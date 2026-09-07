@@ -49,7 +49,7 @@
           <td>what the run still owes. Fires automatically on PostToolUse and at turn end</td></tr>
         <tr><td><strong>At <a href="#close">the close</a></strong></td>
           <td><code>cargo xtask verify-doc &lt;the run&gt;</code> → green, <em>then</em> <code>data-status="archived"</code></td>
-          <td>step ③ before step ④: a red run is not closeable</td></tr>
+          <td>step ④ before step ⑤: a red run is not closeable</td></tr>
         <tr><td><strong>At the review</strong><br><span class="kd">Tier-3</span></td>
           <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code></td>
           <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim about. The <strong>code-review skill</strong> on the tip writes a <code>cr/v3</code> note</td></tr>
@@ -317,14 +317,16 @@ soft:
     <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Hard rules leave the receipt and become predicates; each one still unimplemented is printed on every verify.</p>
 
     <h2 id="close">7 · Close the run <span class="badge id">a step, not a side effect</span></h2>
+    <p><strong>Why ① is first, and why it is a walk of the old run rather than a read of the new one:</strong> a changed answer leaves a false statement behind, which review finds. A <em>dropped</em> answer leaves nothing, and nothing is not reviewable from the near side. E-EXPORT.W9 carried six silent reversals through nine review rounds that read only the new run and asked whether its statements were true — they were — and the rounds that walked the predecessor found them in one pass each.</p>
     <p><strong>Edits are batched, not cycled:</strong> apply all changes in one pass, <code>verify-doc</code> once, then batch residuals and verify again. The norm is <strong>edit twice, verify twice</strong> — never twelve edit→verify cycles.</p>
     <table data-c="tbl-close">
       <thead><tr><th>#</th><th>Do</th><th>What refuses it</th></tr></thead>
       <tbody>
-        <tr><td>①</td><td><strong>Re-pin the rulebook.</strong> <code>git hash-object docs/design-rules/design-rules-index.html</code>; if it no longer matches the receipt's <code>rulebook:</code>, the rulebook moved <em>under</em> the run</td><td><code>receipt·rulebook-stale</code></td></tr>
-        <tr><td>②</td><td><strong>Fill the review item</strong> — one row per reviewer instruction, what it moved, the contract it hit</td><td><code>item·review</code> · <code>review·recorded</code></td></tr>
-        <tr><td>③</td><td><strong>Green the run</strong>: <code>cargo xtask verify-doc &lt;the run&gt;</code></td><td>every Tier-1 predicate</td></tr>
-        <tr><td>④</td><td><strong>Archive it</strong>: <code>data-status="archived"</code></td><td><code>6·run-closed</code> refuses the <strong>merge</strong> of any tip whose diff carries a run still open</td></tr>
+        <tr><td>①</td><td><strong>Walk the run this one supersedes</strong> — only when there is one. Stage by stage, over the <em>old</em> run: classify every answer in it as held, changed, or dropped. Its answers are the checklist; an unclassified one is the defect. A held answer is cited, not left to be inferred</td><td>nothing machine-checks it — <a href="#review-tier">Tier-3</a> is the only reader that can, and it must be told the predecessor's path</td></tr>
+        <tr><td>②</td><td><strong>Re-pin the rulebook.</strong> <code>git hash-object docs/design-rules/design-rules-index.html</code>; if it no longer matches the receipt's <code>rulebook:</code>, the rulebook moved <em>under</em> the run</td><td><code>receipt·rulebook-stale</code></td></tr>
+        <tr><td>③</td><td><strong>Fill the review item</strong> — one row per reviewer instruction, what it moved, the contract it hit</td><td><code>item·review</code> · <code>review·recorded</code></td></tr>
+        <tr><td>④</td><td><strong>Green the run</strong>: <code>cargo xtask verify-doc &lt;the run&gt;</code></td><td>every Tier-1 predicate</td></tr>
+        <tr><td>⑤</td><td><strong>Archive it</strong>: <code>data-status="archived"</code></td><td><code>6·run-closed</code> refuses the <strong>merge</strong> of any tip whose diff carries a run still open</td></tr>
       </tbody>
     </table>
 
@@ -370,7 +372,7 @@ soft:
       <tbody>
         <tr><td>After every stage the run is red for <strong>exactly the stages not yet written</strong></td>
           <td>the flow stalling, or prompting for work it has not reached</td></tr>
-        <tr><td>The rulebook moving under an open run re-opens <em>both</em> halves of the close's step ①</td>
+        <tr><td>The rulebook moving under an open run re-opens <em>both</em> halves of the close's step ②</td>
           <td>a receipt that is complete against a rulebook nobody has read since</td></tr>
         <tr><td>A rule-violating mockup reds <strong>at the stage that wrote it</strong>, and the chain from there keeps it out of the tree</td>
           <td>a breach surfacing only at the end, where it is expensive</td></tr>

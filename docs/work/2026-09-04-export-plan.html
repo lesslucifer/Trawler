@@ -331,7 +331,8 @@ flowchart LR
           (<code>toCurl</code>, <code>ui/src/flow.ts:67</code>): a parser that turns a pasted
           <code>curl</code> command line into a flow, reached as
           <code>POST /flows/import?format=curl</code> and, in the app, as a paste target on
-          the same import control W5 designs. It accepts exactly the set settled in question 8
+          the same import control W9 designs (run 11; W5's run 10 is superseded and is not
+          cited). It accepts exactly the set settled in question 8
           — what a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> emit, with
           <code>-u</code> and <code>--compressed</code> expanded into the headers they imply,
           shell quoting and backslash line-continuations handled, and transfer-only flags
@@ -353,8 +354,10 @@ flowchart LR
         </p>
         <p data-item="wu-deps">
           E-EXPORT.W3 — reuses its <code>source</code> marking and its refusal contract;
-          the parser is a second format behind the same import endpoint. Independent of W5/W6,
-          though its paste affordance is designed in W5 if it lands first.
+          the parser is a second format behind the same import endpoint. Independent of W6/W9 as
+          a parser, and ordered before them rather than beside them: W9's design run requires W7
+          merged, so the paste affordance is designed in W9's run 11 — unconditionally, not
+          whichever of the two lands first — and built in W6.
         </p>
       </div>
 

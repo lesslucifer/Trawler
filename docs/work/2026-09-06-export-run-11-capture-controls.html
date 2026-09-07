@@ -25,8 +25,14 @@
     .app{background:var(--a-canvas);color:var(--a-ink);font-family:var(--a-ui);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative;}
     .a-mock{display:flex;flex-direction:column;}
     .a-head{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--a-soft);border-bottom:1px solid var(--a-line);flex-wrap:wrap;}
-    .a-acts{display:flex;align-items:center;gap:6px;margin-left:auto;}
-    .a-sep{width:1px;height:16px;background:var(--a-line);}
+    .a-acts{display:flex;align-items:center;gap:8px;margin-left:auto;position:relative;}
+    .a-inflight{display:none;}
+    .a-mock.exporting .a-inflight{display:block;}
+    .a-mock.exporting .a-rest{display:none;}
+    /* M — the menu. Screen-owned in this mockup because the popup it needs is a
+       PROPOSAL (see Proposals); the shipped Select owns every behaviour it wants. */
+    .a-menu{position:absolute;right:0;top:100%;margin-top:4px;z-index:20;display:none;}
+    .a-mock.menuing .a-menu{display:block;}
     .a-body{display:flex;min-height:0;flex:1;height:208px;}
     .a-main{display:flex;flex-direction:column;min-width:0;flex:1;overflow:hidden;}
     .a-hrow,.a-row{display:grid;gap:12px;align-items:center;padding:0 16px;}
@@ -36,7 +42,7 @@
     .a-row.sel{background:var(--a-soft);}
     .a-scroll{min-height:0;flex:1;overflow:auto;}
     .a-title{font-family:var(--a-serif,serif);font-style:italic;font-size:18px;}
-    .a-mark{color:var(--a-mute);display:inline-block;width:12px;}
+    .a-mark{color:var(--a-mute);display:inline-block;width:16px;}
     /* the ask — screen-owned in this mockup because the frame it needs is a
        PROPOSAL (see Proposals); the shipped ModalShell is the thing proposed. */
     .a-scrim{position:absolute;inset:0;display:none;align-items:center;justify-content:center;}
@@ -85,7 +91,8 @@
       cancelled · <code>ModalShell</code>, screen-local.</p>
       <p><strong>Not given</strong> (may not be assumed to exist):
       a byte counter on either transfer · an undo for a clear · a per-flow delete affordance ·
-      a glyph entry for out, in or empty · any multi-line text entry · a registry-owned dialog.</p>
+      a glyph entry for out, in, empty or more · any multi-line text entry · a registry-owned
+      dialog · a registry-owned action menu.</p>
       <table>
         <thead><tr><th>Driver</th><th>why…</th><th>therefore (design consequence)</th><th>on this screen</th></tr></thead>
         <tbody>
@@ -94,13 +101,13 @@
             <td>keep watching traffic</td>
             <td>the list is the screen's whole job</td>
             <td>controls take chrome, never rows</td>
-            <td>✓ three controls inside the existing header line<br>✗ a second toolbar row costing four flows</td>
+            <td>✓ one control inside the existing header line<br>✗ a second row — or three controls, which force one below 942px</td>
           </tr>
           <tr>
             <td>hand this capture over</td>
             <td>a bug report is the file, not a screenshot</td>
-            <td>the out-door is one act from the list</td>
-            <td>✓ one control, no format step to choose<br>✗ a format picker in front of one format</td>
+            <td>the out-door is one named act, one level in</td>
+            <td>✓ a menu item that names the format it will write<br>✗ a format picker in front of one format</td>
           </tr>
           <tr>
             <td>read someone else's capture</td>
@@ -129,9 +136,9 @@
           </tr>
           <tr>
             <td>the header row is already full</td>
-            <td>a field, two dropdowns, a field, a count</td>
-            <td>new controls are square, not worded</td>
-            <td>✓ 28px glyphs pushed to the trailing edge<br>✗ three word buttons crushing the filters</td>
+            <td>measured: the shipped row is one line only down to 782px, against a configured <code>minWidth</code> of 800</td>
+            <td>the three acts collapse behind one control</td>
+            <td>✓ one 28px trigger at the trailing edge, and words inside it<br>✗ three controls, which hold one line only to 942px</td>
           </tr>
           <tr>
             <td>two neighbours open popups</td>
@@ -180,37 +187,124 @@
 
     <h2 id="layout">2 · Layout</h2>
     <div data-item="layout" data-c="layout">
-      <pre class="sk">┌────────────────────────────────────────────────────────────┬───────────┐
-│ A  header — dot · title · field · ▾host · ▾method · field  │           │
-│    · count                                    │ ⇥ │ A′ acts │  D        │ ← A pinned; A′ is A's trailing cluster
-├────────────────────────────────────────────────────────────┤  detail   │
-│ B  column labels                                           │  pane     │ ← pinned under A
-├────────────────────────────────────────────────────────────┤  (seam)   │
-│ C  flow rows — an imported row carries its mark in cell 1  │           │ ← the only vertical scroller
-│      ⇩ 14:22:07 · GET · api.example.com · /v1/orders · 200 │           │
-└────────────────────────────────────────────────────────────┴───────────┘
+      <pre class="sk">┌──────────────────────────────────────────────────────────────────┬─────────┐
+│ A  ●Trawler ⟩ filter… ▾host ▾method status ⟩ 6 flows ⋮           │         │ ← A pinned, one line at every allowed width
+│    └─ G1 ─┘   └───── G2 · the query ─────┘   └── A′ ─┘           │  D      │
+├──────────────────────────────────────────────────────────────────┤ detail  │
+│ B  column labels                                                 │  pane   │ ← pinned under A
+├──────────────────────────────────────────────────────────────────┤         │
+│ C  flow rows — an imported row carries its mark in cell 1        │ (seam)  │ ← the only vertical scroller
+│      ↑ 06/09 · 14:22:07 · GET · api.example.com · /v1/orders     │         │
+└──────────────────────────────────────────────────────────────────┴─────────┘
+                            ┌──────────────────────┐
+   M  the menu ────────────▶│ export as har…       │ ← under ⋮, right-aligned
+      (transient)           │ import…              │   to the trigger
+                            ├──────────────────────┤ ← this hairline DOES earn
+                            │ clear…               │   itself: see the legend
+                            └──────────────────────┘
                      ┌──────────────────────────────┐
-   E  the ask ──────▶│  clear 214 flows?         ✕  │ ← modal, over the whole app,
+   E  the ask ──────▶│  clear 214 flows?         ×  │ ← modal, over the whole app,
       (transient)    │  ⚠ the capture is not saved  │   only for the destructive door
                      │  [ cancel ]      [ clear ]   │   focus starts on [cancel]
                      └──────────────────────────────┘
    F  the paste ────▶ same frame: textarea · [choose a file…] [import] · refusal below
 
+⟩ = a 20px group seam — gap-3 plus ml-2, the seam App.tsx already spends between
+    the title and the filter. Within a group: 12px in G2 (the header's own gap-3),
+    8px in A′ (gap-2, the cluster gap FlowDetail's header already ships).
+M = the three acts, absent until the trigger is pressed. Its hairline before
+    clear DOES earn itself, where the same rule failed in the header: the popup
+    sits on canvas (#3f3a36 on #2b2622 — 1.33:1, the contrast every shipped
+    hairline in the app already relies on), and the header sits on canvas-soft
+    (#3f3a36 on #383330 — 1.11:1, invisible). Same rule, same token, different
+    ground.
 priority: C is the screen. A is standing chrome; A′ is its trailing edge and
-  nothing in it competes with the filters. E and F are absent until asked for.
+  holds one control, so nothing in it competes with the filters. M, E and F are
+  absent until asked for.
 scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
   margin-left:auto so it holds the trailing edge and is the last thing to wrap
   (owner: this screen) · B pinned, one line, never scrolls · C the single
   vertical scroll region, virtualized, capped by the capture ring (owner: the
   core's ring) · D scrolls itself at w-pane, independent of C (owner: the
-  flow-detail run) · E content-height, capped at dialog-max 384px, never scrolls
+  flow-detail run) · M content-height, three items, never scrolls and never
+  reserves space in A — it overlays C the way Select's popup does (owner: this
+  screen) · E content-height, capped at dialog-max 384px, never scrolls
   — one sentence and two buttons cannot exceed it · F's textarea is the one
   unbounded input: fixed height, scrolls internally, never grows the frame
   (owner: this screen).</pre>
-      <p><strong>A′ is not a new zone</strong> — it is A's trailing cluster, which is what keeps
-      the controls out of the row budget. <code>choose-before-act</code> is the reason it sits
-      after the filters and not before: the filters decide what export and clear act on, so they
-      are read first.</p>
+      <p><strong>A′ is not a new zone</strong> — it is A's trailing cluster, and it now holds two
+      things: one fixed-width muted slot and one 28px trigger.
+      <code>choose-before-act</code> is the reason for that order and not the reverse: the filters
+      decide what export and clear act on, the slot says what they decided ("6 flows"), and the
+      trigger comes last. The slot also stays on screen while M is open — M opens 4px <em>below</em>
+      it — so the scope is legible at the moment the act is chosen, which is where the Frame's
+      <em>each label states the scope it acts on</em> is actually paid.</p>
+      <p><strong>Why the three acts went behind one control, measured.</strong> The header is
+      <code>flex-wrap</code>, so the question was never whether the controls fit at 1200px — it
+      was the width below which A becomes two lines. Rendered and scanned in 2px steps:</p>
+      <table>
+        <thead><tr><th>A′</th><th>A holds one line down to</th><th>vs <code>minWidth</code> 800</th></tr></thead>
+        <tbody>
+          <tr><td>none — the shipped header</td><td>782px</td><td>fits, by 18px</td></tr>
+          <tr><td>three inline controls</td><td><strong>942px</strong></td><td>two lines for the whole 800–942 band</td></tr>
+          <tr><td>one trigger, slot kept</td><td>846px</td><td>two lines for 800–846</td></tr>
+          <tr><td>one trigger, no fixed slot</td><td>814px</td><td>two lines for 800–814</td></tr>
+        </tbody>
+      </table>
+      <p>So the inline cluster does not merely risk a second line, it <em>guarantees</em> one
+      across a 142px band of allowed widths — and the shipped header had only 18px of slack at 800
+      to begin with, which is why every option above still needs something. The design takes the
+      one that keeps the slot (846px) and asks W6 for
+      <code>minWidth: 850</code> in <code>tauri.conf.json</code> — one number, and the honest one:
+      a six-column flow table at 800px leaves PATH 138px, so 800 was never a width this screen
+      worked at. Dropping the slot instead would buy 32px and give back the reflow it exists to
+      prevent.</p>
+      <p><strong>What this costs, stated rather than buried.</strong> Export becomes two acts
+      instead of one, and the Frame's goal-2 consequence changed with it — from <em>the out-door is
+      one act from the list</em> to <em>one named act, one level in</em>. That is a real regression
+      against a stated goal and it is the price of the row. What buys it back is the ranking those
+      goals sit in: <em>keep watching traffic</em> is first, these three acts are the rarest things
+      on the screen, and <code>progressive-disclosure</code> is explicit that the default view is
+      the scan level with depth one invited act away. The argument that refused a second toolbar
+      row — the least-used group must not take the most chrome — applies with more force to three
+      permanent controls than it did to the row, because three controls cost 212.8px of the line
+      the row was trying to protect.</p>
+      <p><strong>The row is three groups, and the grouping is spacing rather than decoration.</strong>
+      <span class="was">An earlier draft of this run spent one flat 12px gap between all eight
+      members, so identity, query and acts read as a single queue — and then spent the row's only
+      hairline on the <em>smallest</em> boundary in it (import against clear) while the largest
+      (query against acts) went unmarked.</span> Proximity carries the header: 8px inside A′, 20px
+      at the two group seams. The additive/irreversible boundary is no longer a boundary <em>in
+      A</em> at all — it moved into M, where it is a hairline that can actually be seen. That
+      answers <code>grouping-by-relatedness</code> in both directions: no real boundary is left
+      unmarked, and no separator marks a false one. It took two attempts —
+      see <a href="#tune">T1</a>.</p>
+      <p><strong>The seam is not invented here.</strong> <code>ui/src/App.tsx</code> already sets
+      <code>mr-2</code> on the title, so the identity-to-query boundary is <em>already</em> a 20px
+      seam against the row's 12px gap. The redesign reads that as the app's own convention and
+      spends the same 20px at the second boundary, rather than minting a width of its own. Nothing
+      the user already knows moves: A keeps its members and their order, and gains one slot and
+      three controls after them.</p>
+      <p><strong>One slot, two facts, no reflow.</strong> The slot holds the count at rest and the
+      in-flight line while a transfer runs — "6 flows" becomes "exporting…" and comes back. Both
+      are one muted line about the capture, both fit <code>field-sm</code>, and the slot's width is
+      fixed, so neither its arrival nor its departure moves anything. Measured on the rendered
+      assembly rather than asserted: in both states the slot is <strong>80.0px</strong> and every
+      member of A′ holds the same x — the slot at 866.2, <code>↓</code> at 954.2, <code>↑</code> at
+      990.2, <code>clear</code> at 1034.2 — which also confirms the gaps as 8px, 8px and 16px.
+      <span class="was">The earlier draft inserted the in-flight line into the cluster instead,
+      which re-allocated the header's slack and resized the filter field — a control the user may
+      be typing in at that exact moment.</span></p>
+      <p><strong>Why the second toolbar row is refused, measured rather than asserted.</strong>
+      The devtools genre does put the transfers in a toolbar above the filter bar, so
+      <code>familiar-idioms</code> owes a driver for departing from it. The driver is not cost: a
+      chrome row of 28px controls at <code>py-chrome-y</code> is 37px against a 30px row, so it
+      costs about one flow — <span class="was">not the four an earlier draft of the Frame claimed,
+      which was asserted rather than measured and is wrong by roughly threefold.</span> The driver
+      is <code>visual-weight-follows-goals</code>: <em>keep watching traffic</em> is the top goal
+      and these three acts are the rarest thing on the screen, so a permanent zone of their own
+      would hand the least-used group the most new chrome. DevTools earns its second row with a
+      dozen controls; three do not earn one.</p>
       <p><strong>What the redesign changed here.</strong> Host and method are
       <code>Select</code>s, so two of A's members now open popups. That is why A′ is at the
       trailing edge rather than merely <em>somewhere</em> in A: a popup opens below its trigger
@@ -223,8 +317,9 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
     <div data-item="elements" data-map data-c="elements">
       <pre class="sk">shell
 ├─ A  header ─── StatusDot ◆ · title (inline) · <span data-key="field">Field</span> ◆ · <span data-key="select">Select</span> ◆ ×2 · <span data-key="field">Field</span> ◆
-│   │            · <span data-key="toned-text">TonedText</span> ◆ (count)
-│   └─ A′ acts ── <span data-key="icon-button">IconButton</span> ◆ ×3 (export · import · clear) · <span data-key="toned-text">TonedText</span> ◆ (progress)
+│   └─ A′ ─────── <span data-key="toned-text">TonedText</span> ◆ (the slot — count at rest, in-flight while running)
+│                · <span data-key="icon-button">IconButton</span> ◆ (the ⋮ trigger)
+├─ M  the menu ─ <span data-key="menu">Menu</span> ▣
 ├─ B  labels ─── column label row ▣
 ├─ C  list ───── FlowRow ▣ ×n · <span data-key="notice">Notice</span> ◆ (absences)
 ├─ E  the ask ── <span data-key="dialog">Dialog</span> ▣
@@ -233,45 +328,58 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
 ▣ FlowRow   = <span data-key="import-mark">import mark</span> (inline glyph) · TimestampText ◆ · MethodLabel ◆
               · host · path · <span data-key="status-pill">StatusPill</span> ◆ · DurationText ◆
 ▣ Dialog    = scrim + panel + focus trap (PROPOSED — the shipped ModalShell)
-              · <span data-key="notice">Notice</span> ◆ (the question or the refusal) · <span data-key="button">Button</span> ◆ ×2</pre>
+              · <span data-key="notice">Notice</span> ◆ (the question or the refusal) · <span data-key="button">Button</span> ◆ ×2
+▣ Menu      = popup + three worded items + a hairline before the last
+              (PROPOSED — nothing in the collection is an action menu)</pre>
       <table>
         <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>Shape · States</th></tr></thead>
         <tbody>
           <tr>
             <td data-key="icon-button"><strong>IconButton</strong><br><span class="kd">T1</span></td>
-            <td>A′ · the three doors<br><span class="v v-reuse">reuse</span></td>
+            <td>A′ · the ⋮ trigger<br><span class="v v-reuse">reuse</span></td>
             <td>
-              <div class="gist">Icon-only triggers; the header has no room for words.</div>
+              <div class="gist">One icon-only trigger; the acts it opens are words.</div>
               <details class="why"><summary>why</summary>
                 <p>Lands in <span class="use">@use</span> "icon-only triggers unambiguous in
-                place". Clears <span class="avoid">@avoid</span> "primary actions (no visual
-                weight at rest)": none of the three is primary, and the <em>list stays the
-                subject</em> quality wants exactly this unweighted rest state.</p>
-                <p>The <span class="avoid">@avoid</span> line that does <em>not</em> clear
-                cleanly is "actions with no fitting glyph". The glyph registry holds
-                <code>close</code> and <code>save</code> — nothing for out, in or empty. The
-                component accepts <code>children</code>, so the faces can be passed, but a face
-                passed at the call site is a string where the collection keeps a vocabulary.
-                Resolved as a <a href="#proposals">proposal</a> of three glyph entries rather
-                than a shrug: the run uses the supported escape and names the debt.
-                <span class="was">Run 10 filed the same fact as blocked-on. It is not blocked —
-                nothing upstream is missing, the vocabulary is simply short three entries, and
-                that is a proposal.</span></p>
-                <p>The near-miss worth restating: <code>Button</code> with a word label is the
-                better control in isolation — a word never needs a tooltip. It loses on the
-                <em>header row is already full</em> constraint, and now on a second one: two of
-                A's members are popup-bearing, so the row has less slack than run 10 measured.</p>
+                place". Clears <span class="avoid">@avoid</span> "primary actions (no visual weight
+                at rest)": the trigger is not an action at all, it opens the ones that are. And it
+                clears the line that decided the earlier draft — "actions with no fitting glyph
+                (word label carries it better)" — because the three acts <em>do</em> carry their
+                words now, inside <a href="#elements">Menu</a>. One control needs a face; three
+                did not have one between them.</p>
+                <p><strong>Why a bare square glyph and not a worded trigger.</strong> A worded
+                trigger with a caret — <code>capture ▾</code> — was the first instinct and it is
+                wrong here for a specific reason: it would stand immediately beside two
+                <code>Select</code>s that look exactly like that, so it would read as a third
+                filter. The row's two affordance families are "bordered box with a caret = narrows
+                the list" and "bare square = acts", and the trigger has to be legible as the
+                second. That is <code>grouping-by-relatedness</code> applied to affordance rather
+                than to spacing.</p>
+                <p><strong>Why <code>⋮</code> and not <code>⋯</code>.</strong> The app already
+                spends the horizontal ellipsis on <em>in progress</em> — "exporting…", and
+                <code>StatusPill</code> renders "…" for a flow with no response yet. A horizontal
+                ellipsis as a control face would collide with a meaning the screen already
+                carries, in the same header, sometimes in the same second. The vertical one has no
+                such tenant. One <a href="#proposals">proposed</a> entry, slug <code>more</code>.</p>
+                <p><span class="was">Run 10 and this run's earlier drafts put three faces in the
+                header — ⇧ ⇩ ⌫, then ↓ ↑ and a word. The first set was worse than it looked: all
+                three are keyboard-key symbols on the platform this app ships to (⇧ is Shift, ⌫ is
+                Backspace), so the cluster read as a shortcut hint, and ⇧ pointed the opposite way
+                from the app's own <code>save</code> face for the same act. The second set was
+                correct and still cost 212.8px of a row that had 18px of slack at
+                <code>minWidth</code>. Collapsing to one trigger retires the whole question: the
+                only face left is the one that opens the menu.</span></p>
               </details>
             </td>
-            <td><pre class="tb">⇧  ⇩  ⌫</pre>Per its TSDoc — rest (muted glyph, no bg) · hover
-              (ink + 7% wash) · focus · active · disabled (35%, no tab). The accessible name is
-              the component's own guarantee.</td>
+            <td><pre class="tb">⋮</pre>Per its TSDoc — rest (muted glyph, no bg) · hover
+              (ink + 7% wash) · focus · active · disabled (35%, no tab). The accessible name
+              ("capture actions") is the component's own guarantee.</td>
           </tr>
           <tr>
             <td data-key="toned-text"><strong>TonedText</strong><br><span class="kd">T1</span></td>
-            <td>A′ · progress line<br><span class="v v-reuse">reuse</span></td>
+            <td>A′ · the slot<br><span class="v v-reuse">reuse</span></td>
             <td>
-              <div class="gist">The second half <code>Button</code>'s fork D4 makes mandatory.</div>
+              <div class="gist">One fixed slot holding two facts: the count, then the in-flight line.</div>
               <details class="why"><summary>why</summary>
                 <p><code>IconButton</code> composes <code>Button</code>, whose
                 <span class="use">@states</span> is explicit: no loading state of its own — for a
@@ -281,6 +389,17 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 <p>Lands in <span class="use">@use</span> "any short value whose meaning is carried
                 by tone". Clears <span class="avoid">@avoid</span> "a toned sentence or prose with
                 an action" — "exporting…" is a value, not a sentence.</p>
+                <p><strong>It is a slot, not an insertion.</strong> The same
+                <code>field-sm</code> box carries "6 flows" at rest and "exporting…" while a
+                transfer runs, right-aligned against the doors it scopes. Fixing the width is the
+                whole point: <span class="was">the earlier draft inserted the line into the
+                cluster as a new member, so starting an export re-allocated the header's slack and
+                resized the filter <code>Field</code> — a control the user may be mid-keystroke
+                in.</span> Two facts share the box because they are the same kind of fact — one
+                muted line about the capture — and because the count is what the transfer is
+                transferring, so replacing it loses nothing the user needs during the flight. It
+                takes <code>text-control</code> rather than the inherited 14px so it reads at the
+                size of the controls it sits among (Tune T6).</p>
                 <p>Tone is muted: in-flight is neither success nor failure, and the chromatic set
                 has no third meaning for it. <code>Notice</code> is the right shape for the same
                 job <em>inside</em> a dialog (where there is room for a sentence, and where
@@ -288,8 +407,10 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 control row, where its glyph and block would compete with the filters.</p>
               </details>
             </td>
-            <td><pre class="tb">exporting…   importing…</pre>Per its TSDoc — tone:ok · warn ·
-              muted. The tone prop is the whole state machine.</td>
+            <td><pre class="tb">6 flows      ← at rest
+exporting…   ← in flight
+importing…</pre>Per its TSDoc — tone:ok · warn · muted. The tone prop is the whole state
+              machine; the slot never changes width between them.</td>
           </tr>
           <tr>
             <td data-key="button"><strong>Button</strong><br><span class="kd">T1</span></td>
@@ -431,6 +552,48 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
               null/pending → "…".</td>
           </tr>
           <tr>
+            <td data-key="menu"><strong>Menu</strong><br><span class="kd">T2 → proposed</span></td>
+            <td>M · the three acts<br><span class="v v-propose">propose</span></td>
+            <td>
+              <div class="gist">Nothing in 28 entries is an action menu, and Select is not one.</div>
+              <details class="why"><summary>why</summary>
+                <p><code>Select</code> is the near miss and it fails on its own
+                <span class="avoid">@avoid</span> twice, independently. "Two to four options (use
+                <code>SegmentedControl</code> — this is a miss by cardinality, not kind)": three
+                acts is below its floor. And "multi-select or a clear affordance — at most one
+                option is selected, and nothing returns to unselected once chosen": a menu of acts
+                has no selected value at all, so the whole notion of a held selection is wrong for
+                it, not merely inconvenient. <code>SegmentedControl</code> is worse — it shows all
+                choices at once, which is the chrome this design is trying not to spend.</p>
+                <p>What it must own, and all of it exists already in <code>Select</code>'s popup:
+                the positioned surface (canvas, hairline, <code>rounded-card</code>,
+                <code>shadow-pop</code>, <code>z-popup</code>, offset by
+                <code>chrome-y</code>), ↑↓ to move without acting, Enter to act, Esc to close
+                unchanged, Tab to close and move on, and focus returning to the trigger on every
+                exit. Those are the rulebook's own <a href="../design-rules/design-rules-index.html#keyboard-conventions">keyboard
+                conventions</a>, so this run invents no interaction — which is why
+                <code>keyboard-parity</code> and <code>focus-returns-to-origin</code> are answered
+                by the proposal rather than by this screen.</p>
+                <p>What it must <em>not</em> own: a selected state, a tick column, type-to-filter,
+                or a scrim. It is not modal — clicking away dismisses it, and the list underneath
+                stays readable, which is the whole difference between M and E.</p>
+                <p><strong>The overlap is the interesting part of the proposal.</strong> Every
+                behaviour above is already implemented inside <code>Select</code>, so the honest
+                recommendation to the owner is to look at both at once: either <code>Menu</code>
+                duplicates a proven popup shell, or that shell is extracted and both consume it.
+                This run is not entitled to decide which — it has one sighting of a menu — so it
+                names the choice instead of silently taking the cheaper half.</p>
+              </details>
+            </td>
+            <td><pre class="tb">┌──────────────────┐
+│ export as har…   │ ← words, not glyphs
+│ import…          │
+├──────────────────┤ ← 1.33:1 on canvas
+│ clear…           │   and last
+└──────────────────┘</pre>rest · hover (wash) · keyboard-active · open · closed. No
+              selected state, no filtering, no empty state — the three items are fixed.</td>
+          </tr>
+          <tr>
             <td data-key="dialog"><strong>Dialog</strong><br><span class="kd">T2 → proposed</span></td>
             <td>E, F · the modal frame<br><span class="v v-propose">propose</span></td>
             <td>
@@ -486,16 +649,24 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 cell of one screen. Proposing an entry on a sample of one is the more expensive
                 mistake — and this run makes the opposite call for <code>Dialog</code> precisely
                 because there the sample is three.</p>
+                <p><strong>The mark wears the door's own face.</strong> It is <code>↑</code>,
+                the same glyph as the import control, because that is the control that put the row
+                there — one face, one meaning, learnable in a single sighting.
+                <span class="was">The earlier draft used ⇩, which was not only a keyboard-key
+                symbol but pointed the opposite way from the door it came from.</span></p>
                 <p>The text channel satisfying <code>colour-plus-text</code> is the glyph's
-                <code>title</code>/<code>aria-label</code> ("imported") plus the
-                — a text channel on its own, and the only one this design ships. It deliberately
+                <code>title</code>/<code>aria-label</code> ("imported") — a text channel on its
+                own, and the only one this design ships. <span class="was">The sentence that stood
+                here read "plus the — a text channel on its own": a phrase had been lost in an
+                earlier edit and the broken clause survived several rounds of review.</span>
+                It deliberately
                 does <em>not</em> rest on a <code>?source=</code> filter: the capability exists on
                 the API and this run adds no control for it, so citing one would be citing
                 something the screen does not have. The mark is ink-mute, deliberately not
                 chromatic, because being imported is not an outcome.</p>
               </details>
             </td>
-            <td><pre class="tb">⇩ 14:22:07   ← imported
+            <td><pre class="tb">↑ 14:22:07   ← imported
   14:22:09   ← captured</pre>Two states: present · absent. No hover, no interaction — display.</td>
           </tr>
           <tr>
@@ -524,7 +695,7 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
       (T0, proposed as the promoted component) · Notice (T1) · Button ×2 (T1) · focus trap
       (behaviour, no tier).</p>
       <p><strong>Proposals:</strong> <code>Dialog</code> (T2 widget — promote the shipped
-      <code>ModalShell</code>) · three <code>IconButton</code> glyph entries. See
+      <code>ModalShell</code>) · one <code>IconButton</code> glyph entry, the import face. See
       <a href="#proposals">Proposals</a>.</p>
     </div>
 
@@ -536,16 +707,17 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
           <tr>
             <td>export what the filter selects</td>
             <td>hand this capture over</td>
-            <td>clicks ⇧</td>
+            <td>opens ⋮, chooses <em>export as har…</em></td>
             <td>
               <div class="gist">The control disables and says so; the list does not move.</div>
               <details class="why"><summary>zone → delta</summary>
-                <pre class="tb">A′ → ⇧ disabled, "exporting…" beside it
+                <pre class="tb">A′ → the slot reads "exporting…"; in M,
+     export as har… is disabled
 C  → UNCHANGED   ← the list is not what is happening
 D  → UNCHANGED</pre>
               </details>
             </td>
-            <td>Tab to ⇧ · Enter/Space</td>
+            <td>Tab to ⋮ · Enter opens · ↓ to the item · Enter</td>
           </tr>
           <tr>
             <td>…the OS dialog returns a path</td>
@@ -554,7 +726,7 @@ D  → UNCHANGED</pre>
             <td>
               <div class="gist">The line clears; nothing on this screen changed, because the file is elsewhere.</div>
               <details class="why"><summary>zone → delta</summary>
-                <pre class="tb">A′ → the line clears, ⇧ enabled
+                <pre class="tb">A′ → the slot returns to the count; M re-enabled
 C  → UNCHANGED   ← the file is elsewhere; nothing here moved</pre>
               </details>
             </td>
@@ -568,7 +740,7 @@ C  → UNCHANGED   ← the file is elsewhere; nothing here moved</pre>
               <div class="gist">The same clearing, and deliberately no claim that a file exists.</div>
               <span class="was">the state run 10 did not name</span>
               <details class="why"><summary>zone → delta</summary>
-                <pre class="tb">A′ → the line clears, ⇧ enabled
+                <pre class="tb">A′ → the slot returns to the count; M re-enabled
    → and NOTHING claims a file was written</pre>
               </details>
             </td>
@@ -577,7 +749,7 @@ C  → UNCHANGED   ← the file is elsewhere; nothing here moved</pre>
           <tr>
             <td>import a .har file</td>
             <td>read someone else's capture</td>
-            <td>clicks ⇩, chooses a file</td>
+            <td>opens ⋮, chooses <em>import…</em>, chooses a file</td>
             <td>
               <div class="gist">The dialog holds the wait; the list refills from the bus, not the response.</div>
               <details class="why"><summary>zone → delta</summary>
@@ -587,7 +759,7 @@ A  → the count moves
 F  → closes on success            ← same as the paste</pre>
               </details>
             </td>
-            <td>Tab to ⇩ · Enter/Space · Esc dismisses</td>
+            <td>Tab to ⋮ · Enter opens · ↓↓ to the item · Enter · Esc dismisses</td>
           </tr>
           <tr>
             <td>…the file picker is cancelled</td>
@@ -605,7 +777,7 @@ C  → UNCHANGED   ← the symmetric case to the cancelled save</pre>
           <tr>
             <td>paste a curl command</td>
             <td>read someone else's capture</td>
-            <td>clicks ⇩, pastes, imports</td>
+            <td>opens ⋮, chooses <em>import…</em>, pastes, imports</td>
             <td>
               <div class="gist">One command becomes one request-only row, and the dialog leaves.</div>
               <details class="why"><summary>zone → delta</summary>
@@ -650,7 +822,7 @@ C       → UNCHANGED in every case   ← nothing partial was applied</pre>
           <tr>
             <td>clear what the filter selects</td>
             <td>empty the noise first</td>
-            <td>clicks ⌫</td>
+            <td>opens ⋮, chooses <em>clear…</em></td>
             <td>
               <div class="gist">It asks first, names the count, and focuses the safe answer.</div>
               <details class="why"><summary>zone → delta</summary>
@@ -659,7 +831,7 @@ C       → UNCHANGED in every case   ← nothing partial was applied</pre>
 C  → UNCHANGED until answered</pre>
               </details>
             </td>
-            <td>Tab to ⌫ · Enter/Space</td>
+            <td>Tab to ⋮ · Enter opens · ↓↓↓ to the item · Enter</td>
           </tr>
           <tr>
             <td>…confirms the clear</td>
@@ -674,7 +846,7 @@ C  → empties to Notice "capture cleared"   ← NOT "no flows yet"
 A  → the count reads 0</pre>
               </details>
             </td>
-            <td>Enter on [clear] · focus returns to ⌫</td>
+            <td>Enter on the ask's [clear] · focus returns to ⋮</td>
           </tr>
           <tr>
             <td>…changes their mind</td>
@@ -687,7 +859,7 @@ A  → the count reads 0</pre>
 C  → UNCHANGED   ← the whole point of asking</pre>
               </details>
             </td>
-            <td>Esc · focus returns to ⌫</td>
+            <td>Esc · focus returns to ⋮</td>
           </tr>
         </tbody>
       </table>
@@ -734,29 +906,60 @@ C  → UNCHANGED   ← the whole point of asking</pre>
               data-label-off="▶ show the paste, refused" data-label-on="◀ show the list">▶ show the paste, refused</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="cleared"
               data-label-off="▶ show the list after a clear" data-label-on="◀ show the list">▶ show the list after a clear</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="exporting"
+              data-label-off="▶ show the export in flight" data-label-on="◀ show the list">▶ show the export in flight</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="menuing"
+              data-label-off="▶ open the menu" data-label-on="◀ close the menu">▶ open the menu</button>
       <script type="text/babel">
         const { React, createRoot, Field, Select, StatusDot, TonedText, IconButton, Notice,
                 Button, TimestampText, MethodLabel, StatusPill, DurationText } = window.Trawler;
         const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
-        const COLS = "122px 70px 180px 1fr 70px 90px";
+        const COLS = "160px 70px 180px 1fr 70px 90px";
         const LABELS = ["Time", "Method", "Host", "Path", "Status", "Duration"];
-        const at = (s) => new Date(2026, 8, 6, 14, 22, s).getTime();
+        // Relative to the day the doc is READ, never a fixed date. TimestampText's
+        // S1/S2 fork turns on "is this today", so a hardcoded date silently flips
+        // every row to the wide cross-day form the morning after it is written —
+        // which is exactly what happened to this mockup. Captured rows are today
+        // (S1); imported rows are the day before (S2), which is what a HAR handed
+        // over from another machine actually carries.
+        const today = (s) => { const d = new Date(); d.setHours(14, 22, s, 0); return d.getTime(); };
+        const yesterday = (s) => today(s) - 86400000;
         const FLOWS = [
-          { id: "1", at: at(3),  m: "GET",    h: "api.example.com", p: "/v1/orders?status=open", s: 200, d: 142, imported: false },
-          { id: "2", at: at(7),  m: "POST",   h: "api.example.com", p: "/v1/orders", s: 201, d: 318, imported: false },
-          { id: "3", at: at(11), m: "GET",    h: "cdn.example.com", p: "/assets/app.a91f3c.js", s: 304, d: 12, imported: true },
-          { id: "4", at: at(14), m: "DELETE", h: "api.example.com", p: "/v1/sessions/self", s: 403, d: 96, imported: true },
-          { id: "5", at: at(16), m: "PATCH",  h: "api.example.com", p: "/v1/orders/4821?fields=status,total", s: 500, d: 2310, imported: false },
-          { id: "6", at: at(18), m: "GET",    h: "api.example.com", p: "/v1/orders/4821", s: null, d: null, imported: true },
+          { id: "1", at: today(3),      m: "GET",    h: "api.example.com", p: "/v1/orders?status=open", s: 200, d: 142, imported: false },
+          { id: "2", at: today(7),      m: "POST",   h: "api.example.com", p: "/v1/orders", s: 201, d: 318, imported: false },
+          { id: "3", at: yesterday(11), m: "GET",    h: "cdn.example.com", p: "/assets/app.a91f3c.js", s: 304, d: 12, imported: true },
+          { id: "4", at: yesterday(14), m: "DELETE", h: "api.example.com", p: "/v1/sessions/self", s: 403, d: 96, imported: true },
+          { id: "5", at: today(16),     m: "PATCH",  h: "api.example.com", p: "/v1/orders/4821?fields=status,total", s: 500, d: 2310, imported: false },
+          { id: "6", at: yesterday(18), m: "GET",    h: "api.example.com", p: "/v1/orders/4821", s: null, d: null, imported: true },
         ];
         const noop = () => {};
         // App.tsx's own sentinel: Select never returns to unselected, so "any" is a
         // real chosen option rather than an empty value.
         const ANY = "\u0000any";
 
+        // The seams are App.tsx's own technique, not a new one: the title already
+        // carries mr-2, so a group boundary is gap-3 + 8px = 20px. The status Field
+        // gains the same mr-2 to mark the second boundary.
+        const SLOT = "w-field-sm text-right text-control whitespace-nowrap";
+        // Drawn, not mounted, because Menu is a PROPOSAL — the same treatment this
+        // run gives the Dialog frame. Every utility here is one Select's own popup
+        // and option rows already use, which is the point of proposing a promotion
+        // rather than a new shape.
+        const ITEM = "flex min-h-control w-full cursor-pointer items-center whitespace-nowrap" +
+                     " px-control-x py-control-y font-ui text-control text-ink-body" +
+                     " hover:bg-wash-hover hover:text-ink";
+        const MENU = (
+          <span className={"block min-w-control-min overflow-hidden rounded-card" +
+                            " border border-hairline bg-canvas shadow-pop"}>
+            <span className={ITEM} role="menuitem">export as har…</span>
+            <span className={ITEM} role="menuitem">import…</span>
+            <span className={`${ITEM} border-t border-hairline`} role="menuitem">clear…</span>
+          </span>
+        );
+
         mount("m-head", <>
           <StatusDot status="connected" onClick={noop} />
-          <span className="a-title">Trawler</span>
+          <span className="a-title mr-2">Trawler</span>
           <Field aria-label="filter" placeholder="filter — free text" value="" onChange={noop}
                  className="min-w-field flex-1" />
           <Select label="host" placeholder="any host" className="w-field-lg" value={ANY}
@@ -766,14 +969,12 @@ C  → UNCHANGED   ← the whole point of asking</pre>
                   value={ANY} onChange={noop}
                   options={[{ id: ANY, label: "any method" }, { id: "GET", label: "GET" }]} />
           <Field aria-label="status" placeholder="status" value="" onChange={noop}
-                 inputMode="numeric" className="w-field-sm" />
-          <TonedText tone="muted" className="whitespace-nowrap">6 flows</TonedText>
+                 inputMode="numeric" className="w-field-sm mr-2" />
           <span className="a-acts">
-            <TonedText tone="muted">exporting…</TonedText>
-            <IconButton label="export as har" onClick={noop} disabled>⇧</IconButton>
-            <IconButton label="import a har file or a curl command" onClick={noop}>⇩</IconButton>
-            <span className="a-sep" />
-            <IconButton label="clear the capture" onClick={noop}>⌫</IconButton>
+            <TonedText tone="muted" className={`${SLOT} a-rest`}>6 flows</TonedText>
+            <TonedText tone="muted" className={`${SLOT} a-inflight`}>exporting…</TonedText>
+            <IconButton label="capture actions" onClick={noop}>⋮</IconButton>
+            <span className="a-menu">{MENU}</span>
           </span>
         </>);
 
@@ -790,7 +991,7 @@ C  → UNCHANGED   ← the whole point of asking</pre>
                  style={{ gridTemplateColumns: COLS }} title={f.p}>
               <span data-wire="started_at">
                 <span className="a-mark" aria-label={f.imported ? "imported" : undefined}
-                      title={f.imported ? "imported" : undefined}>{f.imported ? "⇩ " : "  "}</span>
+                      title={f.imported ? "imported" : undefined}>{f.imported ? "↑" : ""}</span>
                 <TimestampText timestamp={f.at} />
               </span>
               <span data-wire="method"><MethodLabel method={f.m} /></span>
@@ -832,16 +1033,34 @@ C  → UNCHANGED   ← the whole point of asking</pre>
         </>);
       </script>
       <p><strong>What the assembly shows that the tables could not.</strong> The mark is the thing
-      to look at: rows 3, 4 and 6 are imported and rows 1, 2, 5 are not, and the time column still
-      reads as one clean left edge because the absent mark holds its own width. Row 4 is
+      to look at: rows 3, 4 and 6 are imported and rows 1, 2, 5 are not, and cell 1 shows the two
+      shapes together — the imported rows carry both the mark <em>and</em>
+      <code>TimestampText</code>'s cross-day form, because a capture handed over from another
+      machine was taken on another day. That coincidence is the column's real constraint and it is
+      now demonstrated rather than argued (<a href="#tune">T3</a>). The absent mark still holds its
+      own 16px, so the timestamps share one left edge whatever their form. Row 4 is
       <em>both</em> imported and selected and a 403 — three signals in one row, and the ink-mute
       mark stays clearly subordinate to the toned status, which is what <em>destructive reads as
       destructive</em> wanted. Row 6 is an imported request-only flow: <code>StatusPill</code>
       renders "…" and <code>DurationText</code> holds the column — the exact shape a pasted curl
-      command produces, demonstrated rather than asserted. In A′ the export control is disabled
-      with "exporting…" beside it: fork D4, both halves, in the real components. And the header is
-      now measured rather than imagined — the two <code>Select</code>s are the real ones, so the
-      space A′ actually has left is the space the build will find.</p>
+      command produces, demonstrated rather than asserted. The header is
+      measured rather than imagined — the two <code>Select</code>s are the real ones, so the space
+      A′ actually has left is the space the build will find.</p>
+      <p><strong>What the resting state is for.</strong> The mockup opens on the state the screen
+      is in almost all of the time — and that state is now a header with one quiet control in it.
+      Press <em>open the menu</em> for M, and <em>show the export in flight</em> for the fork D4
+      pair: the slot's "6 flows" becomes "exporting…" and, inside M, <em>export as har…</em> is
+      the half that goes disabled. The slot is the same 80px in both, so nothing in the row moves.
+      <span class="was">An earlier draft mounted the in-flight half permanently, so the assembly a
+      reader judged was a state the screen is almost never in.</span></p>
+      <p><strong>What collapsing the doors bought, and what it cost.</strong> A′ went from
+      212.8px to <strong>116px</strong> — a slot and a 28px trigger — and the header stopped
+      being a place where four filters and three actions compete for one line. The four filters
+      are what the user touches while watching traffic, and they now have the room. The cost is
+      one extra act on export, and it is not hidden: the Frame's goal-2 consequence changed to say
+      so. M is drawn rather than mounted because <a href="#elements">Menu</a> is a proposal — the
+      same treatment this run gives the <code>Dialog</code> frame — but every utility in it is one
+      <code>Select</code>'s own popup already ships, which is the substance of the proposal.</p>
       <p><strong>One deliberate divergence, stated rather than hidden.</strong> The mockup's rows
       are 28px (<code>control-lg</code>); the real row is 30px, set inline in
       <code>ui/src/FlowList.tsx</code> as <code>ROW_HEIGHT</code>. The spacing scale has no 30px
@@ -850,8 +1069,9 @@ C  → UNCHANGED   ← the whole point of asking</pre>
       explicitly may not excuse for a size. The 2px is immaterial to every question this run
       answers, and the Frame states the real 30px. Worth recording as a vocabulary gap: the app
       ships a row height its own scale cannot express, which is why the component sets it inline.</p>
-      <p><em>Stubbed:</em> the glyph faces (passed as <code>children</code> — see
-      <a href="#proposals">Proposals</a>) · the focus trap and scrim behaviour of the proposed
+      <p><em>Stubbed:</em> the import face (the one glyph passed as <code>children</code> — see
+      <a href="#proposals">Proposals</a>; export mounts the registry's own <code>save</code>) ·
+      the focus trap and scrim behaviour of the proposed
       <code>Dialog</code>, drawn here because the component is proposed, not built · the native
       save and open dialogs · live SSE, filtering and virtualization · the textarea's editing (it
       is <code>readOnly</code> so the refused state stays on screen).</p>
@@ -862,81 +1082,181 @@ C  → UNCHANGED   ← the whole point of asking</pre>
       <thead><tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr></thead>
       <tbody>
         <tr>
-          <td>the separator earns itself</td>
-          <td><pre class="tb">⇧ ⇩ ⌫</pre></td>
-          <td><pre class="tb">⇧ ⇩ │ ⌫</pre></td>
-          <td><code>grouping-by-relatedness</code></td>
+          <td>T1 · the separator earns itself one zone over</td>
+          <td><pre class="tb">in A:  ↓ ↑ ┆ clear
+1.11:1 on canvas-soft
+— invisible</pre></td>
+          <td><pre class="tb">in M:  import…
+       ┄┄┄┄┄┄┄
+       clear…
+1.33:1 on canvas</pre></td>
+          <td><code>data-ink-first</code></td>
         </tr>
         <tr>
-          <td>the import door says both ways in</td>
+          <td>T2 · the import door says both ways in</td>
           <td><pre class="tb">label: "import a har file"</pre></td>
           <td><pre class="tb">label: "import a har file
         or a curl command"</pre></td>
           <td><code>absence-names-itself</code></td>
         </tr>
         <tr>
-          <td>the reserved mark widens the column</td>
-          <td><pre class="tb">110px  ⇩ 14:22:07
-       14:22:09</pre></td>
-          <td><pre class="tb">122px  ⇩ 14:22:07
-          14:22:09</pre></td>
-          <td><code>visual-weight-follows-goals</code></td>
+          <td>T3 · cell 1 is sized by the timestamp import produces, not by the mark</td>
+          <td><pre class="tb">110px  ↑ 06/09 · 14:22:07
+             14:22:09
+       (overflows into METHOD)</pre></td>
+          <td><pre class="tb">160px  ↑ 06/09 · 14:22:07
+             14:22:09</pre></td>
+          <td><code>wrap-not-truncate</code></td>
         </tr>
         <tr>
-          <td>the paste offers the file, not the reverse</td>
+          <td>T4 · the paste offers the file, not the reverse</td>
           <td><pre class="tb">[import]  [paste instead…]</pre></td>
           <td><pre class="tb">[choose a file…]  [import]</pre></td>
           <td><code>choose-before-act</code></td>
+        </tr>
+        <tr>
+          <td>T5 · the row becomes three groups</td>
+          <td><pre class="tb">one flat 12px gap
+between all eight members</pre></td>
+          <td><pre class="tb">20px seams at the two
+group boundaries; 12px
+inside G2, 8px inside A′</pre></td>
+          <td><code>grouping-by-relatedness</code></td>
+        </tr>
+        <tr>
+          <td>T6 · the slot takes the header's type size</td>
+          <td><pre class="tb">6 flows  — inherited 14px</pre></td>
+          <td><pre class="tb">6 flows  — text-control</pre></td>
+          <td><code>visual-weight-follows-goals</code></td>
+        </tr>
+        <tr>
+          <td>T7 · the acts stop needing faces at all</td>
+          <td><pre class="tb">⇧  ⇩  ⌫
+three faces, none of them
+in the glyph registry</pre></td>
+          <td><pre class="tb">⋮  → words
+one proposed face, for the
+trigger; the acts are read</pre></td>
+          <td><code>familiar-idioms</code></td>
+        </tr>
+        <tr>
+          <td>T8 · the three acts collapse behind one control</td>
+          <td><pre class="tb">A′ = 212.8px
+A is two lines below 942px
+(minWidth is 800)</pre></td>
+          <td><pre class="tb">A′ = 116px
+A is two lines below 846px
++ minWidth 850 → never</pre></td>
+          <td><code>progressive-disclosure</code></td>
         </tr>
       </tbody>
     </table>
     <details class="why"><summary>why</summary>
       <ul>
-        <li><strong>the separator.</strong> Two of the three doors are additive and one destroys.
-        A hairline between them marks a real semantic boundary, which is the only thing that earns
-        a separator. Loops back to Layout: no.</li>
-        <li><strong>the import label.</strong> One control now has two ways in, and the accessible
+        <li><strong>T1 · the separator.</strong> Two acts are additive and one destroys, and that
+        is a real semantic boundary — the only thing that earns a separator. A hairline went in,
+        and then the assembly was rendered and looked at, and it was not there:
+        <code>hairline</code> is <code>#3f3a36</code>, the header's <code>canvas-soft</code> is
+        <code>#383330</code>, and that is <strong>1.11:1</strong>. The app draws no hairline inside
+        a <code>canvas-soft</code> zone anywhere else; every shipped one separates soft from
+        <code>canvas</code> at 1.33:1 and runs a full pane width rather than 16px.
+        <strong>T8 then moved the boundary somewhere the rule works.</strong> M's popup sits on
+        <code>canvas</code>, so the same token at the same width is the contrast every hairline in
+        the app already relies on — and it separates the two additive items from the irreversible
+        one, last in the list, farthest from where the pointer entered. Same rule, same token,
+        different ground.
+        <span class="was">The call as first written claimed the hairline "marks a real semantic
+        boundary", which was true of the intent and false of the pixels; its first repair spent a
+        16px gap in the header instead, which T8 made moot by emptying the header of acts.</span>
+        Loops back to Layout: <strong>yes</strong> — the legend now explains M's hairline rather
+        than A's missing one.</li>
+        <li><strong>T2 · the import label.</strong> One control now has two ways in, and the accessible
         name was the only place that could say so without spending header width. A user who has a
         curl command in the clipboard and reads "import a har file" concludes this screen cannot
         take it. Loops back to Layout: no.</li>
-        <li><strong>the reserved mark.</strong> Cell 1 holds a timestamp that every row has and a
-        mark that few rows have. If the mark renders only when present, an imported row's
-        timestamp sits left of every captured row's, which in a virtualized list of mostly-captured
-        rows reads as jitter rather than as information — so the absent mark holds its width. That
-        reservation has to come from somewhere, and the shipped column has no slack: cell 1 grows
-        by exactly the reserved width. <span class="was">Run 10 reached this same answer in its own
-        T4 and sized the column 110px → 126px. The answer is held; the number is not, and the
-        difference is this run's, not a correction of run 10's.</span> Run 10's mark was 16px; this
-        run's is the 12px <code>.a-mark</code> the mockup actually renders, so the same arithmetic
-        lands on 122px. Loops back to Layout: <strong>yes</strong> — the sketch's cell-1 width is
-        the tuned one, and W6 builds 122px, not <code>FlowList</code>'s current 110px.</li>
-        <li><strong>the paste's button order.</strong> First draft put <code>import</code> first
+        <li><strong>T3 · cell 1's width.</strong> Cell 1 holds a timestamp that every row has
+        and a mark that few rows have, and the earlier drafts spent the whole argument on the
+        mark. That was the wrong variable. <code>TimestampText</code> has a documented fork
+        (<span class="use">@states</span> S1/S2): it renders <code>14:22:03</code> when the flow
+        is <em>today</em> and <code>06/09 · 14:22:03</code> when it is not. Measured in the app's
+        own <code>font-mono</code> at <code>text-body</code> with <code>tabular-nums</code>:
+        <strong>64.22px</strong> for S1, <strong>120.88px</strong> for S2, <strong>163.47px</strong>
+        for the cross-year form, and <strong>12.19px</strong> for the <code>↑</code> mark. So S2
+        plus the mark needs ~137px, and every number the earlier drafts reached — run 10's 126px,
+        this run's 122px, the shipped <code>FlowList</code>'s own 110px — is too narrow for it.
+        <strong>And S2 is not the rare case here: it is the case this run's own feature creates.</strong>
+        A HAR you were handed was captured on another machine on another day, so an imported row
+        is a cross-day row almost by definition — the rows that carry the mark are the same rows
+        that carry the wide timestamp, and the design added them. Cell 1 therefore takes
+        <code>field-lg</code> (160px), which holds 136.9px of content with room and is a token
+        rather than an arithmetic result.
+        <span class="was">The call as first written moved 110px → 122px on the reserved mark's
+        12px, and the round-10 draft before it moved 110px → 126px on a 16px mark it had inferred
+        from run 10's own arithmetic. Both were answering a question that was not the binding one,
+        and both produced a column that overflows on the rows the feature exists to create.</span>
+        Loops back to Layout: <strong>yes</strong> — the sketch's cell 1 is the tuned one, and W6
+        builds 160px, not <code>FlowList</code>'s current 110px.</li>
+        <li><strong>T4 · the paste's button order.</strong> First draft put <code>import</code> first
         and the file picker second, which reads as "act, then choose what you are acting on".
         Reversed: the thing that decides <em>what is being imported</em> comes before the thing
         that imports it. Loops back to Layout: no.</li>
+        <li><strong>T5 · the three groups.</strong> A is four semantic kinds — identity, query,
+        the scope readout, the acts — and an even 12px gap between all of them says they are one
+        queue. Proximity is the cheapest grouping channel there is and it was going unspent, while
+        the row's only explicit boundary marker sat at the <em>narrowest</em> semantic gap in it.
+        The widths are not invented: 12px is the header's own <code>gap-3</code>, 8px is the
+        cluster gap <code>FlowDetail</code>'s header already ships, and the 20px seam is what
+        <code>App.tsx</code> already spends after the title. Loops back to Layout:
+        <strong>yes</strong> — the sketch carries the seams and A′ now opens with the slot.</li>
+        <li><strong>T6 · the slot's type size.</strong> <code>TonedText</code> sets no size, so
+        the count inherited the 14px body size and rendered <em>larger</em> than every control
+        beside it — the muted, least-important text in the header was also its biggest. At
+        <code>text-control</code> it matches the fields and selects it sits among, and
+        "exporting…" then fits the 80px slot, which at 14px mono it does not. Loops back to
+        Layout: no — the slot's width is stated there and does not change.</li>
+        <li><strong>T7 · the faces.</strong> The full argument is in the
+        <a href="#elements">IconButton</a> row. The short form: the three faces the earlier drafts
+        used were keyboard-key symbols on the platform the app ships to, and the deeper problem was
+        that two of the three acts had no honest face at all — the registry has none for
+        <em>bring a file in</em> or <em>empty the capture</em>, which is why each draft either
+        invented one or borrowed one pointing the wrong way. T8 dissolves the question instead of
+        answering it: inside M the acts are <em>read</em>, so the only face left in the design is
+        the one that opens the menu. Vocabulary debt: three proposed entries, then one, now one —
+        but a different one, and the last that will be needed here.</li>
+        <li><strong>T8 · the collapse.</strong> Asked directly: is a permanent control each what
+        these three acts have earned? The measurement says no twice over. They are the rarest acts
+        on a screen whose first goal is <em>keep watching traffic</em>, and at 212.8px they force
+        A onto two lines across the whole 800–942px band of allowed window widths — so the row the
+        Frame refused to spend on a toolbar was being spent anyway, just unpredictably, at whatever
+        width the user happened to drag to. <code>progressive-disclosure</code> is the rule that
+        settles it: the default view is the scan level and depth is one explicit, invited act away.
+        The honest debit is on the other side of the ledger — export is two acts now, and the Frame
+        says so where it used to promise one. Loops back to Layout: <strong>yes</strong> — A′, the
+        zone list, the overflow line and the sketch all change, and W6 owes
+        <code>minWidth: 850</code>.</li>
       </ul>
     </details>
 
     <h2 id="receipt">Receipt</h2>
     <pre data-item="receipt" data-c="receipt">rulebook: a7f9ae3becf27694bfc1ffb9f0b43f87c9abb7e2
 soft:
-  visual-weight-follows-goals: satisfied — C owns the weight; A′ is bare glyphs at rest, no fill; Tune T4 spends 12px of cell 1 on the reserved mark rather than a column
-  grouping-by-relatedness: satisfied — one hairline in A′, between the two additive doors and the destructive one
-  ordering-by-priority: satisfied — out, then in, then empty; the two safe doors precede the one that destroys
-  progressive-disclosure: satisfied — the ask and the paste are absent until asked for; the row's mark is the scan level
-  data-ink-first: satisfied — the mark costs nothing when absent; a seventh column and a tinted row both rejected on this test
-  generous-targets: inherited — IconButton's 28px square with padding beyond the glyph is the component's guarantee
-  motion-informs: satisfied — nothing animates; the progress line is a state that ends, not a transition
+  visual-weight-follows-goals: satisfied — C owns the weight, and the rarest acts now take the least chrome on the screen rather than the most — one 28px trigger, bare and muted (T8). T3 sizes cell 1 by the timestamp import actually produces rather than by the mark, and spends no column on either; T6 stops the least-important text in A from also being its largest
+  grouping-by-relatedness: satisfied — proximity groups A (20px seams, 12px inside G2, 8px inside A′ — T5), and the one separator the design ships is M's hairline before clear, on canvas at 1.33:1 where it can be seen. Affordance is grouped too, so a bordered box with a caret narrows the list, bare square acts. The header's own hairline was struck for measuring 1.11:1 and informing nobody (T1)
+  ordering-by-priority: satisfied — in A the slot precedes the trigger, so the scope is read before the acts; in M the order runs out, then in, then empty, so the two safe acts precede the one that destroys and the irreversible one sits last, farthest from where the pointer entered
+  progressive-disclosure: satisfied — this is the rule T8 turns on. At rest A carries the query and one trigger; the three acts, the ask and the paste are all one invited act away, and the row's mark is the scan level. Nothing rare is permanently on screen
+  data-ink-first: satisfied — the mark costs nothing when absent; a seventh column and a tinted row both rejected on this test; A's grouping is spent gaps rather than added rules; and the one hairline the design keeps was moved to the surface where it informs instead of being kept where it did not. T1 was struck on rendered pixels, not on intent
+  generous-targets: inherited — IconButton's 28px square, Button's 24px min-height and M's full-width rows at the same 24px floor are the components' guarantees; this design places no hit area of its own
+  motion-informs: satisfied — nothing animates, and nothing moves. The in-flight line swaps inside a fixed-width slot rather than displacing the row, and M overlays C rather than reserving space in A
   empty-states-orient: satisfied — a cleared list says "capture cleared" and, in its siblings' imperative voice, how to bring rows back; the two existing absences keep their own wordings
-  familiar-idioms: satisfied — out/in/empty glyphs and a network-table row are the devtools genre; no novelty to justify
+  familiar-idioms: satisfied — an overflow menu for a toolbar's least-used actions is the genre's own answer, and the network-table row grammar is the genre. The departure — no second toolbar row, where devtools has one — is driven in Layout by the goal ranking and by the measured wrap band, not by cost
   display-equals-payload: satisfied — the pasted command is shown verbatim in mono and never reformatted; the refusal is the server's sentence
-  labels-add-context: satisfied — the title "clear 214 flows?" states the scope the header does not, and the Notice adds the consequence the count cannot
-  calm-microcopy: satisfied — lowercase, terse, no exclamation — "exporting…", "importing…", "clear 214 flows?", "capture cleared"
-  one-term-per-concept: inherited — export now has its own Lexicon row (write the capture out as a HAR file); the run uses it and proposes no term
-  confirm-at-point: satisfied — the progress line sits in A′ beside the control; the refusal sits under the textarea it is about. No toast
+  labels-add-context: satisfied — M's items name only what their context does not — "export as har…" adds the format, "import…" and "clear…" add nothing the menu already says, and each ellipsis says a further step follows. The ask's title "clear 214 flows?" states the scope, and the Notice adds the consequence the count cannot
+  calm-microcopy: satisfied — lowercase, terse, no exclamation — "export as har…", "import…", "clear…", "exporting…", "importing…", "clear 214 flows?", "capture cleared"
+  one-term-per-concept: inherited — export has its own Lexicon row (write the capture out as a HAR file); M's item is "export as har…" and the run proposes no term. The never-list (copy · save · download) is untouched, and no glyph now stands in for a word that the Lexicon governs
+  confirm-at-point: satisfied — the in-flight line sits in A′'s slot, immediately beside the control it is about; the refusal sits under the textarea it is about. No toast
   absence-names-itself: satisfied — cancelled save, refused command, empty-by-clear, empty-by-filter and never-captured are five wordings; clearing gets its own because telling someone to send traffic they just sent is the failure that message exists to prevent
-  focus-returns-to-origin: satisfied-via-proposal — the proposed Dialog owns it, implemented already in ModalShell
-  choose-before-act: satisfied — A′ sits after the filters that scope it; in F the file picker precedes import</pre>
+  focus-returns-to-origin: satisfied-via-proposal — both proposed components own it — Dialog, implemented already in ModalShell, and Menu, implemented already in Select's popup. Every exit from M and E returns focus to the trigger that opened it
+  choose-before-act: satisfied — the count opens A′ and the trigger follows it (run 10's Tune T2, held), and the slot stays on screen while M is open because M opens below it, so the scope is legible at the moment the act is chosen; A′ sits after the filters that scope it; in F the file picker precedes import</pre>
     <p><strong>Three verdict words moved from run 10, and these are all three.</strong>
     <code>one-term-per-concept</code> is <em>inherited</em> rather than
     <em>satisfied-via-proposal</em> because run 10's proposal already landed in the rulebook — the
@@ -946,20 +1266,21 @@ soft:
     this screen does not import. <code>generous-targets</code> is <em>inherited</em> where
     <span class="was">run 10 wrote <em>satisfied</em></span>: run 10 earned the word partly with
     the ask's own full-width <code>Button</code> hit areas, which it was placing itself. This run
-    places no hit area of its own — every target here is an <code>IconButton</code> or a
-    <code>Dialog</code> button, and the floor is the component's guarantee, not this design's
-    achievement. <em>Inherited</em> is the weaker and the truer word.</p>
+    places no hit area of its own — every target here is an <code>IconButton</code>, a
+    <code>Button</code> or a <code>Dialog</code> button, and the floor is the component's
+    guarantee, not this design's achievement. <em>Inherited</em> is the weaker and the truer
+    word.</p>
 
     <h2 id="capabilities">Capabilities</h2>
     <table data-item="capabilities" data-c="capabilities">
       <thead><tr><th>Capability</th><th>Verdict</th><th>Where / why</th></tr></thead>
       <tbody>
-        <tr><td><code>GET /flows/export</code>, filtered</td><td>used</td><td>A′ · ⇧, scoped by the live filter</td></tr>
+        <tr><td><code>GET /flows/export</code>, filtered</td><td>used</td><td>M · <em>export as har…</em>, scoped by the live filter</td></tr>
         <tr><td>the <code>Content-Disposition</code> filename</td><td>used</td><td>passed to <code>saveBody</code> as the default name, so the app does not invent one</td></tr>
-        <tr><td><code>POST /flows/import</code> (HAR)</td><td>used</td><td>F · "choose a file…"</td></tr>
+        <tr><td><code>POST /flows/import</code> (HAR)</td><td>used</td><td>F · "choose a file…", reached from M · <em>import…</em></td></tr>
         <tr><td><code>?format=curl</code></td><td>used</td><td>F · the textarea</td></tr>
         <tr><td>the plain-text <code>400</code> reason</td><td>used</td><td>F · rendered verbatim in a warn <code>Notice</code></td></tr>
-        <tr><td><code>DELETE /flows</code>, filtered</td><td>used</td><td>A′ · ⌫, via E</td></tr>
+        <tr><td><code>DELETE /flows</code>, filtered</td><td>used</td><td>M · <em>clear…</em>, via E</td></tr>
         <tr><td><code>DELETE /flows/{id}</code></td><td>deliberately unused</td><td>a per-flow delete is a non-goal here — no Frame goal asks for it, and the row has no width for it</td></tr>
         <tr><td><code>source</code> on the flow</td><td>used</td><td>C · the mark</td></tr>
         <tr><td><code>source</code> in <code>FlowFilter</code></td><td>deliberately unused</td><td>the text channel the mark needs is its label, not a filter control; adding a fifth filter is E-REDESIGN's row to re-open, not this run's. <span class="was">Run 10 marked this capability <em>used</em>, arguing the filter is what stops the mark being decoration. The redesigned header is why the answer moved: run 10 sketched the filters itself and could spend a fourth slot freely, where this run mounts the shipped four-control bar and a fifth control is a change to a surface E-REDESIGN owns. The decoration worry is answered instead by the mark carrying its own accessible name.</span></td></tr>
@@ -989,6 +1310,25 @@ soft:
               consume it but must not mint it</td>
           </tr>
           <tr>
+            <td>T2 widget</td>
+            <td><strong>Menu</strong> — an action menu: a popup anchored to a trigger, worded rows,
+              an optional hairline before a destructive last item, no selected state and no
+              scrim.</td>
+            <td>The collection has no action menu at 28 entries, and <code>Select</code> — the only
+              thing with a popup — excludes itself twice in its own
+              <span class="avoid">@avoid</span>: "two to four options" (three acts is below its
+              cardinality floor) and "at most one option is selected, and nothing returns to
+              unselected once chosen" (a menu of acts holds no selection at all).
+              <code>SegmentedControl</code> shows every choice at once, which is the chrome T8
+              exists to stop spending. <strong>The overlap is the proposal's real content:</strong>
+              the positioned surface, ↑↓ without acting, Enter, Esc-unchanged, Tab-out and
+              focus-return are all already implemented inside <code>Select</code> — so the owner
+              should decide whether Menu duplicates that shell or the shell is extracted and both
+              consume it. This run has one sighting of a menu and is not entitled to pick.</td>
+            <td>the collection (a component design file, then a build WU) — W6 may build it local,
+              the way this run's ask is local, but must not mint a registry entry</td>
+          </tr>
+          <tr>
             <td>soft rule</td>
             <td><strong>A destructive ask focuses the answer that does nothing.</strong> A
               rulebook row — proposed slug <code>safe-answer-takes-focus</code>: when a
@@ -1006,38 +1346,25 @@ soft:
           </tr>
           <tr>
             <td>vocabulary</td>
-            <td>Three <code>IconButton</code> glyph entries — out, in, empty — added to the
-              <code>GlyphName</code> registry beside <code>close</code> and <code>save</code>.</td>
+            <td>One <code>IconButton</code> glyph entry — the overflow face <code>⋮</code>,
+              proposed slug <code>more</code> — added to the <code>GlyphName</code> registry beside
+              <code>close</code> and <code>save</code>.</td>
             <td><code>children</code> accepts any face, so the run is not blocked; but a face
-              chosen at the call site is exactly the drift a closed vocabulary prevents, and three
-              call sites arrive at once. The <span class="avoid">@avoid</span> line "actions with
-              no fitting glyph" is currently true of all three.</td>
+              chosen at the call site is exactly the drift a closed vocabulary prevents, and a
+              second screen wanting an overflow menu will otherwise pick its own.
+              <span class="was">Two earlier drafts proposed faces for the acts themselves — three
+              entries (out, in, empty), then one (the import arrow). Both were the vocabulary being
+              asked to pay for a layout decision: once the acts are words inside M, none of those
+              entries is needed, and the only face the design still spends is the one that opens
+              the menu.</span> <code>⋮</code> rather than <code>⋯</code> because the app already
+              spends the horizontal ellipsis on <em>in progress</em>.</td>
             <td><code>IconButton</code>'s design file / TSDoc</td>
-          </tr>
-          <tr>
-            <td>process</td>
-            <td><strong>A re-run closes against the run it supersedes, not against itself.</strong>
-              When a design run has a predecessor, closing it requires one pass that walks the
-              <em>old</em> run stage by stage and classifies every answer in it as held, changed, or
-              dropped — the superseded run's answers being the checklist, and an unclassified answer
-              being the defect. Proposed as a step in the close sequence, before the review list is
-              filled.</td>
-            <td>The flow's close sequence has no step that reads the predecessor. This run carried
-              four silent reversals through six review rounds — including a receipt paragraph
-              claiming completeness it did not have — and every one of them survived because the
-              rounds read <em>this</em> document and asked whether its statements were true. They
-              were. A dropped answer leaves no false statement behind to find; it leaves nothing,
-              and nothing is not reviewable from the near side. The one round that walked run 10
-              found all four at once, which is the evidence that the direction of the walk is the
-              whole mechanism.</td>
-            <td>the design flow (<code>docs/design-flow.html</code>), confirmed at a distillation —
-              a run proposes a step, it does not amend the flow</td>
           </tr>
         </tbody>
       </table>
-      <p>None of the three blocks W6. The build can ship with the glyphs as
-      <code>children</code> and the frame built local; both would then be paid down when the
-      owners act. What the run must not do is <em>invent</em> either during the build, which is
+      <p>None of the four blocks W6. The build can ship with the trigger face as
+      <code>children</code> and both the menu and the frame built local; all three would then be
+      paid down when the owners act. What the run must not do is <em>invent</em> either during the build, which is
       what recording them here prevents.</p>
     </div>
 
@@ -1046,18 +1373,20 @@ soft:
       <thead><tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr></thead>
       <tbody>
         <tr>
-          <td>The header's wrap behaviour is untested at this width. A′ adds three 28px controls
-            and a progress line to a row already holding a dot, a title, a field, two dropdowns, a
-            field and a count — <em>more</em> than run 10 measured, because two of those members
-            are now popup-bearing <code>Select</code>s rather than plain boxes.</td>
-          <td>Layout</td>
-          <td>W6, at build, in the real window — and the epic's WebDriver row, which drives the
-            built app at a real size.</td>
-          <td>Put A′ on <code>margin-left:auto</code> so it holds the trailing edge and wraps last,
-            and stated that rule in the overflow line. The design does not depend on the row never
-            wrapping: the header is <code>flex-wrap</code> and grows to a second line rather than
-            clipping, so wrapping is a degradation, not a break. What cannot be settled on paper
-            is the width at which it happens.</td>
+          <td><code>minWidth: 850</code> in <code>ui/src-tauri/tauri.conf.json</code>, up from
+            800. A′ is 116px and A holds one line down to <strong>846px</strong>, so at the
+            configured minimum the header is still two lines — by 46px. This run cannot make that
+            change itself: the window config is not a design artifact.</td>
+          <td>Layout · Tune T8</td>
+          <td>W6, in the same commit that builds A′ — and the epic's WebDriver row, which drives
+            the built app at a real size and is the only thing that can confirm it.</td>
+          <td>Measured the band instead of leaving it as an unknown: rendered the three candidate
+            headers and scanned widths in 2px steps, giving 782px shipped, 942px with three inline
+            controls, 846px with the trigger. That measurement is what chose T8, and it is also
+            what says 850 rather than a guessed round number. Note the shipped header already had
+            only 18px of slack at 800, so this is a pre-existing tightness the design surfaced
+            rather than one it caused — and a six-column table at 800px leaves PATH 138px, so 800
+            was never a width this screen worked at.</td>
         </tr>
       </tbody>
     </table>
@@ -1094,6 +1423,23 @@ soft:
           <td><strong>Still open — the row above.</strong> Carried rather than dropped: the header
             is denser than it was when run 10 filed it.</td>
         </tr>
+        <tr>
+          <td>A cross-<em>year</em> timestamp still overflows cell 1.
+            <code>TimestampText</code> appends the year when the flow is not from the current one
+            (<code>DD/MM/YYYY · HH:mm:ss</code>), which measures 163.47px — 179.5px with the mark,
+            against cell 1's 160px. Importing a HAR kept from last year is an ordinary thing to
+            do.</td>
+          <td>Elements · Tune</td>
+          <td>W6 at build, or the flow-detail run — the two exits are a wider cell 1 (paid for out
+            of PATH) or a full timestamp somewhere in the detail pane.</td>
+          <td>Sized cell 1 for the cross-day form, which import makes common, and stopped there
+            rather than widening for a case that costs another 24px of every row. Recording the
+            limit instead of hiding it: <code>wrap-not-truncate</code>'s
+            <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> escape is
+            <em>not</em> available here, because the escape requires the full value to stay
+            reachable by a named route and the detail pane shows no timestamp at all. So this is a
+            defect with a declared owner, not a violation this run may sign off.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -1105,10 +1451,15 @@ soft:
           <td>The WU plan's Q6: say which of run 10's answers this run keeps and which it
             overturns, rather than presenting a re-run as a first run.</td>
           <td>Added the <span class="was">italic</span> delta notes, which are now the index of
-            every place the two runs differ: eight answers moved, and three were re-derived and
-            held with the holding said out loud (Layout's placement, the ask's focused button, the
-            paste's initial focus). The Lexicon question closed on its own. The count was wrong in
-            six successive drafts of this row — see the four rows below.</td>
+            every place the two runs differ. Three categories, and the counts are checked against
+            the markers rather than remembered: <strong>eight moved</strong>; <strong>three were
+            re-derived and held</strong> with the holding said out loud (Layout's placement at
+            <a href="#layout">Layout</a>, the paste's initial focus in
+            <a href="#interaction">Interaction</a>, and cell 1's arithmetic, now <a href="#tune">T3</a>); and
+            <strong>one is an addition</strong> — the cancelled save, a state run 10 never named,
+            which is neither. The Lexicon question closed on its own. This row has itself been
+            wrong twice, most recently by naming the ask's focused button as held when nothing in
+            the document says so, while omitting the cell-1 call, which does.</td>
           <td>the W9 plan's <code>Q6</code> — a re-run's stated duty</td>
         </tr>
         <tr>
@@ -1139,7 +1490,10 @@ soft:
             un-tuned 110px.</td>
           <td>Tune gained T4 back, with this run's own arithmetic rather than run 10's: the mark
             here is 12px, not 16px, so the width is <strong>122px</strong>. The mockup constant and
-            the <code>visual-weight-follows-goals</code> line follow it. W6 builds 122px.</td>
+            the <code>visual-weight-follows-goals</code> line follow it. W6 builds 122px.
+            <span class="was">Superseded this round: the mark was never the binding variable. See
+            <a href="#tune">T3</a> — the timestamp's own cross-day form needs 120.88px on its own,
+            so 122px overflows, and cell 1 is now <code>field-lg</code>.</span></td>
           <td><code>visual-weight-follows-goals</code> · the mockup drew a number the prose
             contradicted</td>
         </tr>
@@ -1192,6 +1546,212 @@ soft:
             comes from (<code>saveBody</code> returns null). E-REDESIGN.W10's review caught this
             exact class — a cancelled save reporting success — in shipped code.</td>
           <td><code>absence-names-itself</code></td>
+        </tr>
+        <tr>
+          <td>Round 11, verifying round 10's own repairs: three of them were themselves defective.
+            The Tune T4 repair explained its 122px by asserting run 10's mark "was 16px" — an
+            inference from run 10's arithmetic, stated as a measurement, and false: run 10's
+            <code>.a-mark</code> rule is byte-identical to this run's at 12px.</td>
+          <td>Tune's why-block now reports what is actually there — run 10's receipt says 16px and
+            its stylesheet says 12px, so 126px rests on a figure run 10's own CSS contradicts, and
+            this run follows the stylesheet. 122px is unchanged; only the reason is. The retracted
+            claim is named rather than quietly removed.
+            <span class="was">Superseded this round: 122px is no longer the number either. The
+            whole 110-vs-122-vs-126 argument was about the mark, and the column is bound by the
+            timestamp — see <a href="#tune">T3</a>.</span></td>
+          <td><code>display-equals-payload</code>, applied to the run's own prose — a stated
+            measurement is a claim about a file, not a rounding of an argument</td>
+        </tr>
+        <tr>
+          <td>The Q6 accounting row named "the ask's focused button" among the answers held out
+            loud, when nothing in the document says so, and omitted the cell-1 call, which does. The third
+            self-referential completeness claim in this run to overstate its coverage — and the
+            edit that introduced it was the one fixing the second.</td>
+          <td>Review: the row now states three categories with counts checked against the markers
+            — eight moved, three held, one addition — and says it has been wrong twice. The addition
+            (the cancelled save) had no category before; a two-category tally could not hold it.</td>
+          <td><code>D1</code> — a summary that asserts its own completeness</td>
+        </tr>
+        <tr>
+          <td>Run 10's Tune T2 — the count precedes the acts it scopes — is held unchanged in this
+            run's mockup but cited nowhere, and this run's <code>choose-before-act</code> receipt
+            line had quietly substituted two different facts for run 10's.</td>
+          <td>The receipt line names run 10's T2 first and marks it held. "Held silently" is the
+            category this run's own audit defines as non-ideal; it applied to the run itself.</td>
+          <td><code>choose-before-act</code> · the W9 plan's <code>Q6</code></td>
+        </tr>
+        <tr>
+          <td>The process proposal round 10 added — that a re-run closes against the run it
+            supersedes — was filed in the Proposals list, whose documented scope
+            (<a href="../design-flow.html#close">design-flow</a>) is entries the design needed and
+            the <em>vocabulary</em> lacked. A change to the flow's own procedure is not a
+            vocabulary gap, and no closing list is the home for feedback on the flow.</td>
+          <td>Removed from Proposals and performed instead:
+            <a href="../design-flow.html#close">the close sequence</a> gains a new step ① — walk
+            the run this one supersedes and classify every answer in it — with the later steps
+            renumbered and two stale cross-references to them repaired.
+            <code>documentation-system.html</code>'s checklist routes a changed process to its T1
+            doc in the same session, and a T3 run is archived and never re-read, so leaving it as
+            a proposal would have lost it.</td>
+          <td><code>documentation-system.html</code>'s distillation checklist · the Proposals
+            list's documented scope</td>
+        </tr>
+        <tr>
+          <td>"It looks insanely ugly … think thoroughly of UI UX perspective &amp; the overall
+            looks &amp; feel. It needs to be consistent &amp; suitable to the current UI. Don't
+            just throw controls there."</td>
+          <td><a href="#layout">Layout</a> and <a href="#tune">Tune</a>: A's eight members were one
+            flat 12px queue, so identity, query and acts read as a single undifferentiated row —
+            and the row's only explicit boundary marker sat at the <em>narrowest</em> semantic gap
+            in it (import against clear) while the widest (query against acts) went unmarked.
+            Layout now states three groups with 20px seams and T5 records the call. Every width is
+            one the app already ships: 12px is the header's own <code>gap-3</code>, 8px is
+            <code>FlowDetail</code>'s cluster gap, and the 20px seam is what <code>App.tsx</code>
+            already spends after the title — so the repair imports no new magnitude.</td>
+          <td><code>grouping-by-relatedness</code> · <code>visual-weight-follows-goals</code></td>
+        </tr>
+        <tr>
+          <td>The same review, on the faces: three controls dropped into the header without asking
+            what the app's own icon vocabulary already says.</td>
+          <td><a href="#elements">Elements</a>, the <a href="#mockup">Draft mockup</a> and Tune T7:
+            ⇧ ⇩ ⌫ are all three <em>keyboard-key</em> symbols on the platform this app ships to —
+            ⇧ is Shift, ⌫ is Backspace — so the cluster read as a shortcut hint, and ⇧ pointed the
+            opposite way from the app's own <code>save</code> face for the same act. Export now
+            mounts <code>glyph="save"</code>, which <code>BodyViewer.tsx:108</code> already ships
+            for writing a file through <code>saveBody</code>; import proposes the one face the
+            registry genuinely lacks; clear moves to a bare <code>Button</code> because it has no
+            face at all. <a href="#proposals">Proposals</a> falls from three glyph entries to
+            one.
+            <span class="was">Superseded this round: with the acts collapsed into M they are words,
+            so none of these three faces is spent at all. The one proposed entry is now
+            <code>⋮</code>, the trigger — see <a href="#tune">T7</a> and T8. The keyboard-symbol
+            finding stands; the replacement faces it argued for do not.</span></td>
+          <td><code>familiar-idioms</code> · <code>IconButton</code>'s <span class="avoid">@avoid</span>
+            "actions with no fitting glyph"</td>
+        </tr>
+        <tr>
+          <td>Found while reworking A′, not reported: what does the header do at the moment an
+            export starts?</td>
+          <td><a href="#layout">Layout</a> and <a href="#elements">Elements</a>: the in-flight line
+            was a <em>member</em> of the cluster, so its arrival re-allocated the header's slack
+            and resized the filter <code>Field</code> — a control the user may be mid-keystroke in.
+            It now shares one fixed <code>field-sm</code> slot with the count, which is the same
+            width in both states, so the fork's two halves cost no movement. The
+            <a href="#mockup">Draft mockup</a> gains a fourth state toggle rather than mounting the
+            in-flight half permanently, so what a reader judges at rest is the state the screen is
+            actually in.</td>
+          <td><code>Button</code>'s fork <code>D4</code> · <code>motion-informs</code></td>
+        </tr>
+        <tr>
+          <td>Re-reading the <a href="#frame">Frame</a> while deciding whether the genre's second
+            toolbar row was the right answer after all: on what was its refusal resting?</td>
+          <td><a href="#frame">Frame</a> and Layout: on "costing four flows", which was asserted
+            and is wrong — a chrome row of 28px controls at <code>py-chrome-y</code> is 37px
+            against a 30px row, so it costs about <em>one</em>. The refusal itself survives, but it
+            now rests on the goal ranking (three of the rarest acts on the screen must not claim
+            the most new chrome) rather than on a cost figure that does not hold. The genre
+            departure is named and driven where <code>familiar-idioms</code> requires it.</td>
+          <td><code>familiar-idioms</code> — a departure from the genre owes a driver</td>
+        </tr>
+        <tr>
+          <td>"adding a whole new line for them is not appropriate imo, can we have all of them in
+            the header? having an extra menu for these least using actions"</td>
+          <td><a href="#frame">Frame</a>, <a href="#layout">Layout</a>,
+            <a href="#elements">Elements</a>, the <a href="#mockup">Draft mockup</a> and
+            <a href="#tune">Tune</a> T8 — the three acts collapse behind one <code>⋮</code>
+            trigger, and A′ falls from 212.8px to 116px. <strong>The objection was empirically
+            right and the run had no basis to argue.</strong> The header is
+            <code>flex-wrap</code>, so the real question was the width below which A becomes two
+            lines, and nobody had measured it. Rendered and scanned in 2px steps: shipped 782px,
+            three inline controls <strong>942px</strong>, one trigger 846px. Against a configured
+            <code>minWidth</code> of 800 the inline cluster guarantees a second line across a
+            142px band of reachable window widths — so the second row the Frame refused to spend
+            was being spent anyway, unpredictably, at whatever width the user dragged to.</td>
+          <td><code>progressive-disclosure</code> · <code>visual-weight-follows-goals</code></td>
+        </tr>
+        <tr>
+          <td>What the collapse costs, asked before it was accepted rather than after.</td>
+          <td><a href="#frame">Frame</a>: goal 2's consequence changed from <em>the out-door is one
+            act from the list</em> to <em>one named act, one level in</em>. Export is two acts now
+            and the Frame says so in the row that used to promise one — recorded rather than
+            absorbed, because it is a real regression against a stated goal. What buys it is the
+            ranking those goals sit in, which the same Frame states: <em>keep watching traffic</em>
+            is first, and three permanent controls hand the rarest group the most chrome. Also
+            recorded: the run now proposes <em>two</em> components (Dialog, Menu), which is a lot
+            of proposed surface for one design, so <a href="#proposals">Proposals</a> says
+            explicitly that W6 may build both local and mint neither.</td>
+          <td>the Frame's goal ranking · <code>D1</code> — a receipt that contradicts itself</td>
+        </tr>
+        <tr>
+          <td>Whether the menu could reuse something rather than be proposed.</td>
+          <td><a href="#elements">Elements</a> gained the <code>Menu</code> row.
+            <code>Select</code> is the only component with a popup and it disqualifies itself twice
+            in its own <span class="avoid">@avoid</span> — "two to four options" (three acts is
+            below its cardinality floor) and "at most one option is selected, and nothing returns
+            to unselected once chosen" (a menu of acts holds no selection at all). Two independent
+            grounds, so the answer is not a judgement call. What the row does <em>not</em> do is
+            pretend the behaviour is new: every keyboard path and every popup token M needs is
+            already implemented inside <code>Select</code>, and the proposal names that overlap as
+            the choice its owner has to make.</td>
+          <td><code>Select</code>'s <span class="avoid">@avoid</span> · reuse-or-propose</td>
+        </tr>
+        <tr>
+          <td>Where the destructive boundary went, given T1 had just been struck for being
+            invisible.</td>
+          <td><a href="#tune">Tune</a> T1, reversed a second time. The boundary is now M's hairline
+            before <em>clear…</em>, and it works for the reason the header's did not — the popup
+            sits on <code>canvas</code> (1.33:1, the contrast every shipped hairline in the app
+            relies on) and the header sits on <code>canvas-soft</code> (1.11:1). Same rule, same
+            token, different ground. The 16px gap T1's first repair spent in the header is gone
+            with the acts it separated.</td>
+          <td><code>data-ink-first</code> · <code>grouping-by-relatedness</code></td>
+        </tr>
+        <tr>
+          <td>Rendering the reworked header in headless Chrome and <em>looking</em> at it, rather
+            than reasoning about it from the class names.</td>
+          <td><a href="#tune">Tune</a> T1 and the <a href="#mockup">Draft mockup</a>: the hairline
+            separating the additive doors from the destructive one is not visible.
+            <code>hairline</code> is <code>#3f3a36</code>; the header's <code>canvas-soft</code> is
+            <code>#383330</code>; the contrast is <strong>1.11:1</strong>. Every hairline the app
+            actually ships separates <code>canvas-soft</code> from <code>canvas</code> and runs the
+            full width of its pane — this one would have been the first drawn <em>inside</em> a
+            soft zone, and at 16px tall. Struck, and replaced by a 16px gap at twice the cluster's
+            own 8px.
+            <span class="was">Superseded this round: the boundary moved into M, where the same
+            token on <code>canvas</code> reaches 1.33:1 and the hairline does earn itself. The
+            16px gap went with the acts it separated.</span> No gate could have caught it: <code>verify-doc</code> reads structure,
+            <code>check-render</code> fails only an <em>empty</em> mount, and a separator that
+            renders in the right place in the wrong colour is green by both.</td>
+          <td><code>data-ink-first</code> — chrome that informs nobody is not chrome</td>
+        </tr>
+        <tr>
+          <td>Still looking at the render rather than the source: why is every row's timestamp
+            sitting outside its column and dragging the row out of alignment?</td>
+          <td><a href="#mockup">Draft mockup</a> and <a href="#tune">Tune</a> T3.
+            <strong>The fixture had rotted overnight.</strong> <code>TimestampText</code> renders
+            <code>14:22:03</code> when a flow is <em>today</em> and <code>06/09 · 14:22:03</code>
+            when it is not (<span class="use">@states</span> S1/S2), and the mockup hardcoded
+            <code>new Date(2026, 8, 6, …)</code> — the day it was written. On 2026-09-06 every row
+            rendered the narrow form and the assembly looked right; on 2026-09-07 every row flipped
+            to the wide form, overflowed a 122px column into METHOD, and the whole list lost its
+            alignment. The fixture is now computed from the day the doc is <em>read</em>, so it can
+            never rot again, and the imported rows are deliberately the day before — which is what
+            an imported HAR really carries. That change is what exposed T3: the column was never
+            bound by the mark.</td>
+          <td><code>display-equals-payload</code> · a mockup that renders differently on
+            different days is not a specification</td>
+        </tr>
+        <tr>
+          <td>Sweeping the prose for the same class of defect as the round-10 fabrication rather
+            than only for the design change.</td>
+          <td><a href="#elements">Elements</a> and <a href="#tune">Tune</a>: the import-mark row
+            read "plus the — a text channel on its own", a clause with a phrase lost in some
+            earlier edit, and it had been green through every round because no check reads prose.
+            Repaired and marked. Separately, the Tune calls are now numbered T1–T7: the receipt
+            cited "Tune T4" for a row lying third in an unnumbered table, so a reader had to
+            reconstruct the numbering to check the citation.</td>
+          <td><code>verify-doc</code> reads structure, never prose · the receipt's own
+            cross-references</td>
         </tr>
         <tr>
           <td>Run 10 asked which word the UI uses for the operation, given the rulebook reserved
