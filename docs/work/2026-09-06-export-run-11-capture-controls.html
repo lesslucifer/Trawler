@@ -284,17 +284,20 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
       seam against the row's 12px gap. The redesign reads that as the app's own convention and
       spends the same 20px at the second boundary, rather than minting a width of its own. Nothing
       the user already knows moves: A keeps its members and their order, and gains one slot and
-      three controls after them.</p>
+      one control after them.</p>
       <p><strong>One slot, two facts, no reflow.</strong> The slot holds the count at rest and the
       in-flight line while a transfer runs — "6 flows" becomes "exporting…" and comes back. Both
       are one muted line about the capture, both fit <code>field-sm</code>, and the slot's width is
       fixed, so neither its arrival nor its departure moves anything. Measured on the rendered
-      assembly rather than asserted: in both states the slot is <strong>80.0px</strong> and every
-      member of A′ holds the same x — the slot at 866.2, <code>↓</code> at 954.2, <code>↑</code> at
-      990.2, <code>clear</code> at 1034.2 — which also confirms the gaps as 8px, 8px and 16px.
+      assembly rather than asserted: in both states the slot is <strong>80.0px</strong>, the
+      trigger <strong>28.0px</strong>, the single gap between them <strong>8.0px</strong>, and both
+      members hold the same x — so A′ is <strong>116.0px</strong> whichever fact the slot shows.
       <span class="was">The earlier draft inserted the in-flight line into the cluster instead,
       which re-allocated the header's slack and resized the filter field — a control the user may
-      be typing in at that exact moment.</span></p>
+      be typing in at that exact moment. The draft before <a href="#tune">T8</a> read A′ as a slot
+      plus three separate controls and reported their four x positions here, including a 16px gap
+      before <em>clear</em>; T8 left one trigger, and that gap went with the acts it
+      separated.</span></p>
       <p><strong>Why the second toolbar row is refused, measured rather than asserted.</strong>
       The devtools genre does put the transfers in a toolbar above the filter bar, so
       <code>familiar-idioms</code> owes a driver for departing from it. The driver is not cost: a
@@ -1254,7 +1257,7 @@ soft:
   calm-microcopy: satisfied — lowercase, terse, no exclamation — "export as har…", "import…", "clear…", "exporting…", "importing…", "clear 214 flows?", "capture cleared"
   one-term-per-concept: inherited — export has its own Lexicon row (write the capture out as a HAR file); M's item is "export as har…" and the run proposes no term. The never-list (copy · save · download) is untouched, and no glyph now stands in for a word that the Lexicon governs
   confirm-at-point: satisfied — the in-flight line sits in A′'s slot, immediately beside the control it is about; the refusal sits under the textarea it is about. No toast
-  absence-names-itself: satisfied — cancelled save, refused command, empty-by-clear, empty-by-filter and never-captured are five wordings; clearing gets its own because telling someone to send traffic they just sent is the failure that message exists to prevent
+  absence-names-itself: satisfied — refused command, empty-by-clear, empty-by-filter and never-captured are four wordings, and the cancelled save is the one absence deliberately given none — the in-flight line clears and nothing claims a file, because a sentence about a file the user chose not to write is the noise this rule's own goal refuses; clearing gets its own wording because telling someone to send traffic they just sent is the failure that message exists to prevent
   focus-returns-to-origin: satisfied-via-proposal — both proposed components own it — Dialog, implemented already in ModalShell, and Menu, implemented already in Select's popup. Every exit from M and E returns focus to the trigger that opened it
   choose-before-act: satisfied — the count opens A′ and the trigger follows it (run 10's Tune T2, held), and the slot stays on screen while M is open because M opens below it, so the scope is legible at the moment the act is chosen; A′ sits after the filters that scope it; in F the file picker precedes import</pre>
     <p><strong>Three verdict words moved from run 10, and these are all three.</strong>
@@ -1388,6 +1391,23 @@ soft:
             rather than one it caused — and a six-column table at 800px leaves PATH 138px, so 800
             was never a width this screen worked at.</td>
         </tr>
+        <tr>
+          <td>A cross-<em>year</em> timestamp still overflows cell 1.
+            <code>TimestampText</code> appends the year when the flow is not from the current one
+            (<code>DD/MM/YYYY · HH:mm:ss</code>), which measures 163.47px — 179.5px with the mark,
+            against cell 1's 160px. Importing a HAR kept from last year is an ordinary thing to
+            do.</td>
+          <td>Elements · Tune</td>
+          <td>W6 at build, or the flow-detail run — the two exits are a wider cell 1 (paid for out
+            of PATH) or a full timestamp somewhere in the detail pane.</td>
+          <td>Sized cell 1 for the cross-day form, which import makes common, and stopped there
+            rather than widening for a case that costs another 24px of every row. Recording the
+            limit instead of hiding it: <code>wrap-not-truncate</code>'s
+            <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> escape is
+            <em>not</em> available here, because the escape requires the full value to stay
+            reachable by a named route and the detail pane shows no timestamp at all. So this is a
+            defect with a declared owner, not a violation this run may sign off.</td>
+        </tr>
       </tbody>
     </table>
     <p><strong>Run 10's five entries, and where each one went.</strong> The superseded run carried
@@ -1415,30 +1435,16 @@ soft:
         </tr>
         <tr>
           <td><code>IconButton</code>'s glyph registry has no export, import or clear glyph.</td>
-          <td><strong>Moved to <a href="#proposals">Proposals</a>.</strong> Nothing upstream is
-            missing; the vocabulary is three entries short, and that is a proposal.</td>
+          <td><strong>Moved to <a href="#proposals">Proposals</a>, and then reduced to one entry
+            by <a href="#tune">T8</a></strong> — the three acts are words inside M, so the only
+            face the run proposes is the trigger's <code>⋮</code>. Nothing upstream is missing; a
+            short vocabulary is a proposal, not a block.</td>
         </tr>
         <tr>
           <td>The header's wrap behaviour is untested at this width.</td>
-          <td><strong>Still open — the row above.</strong> Carried rather than dropped: the header
-            is denser than it was when run 10 filed it.</td>
-        </tr>
-        <tr>
-          <td>A cross-<em>year</em> timestamp still overflows cell 1.
-            <code>TimestampText</code> appends the year when the flow is not from the current one
-            (<code>DD/MM/YYYY · HH:mm:ss</code>), which measures 163.47px — 179.5px with the mark,
-            against cell 1's 160px. Importing a HAR kept from last year is an ordinary thing to
-            do.</td>
-          <td>Elements · Tune</td>
-          <td>W6 at build, or the flow-detail run — the two exits are a wider cell 1 (paid for out
-            of PATH) or a full timestamp somewhere in the detail pane.</td>
-          <td>Sized cell 1 for the cross-day form, which import makes common, and stopped there
-            rather than widening for a case that costs another 24px of every row. Recording the
-            limit instead of hiding it: <code>wrap-not-truncate</code>'s
-            <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> escape is
-            <em>not</em> available here, because the escape requires the full value to stay
-            reachable by a named route and the detail pane shows no timestamp at all. So this is a
-            defect with a declared owner, not a violation this run may sign off.</td>
+          <td><strong>Still open</strong>, as <a href="#blocked-on">Blocked-on</a>'s
+            <code>minWidth</code> entry — and now measured rather than untested. Carried rather
+            than dropped: the header is denser than it was when run 10 filed it.</td>
         </tr>
       </tbody>
     </table>
@@ -1488,7 +1494,8 @@ soft:
             timestamps out of line. This run kept the conclusion in the mockup prose ("the absent
             mark holds its own width") but dropped the tune call, and the mockup drew the
             un-tuned 110px.</td>
-          <td>Tune gained T4 back, with this run's own arithmetic rather than run 10's: the mark
+          <td>Tune gained the call back — filed <code>T4</code> that round, <a href="#tune">T3</a>
+            in the table this run ships — with this run's own arithmetic rather than run 10's: the mark
             here is 12px, not 16px, so the width is <strong>122px</strong>. The mockup constant and
             the <code>visual-weight-follows-goals</code> line follow it. W6 builds 122px.
             <span class="was">Superseded this round: the mark was never the binding variable. See
@@ -1551,7 +1558,10 @@ soft:
           <td>Round 11, verifying round 10's own repairs: three of them were themselves defective.
             The Tune T4 repair explained its 122px by asserting run 10's mark "was 16px" — an
             inference from run 10's arithmetic, stated as a measurement, and false: run 10's
-            <code>.a-mark</code> rule is byte-identical to this run's at 12px.</td>
+            <code>.a-mark</code> rule sets <code>width:12px</code>.
+            <span class="was">The claim as first repaired read "byte-identical to this run's at
+            12px", which this round's own <a href="#tune">T3</a> falsified — the reserve here is
+            16px now. Run 10's 12px is what the finding rests on, and it is unchanged.</span></td>
           <td>Tune's why-block now reports what is actually there — run 10's receipt says 16px and
             its stylesheet says 12px, so 126px rests on a figure run 10's own CSS contradicts, and
             this run follows the stylesheet. 122px is unchanged; only the reason is. The retracted
@@ -1589,7 +1599,10 @@ soft:
           <td>Removed from Proposals and performed instead:
             <a href="../design-flow.html#close">the close sequence</a> gains a new step ① — walk
             the run this one supersedes and classify every answer in it — with the later steps
-            renumbered and two stale cross-references to them repaired.
+            renumbered and two stale cross-references to them repaired. The T1 doc states the
+            mechanism only; the six reversals that produced the step are
+            <a href="../decisions/dec-38-the-predecessor-is-the-checklist.html">DEC-38</a>, because
+            incident history at shape level is a decision record, not a process spec.
             <code>documentation-system.html</code>'s checklist routes a changed process to its T1
             doc in the same session, and a T3 run is archived and never re-read, so leaving it as
             a proposal would have lost it.</td>
@@ -1747,7 +1760,8 @@ soft:
           <td><a href="#elements">Elements</a> and <a href="#tune">Tune</a>: the import-mark row
             read "plus the — a text channel on its own", a clause with a phrase lost in some
             earlier edit, and it had been green through every round because no check reads prose.
-            Repaired and marked. Separately, the Tune calls are now numbered T1–T7: the receipt
+            Repaired and marked. Separately, the Tune calls are now numbered (T1–T8 by this
+            round's end): the receipt
             cited "Tune T4" for a row lying third in an unnumbered table, so a reader had to
             reconstruct the numbering to check the citation.</td>
           <td><code>verify-doc</code> reads structure, never prose · the receipt's own
@@ -1759,6 +1773,45 @@ soft:
           <td>Nothing — the question is closed. Its answer was written back to the rulebook's
             Lexicon at W5's distillation, so this run inherits the row instead of re-arguing it.</td>
           <td>the Lexicon's <code>export</code> row · <code>one-term-per-concept</code></td>
+        </tr>
+        <tr>
+          <td>The round-13 code review, on the same defect class for the fourth time: a value
+            moved and a sentence quoting the old value survived. Four sites, one of them written
+            and contradicted inside the same commit.</td>
+          <td><a href="#layout">Layout</a>'s "one slot, two facts" paragraph was still reporting
+            the <em>rejected</em> option's four x positions and its three gaps, so the one
+            paragraph that claims to be measured was measuring something the run does not propose;
+            it now reports A′ as it is — slot 80.0px, trigger 28.0px, one 8.0px gap,
+            <strong>116.0px</strong> in both states — with the retracted figures marked. Three
+            more: this table said "Tune gained T4 back" for a call the shipped table numbers
+            <a href="#tune">T3</a>; it called run 10's <code>.a-mark</code> "byte-identical to this
+            run's at 12px", which this round's own 16px reserve falsified; and the accounting table
+            still said the glyph vocabulary was three entries short after T8 reduced it to one.</td>
+          <td><code>display-equals-payload</code>, applied to the run's own prose · a measurement
+            names the assembly it was taken on</td>
+        </tr>
+        <tr>
+          <td>The same review, on where the close-sequence lesson was written: the T1 paragraph
+            performing it also narrated this WU's six reversals and nine rounds.</td>
+          <td>Nothing in this run's stages. <a href="../design-flow.html#close">design-flow</a>'s
+            rationale is now mechanism only, at the altitude its two sibling callouts hold, and the
+            incident is <a href="../decisions/dec-38-the-predecessor-is-the-checklist.html">DEC-38</a>
+            with the round-by-round split that makes it evidence. T1 is permanent and shape-level;
+            one epic's history is not.</td>
+          <td><code>documentation-system.html</code>'s tiers — synthesize up, never duplicate
+            down · <code>docs/decisions/</code> is where an incident is kept</td>
+        </tr>
+        <tr>
+          <td>Rendering the two closing tables and counting their cells, rather than reading them.</td>
+          <td><a href="#blocked-on">Blocked-on</a>: the cross-year entry had been appended to the
+            <em>accounting</em> table beside it — a four-cell row under two headers, so two of its
+            cells rendered under no heading, the table headed "run 10's five entries" carried six,
+            and <code>data-item="blocked-on"</code> held one entry while the run had two. Measured
+            in the browser: 2 headers against a 4-cell row. The entry is now Blocked-on's second
+            row and the accounting table is five again. Also struck a positional
+            cross-reference ("the row above") that pointed into the other table.</td>
+          <td><code>blocked-on</code> — the flow's item definition: the list is the element, so
+            an entry beside it is not on it · the same render-don't-read lesson as T3's fixture</td>
         </tr>
       </tbody>
     </table>

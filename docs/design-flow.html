@@ -317,7 +317,7 @@ soft:
     <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Hard rules leave the receipt and become predicates; each one still unimplemented is printed on every verify.</p>
 
     <h2 id="close">7 · Close the run <span class="badge id">a step, not a side effect</span></h2>
-    <p><strong>Why ① is first, and why it is a walk of the old run rather than a read of the new one:</strong> a changed answer leaves a false statement behind, which review finds. A <em>dropped</em> answer leaves nothing, and nothing is not reviewable from the near side. E-EXPORT.W9 carried six silent reversals through nine review rounds that read only the new run and asked whether its statements were true — they were — and the rounds that walked the predecessor found them in one pass each.</p>
+    <p class="kd"><strong>Why ① is first, and why it walks the old run rather than reading the new one:</strong> a changed answer leaves a false statement behind, which review finds. A <em>dropped</em> answer leaves nothing — and a reader testing the new run's statements has no location at which the absent one is wrong. The predecessor's answers are the only checklist that names it (<a href="decisions/dec-38-the-predecessor-is-the-checklist.html">DEC-38</a>).</p>
     <p><strong>Edits are batched, not cycled:</strong> apply all changes in one pass, <code>verify-doc</code> once, then batch residuals and verify again. The norm is <strong>edit twice, verify twice</strong> — never twelve edit→verify cycles.</p>
     <table data-c="tbl-close">
       <thead><tr><th>#</th><th>Do</th><th>What refuses it</th></tr></thead>
