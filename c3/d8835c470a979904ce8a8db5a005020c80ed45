@@ -1,0 +1,65 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W9
+branch: wu/export/controls-redesign
+t2_waived: "A design run decides how a screen will look and changes no user-observable contract, so there is no T2 fact to synthesise yet: UC-4's surface gains the export, import and clear controls when W6 BUILDS them, and stating them now would put a capability in the use-case KB that the app does not have. The rulebook is untouched for the same reason plus a specific one — the only T2 write-back this line of work owed was run 10's Lexicon question, and W5 already landed it, so `export` has its row and this run inherits it rather than proposing a term. The run's THREE proposals - promote ModalShell as Dialog, three IconButton glyph entries, and a new rulebook soft rule (safe-answer-takes-focus: a destructive ask focuses the answer that does nothing) - are recorded in the run's Proposals list and belong to their owners; a run proposes and an owner performs, so none is a T2 edit this WU may make. The third is the one a reader should notice: the rulebook has no rule on destructive focus at all, this run had to derive it from a Frame constraint and got it wrong on the first pass, and the rulebook's own growth mechanism says a design needing a rule that is not there proposes it. Proposing it is therefore the T2 obligation this WU discharges - by recording it, not by writing the row."
+changes:
+  - path: docs/work/2026-09-06-export-w9-controls-redesign-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the run. The requirement sentence; why a new run rather than an amendment to run 10 (the close step is re-pin, green, archive — re-opening an archived run to re-pin it inverts it, and receipt·rulebook-stale is precisely the condition run 10 is now in); a four-row substrate table naming what moved (rulebook aeff5b0 → a7f9ae3, registry 24 → 28, the header's four Fields → Field + two Selects + Field, and modality from 'nothing in the collection is a dialog' to a shipped ModalShell); the note that every contract is now merged so this run designs ahead of nothing, where run 10 carried W7's refusal as a blocked-on; six questions with the stage that owns each, including Q6, the duty a re-run has and a first run does not; the expected result naming that W6 cites THIS run and not run 10; the test plan with three reasoned waivers; and the distillation owed, which is deliberately almost nothing because a design run changes no user-observable contract."
+  - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+    tier: T3
+    action: added
+    distills: "Design run 11, closed and archived. All eleven items: a Frame whose Given is now entirely merged capability and whose constraints include two the earlier run could not state (two header neighbours open popups; saveBody returns null on cancel); a Layout keeping run 10's trailing-cluster placement but for a second reason — a Select's popup must not be covered by the acts; an Elements catalog resolving ten entries, with Select and Field split into their own rows because A′ shares their row; an Interaction table of eleven use cases including the cancelled save and the refused paste, each with the zone→delta trace collapsed behind its gist; a mockup that MOUNTS the real Field, Select, StatusDot, IconButton, TonedText, Notice, Button, StatusPill, MethodLabel, TimestampText and DurationText from the rebuilt specimens bundle; three Tune calls; the 17-slug receipt; a capabilities table answering all twelve Givens including two deliberately unused; two proposals (promote ModalShell as Dialog, and three IconButton glyph entries); a blocked-on list carrying ONE entry — the header's wrap behaviour, untested at this width and more pressing than when run 10 filed it, because two header members are now popup-bearing Selects — beside a five-row table accounting for each of run 10's five entries; and a six-row review list naming every answer that moved since run 10 and the contract that moved it. The Tier-3 round's own findings are NOT in that list, and after round 4 the run's body carries no review-process narrative at all (round 3 claimed this and three sentences outside the review table survived it): it states the rule in run 10's exact words and stops. The findings' home is this tip's cr/v3 note (design-flow section 8, DEC-24, whose rejected-alternatives table names 'keep the verdict inline in the run doc' by title). An earlier draft of this note described an empty blocked-on list and six review rows; that was true of the run before the review round and false of the tip this note is attached to, which the review caught."
+  - path: docs/work/2026-09-04-export-plan.html
+    tier: T3
+    action: updated
+    distills: "The WU table gains the W9 block — summary, mapping, expected result and dependencies — stating that every endpoint it designs against is merged, that the E-REDESIGN baseline reached this epic as a back-merge of landed history rather than as a WU (so the merge hook and the epic walk both skip that seam, DEC-8), and that there is no E-EXPORT.W8: the number was allocated to that integration while it was still framed as a WU and retired unstarted when it became a back-merge. The W6 block is reconciled to it, which adding the W9 row alone had not done: in four places it still sent the build to W5's design, so it now names W9 throughout, the W5 heading is marked superseded, and the e2e Covers column reads W9 - without this the plan contradicted itself about which design 9.design would bind W6's citation to. The same block also stopped instructing W6 to wire the clear confirmation through useConfirm, which both design runs found to be a ~2 s flash that reports rather than asks; it states the modal ask and names the deviation, which W6's result carries. Header to v4."
+  - path: docs/design-flow.html
+    tier: T1
+    action: updated
+    distills: "THE ONE T1 CHANGE IN THIS WU, and the reason the commit needed a human Reviewed-By trailer. The close sequence gains a new step (1) — walk the run this one supersedes, stage by stage, and classify every answer in it as held, changed or dropped, because an unclassified answer is the defect and a held answer must be cited rather than left to be inferred — with its rationale paragraph, the later steps renumbered (2)-(5), and two stale cross-references to the old numbering repaired (line 52's 'step 3 before step 4' and line 375's 'close's step 1'). This was round 10's finding, which round 10 had filed as a vocabulary Proposal; Proposals is for entries the design needed and the vocabulary lacked, and a change to the flow's own procedure is neither, so it is performed here instead. documentation-system.html's checklist routes a changed process to its T1 doc in the same session, and a T3 run is archived and never re-read, so leaving it as a proposal would have lost it. Recorded plainly because it is a bigger change than a design WU normally makes: it amends the procedure every future design run follows, on the strength of one WU's experience, and the human signature on this commit is where that was accepted."
+note: >-
+  No T2 doc changes in this WU, and one T1 change. The T2 silence is the correct outcome rather than an omission: a
+  design run decides how a screen will look and changes no user-observable contract, so UC-4 gains
+  the controls when W6 builds them, not now. The rulebook is likewise untouched — run 10's Lexicon
+  question was already written back at W5's distillation, so `export` has its row and this run
+  consumes it (receipt verdict: inherited) instead of proposing a term. The four proposals the run
+  does make are recorded in the run's own Proposals list and belong to their owners — the
+  collection for Dialog, the rulebook for safe-answer-takes-focus, IconButton's TSDoc for the
+  three glyphs, and docs/design-flow.html for the re-run close step — and not one is performed
+  here, because a run proposes and an owner performs. The last of those is the review's own
+  finding turned into a proposal: the close sequence has no step that reads the run being
+  superseded, which is why four silent reversals survived nine rounds.
+  One fact per tier held deliberately: the endpoint shapes live in src/api/routes.rs and are named
+  in the run only by what the screen needs from them; the component contracts live in each
+  component's TSDoc and the run cites @use/@avoid rather than restating states; and the run's own
+  detail of which capability is used or deliberately unused lives in its capabilities table rather
+  than being repeated in the Frame, which is why the Frame's Given line is a terse ·-separated
+  list.
+  Both new docs were snapshotted at creation and the epic plan before its first edit, so
+  <doc>.html?diff=latest shows exactly what changed. verify-doc is green over every doc in the
+  tree, with every relative href resolving on disk.
+  CORRECTION, and it is the reason this note is not simply the previous one moved forward: the
+  block above opened by saying there were no T1 changes in this WU. That was true when it was
+  written and false of the tip it is now attached to. docs/design-flow.html IS a T1 change, it
+  carries its own changes entry above, and it is what the human Reviewed-By trailer on this
+  commit signs. A doc note that had been carried forward unread would have asserted the opposite
+  of its own diff — which is the same class of defect as the silent reversals this WU spent nine
+  rounds failing to see, committed in the receipt rather than in the run.
+  Two proposals moved. The IconButton glyph entries went from three (out, in, empty) to one, then
+  to a different one: with the acts collapsed into a menu they are words, so no face is spent on
+  any of them and the only proposed entry is the trigger's. And a fourth proposal is added — Menu,
+  a T2 widget, because Select disqualifies itself twice in its own @avoid and the collection has
+  no action menu at 28 entries. So the run now proposes two components, which is a lot of proposed
+  surface for one design; Proposals states explicitly that W6 may build both local and mint
+  neither, the way this run's ask is local.
+  One item is deliberately NOT distilled and is recorded as owed instead: tauri.conf.json's
+  minWidth must rise from 800 to 850 for the header to hold one line at every reachable width. The
+  window config is not a design artifact and not a doc, so it is in the run's Blocked-on with W6
+  named as the owner, rather than being quietly changed here.
+  The run doc was snapshotted before the first edit of this session, so <doc>.html?diff=latest
+  shows the whole rework — the visual recomposition and the menu collapse together — against the
+  state a reader last saw. verify-doc is green over all three touched docs, with every relative
+  href resolving on disk.
