@@ -1077,8 +1077,10 @@ C  → UNCHANGED   ← the whole point of asking</pre>
       <code>children</code> — see <a href="#proposals">Proposals</a>; the three acts are words
       inside M, so no other face is spent) · <strong>the mono face</strong>: this page ships no
       <code>@font-face</code> and the bundle carries only the <em>token</em>, so over
-      <code>file://</code> <code>font-mono</code> falls through to <code>ui-monospace</code> and
-      the timestamps here are not drawn in <code>DM Mono</code>. Any width taken off this page is
+      <code>file://</code> <code>font-mono</code> falls <em>past</em> <code>ui-monospace</code> —
+      Chrome does not resolve that keyword when it is not the terminal fallback — to the
+      <code>monospace</code> generic, which here is Menlo. The timestamps on this page are drawn in
+      neither <code>DM Mono</code> nor <code>ui-monospace</code>. Any width taken off this page is
       a fallback width — <a href="#tune">T3</a>'s figures were re-measured against the shipped
       <code>ui/dist</code> font files, not against this render ·
       the focus trap and scrim behaviour of the proposed
@@ -1191,18 +1193,31 @@ A is two lines below 846px
         is <em>today</em> and <code>06/09 · 14:22:03</code> when it is not. Measured in the app's
         own <code>font-mono</code> at <code>text-body</code> with <code>tabular-nums</code>:
         <strong>57.6px</strong> for S1, <strong>115.2px</strong> for S2, <strong>151.2px</strong>
-        for the cross-year form, and <strong>7.2px</strong> for the <code>↑</code> mark — an exact
-        7.2px per character, which is <code>DM Mono</code>'s 0.6em advance at
-        <code>text-body</code>. So S2 plus the mark's reserved 16px needs
+        for the cross-year form — an exact 7.2px per character, which is <code>DM Mono</code>'s
+        0.6em advance at <code>text-body</code> — and <strong>~7.23px</strong> for the
+        <code>↑</code> mark, which is <em>not</em> that face. <code>U+2191</code> is absent from
+        <code>DM Mono</code>'s <code>cmap</code> in both shipped subsets, so the mark falls back to
+        the next family in the stack; the <code>unicode-range</code> on the
+        <code>@font-face</code> rule does list it, but that descriptor is a fetch hint and is
+        copy-identical across this bundle's three unrelated faces, so it says nothing about
+        coverage. The mark's width does not enter the column arithmetic anyway — its box is
+        reserved at a fixed 16px, not measured. So S2 plus that reserve needs
         <strong>131.2px</strong>, and every number the earlier drafts reached — run 10's 126px,
         this run's 122px, the shipped <code>FlowList</code>'s own 110px — is too narrow for it.
         <strong>And S2 is not the rare case here: it is the case this run's own feature creates.</strong>
         A HAR you were handed was captured on another machine on another day, so an imported row
         is a cross-day row almost by definition — the rows that carry the mark are the same rows
         that carry the wide timestamp, and the design added them. Cell 1 therefore takes
-        <code>field-lg</code> (160px), which holds 131.2px of content with 28.8px to spare and is
-        a token rather than an arithmetic result. <code>field</code> (128px) is the next token down
-        and 131.2px does not fit it, so the choice is forced rather than picked.
+        <code>field-lg</code> (160px), which holds 131.2px of content with 28.8px to spare.
+        <code>field</code> (128px) is the next token down and 131.2px does not fit it — but that
+        follows from the mark's <strong>16px</strong> box, and this round corrected the glyph to
+        7.2px without re-deriving the box around it. So the alternative is named rather than left
+        implicit: an <strong>8px</strong> box, the scale's own step, puts cross-day at 123.2px,
+        which <code>field</code> holds, and would return 32px to <code>PATH</code> — a column the
+        <a href="#frame">Frame</a> already calls tight at 138px. It is not taken, because 8px
+        leaves under a pixel between a ~7.23px glyph and the timestamp beside it, and the mark has to read as
+        its own signal rather than as part of the time. The width is therefore <em>chosen</em>, not
+        forced, and W6 may revisit it with the whole grid in view.
         <span class="was">The call as first written moved 110px → 122px on the reserved mark's
         12px, and the round-10 draft before it moved 110px → 126px on a 16px mark it had inferred
         from run 10's own arithmetic. Both were answering a question that was not the binding one,
@@ -1829,7 +1844,11 @@ soft:
           <td><a href="#tune">T3</a> and <a href="#blocked-on">Blocked-on</a>. Re-measured against
             the shipped <code>ui/dist</code> font files: <strong>57.6 / 115.2 / 151.2px</strong>
             for S1 / S2 / cross-year and <strong>7.2px</strong> for the mark — an exact 7.2px per
-            character, <code>DM Mono</code>'s 0.6em advance at <code>text-body</code>. The old
+            character for the three timestamp forms, <code>DM Mono</code>'s 0.6em advance at
+            <code>text-body</code>; the mark is ~7.23px and is a <em>fallback</em> glyph, because
+            <code>U+2191</code> is not in <code>DM Mono</code>'s <code>cmap</code> — the
+            <code>unicode-range</code> that appears to say otherwise is boilerplate shared across
+            three unrelated faces in the bundle. The old
             figures implied three different per-character widths, which no monospaced face can do.
             Both conclusions survive: cell 1 stays <code>field-lg</code>, now with 28.8px spare
             and <code>field</code> ruled out by arithmetic rather than by assertion, and cross-year
