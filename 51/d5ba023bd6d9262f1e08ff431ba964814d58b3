@@ -1,0 +1,17 @@
+schema: cr/v3
+scope: "WU controls-redesign -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W9
+branch: wu/export/controls-redesign
+base: 1e054ad481c02a91014c4c1bb06e812994dab72b
+head: 51d5ba023bd6d9262f1e08ff431ba964814d58b3
+diff_sha256: 11f72f29e48f101e785172a4261abbab345ef4e0e3ecd80b3502445a9eaef3e4
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 14, verified: 5, waived: 0 }
+design:
+  artifacts: [docs/work/2026-09-06-export-run-11-capture-controls.html]
+  rulebook: a7f9ae3becf27694bfc1ffb9f0b43f87c9abb7e2
+  findings: { found: 3, verified: 2, waived: 0 }
+  verdict: PASS
+verdict: PASS
+date: 2026-09-07
