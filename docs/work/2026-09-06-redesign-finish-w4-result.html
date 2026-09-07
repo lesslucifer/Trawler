@@ -190,10 +190,13 @@ ok    _vc.html  (7 mounts, 7 buttons)                   ← same file, bootstrap
 ok    _vd.html  (7 mounts, 7 buttons)                   ← same file, bootstrap + async
 ok    _probe-w3.html  (5 mounts, 2 buttons)             ← the first pass's run, control
 
-Later prose-only edits could not be re-rendered: Chrome began aborting (SIGABRT, empty
-stdout) on every invocation. Established by diff instead — the &lt;head&gt; and the whole
-data-item="mockup" block are byte-identical to the state that rendered 7/7, and all 33
-changed lines are prose, quotations and one receipt verdict outside both.</pre></td>
+ok    2026-09-06-shell-list-second-pass.html  (7 mounts, 7 buttons)   ← the final file
+
+Between those two passes the gate was unrunnable for a while — Chrome aborted (SIGABRT,
+empty stdout) on every invocation — and the mockup evidence was carried by diff instead:
+the &lt;head&gt; and the whole data-item="mockup" block byte-identical to the state that had
+rendered 7/7, with every changed line prose outside both. The direct pass above, on the
+file as it stands, replaces that argument with a measurement.</pre></td>
       </tr>
       <tr>
         <td><code>git hash-object</code><br>the rulebook, re-pinned at the close</td>
