@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9e255f9f34851f0dfaca94" data-artifact="epic-plan" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBOARD epic plan (skeleton)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBOARD — epic plan <span class="badge id">skeleton</span></h1>
+      <p>Re-design and rebuild the setup screen and the quit dialog — the pair E-REDESIGN shipped
+        <em>gated, not endorsed</em>, and the one piece of work E-RFINISH handed out rather than absorbed.</p>
+      <div class="meta">draft v0 · 2026-09-07 · Trawler · T3 (docs/work/) · branch <code>epic/onboarding-redesign</code></div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout warn" data-c="skeleton-notice">
+      <strong>This is a skeleton, deliberately.</strong> It exists so the deferral has a home in the
+      registry — the epic is <em>opened</em>, not <em>started</em>. It carries the intent, what it inherits
+      and what is still undecided; the checklist items a started epic owes
+      (<a href="../work-planning.html">use-cases · expected · WU summaries · e2e plan · distillation plan</a>)
+      are listed at the bottom and written when the epic actually begins. It stays
+      <code>data-status="draft"</code> until then, which is what keeps <code>verify-doc</code> silent about
+      the gaps rather than lying about them.
+    </div>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">E-REDESIGN.W10 shipped <code>Onboarding.tsx</code> (563 lines) and
+      <code>ProxyCloseDialog.tsx</code> (288) after eleven review rounds and three owner rounds, and its own
+      result declined to endorse the pair as final: the last owner round found the status model wrong at the
+      root and produced <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>, which fixed what
+      the screen <em>knows</em> and left what it <em>looks like</em> undesigned. E-RFINISH opened that re-design
+      as a WU pair (W7 design, W8 build) and the design run came back saying the arrangement is wrong in six
+      places at once — a wizard's cursor over a model that refuses to claim progress, one question asked three
+      times by three independent target pickers, four disclosures three levels deep in a 384&nbsp;px column, a
+      re-check control drawn as if it governed a layer it cannot read, a disabled remedy button that informs
+      nobody, and a whole second dialog body for one of three modes. That is a screen-shaped change with its own
+      e2e spine, not debt payment. <strong>Why its own epic:</strong> the owner's call at E-RFINISH's W7 round —
+      a rebuild of the two largest screens in the app, carrying a re-written
+      <code>onboarding.spec.ts</code>, three shape nits, a missing seam test and a UC-ONBOARD re-statement, does
+      not belong as two WUs inside an epic whose intent is <em>pay the debt E-REDESIGN named</em>. E-RFINISH
+      keeps its debt and its shell/list track; this epic gets the screens.</p>
+
+    <h2 id="inherits">What this epic inherits</h2>
+    <p>The design work is already done and <strong>is not on any merged branch</strong>. It lives, closed and
+      archived, on the WU branch E-RFINISH opened and dropped — that branch is the carrier, and this epic
+      resumes from it.</p>
+
+    <table>
+      <thead>
+        <tr><th>Inherited</th><th>Where it is</th><th>State</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>The closed design run</strong> — both surfaces, one artifact: Frame&nbsp;×2 through Tune,
+            the five closing lists, a 23-row <em>promises kept</em> audit of UC-ONBOARD, a receipt with all
+            seventeen soft rules verdicted</td>
+          <td>branch <code>wu/redesign-finish/onboarding-design</code>, tip
+            <code>7c6e14456dd892b9283c7987110ec16244743361</code> (the run itself closed at
+            <code>99745af</code>) — <code>docs/work/2026-09-06-redesign-finish-w7-run.html</code>
+            <span class="badge id">unmerged</span></td>
+          <td><span class="badge auto">Tier-1 green</span> · <code>data-status="archived"</code> · one review
+            round absorbed · <strong>never Tier-3 judged</strong>, because Tier-3 judges a design artifact at the
+            merge that lands it and no merge happened</td>
+        </tr>
+        <tr>
+          <td><strong>The WU plan behind it</strong> — the six shape defects, verified against the tree line by
+            line, and the scope split that put every <code>ui/src/</code> change in the build WU</td>
+          <td>same branch, <code>docs/work/2026-09-06-redesign-finish-w7-plan.html</code>, and its closure record
+            <code>…-w7-result.html</code> <span class="badge id">unmerged</span></td>
+          <td>ready · the result records the drop and names this epic</td>
+        </tr>
+        <tr>
+          <td><strong>The build</strong> — rebuild both screens from the run, citing it through the
+            <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> handoff</td>
+          <td>not started</td>
+          <td>E-RFINISH.W8's requirement, moved here whole</td>
+        </tr>
+        <tr>
+          <td><strong>Three shape nits</strong> — <code>useNow</code>'s one-second tick re-renders the whole step
+            list where only the traffic verdict depends on it; <code>attemptRemove</code> hand-rolls the shape
+            <code>useAction</code> already implements; <code>setup.ts</code> carries OS-target data and DEC-33's
+            verdict resolution behind a comment rather than a module boundary</td>
+          <td><code>ui/src/screens/Onboarding.tsx</code>, <code>ui/src/screens/ProxyCloseDialog.tsx</code>,
+            <code>ui/src/lib/setup.ts</code></td>
+          <td>recorded by E-REDESIGN, addressed to <em>"whichever WU next opens each file"</em> — that WU is now
+            in this epic</td>
+        </tr>
+        <tr>
+          <td><strong>The missing seam test</strong> — no single test wires <code>closeConfirm.remove</code> into
+            the dialog; each module's tests model the other with a comment</td>
+          <td>same pair</td>
+          <td>open</td>
+        </tr>
+        <tr>
+          <td><strong>The e2e rewrite</strong> — <code>onboarding.spec.ts</code> re-written against the new
+            design, journey spine intact, every retired assertion given a successor or a recorded reason</td>
+          <td><code>ui/e2e/</code></td>
+          <td>the coverage-map discipline E-DFLOW.W11 established</td>
+        </tr>
+        <tr>
+          <td><strong>One blocked-on item</strong> — the <code>/stats</code> connection tally counts tunnels since
+            core start and carries no clock, so the traffic band can state <em>that</em> traffic arrived and never
+            <em>when</em></td>
+          <td>the core's store</td>
+          <td>the run renders the band undated rather than faking it; scoped to the owner as its own WU — see
+            <a href="#open-questions">open questions</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="inputs">Inputs — may not be re-opened, may not be narrowed</h2>
+    <div class="cards">
+      <div class="card">
+        <h3><a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a> — two layers and a clock</h3>
+        <p>Probes answer for <em>this machine</em>, at the moment they ran; timestamps answer for <em>the wire</em>,
+          judged against a moving clock. Neither borrows. The 30&nbsp;s window and the 3&nbsp;s tunnel grace are
+          settled constants. The run made the two layers the two bands — the arrangement follows the decision, it
+          does not revisit it.</p>
+      </div>
+      <div class="card">
+        <h3><a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> — what the screen may promise</h3>
+        <p>A design run may not narrow a shipped capability, and its inherited assertion stands: stop routing
+          appears <strong>only after</strong> the proxy was set. A gain is permitted; a loss is a review finding.</p>
+      </div>
+      <div class="card">
+        <h3><a href="../use-cases/web-ui.html">UC-ONBOARD</a> — the contract</h3>
+        <p>The CA save step, the copy confirms, the probed verdicts, the quit remedy. The closed run audits all
+          twenty-three promises row by row; the build re-checks them rather than trusting the audit.</p>
+      </div>
+    </div>
+
+    <h2 id="shape">Shape — provisional</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  R["the closed design run
+wu/redesign-finish/onboarding-design @ 7c6e144"]
+  W1["W1 · adopt the run
+re-identified, Tier-3 judged at its merge"]
+  W2["W2 · build both screens
++ three nits + the seam test"]
+  W3["W3 · epic close
+e2e rewrite · UC-ONBOARD · archive"]
+  R -.resumes from.-> W1
+  W1 --> W2 --> W3
+      </pre>
+      <div class="caption">Provisional — the WU split is written when the epic starts, and
+        <a href="#open-questions">open question 1</a> decides whether W1 is an adoption or a re-run.</div>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>E-RFINISH's tracks.</strong> The four stale docstrings, the performance benchmark, the shell and
+        flow-list second pass, the status-class API and the <code>BodyViewer</code> relabel stay where they are.
+        This epic takes the two screens and nothing else that epic is holding.</li>
+      <li><strong>Re-opening DEC-33 or DEC-13.</strong> Both are inputs. If the build finds either wrong, that is a
+        decision record of its own, not a quiet edit.</li>
+      <li><strong>Capture-core work.</strong> The one core question in reach is a timestamp on the
+        <code>/stats</code> tally, and the default is that it does not land here — see below.</li>
+      <li><strong>Making the screens smaller as a goal.</strong> 563 and 288 lines are the symptom the run
+        diagnosed, not the acceptance criterion. A line count is evidence, never a target.</li>
+    </ul>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table>
+        <thead><tr><th>Question</th><th>Proposed default</th><th>Decided by</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Does this epic <strong>adopt</strong> the closed W7 run as its design of record, or re-run the
+              design under its own Frame?</td>
+            <td><strong>Adopt.</strong> The run is Tier-1 green, absorbed a review round, and its Frame already
+              names the reader this epic has (a first-run user who has not yet seen traffic). Adoption means
+              re-identifying the two docs onto a WU branch off this epic with their content unchanged — the ids
+              change, the design does not — and Tier-3 judging them at that merge, which never happened. A re-run
+              is only warranted if this epic's Frame differs from W7's.</td>
+            <td>this plan, when the epic starts</td>
+          </tr>
+          <tr>
+            <td>Does the <code>/stats</code> timestamp land here, unblocking a dated traffic band?</td>
+            <td><strong>No.</strong> It is a core store change the owner scoped as its own WU, and the design is
+              honest without it: the band states the verdict and omits a date it cannot support. If the tally
+              gains a time, the band gains a line and nothing else moves.</td>
+            <td>owner</td>
+          </tr>
+          <tr>
+            <td>Where does the epic sit in the roadmap sequence?</td>
+            <td><strong>Wave 2, GUI</strong>, started after E-RFINISH's shell/list track merges — both touch
+              <code>ui/src/</code> and the component registry, and two open design tracks over one registry is how
+              citations go stale.</td>
+            <td>owner, at the roadmap</td>
+          </tr>
+          <tr>
+            <td>Is the epic three WUs (adopt · build · close) or does the build split by surface?</td>
+            <td><strong>Three.</strong> The run's whole argument is that the setup screen and the dialog answer one
+              question in two places; splitting the build by surface re-creates the drift it diagnosed.</td>
+            <td>this plan, when the epic starts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="still-owed">What this skeleton still owes</h2>
+    <p>Filled in when the epic starts, at which point the doc flips to <code>ready</code> and
+      <code>verify-doc</code> enforces every row.</p>
+    <table>
+      <thead><tr><th><code>data-item</code></th><th>What it must say</th></tr></thead>
+      <tbody>
+        <tr><td><code>use-cases</code></td><td>UC-ONBOARD contract-level: what the re-design gains, and the
+          explicit statement that no promise is narrowed</td></tr>
+        <tr><td><code>expected</code></td><td>Observable acceptance for a reader who was not here — both screens
+          rendered from the design, every promise re-checked, the nits gone, the seam driven by one test</td></tr>
+        <tr><td><code>wu-summaries</code></td><td>One <code>data-wu</code> block per WU with its four sub-tags,
+          after open questions 1 and 4 are answered</td></tr>
+        <tr><td><code>e2e-plan</code></td><td>The re-written <code>onboarding.spec.ts</code> and its coverage map
+          against the current spec's assertions</td></tr>
+        <tr><td><code>distillation-plan</code></td><td>UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a>,
+          any decision the run escalated, the registry entries the build retires into TSDoc per DEC-16, and the
+          <a href="../backlog/roadmap.html">roadmap</a> row this epic strikes</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
