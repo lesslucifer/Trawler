@@ -60,8 +60,11 @@
         to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.
         <strong>The two keys the API matches exactly are chosen, not typed</strong>: method from the closed
         set of verbs, host from the hosts capture has seen, each with an "any" option that clears it. Free
-        text and status stay typed — the API substring-matches the first, and the second is deferred
-        (a status <em>class</em> query is not expressible against the current API at all).</li>
+        text and status stay typed — the API substring-matches the first, and reads the second at either
+        resolution: <code>status=404</code> is the exact code and <code>status=4xx</code> the class, with
+        anything that names neither refused as a stated <code>400</code> rather than an empty list
+        (<span class="badge id">E-RFINISH</span>). The <em>control</em> catches up with the class after the
+        core does.</li>
         <li>The app is a pure <em>cross-origin</em> client of <code>127.0.0.1:7421</code> — it reaches no
         core internals; everything it shows is equally reachable with <code>curl</code>. Because the
         webview origin differs from the API's, every API response carries an open CORS grant

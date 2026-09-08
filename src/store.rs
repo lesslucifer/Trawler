@@ -1,4 +1,5 @@
 use std::collections::{HashMap, VecDeque};
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
@@ -41,11 +42,60 @@ impl Ring {
     }
 }
 
+/// What a caller may ask of a response status: one code, or the class it falls
+/// in. The two are one parameter because they answer one question at different
+/// resolutions - `404` and `4xx` are both "which failures", and a caller that
+/// has to pick a different parameter to widen the question is a caller writing
+/// the class arithmetic itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StatusMatch {
+    Exact(u16),
+    Class(u8),
+}
+
+pub const STATUS_GRAMMAR: &str =
+    "status must be an exact code (100-599, e.g. 404) or a class (1xx-5xx, e.g. 4xx)";
+
+impl StatusMatch {
+    pub fn matches(self, status: u16) -> bool {
+        match self {
+            Self::Exact(code) => status == code,
+            Self::Class(class) => status / 100 == u16::from(class),
+        }
+    }
+}
+
+/// Refuses everything the grammar does not name, `999` as firmly as `9xx`: a
+/// value that denotes no status has one honest answer, and a silent empty list
+/// is indistinguishable from "no such traffic captured".
+impl FromStr for StatusMatch {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let &[first, second, third] = value.as_bytes() else {
+            return Err(());
+        };
+        if second.eq_ignore_ascii_case(&b'x') && third.eq_ignore_ascii_case(&b'x') {
+            return match first {
+                digit @ b'1'..=b'5' => Ok(Self::Class(digit - b'0')),
+                _ => Err(()),
+            };
+        }
+        if !(first.is_ascii_digit() && second.is_ascii_digit() && third.is_ascii_digit()) {
+            return Err(());
+        }
+        match value.parse::<u16>() {
+            Ok(code @ 100..=599) => Ok(Self::Exact(code)),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct FlowFilter {
     pub host: Option<String>,
     pub method: Option<String>,
-    pub status: Option<u16>,
+    pub status: Option<StatusMatch>,
     pub content_type: Option<String>,
     pub q: Option<String>,
 }
@@ -64,7 +114,7 @@ impl FlowFilter {
             }
         }
         if let Some(status) = self.status {
-            if flow.response.as_ref().map(|r| r.status) != Some(status) {
+            if !flow.response.as_ref().is_some_and(|r| status.matches(r.status)) {
                 return false;
             }
         }
@@ -284,12 +334,19 @@ mod tests {
         let one = |f: FlowFilter| s.list(&f).len();
         assert_eq!(one(FlowFilter { host: Some("EXAMPLE".into()), ..Default::default() }), 1);
         assert_eq!(one(FlowFilter { method: Some("post".into()), ..Default::default() }), 1);
-        assert_eq!(one(FlowFilter { status: Some(200), ..Default::default() }), 1);
+        assert_eq!(
+            one(FlowFilter { status: Some(StatusMatch::Exact(200)), ..Default::default() }),
+            1
+        );
         assert_eq!(one(FlowFilter { content_type: Some("json".into()), ..Default::default() }), 1);
         assert_eq!(one(FlowFilter { content_type: Some("png".into()), ..Default::default() }), 1);
         assert_eq!(one(FlowFilter { q: Some("users".into()), ..Default::default() }), 1);
         assert_eq!(
-            one(FlowFilter { method: Some("GET".into()), status: Some(201), ..Default::default() }),
+            one(FlowFilter {
+                method: Some("GET".into()),
+                status: Some(StatusMatch::Exact(201)),
+                ..Default::default()
+            }),
             0
         );
         assert_eq!(one(FlowFilter::default()), 2);
@@ -299,7 +356,103 @@ mod tests {
     fn status_filter_excludes_responseless() {
         let s = store();
         s.insert(FlowBuilder::new().build());
-        assert_eq!(s.list(&FlowFilter { status: Some(200), ..Default::default() }).len(), 0);
+        assert_eq!(
+            s.list(&FlowFilter { status: Some(StatusMatch::Exact(200)), ..Default::default() })
+                .len(),
+            0
+        );
+    }
+
+    #[test]
+    fn status_grammar_accepts_only_codes_and_classes() {
+        let parse = |value: &str| value.parse::<StatusMatch>();
+        for (value, expected) in [
+            ("1xx", StatusMatch::Class(1)),
+            ("2xx", StatusMatch::Class(2)),
+            ("3xx", StatusMatch::Class(3)),
+            ("4xx", StatusMatch::Class(4)),
+            ("5xx", StatusMatch::Class(5)),
+            ("4XX", StatusMatch::Class(4)),
+            ("4Xx", StatusMatch::Class(4)),
+            ("100", StatusMatch::Exact(100)),
+            ("404", StatusMatch::Exact(404)),
+            ("599", StatusMatch::Exact(599)),
+        ] {
+            assert_eq!(parse(value), Ok(expected), "{value} should parse");
+        }
+        for value in [
+            "0xx",
+            "6xx",
+            "9xx",
+            "xxx",
+            "4x",
+            "40x",
+            "x44",
+            "4x4",
+            "99",
+            "600",
+            "999",
+            "abc",
+            "",
+            " 4xx",
+            "404 ",
+            "+404",
+            "-404",
+            "0404",
+            "4xxx",
+            "\u{fffd}xx",
+        ] {
+            assert_eq!(parse(value), Err(()), "{value} should be refused");
+        }
+    }
+
+    #[test]
+    fn status_match_covers_its_class_and_nothing_beside_it() {
+        assert!(StatusMatch::Class(4).matches(400));
+        assert!(StatusMatch::Class(4).matches(499));
+        assert!(!StatusMatch::Class(4).matches(399));
+        assert!(!StatusMatch::Class(4).matches(500));
+        assert!(StatusMatch::Exact(404).matches(404));
+        assert!(!StatusMatch::Exact(404).matches(400));
+    }
+
+    #[test]
+    fn status_class_narrows_the_listing() {
+        let s = store();
+        for status in [200, 404, 451, 500] {
+            s.insert(FlowBuilder::new().uri("http://x/y").status(status).build());
+        }
+        let one = |f: FlowFilter| s.list(&f).len();
+        assert_eq!(
+            one(FlowFilter { status: Some(StatusMatch::Class(4)), ..Default::default() }),
+            2
+        );
+        assert_eq!(
+            one(FlowFilter { status: Some(StatusMatch::Class(5)), ..Default::default() }),
+            1
+        );
+        assert_eq!(
+            one(FlowFilter { status: Some(StatusMatch::Exact(404)), ..Default::default() }),
+            1
+        );
+        assert_eq!(
+            one(FlowFilter {
+                method: Some("nope".into()),
+                status: Some(StatusMatch::Class(4)),
+                ..Default::default()
+            }),
+            0
+        );
+    }
+
+    #[test]
+    fn status_class_excludes_responseless() {
+        let s = store();
+        s.insert(FlowBuilder::new().build());
+        assert_eq!(
+            s.list(&FlowFilter { status: Some(StatusMatch::Class(2)), ..Default::default() }).len(),
+            0
+        );
     }
 
     #[test]

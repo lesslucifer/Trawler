@@ -16,7 +16,7 @@ use uuid::Uuid;
 use super::decode;
 use super::view::{self, FlowSummary, FlowView};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
-use crate::store::{FlowFilter, Store};
+use crate::store::{FlowFilter, StatusMatch, Store, STATUS_GRAMMAR};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -28,7 +28,7 @@ pub struct AppState {
 pub struct ListQuery {
     host: Option<String>,
     method: Option<String>,
-    status: Option<u16>,
+    status: Option<String>,
     content_type: Option<String>,
     q: Option<String>,
 }
@@ -51,19 +51,20 @@ enum BodyView {
     Decoded,
 }
 
-pub async fn list_flows(
-    Query(query): Query<ListQuery>,
-    State(state): State<AppState>,
-) -> Json<Vec<FlowSummary>> {
+pub async fn list_flows(Query(query): Query<ListQuery>, State(state): State<AppState>) -> Response {
+    let Ok(status) = query.status.as_deref().map(str::parse::<StatusMatch>).transpose() else {
+        return (StatusCode::BAD_REQUEST, STATUS_GRAMMAR).into_response();
+    };
     let filter = FlowFilter {
         host: query.host,
         method: query.method,
-        status: query.status,
+        status,
         content_type: query.content_type,
         q: query.q,
     };
-    let summaries = state.store.list(&filter).iter().map(FlowSummary::from).collect();
-    Json(summaries)
+    let summaries: Vec<FlowSummary> =
+        state.store.list(&filter).iter().map(FlowSummary::from).collect();
+    Json(summaries).into_response()
 }
 
 /// One-shot counterpart to the `connection` SSE event: "has any traffic reached
