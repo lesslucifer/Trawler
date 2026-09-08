@@ -1,0 +1,129 @@
+schema: test/v2
+level: working-unit
+epic: E-EXPORT
+wu: E-EXPORT.W6
+branch: wu/export/controls-build
+tests:
+  unit:
+    count: 63
+    covers: >-
+      ui/src/api.test.ts (11 new, 20 total): exportHar carrying the live filter and taking the filename
+      off Content-Disposition; attachmentName over the quoted form, the bare form, a header the CORS grant
+      did not expose (null) and one carrying no filename, each falling back to trawler.har rather than
+      inventing a name; exportHar throwing on a non-ok response; importHar posting the bytes to the bare
+      door and importCurl posting the command VERBATIM under ?format=curl (asserted as identity, not as a
+      substring, because a JSON wrapper would add a quoting layer to an input whose whole difficulty is
+      quoting); a refused import throwing the server's sentence unwrapped and unprefixed, anchored ^$ so a
+      later prefix breaks the test; a refusal with a blank body still saying something rather than leaving
+      the screen an empty notice; clearFlows issuing DELETE against the filtered listing and answering
+      `removed`; a refused clear throwing the same way; stream() registering `cleared` - the event the
+      server has always emitted and the client never listened for; and listFlows parsing `source` off a
+      summary. ui/src/CaptureMenu.test.tsx (14): the trigger alone at rest; the three acts as words in the
+      order out/in/empty; exactly one separator and it is above the irreversible act; the fuller accessible
+      name on the item whose visible label leans on the menu; click-to-act closing the menu; a disabled act
+      neither running nor taking the highlight; the keyboard path (open, two moves with NOTHING run - the
+      assertion that movement is not selection - then Enter taking the moved-to item); arrows stopping at
+      the ends rather than wrapping; Esc and Tab both closing with only Esc consuming the key (DOM focus
+      never leaves the trigger while M is open - movement is virtual, exactly as Select works - so the
+      tested difference is consumption, not restoration); focus on the trigger after acting; the trigger
+      toggling; click-away dismissing (it is not modal); and re-opening starting at the first act.
+      ui/src/CaptureControls.test.tsx (18): the slot's fixed w-field-sm box and its text-control size (T6 -
+      the muted, least-important text in the header must not also be its biggest); the singular count; the
+      export sending the live filter, reading "exporting…" for the whole in-flight window with its own menu
+      item disabled, and handing saveBody the server's filename; a cancelled save clearing the line and
+      claiming nothing, asserted as the ABSENCE of any .har anywhere in the DOM; a failed export naming the
+      server's reason beside the control; the clear ask's title carrying the count, its consequence at warn
+      and initial focus on cancel with clearFlows not called; the alarm living in the question and not on
+      the button; cancel and Esc both clearing nothing; confirm sending the live filter and announcing the
+      absence; a refused clear keeping the ask open; the import ask opening focused IN the textarea, which
+      is a textarea in mono, with choose-a-file before import; a pasted command reaching importCurl
+      verbatim and the ask leaving on success; import unavailable while there is nothing to import
+      (including whitespace-only); a chosen file posting its bytes; a dismissed picker leaving the ask open
+      with nothing claimed - the symmetric case to the cancelled save; a refusal rendered verbatim at warn
+      under the textarea whose text survives; and both zones reading "importing…" at once, because a modal
+      covers the header. ui/src/ModalShell.test.tsx (11): initial focus on the marked control rather than
+      the first in the DOM; the marker being the focusable itself (the paste target is a textarea, which is
+      the one behaviour the lift added); the fallback to the panel's first focusable; the caller-named ✕;
+      Esc, backdrop and ✕ each dismissing; an Esc a nested control already consumed NOT dismissing the
+      dialog around it (driven by a real preventDefault handler, not a synthetic flag); Tab wrapping inside
+      the panel; focus returning to the invoker on unmount; and each dialog's three parts addressable under
+      its own name. ui/src/FlowList.test.tsx (6 new, 21 total): the imported row's ↑ with its own accessible
+      name and ink-mute (not chromatic - being imported is a provenance, not an outcome); a captured row
+      still holding the 16px box so timestamps share one left edge; cell 1 at 160px; the cleared list's own
+      heading with the never-captured remedy; all three absences proven pairwise distinct rather than
+      spot-checked; and a clear that emptied a filtered view reading as cleared. Rust: src/api/mod.rs (1) -
+      the export's Content-Disposition readable cross-origin, asserting both the expose grant and that the
+      header it exposes is the one carrying the name. xtask/src/ui.rs (1) - the window minimum at >= 850,
+      above the 846px where the header wraps, plus the assertion that the e2e overlay still declares no
+      windows, which is the condition under which it inherits the minimum and the thing that would silently
+      break it.
+  integration:
+    count: 9
+    covers: >-
+      ui/src/App.test.tsx (7 new, 34 total) over the composed screen against a mock API - this WU's bounded
+      contract is the whole flow-list surface, so every assertion is made through the real header beside the
+      real filters rather than against a component in isolation. The acts sit LAST among the header's
+      controls (asserted by index, so a control added before them cannot silently move them off the trailing
+      edge) and take no room until asked for. Export is scoped by whatever the filters selected, driven by
+      choosing a host from the real dropdown and asserting the request carries it. Clearing empties the list
+      into the absence only a clear produces and the count follows - and the rows move only when the bus
+      fires, because the mock's clearFlows answers a count and nothing else, which is exactly the dependency
+      the screen has on the real system. The cleared absence gives way when rows return, and an emptying
+      that is NOT a clear lands on "no flows yet" - the flag can only ever describe the emptiness it caused.
+      Narrowing after a clear reads as the filter's absence. An imported file lands as marked rows the list
+      gets from the bus. A pasted command is refused first (the sentence verbatim, the list untouched, so
+      nothing was stored) and then accepted, landing as a request-only marked row.
+      tests/api.rs (2 new, 42 total) over the real axum router: a cross-origin client can read the filename
+      the export stamped - the preflight AND the real response both carrying the expose grant, because the
+      browser checks each in turn; and every door the app calls answering what it did and refusing in a
+      sentence - export scoped by the same filter the listing is, that document imported back, a curl
+      command imported, an unsupported flag refused with the flag NAMED in the body (which is what the paste
+      target renders), a filtered clear reporting what left, and both doors' rows marked. Writing this one
+      found the request-only/HAR fact recorded in the result.
+  e2e:
+    waived: >-
+      The app half is the epic's own WebDriver row - launch the built app against the running engine and
+      drive export -> clear -> import -> paste - which lands with the epic per its e2e plan, and which is
+      also the ONLY thing that can confirm the minWidth change against a real window, which is why design
+      run 11 names it there rather than here. A WU-level e2e would build the same app and drive the same
+      controls through the same window. Same reasoning W1-W4 and W7 recorded, and the epic gate re-walks it.
+      The two existing e2e suites (e2e_capture 6, e2e_h2 4) run green unchanged, which is the regression
+      evidence that nothing on the capture path moved.
+note: >-
+  E-EXPORT.W6 builds the capture-management controls design run 11 specified, and cites that run rather
+  than the superseded run 10. Four things carry the WU. First, the build consumes the run's proposals
+  without minting any of them: Menu and the modal frame are built local and the ⋮ face rides `children`,
+  because Dialog, Menu and the `more` glyph entry all have named owners and the run is explicit that a
+  build may use them and must not mint them - so what lands is three proposals now proven in one call site
+  each, which is a better starting point for their owners than a description was. ModalShell moving to a
+  module of its own is the one judgement call there: its warrant for staying local was a statement about
+  the collection ("a general Dialog drawn from the app's only dialog would generalise from a sample of
+  one"), not about the file, and a second screen importing it out of a sibling screen is the shape the
+  collection exists to prevent. Second, the build pays two things the design could not reach because
+  neither is a design artifact: minWidth 800 -> 850, above the 846px at which the header wraps, guarded by
+  a test that reads the shipped config; and Access-Control-Expose-Headers on the CORS grant, without which
+  Content-Disposition is invisible to a cross-origin reader and the app would have to invent the filename
+  the server already stamps - the run listed that filename as a USED capability, so the grant is what makes
+  the capability true rather than an extra. Third, the list refills from the bus in every case and never
+  from a mutation's own response, which closed a live gap the run had spotted by reading the code: the
+  server names its clear event `cleared` and stream() registered request/response/evicted/lagged only, so
+  before this WU a clear emptied the store and left the rows on screen. Fourth, the absences. FlowList
+  carried a comment saying its two wordings must not share a sentence, because telling someone to send
+  traffic they have already sent is the failure the second exists to prevent - and a user who has just
+  cleared the capture is exactly that person, which is the build fact that overturned run 10's answer. The
+  third absence is tested pairwise-distinct rather than spot-checked, so a future edit that collapses two
+  of them is red. One deviation is carried rather than introduced: the epic plan named useConfirm for the
+  clear confirmation and both design runs found it a ~2 s after-the-fact flash that reports rather than
+  asks, so the ask is a modal and the plan's claim stays wrong on the record. Two smaller calls are worth
+  naming because a reviewer would otherwise read them as drift: `import` is disabled while the textarea is
+  empty rather than refusing with a sentence, because every refusal wording on this surface is the
+  server's and a client-side one would put text on screen that no contract owns; and testId became a
+  prefix so two dialogs on one screen have addressable parts, chosen so ProxyCloseDialog keeps all three of
+  its existing test ids verbatim and no shipped test moved. Writing the integration test found one fact
+  the epic had not stated: har_entry requires a response, so a pasted curl command is invisible to
+  GET /flows/export while appearing in GET /flows. That is W2's deliberate contract - a HAR entry without a
+  response is not a HAR entry - and it is recorded in the result as a follow-up rather than worked around.
+  Suite green: 808 UI tests in 47 files (up from 741 in 44), 224 lib unit, 42 tests/api.rs, 3 tests/ca.rs,
+  6 tests/e2e_capture.rs, 4 tests/e2e_h2.rs, 0 failures; cargo fmt --check and clippy -D warnings clean
+  across all targets; pnpm lint (design/vocabulary) clean with one design-allow pragma on the same
+  offset-from-the-trigger shape Select's popup already carries.
