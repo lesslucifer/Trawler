@@ -574,3 +574,36 @@ test("the ask's words lead with the command, not with the file it also takes", (
   expect(screen.getByRole("button", { name: CAPTURE_COPY.choose })).toBeInTheDocument();
   expect(title).toContain("har");
 });
+
+// Round 6's confirmed finding. The textarea was moved to read-only so that
+// disabling it could not blur focus out of the dialog and take Esc with it —
+// but "choose a file…" beside it is still a real disabled control, and the file
+// picker never holds focus itself (Tauri's dialog is another window, the browser
+// fallback's <input> is never in the DOM). So a keyboard user who tabs to that
+// button and presses Enter still owns focus when the import starts and disables
+// it. jsdom does not blur on disable, so what is asserted is the condition the
+// browser acts on: whatever holds focus must still be inside the panel and must
+// not be the thing that just went disabled.
+test("the file-picker path keeps focus on something that is still enabled", async () => {
+  let land: ((n: number) => void) | undefined;
+  vi.spyOn(files, "openFile").mockResolvedValue({ name: "c.har", bytes: new Uint8Array([1]) });
+  mount({ importHar: vi.fn(async () => new Promise<number>((resolve) => (land = resolve))) });
+
+  choose(CAPTURE_COPY.importName);
+  const picker = screen.getByRole("button", { name: CAPTURE_COPY.choose });
+  picker.focus();
+  expect(picker).toHaveFocus();
+
+  fireEvent.click(picker);
+  await waitFor(() => expect(screen.getByTestId("import-running")).toBeInTheDocument());
+
+  const panel = screen.getByTestId("import-ask-panel");
+  const focused = document.activeElement as HTMLElement;
+  expect(panel).toContainElement(focused);
+  expect(focused).not.toBeDisabled();
+
+  // And the exit that focus hold exists to protect still works.
+  fireEvent.keyDown(focused, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await act(async () => land?.(1));
+});

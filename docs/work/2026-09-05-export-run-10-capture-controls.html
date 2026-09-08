@@ -560,7 +560,7 @@ soft:
   progressive-disclosure: "satisfied — the ask and the paste target do not exist until invited; the scan level is the list plus three glyphs"
   data-ink-first: "satisfied — no badge, no fill, no border at rest; the import mark is one character in an existing cell, and three of four outcomes render nothing at all"
   generous-targets: "satisfied — IconButton's 28px square is the component's own floor, not a 12px glyph; the ask's buttons are full Button hit areas"
-  motion-informs: "satisfied — in-flight is a disabled control plus a word naming what is awaited. This run also wrote 'nothing animates … never a spinner or a bar', which is OVERTURNED — see docs/work/components/spinner.html, retired into the Spinner TSDoc. The rule bans animation that DECORATES, and a ring reporting a transfer still in flight is state change. The word stays; the ring joins it as a second channel"
+  motion-informs: "satisfied — in-flight is a disabled control plus a word naming what is awaited. This run also wrote 'nothing animates … never a spinner or a bar', which is OVERTURNED — see docs/decisions/dec-39-motion-informs-bans-decoration-not-progress.html. The rule bans animation that DECORATES, and a ring reporting a transfer still in flight is state change. The word stays; the ring joins it as a second channel"
   empty-states-orient: "satisfied — a cleared list lands on the existing 'no flows yet — send traffic through the proxy', which names what will appear and the act that causes it"
   familiar-idioms: "satisfied — out/in/empty glyphs and a modal confirm are the devtools genre; the epic's own inverse (copy-as-curl) is why a paste target is the expected shape"
   display-equals-payload: "satisfied — the ask's count is the filtered listing's own count, not a stored total; the paste target shows the pasted bytes verbatim in mono"
@@ -669,7 +669,7 @@ soft:
       <tr>
         <td><em>The registry, read before stage 1 (<span class="avoid">@avoid</span> first):</em> <code>Button</code>'s <span class="use">@states</span> forbids a loading state of its own and requires both halves of fork D4 from any caller with a slow action.</td>
         <td><strong>Elements</strong> gained the <code>TonedText</code> progress row, and <strong>Interaction</strong> rows 1 and 2 spell the disabled window and the progress word as zone deltas. Without this the design would have shipped three controls that silently do nothing for two seconds.</td>
-        <td><code>Button</code>'s <span class="use">@states</span> fork D4 · <code>motion-informs</code> (read at the time as the reason it is a word and not a spinner — overturned, see <code>docs/work/components/spinner.html</code>; the word stays and the ring joins it)</td>
+        <td><code>Button</code>'s <span class="use">@states</span> fork D4 · <code>motion-informs</code> (read at the time as the reason it is a word and not a spinner — overturned, see <code>docs/decisions/dec-39-motion-informs-bans-decoration-not-progress.html</code>; the word stays and the ring joins it)</td>
       </tr>
       <tr>
         <td><em>The assembled mockup, against its own Elements table:</em> the import mark rendered only when present, so imported and captured rows started their timestamps two characters apart.</td>

@@ -217,6 +217,7 @@ function ImportDialog({
   // honest is that a dismissed ask stops listening to it: its answer must not
   // reach back and close whatever the user opened next.
   const listening = useRef(true);
+  const paste = useRef<HTMLTextAreaElement>(null);
   // Armed in the body, not just at the declaration: StrictMode mounts, unmounts
   // and remounts, so a cleanup-only effect disarms the ref for the whole life of
   // an ask that was never dismissed — and every import then answers into a
@@ -248,6 +249,13 @@ function ImportDialog({
   };
 
   const run = async (call: () => Promise<number>) => {
+    // Both buttons are about to be disabled, and a browser blurs a focused
+    // control when that happens — to <body>, outside the dialog, where
+    // ModalShell never sees Esc. Read-only is what keeps the textarea focusable
+    // through the import, so it is where focus goes before the buttons die; the
+    // picker's own dialog never holds focus, so the button the user pressed
+    // still has it. Same hazard ProxyCloseDialog hands to its exit.
+    paste.current?.focus();
     setImporting(true);
     onBusy(true);
     try {
@@ -269,6 +277,7 @@ function ImportDialog({
   return (
     <ModalShell title={CAPTURE_COPY.importName} onCancel={dismiss} testId="import-ask" dismissLabel="close">
       <textarea
+        ref={paste}
         data-opener="true"
         data-wire="curl-command"
         aria-label={CAPTURE_COPY.pasteLabel}
