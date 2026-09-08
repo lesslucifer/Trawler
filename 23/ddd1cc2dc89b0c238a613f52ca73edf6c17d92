@@ -1,0 +1,61 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W6 shell-list-build -> epic/redesign-finish (six rounds; rounds 1-5 on tips b31272d, 9cc170b, 264f022, 8a89d38, ba05b76)"
+epic: E-RFINISH
+wu: E-RFINISH.W6
+branch: wu/redesign-finish/shell-list-build
+base: baa5d7c0ea2946ccafce4bd045e87a5184bf62a5
+head: 23ddd1cc2dc89b0c238a613f52ca73edf6c17d92
+diff_sha256: a846422e4e661c0b01919d0e4144579fe758c5245352423968309e3bb9919bda
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 26, verified: 13, waived: 0 }
+waivers: []
+design:
+  artifacts: [docs/work/2026-09-06-shell-list-second-pass.html]
+  rulebook: 849cc8e0ff423345004cccf79715fc489abc9dbf
+  findings: { found: 5, verified: 2, waived: 0 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-06-shell-list-second-pass.html
+      blob: 4d1f58de498713e530a4e3e5a60c573418c78cff
+      built: [ui/src/NotAnswering.tsx, ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/Layout.tsx]
+  undesigned:
+    - path: ui/src/FlowDetail.tsx
+      why: "one sentence swapped in a slot the pane already had. The !flow branch rendered a Notice reading 'loading this flow...'; it now renders a mute Notice reading 'could not load this flow' when the fetch came back with nothing, and the unchanged loading line otherwise. No zone, prop, layout or control moved - the run owns this pane's width only ('this run changes the box, never what is in it') and its absence table names the pane's load failure as a slot it deliberately did not design. Judged in round 3 (the second warn beside the band's) and again in round 5 (the reserved 'no longer captured' term): the tone is now mute so the band keeps the only alarm, and the wording names no cause so it does not occupy the reserved term. Recorded as a follow-up for the run that owns that sentence"
+verdict: PASS
+date: 2026-09-08
+notes: |
+  Six rounds, because rounds 2, 3 and 4 each found defects inside the previous
+  round's fix. That pattern was the real finding: three facts - the core is not
+  answering, the core refused this query, this flow's fetch produced nothing -
+  were encoded in two values with precedence baked into the encoding, so each fix
+  traded one wrong state for another. Round 4 split them into ,
+  and  with one owner each and moved precedence into the renderers; round
+  5 found the build had still invented a ranking between silence and a refusal
+  that the run never made; round 6 returned clean by case analysis, proving the
+  band and the row region structurally mutually exclusive and
+   unreachable.
+  13 verified across the rounds: a latched pane failure speaking for the list,
+  never expiring, and a straggling refresh un-doing a retry (r1); the listing
+  counter clearing a pane failure without re-fetching, and no zone stating a pane
+  failure with the list empty (r2); a second warn for one cause, the stream
+  overwriting a refusal, a focus claim that never expired, a stale test title
+  (r3); the pane reverting to a false "loading" when the core went silent after
+  it failed, and a refusal latched through a real outage (r4); an invented
+  precedence hiding a refusal, a refusal quoting a value never asked, and a
+  trailing clause false of the region below (r5).
+  Refuted and recorded as refuted, not silently acted on: the three test-double
+  factories in useFlows.test.ts and shellApi-vs-mockApi in App.test.tsx (both
+  follow the files' existing one-double-per-concern convention; merging yields a
+  config object with five knobs, which the reuse dimension explicitly excludes);
+  the retry's unconditional nonce bump (the design's "one cause, one retry",
+  costing one idempotent GET on a rare user click); the pane still reading
+  "loading this flow..." at round 1 (the run puts that sentence in A' by design -
+  later superseded by rounds 3-5, which is why the pane's own line exists now);
+  and a duplicated comment.
+  Recorded, not fixed: failureOf maps a 5xx listing to silence - a core answering
+  with a server error leaves the rows exactly as unverified, which is what the
+  sentence is for; and the pane's "could not load this flow" also covers a
+  ring-dropped flow, whose precise sentence the run reserved as "no longer
+  captured".
+  Gate 0 green at every round. Final: 831 unit/integration, e2e 32/32,
+  onboarding.spec.ts unedited and green.
