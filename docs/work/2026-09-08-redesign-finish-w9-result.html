@@ -168,18 +168,15 @@
               <code>use-cases-index.html</code> moved v1 → v2 for the same reason.</td></tr>
           <tr><td><strong>Nine files</strong> beyond the four surfaces the epic plan named — and the
           plan said “five”</td>
-              <td>The plan's own sentence (<em>“the grep found five more”</em>) undercounts: nine files
-              this diff touches are outside the four surfaces the epic plan's W9 row names, and the
-              plan's in-scope table lists them all even though its prose miscounts them. Corrected here
-              rather than in the plan, because a plan states what was intended before the code and the
-              result is where what happened belongs (W6 set that precedent in this epic). Not a deviation
-              in substance — the grep ran before the plan was written and every surface was listed with
-              an in/out reason. Recorded here because a reader
-              comparing the diff against the <em>epic</em> plan's W9 row will find nine files it does not
-              mention: the api boolean, the registry docstring and its fixture, the use-case index, two
-              decision records and the rulebook example — plus the api client's own test and the
-              shell's, which the rename reaches through a local name and an added assertion. Nine files,
-              nine names, so the count and the list agree.</td></tr>
+              <td>The plan's own sentence (<em>“the grep found five more”</em>) undercounts. Nine files
+              this diff touches lie outside the four surfaces the epic plan's W9 row names: the api
+              client and its test, the shell's own test, the registry docstring and its fixture, the
+              use-case index, two decision records and the rulebook example. Eight of the nine carry an
+              in/out reason in the plan's surfaces table; the ninth, <code>api.test.ts</code>, is named
+              only in the plan's test plan. Corrected here and not in the plan, because a plan states
+              what was intended before the code and the result is where what happened belongs — W6 set
+              that precedent in this epic. Not a deviation in substance: the grep ran before the plan
+              was written, and no surface was edited without a stated reason.</td></tr>
           <tr><td>The on-screen order is <code>[pretty│raw]</code>, not <code>[raw│pretty]</code></td>
               <td>The ruling, the lexicon and the acceptance sentence all write the pair as
               <em>raw | pretty</em>; design run #9 drew the control readable-first and cited
@@ -270,19 +267,24 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Three review rounds, and what they were actually for</h2>
+    <h2 id="review">Four review rounds, and what they were actually for</h2>
     <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
     corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
     refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
     claim accuracy because that is where rounds 1 and 2 found everything — raised two and
-    <strong>verified one</strong>. Fourteen candidates over three rounds; <strong>four verified, every
-    one of them a false sentence in this report rather than a line of code.</strong></p>
+    <strong>verified one</strong>. Round 4 raised one and verified it — a false sentence inside round
+    3's own correction. Fifteen candidates over four rounds; <strong>five verified, every one of them a
+    false sentence in this report rather than a line of code.</strong></p>
     <div class="callout" data-c="lesson">
-      <strong>The pattern is the finding.</strong> Three rounds found nothing wrong with the rename — the
-      dimensions that judge code came back clean each time. What they found, four times over, was this
-      report claiming more than the tree supported: an invented total, two miscounts, and a check
-      reported as passed that could not have passed as written. A rename is easy to get right and easy to
-      over-report, and the report is the part a human signs.
+      <strong>The pattern is the finding.</strong> Four rounds found nothing wrong with the rename — the
+      dimensions that judge code came back clean every time. What they found, five times over, was this
+      report claiming more than the tree supported: an invented total, three miscounts, and a check
+      reported as passed that could not have passed as written. Round 4's finding sat inside round 3's
+      own correction, which is the sharpest version of the lesson: <strong>a sentence that summarises
+      evidence is itself evidence, and re-stating it is a new claim, not a safer one.</strong> The two
+      habits that ended it were dropping counts the document does not need and enumerating whatever
+      count it keeps. A rename is easy to get right and easy to over-report, and the report is the part
+      a human signs.
     </div>
       <table data-c="tbl-review">
         <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
@@ -335,6 +337,18 @@
               wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
               this WU has no channel for. The record did move out of <code>evidence</code> into its own
               section, matching W6.</td></tr>
+          <tr><td><strong>Round 4 · round 3's correction claimed the plan's surfaces table
+          <em>“lists them all”</em></strong></td>
+              <td><strong>Verified.</strong> Eight of the nine files are in that table with an in/out
+              reason; <code>api.test.ts</code> appears only in the plan's test plan. The correction is
+              now stated as eight-and-one, and the row enumerates all nine files rather than asserting a
+              number over a shorter list — which is how the same miscount got in twice.</td></tr>
+          <tr><td>Round 4 · the code and the five T2 edits, all five dimensions</td>
+              <td>Clean, no candidates. <code>aria-checked</code> is bound to the active segment, so the
+              unit test's <code>toBeChecked()</code> asserts the real thing; the e2e's exact-text
+              absence selector is the strategy already proven in that file; and <code>getBody</code>'s
+              boolean covering two of the core's three <code>?decode=</code> values is the shape it
+              already had before this diff.</td></tr>
           <tr><td><strong>Round 3 · the report claimed <code>SegmentedControl</code>'s eight assertions
           passed <em>unedited</em></strong></td>
               <td><strong>Verified.</strong> The fixture rename reaches inside seven of the eight tests,
