@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9f79d59f34851f0dfacc6e" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W6 result: the capture-management controls, built</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W6 result — the controls, built</h1>
+      <p>One <code>⋮</code> trigger, three worded acts, two asks and a marked row. The three doors the API has had since W2 reach a person, and two things the design could not change itself — the window's minimum width and the CORS grant hiding the export's filename — are paid here.</p>
+      <div class="meta">v1 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
+        <a href="2026-09-08-export-w6-controls-build-plan.html">WU plan</a> ·
+        <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> ·
+        <a href="2026-09-04-export-plan.html#w6">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <p data-item="outcome">
+      <strong>Delivered, against the requirement as written.</strong> All eleven observables hold, each
+      with a test that fails against the pre-WU build. The screen the run designed is the screen that
+      ships: A′ is a fixed 80px slot and a 28px trigger, M is three words with a hairline before the
+      irreversible one, E asks with its focus on <em>cancel</em>, and F takes a file or a paste and shows
+      a refusal in the server's own sentence. Run 11 is cited; run 10 is not.
+    </p>
+
+    <h2 id="shipped">What shipped</h2>
+    <table data-c="shipped">
+      <thead><tr><th>File</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src/CaptureControls.tsx</code> <span class="badge id">new</span></td>
+        <td>A′ and the two dialogs it opens. Exports <code>CAPTURE_COPY</code>, so every word on the surface has one home and the tests assert the shipped string rather than a copy of it.</td></tr>
+        <tr><td><code>ui/src/CaptureMenu.tsx</code> <span class="badge id">new</span></td>
+        <td>M. Built local — the run's <code>Menu</code> proposal is the collection's to mint.</td></tr>
+        <tr><td><code>ui/src/ModalShell.tsx</code> <span class="badge id">new</span></td>
+        <td>The frame, lifted out of <code>ProxyCloseDialog.tsx</code> with its behaviour unchanged and two additions: the initial-focus marker now accepts a focusable that is not a button, and the ✕'s accessible name is the caller's.</td></tr>
+        <tr><td><code>ui/src/apiStub.ts</code> <span class="badge id">new</span></td>
+        <td>Test support. Five suites each spelled out a whole <code>TrawlerApi</code>, so four new client methods would have edited five unrelated files; they now override only what they are about.</td></tr>
+        <tr><td><code>ui/src/api.ts</code></td>
+        <td><code>source</code> on both projections, the four methods, and the <code>cleared</code> listener.</td></tr>
+        <tr><td><code>ui/src/App.tsx</code> · <code>FlowList.tsx</code> · <code>ProxyCloseDialog.tsx</code></td>
+        <td>The cluster mounted at the trailing edge with T5's seam before it; cell 1 at 160px, the mark, the third absence; and the shell's old home now importing it.</td></tr>
+        <tr><td><code>src/api/mod.rs</code> · <code>xtask/src/ui.rs</code> · <code>tauri.conf.json</code> · <code>capabilities/default.json</code></td>
+        <td>The expose-headers grant; the guard on the window minimum; the minimum itself at 850; the two permissions the import door needs.</td></tr>
+      </tbody>
+    </table>
+    <p><strong>What was deliberately not built:</strong> no registry entry for <code>Menu</code> or
+    <code>Dialog</code>, and no <code>GlyphName</code> entry for <code>⋮</code> — all three are the run's
+    proposals with named owners, and the run says a build may consume them locally but must not mint them.
+    The face rides <code>children</code>, which is what an unpaid vocabulary debt looks like from the build
+    side.</p>
+
+    <h2 id="calls">The contract calls the build made</h2>
+    <table data-c="calls">
+      <thead><tr><th>Call</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>ModalShell</code> moves to a module of its own rather than being exported from the screen it lived in</td>
+          <td>The run's warrant for keeping it local was "a general Dialog drawn from the app's only dialog would generalise from a sample of one" — a statement about the <em>collection</em>, not about the file. Importing it out of a sibling screen is the shape the collection exists to prevent; a module is neither that nor a registry entry, and the promotion stays the proposal it was.</td>
+        </tr>
+        <tr>
+          <td><code>testId</code> became a prefix — <code>&lt;id&gt;-dialog</code>, <code>-backdrop</code>, <code>-panel</code></td>
+          <td>Two dialogs on one screen need addressable parts. Chosen so <code>ProxyCloseDialog</code> keeps all three of its existing names verbatim by passing <code>"proxy-close"</code>: no shipped test moved.</td>
+        </tr>
+        <tr>
+          <td>The ✕ gained a caller-supplied name, defaulting to its old one</td>
+          <td>E's escape is a button named <em>cancel</em>, and the frame's ✕ was also named <em>cancel</em> — two controls under one name doing the same thing. The default keeps <code>ProxyCloseDialog</code> unchanged (its own escape is <em>quit</em>, so it never collided).</td>
+        </tr>
+        <tr>
+          <td><em>import</em> is disabled while the textarea is empty, rather than refusing with a sentence</td>
+          <td>The refusal wordings on this surface are all the server's. Inventing a client-side one for "you have typed nothing" would put a sentence on the screen that no contract owns; the file picker is the other way in and is never disabled.</td>
+        </tr>
+        <tr>
+          <td>The in-flight line appears in both A′ and F during an import</td>
+          <td>The run's <code>TonedText</code> row lists all three slot states and its Interaction row puts a mute <code>Notice</code> in the dialog. Both, because a modal covers the header: neither zone is inferable from the other.</td>
+        </tr>
+        <tr>
+          <td><code>openFile()</code> lives beside <code>saveBody()</code> in <code>body.ts</code></td>
+          <td>One home for the app's native file dialogs, and the same <code>null</code>-means-cancelled contract — which is what makes the dismissed-picker case symmetric with the cancelled-save case the run names.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>From</th><th>What changed, and why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the epic plan's <code>useConfirm</code> for the clear confirmation</td>
+          <td><strong>Carried, as both design runs required.</strong> <code>useConfirm</code> is a ~2 s after-the-fact flash that reports rather than asks, and an irreversible act needs a question. The ask is a modal on <code>ModalShell</code>. The plan's claim stays wrong on the record; this is the deviation it predicted.</td>
+        </tr>
+        <tr>
+          <td>the WU plan's observable 11 — "the shipped <em>and e2e</em> Tauri configs both declare <code>minWidth</code> ≥ 850"</td>
+          <td>The e2e config is an overlay that declares no window block at all, so it <em>inherits</em> the minimum rather than declaring one. The guard asserts the shipped value and asserts that the overlay still declares no windows — which is the condition under which the inheritance holds, and the thing that would silently break it.</td>
+        </tr>
+        <tr>
+          <td>the run's <code>focus-returns-to-origin</code> reading of M</td>
+          <td>Honoured, but by a mechanism worth naming: DOM focus never leaves the trigger while M is open — movement is virtual, exactly as <code>Select</code> already works. So "focus returns to the trigger on every exit" is true by construction rather than by restoration, and the tested distinction between Esc and Tab is which one consumes the key.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="found">One thing the build found</h2>
+    <p><strong>A request-only flow cannot be exported, and that is HAR, not a defect.</strong> Writing the
+    integration test caught it: <code>har_entry</code> requires a response, so a pasted <code>curl</code>
+    command — and any flow still in flight — is skipped by <code>GET /flows/export</code> while appearing in
+    <code>GET /flows</code>. That is W2's deliberate contract (a HAR entry without a response is not a HAR
+    entry), and it means the epic's round-trip guarantee never covered the curl door's output. Recorded
+    rather than silently worked around; the export/import parity claim is about captured exchanges, which is
+    what <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a> already scopes it to.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>pnpm test</code> (vitest)</td>
+        <td><strong>808 passed</strong> in 47 files, up from 741 in 44 — 67 new across five suites: <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (18), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer).</td></tr>
+        <tr><td><code>pnpm lint</code> (design/vocabulary)</td>
+        <td>clean. One <code>design-allow</code> pragma, on the same offset-from-the-trigger shape <code>Select</code>'s popup already carries; the gap in it is a token.</td></tr>
+        <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full suite, including the two new <code>tests/api.rs</code> cases and the window-minimum guard.</td></tr>
+        <tr><td><code>cargo xtask ui build</code></td><td>green — <code>tsc -b</code> clean, bundle built.</td></tr>
+        <tr><td><code>cargo xtask ui specimens --check</code></td><td>ok — run 11 still mounts and renders (7 mounts, 15 buttons).</td></tr>
+        <tr><td><code>cargo xtask verify-doc</code></td><td>green on the plan and this result; the repo-wide link check passes with UC-6 and UC-7 now pointing at UC-4's controls.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <thead><tr><th>Tier</th><th>Done</th></tr></thead>
+      <tbody>
+        <tr><td>T2</td><td><code>use-cases/web-ui.html</code> — UC-4 gains <em>The capture-management controls</em>: the trigger and the slot, the three acts and what each gives a user, the imported row's mark, the third absence, and the rule that all three refill from the bus. UC-6's and UC-7's provenance callouts each name the route a person takes, which they previously deferred to "the app's own controls follow in the same epic". Header to v10.</td></tr>
+        <tr><td>T2</td><td><code>use-cases/use-cases-index.html</code> — the UC-4 row says the surface now changes server state.</td></tr>
+        <tr><td>T1 · not edited</td><td><code>architecture.html</code> re-read at close. Its UI seam says the app is an out-of-process API client; a client that also POSTs and DELETEs is still that, and no store or module contract moved. Nothing there is now false.</td></tr>
+        <tr><td>T2 · not edited</td><td>The rulebook and the decisions. This WU decided nothing the design run had not already decided and recorded; copying its reasoning down a tier is the duplication the tier system forbids.</td></tr>
+      </tbody>
+    </table>
+    <p>One fact per tier held: the request shapes live only in <code>ui/src/api.ts</code>, the words only in
+    <code>CAPTURE_COPY</code>, and the design's reasoning only in run 11, which this result cites rather than
+    restates.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li><strong>The epic owes the e2e.</strong> <code>tests/e2e_export.rs</code> and the WebDriver row (export → clear → import → paste against the built app) land with the epic per its <a href="2026-09-04-export-plan.html#e2e-plan">e2e plan</a> — and the WebDriver row is the only thing that can confirm the window minimum against a real window, which is why the run named it there.</li>
+      <li><strong>Run 11's second blocked-on is carried, not closed.</strong> A cross-year timestamp still overruns cell 1 by 7.2px, and <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a>'s escape is still unavailable because the detail pane shows no timestamp. The two exits are unchanged — a wider cell 1 paid out of PATH, or a full timestamp in the detail pane — and both are whole-grid calls this WU has no design for. Owner stays the flow-detail run.</li>
+      <li><strong>Three proposals remain unpaid, all with named owners:</strong> <code>Dialog</code> (promote <code>ModalShell</code>, now a module and one import away from the collection), <code>Menu</code> (mint, or extract the popup shell <code>Select</code> already owns and have both consume it), and the <code>more</code> glyph entry. Each is now built and proven in one call site, which is a better starting point for its owner than a description was.</li>
+      <li><strong>A request-only flow is invisible to the export</strong> — see above. Worth stating in <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a> if a reader ever asks why a pasted command does not come back out; not amended here because the record already scopes the guarantee to captured exchanges.</li>
+    </ul>
+    <p>No debt discovered beyond those. No test layer skipped beyond the recorded e2e waiver.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
