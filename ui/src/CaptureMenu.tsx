@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { IconButton } from "./components/index";
-import { Spinner } from "./Spinner";
+import { IconButton, Spinner } from "./components/index";
 
 export interface CaptureAct {
   id: string;

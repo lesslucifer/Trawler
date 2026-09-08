@@ -3,8 +3,7 @@ import type { Filter, TrawlerApi } from "./api";
 import { openFile, saveBody, type ChosenFile } from "./body";
 import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
 import { ModalShell } from "./ModalShell";
-import { Spinner } from "./Spinner";
-import { Button, Notice, TonedText } from "./components/index";
+import { Button, Notice, Spinner, TonedText } from "./components/index";
 
 export const CAPTURE_COPY = {
   trigger: "capture actions",

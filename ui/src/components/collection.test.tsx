@@ -56,6 +56,7 @@ const SPECIMENS: Record<string, ReactElement> = {
     />
   ),
   SourceSurface: <collection.SourceSurface text='{"a":1}' language={json()} testId="surface" />,
+  Spinner: <collection.Spinner />,
   StatusDot: <collection.StatusDot status="connected" onClick={() => {}} />,
   StatusLine: (
     <collection.StatusLine
