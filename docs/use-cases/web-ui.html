@@ -14,10 +14,11 @@
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD)
       the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
       capture (UC-7).</p>
-      <div class="meta">v9 · 2026-09-06 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v10 · 2026-09-08 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
-      UC-3/UC-4 paging + provenance + UC-6 (incl. the curl paste) + UC-7 by <span class="badge id">E-EXPORT</span> ·
+      UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
+      + UC-7 by <span class="badge id">E-EXPORT</span> ·
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span></div>
     </div>
   </header>
@@ -110,6 +111,58 @@
       <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> now sets on the escape: the
       rulebook clause the design run escalated was written at the epic close, and the rule's Tier-1 red is
       unchanged.</p>
+    </div>
+
+    <div data-c="uc-4-capture-controls">
+      <h3 id="uc-4-capture-controls">The capture-management controls</h3>
+      <p>The flow list is where UC-6 and UC-7 reach a person rather than only a client
+      (<span class="badge id">E-EXPORT</span> W6, built from the capture-controls design run). These are
+      the first controls in the app that change server state, and they sit
+      behind one <code>⋮</code> trigger at the header's trailing edge, past the filters that scope them.
+      Beside it a fixed-width slot reads the count those filters selected, and reads
+      <em>exporting…</em> or <em>importing…</em> while a transfer runs — the same box either way, so
+      starting one moves nothing else in the row. A turning ring joins the in-flight line, and a second
+      one turns inside the menu in place of the running act's own face: reopening the menu mid-transfer
+      is the one way to ask why an act is withheld, so the answer is there and not only in the header.</p>
+      <p>Each act wears a face, and none of the three is minted for the menu: <code>↓</code> is the save
+      glyph the app already spends on writing something out, <code>↑</code> is the very mark an imported
+      row carries in the list below, and <code>⌫</code> is the erase the third act is. The box holding
+      them is drawn whether or not it is filled, so every label hangs off one left edge, and none of the
+      faces reaches the accessible name — the label is what the act is called.</p>
+      <table data-c="uc-4-acts">
+        <tr><th>Act</th><th>What a user gets</th></tr>
+        <tr><td><strong>export as har…</strong></td>
+        <td>The filtered capture, through the OS save dialog, under the filename the server stamped
+        rather than one the app invented. Dismissing that dialog is an outcome, not a failure: the line
+        clears and nothing claims a file was written.</td></tr>
+        <tr><td><strong>import…</strong></td>
+        <td>One modal taking either way in, and not evenly: the paste offers the file, not the reverse.
+        The <code>curl</code> target is what opens focused and what the primary button acts on, so the
+        words lead with it too — the title names the command before the <code>.har</code> file, and the
+        target states its own act instead of opening on an <em>…or</em> that made the one thing the ask
+        is mainly for read as an aside. Choosing a file stays one muted button beside it.
+        A refusal is the server's own sentence
+        (<a href="../decisions/dec-37-curl-parser-accepts-what-a-browser-emits.html">DEC-37</a>), shown
+        verbatim under the text that caused it, with the text left in place to edit. While the import
+        runs the ask says so on its own surface — a ring beside <em>importing…</em> — and holds the
+        command <em>read-only</em> rather than disabled: that target is what the ask opened focused on,
+        and disabling it would drop focus to <code>&lt;body&gt;</code>, outside the dialog, taking Esc
+        with it. A slow import keeps its one keyboard exit.</td></tr>
+        <tr><td><strong>clear…</strong></td>
+        <td>A modal ask titled with the count it will remove, whose initial focus is on the answer that
+        does nothing — the act behind it cannot be undone. The consequence carries the only alarm on the
+        screen; the button carries none.</td></tr>
+      </table>
+      <p>Two things the list itself gained. An <strong>imported row carries a <code>↑</code> mark</strong>
+      in its time cell, with its own accessible name, so a capture someone handed you is tellable from
+      live traffic without a column of its own
+      (<a href="../decisions/dec-36-imported-flows-are-marked.html">DEC-36</a>). And a
+      <strong>cleared list gets a third absence of its own</strong> — "capture cleared", with the same
+      remedy the never-captured one gives, because after a clear the remedy genuinely is the same and the
+      heading is what says which nothing this is.</p>
+      <p>Every one of the three refills the list <strong>from the event bus, never from its own
+      response</strong>: the responses carry counts, not rows, and two sources of truth for one list is a
+      race. The <code>cleared</code> event exists for exactly this.</p>
     </div>
 
     <div class="callout" data-c="uc-4-provenance">
@@ -526,7 +579,9 @@ flowchart TD
       <code>source</code> mark by <span class="badge id">E-EXPORT.W3</span>, the curl paste by
       <span class="badge id">E-EXPORT.W7</span> (<code>src/api/curl.rs</code>, its
       <code>toCurl</code> inverse proven as a property against a mirror anchored to the app's own
-      pinned outputs); the app's own controls follow in the same epic. Both HAR directions live in
+      pinned outputs); the route a person takes to all three is
+      <a href="#uc-4-capture-controls">UC-4's capture-management controls</a>
+      (<span class="badge id">E-EXPORT.W6</span>). Both HAR directions live in
       <code>src/api/har.rs</code> — the
       parser is defined against the projection it inverts, so the two cannot drift into a format
       Trawler writes but cannot read — and the exported document's shape is snapshot-locked in
@@ -603,8 +658,10 @@ flowchart TD
     </div>
 
     <div class="callout" data-c="uc-7-provenance">
-      <p>Delivered by <span class="badge id">E-EXPORT.W4</span>; the app's own clear control
-      follows in the same epic. The API half is the whole contract above: both routes converge on
+      <p>Delivered by <span class="badge id">E-EXPORT.W4</span>; the app's own clear control —
+      the modal ask, and the absence a cleared list lands on — is
+      <a href="#uc-4-capture-controls">UC-4's capture-management controls</a>
+      (<span class="badge id">E-EXPORT.W6</span>). The API half is the whole contract above: both routes converge on
       one <code>Store</code> removal, which shares its unlinking with eviction so the ring's byte
       accounting cannot differ between the two — the invariant is asserted as a property over
       arbitrary sequences of inserts, imports, evictions and removals. Why the mutating methods

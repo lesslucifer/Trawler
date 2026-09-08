@@ -1,23 +1,20 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useFlows } from "./useFlows";
-import type { FlowSummary, StreamHandlers, TrawlerApi } from "./api";
+import type { FlowSummary, StreamHandlers } from "./api";
+import { apiStub } from "./apiStub";
 
 // Fake API with a hand-resolved /stats promise and a captured stream handler set,
 // so a test can interleave a live `connection` bump with the seed's resolution.
 function fakeApi() {
   let handlers: StreamHandlers | undefined;
   let resolveStats: ((n: number) => void) | null = null;
-  const api: TrawlerApi = {
-    listFlows: async () => [],
+  const api = apiStub({
     connectionCount: () => new Promise<number>((res) => (resolveStats = res)),
-    caCertPem: async () => "",
-    getFlow: async () => { throw new Error("unused"); },
-    getBody: async () => { throw new Error("unused"); },
     stream: (h) => {
       handlers = h;
       return () => {};
     },
-  };
+  });
   return {
     api,
     fireConnection: () => handlers?.onConnection?.(),
@@ -87,15 +84,7 @@ test("a live connection is stamped with its time; the /stats seed stamps nothing
 // leave the user no way to pick another.
 function hostApi(pages: FlowSummary[][]) {
   let page = 0;
-  const api: TrawlerApi = {
-    listFlows: async () => pages[Math.min(page++, pages.length - 1)],
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
-    getFlow: async () => { throw new Error("unused"); },
-    getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
-  };
-  return api;
+  return apiStub({ listFlows: async () => pages[Math.min(page++, pages.length - 1)] });
 }
 
 function summary(id: string, uri: string): FlowSummary {
@@ -106,6 +95,7 @@ function summary(id: string, uri: string): FlowSummary {
     method: "GET",
     uri,
     status: 200,
+    source: "captured",
     request_body_state: "empty",
     response_body_state: "empty",
   };
