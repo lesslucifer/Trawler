@@ -31,9 +31,31 @@ changes:
       DEC-39's row, carrying the decision, the two receipts it overturns, the constraint that survives, the
       fact that the rulebook text is unchanged and why, and the two rejected alternatives - so the index
       answers the question without opening the record, which is what index-first means.
+  - path: docs/work/2026-09-05-export-run-10-capture-controls.html
+    tier: T3
+    action: updated
+    distills: >-
+      Its motion-informs receipt is corrected, and its stage-log line with it. The original wording -
+      "nothing animates; in-flight is a disabled control plus a static word, never a spinner or a bar" -
+      is KEPT verbatim inside the new text and marked OVERTURNED, pointing at DEC-39, so the run still
+      records what it decided while no longer asserting it as current. The word stays; the ring joins it
+      as a second channel. Run 10 is superseded by run 11 and carries no `built` of its own; it is amended
+      because a reader who reaches it through the epic's history must not find a live prohibition there.
+  - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+    tier: T3
+    action: updated
+    distills: >-
+      Its motion-informs receipt is corrected the same way, and this is the one that mattered, run 11
+      being the design W6 actually builds from. "Nothing animates, and nothing moves" is split: the second
+      half stands unchanged and is named as standing, because the in-flight line still swaps inside a
+      fixed-width slot rather than displacing the row; the first half is marked OVERTURNED and points at
+      DEC-39. Run 11 inherited the verdict from run 10 without re-testing it, which is exactly the failure
+      DEC-38 exists to catch, and the amendment says so rather than quietly correcting the text.
   - path: docs/work/components/spinner.html
     tier: T3
     action: added, then removed in the same WU
+    distilled_to:
+      - docs/decisions/dec-39-motion-informs-bans-decoration-not-progress.html
     distills: >-
       The component design for Spinner - why it exists (two components already hand-roll the ring inline
       and two more call sites arrived), the motion-informs argument in full, the contract facet by facet
@@ -42,6 +64,20 @@ changes:
       per DEC-16: a component's contract is its TSDoc, and a second copy is the drift retirement exists to
       kill. The cr/v3 citation resolves it at b53d433, its last state reachable from the tip, per DEC-28.
       Review round 7 found one flaw in it, waived on the cr note because the file no longer exists to fix.
+      Its forks, one by one, and what carries each now. The motion-informs reversal - the fork that made
+      the component possible at all - goes to DEC-39, named in distilled_to above; it is the only one that
+      constrains future work, since it settles a rulebook slug's reading for every screen that comes
+      after. The colour fork (ink-mute, never ok/warn, because a transfer in flight is not an outcome and
+      a tint would claim one) is carried by @anatomy, which states the inked edge and "no colour of its
+      own". The accessible-name fork (none, deliberately, because every sanctioned use puts the ring
+      beside a line that already says what is happening in words) is carried by @avoid, which names giving
+      it a name as the thing not to do, and is additionally pinned by a test so a later "fix" must argue
+      with it. The size fork (one size, spinner-lg left with no caller until a second context needs it) is
+      carried by @states and @anatomy - one shape, one size. The use/avoid boundary, including that a
+      progress ring is wrong where the extent is knowable and a count would say more, is carried verbatim
+      by @use and @avoid. The one item in the file that is NOT a fork is the note that Select and
+      StatusLine still hand-roll the ring: that is WU-scope bookkeeping about two other components rather
+      than a decision constraining Spinner, and it is preserved in commit 45035f6's message.
   - path: docs/use-cases/web-ui.html
     tier: T2
     action: updated
