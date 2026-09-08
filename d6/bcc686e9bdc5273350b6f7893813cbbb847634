@@ -5,7 +5,7 @@ wu: E-EXPORT.W6
 branch: wu/export/controls-build
 tests:
   unit:
-    count: 69
+    count: 68
     covers: >-
       ui/src/api.test.ts (11 new, 20 total): exportHar carrying the live filter and taking the filename
       off Content-Disposition; attachmentName over the quoted form, the bare form, a header the CORS grant
@@ -51,7 +51,7 @@ tests:
       name and ink-mute (not chromatic - being imported is a provenance, not an outcome); a captured row
       still holding the 16px box so timestamps share one left edge; cell 1 at 160px; the cleared list's own
       heading with the never-captured remedy; all three absences proven pairwise distinct rather than
-      spot-checked; and a clear that emptied a filtered view reading as cleared. Rust: src/api/mod.rs (1) -
+      spot-checked; and a clear that emptied a filtered view reading as cleared. ui/src/body.test.ts (2, both added by review round 1, which found openFile shipping untested): the Tauri branch - a dismissed dialog answering null with no read attempted, a picked path returning name and bytes, and the call asserted single-file rather than a directory - and the browser fallback, whose cancel listener is the only reason a dismissed picker settles at all: a dismissal, a chosen file read to bytes, a change event carrying no file, and a read that fails, which must reject rather than never settle. Rust: src/api/mod.rs (1) -
       the export's Content-Disposition readable cross-origin, asserting both the expose grant and that the
       header it exposes is the one carrying the name. xtask/src/ui.rs (1) - the window minimum at >= 850,
       above the 846px where the header wraps, plus the assertion that the e2e overlay still declares no
@@ -123,22 +123,28 @@ note: >-
   the epic had not stated: har_entry requires a response, so a pasted curl command is invisible to
   GET /flows/export while appearing in GET /flows. That is W2's deliberate contract - a HAR entry without a
   response is not a HAR entry - and it is recorded in the result as a follow-up rather than worked around.
-  Suite green: 814 UI tests in 47 files (up from 741 in 44), 224 lib unit, 42 tests/api.rs, 3 tests/ca.rs,
+  Suite green, every figure read off a run rather than counted from source: 814 UI tests in 47 files
+  (up from 741 in 44, 73 new across seven suites), 221 lib unit, 41 tests/api.rs, 3 tests/ca.rs,
   6 tests/e2e_capture.rs, 4 tests/e2e_h2.rs, 0 failures; cargo fmt --check and clippy -D warnings clean
   across all targets; pnpm lint (design/vocabulary) clean with one design-allow pragma on the same
   offset-from-the-trigger shape Select's popup already carries.
 review_rounds: >-
-  Two rounds of the code-review skill ran against this WU and both are recorded on the cr note. Round 1
-  (five finders, eleven candidates) confirmed three: a T2 doc calling design run 11 "archived" when
-  archival is an epic-close event; openFile and its browser fallback shipping with no unit test; and the
-  export and import sharing one in-flight slot, so dismissing the import ask mid-export cleared the
-  export's line. Round 2 re-read the fix and confirmed four more, the first of which says round 1's fix was
-  half a fix: guarding the slot's CLEAR left its SET unguarded, so an import that actually ran mid-export
-  still overwrote the export's mark and the export's finally then cleared it, re-offering an act that was
-  still running - the slot is now two independent flags. Also: an abandoned import still called onDone() on
-  the mounted parent, closing whichever ask the user had opened since; the export door now throws the
-  server's sentence like the other two, a finding whose verifier refuted it on the strength of THIS WU's
-  own plan, which does not outrank the design run it cites (run 11's Interaction table spells out the
-  export row); and the result's per-suite test count was stale because a test.each block yields more cases
-  than it has test( calls. Every confirmed finding has a regression test written red first. Six of the 69
-  unit tests and both of the openFile tests exist because of these rounds.
+  Three rounds of the code-review skill ran against this WU; each round's record is the cr note on the tip
+  it judged. Round 1 (five finders, eleven candidates) confirmed three: a T2 doc calling design run 11
+  "archived" when archival is an epic-close event; openFile and its browser fallback shipping with no unit
+  test; and the export and import sharing one in-flight slot, so dismissing the import ask mid-export
+  cleared the export's line. Round 2 re-read the fix and confirmed four more, the first of which says round
+  1's fix was half a fix: guarding the slot's CLEAR left its SET unguarded, so an import that actually ran
+  mid-export still overwrote the export's mark and the export's finally then cleared it, re-offering an act
+  that was still running - the slot is now two independent flags. Also: an abandoned import still called
+  onDone() on the mounted parent, closing whichever ask the user had opened since; the export door now
+  throws the server's sentence like the other two, a finding whose verifier refuted it on the strength of
+  THIS WU's own plan, which does not outrank the design run it cites (run 11's Interaction table spells out
+  the export row); and the result's per-suite test count was stale because a test.each block yields more
+  cases than it has test( calls. Round 3 found nothing in the code - correctness traced every export/import
+  interleaving and both flags and returned empty - and five more wrong numbers in this WU's own record,
+  including two in an earlier version of THIS note (a lib count and an api.rs count that were never
+  measured). Every count above is now read off a run. That is the WU's one recurring defect class and it is
+  the same one E-EXPORT.W9 named: a value moves and a sentence quoting the old value survives. Every
+  confirmed code finding carries a regression test written red first; eight of the tests counted above
+  exist because of these rounds.
