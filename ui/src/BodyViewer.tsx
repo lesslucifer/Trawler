@@ -25,7 +25,7 @@ import {
 } from "./components/index";
 
 const MODES = [
-  { value: "decoded", label: "decoded" },
+  { value: "pretty", label: "pretty" },
   { value: "raw", label: "raw" },
 ];
 
@@ -62,20 +62,20 @@ export function BodyViewer({
   flow: FlowView;
   leg: Leg;
 }) {
-  const [decode, setDecode] = useState(true);
+  const [pretty, setPretty] = useState(true);
   const [fetched, setFetched] = useState<BodyFetch | "error" | null>(null);
 
   const body: BodyView | null = leg === "request" ? flow.request_body : flow.response_body;
   const notice = bodyNotice(body);
   const loaded = fetched !== null && fetched !== "error" ? fetched : null;
   const kind: BodyKind | null =
-    loaded && (decode ? bodyKind(loaded.contentType) : rawKind(loaded.bytes));
+    loaded && (pretty ? bodyKind(loaded.contentType) : rawKind(loaded.bytes));
 
   useEffect(() => {
     setFetched(null);
     if (body?.state !== "captured") return;
     let cancelled = false;
-    api.getBody(flow.id, leg, decode).then(
+    api.getBody(flow.id, leg, pretty).then(
       (result) => {
         if (!cancelled) setFetched(result);
       },
@@ -86,7 +86,7 @@ export function BodyViewer({
     return () => {
       cancelled = true;
     };
-  }, [api, flow.id, leg, decode, body?.state]);
+  }, [api, flow.id, leg, pretty, body?.state]);
 
   // Copy delivers what the pane shows: the hex dump for hex-rendered bodies,
   // the body text otherwise. An image has no text form — ImageRenderer's @avoid
@@ -104,8 +104,8 @@ export function BodyViewer({
       <div className="flex items-center gap-chrome-gap">
         <SegmentedControl
           options={MODES}
-          value={decode ? "decoded" : "raw"}
-          onChange={(value) => setDecode(value === "decoded")}
+          value={pretty ? "pretty" : "raw"}
+          onChange={(value) => setPretty(value === "pretty")}
           ariaLabel={`${leg} body mode`}
         />
         {loaded && (

@@ -487,7 +487,7 @@ test("Esc closes the panel and hands focus back to the list that opened it", asy
   expect(document.activeElement).toBe(list);
 });
 
-test("a captured response body is fetched decoded and rendered by the viewer", async () => {
+test("a captured response body is fetched pretty and rendered by the viewer", async () => {
   const { api } = mockApi(() => [flow({ id: "f1" })]);
   (api.getFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
     ...flow({ id: "f1" }),
@@ -508,6 +508,12 @@ test("a captured response body is fetched decoded and rendered by the viewer", a
   expect(api.getBody).toHaveBeenCalledWith("f1", "response", true);
   expect(tree).toHaveTextContent("greeting");
   expect(screen.getByRole("button", { name: "save" })).toBeInTheDocument();
+  // The label and the fetch asserted together: a switch reading "pretty" over a
+  // source fetch would satisfy either one alone.
+  const view = within(screen.getByRole("radiogroup", { name: "response body mode" }));
+  expect(view.getByRole("radio", { name: "pretty" })).toBeChecked();
+  expect(view.getByRole("radio", { name: "raw" })).toBeInTheDocument();
+  expect(view.queryByRole("radio", { name: "decoded" })).toBeNull();
 });
 
 test("selecting a different flow resets the copy button (no stale 'copied')", async () => {

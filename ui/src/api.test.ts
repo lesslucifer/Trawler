@@ -109,10 +109,10 @@ test("getBody asks for the rendered view or the source, and keeps the content ty
   vi.stubGlobal("fetch", fetchMock);
   const api = createApi("http://x");
 
-  const decoded = await api.getBody("f1", "response", true);
+  const pretty = await api.getBody("f1", "response", true);
   expect(fetchMock).toHaveBeenLastCalledWith("http://x/flows/f1/response/body?decode=1");
-  expect(decoded.contentType).toBe("text/plain");
-  expect([...decoded.bytes]).toEqual([...bytes]);
+  expect(pretty.contentType).toBe("text/plain");
+  expect([...pretty.bytes]).toEqual([...bytes]);
 
   // Raw asks for source, not the stored bytes: a gzipped body's stored form is
   // a hex dump of compression frames, which answers nothing.

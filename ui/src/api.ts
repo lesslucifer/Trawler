@@ -136,7 +136,7 @@ export interface TrawlerApi {
   connectionCount(): Promise<number>;
   caCertPem(): Promise<string>;
   getFlow(id: string): Promise<FlowView>;
-  getBody(id: string, leg: Leg, decode: boolean): Promise<BodyFetch>;
+  getBody(id: string, leg: Leg, pretty: boolean): Promise<BodyFetch>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -165,12 +165,13 @@ export function createApi(baseUrl?: string): TrawlerApi {
       if (!res.ok) throw new ApiError(res.status, `GET /flows/${id} failed: ${res.status}`);
       return (await res.json()) as FlowView;
     },
-    async getBody(id, leg, decode) {
-      // Raw asks for `source`, not the stored bytes: a compressed body's stored
-      // form is a hex dump of gzip frames, which answers no question a reader
-      // has. `source` reverses only the transport encoding, so raw stays the
-      // bytes the server sent — unindented and untranscoded.
-      const query = decode ? "?decode=1" : "?decode=source";
+    async getBody(id, leg, pretty) {
+      // Both views are decoded — the parameter picks which resolution. Raw asks
+      // for `source`, not the stored bytes: a compressed body's stored form is a
+      // hex dump of gzip frames, which answers no question a reader has.
+      // `source` reverses only the transport encoding, so raw stays the bytes
+      // the server sent — unindented and untranscoded.
+      const query = pretty ? "?decode=1" : "?decode=source";
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}/${leg}/body${query}`);
       if (!res.ok) throw new ApiError(res.status, `GET ${leg} body for ${id} failed: ${res.status}`);
       return {

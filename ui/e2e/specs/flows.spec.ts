@@ -14,7 +14,7 @@ const hit = (path?: string) => fetch(`${ports.control}/hit${path ? `?p=${path}` 
 
 const RESPONSE_PANE = '[data-testid="body-viewer"][data-leg="response"]';
 const inResponsePane = (selector: string) => $(`${RESPONSE_PANE} ${selector}`);
-const responseMode = (label: "decoded" | "raw") =>
+const responseMode = (label: "pretty" | "raw") =>
   $(`${RESPONSE_PANE} [role="radiogroup"]`).$(`button=${label}`);
 // The panel shows one leg at a time under one selector (DEC-31), so the pane
 // for a leg exists only while that leg is selected.
@@ -323,12 +323,21 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(shown).toContain("}");
   });
 
-  it("toggles to the served source as text", async () => {
+  // Both positions are decoded — they differ in re-indenting — so the switch is
+  // labelled raw | pretty (ruled by E-DFLOW.W6). The names and the toggling are
+  // asserted together: a relabelled switch that stopped switching, or a switch
+  // that still worked under the retired word, would pass either one alone.
+  it("names its views raw and pretty, and toggles to the served source as text", async () => {
+    expect(await responseMode("pretty").isExisting()).toBe(true);
+    expect(await responseMode("raw").isExisting()).toBe(true);
+    const group = $(`${RESPONSE_PANE} [role="radiogroup"]`);
+    expect(await group.$("button=decoded").isExisting()).toBe(false);
+
     await responseMode("raw").click();
     await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
     const raw = await inResponsePane('[data-testid="body-text"]').getText();
     expect(raw).toContain('{"greeting":"hello"');
-    await responseMode("decoded").click();
+    await responseMode("pretty").click();
     await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
   });
 
@@ -383,9 +392,9 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(raw).toContain('"compressed":"brotli"');
     expect(await inResponsePane('[data-testid="body-hex"]').isExisting()).toBe(false);
 
-    // Raw is the source, not a rendering: the decoded view indents, raw does not.
+    // Raw is the source, not a rendering: the pretty view indents, raw does not.
     expect(raw).not.toContain("\n  ");
-    await responseMode("decoded").click();
+    await responseMode("pretty").click();
     await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
   });
 

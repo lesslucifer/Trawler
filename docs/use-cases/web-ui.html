@@ -12,7 +12,7 @@
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD).</p>
-      <div class="meta">v5 · 2026-09-06 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v6 · 2026-09-08 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span> · all three native surfaces re-designed and
       rebuilt by <span class="badge id">E-REDESIGN</span></div>
@@ -156,7 +156,7 @@
         checkerboard, form-urlencoded as decoded key/value rows (each value individually
         copyable), other text as text, anything else as a toned hex dump.</li>
         <li><strong>Raw shows the source, not the compression frames</strong>: the
-        <strong>raw / decoded</strong> toggle switches between the bytes the server sent
+        <strong>raw / pretty</strong> toggle switches between the bytes the server sent
         (<code>?decode=source</code> — transport encoding reversed, nothing re-indented or
         transcoded) and the fully rendered view (<code>?decode=1</code> — decompressed,
         charset-normalised, JSON/XML pretty-printed). A gzipped JSON body therefore reads as its minified
@@ -182,7 +182,7 @@
         opens in the right application.</li>
         <li>The <code>?decode=1</code> contract is server-side — gzip/deflate/brotli reversal,
         charset→UTF-8, JSON + XML pretty-printing — so <code>curl</code> and the web shell gain
-        the same decoded view the app shows.</li>
+        the same pretty view the app shows.</li>
       </ul>
     </div>
 
