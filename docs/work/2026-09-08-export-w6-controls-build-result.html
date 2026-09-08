@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W6 result — the controls, built</h1>
       <p>One <code>⋮</code> trigger, three worded acts, two asks and a marked row. The three doors the API has had since W2 reach a person, and two things the design could not change itself — the window's minimum width and the CORS grant hiding the export's filename — are paid here.</p>
-      <div class="meta">v3 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
+      <div class="meta">v4 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
         <a href="2026-09-08-export-w6-controls-build-plan.html">WU plan</a> ·
         <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> ·
         <a href="2026-09-04-export-plan.html#w6">epic plan</a></div>
@@ -192,15 +192,25 @@
       <thead><tr><th>Check</th><th>Result</th></tr></thead>
       <tbody>
         <tr><td><code>pnpm test</code> (vitest)</td>
-        <td><strong>814 passed</strong> in 47 files, up from 741 in 44 — 73 new across six suites (six added by the two review rounds): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (22), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches).</td></tr>
+        <td><strong>814 passed</strong> in 47 files, up from 741 in 44 — 73 new across seven suites (eight of them added by the review rounds): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (22), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches). Counted by running each file, not by counting <code>test(</code> calls — a <code>test.each</code> block yields more cases than it has calls, which is how round 2's stale figure got written.</td></tr>
         <tr><td><code>pnpm lint</code> (design/vocabulary)</td>
         <td>clean. One <code>design-allow</code> pragma, on the same offset-from-the-trigger shape <code>Select</code>'s popup already carries; the gap in it is a token.</td></tr>
-        <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full suite, including the two new <code>tests/api.rs</code> cases and the window-minimum guard.</td></tr>
+        <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full suite: <strong>221</strong> lib unit (+1, the CORS grant), <strong>41</strong> <code>tests/api.rs</code> (+2), 3 <code>tests/ca.rs</code>, 6 <code>tests/e2e_capture.rs</code>, 4 <code>tests/e2e_h2.rs</code>, plus the window-minimum guard in <code>xtask</code>. Every figure here was read off a run, after a stale build artifact made one of them lie — see below.</td></tr>
         <tr><td><code>cargo xtask ui build</code></td><td>green — <code>tsc -b</code> clean, bundle built.</td></tr>
         <tr><td><code>cargo xtask ui specimens --check</code></td><td>ok — run 11 still mounts and renders (7 mounts, 15 buttons).</td></tr>
         <tr><td><code>cargo xtask verify-doc</code></td><td>green on the plan and this result; the repo-wide link check passes with UC-6 and UC-7 now pointing at UC-4's controls.</td></tr>
       </tbody>
     </table>
+
+    <p><strong>A note on how these numbers were got, because it nearly went wrong.</strong> Round 3's
+    reviewer ran the suite in a throwaway git worktree and left it behind; the shared
+    <code>target/</code> then held a <code>trawler</code> lib built somewhere else, and
+    <code>cargo test --test api</code> started failing on a snapshot whose recorded source path pointed
+    into that deleted directory — and then, once the test crate alone was rebuilt, on a genuine-looking
+    assertion that the CORS grant was missing. It was not: the code was committed and present, and the
+    stale lib was the whole story. <code>cargo clean -p trawler</code> and every test passes. Recorded
+    because the first read of it looked exactly like a real regression in this WU's own change, and the
+    thing that settled it was rebuilding rather than reasoning.</p>
 
     <h2 id="distillation">Distillation</h2>
     <table data-item="distillation">
