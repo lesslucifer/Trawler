@@ -68,8 +68,11 @@
             removed</td></tr>
         <tr><td>The registry citation resolves</td>
             <td class="good">✓ <code>SegmentedControl</code>'s <code>@use</code> names <em>the body view
-            (raw | pretty)</em>, which is what the tree renders; its fixture models the same words and
-            every one of its eight assertions passed unedited</td></tr>
+            (raw | pretty)</em>, which is what the tree renders, and its fixture models the same words.
+            Its eight tests still assert exactly what they asserted before: the rename reaches inside
+            seven of them, because every query addresses an option <em>by its accessible name</em> — and
+            only as that argument. No matcher, subject or count moved, nothing was removed, and the one
+            test that names no option is byte-identical</td></tr>
         <tr><td>UC-5 and its index state the shipped terms</td>
             <td class="good">✓ both read <code>raw / pretty</code>; the <code>?decode=1</code> paragraph
             still describes the server contract in the server's own word</td></tr>
@@ -94,8 +97,11 @@
         <tr><td><code class="f">ui/src/components/SegmentedControl.tsx</code></td>
             <td><code>@use</code>'s sighting: “decode (raw | decoded)” → “the body view (raw | pretty)”</td></tr>
         <tr><td><code class="f">ui/src/components/SegmentedControl.test.tsx</code></td>
-            <td>fixture rename, positions kept (the roving-tabindex tests index into it). No assertion
-            edited — the check the plan named, and it held</td></tr>
+            <td>fixture rename, positions kept (the roving-tabindex tests index into it). It reaches
+            into seven of the eight tests, since each query names its option. <strong>The plan's check
+            was mis-written:</strong> it asked for every assertion “green <em>unedited</em>”, which no
+            fixture rename can satisfy. What held is the check that carries the meaning — no matcher,
+            subject or count changed, so the rename never reached the control's behaviour</td></tr>
         <tr><td><code class="f">ui/src/BodyViewer.test.tsx</code></td>
             <td>one new test (the two names + the absence of the old one) and the return trip added to
             the existing raw-segment test</td></tr>
@@ -160,12 +166,20 @@
               version says nothing changed is the worse outcome. So the terms landed with a version bump,
               and <strong>W10 takes web-ui.html to v7</strong> for UC-4's two gains and the pane width.
               <code>use-cases-index.html</code> moved v1 → v2 for the same reason.</td></tr>
-          <tr><td>Five surfaces beyond the four the epic plan named</td>
-              <td>Not a deviation from <em>this WU's</em> plan — the grep ran before the plan was written
-              and the plan listed all fourteen with in/out reasons. Recorded here because a reader
+          <tr><td><strong>Nine files</strong> beyond the four surfaces the epic plan named — and the
+          plan said “five”</td>
+              <td>The plan's own sentence (<em>“the grep found five more”</em>) undercounts: nine files
+              this diff touches are outside the four surfaces the epic plan's W9 row names, and the
+              plan's in-scope table lists them all even though its prose miscounts them. Corrected here
+              rather than in the plan, because a plan states what was intended before the code and the
+              result is where what happened belongs (W6 set that precedent in this epic). Not a deviation
+              in substance — the grep ran before the plan was written and every surface was listed with
+              an in/out reason. Recorded here because a reader
               comparing the diff against the <em>epic</em> plan's W9 row will find nine files it does not
               mention: the api boolean, the registry docstring and its fixture, the use-case index, two
-              decision records and the rulebook example.</td></tr>
+              decision records and the rulebook example — plus the api client's own test and the
+              shell's, which the rename reaches through a local name and an added assertion. Nine files,
+              nine names, so the count and the list agree.</td></tr>
           <tr><td>The on-screen order is <code>[pretty│raw]</code>, not <code>[raw│pretty]</code></td>
               <td>The ruling, the lexicon and the acceptance sentence all write the pair as
               <em>raw | pretty</em>; design run #9 drew the control readable-first and cited
@@ -256,13 +270,20 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Two review rounds, and the question the first one settled</h2>
+    <h2 id="review">Three review rounds, and what they were actually for</h2>
     <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
     corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
-    refuted six and <strong>verified three</strong>. Twelve candidates over two rounds, three of them
-    real. Every verified finding is in this report's own
-    prose, and that is the shape of this WU: the code was a rename with one failure mode, and the
-    defects were all in the sentences claiming it was done.</p>
+    refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
+    claim accuracy because that is where rounds 1 and 2 found everything — raised two and
+    <strong>verified one</strong>. Fourteen candidates over three rounds; <strong>four verified, every
+    one of them a false sentence in this report rather than a line of code.</strong></p>
+    <div class="callout" data-c="lesson">
+      <strong>The pattern is the finding.</strong> Three rounds found nothing wrong with the rename — the
+      dimensions that judge code came back clean each time. What they found, four times over, was this
+      report claiming more than the tree supported: an invented total, two miscounts, and a check
+      reported as passed that could not have passed as written. A rename is easy to get right and easy to
+      over-report, and the report is the part a human signs.
+    </div>
       <table data-c="tbl-review">
         <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
         <tbody>
@@ -314,6 +335,26 @@
               wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
               this WU has no channel for. The record did move out of <code>evidence</code> into its own
               section, matching W6.</td></tr>
+          <tr><td><strong>Round 3 · the report claimed <code>SegmentedControl</code>'s eight assertions
+          passed <em>unedited</em></strong></td>
+              <td><strong>Verified.</strong> The fixture rename reaches inside seven of the eight tests,
+              because each query addresses its option by accessible name. Nothing was weakened — no
+              matcher, subject or count moved — but “unedited” was false, and the plan had named that
+              exact check as the tripwire for a rename touching the control. The plan's check was itself
+              mis-written: <em>“green unedited”</em> is unsatisfiable by any fixture rename. Both claims
+              are restated above, and the same audit turned up the deviations row saying “nine files”
+              over a list of seven, and the plan's prose saying “five more” where there are nine.</td></tr>
+          <tr><td>Round 3 · the roadmap's Deferred row for this item is still open, so the diff leaves a
+          T2 doc asserting work this diff resolved</td>
+              <td><strong>Refuted.</strong> The diff does not touch <code>roadmap.html</code> at all, so
+              nothing was left by it. The backlog's own rule strikes a row <em>“when an epic absorbs
+              it”</em>, the epic plan assigns both strikes to W10 by name, and W1 already landed through
+              the gate with its own row left open. Striking it here would falsify W10's plan row.</td></tr>
+          <tr><td>Round 3 · the code, at all five dimensions</td>
+              <td>Clean. Nothing outside the diff couples to the retired value strings — no stored
+              preference, URL parameter, data attribute or selector. The one fixture still reading
+              <code>decode (raw | decoded)</code> is a frozen density-calibration specimen under
+              <code>xtask/fixtures/</code> that predates the base. Order, default and dispatch stand.</td></tr>
           <tr><td>Round 1 · correctness · reuse · simplification · efficiency</td>
               <td>Clean, no candidates. Each independently confirmed the wire is unchanged
               (<code>api.test.ts</code>'s two query strings), the effect's dependency shape is unchanged,
