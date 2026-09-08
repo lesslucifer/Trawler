@@ -272,7 +272,7 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Six review rounds, and what they were actually for</h2>
+    <h2 id="review">Seven review rounds, and what they were actually for</h2>
     <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
     corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
     refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
@@ -282,19 +282,21 @@
     already found false, left standing in a table the correction did not visit. Round 6 swept both
     documents sentence by sentence instead of spot-checking, and verified two: a phrase attributed to a
     document that does not contain it, and this report's oldest false claim — that the tip carried its
-    evidence notes. Eighteen candidates over six rounds; <strong>eight verified, every one of them a
-    false sentence in this report rather than a line of code.</strong></p>
+    evidence notes. Round 7 found the same retired claim a fourth time, in the <code>test/v2</code> note
+    rewritten onto the tip that round, and its code sweep came back empty with every suite re-run green.
+    Nineteen candidates over seven rounds; <strong>nine verified, every one of them a false sentence in
+    this WU's own report or notes rather than a line of code.</strong></p>
     <div class="callout" data-c="lesson">
-      <strong>The pattern is the finding.</strong> Six rounds found nothing wrong with the rename — the
-      dimensions that judge code came back clean every time. What they found, eight times over, was this
+      <strong>The pattern is the finding.</strong> Seven rounds found nothing wrong with the rename — the
+      dimensions that judge code came back clean every time. What they found, nine times over, was this
       report claiming more than the tree supported — a total nobody counted, several counts that did not
       match their own lists, a check reported as passed in a form that could not be met, and a claim
       about what another document contained. Round 4's finding sat inside round 3's
       own correction, which is the sharpest version of the lesson: <strong>a sentence that summarises
       evidence is itself evidence, and re-stating it is a new claim, not a safer one.</strong> The two
       habits that ended it were dropping counts the document does not need and enumerating whatever
-      count it keeps — and, after round 5, grepping the document for the retired claim instead of
-      correcting the places one happens to remember. A rename is easy to get right and easy to
+      count it keeps — and, after rounds 5 and 7, grepping <em>every</em> carrier of the claim for the
+      retired wording, the git notes included, instead of correcting the places one happens to remember. A rename is easy to get right and easy to
       over-report, and the report is the part a human signs.
     </div>
       <table data-c="tbl-review">
@@ -348,6 +350,14 @@
               wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
               this WU has no channel for. The record did move out of <code>evidence</code> into its own
               section, matching W6.</td></tr>
+          <tr><td><strong>Round 7 · the <code>test/v2</code> note still said
+          <em>“all eight assertions green UNEDITED”</em></strong></td>
+              <td><strong>Verified — the same claim, a fourth carrier.</strong> The note was rewritten
+              onto this tip in round 6 by editing its <code>rounds:</code> field and carrying the rest
+              over verbatim, so it brought the original false clause with it and then disagreed with the
+              report it accompanies. Corrected in place on the tip. Round 7's code sweep found nothing
+              and re-ran every suite green: 832 unit and integration tests, 32 e2e, lint,
+              <code>tsc</code>, <code>fmt</code> and <code>clippy</code>.</td></tr>
           <tr><td><strong>Round 6 · the report said the tip carried
           <code>test/v2</code>, <code>doc/v1</code> and <code>cr/v3</code></strong></td>
               <td><strong>Verified, and it was the oldest defect in the document.</strong> The sentence
