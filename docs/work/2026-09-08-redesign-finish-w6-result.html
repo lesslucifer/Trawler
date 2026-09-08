@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9fa7099f34851f0dfacca2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W6 result (the shell and list, second pass, built)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .num{font-family:var(--mono,monospace);text-align:right;white-space:nowrap}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+    pre.tb{font-family:var(--mono,monospace);font-size:11.5px;line-height:1.5;margin:0;white-space:pre-wrap}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="delivered">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W6 result — the screen states what it could not reach</h1>
+      <p>All seven of W4's handoff rows landed, plus the eighth its result assigned here. The pane is the
+      width that was chosen with the window that pays for it, the status filter speaks W5's grammar, and
+      the three swallowed failures became two sentences a reader can act on — told apart, and never said
+      twice.</p>
+      <div class="meta">WU result · 2026-09-08 · Trawler · T3 (docs/work/) ·
+      <code>wu/redesign-finish/shell-list-build</code> → <code>epic/redesign-finish</code> ·
+      plan: <a href="2026-09-08-redesign-finish-w6-plan.html">W6 plan</a> ·
+      design: <a href="2026-09-06-shell-list-second-pass.html">the second-pass run</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Verdict — delivered</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Delivered, to the plan's sentence.</strong> The shell renders at 520px in a 1440 window, a
+      status class narrows the list end to end against the real core, and a failed fetch is stated rather
+      than swallowed. Two commits: the plan, then the build. Nothing W4 decided was re-opened; the two
+      things the design explicitly left to the build are named below with what decided them.
+    </div>
+
+    <h2 id="landed">The eight rows</h2>
+    <table data-c="landed">
+      <thead><tr><th>#</th><th>What landed</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>pane</code> 380px → <strong>520px</strong> — a token value, never an inline magnitude (DEC-17)</td><td><code>ui/tailwind.config.js</code></td></tr>
+        <tr><td>2</td><td>window width 1200 → <strong>1440</strong>; the other half of one decision, since a wider pane alone makes the screen worse at the width the app opens at</td><td><code>ui/src-tauri/tauri.conf.json</code></td></tr>
+        <tr><td>3</td><td>the status <code>Field</code>: <code>inputMode="numeric"</code> gone (a class is a letter), placeholder <code>status — 404 or 4xx</code>, <code>w-field-sm</code> → <code>w-field</code> so the placeholder is not itself truncated</td><td><code>ui/src/App.tsx</code></td></tr>
+        <tr><td>4</td><td>the three <code>.catch(() =&gt; {})</code> sites become one mapper over a typed error: <code>FeedFailure</code> is <code>unreachable</code> or <code>rejected</code>, and <code>retry</code> reports whether the listing arrived</td><td><code>ui/src/useFlows.ts</code> · <code>ui/src/api.ts</code></td></tr>
+        <tr><td>5</td><td>zone A′ — a full-width band between header and body, present only when passed, and a <code>main</code> that can take focus</td><td><code>ui/src/Layout.tsx</code></td></tr>
+        <tr><td>6</td><td>the band's warn <code>Notice</code> + retry <code>Button</code>, fork D4's two halves from one <code>retrying</code> flag, and focus to the list region when the band removes itself</td><td><code>ui/src/App.tsx</code> · <code>ui/src/NotAnswering.tsx</code></td></tr>
+        <tr><td>7</td><td>four absences behind one precedence expression: a failure outranks both empties, and a rejection is a rejection rather than a failure</td><td><code>ui/src/FlowList.tsx</code></td></tr>
+        <tr><td>8</td><td><code>useFlowDetail</code> reports a fetch that never answered, so the pane cannot sit on “loading this flow…” forever</td><td><code>ui/src/useFlows.ts</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="settled">Two things the design left to the build</h2>
+    <div class="cards" data-c="settled">
+      <div class="card">
+        <div class="who">the pane's failure, minus one cause</div>
+        <h4>A 404 is not the shell's silence</h4>
+        <p>W4 sent <code>useFlowDetail</code>'s swallowed failure here and said the band explains the
+        pane's silence. But <code>getFlow</code> also 404s when the ring drops the selected flow — a cause
+        W4's own absence table names and <em>reserves</em> for the pane's design, with the lexicon's
+        “no longer captured” held for it.</p>
+        <p>So <code>failed</code> excludes a 404 and means only <em>no answer</em>. Folding the drop into
+        the band would have made the shell claim an unreachable core every time the ring evicted a
+        selected row, on a core that was answering perfectly.</p>
+      </div>
+      <div class="card">
+        <div class="who">the signal, not just the sentence</div>
+        <h4>The band has to appear while the user does nothing</h4>
+        <p>W4's Interaction table gives the unreachable row a user act of <strong>“nothing — the core dies
+        under the window”</strong>. Nothing in the shipped code could honour that: the list refetches on
+        SSE events and on filter change, and a dead core sends no events — so the band would have waited
+        for the next keystroke to appear.</p>
+        <p>The dropped stream is the only signal that arrives unprompted, and it was a fourth swallowed
+        failure: <code>api.stream</code> ignored the <code>EventSource</code>'s own errors entirely. It now
+        reports <code>onDown</code>/<code>onUp</code>, and the e2e proves the band appears with no act at
+        all. This is the row-4 family, extended by what the row's own design required — recorded here
+        rather than folded in silently.</p>
+      </div>
+    </div>
+
+    <h2 id="discrimination">How the two sentences are told apart</h2>
+    <p>W4 designed two causes and left the client no way to distinguish them: <code>listFlows</code> threw
+    the same untyped <code>Error</code> for a dead socket and a refused query. One typed error settles it,
+    and the shape is the answer to the question rather than a flag beside it.</p>
+    <table data-c="discrimination">
+      <thead><tr><th>What the API did</th><th>What reaches the caller</th><th>What renders</th></tr></thead>
+      <tbody>
+        <tr><td>answered <code>2xx</code></td><td>the list</td><td class="good">rows, no band</td></tr>
+        <tr><td>answered <code>400</code></td><td><code>ApiError(400)</code></td><td><code>4xz is not a status</code> · <em>type a code (404) or a class (4xx)</em> — in the row region, no band, no retry</td></tr>
+        <tr><td>answered anything else</td><td><code>ApiError(status)</code></td><td class="bad">the connection statement — a core not behaving like the core leaves the rows just as unverified</td></tr>
+        <tr><td>did not answer</td><td>a plain <code>TypeError</code>, never an <code>ApiError</code></td><td class="bad">the connection statement</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="instanceof">
+      <strong>The absence of the type is the signal.</strong> <code>instanceof ApiError</code> means the API
+      answered; anything else means it did not. That is why the error carries a plain
+      <code>status: number</code> rather than a nullable one — a null status would have been a second way
+      of saying what the type already says, and a caller could forget to check it.
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>Claim</th><th>What proves it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A refused query and a dead socket do not arrive as the same throw</td>
+          <td><code>api.test.ts</code> — <em>a refused listing throws ApiError with the status; a dead socket
+          throws no ApiError</em>, and <em>every non-ok answer carries its own status</em> over 400/404/500/503.</td>
+        </tr>
+        <tr>
+          <td>The rows survive an unreachable core, and do not survive a refused query</td>
+          <td><code>useFlows.test.ts</code> — the two failure tests assert opposite outcomes for
+          <code>flows</code> from the same code path. Rows stay on silence (discarding evidence on a
+          transient failure is the worse error); rows go on a rejection (the old list is not an answer to
+          the query that was refused).</td>
+        </tr>
+        <tr>
+          <td>The band appears with no user act</td>
+          <td><code>useFlows.test.ts</code> — <em>a dropped stream states the core is unreachable without
+          waiting for a keystroke</em>, and its pair: a stream that comes back re-asks, and a listing that
+          answers clears the statement. Proven again in the real window (below).</td>
+        </tr>
+        <tr>
+          <td>A dropped flow is not reported as an unreachable core</td>
+          <td><code>useFlows.test.ts</code> — <em>a dropped flow is not the shell's silence</em>: a 404
+          leaves <code>failed</code> false while a <code>TypeError</code> sets it.</td>
+        </tr>
+        <tr>
+          <td>The precedence rule holds in both directions</td>
+          <td><code>FlowList.test.tsx</code> — a failure takes the empty region from <em>both</em> empties
+          (asserted for filtered and unfiltered), and rows on screen leave the region absent whatever the
+          failure, which is what keeps the band from being said twice.</td>
+        </tr>
+        <tr>
+          <td>Fork D4 is one obligation, not two</td>
+          <td><code>FlowList.test.tsx</code> and <code>App.test.tsx</code> — the disabled button and the
+          <code>trying …</code> line are asserted in the same act, driven by one flag. The unit level is
+          where this is proven, because the in-flight window against a dead socket is too short to catch
+          reliably in a browser.</td>
+        </tr>
+        <tr>
+          <td>A status class reaches the core as typed, and 4xx really means 4xx</td>
+          <td><code>App.test.tsx</code> asserts the wire call; the e2e asserts the result against real
+          captured traffic holding a 200, a 404 and a 500 — the 5xx is present so <em>not 2xx</em> cannot
+          pass for <em>is 4xx</em>.</td>
+        </tr>
+        <tr>
+          <td>An unreachable core and a quiet one are different screens</td>
+          <td>e2e <code>flows.spec.ts</code> — the control (a reachable core with a filter matching nothing)
+          renders <em>no flows match this filter</em> and explicitly <em>not</em> the connection statement;
+          then the core is killed and the band appears above rows that are still there, count unchanged.</td>
+        </tr>
+        <tr>
+          <td>The re-design really did leave this epic</td>
+          <td><code>onboarding.spec.ts</code> untouched and green; no file under
+          <code>Onboarding.tsx</code>, <code>ProxyCloseDialog.tsx</code> or <code>setup.ts</code> is in the
+          diff. <code>App.test.tsx</code> adds the negative directly: the onboarding phase renders no band.</td>
+        </tr>
+        <tr>
+          <td>Nothing else moved</td>
+          <td>Every pre-existing assertion passes unedited. <strong>817 unit/integration tests, 0
+          failures</strong> (789 before, 28 added); <code>pnpm lint</code> and <code>tsc --noEmit</code>
+          clean; <code>cargo clippy</code> pedantic and <code>cargo fmt</code> clean;
+          <strong>e2e 32 passing, 0 failing</strong> across both specs.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations from the plan</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>What</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>ApiError.status</code> is a plain <code>number</code>, not the plan's
+          <code>number | null</code>.</td>
+          <td>Writing it showed the null was redundant: a fetch that never answers rejects with a
+          <code>TypeError</code> and never constructs an <code>ApiError</code> at all, so the type's own
+          presence already carries “the API answered”. A nullable field would have been a second encoding of
+          the same fact, and one a caller can forget to check. The discrimination the plan specified is
+          unchanged; only its representation got smaller.</td>
+        </tr>
+        <tr>
+          <td>A fourth swallowed failure was opened — the SSE stream's own errors.</td>
+          <td>Row 4 named three <code>.catch</code> sites, but W4's Interaction table requires the band to
+          appear with the user doing <em>nothing</em>, and none of the three can fire on a dead core. Named
+          in full under <a href="#settled">two things the design left to the build</a> rather than folded
+          into row 4's count.</td>
+        </tr>
+        <tr>
+          <td>A new module, <code>NotAnswering.tsx</code>, that the plan's file list did not name.</td>
+          <td>The sentence is mounted in two zones — the band and the row region — and
+          <code>FlowList</code> importing it from <code>App</code> would be a cycle. One definition, two
+          placements, which is exactly the shape W4's own mockup used. Cited to the design as a new surface.</td>
+        </tr>
+        <tr>
+          <td>Focus lands on the <code>main</code> region, not on the listbox.</td>
+          <td>W4 says “focus moves to the list region”. The listbox exists only when there are rows, and a
+          successful retry can return an empty list — so targeting it would leave focus on
+          <code>&lt;body&gt;</code> in exactly the case the rule exists to prevent. <code>main</code> is the
+          zone, and it exists in every state the retry resolves into.</td>
+        </tr>
+        <tr>
+          <td>The e2e harness gained two origin routes and an abrupt <code>/kill</code>.</td>
+          <td>A status-class assertion needs a capture holding more than one class, and the harness produced
+          only 2xx. And <code>/stop</code> is a <em>graceful</em> shutdown: it waits for in-flight requests,
+          and an SSE stream never finishes — so it would hold open the very connection the assertion is
+          about. <code>/kill</code> exits the process, which is what “the core died under the window” means.</td>
+        </tr>
+        <tr>
+          <td>The rejected sentence is <code>tone="mute"</code>, with no ⚠.</td>
+          <td>W4's absence table gives the glyph to the two <em>not answering</em> rows and not to this one,
+          and its wording is explicit that a rejection “is a rejection rather than a failure — the API
+          answered, and said no”. Mute puts it with the two inherited empties, where it belongs.</td>
+        </tr>
+        <tr>
+          <td>Three test doubles in <code>useFlows.test.ts</code> were rebuilt per render at first, and one
+          test caught it.</td>
+          <td>Constructing the fake API inside the <code>renderHook</code> callback gives the hook a new
+          <code>api</code> identity every render, so its effects re-ran forever and never settled. The
+          file's pre-existing tests already build the double once, outside; the new ones now match. No
+          production code changed — the defect was only in the new tests, and it is recorded because a
+          passing-by-luck test is worth naming.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups this WU is leaving</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>Item</th><th>Owner</th><th>Why not here</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The shell still has no valid arrangement below 1132px with the pane open — and widening the
+          pane is what moved that threshold from 992.</td>
+          <td>A later WU, or the epic that next opens <code>FlowList</code>'s grid</td>
+          <td>W4 escalated it with the arithmetic rather than hiding it, and both available fixes (the row's
+          column widths, a second arrangement of the whole screen) are inside this epic's declared
+          non-goals. Building the width without the fix is what W4's escalation <em>asked</em> for; quietly
+          re-deciding the row grammar to make the number disappear is what it refused.</td>
+        </tr>
+        <tr>
+          <td>WebdriverIO's <code>*=</code> partial-text selector matches nothing against this app in the
+          embedded WebKit provider, silently — three e2e runs failed on a screen that was rendering
+          correctly the whole time.</td>
+          <td>The e2e harness — whichever WU next writes a spec</td>
+          <td>Diagnosed here and worked around by giving the band a <code>data-testid</code>, which is what
+          every other zone in the suite already uses. Worth a note because the failure mode is a selector
+          that never matches rather than one that errors, and the cost is a full build cycle each time.</td>
+        </tr>
+        <tr>
+          <td>A retry's in-flight window is not asserted in the real window.</td>
+          <td>—, unless a slow-core fixture ever earns its keep</td>
+          <td>Against a dead socket the fetch rejects too fast to observe, and faking slowness in the
+          harness would assert the fixture rather than the app. Fork D4's two halves are proven at the unit
+          level where the timing is controlled, and the e2e proves the button survives its own use.</td>
+        </tr>
+        <tr>
+          <td>A transient stream blip raises the band for as long as the reconnect takes.</td>
+          <td>—, watch it</td>
+          <td>Honest rather than wrong: the stream <em>is</em> down while it reconnects, and the statement
+          clears the moment a listing answers. If real use shows it flickering, the fix is a grace period,
+          which is a change worth evidence rather than a guess now.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation" data-c="distillation">
+      <p><strong>No T2 write-back here, and the reason is the epic's own plan.</strong> UC-4's two gains are
+      now true of a screen that exists, and the pane-width ruling is the epic's expected DEC-36 — but
+      E-RFINISH puts all of it at W10 so the living documents are rewritten once rather than at every WU.
+      UC-4's <em>filter-bar</em> sentence was already corrected at W5, because it had become false the
+      moment the core changed; nothing in this WU makes a T2 doc false in the same way.</p>
+      <p>What W10 inherits from this WU, in one line each: <strong>UC-4</strong> gains the rendered
+      unreachable statement, the rejected-query statement, and the status class end to end ·
+      <strong>UC-5</strong> gains the pane width's observable half · <strong>DEC-36</strong> records the
+      520px/1440 pair with W4's six rejected candidates · the <strong>rulebook</strong> gains
+      <em>not answering</em> as a lexicon term · the <strong>roadmap</strong> gains the minimum-window row
+      above, alongside the two harness rows the epic already owes it.</p>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
