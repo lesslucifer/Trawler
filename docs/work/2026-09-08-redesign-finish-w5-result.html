@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9f95399f34851f0dfacc87">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W5 result (the core accepts a status class)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .num{font-family:var(--mono,monospace);text-align:right;white-space:nowrap}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="delivered">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W5 result — one parameter, two resolutions</h1>
+      <p><code>GET /flows?status=</code> now answers <code>404</code> and <code>4xx</code> from the same
+      parameter, and refuses everything that names neither with a <code>400</code> that carries the grammar.
+      The epic's only capture-core change, landed with no <code>ui/src/</code> file opened.</p>
+      <div class="meta">WU result · 2026-09-08 · Trawler · T3 (docs/work/) ·
+      <code>wu/redesign-finish/status-class</code> → <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a> ·
+      plan: <a href="2026-09-08-redesign-finish-w5-plan.html">W5 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Verdict — delivered</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Delivered, to the plan's sentence.</strong> <code>?status=4xx</code> returns only 4xx flows,
+      <code>?status=404</code> still returns exactly the 404s, and <code>9xx</code>, <code>999</code>,
+      <code>abc</code> and <code>40x</code> are each a <code>400</code> stating the grammar. Two commits:
+      the plan, then one change that could not be split without a non-compiling intermediate — the store
+      owns the type the API parses into.
+    </div>
+
+    <h2 id="what-landed">What landed</h2>
+    <div class="cards" data-c="what-landed">
+      <div class="card">
+        <h4><code>StatusMatch</code></h4>
+        <div class="who">src/store.rs</div>
+        <p><code>Exact(u16)</code> | <code>Class(u8)</code>, a <code>FromStr</code> that is the whole
+        grammar, and a <code>matches</code> that is the only place <code>/ 100</code> appears.
+        <code>FlowFilter.status</code> holds it instead of a bare <code>u16</code>.</p>
+      </div>
+      <div class="card">
+        <h4>the stated refusal</h4>
+        <div class="who">src/api/routes.rs</div>
+        <p><code>ListQuery.status</code> is a <code>String</code> so serde stops rejecting
+        <code>4xx</code> before the parser sees it; <code>list_flows</code> returns
+        <code>Response</code> because it now has two answers, and the <code>400</code> uses the plain-text
+        shape <code>bad_id</code> established.</p>
+      </div>
+      <div class="card">
+        <h4>UC-4 stopped lying</h4>
+        <div class="who">docs/use-cases/web-ui.html</div>
+        <p>Its filter-bar bullet claimed a class query was <em>“not expressible against the current API at
+        all”</em>. It now states both resolutions and the stated refusal, and says the control catches up
+        after the core — which is W6.</p>
+      </div>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>Claim</th><th>What proves it</th></tr></thead>
+      <tbody>
+        <tr><td>A class narrows to its class and nothing beside it</td><td><code>tests/api.rs</code> —
+        <code>status_filter_accepts_a_class_a_code_and_refuses_the_rest</code> holds 200, 404, 418 and 500 in
+        the store and asserts <code>?status=4xx</code> returns exactly the 404 and the 418. A 5xx is present
+        precisely so “not 2xx” cannot pass for “is 4xx”.</td></tr>
+        <tr><td>The exact form did not become a prefix match</td><td>Same test —
+        <code>?status=404</code> returns the 404 alone with a 418 and a 500 in the store.</td></tr>
+        <tr><td>Nonsense is stated, not empty</td><td>Same test — <code>9xx</code>, <code>999</code>,
+        <code>abc</code> and <code>40x</code> each return <code>400</code> and a body containing the
+        grammar. None returns <code>200</code> with <code>[]</code>.</td></tr>
+        <tr><td>The grammar refuses more than it accepts</td><td><code>src/store.rs</code> —
+        <code>status_grammar_accepts_only_codes_and_classes</code>: ten acceptances against twenty
+        refusals, including every near-miss a loose parser would take.</td></tr>
+        <tr><td>The class boundaries are right</td><td><code>status_match_covers_its_class_and_nothing_beside_it</code>
+        — 400 and 499 in, 399 and 500 out.</td></tr>
+        <tr><td>An in-flight flow is still excluded</td><td><code>status_class_excludes_responseless</code>,
+        alongside the pre-existing <code>status_filter_excludes_responseless</code> — both forms behave the
+        way <code>Option&lt;u16&gt;</code> did.</td></tr>
+        <tr><td>Nothing else on the wire moved</td><td><code>list_flows_orders_and_filters</code> passes with
+        its assertions <strong>unedited</strong>. Full suite: <span class="good">98 tests, 0
+        failures</span>; <code>cargo clippy</code> clean under pedantic.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations from the plan</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>What</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>The grammar got stricter than the plan's parser sketch.</strong> The plan implied the
+          exact form was “parses as <code>u16</code> in 100..=599”; the landed form is <em>exactly three
+          characters</em>, all digits.</td>
+          <td>The unit test found it: <code>u16::from_str</code> accepts a sign, so
+          <code>+404</code> parsed as 404, and <code>0404</code> would have too. Neither is how a status is
+          written, and both would have been silent acceptances of a typo. The plan's own rule — the value
+          denotes a real status or it is refused — is what the three-character shape enforces; the sketch
+          was the looser statement of it. Both are now named refusals in the test.</td>
+        </tr>
+        <tr>
+          <td><strong>Three existing unit-test call sites in <code>store.rs</code> changed.</strong></td>
+          <td>A mechanical type update — <code>Some(200)</code> → <code>Some(StatusMatch::Exact(200))</code>.
+          No assertion was relaxed, retimed or deleted, and the expected counts are unchanged. The plan
+          promised <code>tests/api.rs</code>'s existing assertions unedited, and those <em>are</em>
+          untouched.</td>
+        </tr>
+        <tr>
+          <td><strong>No deviation on scope.</strong></td>
+          <td>No file under <code>ui/src/</code> is in the diff, so the WU carries no design accounting, and
+          the e2e assertion stays W6's as the epic plan assigns it.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="narrowing">
+      <strong>The recorded narrowing:</strong> <code>?status=999</code> used to be <code>200 []</code> and is
+      now <code>400</code>. Nothing depended on it — the only client is the app, whose field a human types a
+      code into, and the change makes the typo legible rather than indistinguishable from “no such traffic”.
+      Carried forward from the plan so it is a decision on the record, not a surprise at the epic gate.
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Tier</th><th>Doc</th><th>What moved</th></tr></thead>
+      <tbody>
+        <tr><td>T2</td><td><a href="../use-cases/web-ui.html">use-cases/web-ui.html</a></td>
+        <td><span class="good">Done here.</span> UC-4's filter-bar bullet states both resolutions and the
+        stated <code>400</code>. The <em>UI</em> half of UC-4's distillation — the designed control, the
+        unreachable statement, the pane width — stays W10's, per the epic plan.</td></tr>
+        <tr><td>T2</td><td><code>decisions/</code></td><td><span class="bad">Nothing.</span> The grammar is
+        the epic plan's own ruling carried out; the one judgment call (refusing <code>999</code>) is bounded
+        to this parameter and recorded above. A decision record for it would restate a WU result.</td></tr>
+        <tr><td>T1</td><td><a href="../core-technical-design.html">core-technical-design.html</a></td>
+        <td><span class="bad">Nothing.</span> Its endpoint table names the parameter
+        (<code>GET /flows?host=&amp;method=&amp;status=&amp;content_type=&amp;q=</code>), not its value
+        grammar, so it is still true. No T1 edit, no <code>Reviewed-By</code> trailer needed.</td></tr>
+        <tr><td>T2</td><td><code>use-cases/web-ui.html</code> — UC-3</td><td><span class="bad">Nothing.</span>
+        UC-3 says the page uses “exactly the <code>GET /flows</code> query-parameter semantics” and makes no
+        exactness claim of its own; widening the semantics widens UC-3's sentence with it.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>Item</th><th>Home</th></tr></thead>
+      <tbody>
+        <tr><td>The status <code>Field</code> becomes W4's designed control: placeholder naming both forms,
+        <code>inputMode="numeric"</code> dropped (it cannot honour <code>4xx</code>), and
+        <code>w-field-sm</code> → <code>w-field</code> so the placeholder is not itself truncated.</td>
+        <td><strong>W6</strong> — already in its scope from W4's Q2 answer.</td></tr>
+        <tr><td>The e2e assertion: a class typed into the control narrows the list to 4xx while 2xx traffic
+        is present, and an exact code still narrows to exactly that code.</td>
+        <td><strong>W6</strong> — the epic plan's E2E table already assigns it there.</td></tr>
+        <tr><td>The core refuses surrounding whitespace by design; the trim lives in
+        <code>filterParams</code>, which already does it. A fact W6 inherits, not a task.</td>
+        <td><strong>none</strong> — recorded so W6 does not rediscover it as a bug.</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
