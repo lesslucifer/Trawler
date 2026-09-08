@@ -716,20 +716,61 @@ test("a failed detail fetch does not speak for the list — a refused query keep
   expect(screen.queryByText("trawler is not answering")).toBeNull();
 });
 
-test("a listing that answers clears a latched pane failure, so the band cannot stick on a live core", async () => {
-  let flow: () => Promise<FlowView> = () =>
-    Promise.reject(new TypeError("Failed to fetch"));
-  const api = paneApi(async () => [HTTPS], () => flow());
+test("a pane failure never raises the connection band on a core that is answering", async () => {
+  const api = paneApi(async () => [HTTPS], () => Promise.reject(new TypeError("Failed to fetch")));
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+  await waitFor(() =>
+    expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow"),
+  );
+
+  // The listing keeps arriving, so the core is answering. One flow's fetch
+  // failing is a fact about that flow, and the band speaks only for the
+  // connection — otherwise it claims an outage that is not happening.
+  expect(screen.queryByTestId("band")).toBeNull();
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(1);
+});
+
+// Regression (review round 2, correctness): round 1's fix cleared the pane's
+// latched failure when a listing arrived — without re-fetching the flow. The
+// band went away and the pane was left on "loading this flow…" forever, with
+// nothing on screen saying otherwise. A zone may not be silent about its own
+// failure just because another zone stopped talking.
+test("a pane whose fetch failed says so, and does not keep claiming it is loading", async () => {
+  const api = paneApi(async () => [HTTPS], () => Promise.reject(new TypeError("Failed to fetch")));
   render(<App api={api} initialState={PROVEN} />);
   fireEvent.click(await screen.findByTestId("flow-row"));
 
-  // The pane's silence raises the band, which is the design: one cause, said once.
-  await screen.findByTestId("band");
+  await waitFor(() => expect(screen.queryByTestId("detail-loading")).toBeNull());
+  expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 
-  // But the list keeps answering, and a core that answers the listing is not a
-  // core that is failing to answer — so the band may not outlive that proof.
+  // An unrelated listing arriving must not silence it either.
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "example" } });
+  await waitFor(() => expect(screen.getByLabelText("filter")).toHaveValue("example"));
+  expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
+});
 
-  await waitFor(() => expect(screen.queryByTestId("band")).toBeNull());
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+// Regression (review round 2, correctness): with the list empty for its own
+// reason, the band was gated off (no rows) and the row region only ever looked
+// at the list's failure — so a failed pane fetch was stated by nobody at all.
+test("a pane failure is stated even when the list is empty for its own reason", async () => {
+  let list: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const api = paneApi(
+    () => list(),
+    () => Promise.reject(new TypeError("Failed to fetch")),
+  );
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+  await waitFor(() =>
+    expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow"),
+  );
+
+  list = async () => [];
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "matches-nothing" } });
+  await screen.findByTestId("empty");
+
+  // The list says its own thing; the pane still says its own.
+  expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
+  expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 });

@@ -43,27 +43,12 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const {
-    filter,
-    flows,
-    hosts,
-    connections,
-    lastConnectionAt,
-    failure,
-    answered,
-    retrying,
-    retry,
-    update,
-  } = useFlows(client);
+  const { filter, flows, hosts, connections, lastConnectionAt, failure, retrying, retry, update } =
+    useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
-  const { flow: detail, failed: detailFailed } = useFlowDetail(
-    client,
-    selectedId,
-    retryNonce,
-    answered,
-  );
+  const { flow: detail, failed: detailFailed } = useFlowDetail(client, selectedId, retryNonce);
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
@@ -175,21 +160,32 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
-  // One silence, one sentence: the list's fetch and the pane's fail together when
-  // the core stops answering, and the band says it once for every zone rather
-  // than each zone saying it. Only the connection is folded in here — a refused
-  // query is the list's own answer and stays the list's to state, or the pane
-  // would end up speaking for a question it was never asked.
-  const notAnswering = failure?.kind === "unreachable" || detailFailed;
+  // The connection has one owner. Both signals that can observe it — a listing
+  // that did not arrive, and the stream going down — write this one value, so
+  // the band and the row region can never disagree about it. The pane's own
+  // failed fetch is deliberately NOT folded in: it is a fact about one flow, it
+  // can be true of a core that is answering everything else, and a zone that
+  // borrows another zone's failure ends up speaking for a question it was never
+  // asked.
+  const notAnswering = failure?.kind === "unreachable";
 
   // Retry removes its own button, and Button leaves focus on nothing when it
-  // stops existing — so the shell places it. The list region is the target
-  // because it exists whether or not the fresh listing has rows.
+  // stops existing — so the shell places it, keyed on the band actually leaving
+  // rather than on which fetch cleared it. The list region is the target because
+  // it exists whether or not the fresh listing has rows.
   const mainRef = useRef<HTMLElement>(null);
-  const retryConnection = useCallback(async () => {
+  const retried = useRef(false);
+  const retryConnection = useCallback(() => {
+    retried.current = true;
     setRetryNonce((n) => n + 1);
-    if (await retry()) mainRef.current?.focus();
+    return retry();
   }, [retry]);
+
+  useEffect(() => {
+    if (notAnswering || !retried.current) return;
+    retried.current = false;
+    mainRef.current?.focus();
+  }, [notAnswering]);
 
   if (state.phase !== "proven") {
     return (
@@ -292,6 +288,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             key={selectedId}
             api={client}
             flow={detail}
+            failed={detailFailed}
             onClose={() => setSelectedId(null)}
           />
         )

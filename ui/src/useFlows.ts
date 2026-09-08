@@ -30,9 +30,6 @@ export function useFlows(api: TrawlerApi) {
   // discarding evidence on a transient failure is the worse error.
   const [failure, setFailure] = useState<FeedFailure | null>(null);
   const [retrying, setRetrying] = useState(false);
-  // Bumped by every listing that arrives. A core that answers the list is a core
-  // that answers, which is the proof that expires a pane failure latched earlier.
-  const [answered, setAnswered] = useState(0);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
   // tunnel but no flow). Onboarding reads it as "traffic has reached Trawler at
@@ -57,29 +54,25 @@ export function useFlows(api: TrawlerApi) {
   // letting it through un-does a retry the user just watched succeed.
   const latest = useRef(0);
 
-  // Resolves to whether the listing arrived, which is what lets the caller of
-  // `retry` know its surface may go away. Two-armed `then` rather than `catch`,
-  // so a throw from the success arm is never read as a failed fetch.
+  // Two-armed `then` rather than `catch`, so a throw from the success arm is
+  // never read as a failed fetch.
   const refresh = useCallback(() => {
     const mine = ++latest.current;
     return api.listFlows(filterRef.current).then(
       (list) => {
-        if (mine !== latest.current) return false;
+        if (mine !== latest.current) return;
         setFlows(list);
         setHosts((known) => merge(known, list));
         setFailure(null);
-        setAnswered((n) => n + 1);
-        return true;
       },
       (error: unknown) => {
-        if (mine !== latest.current) return false;
+        if (mine !== latest.current) return;
         const next = failureOf(error, filterRef.current.status ?? "");
         // A refused query has no answer to show, so the rows go with it and the
         // count reads what is on screen. An unreachable core is the opposite
         // case: its last answer was true when it arrived.
         if (next.kind === "rejected") setFlows([]);
         setFailure(next);
-        return false;
       },
     );
   }, [api]);
@@ -137,7 +130,6 @@ export function useFlows(api: TrawlerApi) {
     connections,
     lastConnectionAt,
     failure,
-    answered,
     retrying,
     retry,
     update,
@@ -155,21 +147,15 @@ export function merge(known: string[], list: FlowSummary[]): string[] {
 
 // Fetches GET /flows/{id} when the selection changes; null clears it. A cancel
 // flag drops a stale response if the selection moves before the fetch resolves.
-// `failed` is what separates a fetch that never answered from one still in
-// flight — without it the pane holds "loading this flow…" forever. `nonce` lets
-// the shell's retry re-run this fetch too, since the silence it explains is the
-// same silence.
-export function useFlowDetail(api: TrawlerApi, id: string | null, nonce = 0, answered = 0) {
+// `failed` is what separates a fetch that did not produce a flow from one still
+// in flight — without it the pane holds "loading this flow…" forever, which is
+// the one claim that is false in both cases. It says only that: the pane names
+// no cause, because the causes it would have to tell apart (a dropped flow, a
+// refused id, a dead core) are the shell's or a later run's to word.
+// `nonce` lets the shell's retry re-run this fetch alongside the listing.
+export function useFlowDetail(api: TrawlerApi, id: string | null, nonce = 0) {
   const [flow, setFlow] = useState<FlowView | null>(null);
   const [failed, setFailed] = useState(false);
-
-  // A listing that arrived is proof the core answers, which retires this pane's
-  // older silence without re-fetching anything: a failure nothing has disproved
-  // is evidence, and one the listing has disproved is a stale claim the shell
-  // would otherwise keep repeating.
-  useEffect(() => {
-    if (answered > 0) setFailed(false);
-  }, [answered]);
 
   useEffect(() => {
     setFlow(null);
@@ -180,12 +166,8 @@ export function useFlowDetail(api: TrawlerApi, id: string | null, nonce = 0, ans
       (f) => {
         if (!cancelled) setFlow(f);
       },
-      (error: unknown) => {
-        // A 404 is the ring having dropped this flow while it was selected — a
-        // different cause with a different sentence, and one the pane's own
-        // design still owns. Only silence is the shell's to state.
-        const dropped = error instanceof ApiError && error.status === 404;
-        if (!cancelled && !dropped) setFailed(true);
+      () => {
+        if (!cancelled) setFailed(true);
       },
     );
     return () => {

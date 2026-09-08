@@ -184,19 +184,19 @@ test("a listing that arrives clears whichever failure preceded it", async () => 
 
   answer = async () => [summary("f1", "http://example.com/")];
   await act(async () => {
-    expect(await result.current.retry()).toBe(true);
+    await result.current.retry();
   });
   expect(result.current.failure).toBeNull();
   expect(result.current.flows).toHaveLength(1);
 });
 
-test("retry reports the failure back so a surface that removes itself knows not to", async () => {
+test("a retry that fails again leaves the statement standing", async () => {
   const api = feedApi(() => Promise.reject(new TypeError("still dead")));
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
 
   await act(async () => {
-    expect(await result.current.retry()).toBe(false);
+    await result.current.retry();
   });
   expect(result.current.failure).toEqual({ kind: "unreachable" });
 });
@@ -210,7 +210,7 @@ test("retry is in flight for the whole fetch — fork D4's half the hook owns", 
   expect(result.current.retrying).toBe(false);
 
   answer = () => new Promise<FlowSummary[]>((res) => (release = res));
-  let settled: Promise<boolean>;
+  let settled: Promise<void>;
   act(() => {
     settled = result.current.retry();
   });
@@ -256,13 +256,15 @@ test("a detail fetch that never answers is reported, not swallowed", async () =>
   expect(result.current.flow).toBeNull();
 });
 
-// A 404 is the ring having dropped the selected flow — a different cause, with a
-// sentence the pane's own design still owns. It must not reach the shell's band.
-test("a dropped flow is not the shell's silence", async () => {
+// Every failed fetch reports, including a 404 — the pane names no cause, so it
+// has none to get wrong. A dropped flow deserves a better sentence than "could
+// not load this flow", and the run that owns "no longer captured" will write it;
+// until then the pane says something true rather than something false.
+test("a dropped flow reports too, because the pane claims only that it has no flow", async () => {
   const api = detailApi(() => Promise.reject(new ApiError(404, "gone")));
   const { result } = renderHook(() => useFlowDetail(api, "f1"));
-  await waitFor(() => expect(result.current.flow).toBeNull());
-  expect(result.current.failed).toBe(false);
+  await waitFor(() => expect(result.current.failed).toBe(true));
+  expect(result.current.flow).toBeNull();
 });
 
 test("a bumped nonce re-runs the detail fetch, so the shell's retry covers the pane", async () => {
@@ -349,7 +351,7 @@ test("a straggling refresh cannot overwrite the answer a later one already gave"
   await waitFor(() => expect(pending).toHaveLength(1)); // the mount's own refresh
 
   // A second, later refresh starts and succeeds while the first is still out.
-  let second: Promise<boolean>;
+  let second: Promise<void>;
   act(() => {
     second = result.current.retry();
   });
