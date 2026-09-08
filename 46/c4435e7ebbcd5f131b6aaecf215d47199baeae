@@ -1,0 +1,106 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W6 (wu/export/controls-build) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W6
+branch: wu/export/controls-build
+base: d31286592450f9c9baaac561a4d65377324f50a4
+head: 46c4435e7ebbcd5f131b6aaecf215d47199baeae
+diff_sha256: d26e16f98adf3fae3a8d4e0d02bcd2044ffe752805ac7bacf6bac4e18f534f63
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 29, verified: 15, waived: 0 }
+rounds:
+  - round: 1
+    found: 11
+    verified: 3
+    tip: 9d8b63ad0207e80d122bf6b384bcef9c42661f5b
+    detail: >-
+      Five finders, eleven candidates, three confirmed - recorded in full on the cr note at 9d8b63a, which
+      carried verdict FAIL. (1) ALTITUDE: the new UC-4 block called design run 11 "archived" while the run
+      is still tracked in docs/work/; DEC-28 makes archival an epic-close event, and the verifier found the
+      precedent - the plain-text idiom was minted in d475bef to REPLACE a live link once E-REDESIGN's run
+      was really git rm'd, so it asserts git-tier removal. Struck. (2) CORRECTNESS: openFile and its browser
+      fallback shipped with no unit test, every "choose a file" test mocking openFile itself; the verifier
+      established jsdom can dispatch the cancel/change events, so it was an omission and not a harness
+      limit. Both branches covered. (3) CORRECTNESS: export and import shared one in-flight slot, so
+      dismissing the import ask mid-export cleared the export's line. Eight refuted, the two substantive
+      ones because design run 11 foresaw them: CaptureMenu duplicating Select's popup shell and its panel
+      classes is the duplication the run names verbatim and reserves for the collection's owner, with the
+      lint rule validating each design-allow pragma independently.
+  - round: 2
+    found: 10
+    verified: 4
+    tip: 9a19f7d8106ed6718c32f3b5585811af95277b96
+    detail: >-
+      Re-review of 9a19f7d as unreviewed code - three finders over the five dimensions, efficiency folded in
+      because the delta added no hot-path code and round 1's efficiency candidate was fully refuted. Four
+      confirmed, the first of which says round 1's fix was half a fix: guarding the shared slot's CLEAR left
+      its SET unguarded, so an import that actually RAN mid-export still overwrote the export's mark and the
+      export's own finally then cleared it, re-offering an act whose request was still in flight. The slot
+      is now two independent flags - export and import start and finish independently and neither may speak
+      for the other - and the interleaving the round-1 test missed has its own regression test. Second: a
+      dismissed import ask abandoned a request nothing can cancel, and its answer still called onDone() on
+      the still-mounted parent, closing whichever ask the user had opened since, with its typed command in
+      it; the verifier reproduced the vanishing dialog live before the fix. A dismissed ask now stops
+      listening. Third, ALTITUDE: the result's per-suite count said 18 where the file runs 22, because a
+      test.each block yields more cases than it has test( calls. Fourth, ALTITUDE: the test/v2 and doc/v1
+      notes sat on the pre-fix commit, so the tip the gate would read carried none. One refutation was NOT
+      accepted, and the reason is on the record: a finder said exportHar threw a status-shaped message where
+      the other two doors throw the server's sentence, and its verifier refuted it partly on the strength of
+      THIS WU's own plan. A plan does not outrank the design it cites - run 11's Interaction table says any
+      of the three failing carries the server's reason and spells out the export row - so the finding was
+      taken and the plan corrected. Two refuted: the `let file` declaration outside choose()'s try, kept
+      because it makes the catch's scope true by construction rather than by trusting run() not to throw;
+      and test boilerplate shared with the saveBody test.
+  - round: 3
+    found: 5
+    verified: 5
+    tip: d6bcc686e9bdc5273350b6f7893813cbbb847634
+    detail: >-
+      Re-review of d6bcc68. Correctness traced every export/import interleaving, both flags, the listening
+      ref and refusal()'s res.text() on a non-text body, and returned an EMPTY list - the code was clean.
+      Altitude returned five, all of them wrong numbers in this WU's own record, two of them inside the
+      test/v2 note itself: "224 lib unit" and "42 tests/api.rs" that had never been run (221 and 41), a unit
+      count of 69 against an itemisation summing to 66 with body.test.ts - the file round 1 forced into
+      existence - missing from the list, a claim that both rounds were "recorded on the cr note" written
+      before round 2's note existed, and "73 new across six suites" introducing a list of seven. All
+      corrected by measurement. One scare, recorded in the result because its first read looked exactly like
+      a real regression: this round's reviewer left a throwaway git worktree behind, the shared target/ then
+      held a trawler lib built elsewhere, and tests/api.rs began failing - first on a snapshot whose recorded
+      source path pointed into the deleted directory, then on an assertion that the CORS grant was missing.
+      It was not; the code was committed and present. cargo clean -p trawler and all 41 pass. Rebuilding
+      settled it, not reasoning.
+  - round: 4
+    found: 3
+    verified: 3
+    tip: 31006d94c270d3fe441dd04fad0cbc080f5c413f
+    detail: >-
+      Narrow round over the record only, since round 3 had cleared the code and 31006d9 changed docs and the
+      note alone. Three confirmed, all the same class one round later: "eight of them added by the review
+      rounds" in both the result and the note where six is right (four in CaptureControls.test.tsx, two in
+      body.test.ts, counted rather than asserted), and a section opening "Two rounds" that the same document
+      contradicted two paragraphs later and the note contradicted outright. Corrected, and rounds 3 and 4
+      now carry a table listing all eight of their findings. The standing lesson is on the result and is not
+      about any of these numbers: this is the identical defect class E-EXPORT.W9's result named for itself
+      six times over one WU earlier, for which W9 reached a structural answer. That answer did not hold
+      here. Two consecutive runs have now spent their review budget on values that moved out from under the
+      sentences quoting them.
+  - round: 5
+    found: 0
+    verified: 0
+    tip: 46c4435e7ebbcd5f131b6aaecf215d47199baeae
+    detail: >-
+      The tip differs from round 4's only by the corrections round 4 asked for, plus the notes moved onto
+      it. No source changed after d6bcc68, which round 3's correctness finder cleared with an empty list;
+      every count now on the record was read off a run and re-checked at this tip (814 UI in 47 files across
+      seven suites, 221 lib, 41 tests/api.rs, 3 ca, 6 e2e_capture, 4 e2e_h2). Gate 0 green. No finding
+      stands unwaived, and the verdict is PASS.
+design:
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: 72e35e155b1f0ae7e146a8ecbaeef259abfda2a3
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: "the modal frame this file owned moved out to ui/src/ModalShell.tsx unchanged in behaviour - 5 insertions against 91 deletions, all of them the lifted block - and the file now calls the shared frame. Its three test ids are preserved verbatim and its own suite passes untouched, so no surface it renders was re-shaped and there was nothing for a design to decide"
+verdict: PASS
+date: 2026-09-08
