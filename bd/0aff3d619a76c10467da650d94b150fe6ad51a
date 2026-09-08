@@ -1,0 +1,14 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W5 status-class -> epic/redesign-finish"
+epic: E-RFINISH
+wu: E-RFINISH.W5
+branch: wu/redesign-finish/status-class
+base: eac4f1078d7199b440caeb18d7ef463e4723ee47
+head: bd0aff3d619a76c10467da650d94b150fe6ad51a
+diff_sha256: 4baa74f5fa6bef7425ae103c9bf9079c4e21c1ad6eb6b3add84236409b774bd2
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-09-08
+notes: "Gate 0 required an isolated CARGO_TARGET_DIR to be trustworthy. target/ is a symlink shared by all six worktrees (.gitworktreecopy's '~> target'), and the first run failed on xtask::ui::tests::the_window_cannot_be_dragged_narrower_than_the_header_holds_one_line - a test absent from this worktree, panicking at xtask/src/ui.rs:117 in a 116-line file, and present only on wu/export/controls-build. A concurrent build from the TRA-EXPORT worktree had left a stale test binary in the shared cache. Re-run against a private target dir: green, fmt+clippy+238 tests. The two candidates both fell to verification. Altitude claimed StatusMatch's FromStr and STATUS_GRAMMAR are wire concerns misplaced in the domain module, citing parse_flow_id/bad_id as the precedent for the opposite split; refuted, because the W5 plan names store.rs 'the domain half' by design, DEC-20 (logic lives with its inputs) is the standing ruling, parse_flow_id is a bare Uuid::parse_str delegation over a type carrying no domain invariant while StatusMatch's ranges are its invariant, and FlowFilter already makes store.rs query-shaped rather than purely domain. Simplification claimed the ASCII-digit pre-check followed by value.parse::<u16>() is a redundant second traversal that hand-rolled place-value arithmetic would simplify; refuted as stylistic - the pre-check is a shape guard and .parse is the idiomatic conversion, the replacement trades a legible stdlib call for manual base-10 math over three bytes off any hot path, and the plan's own flowchart states this branch as 'parses as u16 in 100..=599'. Correctness, reuse and efficiency returned empty."
