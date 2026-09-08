@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { defaultProxyAddr, type FlowSummary } from "./api";
 import { toRow } from "./flow";
+import { NotAnswering } from "./NotAnswering";
 import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
 
 const ROW_HEIGHT = 30;
@@ -25,13 +26,45 @@ function HeaderRow() {
   );
 }
 
-// The list is empty for two unrelated reasons and they must not share a
-// sentence: telling someone to send traffic they have already sent is the
-// failure the second message exists to prevent.
-function Absence({ filtered }: { filtered: boolean }) {
+// The region is empty for four unrelated reasons and none of them may share a
+// sentence: telling someone to send traffic they have already sent, or to retry
+// a query the core will refuse identically forever, is the failure each separate
+// wording exists to prevent.
+//
+// A silent core outranks both empties, because an empty list means nothing when
+// the list could not be fetched — that is the run's rule. It does NOT outrank a
+// refusal: the run never ranked those two against each other, and they are not
+// alternatives, so when both are true the refusal stands here and the shell
+// states the silence above it rather than in its place.
+function Absence({
+  filtered,
+  silent,
+  refused,
+  retrying,
+  onRetry,
+}: {
+  filtered: boolean;
+  silent: boolean;
+  refused: string | null;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
   return (
     <div data-testid="empty" className="flex justify-center p-12">
-      {filtered ? (
+      {silent && refused === null ? (
+        // The clause is a claim about why this region is empty, so it is made
+        // only when it is this region's own truth: a filter that excludes
+        // everything is not a window nothing has reached.
+        <NotAnswering
+          trailing={filtered ? undefined : "nothing has reached the window"}
+          retrying={retrying}
+          onRetry={onRetry}
+        />
+      ) : refused !== null ? (
+        // A rejection, not a failure: the API answered and said no, so there is
+        // no ⚠ and no retry — the correction is more typing.
+        <Notice detail="type a code (404) or a class (4xx)">{`${refused} is not a status`}</Notice>
+      ) : filtered ? (
         <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
       ) : (
         <Notice detail={`send traffic through the proxy — ${defaultProxyAddr()}`}>no flows yet</Notice>
@@ -45,11 +78,19 @@ export function FlowList({
   selectedId,
   onSelect,
   filtered = false,
+  silent = false,
+  refused = null,
+  retrying = false,
+  onRetry = () => {},
 }: {
   flows: FlowSummary[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   filtered?: boolean;
+  silent?: boolean;
+  refused?: string | null;
+  retrying?: boolean;
+  onRetry?: () => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -98,7 +139,13 @@ export function FlowList({
     return (
       <div className="flex h-full flex-col">
         <HeaderRow />
-        <Absence filtered={filtered} />
+        <Absence
+          filtered={filtered}
+          silent={silent}
+          refused={refused}
+          retrying={retrying}
+          onRetry={onRetry}
+        />
       </div>
     );
   }

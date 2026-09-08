@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowList } from "./FlowList";
-import { defaultProxyAddr, type FlowSummary } from "./api";
+import { apiAddr, defaultProxyAddr, type FlowSummary } from "./api";
 
 function flow(over: Partial<FlowSummary> = {}): FlowSummary {
   return {
@@ -224,4 +224,87 @@ test("the status column is centred with its label rather than sharing the durati
   expect(screen.getByLabelText("200 OK").parentElement?.className).toMatch(
     /text-center/,
   );
+});
+
+// Four causes, four sentences, and an order between them. The order is the point:
+// an empty list means nothing when the list could not be fetched, so a failure
+// outranks both empties rather than sharing a region with them.
+test("a core that is not answering takes the empty region from both empties", () => {
+  for (const filtered of [false, true]) {
+    const { unmount } = render(
+      <FlowList flows={[]} filtered={filtered} silent />,
+    );
+    const region = screen.getByTestId("empty");
+    expect(region).toHaveTextContent("trawler is not answering");
+    expect(region).toHaveTextContent(apiAddr());
+    expect(region).not.toHaveTextContent("no flows yet");
+    expect(region).not.toHaveTextContent("no flows match this filter");
+    unmount();
+  }
+});
+
+// The trailing clause explains why THIS region is empty, so it is only said when
+// that is what emptied it. A filter that excludes everything is not a window
+// nothing has reached, and claiming so would be the shell inventing history.
+test("the silence says nothing reached the window only when nothing did", () => {
+  const { unmount } = render(<FlowList flows={[]} silent />);
+  expect(screen.getByTestId("empty")).toHaveTextContent("nothing has reached the window");
+  unmount();
+
+  render(<FlowList flows={[]} filtered silent />);
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("nothing has reached the window");
+  expect(screen.getByTestId("empty")).toHaveTextContent("trawler is not answering");
+});
+
+// The run ranked "not answering" above the two empties and never against a
+// refusal, so the build does not either: the refusal keeps the region it earned
+// and the silence is stated above it by the shell.
+test("a refusal is not hidden by the silence that followed it", () => {
+  render(<FlowList flows={[]} silent refused="4xz" />);
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("4xz is not a status");
+  expect(region).not.toHaveTextContent("trawler is not answering");
+});
+
+test("the empty region's retry is offered, and reports the act", () => {
+  const onRetry = vi.fn();
+  render(<FlowList flows={[]} silent onRetry={onRetry} />);
+  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+  expect(onRetry).toHaveBeenCalledOnce();
+});
+
+// Fork D4: disabled and a progress line are one obligation, never half of one.
+test("a retry in flight disables its button and says what is awaited", () => {
+  render(<FlowList flows={[]} silent retrying />);
+  expect(screen.getByRole("button", { name: "retry" })).toBeDisabled();
+  expect(screen.getByTestId("empty")).toHaveTextContent(`trying ${apiAddr()}…`);
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("the rows below");
+});
+
+// A rejection is not a failure: the API answered and said no, so there is nothing
+// to retry — the correction is more typing, and the sentence names what was typed.
+test("a refused status names the value and offers a grammar, not a retry", () => {
+  render(<FlowList flows={[]} filtered refused="4xz" />);
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("4xz is not a status");
+  expect(region).toHaveTextContent("type a code (404) or a class (4xx)");
+  expect(region).not.toHaveTextContent("no flows match this filter");
+  expect(screen.queryByRole("button", { name: "retry" })).toBeNull();
+});
+
+test("with no failure the two inherited empties are unchanged", () => {
+  const { unmount } = render(<FlowList flows={[]} silent={false} refused={null} />);
+  expect(screen.getByTestId("empty")).toHaveTextContent("no flows yet");
+  unmount();
+
+  render(<FlowList flows={[]} filtered silent={false} refused={null} />);
+  expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
+});
+
+// The empty region only exists when the region is empty, which is what keeps the
+// statement from being said twice when the shell's band is also up.
+test("rows on screen leave the empty region absent whatever the failure", () => {
+  render(<FlowList flows={three} silent />);
+  expect(screen.queryByTestId("empty")).toBeNull();
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(3);
 });
