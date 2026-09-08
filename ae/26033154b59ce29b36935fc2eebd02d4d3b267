@@ -1,0 +1,34 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W9
+changes:
+  - path: docs/work/2026-09-08-redesign-finish-w9-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before any code. Its substance is the surface inventory: the epic plan named four surfaces, a grep over the tree found fourteen that name the switch position and five more that name the decode chain, and every one is listed in-scope or out-of-scope with its reason - so the boundary is judged rather than guessed. Also states the three things that do NOT change and why: the on-screen order (design run #9 drew it readable-first under progressive-disclosure), the default, and the control itself"
+  - path: docs/work/2026-09-08-redesign-finish-w9-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with an evidence row per claim, the left-alone table with a reason each, and three stated deviations - web-ui.html reaching v6 here rather than at W10, the nine files the epic plan's W9 row does not name, and the order/term-pair reading of 'raw | pretty'. Records DEC-21's rejected-alternatives table as seen and deliberately not edited, and the ariaLabel's 'body mode' as a follow-up needing a lexicon proposal rather than a copy fix. Rewritten across six review rounds, which found no code defect and eight false sentences HERE: the review section carries all eighteen candidates with the verdict and the evidence that settled each, and the callout states the pattern - a sentence that summarises evidence is itself evidence, so re-stating it is a new claim rather than a safer one. Three habits came out of it and are named in the doc: drop the counts a document does not need (the grep row now quotes no total), enumerate whatever count it keeps (the nine-file row lists nine), and grep the file for a retired claim rather than correcting the copies one remembers (round 5 found a third copy of a claim round 3 had already corrected twice)"
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: edited
+    distills: "UC-5's contract: the toggle is raw / pretty, and the server-side paragraph names the pretty view the API serves. v5 -> v6. This is the T2 write-back the WU's own requirement puts in this diff - the epic plan's distillation table had assigned web-ui.html's v6 to W10, so W10 takes it to v7 for UC-4's gains and the pane width. Deliberately NOT edited: 'a brotli body still renders decoded', which is about the decode chain and not the switch"
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: edited
+    distills: "UC-5's summary row reads raw/pretty, so the index and the contract agree at the first place a reader looks. v1 -> v2"
+  - path: docs/decisions/dec-31-leg-is-panel-scoped.html
+    tier: T2
+    action: edited
+    distills: "the cell describing what the body pane owns names the shipped positions - 'the body view (raw | pretty)'. An incidental description of the pane's copy; the leg-scoping ruling and its alternatives are untouched"
+  - path: docs/decisions/dec-32-body-is-the-main-zone.html
+    tier: T2
+    action: edited
+    distills: "the panel sketch's control row reads [pretty|raw], re-aligned to the box. A drawing of the control; the zoning ruling is untouched"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: edited
+    distills: "display-equals-payload's OK example loses its second pair, which illustrated the very form the rulebook's own lexicon forbids. NOT a rule amendment: predicate, slug, tier and the lexicon all stand, so no cr/v3 receipt that pinned this rulebook blob is invalidated, and this is not the DEC-14 rulebook growth the epic plan reserves for W10"
+t2_waived: none
+date: 2026-09-08
