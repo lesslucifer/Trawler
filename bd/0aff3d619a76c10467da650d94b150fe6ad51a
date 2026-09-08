@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W5
+branch: wu/redesign-finish/status-class
+tests:
+  unit:
+    count: 4
+    covers: "src/store.rs, all four added to the existing test module rather than a parallel one. (1) status_grammar_accepts_only_codes_and_classes - the whole grammar as a table: ten acceptances (the five classes, `4XX` and `4Xx` for case, and the code bounds 100, 404, 599) against twenty refusals. The refusals carry the weight, because a permissive parser is exactly how a nonsense filter becomes a silent empty list again: the out-of-range classes `0xx`, `6xx`, `9xx`; the shape near-misses `xxx`, `4x`, `40x`, `x44`, `4x4`, `4xxx`; the out-of-range codes `99`, `600`, `999`; the surrounding whitespace ` 4xx` and `404 `; the empty string; a multi-byte leading character; and `+404`, `-404`, `0404`, which u16::from_str accepts and this grammar does not. (2) status_match_covers_its_class_and_nothing_beside_it - 400 and 499 match 4xx, 399 and 500 do not; Exact(404) matches 404 and not 400. (3) status_class_narrows_the_listing - over a store of 200/404/451/500, a class returns its two, another class its one, an exact code its one, and a class composed with a non-matching method returns none. (4) status_class_excludes_responseless - a flow still awaiting its response is excluded by the class form, the behaviour the pre-existing status_filter_excludes_responseless pins for the exact form."
+  integration:
+    count: 1
+    covers: "tests/api.rs - status_filter_accepts_a_class_a_code_and_refuses_the_rest, the WU's own sentence over the real router against an ephemeral store holding 200, 404, 418 and 500. `?status=4xx` returns exactly the 404 and the 418 - the 5xx is in the store precisely so a too-wide match fails and `not 2xx` cannot pass for `is 4xx`; `?status=404` returns the 404 alone, so the exact form did not become a prefix match; and `9xx`, `999`, `abc` and `40x` each return 400 with the grammar in the body, none of them 200 with an empty array. The pre-existing list_flows_orders_and_filters passes with its assertions unedited, which is the proof that widening one parameter moved nothing else on the wire. Deterministic and hermetic: an in-process router over an in-memory store, no port and no network."
