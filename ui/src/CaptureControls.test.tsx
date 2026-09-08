@@ -1,6 +1,7 @@
+import { StrictMode } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
-import { CaptureControls, CAPTURE_COPY } from "./CaptureControls";
+import { CaptureControls, CAPTURE_COPY, CAPTURE_GLYPH } from "./CaptureControls";
 import { apiStub } from "./apiStub";
 import type { Filter, TrawlerApi } from "./api";
 import * as files from "./body";
@@ -359,4 +360,217 @@ test("an abandoned import never closes the ask the user opened after it", async 
   await act(async () => release?.(1));
   expect(reopened).toBeInTheDocument();
   expect(slot()).toHaveTextContent("6 flows");
+});
+
+const spinners = (within: HTMLElement) => within.querySelectorAll('[data-testid="spinner"]');
+
+const paste = (command: string) =>
+  fireEvent.change(screen.getByRole("textbox", { name: CAPTURE_COPY.pasteLabel }), {
+    target: { value: command },
+  });
+
+// Found by driving the built app by hand. `listening` was armed at its
+// declaration and disarmed in a cleanup, so StrictMode's mount → unmount →
+// remount disarmed it for good: every import answered into a listener that had
+// stopped listening, and the ask it belonged to never closed. Every other test
+// here renders unwrapped, which is exactly why none of them saw it — main.tsx
+// wraps the app in StrictMode, so this is the tree the user actually runs.
+test("a successful import closes its own ask after StrictMode has remounted it", async () => {
+  const importCurl = vi.fn(async () => 1);
+  render(
+    <StrictMode>
+      <CaptureControls api={apiStub({ importCurl })} filter={{}} count={6} onCleared={vi.fn()} />
+    </StrictMode>,
+  );
+
+  choose(CAPTURE_COPY.importName);
+  paste("curl http://x/");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(slot()).toHaveTextContent("6 flows");
+});
+
+// The same tree, the failing half: a refusal must reach the ask it came from and
+// be readable there, rather than being swallowed into a dialog frozen mid-import.
+test("a refused import still speaks after StrictMode has remounted the ask", async () => {
+  const importCurl = vi.fn(async () => {
+    throw new Error("not a curl command: starts with \"wget\"");
+  });
+  render(
+    <StrictMode>
+      <CaptureControls api={apiStub({ importCurl })} filter={{}} count={6} onCleared={vi.fn()} />
+    </StrictMode>,
+  );
+
+  choose(CAPTURE_COPY.importName);
+  paste("wget http://x/");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+
+  expect(await screen.findByTestId("import-failed")).toHaveTextContent("starts with");
+  expect(screen.queryByTestId("import-running")).toBeNull();
+});
+
+// Also found by hand: the textarea is the ask's opener, so it holds focus, and
+// disabling it during the import blurred focus to <body> — outside the dialog,
+// where ModalShell's key handler never sees Esc. A slow import lost its one
+// keyboard exit.
+//
+// jsdom does not blur a focused element when it becomes disabled, so no key
+// dispatched here can reproduce that; what it can check is the mechanism the
+// browser acts on. The assertion is therefore the tab ring ModalShell itself
+// reads: while the import runs, the opener must still be one of the dialog's
+// stops, which is what keeps focus — and Esc — inside it. The key below is
+// dispatched from wherever focus actually is rather than at the dialog node,
+// because dispatching at the node is precisely what hid this.
+test("the ask keeps its focus hold, and its esc, while the import is running", async () => {
+  let release: ((n: number) => void) | undefined;
+  const importCurl = vi.fn(async () => new Promise<number>((resolve) => (release = resolve)));
+  mount({ importCurl });
+
+  choose(CAPTURE_COPY.importName);
+  paste("curl http://x/");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+  await waitFor(() => expect(importCurl).toHaveBeenCalled());
+
+  const panel = screen.getByTestId("import-ask-panel");
+  const box = screen.getByRole("textbox", { name: CAPTURE_COPY.pasteLabel });
+  expect([...panel.querySelectorAll("textarea:not([disabled])")]).toContain(box);
+
+  const focused = document.activeElement as HTMLElement;
+  expect(panel).toContainElement(focused);
+  fireEvent.keyDown(focused, { key: "Escape" });
+
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await act(async () => release?.(1));
+});
+
+// The command stays readable and selectable while it is being imported — the
+// point of read-only over disabled is that the text is still there to correct if
+// the server refuses it.
+test("the pasted command is held rather than emptied while the import runs", async () => {
+  let release: ((n: number) => void) | undefined;
+  mount({ importCurl: vi.fn(async () => new Promise<number>((resolve) => (release = resolve))) });
+
+  choose(CAPTURE_COPY.importName);
+  paste("curl http://x/");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+
+  const box = await screen.findByRole("textbox", { name: CAPTURE_COPY.pasteLabel });
+  expect(box).toHaveValue("curl http://x/");
+  expect(box).toHaveAttribute("readonly");
+  await act(async () => release?.(1));
+});
+
+test("a running export turns a ring in the slot, and stops it when the file is written", async () => {
+  let release: (() => void) | undefined;
+  mount({
+    exportHar: vi.fn(
+      async () =>
+        new Promise<{ bytes: Uint8Array; filename: string }>((resolve) => {
+          release = () => resolve({ bytes: new Uint8Array(), filename: "x.har" });
+        }),
+    ),
+  });
+  vi.spyOn(files, "saveBody").mockResolvedValue("/tmp/x.har");
+
+  expect(spinners(slot())).toHaveLength(0);
+  choose(CAPTURE_COPY.exportAct);
+  await waitFor(() => expect(spinners(slot())).toHaveLength(1));
+
+  await act(async () => release?.());
+  await waitFor(() => expect(spinners(slot())).toHaveLength(0));
+});
+
+// Two zones, one ring each: the header says a transfer is running, and the
+// surface holding focus says which one, because the user is looking at the ask.
+test("a running import turns a ring in the slot and in the ask it belongs to", async () => {
+  let release: ((n: number) => void) | undefined;
+  mount({ importCurl: vi.fn(async () => new Promise<number>((resolve) => (release = resolve))) });
+
+  choose(CAPTURE_COPY.importName);
+  paste("curl http://x/");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+
+  const running = await screen.findByTestId("import-running");
+  expect(spinners(running)).toHaveLength(1);
+  expect(running).toHaveTextContent(CAPTURE_COPY.importing);
+  expect(spinners(slot())).toHaveLength(1);
+
+  await act(async () => release?.(1));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(spinners(slot())).toHaveLength(0);
+});
+
+// The faces are the app's own: ↓ is the save glyph, ↑ is the mark FlowList
+// prints on an imported row. Decorative to a reader — the label is the name, so
+// the glyph must not reach the accessible one.
+test("each act wears its own face without changing what the act is called", () => {
+  mount();
+  fireEvent.click(trigger());
+
+  const faces = Object.fromEntries(
+    screen.getAllByRole("menuitem").map((item) => [item.textContent, item]),
+  );
+  expect(Object.keys(faces).join(" ")).toContain(CAPTURE_GLYPH.export);
+  expect(Object.keys(faces).join(" ")).toContain(CAPTURE_GLYPH.import);
+  expect(Object.keys(faces).join(" ")).toContain(CAPTURE_GLYPH.clear);
+
+  // Every face is distinct: a shared glyph would say two acts are the same act.
+  const glyphs = Object.values(CAPTURE_GLYPH);
+  expect(new Set(glyphs).size).toBe(glyphs.length);
+
+  expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.exportAct })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.importName })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.clearAct })).toBeInTheDocument();
+});
+
+// Reopening the menu mid-transfer is the one way to ask "why is this act
+// withheld?", so the answer has to be in the menu and not only in the header.
+test("the act that is running turns a ring where its face was", async () => {
+  let release: (() => void) | undefined;
+  mount({
+    exportHar: vi.fn(
+      async () =>
+        new Promise<{ bytes: Uint8Array; filename: string }>((resolve) => {
+          release = () => resolve({ bytes: new Uint8Array(), filename: "x.har" });
+        }),
+    ),
+  });
+  vi.spyOn(files, "saveBody").mockResolvedValue("/tmp/x.har");
+
+  choose(CAPTURE_COPY.exportAct);
+  await waitFor(() => expect(slot()).toHaveTextContent(CAPTURE_COPY.exporting));
+
+  fireEvent.click(trigger());
+  const running = screen.getByRole("menuitem", { name: CAPTURE_COPY.exportAct });
+  expect(spinners(running)).toHaveLength(1);
+  expect(running.textContent).not.toContain(CAPTURE_GLYPH.export);
+  expect(spinners(screen.getByRole("menuitem", { name: CAPTURE_COPY.clearAct }))).toHaveLength(0);
+
+  await act(async () => release?.());
+});
+
+// Design run 11's T4 — "the paste offers the file, not the reverse". The
+// hierarchy was always in the shape: the textarea is what opens focused and what
+// the primary button acts on, the picker is the muted alternative beside it. The
+// words contradicted it, naming the file first and opening the target on "…or" —
+// an aside to something that was never said.
+test("the ask's words lead with the command, not with the file it also takes", () => {
+  mount();
+  choose(CAPTURE_COPY.importName);
+
+  const title = CAPTURE_COPY.importName;
+  expect(title.indexOf("curl")).toBeLessThan(title.indexOf("har"));
+  expect(screen.getByRole("dialog")).toHaveAccessibleName(title);
+
+  // The primary target states its own act rather than trailing off another's.
+  const box = screen.getByRole("textbox", { name: CAPTURE_COPY.pasteLabel });
+  expect(box).toHaveAttribute("placeholder", CAPTURE_COPY.pastePlaceholder);
+  expect(CAPTURE_COPY.pastePlaceholder).toMatch(/^paste\b/);
+
+  // The file stays reachable and stays second — the menu is the only route to
+  // either, so the title has to carry both names however it orders them.
+  expect(screen.getByRole("button", { name: CAPTURE_COPY.choose })).toBeInTheDocument();
+  expect(title).toContain("har");
 });

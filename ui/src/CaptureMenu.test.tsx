@@ -139,3 +139,33 @@ test("re-opening starts at the first act rather than where the last one left off
   fireEvent.keyDown(screen.getByRole("menu"), { key: "Enter" });
   expect(list[0].run).toHaveBeenCalledOnce();
 });
+
+test("an act's face rides in front of its label without joining its name", () => {
+  mount(acts({ import: { glyph: "↑" } }));
+  open();
+
+  const item = screen.getByRole("menuitem", { name: "import a har file or a curl command" });
+  expect(item.textContent).toBe("↑import…");
+  expect(item.firstElementChild).toHaveAttribute("aria-hidden", "true");
+});
+
+// The box is drawn whether or not a face fills it, so a menu where only some
+// acts have one still hangs every label off a single left edge.
+test("the face's box is reserved even for an act that has none", () => {
+  mount(acts({ export: { glyph: "↓" } }));
+  open();
+
+  const boxes = items().map((i) => i.firstElementChild);
+  expect(boxes.every((b) => b?.className.includes("w-4"))).toBe(true);
+  expect(boxes.map((b) => b?.textContent)).toEqual(["↓", "", ""]);
+});
+
+test("a running act turns a ring in place of its face, and only that act", () => {
+  mount(acts({ export: { glyph: "↓", busy: true }, clear: { glyph: "⌫" } }));
+  open();
+
+  const running = screen.getByRole("menuitem", { name: "export as har…" });
+  expect(running.querySelectorAll('[data-testid="spinner"]')).toHaveLength(1);
+  expect(running.textContent).toBe("export as har…");
+  expect(screen.getByRole("menuitem", { name: "clear…" }).textContent).toBe("⌫clear…");
+});

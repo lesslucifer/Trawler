@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "./components/index";
+import { Spinner } from "./Spinner";
 
 export interface CaptureAct {
   id: string;
   label: string;
   /** The accessible name, where the visible label leans on the menu for context. */
   name?: string;
+  /**
+   * The act's face — the character the rest of the app already spends on this
+   * direction, never a new one. Decorative to a reader: the label is the name.
+   */
+  glyph?: string;
+  /** Turns the ring in the glyph's box: this act is the one currently running. */
+  busy?: boolean;
   disabled?: boolean;
   /** Draws the hairline above this item — the additive/irreversible boundary. */
   separated?: boolean;
@@ -111,6 +119,12 @@ export function CaptureMenu({ acts, label }: { acts: CaptureAct[]; label: string
                   i === active && !item.disabled ? "bg-wash-tint text-ink" : "text-ink-body"
                 }`}
               >
+                <span
+                  aria-hidden="true"
+                  className="mr-chrome-gap inline-flex w-4 shrink-0 items-center justify-center text-ink-mute"
+                >
+                  {item.busy ? <Spinner /> : item.glyph}
+                </span>
                 {item.label}
               </li>
             ))}

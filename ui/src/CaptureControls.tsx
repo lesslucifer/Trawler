@@ -3,13 +3,14 @@ import type { Filter, TrawlerApi } from "./api";
 import { openFile, saveBody, type ChosenFile } from "./body";
 import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
 import { ModalShell } from "./ModalShell";
+import { Spinner } from "./Spinner";
 import { Button, Notice, TonedText } from "./components/index";
 
 export const CAPTURE_COPY = {
   trigger: "capture actions",
   exportAct: "export as har…",
   importAct: "import…",
-  importName: "import a har file or a curl command",
+  importName: "import a curl command or a har file",
   clearAct: "clear…",
   exporting: "exporting…",
   importing: "importing…",
@@ -19,7 +20,17 @@ export const CAPTURE_COPY = {
   choose: "choose a file…",
   import: "import",
   pasteLabel: "a curl command",
-  pastePlaceholder: "…or paste a curl command",
+  pastePlaceholder: "paste a curl command",
+} as const;
+
+// Each act wears the face the app already spends on its direction: ↓ is
+// IconButton's save, ↑ is the mark FlowList prints on an imported row, and ⌫ is
+// the only one minted here — the two directions move data, the third erases it,
+// which is the boundary the menu's own hairline already draws.
+export const CAPTURE_GLYPH = {
+  export: "↓",
+  import: "↑",
+  clear: "⌫",
 } as const;
 
 const flowCount = (n: number) => `${n} ${n === 1 ? "flow" : "flows"}`;
@@ -82,6 +93,8 @@ export function CaptureControls({
     {
       id: "export",
       label: CAPTURE_COPY.exportAct,
+      glyph: CAPTURE_GLYPH.export,
+      busy: exporting,
       disabled: exporting,
       run: () => void exportHar(),
     },
@@ -89,15 +102,27 @@ export function CaptureControls({
       id: "import",
       label: CAPTURE_COPY.importAct,
       name: CAPTURE_COPY.importName,
+      glyph: CAPTURE_GLYPH.import,
+      busy: importing,
       run: () => setAsking("import"),
     },
-    { id: "clear", label: CAPTURE_COPY.clearAct, separated: true, run: () => setAsking("clear") },
+    {
+      id: "clear",
+      label: CAPTURE_COPY.clearAct,
+      glyph: CAPTURE_GLYPH.clear,
+      separated: true,
+      run: () => setAsking("clear"),
+    },
   ];
 
   return (
     <div className="flex items-center gap-2">
       <span data-testid="capture-slot" className="w-field-sm text-right">
-        <TonedText tone="muted" className="whitespace-nowrap text-control">
+        <TonedText
+          tone="muted"
+          className="inline-flex items-center justify-end gap-chrome-tight whitespace-nowrap text-control"
+        >
+          {(exporting || importing) && <Spinner />}
           {slot}
         </TonedText>
       </span>
@@ -171,6 +196,12 @@ function ClearDialog({
 // that decides what is being imported precedes the thing that imports it. A
 // refusal is the server's own sentence, rendered verbatim under the text that
 // caused it, and the text stays so it can be edited rather than re-pasted.
+//
+// The paste offers the file, not the reverse (design run 11, T4): the textarea is
+// what opens focused and what the primary button acts on, the picker is the muted
+// alternative beside it. So the words lead with the command in both places — the
+// title names it first, and the target states its own act rather than opening on
+// "…or", which read as an aside to something that was never said.
 function ImportDialog({
   api,
   onDone,
@@ -187,7 +218,14 @@ function ImportDialog({
   // honest is that a dismissed ask stops listening to it: its answer must not
   // reach back and close whatever the user opened next.
   const listening = useRef(true);
-  useEffect(() => () => void (listening.current = false), []);
+  // Armed in the body, not just at the declaration: StrictMode mounts, unmounts
+  // and remounts, so a cleanup-only effect disarms the ref for the whole life of
+  // an ask that was never dismissed — and every import then answers into a
+  // listener that has stopped listening.
+  useEffect(() => {
+    listening.current = true;
+    return () => void (listening.current = false);
+  }, []);
 
   const dismiss = () => {
     onBusy(false);
@@ -237,13 +275,22 @@ function ImportDialog({
         aria-label={CAPTURE_COPY.pasteLabel}
         placeholder={CAPTURE_COPY.pastePlaceholder}
         value={command}
-        disabled={importing}
+        // Read-only rather than disabled: this is the ask's opener, so it holds
+        // focus, and disabling it blurs to <body> — outside the dialog, where
+        // ModalShell's Esc handler never sees the key and the one exit from a
+        // slow import is gone.
+        readOnly={importing}
         onChange={(e) => setCommand(e.target.value)}
-        className="h-field-sm w-full resize-none rounded-button border border-hairline bg-canvas px-chrome-x py-2 font-mono text-control leading-normal text-ink-body placeholder:text-ink-mute focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus disabled:opacity-disabled"
+        className="h-field-sm w-full resize-none rounded-button border border-hairline bg-canvas px-chrome-x py-2 font-mono text-control leading-normal text-ink-body placeholder:text-ink-mute read-only:opacity-disabled focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus"
       />
       {importing && (
         <div data-testid="import-running">
-          <Notice>{CAPTURE_COPY.importing}</Notice>
+          <Notice>
+            <span className="inline-flex items-center gap-chrome-gap">
+              <Spinner />
+              {CAPTURE_COPY.importing}
+            </span>
+          </Notice>
         </div>
       )}
       {failure !== null && (
