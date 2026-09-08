@@ -229,12 +229,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     <Layout
       mainRef={mainRef}
       band={
-        // Only above rows: with none, the same sentence stands in the row region
-        // instead, so the failure is stated immediately above what it is about
-        // and never twice.
-        notAnswering && flows.length > 0 ? (
+        // The statement sits immediately above what it is about. With rows, that
+        // is the rows; with a refusal standing in their place, it is the refusal
+        // — the core answered that query and then stopped answering, and both
+        // are true. With neither, there is nothing above to qualify and the
+        // sentence moves into the row region instead.
+        notAnswering && (flows.length > 0 || refused !== null) ? (
           <NotAnswering
-            trailing="the rows below are the last it sent"
+            trailing={flows.length > 0 ? "the rows below are the last it sent" : undefined}
             retrying={retrying}
             onRetry={retryConnection}
           />

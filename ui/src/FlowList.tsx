@@ -31,9 +31,11 @@ function HeaderRow() {
 // a query the core will refuse identically forever, is the failure each separate
 // wording exists to prevent.
 //
-// The order is the precedence rule. A failure outranks both empties, because an
-// empty list means nothing when the list could not be fetched — and a refused
-// query outranks nothing at all, since it IS the answer to what was asked.
+// A silent core outranks both empties, because an empty list means nothing when
+// the list could not be fetched — that is the run's rule. It does NOT outrank a
+// refusal: the run never ranked those two against each other, and they are not
+// alternatives, so when both are true the refusal stands here and the shell
+// states the silence above it rather than in its place.
 function Absence({
   filtered,
   silent,
@@ -49,9 +51,12 @@ function Absence({
 }) {
   return (
     <div data-testid="empty" className="flex justify-center p-12">
-      {silent ? (
+      {silent && refused === null ? (
+        // The clause is a claim about why this region is empty, so it is made
+        // only when it is this region's own truth: a filter that excludes
+        // everything is not a window nothing has reached.
         <NotAnswering
-          trailing="nothing has reached the window"
+          trailing={filtered ? undefined : "nothing has reached the window"}
           retrying={retrying}
           onRetry={onRetry}
         />

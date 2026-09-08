@@ -59,6 +59,9 @@ export function useFlows(api: TrawlerApi) {
   // never read as a failed fetch.
   const refresh = useCallback(() => {
     const mine = ++latest.current;
+    // What was asked, captured with the request: by the time a refusal comes
+    // back the box may hold something the core has never judged.
+    const asked = filterRef.current.status ?? "";
     return api.listFlows(filterRef.current).then(
       (list) => {
         if (mine !== latest.current) return;
@@ -74,7 +77,7 @@ export function useFlows(api: TrawlerApi) {
           // answer to show, so the rows go with it and the count reads what is
           // on screen.
           setFlows([]);
-          setRefused(filterRef.current.status ?? "");
+          setRefused(asked);
           setSilent(false);
           return;
         }
@@ -95,6 +98,7 @@ export function useFlows(api: TrawlerApi) {
   // in-flight window is rendered (fork D4), so it may not begin 150ms after the
   // button says it has.
   const retry = useCallback(() => {
+    clearTimeout(timer.current);
     setRetrying(true);
     return refresh().finally(() => setRetrying(false));
   }, [refresh]);

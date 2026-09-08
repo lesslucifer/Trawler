@@ -830,3 +830,27 @@ test("a connection that recovers on its own does not move focus", async () => {
   await waitFor(() => expect(screen.queryByText("trawler is not answering")).toBeNull());
   expect(document.activeElement).toBe(field);
 });
+
+// Regression (review round 5): the run ranked "not answering" above the two
+// empties and never against a refusal. Ranking them anyway hid a real answer the
+// core had given — both are true, so the shell states both.
+test("a core that goes silent after refusing a query states both, hiding neither", async () => {
+  let list: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const { api } = shellApi(() => list());
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  list = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("4xz is not a status"));
+
+  list = () => Promise.reject(new TypeError("Failed to fetch"));
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+
+  const band = await screen.findByTestId("band");
+  expect(band).toHaveTextContent("trawler is not answering");
+  // The refusal keeps its own region; the silence is stated above it.
+  expect(screen.getByTestId("empty")).toHaveTextContent("4xz is not a status");
+  // And the band makes no claim about rows that are not there.
+  expect(band).not.toHaveTextContent("the rows below are the last it sent");
+});

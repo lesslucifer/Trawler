@@ -237,11 +237,33 @@ test("a core that is not answering takes the empty region from both empties", ()
     const region = screen.getByTestId("empty");
     expect(region).toHaveTextContent("trawler is not answering");
     expect(region).toHaveTextContent(apiAddr());
-    expect(region).toHaveTextContent("nothing has reached the window");
     expect(region).not.toHaveTextContent("no flows yet");
     expect(region).not.toHaveTextContent("no flows match this filter");
     unmount();
   }
+});
+
+// The trailing clause explains why THIS region is empty, so it is only said when
+// that is what emptied it. A filter that excludes everything is not a window
+// nothing has reached, and claiming so would be the shell inventing history.
+test("the silence says nothing reached the window only when nothing did", () => {
+  const { unmount } = render(<FlowList flows={[]} silent />);
+  expect(screen.getByTestId("empty")).toHaveTextContent("nothing has reached the window");
+  unmount();
+
+  render(<FlowList flows={[]} filtered silent />);
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("nothing has reached the window");
+  expect(screen.getByTestId("empty")).toHaveTextContent("trawler is not answering");
+});
+
+// The run ranked "not answering" above the two empties and never against a
+// refusal, so the build does not either: the refusal keeps the region it earned
+// and the silence is stated above it by the shell.
+test("a refusal is not hidden by the silence that followed it", () => {
+  render(<FlowList flows={[]} silent refused="4xz" />);
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("4xz is not a status");
+  expect(region).not.toHaveTextContent("trawler is not answering");
 });
 
 test("the empty region's retry is offered, and reports the act", () => {

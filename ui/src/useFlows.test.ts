@@ -409,3 +409,37 @@ test("silence ends when a listing arrives, not when the stream reconnects", asyn
   act(() => f.fireUp());
   await waitFor(() => expect(result.current.silent).toBe(false));
 });
+
+// Regression (review round 5): the refusal named whatever the box held when the
+// answer arrived, not what was asked. Edit inside the debounce window and the
+// core is quoted refusing a value it never saw — or, with the box cleared, the
+// sentence becomes " is not a status".
+test("a refusal names the value that was asked, not whatever the box holds now", async () => {
+  const calls: { status: string; reject: (e: unknown) => void }[] = [];
+  const api: TrawlerApi = {
+    listFlows: (filter) =>
+      new Promise<FlowSummary[]>((_, reject) =>
+        calls.push({ status: filter.status ?? "", reject }),
+      ),
+    connectionCount: async () => 0,
+    caCertPem: async () => "",
+    getFlow: async () => { throw new Error("unused"); },
+    getBody: async () => { throw new Error("unused"); },
+    stream: () => () => {},
+  };
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(calls).toHaveLength(1)); // the mount's own listing
+
+  act(() => result.current.update("status", "4xz"));
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1].status).toBe("4xz");
+
+  // The box changes while that listing is still out, and before the debounce
+  // has dispatched anything for the new value.
+  act(() => result.current.update("status", ""));
+
+  await act(async () => {
+    calls[1].reject(new ApiError(400, "GET /flows failed: 400"));
+  });
+  expect(result.current.refused).toBe("4xz");
+});
