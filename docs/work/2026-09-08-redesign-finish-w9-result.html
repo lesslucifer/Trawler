@@ -203,10 +203,11 @@
               <code>true</code> and the type-dispatched renderer comes back</td>
               <td class="good">✓ red — same reason</td></tr>
           <tr><td>unit</td>
-              <td><code>SegmentedControl.test.tsx</code> — the fixture models the sighting; all eight
-              assertions unedited</td>
-              <td>n/a — <span class="good">green before and after</span>, which was the planned check
-              that the rename did not touch the control</td></tr>
+              <td><code>SegmentedControl.test.tsx</code> — the fixture models the sighting. Seven of the
+              eight tests carry the renamed option name inside their queries; one names no option and is
+              byte-identical</td>
+              <td>n/a — <span class="good">green before and after</span>, with no matcher, subject or
+              count changed, which is the planned check in the form that can actually be met</td></tr>
           <tr><td>unit</td>
               <td><code>api.test.ts</code> — <code>true</code> → <code>?decode=1</code>,
               <code>false</code> → <code>?decode=source</code>, unchanged over the renamed parameter</td>
@@ -267,24 +268,28 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Four review rounds, and what they were actually for</h2>
+    <h2 id="review">Five review rounds, and what they were actually for</h2>
     <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
     corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
     refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
     claim accuracy because that is where rounds 1 and 2 found everything — raised two and
     <strong>verified one</strong>. Round 4 raised one and verified it — a false sentence inside round
-    3's own correction. Fifteen candidates over four rounds; <strong>five verified, every one of them a
-    false sentence in this report rather than a line of code.</strong></p>
+    3's own correction. Round 5 raised one and verified it — a third copy of the claim round 3 had
+    already found false, left standing in a table the correction did not visit. Sixteen candidates over
+    five rounds; <strong>six verified, every one of them a false sentence in this report rather than a
+    line of code.</strong></p>
     <div class="callout" data-c="lesson">
-      <strong>The pattern is the finding.</strong> Four rounds found nothing wrong with the rename — the
-      dimensions that judge code came back clean every time. What they found, five times over, was this
-      report claiming more than the tree supported: an invented total, three miscounts, and a check
-      reported as passed that could not have passed as written. Round 4's finding sat inside round 3's
+      <strong>The pattern is the finding.</strong> Five rounds found nothing wrong with the rename — the
+      dimensions that judge code came back clean every time. What they found, six times over, was this
+      report claiming more than the tree supported — a total nobody counted, several counts that did not
+      match their own lists, a check reported as passed in a form that could not be met, and a claim
+      about what another document contained. Round 4's finding sat inside round 3's
       own correction, which is the sharpest version of the lesson: <strong>a sentence that summarises
       evidence is itself evidence, and re-stating it is a new claim, not a safer one.</strong> The two
       habits that ended it were dropping counts the document does not need and enumerating whatever
-      count it keeps. A rename is easy to get right and easy to over-report, and the report is the part
-      a human signs.
+      count it keeps — and, after round 5, grepping the document for the retired claim instead of
+      correcting the places one happens to remember. A rename is easy to get right and easy to
+      over-report, and the report is the part a human signs.
     </div>
       <table data-c="tbl-review">
         <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
@@ -337,6 +342,13 @@
               wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
               this WU has no channel for. The record did move out of <code>evidence</code> into its own
               section, matching W6.</td></tr>
+          <tr><td><strong>Round 5 · the Evidence table still said
+          <em>“all eight assertions unedited”</em></strong></td>
+              <td><strong>Verified.</strong> Round 3 found that claim false and round 3's own fix
+              corrected it in the Outcome table and the What-changed table — and missed the third copy,
+              in the evidence row for that very test. For two rounds this document asserted the claim in
+              one table and recorded it as false in another. Fixed by grepping the file for the retired
+              wording rather than trusting recall, which is now the habit the callout names.</td></tr>
           <tr><td><strong>Round 4 · round 3's correction claimed the plan's surfaces table
           <em>“lists them all”</em></strong></td>
               <td><strong>Verified.</strong> Eight of the nine files are in that table with an in/out
