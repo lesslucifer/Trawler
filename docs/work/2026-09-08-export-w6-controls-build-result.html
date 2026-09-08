@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W6 result — the controls, built</h1>
       <p>One <code>⋮</code> trigger, three worded acts, two asks and a marked row. The three doors the API has had since W2 reach a person, and two things the design could not change itself — the window's minimum width and the CORS grant hiding the export's filename — are paid here.</p>
-      <div class="meta">v2 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
+      <div class="meta">v3 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
         <a href="2026-09-08-export-w6-controls-build-plan.html">WU plan</a> ·
         <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> ·
         <a href="2026-09-04-export-plan.html#w6">epic plan</a></div>
@@ -112,10 +112,11 @@
     rather than silently worked around; the export/import parity claim is about captured exchanges, which is
     what <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a> already scopes it to.</p>
 
-    <h2 id="review">The review round</h2>
-    <p>Five finders over the WU diff, eleven candidates, eight refuted by their verifiers and
-    <strong>three confirmed</strong> — all three fixed at <code>9d8b63a</code>'s successor, each with its
-    regression test written red first.</p>
+    <h2 id="review">The review rounds</h2>
+    <p>Two rounds. <strong>Round 1</strong>: five finders over the WU diff, eleven candidates, eight
+    refuted by their verifiers and three confirmed. <strong>Round 2</strong> re-read the fix and found that
+    one of those three had been fixed only halfway. Every confirmed finding carries a regression test
+    written red first.</p>
     <table data-c="review-round">
       <thead><tr><th>What it found</th><th>What it moved</th></tr></thead>
       <tbody>
@@ -141,7 +142,40 @@
     <code>choose</code> catches, so a picker that fails lands in the same warn <code>Notice</code> every
     other failure on this surface does — which is what the run's <em>any of the three fails outright</em>
     row asks for. Both paths are tested.</p>
-    <p>The eight refuted are worth one line, because two of them are the design working as intended:
+    <p><strong>Round 2</strong> re-read the fix as unreviewed code — three finders over the five dimensions,
+    efficiency folded in because the delta adds no hot-path code. Ten candidates, four confirmed, and the
+    first of them says round 1's fix was half a fix.</p>
+    <table data-c="review-round-2">
+      <thead><tr><th>What it found</th><th>What it moved</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">correctness</span> Round 1 guarded the <em>clear</em> of the shared slot but not the <em>set</em>: starting an import mid-export still overwrote the export's mark, and the export's own <code>finally</code> then cleared it unconditionally — re-offering the export act while its request was still running.</td>
+          <td>The shared slot is gone. Export and import each own a flag, because they start and finish independently and neither may speak for the other; the slot reads them, and export wins it because export is the act the menu is still withholding. The interleaving the round-1 test missed — an import that actually <em>runs</em> mid-export rather than one merely opened — is now its own regression test.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">correctness</span> A dismissed import ask abandons a request nothing can cancel, and its answer still called <code>onDone()</code> on the still-mounted parent — closing whatever ask the user had opened in the meantime, with its typed command in it.</td>
+          <td>A dismissed ask stops listening: the answer to an abandoned import reaches nothing. Verified live before the fix — the reopened dialog really did vanish.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">altitude</span> The evidence table's per-suite count said <code>CaptureControls.test.tsx</code> (18) where the file runs 22 — a <code>test.each</code> block yields more cases than it has <code>test(</code> calls, and the round-1 edit recomputed the total without revisiting the parts.</td>
+          <td>Corrected, and the arithmetic now adds up to the stated total rather than to a number that happened to be written down.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">altitude</span> The <code>test/v2</code> and <code>doc/v1</code> notes sat on the pre-fix commit and described a tip that no longer existed. The merge gate reads the notes on the tip; there were none.</td>
+          <td>Both rewritten on the tip actually being merged, describing what it actually contains.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>One refutation not accepted.</strong> A finder said <code>exportHar</code> threw a
+    status-shaped message where the other two doors throw the server's sentence. Its verifier refuted it —
+    <code>exportHar</code> is a <code>GET</code>, the file's readers are all status-shaped, and
+    <a href="2026-09-08-export-w6-controls-build-plan.html">the WU plan</a> named only the other three as
+    carrying the reason verbatim. That last ground is the problem: the plan is this WU's own document, and
+    the design it cites outranks it. Run 11's Interaction table says <em>any of the three fails outright →
+    all three → a warn Notice at the point of the act, carrying the server's reason</em>, and it spells out
+    the export row. So the finding is real against the controlling document and was taken: the export door
+    reports like the doors it belongs with, and the plan's line is the thing that was wrong.</p>
+    <p>The eight refuted in round 1 are worth one line, because two of them are the design working as intended:
     <code>CaptureMenu</code> duplicating <code>Select</code>'s popup shell and its panel classes is the
     duplication run 11 foresaw verbatim and reserved for the collection's owner, and the lint rule validates
     each <code>design-allow</code> pragma independently. The rest: a one-line error-unwrap idiom shared with
@@ -158,7 +192,7 @@
       <thead><tr><th>Check</th><th>Result</th></tr></thead>
       <tbody>
         <tr><td><code>pnpm test</code> (vitest)</td>
-        <td><strong>812 passed</strong> in 47 files, up from 741 in 44 — 71 new across six suites (four added by the review round): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (18), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches).</td></tr>
+        <td><strong>814 passed</strong> in 47 files, up from 741 in 44 — 73 new across six suites (six added by the two review rounds): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (22), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches).</td></tr>
         <tr><td><code>pnpm lint</code> (design/vocabulary)</td>
         <td>clean. One <code>design-allow</code> pragma, on the same offset-from-the-trigger shape <code>Select</code>'s popup already carries; the gap in it is a token.</td></tr>
         <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full suite, including the two new <code>tests/api.rs</code> cases and the window-minimum guard.</td></tr>

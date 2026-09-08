@@ -138,7 +138,10 @@ export function createApi(baseUrl?: string): TrawlerApi {
     },
     async exportHar(filter) {
       const res = await fetch(`${base()}/flows/export?${filterParams(filter)}`);
-      if (!res.ok) throw new Error(`GET /flows/export failed: ${res.status}`);
+      // A door, not a reader: its failure is shown to a person beside the
+      // control they pressed, so it carries the server's sentence like the other
+      // two do. The readers above stay status-shaped — nothing renders those.
+      if (!res.ok) throw new Error(await refusal(res));
       return {
         bytes: new Uint8Array(await res.arrayBuffer()),
         filename: attachmentName(res.headers.get("content-disposition")),

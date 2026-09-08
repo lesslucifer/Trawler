@@ -291,3 +291,72 @@ test("a file that cannot be read says so in the ask, rather than nothing happeni
   expect(importHar).not.toHaveBeenCalled();
   expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
+
+// Round 2 sharpened round 1's finding: guarding the CLEAR was not enough, because
+// starting an import mid-export overwrote the export's own in-flight mark, and the
+// export's completion then cleared what was left. The two transfers are
+// independent and neither may speak for the other.
+test("an import running mid-export never speaks for the export", async () => {
+  let releaseExport: (() => void) | undefined;
+  let releaseImport: (() => void) | undefined;
+  const exportHar = vi.fn(
+    async () =>
+      new Promise<{ bytes: Uint8Array; filename: string }>((resolve) => {
+        releaseExport = () => resolve({ bytes: new Uint8Array(), filename: "x.har" });
+      }),
+  );
+  const importCurl = vi.fn(async () => new Promise<number>((resolve) => (releaseImport = () => resolve(1))));
+  vi.spyOn(files, "saveBody").mockResolvedValue("/tmp/x.har");
+  mount({ exportHar, importCurl });
+
+  choose(CAPTURE_COPY.exportAct);
+  await waitFor(() => expect(slot()).toHaveTextContent(CAPTURE_COPY.exporting));
+
+  choose(CAPTURE_COPY.importName);
+  fireEvent.change(screen.getByRole("textbox", { name: CAPTURE_COPY.pasteLabel }), {
+    target: { value: "curl http://x/" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+  await waitFor(() => expect(importCurl).toHaveBeenCalled());
+
+  // The import finishes first. The export is still running, so its line stays and
+  // its act stays unavailable — a second export would otherwise race the first.
+  await act(async () => releaseImport?.());
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(slot()).toHaveTextContent(CAPTURE_COPY.exporting);
+  fireEvent.click(trigger());
+  expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.exportAct }).getAttribute("aria-disabled")).toBe(
+    "true",
+  );
+  fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+
+  await act(async () => releaseExport?.());
+  await waitFor(() => expect(slot()).toHaveTextContent("6 flows"));
+  expect(exportHar).toHaveBeenCalledOnce();
+});
+
+// An import the user walked away from must not reach back into the screen: its
+// request cannot be cancelled, so the only thing that keeps it honest is that a
+// dismissed dialog stops listening to it.
+test("an abandoned import never closes the ask the user opened after it", async () => {
+  let release: ((n: number) => void) | undefined;
+  const importCurl = vi.fn(async () => new Promise<number>((resolve) => (release = resolve)));
+  mount({ importCurl });
+
+  choose(CAPTURE_COPY.importName);
+  fireEvent.change(screen.getByRole("textbox", { name: CAPTURE_COPY.pasteLabel }), {
+    target: { value: "curl http://x/" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+  await waitFor(() => expect(importCurl).toHaveBeenCalled());
+
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  choose(CAPTURE_COPY.importName);
+  const reopened = screen.getByRole("dialog");
+
+  await act(async () => release?.(1));
+  expect(reopened).toBeInTheDocument();
+  expect(slot()).toHaveTextContent("6 flows");
+});

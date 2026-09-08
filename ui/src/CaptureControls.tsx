@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Filter, TrawlerApi } from "./api";
 import { openFile, saveBody, type ChosenFile } from "./body";
 import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
@@ -40,13 +40,18 @@ export function CaptureControls({
   count: number;
   onCleared: () => void;
 }) {
-  const [transfer, setTransfer] = useState<"export" | "import" | null>(null);
+  // Two flags rather than one slot naming the running transfer: export and
+  // import start and finish independently, so a single slot lets whichever
+  // finishes first speak for the other — clearing a line that is still true and
+  // re-offering an act that is still running.
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [asking, setAsking] = useState<"clear" | "import" | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   const exportHar = async () => {
     setFailure(null);
-    setTransfer("export");
+    setExporting(true);
     try {
       const { bytes, filename } = await api.exportHar(filter);
       // saveBody answers null when the OS dialog was cancelled, which is an
@@ -55,7 +60,7 @@ export function CaptureControls({
     } catch (error) {
       setFailure(reasonOf(error));
     } finally {
-      setTransfer(null);
+      setExporting(false);
     }
   };
 
@@ -65,13 +70,19 @@ export function CaptureControls({
     onCleared();
   };
 
-  const slot = transfer === null ? flowCount(count) : CAPTURE_COPY[`${transfer}ing`];
+  // Export wins the slot when both run: it is the one whose act the menu is
+  // still withholding, so its line is the one that has something to explain.
+  const slot = exporting
+    ? CAPTURE_COPY.exporting
+    : importing
+      ? CAPTURE_COPY.importing
+      : flowCount(count);
 
   const acts: CaptureAct[] = [
     {
       id: "export",
       label: CAPTURE_COPY.exportAct,
-      disabled: transfer === "export",
+      disabled: exporting,
       run: () => void exportHar(),
     },
     {
@@ -103,11 +114,7 @@ export function CaptureControls({
         <ImportDialog
           api={api}
           onDone={() => setAsking(null)}
-          // Clearing is scoped to this transfer: an export may still be running
-          // behind the ask, and its line is not the import's to take down.
-          onBusy={(busy) =>
-            setTransfer((running) => (busy ? "import" : running === "import" ? null : running))
-          }
+          onBusy={setImporting}
         />
       )}
     </div>
@@ -176,6 +183,11 @@ function ImportDialog({
   const [command, setCommand] = useState("");
   const [importing, setImporting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  // Nothing can cancel a request already sent, so what keeps an abandoned import
+  // honest is that a dismissed ask stops listening to it: its answer must not
+  // reach back and close whatever the user opened next.
+  const listening = useRef(true);
+  useEffect(() => () => void (listening.current = false), []);
 
   const dismiss = () => {
     onBusy(false);
@@ -203,8 +215,9 @@ function ImportDialog({
     onBusy(true);
     try {
       await call();
-      dismiss();
+      if (listening.current) dismiss();
     } catch (error) {
+      if (!listening.current) return;
       setFailure(reasonOf(error));
       setImporting(false);
       onBusy(false);

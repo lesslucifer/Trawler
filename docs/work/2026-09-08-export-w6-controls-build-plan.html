@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W6 — build the controls</h1>
       <p>The three doors the API already has become three acts a user can reach: one <code>⋮</code> trigger at the header's trailing edge, the acts as words inside a menu, a modal ask in front of the destructive one, and a paste target that takes a <code>curl</code> command or a <code>.har</code> file — built from design run 11, cited to it.</p>
-      <div class="meta">v1 · 2026-09-08 · Trawler · T3 WU plan · <span class="badge id">E-EXPORT.W6</span> · <a href="2026-09-04-export-plan.html#w6">epic plan</a> · <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> · <a href="2026-09-06-export-w9-controls-redesign-result.html">W9 result</a></div>
+      <div class="meta">v2 · 2026-09-08 · Trawler · T3 WU plan · <span class="badge id">E-EXPORT.W6</span> · <a href="2026-09-04-export-plan.html#w6">epic plan</a> · <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> · <a href="2026-09-06-export-w9-controls-redesign-result.html">W9 result</a></div>
     </div>
   </header>
   <main>
@@ -81,7 +81,7 @@ flowchart TB
       <tbody>
         <tr>
           <td><code>ui/src/api.ts</code></td>
-          <td><code>source</code> on <code>FlowSummary</code>/<code>FlowView</code>; four methods — <code>exportHar</code> (bytes + the server's <code>Content-Disposition</code> filename), <code>importHar</code>, <code>importCurl</code>, <code>clearFlows</code>, the last three throwing the server's plain-text reason verbatim; <code>stream()</code> gains the <code>cleared</code> listener it never had</td>
+          <td><code>source</code> on <code>FlowSummary</code>/<code>FlowView</code>; four methods — <code>exportHar</code> (bytes + the server's <code>Content-Disposition</code> filename), <code>importHar</code>, <code>importCurl</code>, <code>clearFlows</code>, each throwing the server's plain-text reason verbatim; <code>stream()</code> gains the <code>cleared</code> listener it never had</td>
           <td>Capabilities</td>
         </tr>
         <tr>
@@ -142,7 +142,7 @@ flowchart TB
         </tr>
         <tr>
           <td>Where does the refusal's text come from?</td>
-          <td>The response body, verbatim. <code>importHar</code>/<code>importCurl</code>/<code>clearFlows</code> throw an <code>Error</code> whose message <em>is</em> the server's sentence, and F renders <code>error.message</code>. The client never rewords and never adds a prefix — <code>display-equals-payload</code>, and the reason W7 wrote those sentences for a paste target.</td>
+          <td>The response body, verbatim. All four doors throw an <code>Error</code> whose message <em>is</em> the server's sentence, and the surface renders <code>error.message</code>. The client never rewords and never adds a prefix — <code>display-equals-payload</code>, and the reason W7 wrote those sentences for a paste target.</td>
         </tr>
         <tr>
           <td>What tells the list it is empty because it was cleared?</td>

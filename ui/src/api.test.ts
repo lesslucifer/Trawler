@@ -150,9 +150,17 @@ test("attachmentName reads quoted and bare forms, and falls back when the header
   expect(attachmentName("attachment")).toBe("trawler.har");
 });
 
-test("exportHar throws on a non-ok response", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-  await expect(createApi("http://x").exportHar({})).rejects.toThrow(/500/);
+test("a refused export throws the server's sentence too — all three doors report the same way", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => "status must be a number" }),
+  );
+  await expect(createApi("http://x").exportHar({ status: "x" })).rejects.toThrow(
+    /^status must be a number$/,
+  );
+
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => "" }));
+  await expect(createApi("http://x").exportHar({})).rejects.toThrow(/500 and gave no reason/);
 });
 
 test("importHar posts the bytes to the HAR door and answers the count", async () => {
