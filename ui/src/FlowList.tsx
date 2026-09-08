@@ -3,7 +3,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { defaultProxyAddr, type FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { NotAnswering } from "./NotAnswering";
-import type { FeedFailure } from "./useFlows";
 import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
 
 const ROW_HEIGHT = 30;
@@ -37,27 +36,29 @@ function HeaderRow() {
 // query outranks nothing at all, since it IS the answer to what was asked.
 function Absence({
   filtered,
-  failure,
+  silent,
+  refused,
   retrying,
   onRetry,
 }: {
   filtered: boolean;
-  failure: FeedFailure | null;
+  silent: boolean;
+  refused: string | null;
   retrying: boolean;
   onRetry: () => void;
 }) {
   return (
     <div data-testid="empty" className="flex justify-center p-12">
-      {failure?.kind === "unreachable" ? (
+      {silent ? (
         <NotAnswering
           trailing="nothing has reached the window"
           retrying={retrying}
           onRetry={onRetry}
         />
-      ) : failure?.kind === "rejected" ? (
+      ) : refused !== null ? (
         // A rejection, not a failure: the API answered and said no, so there is
         // no ⚠ and no retry — the correction is more typing.
-        <Notice detail="type a code (404) or a class (4xx)">{`${failure.value} is not a status`}</Notice>
+        <Notice detail="type a code (404) or a class (4xx)">{`${refused} is not a status`}</Notice>
       ) : filtered ? (
         <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
       ) : (
@@ -72,7 +73,8 @@ export function FlowList({
   selectedId,
   onSelect,
   filtered = false,
-  failure = null,
+  silent = false,
+  refused = null,
   retrying = false,
   onRetry = () => {},
 }: {
@@ -80,7 +82,8 @@ export function FlowList({
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   filtered?: boolean;
-  failure?: FeedFailure | null;
+  silent?: boolean;
+  refused?: string | null;
   retrying?: boolean;
   onRetry?: () => void;
 }) {
@@ -131,7 +134,13 @@ export function FlowList({
     return (
       <div className="flex h-full flex-col">
         <HeaderRow />
-        <Absence filtered={filtered} failure={failure} retrying={retrying} onRetry={onRetry} />
+        <Absence
+          filtered={filtered}
+          silent={silent}
+          refused={refused}
+          retrying={retrying}
+          onRetry={onRetry}
+        />
       </div>
     );
   }

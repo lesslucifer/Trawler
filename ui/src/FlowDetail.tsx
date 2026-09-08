@@ -83,12 +83,14 @@ export function FlowDetail({
 
   if (!flow) {
     // "loading this flow…" is the one sentence that is false once the fetch has
-    // come back with nothing. The cause is not named here: the shell already
-    // states an unreachable core, and a flow the ring has dropped is a sentence
-    // its own run still owns.
+    // come back with nothing, so the pane says what it has instead. It names no
+    // cause and raises no alarm: the causes it would have to tell apart are the
+    // shell's (a core not answering, stated in the band) or a later run's (a
+    // flow the ring dropped, which "no longer captured" is reserved for), and
+    // one warn on screen per failure is what keeps the band's the only one.
     return failed ? (
       <div data-testid="detail-failed" className="px-4 font-ui">
-        <Notice tone="warn">could not load this flow</Notice>
+        <Notice>could not load this flow</Notice>
       </div>
     ) : (
       <div data-testid="detail-loading" className="px-4 font-ui">

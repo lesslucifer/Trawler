@@ -43,7 +43,7 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, hosts, connections, lastConnectionAt, failure, retrying, retry, update } =
+  const { filter, flows, hosts, connections, lastConnectionAt, silent, refused, retrying, retry, update } =
     useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -160,14 +160,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
-  // The connection has one owner. Both signals that can observe it — a listing
-  // that did not arrive, and the stream going down — write this one value, so
-  // the band and the row region can never disagree about it. The pane's own
-  // failed fetch is deliberately NOT folded in: it is a fact about one flow, it
-  // can be true of a core that is answering everything else, and a zone that
-  // borrows another zone's failure ends up speaking for a question it was never
-  // asked.
-  const notAnswering = failure?.kind === "unreachable";
+  // The connection has one owner, written by both things that observe it — a
+  // listing that did not arrive, and the stream going down — so the band and the
+  // row region can never disagree about it. The pane's own failed fetch is a
+  // third fact and stays the pane's: it can be true of a core answering
+  // everything else, and a zone that borrows another zone's failure ends up
+  // speaking for a question it was never asked.
+  const notAnswering = silent;
 
   // Retry removes its own button, and Button leaves focus on nothing when it
   // stops existing — so the shell places it, keyed on the band actually leaving
@@ -292,12 +291,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             key={selectedId}
             api={client}
             flow={detail}
-            // The connection is already stated once — in the band, or in the
-            // row region when there are no rows. A pane that added its own
-            // sentence for that same cause would be the second voice the run
-            // refused it. What it still owns is a failure the shell is silent
-            // about: a dropped flow, a refused id.
-            failed={detailFailed && !notAnswering}
+            failed={detailFailed}
             onClose={() => setSelectedId(null)}
           />
         )
@@ -309,7 +303,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         selectedId={selectedId}
         onSelect={setSelectedId}
         filtered={hasFilter}
-        failure={failure}
+        silent={silent}
+        refused={refused}
         retrying={retrying}
         onRetry={retryConnection}
       />

@@ -775,10 +775,11 @@ test("a pane failure is stated even when the list is empty for its own reason", 
   expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 });
 
-// Regression (review round 3): the pane owns only the failures the shell is
-// silent about. When the connection is already stated, a second sentence for the
-// same cause is the voice the design run refused.
-test("a pane failure defers to the connection statement rather than repeating it", async () => {
+// Regression (review rounds 3 and 4): the pane must not repeat the connection's
+// alarm, and must not go back to claiming it is loading a fetch that already
+// came back. It does neither — it states its own fact, quietly, and the band
+// keeps the only ⚠ on screen.
+test("a pane failure states itself without repeating the connection's alarm", async () => {
   const api = paneApi(
     () => Promise.reject(new TypeError("Failed to fetch")),
     () => Promise.reject(new TypeError("Failed to fetch")),
@@ -787,7 +788,30 @@ test("a pane failure defers to the connection statement rather than repeating it
   await screen.findByText("trawler is not answering");
 
   expect(screen.getAllByText("trawler is not answering")).toHaveLength(1);
-  expect(screen.queryByTestId("detail-failed")).toBeNull();
+  expect(document.querySelectorAll('[data-tone="warn"]')).toHaveLength(1);
+});
+
+// Round 4's blocker: coupling the pane's sentence to the connection meant a core
+// going silent AFTER the pane had already failed silently un-said the pane's
+// failure, putting "loading this flow…" back over a fetch that had come back.
+test("a core going silent does not put the pane back on 'loading this flow…'", async () => {
+  let list: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const api = paneApi(
+    () => list(),
+    () => Promise.reject(new ApiError(500, "GET /flows/f1 failed: 500")),
+  );
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+  await waitFor(() =>
+    expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow"),
+  );
+
+  list = () => Promise.reject(new TypeError("Failed to fetch"));
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "example" } });
+  await screen.findByText("trawler is not answering");
+
+  expect(screen.queryByTestId("detail-loading")).toBeNull();
+  expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 });
 
 // The focus move belongs to the retry, not to every recovery: a core that comes

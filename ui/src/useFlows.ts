@@ -4,19 +4,16 @@ import { hostOf } from "./flow";
 
 const DEBOUNCE_MS = 150;
 
-// The two ways a listing can fail, kept apart because the screen says a
-// different sentence for each and offers retry for only one of them: an
-// unreachable core is worth asking again, a refused query never answers
-// differently until the query changes.
-export type FeedFailure = { kind: "unreachable" } | { kind: "rejected"; value: string };
-
+// Whether the core answered, and what it said, are two facts and not two values
+// of one. A core can be silent about a query it would have refused, and a
+// refusal it already gave does not stop being true when the stream blips. Held
+// together they need a precedence rule inside the state; held apart, precedence
+// belongs where it is a design decision — in what each zone renders.
+//
 // `status` is the only /flows parameter with a grammar to violate, so a 400 is
-// always about the value in that box — which is why the rejected failure can
-// name it.
-function failureOf(error: unknown, status: string): FeedFailure {
-  return error instanceof ApiError && error.status === 400
-    ? { kind: "rejected", value: status }
-    : { kind: "unreachable" };
+// always about the value in that box, which is why a refusal can name it.
+function refusalOf(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400;
 }
 
 // Live flow feed, ported from the web shell: server-side filtering (the API owns
@@ -25,10 +22,14 @@ function failureOf(error: unknown, status: string): FeedFailure {
 export function useFlows(api: TrawlerApi) {
   const [filter, setFilter] = useState<Filter>({});
   const [flows, setFlows] = useState<FlowSummary[]>([]);
-  // Why the last fetch produced nothing new, or null when it produced a list.
-  // Rows already on screen survive it: they were true when they arrived, and
-  // discarding evidence on a transient failure is the worse error.
-  const [failure, setFailure] = useState<FeedFailure | null>(null);
+  // The core is not answering. Two things observe it — a listing that did not
+  // come back, and the stream dropping — and both write here. Rows already on
+  // screen survive it: they were true when they arrived, and discarding evidence
+  // on a transient failure is the worse error.
+  const [silent, setSilent] = useState(false);
+  // The status value the core refused, or null. Distinct from silence: the core
+  // answered, and what it said was no.
+  const [refused, setRefused] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
@@ -63,16 +64,23 @@ export function useFlows(api: TrawlerApi) {
         if (mine !== latest.current) return;
         setFlows(list);
         setHosts((known) => merge(known, list));
-        setFailure(null);
+        setRefused(null);
+        setSilent(false);
       },
       (error: unknown) => {
         if (mine !== latest.current) return;
-        const next = failureOf(error, filterRef.current.status ?? "");
-        // A refused query has no answer to show, so the rows go with it and the
-        // count reads what is on screen. An unreachable core is the opposite
-        // case: its last answer was true when it arrived.
-        if (next.kind === "rejected") setFlows([]);
-        setFailure(next);
+        if (refusalOf(error)) {
+          // The core answered, so it is not silent — and a refused query has no
+          // answer to show, so the rows go with it and the count reads what is
+          // on screen.
+          setFlows([]);
+          setRefused(filterRef.current.status ?? "");
+          setSilent(false);
+          return;
+        }
+        // No answer, or one the core should not have given. Either way the rows
+        // are unverified rather than absent, so they stay.
+        setSilent(true);
       },
     );
   }, [api]);
@@ -111,11 +119,9 @@ export function useFlows(api: TrawlerApi) {
       },
       // A core that dies under an open window sends nothing — so the dropped
       // stream is the only thing that can say so before the next keystroke. It
-      // never overwrites a failure already stated: a refused query stays refused
-      // whatever the transport does, and the listing settles which is true. Not
-      // replacing an unreachable with an identical one also keeps a reconnect
-      // cadence from re-rendering the list every few seconds for the whole outage.
-      onDown: () => setFailure((stated) => stated ?? { kind: "unreachable" }),
+      // says only that: a refusal the core already gave is a separate fact and
+      // stays exactly as it was.
+      onDown: () => setSilent(true),
       // The stream came back; whether the listing did is the listing's to say.
       onUp: debouncedRefresh,
     });
@@ -133,7 +139,8 @@ export function useFlows(api: TrawlerApi) {
     hosts,
     connections,
     lastConnectionAt,
-    failure,
+    silent,
+    refused,
     retrying,
     retry,
     update,

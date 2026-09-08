@@ -155,7 +155,7 @@ test("a core that says nothing is unreachable, and the rows it already sent surv
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
   act(() => result.current.update("q", "x"));
-  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+  await waitFor(() => expect(result.current.silent).toBe(true));
 
   // Discarding evidence on a transient failure is the worse error — the band
   // says the rows are stale, it does not delete them.
@@ -170,7 +170,7 @@ test("a refused query is rejected, names the value typed, and takes the rows wit
 
   answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
   act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.failure).toEqual({ kind: "rejected", value: "4xz" }));
+  await waitFor(() => expect(result.current.refused).toBe("4xz"));
 
   // The old rows are not an answer to the query that was refused.
   expect(result.current.flows).toEqual([]);
@@ -180,25 +180,25 @@ test("a listing that arrives clears whichever failure preceded it", async () => 
   let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
   const api = feedApi(() => answer());
   const { result } = renderHook(() => useFlows(api));
-  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+  await waitFor(() => expect(result.current.silent).toBe(true));
 
   answer = async () => [summary("f1", "http://example.com/")];
   await act(async () => {
     await result.current.retry();
   });
-  expect(result.current.failure).toBeNull();
+  expect(result.current.silent).toBe(false);
   expect(result.current.flows).toHaveLength(1);
 });
 
 test("a retry that fails again leaves the statement standing", async () => {
   const api = feedApi(() => Promise.reject(new TypeError("still dead")));
   const { result } = renderHook(() => useFlows(api));
-  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+  await waitFor(() => expect(result.current.silent).toBe(true));
 
   await act(async () => {
     await result.current.retry();
   });
-  expect(result.current.failure).toEqual({ kind: "unreachable" });
+  expect(result.current.silent).toBe(true);
 });
 
 test("retry is in flight for the whole fetch — fork D4's half the hook owns", async () => {
@@ -206,7 +206,7 @@ test("retry is in flight for the whole fetch — fork D4's half the hook owns", 
   let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
   const api = feedApi(() => answer());
   const { result } = renderHook(() => useFlows(api));
-  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+  await waitFor(() => expect(result.current.silent).toBe(true));
   expect(result.current.retrying).toBe(false);
 
   answer = () => new Promise<FlowSummary[]>((res) => (release = res));
@@ -311,10 +311,10 @@ test("a dropped stream states the core is unreachable without waiting for a keys
   const f = streamApi();
   const { result } = renderHook(() => useFlows(f.api));
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
-  expect(result.current.failure).toBeNull();
+  expect(result.current.silent).toBe(false);
 
   act(() => f.fireDown());
-  expect(result.current.failure).toEqual({ kind: "unreachable" });
+  expect(result.current.silent).toBe(true);
   // The rows it already sent were true when they arrived.
   expect(result.current.flows).toHaveLength(1);
 });
@@ -325,11 +325,11 @@ test("a stream that comes back re-asks, and a listing that answers clears the st
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
   act(() => f.fireDown());
-  expect(result.current.failure).toEqual({ kind: "unreachable" });
+  expect(result.current.silent).toBe(true);
 
   f.setAnswer(async () => [summary("f1", "http://example.com/"), summary("f2", "http://b.test/")]);
   act(() => f.fireUp());
-  await waitFor(() => expect(result.current.failure).toBeNull());
+  await waitFor(() => expect(result.current.silent).toBe(false));
   expect(result.current.flows).toHaveLength(2);
 });
 
@@ -361,21 +361,21 @@ test("a straggling refresh cannot overwrite the answer a later one already gave"
     pending[1].resolve([summary("f1", "http://example.com/")]);
     await second;
   });
-  expect(result.current.failure).toBeNull();
+  expect(result.current.silent).toBe(false);
   expect(result.current.flows).toHaveLength(1);
 
   // The straggler now fails. It is answering a question already answered.
   await act(async () => {
     pending[0].reject(new TypeError("Failed to fetch"));
   });
-  expect(result.current.failure).toBeNull();
+  expect(result.current.silent).toBe(false);
   expect(result.current.flows).toHaveLength(1);
 });
 
-// Regression (review round 3): a stream blip is not a verdict on the query. The
-// core answered "no" and is still answering "no" — replacing that with "not
-// answering" hides the one message the user can act on.
-test("a dropped stream does not overwrite a refusal the core already gave", async () => {
+// Regression (review rounds 3 and 4): the refusal and the silence are two facts.
+// Round 3 kept the refusal by refusing to record the silence, which lost a real
+// outage; both are now recorded, and precedence is the renderer's business.
+test("a dropped stream records the silence without unsaying the refusal", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
   const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
@@ -384,21 +384,28 @@ test("a dropped stream does not overwrite a refusal the core already gave", asyn
 
   answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
   act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.failure).toEqual({ kind: "rejected", value: "4xz" }));
+  await waitFor(() => expect(result.current.refused).toBe("4xz"));
 
   act(() => f.fireDown());
-  expect(result.current.failure).toEqual({ kind: "rejected", value: "4xz" });
+  expect(result.current.refused).toBe("4xz");
+  expect(result.current.silent).toBe(true);
 });
 
-// The reconnect cadence fires `error` repeatedly for the whole outage; each one
-// replacing an identical value would re-render the virtualized list every tick.
-test("a stream that stays down does not restate the same failure", async () => {
+// A listing that arrives is the only thing that ends the silence — the stream
+// coming back is a reason to ask again, not an answer in itself.
+test("silence ends when a listing arrives, not when the stream reconnects", async () => {
   const f = streamApi();
   const { result } = renderHook(() => useFlows(f.api));
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
   act(() => f.fireDown());
-  const first = result.current.failure;
-  act(() => f.fireDown());
-  expect(result.current.failure).toBe(first);
+  expect(result.current.silent).toBe(true);
+
+  f.setAnswer(() => Promise.reject(new TypeError("still dead")));
+  act(() => f.fireUp());
+  await waitFor(() => expect(result.current.silent).toBe(true));
+
+  f.setAnswer(async () => [summary("f1", "http://example.com/")]);
+  act(() => f.fireUp());
+  await waitFor(() => expect(result.current.silent).toBe(false));
 });
