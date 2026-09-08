@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9fdb9b9f34851f0dfacccc">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W9 result (the body view switch says what it does)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+    pre.sk{font-size:12px;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:0}
+    code.f{white-space:nowrap}
+    .num{font-family:var(--mono,monospace);text-align:right;white-space:nowrap}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W9 result — the switch is named for what separates its positions</h1>
+      <p>Delivered. The body pane's two segments read <code>pretty</code> and <code>raw</code>; the word
+      <code>decoded</code> is gone from every surface that named a switch position and kept wherever it
+      means what the lexicon says it means — reversing a wire encoding. Behaviour is byte-identical, and
+      the tests say so at all three levels.</p>
+      <div class="meta">WU result · 2026-09-08 · Trawler · T3 (docs/work/) ·
+      <code>wu/redesign-finish/raw-pretty</code> →
+      <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a> ·
+      <a href="2026-09-08-redesign-finish-w9-plan.html">the plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Delivered, against the requirement as written.</strong> Fourteen surfaces named the
+      position; all fourteen now use the lexicon's terms, and five more that name the <em>decode chain</em>
+      were left alone deliberately. One code commit, one reviewed diff, no behaviour change: the same two
+      queries (<code>?decode=1</code>, <code>?decode=source</code>), the same dispatch, the same default.
+    </div>
+    <table data-c="tbl-outcome">
+      <thead><tr><th>The plan's expected result</th><th>What is true at this tip</th></tr></thead>
+      <tbody>
+        <tr><td>The app reads <code>raw</code> and <code>pretty</code></td>
+            <td class="good">✓ <code>MODES</code> is <code>[pretty, raw]</code>; asserted by accessible
+            name in the unit, integration and e2e layers, and seen in the real WebKit window</td></tr>
+        <tr><td>No surface still says <code>decoded</code> for this control</td>
+            <td class="good">✓ the grep over <code>ui/src</code>, <code>ui/e2e/specs</code>,
+            <code>docs/use-cases</code>, <code>docs/decisions</code>, <code>docs/design-rules</code>
+            returns decode-chain and charset uses only — plus the three <em>absence</em> assertions that
+            name the retired word in order to prove it is gone</td></tr>
+        <tr><td>Behaviour is byte-identical</td>
+            <td class="good">✓ <code>api.test.ts</code> still pins both query strings over the renamed
+            parameter; the e2e finds indented JSON on one side and minified source on the other; 831 of
+            832 unit/integration tests are the pre-existing ones, unedited except for two titles</td></tr>
+        <tr><td>The registry citation resolves</td>
+            <td class="good">✓ <code>SegmentedControl</code>'s <code>@use</code> names <em>the body view
+            (raw | pretty)</em>, which is what the tree renders; its fixture models the same words and
+            every one of its eight assertions passed unedited</td></tr>
+        <tr><td>UC-5 and its index state the shipped terms</td>
+            <td class="good">✓ both read <code>raw / pretty</code>; the <code>?decode=1</code> paragraph
+            still describes the server contract in the server's own word</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="what-changed">What changed, and what was left</h2>
+    <p>The plan's surface inventory held: no surface was found during the work that the grep had missed,
+    and none of the in-scope edits grew.</p>
+    <table data-c="tbl-changed">
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code class="f">ui/src/BodyViewer.tsx</code></td>
+            <td>the option, the value, the <code>onChange</code> predicate, and the state that holds it —
+            <code>decode</code> → <code>pretty</code>. Order, default, dispatch, effect deps unchanged</td></tr>
+        <tr><td><code class="f">ui/src/api.ts</code></td>
+            <td><code>getBody</code>'s third parameter renamed on the interface and the implementation;
+            its comment now opens with the fact that made the old name wrong — <em>both views are
+            decoded, the parameter picks which resolution</em>. Every call site is positional, so no
+            caller changed</td></tr>
+        <tr><td><code class="f">ui/src/components/SegmentedControl.tsx</code></td>
+            <td><code>@use</code>'s sighting: “decode (raw | decoded)” → “the body view (raw | pretty)”</td></tr>
+        <tr><td><code class="f">ui/src/components/SegmentedControl.test.tsx</code></td>
+            <td>fixture rename, positions kept (the roving-tabindex tests index into it). No assertion
+            edited — the check the plan named, and it held</td></tr>
+        <tr><td><code class="f">ui/src/BodyViewer.test.tsx</code></td>
+            <td>one new test (the two names + the absence of the old one) and the return trip added to
+            the existing raw-segment test</td></tr>
+        <tr><td><code class="f">ui/src/App.test.tsx</code></td>
+            <td>the body test retitled and extended: the switch's names asserted in the mounted shell
+            beside the pretty fetch it already pinned</td></tr>
+        <tr><td><code class="f">ui/src/api.test.ts</code></td>
+            <td>a local name; both query-string assertions untouched</td></tr>
+        <tr><td><code class="f">ui/e2e/specs/flows.spec.ts</code></td>
+            <td>the <code>responseMode</code> helper's type and its two call sites; the toggle spec
+            renamed and extended with the label assertions. The compressed-body spec exercises the same
+            helper, so the rename is driven over two body kinds</td></tr>
+        <tr><td><code class="f">docs/use-cases/web-ui.html</code></td>
+            <td>UC-5's toggle terms and the <code>?decode=1</code> paragraph's closing clause · <strong>v5 → v6</strong></td></tr>
+        <tr><td><code class="f">docs/use-cases/use-cases-index.html</code></td>
+            <td>UC-5's summary row · <strong>v1 → v2</strong></td></tr>
+        <tr><td><code class="f">docs/decisions/dec-31…</code></td>
+            <td>the cell describing what the body pane owns. The leg-scoping ruling is untouched</td></tr>
+        <tr><td><code class="f">docs/decisions/dec-32…</code></td>
+            <td>the panel sketch's control row, re-aligned to the box. The zoning ruling is untouched</td></tr>
+        <tr><td><code class="f">docs/design-rules/design-rules-index.html</code></td>
+            <td><code>display-equals-payload</code>'s ✓ example loses its second pair. Predicate, slug,
+            tier and lexicon all unchanged — so no receipt that pinned this rulebook is invalidated</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="left-alone">
+      <strong>Left alone, each for a stated reason</strong> — the same rule read the other way: one
+      concept per term means <code>decode</code> keeps the concept the lexicon gave it.
+      <table>
+        <thead><tr><th>Surface</th><th>Why it stays</th></tr></thead>
+        <tbody>
+          <tr><td>the core's <code>?decode=1|source|0</code>, <code>core-technical-design.html</code></td>
+              <td>the parameter reverses a wire encoding — the term is exactly right, and the core is out
+              of this epic's scope past W5</td></tr>
+          <tr><td><code>decodeBody</code>, <code>DecodedBody</code>, <code>body.ts</code>'s comments</td>
+              <td>charset decoding</td></tr>
+          <tr><td>UC-5's “a brotli body still renders <em>decoded</em>” and the e2e title that matches it</td>
+              <td>about the decode chain, not the switch</td></tr>
+          <tr><td><code>BodyViewer</code>'s <code>ariaLabel</code> (“<em>… body mode</em>”)</td>
+              <td>says neither the retired word nor a forbidden one; <em>mode</em> vs <em>view</em> has no
+              lexicon entry and proposing one is rulebook growth with no design run behind it</td></tr>
+          <tr><td><span class="badge id">DEC-21</span>'s rejected-alternatives table, which argues about
+              the labels “show decoded” and “decoded”</td>
+              <td><strong>found during the work, deliberately not edited.</strong> It records an argument
+              as it was made, and its ruling (all options visible, no toggle button) is independent of
+              which two words the options carry. Rewriting a rejected alternative to use words nobody
+              argued over would falsify the record</td></tr>
+          <tr><td>the roadmap's Deferred row for this item</td>
+              <td>struck at W10 with every other backlog write-back, so the living list is rewritten once</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations" data-c="deviations">
+      <table>
+        <thead><tr><th>From the plan</th><th>What happened, and why</th></tr></thead>
+        <tbody>
+          <tr><td><code>web-ui.html</code> reaches <strong>v6 here</strong>, not at W10</td>
+              <td>The epic plan's distillation table gives web-ui.html “→ v6” at W10; W9's own row
+              requires UC-5's contract in <em>this</em> diff. Both cannot hold, and an edited T2 doc whose
+              version says nothing changed is the worse outcome. So the terms landed with a version bump,
+              and <strong>W10 takes web-ui.html to v7</strong> for UC-4's two gains and the pane width.
+              <code>use-cases-index.html</code> moved v1 → v2 for the same reason.</td></tr>
+          <tr><td>Five surfaces beyond the four the epic plan named</td>
+              <td>Not a deviation from <em>this WU's</em> plan — the grep ran before the plan was written
+              and the plan listed all fourteen with in/out reasons. Recorded here because a reader
+              comparing the diff against the <em>epic</em> plan's W9 row will find nine files it does not
+              mention: the api boolean, the registry docstring and its fixture, the use-case index, two
+              decision records and the rulebook example.</td></tr>
+          <tr><td>The on-screen order is <code>[pretty│raw]</code>, not <code>[raw│pretty]</code></td>
+              <td>The ruling, the lexicon and the acceptance sentence all write the pair as
+              <em>raw | pretty</em>; design run #9 drew the control readable-first and cited
+              <code>progressive-disclosure</code> for it. Read as a term pair, both hold; read as an
+              order, they conflict — and the order is designed, so the design wins and the terms are what
+              this WU changes. Prose naming the pair keeps the lexicon's order; the screen keeps the
+              design's.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence" data-c="evidence">
+      <table>
+        <thead><tr><th>Level</th><th>Assertion</th><th>Red first?</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td>
+              <td><code>BodyViewer.test.tsx</code> — “the switch names the two views the lexicon settled
+              on, never 'decoded'”: <code>pretty</code> checked on open, <code>raw</code> present,
+              <em>no</em> radio named <code>decoded</code></td>
+              <td class="good">✓ red — no radio named <code>pretty</code></td></tr>
+          <tr><td>unit</td>
+              <td>the raw-segment test's return trip: clicking <code>pretty</code> refetches with
+              <code>true</code> and the type-dispatched renderer comes back</td>
+              <td class="good">✓ red — same reason</td></tr>
+          <tr><td>unit</td>
+              <td><code>SegmentedControl.test.tsx</code> — the fixture models the sighting; all eight
+              assertions unedited</td>
+              <td>n/a — <span class="good">green before and after</span>, which was the planned check
+              that the rename did not touch the control</td></tr>
+          <tr><td>unit</td>
+              <td><code>api.test.ts</code> — <code>true</code> → <code>?decode=1</code>,
+              <code>false</code> → <code>?decode=source</code>, unchanged over the renamed parameter</td>
+              <td>n/a — the guard that the wire did not move</td></tr>
+          <tr><td>integration</td>
+              <td><code>App.test.tsx</code> — the response leg in the mounted shell: the switch's two
+              names, the absence of the third, and <code>getBody(id, "response", true)</code> in one test</td>
+              <td class="good">✓ red — no radio named <code>pretty</code> in the shell</td></tr>
+          <tr><td>e2e</td>
+              <td><code>flows.spec.ts</code> UC-5 — “names its views raw and pretty, and toggles to the
+              served source as text”, in the real WebKit window against an ephemeral core</td>
+              <td class="good">✓ the epic plan's W9 assertion, landed</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Suite</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>pnpm test</code></td><td class="good">832 passed (831 at the base, 1 added)</td></tr>
+          <tr><td><code>pnpm lint</code> · <code>tsc --noEmit</code></td><td class="good">clean</td></tr>
+          <tr><td><code>cargo xtask ui e2e</code></td>
+              <td class="good">32 passing — and <code>onboarding.spec.ts</code>'s 6 unedited and green,
+              this epic's standing check that the re-design left</td></tr>
+          <tr><td><code>cargo fmt</code> · <code>cargo clippy</code></td>
+              <td class="good">clean (no Rust source in this diff)</td></tr>
+          <tr><td><code>cargo xtask verify-doc</code></td><td class="good">green on the plan, the result and all five edited docs</td></tr>
+        </tbody>
+      </table>
+      <p>Commits: <code>a47f778</code> plan · <code>89b6bb7</code> the change. Tip carries
+      <code>test/v2</code>, <code>doc/v1</code> and the review's <code>cr/v3</code>.</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation" data-c="distillation">
+      <p>Done in this diff, not deferred — the requirement was that the copy change and the documents
+      that state it land together.</p>
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>What it now carries</th></tr></thead>
+        <tbody>
+          <tr><td><code>use-cases/web-ui.html</code> v6</td><td>T2</td>
+              <td>UC-5's toggle is <code>raw / pretty</code>; the server-side paragraph names the pretty
+              view the API serves</td></tr>
+          <tr><td><code>use-cases/use-cases-index.html</code> v2</td><td>T2</td>
+              <td>UC-5's summary row, so the index and the contract agree at the first place a reader looks</td></tr>
+          <tr><td><span class="badge id">DEC-31</span> · <span class="badge id">DEC-32</span></td><td>T2</td>
+              <td>the body pane's own concerns, and the panel sketch's control row, name the shipped
+              positions. Neither ruling moved</td></tr>
+          <tr><td><code>design-rules-index.html</code></td><td>T2</td>
+              <td><code>display-equals-payload</code>'s example no longer illustrates the pair its own
+              lexicon forbids. <strong>No rule changed</strong> — this is not the DEC-14 rulebook growth
+              W10 provides for</td></tr>
+          <tr><td>the lexicon</td><td>T2</td>
+              <td>nothing to add: <code>raw</code> and <code>pretty</code> were already there, which is
+              why this was a build defect and not a vocabulary question</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Handed to W10:</strong> the roadmap's Deferred row for this item, struck as absorbed;
+      web-ui.html's v7 for UC-4's gains and the pane width.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups" data-c="follow-ups">
+      <table>
+        <thead><tr><th>Item</th><th>Where it goes</th></tr></thead>
+        <tbody>
+          <tr><td>The body pane's <code>ariaLabel</code> says “body <em>mode</em>” while the rulebook, the
+          registry docstring and this control's own test fixture say “body <em>view</em>”. Two words for
+          one concept — the same defect class this WU closed, one layer down, in the accessible name a
+          screen-reader user hears. The lexicon has no entry for either, so closing it means proposing
+          one.</td>
+              <td>the deferred backlog at W10 — a lexicon proposal belongs to a design run's
+              reuse-or-propose step (DEC-14), not to a copy fix</td></tr>
+          <tr><td><span class="badge id">DEC-21</span>'s rejected-alternatives table argues over the
+          labels “show decoded” / “decoded”. Left as recorded, deliberately. A reader who arrives from
+          the current UI will not find those words on screen.</td>
+              <td>no action proposed. Recorded here so the next reader knows it was seen and judged, not
+              missed</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
