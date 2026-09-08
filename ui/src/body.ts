@@ -264,7 +264,7 @@ export async function openFile(extensions: string[]): Promise<ChosenFile | null>
 }
 
 function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = extensions.map((e) => `.${e}`).join(",");
@@ -275,7 +275,12 @@ function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
     input.addEventListener("change", () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
-      file.arrayBuffer().then((buffer) => resolve({ name: file.name, bytes: new Uint8Array(buffer) }));
+      // A read that fails must reject rather than never settle: the caller
+      // disables its controls for the whole wait, so a hung promise is a dialog
+      // with no way forward and no way back.
+      file
+        .arrayBuffer()
+        .then((buffer) => resolve({ name: file.name, bytes: new Uint8Array(buffer) }), reject);
     });
     input.click();
   });

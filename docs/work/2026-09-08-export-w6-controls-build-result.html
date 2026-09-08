@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W6 result — the controls, built</h1>
       <p>One <code>⋮</code> trigger, three worded acts, two asks and a marked row. The three doors the API has had since W2 reach a person, and two things the design could not change itself — the window's minimum width and the CORS grant hiding the export's filename — are paid here.</p>
-      <div class="meta">v1 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
+      <div class="meta">v2 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
         <a href="2026-09-08-export-w6-controls-build-plan.html">WU plan</a> ·
         <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> ·
         <a href="2026-09-04-export-plan.html#w6">epic plan</a></div>
@@ -112,12 +112,53 @@
     rather than silently worked around; the export/import parity claim is about captured exchanges, which is
     what <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a> already scopes it to.</p>
 
+    <h2 id="review">The review round</h2>
+    <p>Five finders over the WU diff, eleven candidates, eight refuted by their verifiers and
+    <strong>three confirmed</strong> — all three fixed at <code>9d8b63a</code>'s successor, each with its
+    regression test written red first.</p>
+    <table data-c="review-round">
+      <thead><tr><th>What it found</th><th>What it moved</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">altitude</span> The UC-4 block called design run 11 <em>archived</em>. It is not: the run is still tracked in <code>docs/work/</code>, and <a href="../decisions/dec-28-citation-after-retirement.html">DEC-28</a> keeps a run there until the epic's cleanup.</td>
+          <td>The claim is struck. The verifier found the precedent that settles it — the idiom was introduced in <code>d475bef</code> specifically to <em>replace</em> a live link once E-REDESIGN's run was really <code>git rm</code>'d, so it means git-tier removal. The neighbouring line 79 keeps it, correctly: its target genuinely is gone from git. (Run 11 does carry <code>data-status="archived"</code> internally — a different, gate-checked vocabulary meaning closed to iteration, which the prose was reading as the wrong sense.)</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">correctness</span> <code>openFile</code> and its browser fallback shipped untested — every test that "chooses a file" mocks <code>openFile</code> itself, so neither branch ever ran. Against "no change lands without its test", with no waiver.</td>
+          <td>Confirmed and covered: the Tauri branch (a dismissed dialog answering <code>null</code> with no read attempted, a picked path returning name and bytes, single-file not directory) and the browser fallback (the <code>cancel</code> listener that is the whole reason a dismissal settles, a chosen file, a change event carrying none, and a read that fails). The verifier had established this was an omission and not a harness limit — jsdom dispatches the events — which is what made it actionable.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">correctness</span> The export and import share one <code>transfer</code> slot, and the import act is never disabled during an export — so opening the import ask mid-export and merely <em>dismissing</em> it cleared the export's "exporting…" line while its request was still in flight.</td>
+          <td>The clear is now scoped to its own transfer: the import path takes down the line only when the line is the import's. The finder's larger claims — a second concurrent export, and the two flows overwriting each other's failure — were refuted: the ask is a true modal whose backdrop sits above the menu's layer and whose trap excludes it, so the trigger is unreachable while it is open, and the two failures are separate local state.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>And one the review did not ask for, found while writing its test.</strong> Covering
+    <code>openFile</code> exposed that a failed read never settled its promise — and that
+    <code>choose()</code> ran as <code>void choose()</code>, so a rejection from the Tauri picker was
+    swallowed whole. Either one leaves the ask sitting there having done nothing and said nothing, with its
+    controls disabled for a wait that never ends. The fallback now rejects rather than hanging, and
+    <code>choose</code> catches, so a picker that fails lands in the same warn <code>Notice</code> every
+    other failure on this surface does — which is what the run's <em>any of the three fails outright</em>
+    row asks for. Both paths are tested.</p>
+    <p>The eight refuted are worth one line, because two of them are the design working as intended:
+    <code>CaptureMenu</code> duplicating <code>Select</code>'s popup shell and its panel classes is the
+    duplication run 11 foresaw verbatim and reserved for the collection's owner, and the lint rule validates
+    each <code>design-allow</code> pragma independently. The rest: a one-line error-unwrap idiom shared with
+    <code>Onboarding</code> under different contracts; setState after unmount, which React 18 makes a
+    documented no-op and which is the pre-existing <code>ProxyCloseDialog</code> pattern this diff extracted;
+    <code>ImportDialog</code>'s local busy flag, whose proposed removal cannot work because
+    <code>onBusy</code> is the parent's only channel; an unread <code>ChosenFile.name</code>, the documented
+    mirror of a <code>saveBody</code> return callers already discard; the computed <code>CAPTURE_COPY</code>
+    key, which <code>tsc</code> proves typo-proof; and a <code>Blob</code> copy in a branch the shipped Tauri
+    app never takes, bounded by the ring's cap, in code this diff does not touch.</p>
+
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence">
       <thead><tr><th>Check</th><th>Result</th></tr></thead>
       <tbody>
         <tr><td><code>pnpm test</code> (vitest)</td>
-        <td><strong>808 passed</strong> in 47 files, up from 741 in 44 — 67 new across five suites: <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (18), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer).</td></tr>
+        <td><strong>812 passed</strong> in 47 files, up from 741 in 44 — 71 new across six suites (four added by the review round): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (18), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches).</td></tr>
         <tr><td><code>pnpm lint</code> (design/vocabulary)</td>
         <td>clean. One <code>design-allow</code> pragma, on the same offset-from-the-trigger shape <code>Select</code>'s popup already carries; the gap in it is a token.</td></tr>
         <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full suite, including the two new <code>tests/api.rs</code> cases and the window-minimum guard.</td></tr>

@@ -247,3 +247,47 @@ test("both zones say a transfer is running — the header slot and the surface t
   await act(async () => release?.());
   await waitFor(() => expect(slot()).toHaveTextContent("6 flows"));
 });
+
+// Found by review round 1. The export and the import share one `transfer`
+// slot, and the import item is not disabled during an export — so the import
+// dialog can be opened mid-export, and merely dismissing it must not clear the
+// line belonging to a transfer that is still running.
+test("dismissing the import ask mid-export leaves the export's own line alone", async () => {
+  let release: (() => void) | undefined;
+  mount({
+    exportHar: vi.fn(
+      async () =>
+        new Promise<{ bytes: Uint8Array; filename: string }>((resolve) => {
+          release = () => resolve({ bytes: new Uint8Array(), filename: "x.har" });
+        }),
+    ),
+  });
+  vi.spyOn(files, "saveBody").mockResolvedValue("/tmp/x.har");
+
+  choose(CAPTURE_COPY.exportAct);
+  await waitFor(() => expect(slot()).toHaveTextContent(CAPTURE_COPY.exporting));
+
+  choose(CAPTURE_COPY.importName);
+  fireEvent.click(screen.getByRole("button", { name: "close" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(slot()).toHaveTextContent(CAPTURE_COPY.exporting);
+
+  await act(async () => release?.());
+  await waitFor(() => expect(slot()).toHaveTextContent("6 flows"));
+});
+
+// Found while covering openFile (review round 1). The picker can fail on its
+// own, before any import is attempted — a swallowed rejection would leave the
+// ask sitting there having done nothing and said nothing.
+test("a file that cannot be read says so in the ask, rather than nothing happening", async () => {
+  vi.spyOn(files, "openFile").mockRejectedValue(new Error("no longer there"));
+  const importHar = vi.fn(async () => 0);
+  mount({ importHar });
+
+  choose(CAPTURE_COPY.importName);
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.choose }));
+
+  expect(await screen.findByTestId("import-failed")).toHaveTextContent("no longer there");
+  expect(importHar).not.toHaveBeenCalled();
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+});

@@ -264,3 +264,79 @@ test("saveBody reports the path it wrote, and null when the native dialog was ca
   // itself, or a refactor that reports the path without writing passes.
   expect(writeFile).toHaveBeenCalledWith("/tmp/picked.pem", bytes);
 });
+
+// openFile is saveBody's inverse and carries the same contract, so it gets the
+// same proof: a dismissed picker is an outcome, not a failure, and the caller
+// must be able to tell the two apart. Found untested by review round 1.
+test("openFile reads the picked file, and answers null when the native dialog was dismissed", async () => {
+  vi.stubGlobal("window", { ...globalThis.window, __TAURI_INTERNALS__: {} });
+  const bytes = new Uint8Array([1, 2, 3]);
+  const readFile = vi.fn(async () => bytes);
+  vi.doMock("@tauri-apps/plugin-fs", () => ({ readFile }));
+
+  vi.doMock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(async () => null) }));
+  vi.resetModules();
+  expect(await (await import("./body")).openFile(["har"])).toBeNull();
+  expect(readFile).not.toHaveBeenCalled();
+
+  const open = vi.fn(async () => "/tmp/session.har");
+  vi.doMock("@tauri-apps/plugin-dialog", () => ({ open }));
+  vi.resetModules();
+  const chosen = await (await import("./body")).openFile(["har", "json"]);
+  expect(chosen).toEqual({ name: "/tmp/session.har", bytes });
+  expect(readFile).toHaveBeenCalledWith("/tmp/session.har");
+  // Single-file, not a directory: the import door takes one document.
+  expect(open).toHaveBeenCalledWith(
+    expect.objectContaining({ multiple: false, directory: false }),
+  );
+});
+
+// The browser half runs under vite dev and here. Its cancel listener is the
+// load-bearing part: a dismissed picker fires no change event, so without it the
+// caller awaits a promise that never settles — and the import dialog would hang
+// disabled with no way back.
+test("openFile's browser fallback settles on a chosen file and on a dismissal alike", async () => {
+  vi.stubGlobal("window", {});
+  vi.resetModules();
+  const { openFile } = await import("./body");
+
+  const inputs: HTMLInputElement[] = [];
+  const create = document.createElement.bind(document);
+  vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+    const el = create(tag) as HTMLInputElement;
+    if (tag === "input") {
+      el.click = () => {};
+      inputs.push(el);
+    }
+    return el;
+  });
+
+  const dismissed = openFile(["har"]);
+  inputs[0].dispatchEvent(new Event("cancel"));
+  expect(await dismissed).toBeNull();
+
+  const picked = openFile(["har", "json"]);
+  const input = inputs[1];
+  expect(input.accept).toBe(".har,.json");
+  Object.defineProperty(input, "files", {
+    value: [{ name: "session.har", arrayBuffer: async () => new Uint8Array([7, 8]).buffer }],
+  });
+  input.dispatchEvent(new Event("change"));
+  expect(await picked).toEqual({ name: "session.har", bytes: new Uint8Array([7, 8]) });
+
+  // A change event carrying no file is a dismissal too, not a hang.
+  const empty = openFile(["har"]);
+  Object.defineProperty(inputs[2], "files", { value: [] });
+  inputs[2].dispatchEvent(new Event("change"));
+  expect(await empty).toBeNull();
+
+  // A read that fails rejects rather than never settling. The caller disables
+  // its controls for the whole wait, so a hung promise is a dialog with no way
+  // forward and no way back.
+  const unreadable = openFile(["har"]);
+  Object.defineProperty(inputs[3], "files", {
+    value: [{ name: "gone.har", arrayBuffer: async () => Promise.reject(new Error("no longer there")) }],
+  });
+  inputs[3].dispatchEvent(new Event("change"));
+  await expect(unreadable).rejects.toThrow("no longer there");
+});

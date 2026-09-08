@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Filter, TrawlerApi } from "./api";
-import { openFile, saveBody } from "./body";
+import { openFile, saveBody, type ChosenFile } from "./body";
 import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
 import { ModalShell } from "./ModalShell";
 import { Button, Notice, TonedText } from "./components/index";
@@ -103,7 +103,11 @@ export function CaptureControls({
         <ImportDialog
           api={api}
           onDone={() => setAsking(null)}
-          onBusy={(busy) => setTransfer(busy ? "import" : null)}
+          // Clearing is scoped to this transfer: an export may still be running
+          // behind the ask, and its line is not the import's to take down.
+          onBusy={(busy) =>
+            setTransfer((running) => (busy ? "import" : running === "import" ? null : running))
+          }
         />
       )}
     </div>
@@ -180,7 +184,15 @@ function ImportDialog({
 
   const choose = async () => {
     setFailure(null);
-    const file = await openFile(["har", "json"]);
+    let file: ChosenFile | null;
+    try {
+      file = await openFile(["har", "json"]);
+    } catch (error) {
+      // Opening or reading can fail on its own, before any import is attempted.
+      // Without this the rejection is swallowed and the ask just sits there.
+      setFailure(reasonOf(error));
+      return;
+    }
     // A dismissed picker leaves the ask open with nothing claimed — the
     // symmetric case to a cancelled save.
     if (file) await run(() => api.importHar(file.bytes));
