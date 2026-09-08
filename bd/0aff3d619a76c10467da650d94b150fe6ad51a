@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W5
+changes:
+  - path: docs/work/2026-09-08-redesign-finish-w5-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before any code; states the grammar exhaustively as a table (code, class, absent, and every refusal), the deliberate narrowing of `999` from an empty list to a stated error, the two-file seam, and the ruling that the core stays strict about whitespace because the trim belongs where the human typing lives"
+  - path: docs/work/2026-09-08-redesign-finish-w5-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with the evidence row for each claim, the one deviation the unit test forced (the grammar tightened to an exactly-three-character shape after `+404` was found parsing as 404), the mechanical type update to three pre-existing store call sites, and three follow-ups, all of them W6's and already in its scope"
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: edited
+    distills: "UC-4's filter-bar bullet claimed a status class query was `not expressible against the current API at all`, which this WU makes false. It now states both resolutions - `status=404` the exact code, `status=4xx` the class - and the stated 400 for anything naming neither, and says the control catches up with the class after the core does. The claim was corrected here rather than left false until W10 because a T2 doc contradicting the tree is the defect the tier system exists to prevent; the UI half of UC-4's distillation (the designed control, the unreachable statement, the pane width) stays W10's, per the epic plan."
+t2_waived: null
