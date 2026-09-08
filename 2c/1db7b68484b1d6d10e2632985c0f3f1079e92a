@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 2c1db7b68484b1d6d10e2632985c0f3f1079e92a
+base: d31286592450f9c9baaac561a4d65377324f50a4
+tier: key
+signer: vuluu
+report: docs/work/2026-09-08-export-w6-controls-build-result.html
+report_sha256: 0415c4f8a2d5ff4c3c1f20c5f41c894697854b3e973e93583e9aa9264096b304
+date: 2026-09-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEC35ZwoYMIMFDF6Gn0gXFsLTJzAFh75fsf04dKNiMyVMJIqiCAdnQsfUn
+  kBHxGmHO5NEYCsccmWUkZyDMfdymAG
+  -----END SSH SIGNATURE-----
