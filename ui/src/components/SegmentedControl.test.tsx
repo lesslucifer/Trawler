@@ -4,7 +4,7 @@ import { SegmentedControl } from "./SegmentedControl";
 
 const OPTIONS = [
   { value: "raw", label: "raw" },
-  { value: "decoded", label: "decoded" },
+  { value: "pretty", label: "pretty" },
 ] as const;
 
 const setup = (value = "raw", disabled = false) => {
@@ -27,14 +27,14 @@ describe("SegmentedControl", () => {
 
     expect(screen.getByRole("radiogroup", { name: "body view" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "raw" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "decoded" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "pretty" })).not.toBeChecked();
   });
 
   it("clicking an inactive segment reports it; the active one is a no-op", () => {
     const onChange = setup("raw");
 
-    fireEvent.click(screen.getByRole("radio", { name: "decoded" }));
-    expect(onChange).toHaveBeenCalledWith("decoded");
+    fireEvent.click(screen.getByRole("radio", { name: "pretty" }));
+    expect(onChange).toHaveBeenCalledWith("pretty");
 
     onChange.mockClear();
     fireEvent.click(screen.getByRole("radio", { name: "raw" }));
@@ -44,15 +44,15 @@ describe("SegmentedControl", () => {
   it("holds no state of its own — the value prop alone decides what is active", () => {
     const onChange = setup("raw");
 
-    fireEvent.click(screen.getByRole("radio", { name: "decoded" }));
-    expect(onChange).toHaveBeenCalledWith("decoded");
+    fireEvent.click(screen.getByRole("radio", { name: "pretty" }));
+    expect(onChange).toHaveBeenCalledWith("pretty");
     expect(screen.getByRole("radio", { name: "raw" })).toBeChecked();
   });
 
   it("roving tabindex: only the active segment is in the tab order", () => {
-    setup("decoded");
+    setup("pretty");
 
-    expect(screen.getByRole("radio", { name: "decoded" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("radio", { name: "pretty" })).toHaveAttribute("tabindex", "0");
     expect(screen.getByRole("radio", { name: "raw" })).toHaveAttribute("tabindex", "-1");
   });
 
@@ -63,7 +63,7 @@ describe("SegmentedControl", () => {
     raw.focus();
     fireEvent.keyDown(raw, { key: "ArrowRight" });
 
-    expect(screen.getByRole("radio", { name: "decoded" })).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "pretty" })).toHaveFocus();
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -81,10 +81,10 @@ describe("SegmentedControl", () => {
 
     const raw = screen.getByRole("radio", { name: "raw" });
     expect(raw).toBeDisabled();
-    expect(screen.getByRole("radio", { name: "decoded" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "pretty" })).toBeDisabled();
     expect(raw).toBeChecked();
 
-    fireEvent.click(screen.getByRole("radio", { name: "decoded" }));
+    fireEvent.click(screen.getByRole("radio", { name: "pretty" }));
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -92,6 +92,6 @@ describe("SegmentedControl", () => {
     setup("raw");
 
     expect(screen.getByRole("radio", { name: "raw" }).className).toContain("bg-canvas-soft");
-    expect(screen.getByRole("radio", { name: "decoded" }).className).toContain("text-ink-mute");
+    expect(screen.getByRole("radio", { name: "pretty" }).className).toContain("text-ink-mute");
   });
 });
