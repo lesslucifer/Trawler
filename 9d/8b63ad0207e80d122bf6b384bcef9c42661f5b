@@ -1,0 +1,87 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W6
+branch: wu/export/controls-build
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: >-
+      UC-4 gains a new block, "The capture-management controls" (id uc-4-capture-controls), stating what a
+      user of the native app can now do that they could not: the app's FIRST controls that change server
+      state, behind one ⋮ trigger at the header's trailing edge past the filters that scope them, beside a
+      fixed-width slot reading the count those filters selected and reading "exporting…"/"importing…" while
+      a transfer runs - the same box either way, so starting one moves nothing else in the row. A three-row
+      table, one per act: export as har… gives the filtered capture through the OS save dialog under the
+      filename THE SERVER stamped rather than one the app invented, and dismissing that dialog is an
+      outcome not a failure (the line clears and nothing claims a file was written); import… is one modal
+      taking either way in - a chosen .har file, or a curl command pasted into the target it opens focused
+      on - whose refusal is the server's own sentence shown verbatim under the text that caused it with
+      that text left in place to edit (links DEC-37); clear… is a modal ask titled with the count it will
+      remove whose initial focus is on the answer that does nothing, with the consequence carrying the only
+      alarm on the screen and the button carrying none. Then the two things the list itself gained: an
+      imported row carries a ↑ mark in its time cell with its own accessible name, so a capture someone
+      handed you is tellable from live traffic WITHOUT a column of its own (links DEC-36); and a cleared
+      list gets a third absence of its own, "capture cleared", with the same remedy the never-captured one
+      gives, because after a clear the remedy genuinely is the same and the heading is what says which
+      nothing this is. Closes with the rule that binds all three: they refill the list from the event bus,
+      never from their own response, because the responses carry counts rather than rows and two sources of
+      truth for one list is a race - which is what the `cleared` event exists for. UC-6's and UC-7's
+      provenance callouts each now name the route a person takes to what they already offered a client,
+      replacing the placeholder both carried ("the app's own controls follow in the same epic") with a link
+      to UC-4's block and the W6 badge. Header to v10 and the E-EXPORT attribution widened to name UC-4's
+      capture-management controls.
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: >-
+      The UC-4 row says the surface is no longer read-only: behind one trigger in its header it takes the
+      capture out, brings one back and clears it.
+  - path: docs/work/2026-09-08-export-w6-controls-build-plan.html
+    tier: T3
+    action: added
+    distills: >-
+      The WU plan, written before the code - the requirement sentence, the mapping to the epic's W6 block
+      with run 11 cited and run 10 explicitly not, a diagram of what gets built and where, the file-by-file
+      diff with each file's design zone and an explicit "not built" line for the three proposals, six
+      contract calls the run leaves to the build (how a second screen uses ModalShell without minting an
+      entry, how F's textarea takes initial focus, where a refusal's text comes from, what tells the list
+      it is empty BECAUSE it was cleared, whether the slot duplicates the dialog's in-flight line, and the
+      cross-year overrun carried rather than fixed), eleven observables each with the test that proves it,
+      the test plan per level with the e2e waived to the epic's own WebDriver row, and the distillation
+      owed.
+  - path: docs/work/2026-09-08-export-w6-controls-build-result.html
+    tier: T3
+    action: added
+    distills: >-
+      The WU result - delivered against all eleven observables; the shipped files with what was
+      DELIBERATELY not built and why (no registry entry for Menu or Dialog, no GlyphName entry for ⋮ - all
+      three are the run's proposals with named owners); six contract calls the build made, each with the
+      reasoning a reviewer would otherwise have to reconstruct; three deviations (useConfirm carried as
+      both design runs required and the epic plan's claim left wrong on the record; the WU plan's own
+      observable 11 corrected because the e2e config inherits the window minimum rather than declaring one,
+      with the guard asserting the condition under which the inheritance holds; and M's focus return being
+      true by construction rather than by restoration, since DOM focus never leaves the trigger); one thing
+      the build found - har_entry requires a response, so a request-only flow is invisible to the export
+      while appearing in the listing, which is W2's deliberate contract and is recorded rather than worked
+      around; the evidence table per check with per-suite counts; the distillation ledger including
+      architecture.html re-read and NOT edited with the reason, and the rulebook/decisions deliberately
+      untouched because this WU decided nothing run 11 had not; and four follow-ups - the epic's e2e, run
+      11's second blocked-on carried forward with its owner unchanged, the three unpaid proposals now each
+      proven in one call site, and the request-only/HAR fact.
+note: >-
+  Code and test files in this diff (ui/src/api.ts, CaptureControls.tsx, CaptureMenu.tsx, ModalShell.tsx,
+  apiStub.ts, App.tsx, FlowList.tsx, ProxyCloseDialog.tsx, body.ts, src/api/mod.rs, xtask/src/ui.rs,
+  tests/api.rs, and the two Tauri config files) carry no doc/v1 entry - they are T4, the truth the docs
+  point at. T2 synthesis is UC-4's new controls block plus its index row (the what), with UC-6 and UC-7
+  each gaining one cross-link where they previously deferred to a WU that had not happened yet. No new
+  decision record and no rulebook change: every reason this WU could have written down was already
+  decided and recorded by design run 11, and copying it down a tier is the duplication the tier system
+  forbids - the result cites the run instead. T1 architecture.html was re-read at close and NOT edited:
+  its UI seam says the native app is an out-of-process client of the control API, and a client that also
+  POSTs and DELETEs is still exactly that; no store, module or event contract moved in this WU. One fact
+  per tier held deliberately: the four request shapes live only in ui/src/api.ts and the use case
+  describes them only by what a user gets; every word on the surface lives only in CAPTURE_COPY and the
+  doc quotes three of them as the shape a person reads, never as the list; and the design's own reasoning
+  (why one trigger, why 160px, why the ask focuses cancel) stays in run 11 and is cited from the result
+  rather than restated in T2.
