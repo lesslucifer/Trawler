@@ -272,7 +272,7 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Eight review rounds, and what they were actually for</h2>
+    <h2 id="review">Ten review rounds, and what they were actually for</h2>
     <p>Round 1 refuted everything it raised. Round 2 — re-run because the round-1 corrections changed
     the tree, so <code>cr/v3</code> had to bind the tip that merges — was the first to verify anything,
     and what it verified were three false claims in this report. Round 3 was aimed at claim accuracy for
@@ -289,15 +289,18 @@
     lesson worth carrying out of this review — a claim about a git note is unverifiable without the
     notes-ref commit holding the state it describes.</p>
     <p><strong>Every candidate of every round is a row below, and the rows are the count.</strong> The
-    running tallies that stood here are gone: round 9 caught the last of them claiming two round-8
-    candidates over a table that listed one, which is the same defect as the grep row's invented total
-    and the deviations row's short list. This report has now been wrong about its own arithmetic four
-    times, so it keeps none — a document should not assert a number a reader cannot see it enumerate.
-    <strong>Nine verified findings across the eight rounds, every one of them a false sentence in this
-    WU's own report or notes and not one in a line of code.</strong></p>
+    running tallies that stood here are gone: round 9 caught one of them claiming two round-8 candidates
+    over a table that listed one, and round 10 caught the sentence announcing their removal miscounting
+    the very failures it was summarising. Its counts have failed in both available ways — three of them
+    were simply wrong (the grep total, the left-alone count, the changed-title count) and two more were
+    right over a list too short to show it (the nine files, then the round-8 candidates) — so it keeps
+    none. A document should not assert a number a reader cannot see it enumerate.
+    <strong>Eleven verified findings across the ten rounds — every one of them a false sentence in this
+    WU's own report or notes, and not one in a line of code.</strong> Rounds 9 and 10 each verified one,
+    both about this review record's own counting; every round has its rows below, in order.</p>
     <div class="callout" data-c="lesson">
-      <strong>The pattern is the finding.</strong> Eight rounds found nothing wrong with the rename — the
-      dimensions that judge code came back clean every time. What they found, nine times over, was this
+      <strong>The pattern is the finding.</strong> Ten rounds found nothing wrong with the rename — the
+      dimensions that judge code came back clean every time. What they found, eleven times over, was this
       report claiming more than the tree supported — a total nobody counted, several counts that did not
       match their own lists, a check reported as passed in a form that could not be met, and a claim
       about what another document contained. Round 4's finding sat inside round 3's
@@ -442,6 +445,20 @@
               note once said needs a notes-ref commit beside it or it cannot be checked — which is why
               the row above now carries one. The second candidate falls with the first: the
               <code>doc/v1</code> note repeats a finding that was real.</td></tr>
+          <tr><td><strong>Round 9 · the review section claimed two round-8 candidates over a table that
+          listed one</strong></td>
+              <td><strong>Verified.</strong> The count was right — round 8 raised two, the second being
+              the <code>doc/v1</code> note echoing the same refuted narrative — and the enumeration was
+              short, which is the same defect as the deviations row's “nine files” over a list of seven.
+              Round 8's row now names both candidates, and the running tallies came out of the prose
+              rather than being corrected again.</td></tr>
+          <tr><td><strong>Round 10 · the sentence retiring the tallies miscounted the failures it was
+          summarising</strong> — “wrong about its own arithmetic four times”, over five of them</td>
+              <td><strong>Verified</strong>, and it had already been rewritten in the worktree when the
+              round reported — the same enumeration, reached independently. The sentence now names all
+              five and groups them by kind rather than counting them. This was the last un-enumerated
+              number in the document: every count that remains is enumerated where it is asserted, which
+              is the only version of this record that a later round cannot falsify.</td></tr>
         </tbody>
       </table>
 
