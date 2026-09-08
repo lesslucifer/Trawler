@@ -37,10 +37,10 @@
     <div class="callout" data-item="outcome" data-c="outcome">
       <strong>Delivered, to the plan's sentence.</strong> The shell renders at 520px in a 1440 window, a
       status class narrows the list end to end against the real core, and a failed fetch is stated rather
-      than swallowed. Three commits: the plan, the build, and the fix for what review round 1 found.
-      Nothing W4 decided was re-opened; the two things the design explicitly left to the build are named
-      below with what decided them, and the one mistake the build made on its own is in
-      <a href="#review">review round 1</a>.
+      than swallowed. Nothing W4 decided was re-opened; the two things the design explicitly left to the
+      build are named below with what decided them. The build's own mistake — three facts encoded in two
+      values — took <a href="#review">five review rounds</a> to find and correct, and the record of that
+      is part of the delivery.
     </div>
 
     <h2 id="landed">The eight rows</h2>
@@ -88,13 +88,14 @@
 
     <h2 id="discrimination">How the two sentences are told apart</h2>
     <p>W4 designed two causes and left the client no way to distinguish them: <code>listFlows</code> threw
-    the same untyped <code>Error</code> for a dead socket and a refused query. One typed error settles it,
-    and the shape is the answer to the question rather than a flag beside it.</p>
+    the same untyped <code>Error</code> for a dead socket and a refused query. One typed error settles
+    <em>which answer arrived</em>; the two facts it feeds are held apart in
+    <a href="#settled-shape">two values</a>, which is what five review rounds were about.</p>
     <table data-c="discrimination">
       <thead><tr><th>What the API did</th><th>What reaches the caller</th><th>What renders</th></tr></thead>
       <tbody>
         <tr><td>answered <code>2xx</code></td><td>the list</td><td class="good">rows, no band</td></tr>
-        <tr><td>answered <code>400</code></td><td><code>ApiError(400)</code></td><td><code>4xz is not a status</code> · <em>type a code (404) or a class (4xx)</em> — in the row region, no band, no retry</td></tr>
+        <tr><td>answered <code>400</code></td><td><code>ApiError(400)</code></td><td><code>4xz is not a status</code> · <em>type a code (404) or a class (4xx)</em> — in the row region, no retry, and the value named is the one that was asked</td></tr>
         <tr><td>answered anything else</td><td><code>ApiError(status)</code></td><td class="bad">the connection statement — a core not behaving like the core leaves the rows just as unverified</td></tr>
         <tr><td>did not answer</td><td>a plain <code>TypeError</code>, never an <code>ApiError</code></td><td class="bad">the connection statement</td></tr>
       </tbody>
@@ -239,7 +240,62 @@
       </tbody>
     </table>
 
-    <h2 id="review">Review round 1 — what it found, and what it cost</h2>
+    <h2 id="review">Review — five rounds, and the one mistake under all of them</h2>
+    <div class="callout warn" data-c="rounds">
+      <strong>Rounds 2, 3 and 4 each found defects inside the previous round's fix.</strong> That pattern
+      was the finding. Three facts — whether the core answered, what it said, and whether one flow's fetch
+      produced a flow — were encoded in two values with precedence baked into the encoding, so every fix
+      traded one wrong state for another. Round 4 stopped patching and split them; rounds 5 and 6 judged the
+      split. The rounds below are kept in order because the sequence is the evidence, not the noise.
+    </div>
+    <table data-c="round-tally">
+      <thead><tr><th>Round</th><th>Verified</th><th>What it found</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td><td class="num">3 of 10</td>
+          <td>A latched pane failure spoke for the list, never expired, and a straggling refresh could
+          un-do a retry. <em>Fix: pass the list's real failure through; count listings to retire a stale
+          pane failure; a generation guard.</em></td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td><td class="num">2 of 2</td>
+          <td>Both inside round 1's fix. The listing counter cleared the pane's failure without
+          re-fetching, so the pane sat on “loading this flow…” with nothing saying otherwise; and with the
+          list empty for its own reason, neither zone stated the pane's failure at all. <em>Fix: the band
+          becomes the connection alone; the pane states its own fact; the counter is deleted.</em></td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td><td class="num">4</td>
+          <td>The flip side: with the core down and a flow selected, band and pane both raised a warn for
+          one cause — the second voice the run refused. Plus the stream overwriting a refusal, a retry's
+          focus claim that never expired, and a test title arguing the opposite of the code.</td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td><td class="num">2 of 2</td>
+          <td>Both inside round 3's fix. Gating the pane on the connection meant a core going silent
+          <em>after</em> the pane failed put “loading this flow…” back over a settled fetch; and refusing to
+          record silence over a refusal lost real outages. <em>Fix: the model, not the encoding.</em></td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td><td class="num">3</td>
+          <td>Correctness and design converged from opposite directions on the same thing: the build had
+          invented a precedence the run never made, hiding a refusal behind the silence. Plus the refusal
+          quoting the wrong value, and a trailing clause claiming things about the region below that were
+          not true of it.</td>
+        </tr>
+        <tr>
+          <td><strong>6</strong></td><td class="good">0</td>
+          <td>Clean, and by case analysis rather than by the tests passing: the band and the row region are
+          <em>structurally</em> mutually exclusive (one branch requires <code>refused !== null</code> with
+          no rows, the other requires <code>refused === null</code>), and
+          <code>flows.length &gt; 0 &amp;&amp; refused !== null</code> is unreachable because every path
+          that sets a refusal empties the rows in the same update. The one genuinely reachable
+          both-facts-true state is the one round 5 added a regression for.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="round1">Round 1 — what it found, and what it cost</h3>
     <p>Six finders over the build's own diff, then a verifier per candidate. <strong>Ten candidates, three
     verified.</strong> All three were the same underlying mistake seen from different angles, and it was
     mine: the pane's failure and the list's failure are two independent facts, and I folded them into one
@@ -276,7 +332,7 @@
         </tr>
       </tbody>
     </table>
-    <p><strong>Refuted, and worth recording as refuted:</strong> that the three new test doubles in
+    <p><strong>Round 1, refuted and worth recording as refuted:</strong> that the three new test doubles in
     <code>useFlows.test.ts</code> should be one parameterized builder (they follow the file's existing
     one-double-per-concern convention, and merging them yields a config object with five knobs); that
     <code>shellApi</code> duplicates <code>mockApi</code> (they are different control modes — raw answer
@@ -293,6 +349,20 @@
       being wrong in three different ways. A comment asserting an invariant the code does not enforce is
       worth reading as a question.
     </div>
+
+    <h3 id="settled-shape">Where it settled</h3>
+    <table data-c="settled-shape">
+      <thead><tr><th>Fact</th><th>Owner</th><th>Written by</th></tr></thead>
+      <tbody>
+        <tr><td>the core is not answering</td><td><code>useFlows.silent</code></td><td>a listing that did not come back · the stream going down</td></tr>
+        <tr><td>the core refused this query</td><td><code>useFlows.refused</code></td><td>a 400, carrying the value that was asked</td></tr>
+        <tr><td>this flow's fetch produced nothing</td><td><code>useFlowDetail.failed</code></td><td>that fetch, and nothing else</td></tr>
+      </tbody>
+    </table>
+    <p>Precedence is no longer in the state. It lives in what each zone renders, which is where it is a
+    design decision and where the run can be checked against it — and the build now makes only the one
+    ranking the run actually states (a silent core outranks the two empties), rather than inventing one
+    between silence and a refusal that the run never ranked.</p>
 
     <h2 id="follow-ups">Follow-ups this WU is leaving</h2>
     <table data-item="follow-ups" data-c="follow-ups">
