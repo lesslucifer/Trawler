@@ -235,8 +235,12 @@
           <tr><td><code>cargo xtask verify-doc</code></td><td class="good">green on the plan, the result and all five edited docs</td></tr>
         </tbody>
       </table>
-      <p>Commits: <code>a47f778</code> plan · <code>89b6bb7</code> the change. Tip carries
-      <code>test/v2</code>, <code>doc/v1</code> and the review's <code>cr/v3</code>.</p>
+      <p>Commits: <code>a47f778</code> plan · <code>89b6bb7</code> the change, then one commit per
+      review round correcting this report. The evidence notes — <code>test/v2</code>,
+      <code>doc/v1</code> and the review's <code>cr/v3</code> — are written on the tip that merges, and
+      the gate refuses that merge without all three. They are deliberately <em>not</em> claimed here as
+      already attached: for five rounds this sentence said the tip carried notes that were sitting on an
+      earlier commit, which round 6 caught.</p>
 
     </div>
 
@@ -268,19 +272,21 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Five review rounds, and what they were actually for</h2>
+    <h2 id="review">Six review rounds, and what they were actually for</h2>
     <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
     corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
     refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
     claim accuracy because that is where rounds 1 and 2 found everything — raised two and
     <strong>verified one</strong>. Round 4 raised one and verified it — a false sentence inside round
     3's own correction. Round 5 raised one and verified it — a third copy of the claim round 3 had
-    already found false, left standing in a table the correction did not visit. Sixteen candidates over
-    five rounds; <strong>six verified, every one of them a false sentence in this report rather than a
-    line of code.</strong></p>
+    already found false, left standing in a table the correction did not visit. Round 6 swept both
+    documents sentence by sentence instead of spot-checking, and verified two: a phrase attributed to a
+    document that does not contain it, and this report's oldest false claim — that the tip carried its
+    evidence notes. Eighteen candidates over six rounds; <strong>eight verified, every one of them a
+    false sentence in this report rather than a line of code.</strong></p>
     <div class="callout" data-c="lesson">
-      <strong>The pattern is the finding.</strong> Five rounds found nothing wrong with the rename — the
-      dimensions that judge code came back clean every time. What they found, six times over, was this
+      <strong>The pattern is the finding.</strong> Six rounds found nothing wrong with the rename — the
+      dimensions that judge code came back clean every time. What they found, eight times over, was this
       report claiming more than the tree supported — a total nobody counted, several counts that did not
       match their own lists, a check reported as passed in a form that could not be met, and a claim
       about what another document contained. Round 4's finding sat inside round 3's
@@ -342,6 +348,19 @@
               wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
               this WU has no channel for. The record did move out of <code>evidence</code> into its own
               section, matching W6.</td></tr>
+          <tr><td><strong>Round 6 · the report said the tip carried
+          <code>test/v2</code>, <code>doc/v1</code> and <code>cr/v3</code></strong></td>
+              <td><strong>Verified, and it was the oldest defect in the document.</strong> The sentence
+              had stood since the first result commit. The notes were real but attached to
+              <code>7d7eba7</code>, and five doc-only correction commits had moved the tip past them —
+              so a merge would have been refused for missing evidence, or worse, landed with the
+              evidence orphaned on a commit nobody would look at. The sentence now states where the
+              notes go and that the gate enforces it, rather than claiming they are already there.</td></tr>
+          <tr><td>Round 6 · the follow-up attributed “body view” to the rulebook</td>
+              <td><strong>Verified.</strong> The rulebook contains the phrase nowhere — a grep matches it
+              only inside “body view<em>ers</em>” in the use-case index. The three surfaces that really
+              say it are <span class="badge id">DEC-31</span>, the registry docstring and the fixture,
+              and the row now names those.</td></tr>
           <tr><td><strong>Round 5 · the Evidence table still said
           <em>“all eight assertions unedited”</em></strong></td>
               <td><strong>Verified.</strong> Round 3 found that claim false and round 3's own fix
@@ -367,8 +386,8 @@
               because each query addresses its option by accessible name. Nothing was weakened — no
               matcher, subject or count moved — but “unedited” was false, and the plan had named that
               exact check as the tripwire for a rename touching the control. The plan's check was itself
-              mis-written: <em>“green unedited”</em> is unsatisfiable by any fixture rename. Both claims
-              are restated above, and the same audit turned up the deviations row saying “nine files”
+              mis-written: <em>“green unedited”</em> is unsatisfiable by any fixture rename. The claim
+              is corrected above in all three places it stood — the third only after round 5 found it — and the same audit turned up the deviations row saying “nine files”
               over a list of seven, and the plan's prose saying “five more” where there are nine.</td></tr>
           <tr><td>Round 3 · the roadmap's Deferred row for this item is still open, so the diff leaves a
           T2 doc asserting work this diff resolved</td>
@@ -394,8 +413,9 @@
       <table>
         <thead><tr><th>Item</th><th>Where it goes</th></tr></thead>
         <tbody>
-          <tr><td>The body pane's <code>ariaLabel</code> says “body <em>mode</em>” while the rulebook, the
-          registry docstring and this control's own test fixture say “body <em>view</em>”. Two words for
+          <tr><td>The body pane's <code>ariaLabel</code> says “body <em>mode</em>” while three other
+          surfaces say “body <em>view</em>”: <span class="badge id">DEC-31</span>, the registry docstring
+          and this control's own test fixture. Two words for
           one concept — the same defect class this WU closed, one layer down, in the accessible name a
           screen-reader user hears. The lexicon has no entry for either, so closing it means proposing
           one.</td>
