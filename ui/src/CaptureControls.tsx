@@ -159,9 +159,15 @@ function ClearDialog({
 }) {
   const [failure, setFailure] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+  const exit = useRef<HTMLSpanElement>(null);
 
   const confirm = () => {
     setFailure(null);
+    // The button about to disable is the one the user just pressed, and a
+    // browser blurs a focused control when it disables — to <body>, outside the
+    // dialog, where ModalShell never sees Esc. Cancel is the control that stays
+    // enabled, so focus goes there for the length of the request.
+    exit.current?.querySelector("button")?.focus();
     setClearing(true);
     onClear().catch((error: unknown) => {
       setFailure(reasonOf(error));
@@ -178,7 +184,7 @@ function ClearDialog({
         </div>
       )}
       <div className="mt-3 flex justify-end gap-chrome-gap">
-        <span data-opener="true">
+        <span ref={exit} data-opener="true">
           <Button onClick={onCancel} frame="bare" tone="mute">
             {CAPTURE_COPY.cancel}
           </Button>

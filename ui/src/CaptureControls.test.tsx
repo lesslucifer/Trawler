@@ -607,3 +607,30 @@ test("the file-picker path keeps focus on something that is still enabled", asyn
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await act(async () => land?.(1));
 });
+
+// Round 7's confirmed finding — the same defect a third time, one dialog over.
+// The clear ask's confirm button disables for the whole DELETE, and a browser
+// blurs a focused control when that happens, to <body>, outside ModalShell's
+// key handler. Cancel staying enabled does not save it: disabling the focused
+// element blurs to body, it does not hand focus to a sibling. jsdom will not
+// reproduce the blur, so the assertion is the condition the browser acts on.
+test("the clear ask keeps its focus hold, and its esc, while the clear runs", async () => {
+  let land: (() => void) | undefined;
+  mount({ clearFlows: vi.fn(async () => new Promise<number>((resolve) => (land = () => resolve(1)))) });
+
+  choose(CAPTURE_COPY.clearAct);
+  const go = screen.getByRole("button", { name: CAPTURE_COPY.clear });
+  go.focus();
+  expect(go).toHaveFocus();
+  fireEvent.click(go);
+  await waitFor(() => expect(go).toBeDisabled());
+
+  const panel = screen.getByTestId("clear-ask-panel");
+  const focused = document.activeElement as HTMLElement;
+  expect(panel).toContainElement(focused);
+  expect(focused).not.toBeDisabled();
+
+  fireEvent.keyDown(focused, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await act(async () => land?.());
+});
