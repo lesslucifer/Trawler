@@ -4,6 +4,7 @@ import { BodyViewer } from "./BodyViewer";
 import { hexDump, HEX_MAX, TEXT_MAX, TREE_MAX } from "./body";
 import { CONFIRM_MS } from "./components/index";
 import type { BodyFetch, BodyView, FlowView, TrawlerApi } from "./api";
+import { apiStub } from "./apiStub";
 
 function flow(over: Partial<FlowView> = {}): FlowView {
   return {
@@ -13,6 +14,7 @@ function flow(over: Partial<FlowView> = {}): FlowView {
     method: "GET",
     uri: "http://example.com/",
     status: 200,
+    source: "captured",
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/1.1",
     request_headers: [],
@@ -26,18 +28,13 @@ function flow(over: Partial<FlowView> = {}): FlowView {
 // Viewer vs the mock API: the returned bytes/content-type drive the dispatch,
 // exactly like GET /flows/{id}/{leg}/body would.
 function apiWith(body: Partial<BodyFetch>): TrawlerApi {
-  return {
-    listFlows: vi.fn(),
-    connectionCount: vi.fn(async () => 0),
-    caCertPem: vi.fn(async () => ""),
-    getFlow: vi.fn(),
-    stream: vi.fn(),
+  return apiStub({
     getBody: vi.fn(async () => ({
       bytes: new Uint8Array(),
       contentType: null,
       ...body,
     })),
-  };
+  });
 }
 
 const text = (s: string) => new TextEncoder().encode(s);

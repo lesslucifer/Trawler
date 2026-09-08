@@ -45,9 +45,10 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
 /// The native app is a cross-origin client (its webview origin is not the API's),
 /// so every response carries an open CORS grant and preflights short-circuit.
 /// `POST` joined the grant with HAR import and `DELETE` with clearing — the
-/// methods that change capture state — and the reasoning behind `*` is
-/// unchanged: the surface is loopback-only, and everything it now accepts is
-/// equally reachable with `curl`, so the grant adds no exposure the bind
+/// methods that change capture state — and the export's response headers joined
+/// it when the app started reading the filename off one. The reasoning behind
+/// `*` is unchanged: the surface is loopback-only, and everything it now accepts
+/// is equally reachable with `curl`, so the grant adds no exposure the bind
 /// address does not already imply.
 async fn allow_cross_origin(request: axum::extract::Request, next: middleware::Next) -> Response {
     let mut response = if request.method() == Method::OPTIONS {
@@ -62,6 +63,11 @@ async fn allow_cross_origin(request: axum::extract::Request, next: middleware::N
         HeaderValue::from_static("GET, POST, DELETE, OPTIONS"),
     );
     headers.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, HeaderValue::from_static("*"));
+    // Without this a cross-origin reader sees only the CORS-safelisted response
+    // headers, so the export's `Content-Disposition` — the filename the server
+    // stamps so successive exports do not overwrite each other — would be
+    // invisible to the app and it would have to invent one.
+    headers.insert(header::ACCESS_CONTROL_EXPOSE_HEADERS, HeaderValue::from_static("*"));
     response
 }
 
@@ -70,7 +76,7 @@ mod tests {
     use std::sync::Arc;
 
     use axum::body::Body;
-    use axum::http::{Request, StatusCode};
+    use axum::http::{header, Request, StatusCode};
     use tower::ServiceExt;
 
     use crate::store::Store;
@@ -170,6 +176,24 @@ mod tests {
             response.headers()["access-control-allow-methods"],
             "GET, POST, DELETE, OPTIONS",
             "the webview cannot POST an import or DELETE a capture without the methods in the grant"
+        );
+    }
+
+    // `Content-Disposition` is not CORS-safelisted, so without the expose grant
+    // the app reads null and has to invent a filename the server already chose.
+    #[tokio::test]
+    async fn the_export_filename_is_readable_by_a_cross_origin_client() {
+        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let request = Request::builder().uri("/flows/export").body(Body::empty()).expect("request");
+        let response = router.oneshot(request).await.expect("response");
+
+        assert_eq!(response.headers()["access-control-expose-headers"], "*");
+        assert!(
+            response.headers()[header::CONTENT_DISPOSITION]
+                .to_str()
+                .expect("ascii")
+                .contains("filename=\"trawler-"),
+            "the header the grant exposes has to be the one carrying the name"
         );
     }
 }

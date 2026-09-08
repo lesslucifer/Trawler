@@ -6,7 +6,11 @@ import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./
 
 const ROW_HEIGHT = 30;
 
-const COLUMNS = "110px 70px 180px 1fr 70px 90px";
+// Cell 1 is sized by the timestamp import produces, not by the mark it also
+// holds: a HAR handed over from another machine was captured on another day, so
+// TimestampText's cross-day form (115.2px) plus the mark's reserved 16px box is
+// what the column has to hold. The mark itself never enters the arithmetic.
+const COLUMNS = "160px 70px 180px 1fr 70px 90px";
 
 function HeaderRow() {
   return (
@@ -25,18 +29,40 @@ function HeaderRow() {
   );
 }
 
-// The list is empty for two unrelated reasons and they must not share a
+// The list is empty for three unrelated reasons and they must not share a
 // sentence: telling someone to send traffic they have already sent is the
-// failure the second message exists to prevent.
-function Absence({ filtered }: { filtered: boolean }) {
+// failure the second message exists to prevent — and a user who just cleared the
+// capture is exactly that person, which is why clearing gets a heading of its
+// own rather than landing on the never-captured one. The remedy is shared
+// because after a clear it genuinely is the same remedy.
+function Absence({ filtered, cleared }: { filtered: boolean; cleared: boolean }) {
+  const refill = `send traffic through the proxy — ${defaultProxyAddr()}`;
   return (
     <div data-testid="empty" className="flex justify-center p-12">
-      {filtered ? (
+      {cleared ? (
+        <Notice detail={refill}>capture cleared</Notice>
+      ) : filtered ? (
         <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
       ) : (
-        <Notice detail={`send traffic through the proxy — ${defaultProxyAddr()}`}>no flows yet</Notice>
+        <Notice detail={refill}>no flows yet</Notice>
       )}
     </div>
+  );
+}
+
+// The mark wears the door's own face — the same ↑ the import control puts in the
+// row — and its box is reserved whether or not it is drawn, so every timestamp
+// shares one left edge. Not a column and not a component: one conditional
+// character with an accessible name, in one cell of one screen.
+function ImportMark({ imported }: { imported: boolean }) {
+  return (
+    <span
+      aria-label={imported ? "imported" : undefined}
+      title={imported ? "imported" : undefined}
+      className="inline-block w-4 text-ink-mute"
+    >
+      {imported ? "↑" : ""}
+    </span>
   );
 }
 
@@ -45,11 +71,13 @@ export function FlowList({
   selectedId,
   onSelect,
   filtered = false,
+  cleared = false,
 }: {
   flows: FlowSummary[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   filtered?: boolean;
+  cleared?: boolean;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -98,7 +126,7 @@ export function FlowList({
     return (
       <div className="flex h-full flex-col">
         <HeaderRow />
-        <Absence filtered={filtered} />
+        <Absence filtered={filtered} cleared={cleared} />
       </div>
     );
   }
@@ -142,6 +170,7 @@ export function FlowList({
                 }}
               >
                 <span data-wire="started_at">
+                  <ImportMark imported={flow.source === "imported"} />
                   <TimestampText timestamp={flow.started_at} />
                 </span>
                 <span data-wire="method">

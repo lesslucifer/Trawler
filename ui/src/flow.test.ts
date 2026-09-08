@@ -17,6 +17,7 @@ const flow: FlowSummary = {
   method: "GET",
   uri: "http://example.com/a/b?x=1",
   status: 200,
+  source: "captured",
   request_body_state: "empty",
   response_body_state: "captured",
 };
@@ -55,6 +56,7 @@ function view(over: Partial<FlowView> = {}): FlowView {
     method: "GET",
     uri: "http://example.com/a?x=1",
     status: 200,
+    source: "captured",
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/1.1",
     request_headers: [{ name: "Accept", value: "application/json" }],

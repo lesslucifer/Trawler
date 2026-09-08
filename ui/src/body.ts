@@ -243,3 +243,40 @@ export async function saveBody(bytes: Uint8Array, filename: string): Promise<str
   URL.revokeObjectURL(url);
   return filename;
 }
+
+export interface ChosenFile {
+  name: string;
+  bytes: Uint8Array;
+}
+
+// The inverse of saveBody, and it carries the same contract: null means the user
+// dismissed the picker, which is an outcome and not a failure. The browser half
+// exists for vite dev and the unit tests, where there is no OS dialog to open.
+export async function openFile(extensions: string[]): Promise<ChosenFile | null> {
+  if ("__TAURI_INTERNALS__" in window) {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readFile } = await import("@tauri-apps/plugin-fs");
+    const path = await open({ multiple: false, directory: false, filters: [{ name: extensions.join("/"), extensions }] });
+    if (typeof path !== "string") return null;
+    return { name: path, bytes: await readFile(path) };
+  }
+  return pickThroughInput(extensions);
+}
+
+function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = extensions.map((e) => `.${e}`).join(",");
+    // A dismissed picker fires no change event in every browser, so `cancel` is
+    // the only signal that the user chose nothing — without it the caller waits
+    // on a promise that never settles.
+    input.addEventListener("cancel", () => resolve(null));
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return resolve(null);
+      file.arrayBuffer().then((buffer) => resolve({ name: file.name, bytes: new Uint8Array(buffer) }));
+    });
+    input.click();
+  });
+}

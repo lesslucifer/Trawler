@@ -1323,3 +1323,74 @@ async fn a_clear_selects_by_provenance_like_every_other_endpoint() {
     assert_eq!(listed.as_array().unwrap().len(), 1);
     assert_eq!(listed[0]["uri"], "http://live.example.com/", "the live capture is untouched");
 }
+
+// E-EXPORT.W6: the app reads the export's filename off the response rather than
+// inventing one, and it reads it cross-origin — where only the safelisted
+// headers are visible unless the grant says otherwise. Both the preflight and
+// the real response have to carry it, because the browser checks each in turn.
+#[tokio::test]
+async fn a_cross_origin_client_can_read_the_filename_the_export_stamped() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://api.example.com/one").build());
+    let r = router_with(store);
+
+    let preflight =
+        Request::builder().method("OPTIONS").uri("/flows/export").body(Body::empty()).unwrap();
+    let res = r.clone().oneshot(preflight).await.unwrap();
+    assert_eq!(res.status(), StatusCode::NO_CONTENT);
+    assert_eq!(res.headers()["access-control-expose-headers"], "*");
+
+    let (status, headers, _) = get(&r, "/flows/export").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers["access-control-expose-headers"], "*");
+    let name = headers["content-disposition"].to_str().unwrap();
+    assert!(name.starts_with("attachment; filename=\"trawler-"), "{name}");
+    assert!(name.ends_with(".har\""), "{name}");
+}
+
+// The three doors as the app reaches them: the app never re-reads the listing
+// after a mutation — it waits for the bus — so what each door answers has to be
+// enough on its own, and a refusal has to arrive as text a screen can render.
+#[tokio::test]
+async fn every_door_the_app_calls_answers_what_it_did_and_refuses_in_a_sentence() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://api.example.com/one").status(200).build());
+    store.insert(FlowBuilder::new().uri("http://other.test/two").status(200).build());
+    let r = router_with(store);
+
+    let (_, exported) = json(&r, "/flows/export?host=api.example.com").await;
+    let entries = exported["log"]["entries"].as_array().unwrap().clone();
+    assert_eq!(entries.len(), 1, "export is scoped by the same filter the listing is");
+
+    let bytes = serde_json::to_vec(&exported).unwrap();
+    let (status, body) = post(&r, "/flows/import", bytes).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["imported"], 1);
+
+    let (status, body) =
+        post(&r, "/flows/import?format=curl", b"curl 'http://api.example.com/three'".to_vec())
+            .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["imported"], 1);
+
+    let (status, body) =
+        post(&r, "/flows/import?format=curl", b"curl -F a=b http://x/".to_vec()).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let reason = body.as_str().unwrap();
+    assert!(
+        reason.contains("-F"),
+        "the refusal names the flag, so the paste target can show it: {reason}"
+    );
+
+    let (status, body) = delete(&r, "/flows?host=other.test").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["removed"], 1,
+        "clear reports what left rather than leaving the app to re-read"
+    );
+
+    let (_, listing) = json(&r, "/flows").await;
+    assert_eq!(listing.as_array().unwrap().len(), 3);
+    let (_, imported) = json(&r, "/flows?source=imported").await;
+    assert_eq!(imported.as_array().unwrap().len(), 2, "both doors mark what they let in");
+}
