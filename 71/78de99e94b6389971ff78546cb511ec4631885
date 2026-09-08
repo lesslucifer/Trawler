@@ -1,0 +1,105 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W6 (wu/export/controls-build) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W6
+branch: wu/export/controls-build
+base: d31286592450f9c9baaac561a4d65377324f50a4
+head: 7178de99e94b6389971ff78546cb511ec4631885
+diff_sha256: b5ca956bbea0cd093bc1ff93a27d556d70886e0575fa5bdd93cd8386e3f95914
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 6, verified: 0, waived: 0 }
+rounds:
+  - round: 1
+    found: 11
+    verified: 3
+    tip: 9d8b63ad0207e80d122bf6b384bcef9c42661f5b
+    detail: >-
+      Recorded in full on the cr note at 9d8b63a (FAIL). Confirmed: a T2 doc calling design run 11
+      "archived" while the run is still tracked; openFile and its browser fallback shipping untested; and
+      the export and import sharing one in-flight slot, so dismissing the import ask mid-export cleared the
+      export's line.
+  - round: 2
+    found: 10
+    verified: 4
+    tip: 9a19f7d8106ed6718c32f3b5585811af95277b96
+    detail: >-
+      Recorded in full on the cr note at 9a19f7d. Round 1's fix was half a fix - guarding the shared slot's
+      CLEAR left its SET unguarded, so the slot became two independent flags; an abandoned import still
+      called onDone() on the mounted parent, closing whichever ask the user had opened since; exportHar was
+      made to throw the server's sentence like the other two doors, a finding whose verifier was overruled
+      because it leaned on this WU's own plan rather than the design the plan cites; and a stale per-suite
+      count.
+  - round: 3
+    found: 5
+    verified: 5
+    tip: d6bcc686e9bdc5273350b6f7893813cbbb847634
+    detail: >-
+      Recorded in full on the cr note at d6bcc68. Correctness returned an EMPTY list - the code was clean -
+      and all five confirmed findings were false statements in the WU's own record, two of them in an
+      earlier version of its test/v2 note.
+  - round: 4
+    found: 9
+    verified: 3
+    tip: 46c4435e7ebbcd5f131b6aaecf215d47199baeae
+    detail: >-
+      Recorded in full on the cr note at 46c4435 (PASS). Three more false statements, two of them the same
+      guessed count in the note and in the result. Eight across rounds 3 and 4, all one class, none in the
+      code.
+  - round: 5
+    found: 6
+    verified: 0
+    tip: 7178de99e94b6389971ff78546cb511ec4631885
+    detail: >-
+      Five isolated finders over the five dimensions against the new commit and the whole range. SCOPE
+      NARROWED BY THE TRIGGER: code files only - the four docs/ files in the range were excluded from this
+      round at the user's explicit instruction, so nothing in this round judged documentation, and the
+      recurring false-statement class rounds 3 and 4 chased was not re-walked. Six candidates, ALL SIX
+      refuted by their verifiers, so the round confirms nothing. Correctness raised the one that mattered:
+      the clear act carries no disabled guard during an export, so a user can fire DELETE /flows while
+      GET /flows/export is in flight and take home a truncated file. Its verifier refuted it on the server:
+      export_har clones the matching flows out of the store under its single Mutex (store.rs list) and
+      serialises the whole HAR body with no .await anywhere in the handler, so the clear can only land
+      strictly before or strictly after the snapshot - the two reachable outcomes are a full pre-clear
+      export or a legitimately empty one, which routes.rs already tests as correct. It also noted a
+      client-side guard could not close the race anyway, since any other client can send the same DELETE.
+      Reuse raised two: that Spinner's warrant cites duplication in Select and StatusLine while touching
+      neither, refuted because the comment claims to avoid a THIRD and FOURTH copy at the new call sites
+      rather than to remove the two it names; and that FlowList hardcodes the import mark instead of
+      importing CAPTURE_GLYPH, refuted because the proposed remedy - a lateral import between two sibling
+      screen files - is the coupling the collection exists to prevent, and the real registry (IconButton's
+      GLYPH) is a promotion this WU is explicitly forbidden to make. Simplification raised three: that the
+      build-local warrant is copy-pasted across Spinner, ModalShell and CaptureMenu, refuted because each
+      gives a different reason (two hand-rolled copies / no owner for modality / Select excluding itself
+      from being a menu) and only the pointer to run 11 is shared; that ImportDialog duplicates the
+      parent's importing flag, refuted by tracing every setter and finding the one asymmetric path
+      (dismiss) unmounts the child in the same batch, with the 31 tests re-run; and that the A'/E/F/M zone
+      codes are dangling, refuted on DEC-28, which keeps a design run in docs/work until epic cleanup.
+      Efficiency and altitude each returned an empty list, efficiency having ruled out the export's
+      double-buffer because the Blob path is the browser fallback and the shipped app writes bytes
+      straight to disk.
+refuted_this_round: >-
+  All six. correctness: clear-during-export truncating the file. reuse: Spinner adding a third copy rather
+  than removing two; FlowList's hardcoded import mark desyncing from CAPTURE_GLYPH. simplification: the
+  repeated build-local warrant; ImportDialog's duplicated importing flag; the undefined zone codes. Two
+  were downgraded to nit by their verifiers before being resolved false-positive rather than being
+  refuted outright - the FlowList glyph (the absence of enforcement is real, the proposed fix is wrong)
+  and the clear guard (no data-integrity bug, at most a UX nicety).
+design:
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: 72e35e155b1f0ae7e146a8ecbaeef259abfda2a3
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: "the modal frame this file owned moved out to ui/src/ModalShell.tsx unchanged in behaviour - 5 insertions against 91 deletions, all of them the lifted block - and the file now calls the shared frame. Its three test ids are preserved verbatim and its own suite passes untouched, so no surface it renders was re-shaped and there was nothing for a design to decide"
+    - path: ui/src/Spinner.tsx
+      why: "a seventeen-line module holding markup that already ships twice - the six classes ui/src/components/Select.tsx and ui/src/components/StatusLine.tsx each hand-roll for an in-flight ring - extracted so the three new call sites in this WU do not become copies three through five. It renders no zone of its own: it is an aria-hidden span placed inside surfaces run 11 designed, and it mints no visual value, every class being one the two existing copies already use. Run 11 required the in-flight half in the first place - Button's @states makes a caller of a slow action render BOTH the disabled control and a progress line in the same zone - so this is that requirement's second channel, not a new one. What run 11 did NOT decide, and what no design covers, is named plainly here rather than excused: the ring itself as a channel beside the words, the glyph column added to the menu items, and the one newly minted face (the erase glyph on the clear act; the other two are IconButton's save glyph and the mark FlowList already prints on an imported row). Measurement says the layout did not move - the filter field is 484px wide with its right edge at 500px both at rest and mid-export, and the count slot holds 80px in both states - so this is additive chrome inside the existing composition rather than a re-shaped surface. That is a judgement about degree, and the honest record is that a design run would normally have made it"
+  note: >-
+    No design ARTIFACT is in scope for this round, so no design finder ran and there is no design verdict
+    to record. The accounting above is a citation and a declaration only. One caveat belongs on the record
+    because the skill's own instruction assumes it away: the trigger session authored this diff, so the
+    undesigned `why` fields were NOT written by an independent party. The five code dimensions were judged
+    by isolated finders and verifiers that received no reasoning from the author; the design accounting
+    was not, and the Spinner entry above states the divergence rather than resting on it.
+verdict: PASS
+date: 2026-09-08
