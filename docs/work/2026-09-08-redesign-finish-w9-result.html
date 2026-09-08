@@ -50,8 +50,10 @@
         <tr><td>No surface still says <code>decoded</code> for this control</td>
             <td class="good">✓ the grep over <code>ui/src</code>, <code>ui/e2e/specs</code>,
             <code>docs/use-cases</code>, <code>docs/decisions</code>, <code>docs/design-rules</code>
-            returns decode-chain and charset uses only — plus the three <em>absence</em> assertions that
-            name the retired word in order to prove it is gone</td></tr>
+            returns 27 hits in three buckets and no fourth: decode-chain and charset uses; the three
+            <em>absence</em> assertions that name the retired word in order to prove it is gone; and
+            <span class="badge id">DEC-21</span>'s rejected-alternatives table, quoting the labels it
+            argued over at the time — left as recorded, for the reason in the table below</td></tr>
         <tr><td>Behaviour is byte-identical</td>
             <td class="good">✓ <code>api.test.ts</code> still pins both query strings over the renamed
             parameter; the e2e finds indented JSON on one side and minified source on the other; 831 of
@@ -67,8 +69,9 @@
     </table>
 
     <h2 id="what-changed">What changed, and what was left</h2>
-    <p>The plan's surface inventory held: no surface was found during the work that the grep had missed,
-    and none of the in-scope edits grew.</p>
+    <p>The plan's surface inventory held for everything it put in scope: no in-scope edit grew, and none
+    was missed. One surface the plan's grep had not listed turned up during the work — DEC-21's
+    rejected-alternatives table — and it was left as recorded, below.</p>
     <table data-c="tbl-changed">
       <thead><tr><th>File</th><th>Change</th></tr></thead>
       <tbody>
@@ -214,6 +217,39 @@
       </table>
       <p>Commits: <code>a47f778</code> plan · <code>89b6bb7</code> the change. Tip carries
       <code>test/v2</code>, <code>doc/v1</code> and the review's <code>cr/v3</code>.</p>
+      <h3 id="review">The review round, and the question it settled</h3>
+      <p>Round 1 raised three candidates and verification refuted all three. Two are worth recording,
+      because the question under them will recur for every WU that corrects a stale fact in a
+      <code>docs/decisions/</code> record.</p>
+      <table data-c="tbl-review">
+        <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
+        <tbody>
+          <tr><td>Editing <span class="badge id">DEC-31</span> and <span class="badge id">DEC-32</span>
+          in place violates <code>documentation-system.html</code>'s <em>“Append-only: never
+          rewritten”</em> — raised as a <strong>blocker</strong>, twice</td>
+              <td><strong>Refuted.</strong> The rule governs a ruling and its reversal — <em>“a reversal
+              flips the old record to superseded by DEC-m and adds a new one”</em> — and the repo's own
+              practice draws the line precisely: commit <code>4109404</code> (E-DFLOW.W8) <em>rewrote</em>
+              DEC-16's narrative in place where a later WU had made it untrue, and in the same commit
+              <em>struck through</em> a clause that DEC-25 overrode, naming the superseding record. Two
+              different instruments for two different situations. This diff overrode no clause: DEC-31's
+              ownership answers and DEC-32's zoning table are untouched, and what changed is the two words
+              naming the switch's positions inside them. Reverting instead would have left two T2 docs
+              teaching a label the code no longer renders, which is what <em>code wins conflicts</em> and
+              same-session distillation exist to prevent.</td></tr>
+          <tr><td>The Outcome row's grep claim is false, because
+          <span class="badge id">DEC-21</span>'s rejected-alternatives table is a fourth kind of hit</td>
+              <td><strong>Refuted</strong> as a defect — the report disclosed DEC-21 twice with its
+              reasoning, so no reader of it was misled. <strong>Corrected anyway, by the author:</strong>
+              the row now names three buckets instead of two. A summary sentence in the artifact the
+              signer reads should not need the rest of the document to be accurate.</td></tr>
+          <tr><td>Correctness · reuse · simplification · efficiency</td>
+              <td>Clean, no candidates. Each independently confirmed the wire is unchanged
+              (<code>api.test.ts</code>'s two query strings), the effect's dependency shape is unchanged,
+              the registry's own citation suites still resolve, and the <code>ariaLabel</code> wrinkle is
+              pre-existing and correctly a follow-up rather than a finding.</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <h2 id="distillation">Distillation</h2>
