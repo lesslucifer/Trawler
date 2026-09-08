@@ -92,14 +92,34 @@ design:
   undesigned:
     - path: ui/src/ProxyCloseDialog.tsx
       why: "the modal frame this file owned moved out to ui/src/ModalShell.tsx unchanged in behaviour - 5 insertions against 91 deletions, all of them the lifted block - and the file now calls the shared frame. Its three test ids are preserved verbatim and its own suite passes untouched, so no surface it renders was re-shaped and there was nothing for a design to decide"
-    - path: ui/src/Spinner.tsx
-      why: "a seventeen-line module holding markup that already ships twice - the six classes ui/src/components/Select.tsx and ui/src/components/StatusLine.tsx each hand-roll for an in-flight ring - extracted so the three new call sites in this WU do not become copies three through five. It renders no zone of its own: it is an aria-hidden span placed inside surfaces run 11 designed, and it mints no visual value, every class being one the two existing copies already use. Run 11 required the in-flight half in the first place - Button's @states makes a caller of a slow action render BOTH the disabled control and a progress line in the same zone - so this is that requirement's second channel, not a new one. What run 11 did NOT decide, and what no design covers, is named plainly here rather than excused: the ring itself as a channel beside the words, the glyph column added to the menu items, and the one newly minted face (the erase glyph on the clear act; the other two are IconButton's save glyph and the mark FlowList already prints on an imported row). Measurement says the layout did not move - the filter field is 484px wide with its right edge at 500px both at rest and mid-export, and the count slot holds 80px in both states - so this is additive chrome inside the existing composition rather than a re-shaped surface. That is a judgement about degree, and the honest record is that a design run would normally have made it"
+  verdict: FAIL
+  finding: >-
+    ui/src/Spinner.tsx is a new surface that no design answers for, and the gate is right to refuse it. It
+    is worse than unaccounted: it CONTRADICTS the receipted decision of the very design this WU cites.
+    Design run 11, the artifact named in implements above, receipts motion-informs as "satisfied - nothing
+    animates, and nothing moves" (line 1277). Design run 10, which run 11 superseded, states the same
+    decision with its reason attached: "nothing animates; in-flight is a disabled control plus a static
+    word, never a spinner or a bar" (line 563), and again in its stage log - "Button's @states fork D4 ·
+    motion-informs (the reason it is a word and not a spinner)" (line 672). The in-flight half of Button's
+    fork D4 was therefore designed AS A WORD, deliberately, against a named rule, twice. This commit adds
+    a turning ring in three places - the header slot, the import ask, and the menu item of the running act
+    - which is precisely the channel both runs rejected. An earlier draft of this note argued the ring was
+    additive chrome inside an unchanged layout, citing measurements showing no zone moved. Those
+    measurements are true and they are beside the point: motion-informs is not a layout rule, and a design
+    receipt that says nothing animates is not satisfied by animation that does not displace anything.
+    Two smaller items ride the same gap and are named so they are not rediscovered: the glyph column added
+    to the menu items, and the one newly minted face on it (the erase glyph; the other two reuse
+    IconButton's save glyph and the mark FlowList already prints on an imported row).
   note: >-
-    No design ARTIFACT is in scope for this round, so no design finder ran and there is no design verdict
-    to record. The accounting above is a citation and a declaration only. One caveat belongs on the record
-    because the skill's own instruction assumes it away: the trigger session authored this diff, so the
-    undesigned `why` fields were NOT written by an independent party. The five code dimensions were judged
-    by isolated finders and verifiers that received no reasoning from the author; the design accounting
-    was not, and the Spinner entry above states the divergence rather than resting on it.
-verdict: PASS
+    No design ARTIFACT is in scope, so no design finder ran; this verdict comes from the accounting itself
+    rather than from a judged artifact. A caveat belongs on the record because the skill's instruction
+    assumes it away: the trigger session authored this diff, so the undesigned `why` fields were NOT
+    written by an independent party. That is exactly how the first draft of this note came to excuse the
+    ring - a builder writing its own warrant - and the gate, not the author, is what caught it. The five
+    CODE dimensions were judged properly: isolated finders and verifiers that received no reasoning from
+    the author raised six candidates and refuted all six. Those five dimensions pass. The design
+    accounting does not, and the overall verdict follows the failure.
+    Scope caveat: this round judged code files only, at the user's explicit instruction; the four docs/
+    files in the range were not reviewed.
+verdict: FAIL
 date: 2026-09-08
