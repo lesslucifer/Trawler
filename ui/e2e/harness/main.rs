@@ -69,7 +69,9 @@ async fn main() {
             .route("/img", get(png_body))
             .route("/xml", get(xml_body))
             .route("/big", get(oversized_text_body))
-            .route("/headers", get(long_headers_body));
+            .route("/headers", get(long_headers_body))
+            .route("/missing", get(not_found_body))
+            .route("/boom", get(server_error_body));
         let _ = axum_server::from_tcp_rustls(origin, tls).serve(app.into_make_service()).await;
     });
 
@@ -103,6 +105,7 @@ async fn main() {
         let app = Router::new()
             .route("/hit", get(hit))
             .route("/stop", get(stop_handler))
+            .route("/kill", get(kill_handler))
             .with_state(control_state);
         let _ = axum::serve(control, app).await;
     });
@@ -173,6 +176,17 @@ async fn png_body() -> impl IntoResponse {
     ([(header::CONTENT_TYPE, "image/png")], PNG_1X1)
 }
 
+// The only non-2xx traffic the harness produces. A status-class filter is
+// answerable only against a capture holding more than one class, and the 5xx
+// beside the 4xx is what stops "not 2xx" from passing for "is 4xx".
+async fn not_found_body() -> impl IntoResponse {
+    (axum::http::StatusCode::NOT_FOUND, "no such thing")
+}
+
+async fn server_error_body() -> impl IntoResponse {
+    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "it broke")
+}
+
 async fn xml_body() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "application/xml")],
@@ -216,4 +230,16 @@ async fn long_headers_body() -> impl IntoResponse {
 async fn stop_handler(State(ctrl): State<Control>) -> &'static str {
     ctrl.stop.notify_one();
     "stopping"
+}
+
+// "The core died under an open window" needs the process gone, not drained: a
+// graceful shutdown waits for in-flight requests, and an SSE stream never
+// finishes — it would hold open the very connection the assertion is about.
+// The delay is only so this response reaches the caller before the exit.
+async fn kill_handler() -> &'static str {
+    tokio::spawn(async {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        std::process::exit(0);
+    });
+    "killing"
 }

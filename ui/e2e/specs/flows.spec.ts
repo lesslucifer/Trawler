@@ -157,6 +157,59 @@ describe("UC-4 — watch live traffic in the native app", () => {
     });
   });
 
+  // UC-4's second W6 contract: the useful debugging query is a class, and it is
+  // one parameter answering at two resolutions (E-RFINISH.W5's grammar).
+  it("a status class narrows the list to that class, and an exact code to that code", async () => {
+    await hit("/missing"); // 404
+    await hit("/boom"); // 500 — so "not 2xx" cannot pass for "is 4xx"
+    await browser.waitUntil(async () => (await rowCount()) >= 3, {
+      timeout: 15_000,
+      timeoutMsg: "the non-2xx traffic never landed",
+    });
+
+    const statuses = async () => {
+      const seen: string[] = [];
+      for (const row of await $$('[data-testid="flow-row"]')) {
+        seen.push(await row.$('[data-wire="status"]').getText());
+      }
+      return seen;
+    };
+
+    await $('[aria-label="status"]').setValue("4xx");
+    await browser.waitUntil(
+      async () => {
+        const seen = await statuses();
+        return seen.length > 0 && seen.every((s) => s.startsWith("4"));
+      },
+      { timeout: 15_000, timeoutMsg: "the class filter never narrowed the list to 4xx" },
+    );
+    expect((await statuses()).some((s) => s.startsWith("5"))).toBe(false);
+
+    await $('[aria-label="status"]').setValue("404");
+    await browser.waitUntil(
+      async () => {
+        const seen = await statuses();
+        return seen.length > 0 && seen.every((s) => s.startsWith("404"));
+      },
+      { timeout: 15_000, timeoutMsg: "the exact code never narrowed the list to 404" },
+    );
+
+    // A value that names neither is a stated rejection, not a silent empty list.
+    await $('[aria-label="status"]').setValue("4xz");
+    const empty = await $('[data-testid="empty"]');
+    await empty.waitForExist({ timeout: 15_000 });
+    const stated = await empty.getText();
+    expect(stated).toContain("4xz is not a status");
+    expect(stated).not.toContain("no flows match this filter");
+    expect(stated).not.toContain("trawler is not answering");
+
+    await $('[aria-label="status"]').clearValue();
+    await browser.waitUntil(async () => (await rowCount()) >= 3, {
+      timeout: 15_000,
+      timeoutMsg: "clearing the status never brought the rows back",
+    });
+  });
+
   it("the two dropdowns and the status field share the header row without wrapping", async () => {
     const box = async (sel: string) =>
       browser.execute((s: string) => {
@@ -396,5 +449,69 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
     const shown = await inResponsePane('[data-testid="body-text"]').getText();
     expect(shown).toMatch(/showing .+ of .+ — save to see all/);
+  });
+});
+
+// UC-4's first W6 contract, and the last block in the run: it kills the core the
+// whole suite shares, so nothing may follow it. The pair is the point — a
+// reachable-but-quiet core and an unreachable one must not produce the same
+// screen, which is exactly what the shipped build did before this WU.
+describe("UC-4 — the list says when it cannot reach the API", () => {
+  before(async () => {
+    await pointAppAtCore();
+    await hit();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "list never revealed after the first decrypted flow",
+    });
+  });
+
+  // The control, taken while the core is alive and answering: an absence, in the
+  // words of an absence, with no claim about the connection.
+  it("a reachable core with nothing to show states the absence, not a failure", async () => {
+    await $('[aria-label="filter"]').setValue("no-such-path.invalid");
+    const empty = await $('[data-testid="empty"]');
+    await empty.waitForExist({ timeout: 15_000 });
+    const text = await empty.getText();
+    expect(text).toContain("no flows match this filter");
+    expect(text).not.toContain("trawler is not answering");
+
+    await $('[aria-label="filter"]').clearValue();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "the list never came back after clearing the filter",
+    });
+  });
+
+  it("killing the core states it, above rows it does not discard", async () => {
+    const before = await rowCount();
+    expect(before).toBeGreaterThanOrEqual(1);
+
+    // No user act follows this — the dropped stream is what the shell notices.
+    await fetch(`${ports.control}/kill`).catch(() => {});
+
+    const band = await $('[data-testid="band"]');
+    await band.waitForExist({ timeout: 30_000 });
+
+    const stated = await band.getText();
+    expect(stated).toContain("trawler is not answering");
+    expect(stated).toContain("no answer from");
+    expect(stated).toContain("the rows below are the last it sent");
+    // The rows were true when they arrived; the statement qualifies them.
+    expect(await rowCount()).toBe(before);
+    expect(await band.$("button=retry").isExisting()).toBe(true);
+  });
+
+  // The in-flight window is too short to catch reliably against a dead socket —
+  // fork D4's two halves are asserted where the timing is controlled, in the unit
+  // tests. What the real window proves is that the way out survives its own use.
+  it("retry against a dead core leaves the statement standing and the button usable", async () => {
+    const band = await $('[data-testid="band"]');
+    await band.$("button=retry").click();
+    await browser.waitUntil(async () => (await band.$("button=retry").isEnabled()) === true, {
+      timeout: 30_000,
+      timeoutMsg: "retry never re-enabled after failing again",
+    });
+    expect(await band.getText()).toContain("trawler is not answering");
   });
 });

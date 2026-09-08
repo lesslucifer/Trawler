@@ -1,5 +1,5 @@
 import { afterEach, vi } from "vitest";
-import { createApi, defaultProxyAddr, filterParams } from "./api";
+import { ApiError, apiAddr, createApi, defaultProxyAddr, filterParams } from "./api";
 import type { FlowSummary } from "./api";
 
 afterEach(() => {
@@ -123,4 +123,66 @@ test("getBody asks for the rendered view or the source, and keeps the content ty
 test("getBody throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
   await expect(createApi("http://x").getBody("f1", "response", true)).rejects.toThrow(/404/);
+});
+
+// The whole basis of the shell's two connection sentences: a core that refused
+// and a core that said nothing must not arrive at the caller as the same throw.
+test("a refused listing throws ApiError with the status; a dead socket throws no ApiError", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+  const refused = await createApi("http://x")
+    .listFlows({ status: "4xz" })
+    .catch((e: unknown) => e);
+  expect(refused).toBeInstanceOf(ApiError);
+  expect((refused as ApiError).status).toBe(400);
+
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+  const silent = await createApi("http://x")
+    .listFlows({})
+    .catch((e: unknown) => e);
+  expect(silent).not.toBeInstanceOf(ApiError);
+});
+
+test("every non-ok answer carries its own status, not a flattened one", async () => {
+  for (const status of [400, 404, 500, 503]) {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status }));
+    const error = await createApi("http://x")
+      .getFlow("f1")
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(status);
+  }
+});
+
+// The sentences name an address, and DEC-12 says that address is configuration.
+test("apiAddr follows the configured base URL, without its scheme", () => {
+  expect(apiAddr()).toBe("127.0.0.1:7421");
+
+  window.__TRAWLER_API__ = "http://127.0.0.1:53219";
+  expect(apiAddr()).toBe("127.0.0.1:53219");
+  delete window.__TRAWLER_API__;
+});
+
+// The stream's own health is a separate channel from its events: it is what the
+// shell reads to say a core died under an open window, with no user act at all.
+test("stream reports its transport going down and coming back", () => {
+  const listeners: Record<string, EventListener[]> = {};
+  class FakeSource {
+    addEventListener(name: string, fn: EventListener) {
+      (listeners[name] ??= []).push(fn);
+    }
+    close() {}
+  }
+  vi.stubGlobal("EventSource", FakeSource);
+
+  const onEvent = vi.fn();
+  const onDown = vi.fn();
+  const onUp = vi.fn();
+  createApi("http://x").stream({ onEvent, onDown, onUp });
+
+  listeners["error"].forEach((fn) => fn(new Event("error")));
+  expect(onDown).toHaveBeenCalledOnce();
+  listeners["open"].forEach((fn) => fn(new Event("open")));
+  expect(onUp).toHaveBeenCalledOnce();
+  // Transport health is not a flow event — it must not itself be read as traffic.
+  expect(onEvent).not.toHaveBeenCalled();
 });

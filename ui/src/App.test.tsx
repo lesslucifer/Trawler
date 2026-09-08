@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent, act, within } from "@testing-librar
 import { afterEach, beforeAll, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
+import { ApiError, apiAddr } from "./api";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import type { OnbState } from "./onboardingMachine";
 import { CA_FILENAME, guidedSteps, TUNNEL_GRACE_MS } from "./setup";
@@ -527,4 +528,155 @@ test("selecting a different flow resets the copy button (no stale 'copied')", as
   expect(screen.getByRole("button", { name: "copy as curl" })).toBeInTheDocument();
   expect(screen.queryByText("copied")).toBeNull();
   vi.unstubAllGlobals();
+});
+
+// The shell's connection states, driven through a core whose answer the test
+// controls: the whole point is what the SCREEN does when the API stops answering
+// or refuses, not what the hook holds.
+function shellApi(answer: () => Promise<FlowSummary[]>) {
+  const listFlows = vi.fn((_filter: Filter) => answer());
+  const api: TrawlerApi = {
+    listFlows,
+    connectionCount: async () => 0,
+    caCertPem: async () => PEM,
+    getFlow: async (id: string): Promise<FlowView> => ({
+      ...flow({ id }),
+      request_http_version: "HTTP/1.1",
+      response_http_version: "HTTP/1.1",
+      request_headers: [],
+      response_headers: [],
+      request_body: { state: "empty" },
+      response_body: { state: "empty" },
+    }),
+    getBody: async () => ({ bytes: new Uint8Array(), contentType: null }),
+    stream: () => () => {},
+  };
+  return { api, listFlows };
+}
+
+const HTTPS = flow({ uri: "https://example.com/" });
+
+test("the status filter says what it takes, and hints no keypad it cannot honour", async () => {
+  const { api } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+
+  const status = await screen.findByLabelText("status");
+  expect(status).toHaveAttribute("placeholder", "status — 404 or 4xx");
+  // A class is a letter; a numeric keypad is a promise the field can no longer keep.
+  expect(status).not.toHaveAttribute("inputMode");
+  expect(status.className).toContain("w-field");
+  expect(status.className).not.toContain("w-field-sm");
+});
+
+test("a status class reaches the API as typed", async () => {
+  const { api, listFlows } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xx" } });
+  await waitFor(() => expect(listFlows).toHaveBeenLastCalledWith({ status: "4xx" }));
+});
+
+test("a core that stops answering states it above rows that do not move", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const { api } = shellApi(() => answer());
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  answer = () => Promise.reject(new TypeError("Failed to fetch"));
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+
+  await screen.findByText("trawler is not answering");
+  expect(screen.getByText(new RegExp(`no answer from ${apiAddr()}`))).toBeInTheDocument();
+  expect(screen.getByText(/the rows below are the last it sent/)).toBeInTheDocument();
+  // The rows were true when they arrived; the band qualifies them, it does not
+  // delete them — and the count still counts what is on screen.
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(1);
+  expect(screen.getByText("1 flow")).toBeInTheDocument();
+  expect(screen.queryByTestId("empty")).toBeNull();
+});
+
+test("with nothing captured the same sentence stands in the row region, and no band", async () => {
+  const { api } = shellApi(() => Promise.reject(new TypeError("Failed to fetch")));
+  render(<App api={api} initialState={PROVEN} />);
+
+  await screen.findByText("trawler is not answering");
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("trawler is not answering");
+  expect(region).toHaveTextContent("nothing has reached the window");
+  // Said once: the statement sits immediately above what it is about, and with
+  // no rows there is nothing above to qualify.
+  expect(screen.getAllByText("trawler is not answering")).toHaveLength(1);
+  expect(screen.queryByText(/the rows below are the last it sent/)).toBeNull();
+});
+
+test("a refused query is not a failed connection — the row region says so, the band stays away", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const { api } = shellApi(() => answer());
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
+
+  const region = await screen.findByTestId("empty");
+  expect(region).toHaveTextContent("4xz is not a status");
+  expect(region).toHaveTextContent("type a code (404) or a class (4xx)");
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  // The field keeps the text — nothing is corrected for the user.
+  expect(screen.getByLabelText("status")).toHaveValue("4xz");
+  expect(screen.getByText("0 flows")).toBeInTheDocument();
+});
+
+test("retry disables its button and names what is awaited, then leaves with focus placed", async () => {
+  let release: (rows: FlowSummary[]) => void = () => {};
+  let answer: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const { api } = shellApi(() => answer());
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  answer = () => Promise.reject(new TypeError("Failed to fetch"));
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+  await screen.findByText("trawler is not answering");
+
+  answer = () => new Promise<FlowSummary[]>((res) => (release = res));
+  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+
+  // Fork D4: both halves or neither.
+  await waitFor(() => expect(screen.getByRole("button", { name: "retry" })).toBeDisabled());
+  expect(screen.getByText(`trying ${apiAddr()}…`)).toBeInTheDocument();
+
+  await act(async () => {
+    release([HTTPS]);
+  });
+  await waitFor(() => expect(screen.queryByText("trawler is not answering")).toBeNull());
+  // A surface that removes itself may not leave focus on <body>.
+  expect(document.activeElement).toBe(screen.getByRole("main"));
+});
+
+test("a retry that fails again keeps the band and re-enables the way out", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const { api } = shellApi(() => answer());
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  answer = () => Promise.reject(new TypeError("Failed to fetch"));
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+  await screen.findByText("trawler is not answering");
+
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "retry" }));
+  });
+  expect(screen.getByText("trawler is not answering")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "retry" })).toBeEnabled();
+  expect(document.activeElement).not.toBe(screen.getByRole("main"));
+});
+
+// The band belongs to the flow shell. Onboarding has its own account of what is
+// and is not working, and this epic does not open it.
+test("the onboarding phase renders no connection band", async () => {
+  const { api } = shellApi(() => Promise.reject(new TypeError("Failed to fetch")));
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(/trust the CA/);
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
 });

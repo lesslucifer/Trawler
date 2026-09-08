@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useFlows } from "./useFlows";
-import type { FlowSummary, StreamHandlers, TrawlerApi } from "./api";
+import { useFlowDetail, useFlows } from "./useFlows";
+import { ApiError } from "./api";
+import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 
 // Fake API with a hand-resolved /stats promise and a captured stream handler set,
 // so a test can interleave a live `connection` bump with the seed's resolution.
@@ -130,4 +131,202 @@ test("a URI with no parseable host contributes no option", async () => {
   const { result } = renderHook(() => useFlows(api));
 
   await waitFor(() => expect(result.current.hosts).toEqual(["example.com"]));
+});
+
+// A listing that fails has two causes and the shell says a different sentence for
+// each, so the hook must not flatten them into "something went wrong".
+function feedApi(answer: () => Promise<FlowSummary[]>) {
+  const api: TrawlerApi = {
+    listFlows: () => answer(),
+    connectionCount: async () => 0,
+    caCertPem: async () => "",
+    getFlow: async () => { throw new Error("unused"); },
+    getBody: async () => { throw new Error("unused"); },
+    stream: () => () => {},
+  };
+  return api;
+}
+
+test("a core that says nothing is unreachable, and the rows it already sent survive", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
+  const api = feedApi(() => answer());
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  answer = () => Promise.reject(new TypeError("Failed to fetch"));
+  act(() => result.current.update("q", "x"));
+  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+
+  // Discarding evidence on a transient failure is the worse error — the band
+  // says the rows are stale, it does not delete them.
+  expect(result.current.flows).toHaveLength(1);
+});
+
+test("a refused query is rejected, names the value typed, and takes the rows with it", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
+  const api = feedApi(() => answer());
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  act(() => result.current.update("status", "4xz"));
+  await waitFor(() => expect(result.current.failure).toEqual({ kind: "rejected", value: "4xz" }));
+
+  // The old rows are not an answer to the query that was refused.
+  expect(result.current.flows).toEqual([]);
+});
+
+test("a listing that arrives clears whichever failure preceded it", async () => {
+  let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
+  const api = feedApi(() => answer());
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+
+  answer = async () => [summary("f1", "http://example.com/")];
+  await act(async () => {
+    expect(await result.current.retry()).toBe(true);
+  });
+  expect(result.current.failure).toBeNull();
+  expect(result.current.flows).toHaveLength(1);
+});
+
+test("retry reports the failure back so a surface that removes itself knows not to", async () => {
+  const api = feedApi(() => Promise.reject(new TypeError("still dead")));
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+
+  await act(async () => {
+    expect(await result.current.retry()).toBe(false);
+  });
+  expect(result.current.failure).toEqual({ kind: "unreachable" });
+});
+
+test("retry is in flight for the whole fetch — fork D4's half the hook owns", async () => {
+  let release: (rows: FlowSummary[]) => void = () => {};
+  let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
+  const api = feedApi(() => answer());
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.failure).toEqual({ kind: "unreachable" }));
+  expect(result.current.retrying).toBe(false);
+
+  answer = () => new Promise<FlowSummary[]>((res) => (release = res));
+  let settled: Promise<boolean>;
+  act(() => {
+    settled = result.current.retry();
+  });
+  await waitFor(() => expect(result.current.retrying).toBe(true));
+
+  await act(async () => {
+    release([]);
+    await settled;
+  });
+  expect(result.current.retrying).toBe(false);
+});
+
+function view(id: string): FlowView {
+  return {
+    ...summary(id, "http://example.com/"),
+    request_http_version: "HTTP/1.1",
+    response_http_version: "HTTP/1.1",
+    request_headers: [],
+    response_headers: [],
+    request_body: { state: "empty" },
+    response_body: { state: "empty" },
+  };
+}
+
+function detailApi(answer: () => Promise<FlowView>) {
+  const api: TrawlerApi = {
+    listFlows: async () => [],
+    connectionCount: async () => 0,
+    caCertPem: async () => "",
+    getFlow: () => answer(),
+    getBody: async () => { throw new Error("unused"); },
+    stream: () => () => {},
+  };
+  return api;
+}
+
+// Without this the pane holds "loading this flow…" forever, which is the one
+// state indistinguishable from a fetch that is merely slow.
+test("a detail fetch that never answers is reported, not swallowed", async () => {
+  const api = detailApi(() => Promise.reject(new TypeError("dead")));
+  const { result } = renderHook(() => useFlowDetail(api, "f1"));
+  await waitFor(() => expect(result.current.failed).toBe(true));
+  expect(result.current.flow).toBeNull();
+});
+
+// A 404 is the ring having dropped the selected flow — a different cause, with a
+// sentence the pane's own design still owns. It must not reach the shell's band.
+test("a dropped flow is not the shell's silence", async () => {
+  const api = detailApi(() => Promise.reject(new ApiError(404, "gone")));
+  const { result } = renderHook(() => useFlowDetail(api, "f1"));
+  await waitFor(() => expect(result.current.flow).toBeNull());
+  expect(result.current.failed).toBe(false);
+});
+
+test("a bumped nonce re-runs the detail fetch, so the shell's retry covers the pane", async () => {
+  let answer: () => Promise<FlowView> = () => Promise.reject(new TypeError("dead"));
+  const api = detailApi(() => answer());
+  const { result, rerender } = renderHook(
+    ({ nonce }: { nonce: number }) => useFlowDetail(api, "f1", nonce),
+    { initialProps: { nonce: 0 } },
+  );
+  await waitFor(() => expect(result.current.failed).toBe(true));
+
+  answer = async () => view("f1");
+  rerender({ nonce: 1 });
+  await waitFor(() => expect(result.current.flow).not.toBeNull());
+  expect(result.current.failed).toBe(false);
+});
+
+// The one signal that arrives with no user act. Without it a core that dies
+// under an open window is discovered only at the next keystroke, and the design
+// says the band appears while the user does nothing at all.
+function streamApi() {
+  let handlers: StreamHandlers | undefined;
+  let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
+  const api: TrawlerApi = {
+    listFlows: () => answer(),
+    connectionCount: async () => 0,
+    caCertPem: async () => "",
+    getFlow: async () => { throw new Error("unused"); },
+    getBody: async () => { throw new Error("unused"); },
+    stream: (h) => {
+      handlers = h;
+      return () => {};
+    },
+  };
+  return {
+    api,
+    fireDown: () => handlers?.onDown?.(),
+    fireUp: () => handlers?.onUp?.(),
+    setAnswer: (a: () => Promise<FlowSummary[]>) => (answer = a),
+  };
+}
+
+test("a dropped stream states the core is unreachable without waiting for a keystroke", async () => {
+  const f = streamApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+  expect(result.current.failure).toBeNull();
+
+  act(() => f.fireDown());
+  expect(result.current.failure).toEqual({ kind: "unreachable" });
+  // The rows it already sent were true when they arrived.
+  expect(result.current.flows).toHaveLength(1);
+});
+
+test("a stream that comes back re-asks, and a listing that answers clears the statement", async () => {
+  const f = streamApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  act(() => f.fireDown());
+  expect(result.current.failure).toEqual({ kind: "unreachable" });
+
+  f.setAnswer(async () => [summary("f1", "http://example.com/"), summary("f2", "http://b.test/")]);
+  act(() => f.fireUp());
+  await waitFor(() => expect(result.current.failure).toBeNull());
+  expect(result.current.flows).toHaveLength(2);
 });
