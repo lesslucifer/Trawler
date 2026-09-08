@@ -1,0 +1,70 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W6 (wu/export/controls-build) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W6
+branch: wu/export/controls-build
+base: d31286592450f9c9baaac561a4d65377324f50a4
+head: 9d8b63ad0207e80d122bf6b384bcef9c42661f5b
+diff_sha256: ff90b668e76cbff4d28a042a059f7e42670bdf1a035692f8cc86b37bfc6a475e
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 3, waived: 0 }
+rounds:
+  - round: 1
+    found: 11
+    verified: 3
+    detail: >-
+      Five finders, eleven candidates, three confirmed. (1) ALTITUDE, important: the new UC-4 block in
+      docs/use-cases/web-ui.html describes design run 11 as "archived", but the run is still tracked in
+      docs/work/ at the tip and docs/.archive/ is empty - DEC-28 says a run stays in docs/work/ until the
+      epic's cleanup, so archival is an epic-close event and the claim is premature. The verifier found the
+      precedent that settles it: commit d475bef introduced this exact plain-text "archived" idiom
+      specifically to REPLACE a live href once E-REDESIGN's run was actually git rm'd at its epic close, so
+      the idiom is tied to git-tier removal. The pre-existing line 79 uses it correctly (its target really
+      is absent from git); the new line copies the idiom onto a file that is still live. Mitigating and
+      recorded: run 11 does carry data-status="archived" internally, which is a different, gate-checked
+      vocabulary meaning the run is closed to iteration - true, but invisible in rendered prose and not the
+      sense the idiom carries in T2. (2) CORRECTNESS, important: openFile and its browser fallback
+      pickThroughInput (ui/src/body.ts) shipped with no unit test - body.test.ts is untouched by the diff,
+      and every test that exercises "choosing a file" mocks openFile itself, so neither the Tauri branch nor
+      the cancel/change listeners ever run. The verifier established this is an omission and not a harness
+      limit: jsdom dispatches synthetic cancel/change events against a captured input, which is the standard
+      technique. Against CLAUDE.md's "no change lands without its test" at commit level, with no waiver.
+      (3) CORRECTNESS, nit: the export and import flows share one `transfer` state, and the import item is
+      never disabled during an export, so opening the import dialog mid-export and merely DISMISSING it
+      calls onBusy(false) -> setTransfer(null), clearing the export's "exporting..." line while its promise
+      is still pending. Reproduced live in a throwaway test. The finder's stronger claims - a second
+      concurrent exportHar, and the two flows clobbering each other's failure state - were refuted: the
+      dialog is a true modal whose z-modal backdrop covers the z-popup menu and whose Tab trap excludes it,
+      so the trigger is unreachable while it is open, and the two `failure` values are separate local state.
+      Eight refuted. REUSE x2: CaptureMenu duplicating Select's popup mechanics and its panel className -
+      design run 11 foresees that duplication verbatim ("the owner should decide whether Menu duplicates
+      that shell or the shell is extracted and both consume it. This run has one sighting of a menu and is
+      not entitled to pick") and its Proposals section authorises W6 to build local and forbids it from
+      minting, so the finding asks the build to make a call the design reserved for someone else; the
+      className overlap is the same condition restated, and ui/eslint-rules/vocabulary.js validates each
+      design-allow pragma per occurrence, so a second copy cannot silently drift. REUSE: reasonOf
+      duplicating Onboarding's error-unwrap - two sites of a one-line idiom, one pre-existing, different
+      contracts (a server-authored refusal vs a generic catch), under the rubric's "inventing new
+      abstractions to force sharing" exclusion. CORRECTNESS: dismissing a dialog mid-flight setting state
+      after unmount - React 18.3.1 makes that a documented silent no-op, the unguarded dismissal is the
+      pre-existing ProxyCloseDialog pattern this diff EXTRACTED rather than introduced, and run 11 treats a
+      dismissal as deliberately silent. SIMPLIFICATION: ImportDialog's local `importing` beside the parent's
+      `transfer` - the proposed remedy is unworkable, since onBusy is the only channel by which the parent
+      learns an import started; the verifier also noted the success path never clears `importing`, which is
+      moot because the component unmounts. SIMPLIFICATION: an unread ChosenFile.name - saveBody returns a
+      name callers already discard, the symmetry is documented in the file, and run 11 never asks for the
+      chosen filename to be shown. SIMPLIFICATION: the computed CAPTURE_COPY[`${transfer}ing`] lookup - the
+      verifier proved with tsc that renaming the key fails the build at that exact line, so it is
+      typo-proof, and the residual complaint is grep convenience with no principle behind it. EFFICIENCY:
+      the Blob copy in saveBody's non-Tauri branch - unreachable in the shipped Tauri app, bounded by the
+      ring's 256 MB cap, and in code this diff does not touch.
+design:
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: 72e35e155b1f0ae7e146a8ecbaeef259abfda2a3
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: "the modal frame this file owned moved out to ui/src/ModalShell.tsx unchanged in behaviour - 5 insertions against 91 deletions, all of them the lifted block - and the file now calls the shared frame. Its three test ids are preserved verbatim and its own suite passes untouched, so no surface it renders was re-shaped and there was nothing for a design to decide"
+verdict: FAIL
+date: 2026-09-08
