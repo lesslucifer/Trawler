@@ -37,9 +37,11 @@
     <h2 id="outcome">Outcome</h2>
     <div class="callout" data-item="outcome" data-c="outcome">
       <strong>Delivered, against the requirement as written.</strong> Fourteen surfaces named the
-      position; all fourteen now use the lexicon's terms, and five more that name the <em>decode chain</em>
-      were left alone deliberately. One code commit, one reviewed diff, no behaviour change: the same two
-      queries (<code>?decode=1</code>, <code>?decode=source</code>), the same dispatch, the same default.
+      position; all fourteen now use the lexicon's terms. <strong>Six</strong> were left alone
+      deliberately — three because <code>decode</code> is the right word where they use it, and three for
+      reasons of their own — each with its row in the table below. One code commit, one reviewed diff, no
+      behaviour change: the same two queries (<code>?decode=1</code>, <code>?decode=source</code>), the
+      same dispatch, the same default.
     </div>
     <table data-c="tbl-outcome">
       <thead><tr><th>The plan's expected result</th><th>What is true at this tip</th></tr></thead>
@@ -48,16 +50,22 @@
             <td class="good">✓ <code>MODES</code> is <code>[pretty, raw]</code>; asserted by accessible
             name in the unit, integration and e2e layers, and seen in the real WebKit window</td></tr>
         <tr><td>No surface still says <code>decoded</code> for this control</td>
-            <td class="good">✓ the grep over <code>ui/src</code>, <code>ui/e2e/specs</code>,
-            <code>docs/use-cases</code>, <code>docs/decisions</code>, <code>docs/design-rules</code>
-            returns 27 hits in three buckets and no fourth: decode-chain and charset uses; the three
-            <em>absence</em> assertions that name the retired word in order to prove it is gone; and
+            <td class="good">✓ <code>grep -rn decoded ui/src ui/e2e/specs docs/use-cases docs/decisions
+            docs/design-rules</code> at this tip falls into three buckets and no fourth: uses where the
+            word means reversing a wire encoding or a charset (the great majority); the three
+            <em>absence</em> assertions that name the retired word in order to prove it is gone
+            (<code>App.test.tsx</code>, <code>BodyViewer.test.tsx</code>, <code>flows.spec.ts</code>); and
             <span class="badge id">DEC-21</span>'s rejected-alternatives table, quoting the labels it
-            argued over at the time — left as recorded, for the reason in the table below</td></tr>
+            argued over at the time — left as recorded, for the reason in the table below. Not one names a
+            switch position. <em>No count is quoted here on purpose: a total is stale the next time
+            anything in those trees mentions decoding, and the buckets are what the claim is about.</em></td></tr>
         <tr><td>Behaviour is byte-identical</td>
             <td class="good">✓ <code>api.test.ts</code> still pins both query strings over the renamed
-            parameter; the e2e finds indented JSON on one side and minified source on the other; 831 of
-            832 unit/integration tests are the pre-existing ones, unedited except for two titles</td></tr>
+            parameter; the e2e finds indented JSON on one side and minified source on the other. 831 of
+            the 832 unit/integration tests are pre-existing, and what this diff did to them is: <strong>one
+            renamed title</strong> (<code>App.test.tsx</code>'s), two existing tests extended with
+            assertions, one fixture rename and one local variable. No assertion was weakened or
+            removed</td></tr>
         <tr><td>The registry citation resolves</td>
             <td class="good">✓ <code>SegmentedControl</code>'s <code>@use</code> names <em>the body view
             (raw | pretty)</em>, which is what the tree renders; its fixture models the same words and
@@ -217,39 +225,7 @@
       </table>
       <p>Commits: <code>a47f778</code> plan · <code>89b6bb7</code> the change. Tip carries
       <code>test/v2</code>, <code>doc/v1</code> and the review's <code>cr/v3</code>.</p>
-      <h3 id="review">The review round, and the question it settled</h3>
-      <p>Round 1 raised three candidates and verification refuted all three. Two are worth recording,
-      because the question under them will recur for every WU that corrects a stale fact in a
-      <code>docs/decisions/</code> record.</p>
-      <table data-c="tbl-review">
-        <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
-        <tbody>
-          <tr><td>Editing <span class="badge id">DEC-31</span> and <span class="badge id">DEC-32</span>
-          in place violates <code>documentation-system.html</code>'s <em>“Append-only: never
-          rewritten”</em> — raised as a <strong>blocker</strong>, twice</td>
-              <td><strong>Refuted.</strong> The rule governs a ruling and its reversal — <em>“a reversal
-              flips the old record to superseded by DEC-m and adds a new one”</em> — and the repo's own
-              practice draws the line precisely: commit <code>4109404</code> (E-DFLOW.W8) <em>rewrote</em>
-              DEC-16's narrative in place where a later WU had made it untrue, and in the same commit
-              <em>struck through</em> a clause that DEC-25 overrode, naming the superseding record. Two
-              different instruments for two different situations. This diff overrode no clause: DEC-31's
-              ownership answers and DEC-32's zoning table are untouched, and what changed is the two words
-              naming the switch's positions inside them. Reverting instead would have left two T2 docs
-              teaching a label the code no longer renders, which is what <em>code wins conflicts</em> and
-              same-session distillation exist to prevent.</td></tr>
-          <tr><td>The Outcome row's grep claim is false, because
-          <span class="badge id">DEC-21</span>'s rejected-alternatives table is a fourth kind of hit</td>
-              <td><strong>Refuted</strong> as a defect — the report disclosed DEC-21 twice with its
-              reasoning, so no reader of it was misled. <strong>Corrected anyway, by the author:</strong>
-              the row now names three buckets instead of two. A summary sentence in the artifact the
-              signer reads should not need the rest of the document to be accurate.</td></tr>
-          <tr><td>Correctness · reuse · simplification · efficiency</td>
-              <td>Clean, no candidates. Each independently confirmed the wire is unchanged
-              (<code>api.test.ts</code>'s two query strings), the effect's dependency shape is unchanged,
-              the registry's own citation suites still resolve, and the <code>ariaLabel</code> wrinkle is
-              pre-existing and correctly a follow-up rather than a finding.</td></tr>
-        </tbody>
-      </table>
+
     </div>
 
     <h2 id="distillation">Distillation</h2>
@@ -279,6 +255,72 @@
       <p><strong>Handed to W10:</strong> the roadmap's Deferred row for this item, struck as absorbed;
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
+
+    <h2 id="review">Two review rounds, and the question the first one settled</h2>
+    <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
+    corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
+    refuted six and <strong>verified three</strong>. Twelve candidates over two rounds, three of them
+    real. Every verified finding is in this report's own
+    prose, and that is the shape of this WU: the code was a rename with one failure mode, and the
+    defects were all in the sentences claiming it was done.</p>
+      <table data-c="tbl-review">
+        <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
+        <tbody>
+          <tr><td>Editing <span class="badge id">DEC-31</span> and <span class="badge id">DEC-32</span>
+          in place violates <code>documentation-system.html</code>'s <em>“Append-only: never
+          rewritten”</em> — raised as a <strong>blocker</strong>, twice</td>
+              <td><strong>Refuted.</strong> The rule governs a ruling and its reversal — <em>“a reversal
+              flips the old record to superseded by DEC-m and adds a new one”</em> — and the repo's own
+              practice draws the line precisely: commit <code>4109404</code> (E-DFLOW.W8) <em>rewrote</em>
+              DEC-16's narrative in place where a later WU had made it untrue, and in the same commit
+              <em>struck through</em> a clause that DEC-25 overrode, naming the superseding record. Two
+              different instruments for two different situations. This diff overrode no clause: DEC-31's
+              ownership answers and DEC-32's zoning table are untouched, and what changed is the two words
+              naming the switch's positions inside them. Reverting instead would have left two T2 docs
+              teaching a label the code no longer renders, which is what <em>code wins conflicts</em> and
+              same-session distillation exist to prevent.</td></tr>
+          <tr><td>The Outcome row's grep claim is false, because
+          <span class="badge id">DEC-21</span>'s rejected-alternatives table is a fourth kind of hit</td>
+              <td><strong>Refuted</strong> as a defect — the report disclosed DEC-21 twice with its
+              reasoning, so no reader of it was misled. <strong>Corrected anyway, by the author:</strong>
+              the row now names three buckets instead of two. A summary sentence in the artifact the
+              signer reads should not need the rest of the document to be accurate.</td></tr>
+          <tr><td><strong>Round 2 · three claims in this report were false</strong> — the Outcome row's
+          <em>“27 hits”</em>, the callout's <em>“five more that name the decode chain”</em>, and the
+          evidence row's <em>“unedited except for two titles”</em></td>
+              <td><strong>Verified, by counting.</strong> The grep returns 34 lines (33 word-bounded), not
+              27 — the number came from a reviewer's tally in round 1 that nobody re-ran. The left-alone
+              table has six rows, only three of which are decode-chain uses, so the callout mis-stated
+              both the count and the kind. And exactly one pre-existing unit/integration title changed,
+              not two. All three are corrected above; the grep row now names its buckets and quotes
+              <strong>no total at all</strong>, because a count in a document is a claim that goes stale
+              on its own. <em>The lesson this WU actually earned: a rename is easy to get right and easy
+              to over-claim, and every number in a result report is a claim the gate will be asked to
+              trust — including, on the first draft of this very row, its own count of the round that
+              caught it.</em></td></tr>
+          <tr><td>Round 2 · the integration test's three label assertions duplicate the unit test's</td>
+              <td><strong>Refuted</strong>, and instructively: <code>BodyViewer</code>'s switch takes
+              <code>ariaLabel={`${leg} body mode`}</code>, so resolving that radiogroup <em>by name</em>
+              after a real click on the leg selector is a fact only the mounted shell can prove — the unit
+              test passes the leg as a static prop and never exercises the wiring. Delete those three
+              lines and nothing proves the real panel renders a correctly labelled switch.</td></tr>
+          <tr><td>Round 2 · the two test comments state domain rationale, which belongs in the design
+          docs · the review record duplicates the report · it sits under the wrong checklist item · the
+          append-only interpretation lives only in a doc W10 archives</td>
+              <td><strong>Refuted</strong>, all five. The comments explain why an <em>absence</em>
+              assertion exists, which is the reader most likely to delete it — CLAUDE.md's guardrail
+              exception, and the house style in both files. The append-only rule was <em>reaffirmed</em>,
+              not proven wrong, and the epic plan reserves a T1 edit for a rule that <em>“proves
+              wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
+              this WU has no channel for. The record did move out of <code>evidence</code> into its own
+              section, matching W6.</td></tr>
+          <tr><td>Round 1 · correctness · reuse · simplification · efficiency</td>
+              <td>Clean, no candidates. Each independently confirmed the wire is unchanged
+              (<code>api.test.ts</code>'s two query strings), the effect's dependency shape is unchanged,
+              the registry's own citation suites still resolve, and the <code>ariaLabel</code> wrinkle is
+              pre-existing and correctly a follow-up rather than a finding.</td></tr>
+        </tbody>
+      </table>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <div data-item="follow-ups" data-c="follow-ups">
