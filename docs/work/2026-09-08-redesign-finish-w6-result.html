@@ -37,8 +37,10 @@
     <div class="callout" data-item="outcome" data-c="outcome">
       <strong>Delivered, to the plan's sentence.</strong> The shell renders at 520px in a 1440 window, a
       status class narrows the list end to end against the real core, and a failed fetch is stated rather
-      than swallowed. Two commits: the plan, then the build. Nothing W4 decided was re-opened; the two
-      things the design explicitly left to the build are named below with what decided them.
+      than swallowed. Three commits: the plan, the build, and the fix for what review round 1 found.
+      Nothing W4 decided was re-opened; the two things the design explicitly left to the build are named
+      below with what decided them, and the one mistake the build made on its own is in
+      <a href="#review">review round 1</a>.
     </div>
 
     <h2 id="landed">The eight rows</h2>
@@ -52,7 +54,7 @@
         <tr><td>5</td><td>zone A′ — a full-width band between header and body, present only when passed, and a <code>main</code> that can take focus</td><td><code>ui/src/Layout.tsx</code></td></tr>
         <tr><td>6</td><td>the band's warn <code>Notice</code> + retry <code>Button</code>, fork D4's two halves from one <code>retrying</code> flag, and focus to the list region when the band removes itself</td><td><code>ui/src/App.tsx</code> · <code>ui/src/NotAnswering.tsx</code></td></tr>
         <tr><td>7</td><td>four absences behind one precedence expression: a failure outranks both empties, and a rejection is a rejection rather than a failure</td><td><code>ui/src/FlowList.tsx</code></td></tr>
-        <tr><td>8</td><td><code>useFlowDetail</code> reports a fetch that never answered, so the pane cannot sit on “loading this flow…” forever</td><td><code>ui/src/useFlows.ts</code></td></tr>
+        <tr><td>8</td><td><code>useFlowDetail</code> reports a fetch that never answered instead of discarding it, so the band can explain the pane's silence — and a listing that arrives retires that report, so it cannot outlive its cause</td><td><code>ui/src/useFlows.ts</code></td></tr>
       </tbody>
     </table>
 
@@ -125,6 +127,13 @@
           <td><code>useFlows.test.ts</code> — <em>a dropped stream states the core is unreachable without
           waiting for a keystroke</em>, and its pair: a stream that comes back re-asks, and a listing that
           answers clears the statement. Proven again in the real window (below).</td>
+        </tr>
+        <tr>
+          <td>A pane failure does not speak for the list, and does not outlive the proof against it</td>
+          <td><code>App.test.tsx</code> — the two round-1 regressions, both red before the fix: a failed
+          detail fetch leaves a refused query its own sentence, and a listing that arrives clears a latched
+          pane failure so the band cannot stick on a live core. <code>useFlows.test.ts</code> — a
+          straggling refresh cannot overwrite the answer a later one already gave.</td>
         </tr>
         <tr>
           <td>A dropped flow is not reported as an unreachable core</td>
@@ -229,6 +238,61 @@
         </tr>
       </tbody>
     </table>
+
+    <h2 id="review">Review round 1 — what it found, and what it cost</h2>
+    <p>Six finders over the build's own diff, then a verifier per candidate. <strong>Ten candidates, three
+    verified.</strong> All three were the same underlying mistake seen from different angles, and it was
+    mine: the pane's failure and the list's failure are two independent facts, and I folded them into one
+    boolean.</p>
+    <table data-c="review">
+      <thead><tr><th>Verified finding</th><th>What it actually did</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>A latched pane failure spoke for the list</strong><br>correctness + altitude, <span class="bad">important</span></td>
+          <td><code>failure={notAnswering ? { kind: "unreachable" } : failure}</code> synthesized a
+          connection failure out of <code>detailFailed</code> and handed it to <code>FlowList</code>,
+          which gives it precedence over everything. A 500 on one flow's fetch, followed by a mistyped
+          status, replaced <em>“4xz is not a status”</em> with <em>“trawler is not answering”</em> and a
+          retry button that could not help — defeating the precedence rule this WU exists to build.</td>
+          <td>The list's real <code>failure</code> is passed through unsynthesized. The band still folds
+          both causes; the row region never does.</td>
+        </tr>
+        <tr>
+          <td><strong>The pane's failure never expired</strong><br>altitude, <span class="bad">important</span></td>
+          <td><code>useFlowDetail</code> resets <code>failed</code> only when <code>api</code>,
+          <code>id</code> or <code>nonce</code> change — nothing clears it when the list recovers. So one
+          non-404 pane failure pinned the band up <em>permanently</em> on a healthy core, still claiming
+          “the rows below are the last it sent” while the list was being answered live.</td>
+          <td><code>useFlows</code> counts listings that arrived; a listing that arrives is proof the core
+          answers, and it retires an older pane failure without re-fetching anything.</td>
+        </tr>
+        <tr>
+          <td><strong>A straggling refresh could un-do a retry</strong><br>correctness, <span class="bad">important</span></td>
+          <td>Four things trigger a listing and <code>refresh</code> had no sequencing guard. Before this
+          WU that only risked stale rows; now the loser also writes <code>failure</code>, so a slow
+          straggler resolving after a successful retry flips the band back on immediately after the user
+          watched it clear.</td>
+          <td>A generation counter: only the newest request may write.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Refuted, and worth recording as refuted:</strong> that the three new test doubles in
+    <code>useFlows.test.ts</code> should be one parameterized builder (they follow the file's existing
+    one-double-per-concern convention, and merging them yields a config object with five knobs); that
+    <code>shellApi</code> duplicates <code>mockApi</code> (they are different control modes — raw answer
+    injection versus store-and-filter simulation); that the retry's unconditional nonce bump is a defect
+    (it is the design's “one cause, one retry”, costing one idempotent GET on a rare user-initiated click);
+    that the detail pane still showing <em>“loading this flow…”</em> is a bug (the design puts that
+    sentence in A′ deliberately — “covered by A′, said once”); and a duplicated comment. The design finder
+    returned clean: no unexplained departure from the run, no unwarranted component, no misapplied
+    <code>@use</code>/<code>@avoid</code>.</p>
+    <div class="callout warn" data-c="lesson">
+      <strong>The comment was the tell.</strong> The line above the folded boolean read “the list's fetch
+      and the pane's fail together when the core stops answering” — true of the case the design walked
+      through, and quietly assumed of every other case. Three of the ten candidates were that assumption
+      being wrong in three different ways. A comment asserting an invariant the code does not enforce is
+      worth reading as a question.
+    </div>
 
     <h2 id="follow-ups">Follow-ups this WU is leaving</h2>
     <table data-item="follow-ups" data-c="follow-ups">

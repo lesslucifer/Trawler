@@ -43,12 +43,27 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, hosts, connections, lastConnectionAt, failure, retrying, retry, update } =
-    useFlows(client);
+  const {
+    filter,
+    flows,
+    hosts,
+    connections,
+    lastConnectionAt,
+    failure,
+    answered,
+    retrying,
+    retry,
+    update,
+  } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
-  const { flow: detail, failed: detailFailed } = useFlowDetail(client, selectedId, retryNonce);
+  const { flow: detail, failed: detailFailed } = useFlowDetail(
+    client,
+    selectedId,
+    retryNonce,
+    answered,
+  );
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
@@ -160,9 +175,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
-  // One silence, one sentence. The list's fetch and the pane's fail together when
-  // the core stops answering, and the band is where that is said — once, for
-  // every zone, rather than in each of them.
+  // One silence, one sentence: the list's fetch and the pane's fail together when
+  // the core stops answering, and the band says it once for every zone rather
+  // than each zone saying it. Only the connection is folded in here — a refused
+  // query is the list's own answer and stays the list's to state, or the pane
+  // would end up speaking for a question it was never asked.
   const notAnswering = failure?.kind === "unreachable" || detailFailed;
 
   // Retry removes its own button, and Button leaves focus on nothing when it
@@ -286,7 +303,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         selectedId={selectedId}
         onSelect={setSelectedId}
         filtered={hasFilter}
-        failure={notAnswering ? { kind: "unreachable" } : failure}
+        failure={failure}
         retrying={retrying}
         onRetry={retryConnection}
       />

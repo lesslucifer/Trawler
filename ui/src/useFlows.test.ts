@@ -330,3 +330,42 @@ test("a stream that comes back re-asks, and a listing that answers clears the st
   await waitFor(() => expect(result.current.failure).toBeNull());
   expect(result.current.flows).toHaveLength(2);
 });
+
+// Regression (review round 1, correctness): refresh had no sequencing guard, so
+// a straggler could write state on top of a newer answer. The visible cost is a
+// retry that appears to work and then silently un-works itself.
+test("a straggling refresh cannot overwrite the answer a later one already gave", async () => {
+  const pending: { resolve: (rows: FlowSummary[]) => void; reject: (e: unknown) => void }[] = [];
+  const api: TrawlerApi = {
+    listFlows: () =>
+      new Promise<FlowSummary[]>((resolve, reject) => pending.push({ resolve, reject })),
+    connectionCount: async () => 0,
+    caCertPem: async () => "",
+    getFlow: async () => { throw new Error("unused"); },
+    getBody: async () => { throw new Error("unused"); },
+    stream: () => () => {},
+  };
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(pending).toHaveLength(1)); // the mount's own refresh
+
+  // A second, later refresh starts and succeeds while the first is still out.
+  let second: Promise<boolean>;
+  act(() => {
+    second = result.current.retry();
+  });
+  await waitFor(() => expect(pending).toHaveLength(2));
+
+  await act(async () => {
+    pending[1].resolve([summary("f1", "http://example.com/")]);
+    await second;
+  });
+  expect(result.current.failure).toBeNull();
+  expect(result.current.flows).toHaveLength(1);
+
+  // The straggler now fails. It is answering a question already answered.
+  await act(async () => {
+    pending[0].reject(new TypeError("Failed to fetch"));
+  });
+  expect(result.current.failure).toBeNull();
+  expect(result.current.flows).toHaveLength(1);
+});

@@ -30,6 +30,9 @@ export function useFlows(api: TrawlerApi) {
   // discarding evidence on a transient failure is the worse error.
   const [failure, setFailure] = useState<FeedFailure | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // Bumped by every listing that arrives. A core that answers the list is a core
+  // that answers, which is the proof that expires a pane failure latched earlier.
+  const [answered, setAnswered] = useState(0);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
   // tunnel but no flow). Onboarding reads it as "traffic has reached Trawler at
@@ -48,30 +51,38 @@ export function useFlows(api: TrawlerApi) {
   const filterRef = useRef(filter);
   filterRef.current = filter;
 
+  // Four things trigger a listing — the filter effect, an SSE event, the stream
+  // coming back, and retry — so responses can land out of order. Only the newest
+  // request may write: a straggler is answering a question already answered, and
+  // letting it through un-does a retry the user just watched succeed.
+  const latest = useRef(0);
+
   // Resolves to whether the listing arrived, which is what lets the caller of
   // `retry` know its surface may go away. Two-armed `then` rather than `catch`,
   // so a throw from the success arm is never read as a failed fetch.
-  const refresh = useCallback(
-    () =>
-      api.listFlows(filterRef.current).then(
-        (list) => {
-          setFlows(list);
-          setHosts((known) => merge(known, list));
-          setFailure(null);
-          return true;
-        },
-        (error: unknown) => {
-          const next = failureOf(error, filterRef.current.status ?? "");
-          // A refused query has no answer to show, so the rows go with it and the
-          // count reads what is on screen. An unreachable core is the opposite
-          // case: its last answer was true when it arrived.
-          if (next.kind === "rejected") setFlows([]);
-          setFailure(next);
-          return false;
-        },
-      ),
-    [api],
-  );
+  const refresh = useCallback(() => {
+    const mine = ++latest.current;
+    return api.listFlows(filterRef.current).then(
+      (list) => {
+        if (mine !== latest.current) return false;
+        setFlows(list);
+        setHosts((known) => merge(known, list));
+        setFailure(null);
+        setAnswered((n) => n + 1);
+        return true;
+      },
+      (error: unknown) => {
+        if (mine !== latest.current) return false;
+        const next = failureOf(error, filterRef.current.status ?? "");
+        // A refused query has no answer to show, so the rows go with it and the
+        // count reads what is on screen. An unreachable core is the opposite
+        // case: its last answer was true when it arrived.
+        if (next.kind === "rejected") setFlows([]);
+        setFailure(next);
+        return false;
+      },
+    );
+  }, [api]);
 
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const debouncedRefresh = useCallback(() => {
@@ -126,6 +137,7 @@ export function useFlows(api: TrawlerApi) {
     connections,
     lastConnectionAt,
     failure,
+    answered,
     retrying,
     retry,
     update,
@@ -147,9 +159,17 @@ export function merge(known: string[], list: FlowSummary[]): string[] {
 // flight — without it the pane holds "loading this flow…" forever. `nonce` lets
 // the shell's retry re-run this fetch too, since the silence it explains is the
 // same silence.
-export function useFlowDetail(api: TrawlerApi, id: string | null, nonce = 0) {
+export function useFlowDetail(api: TrawlerApi, id: string | null, nonce = 0, answered = 0) {
   const [flow, setFlow] = useState<FlowView | null>(null);
   const [failed, setFailed] = useState(false);
+
+  // A listing that arrived is proof the core answers, which retires this pane's
+  // older silence without re-fetching anything: a failure nothing has disproved
+  // is evidence, and one the listing has disproved is a stale claim the shell
+  // would otherwise keep repeating.
+  useEffect(() => {
+    if (answered > 0) setFailed(false);
+  }, [answered]);
 
   useEffect(() => {
     setFlow(null);

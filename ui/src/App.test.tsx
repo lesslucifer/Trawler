@@ -680,3 +680,56 @@ test("the onboarding phase renders no connection band", async () => {
   await screen.findByText(/trust the CA/);
   expect(screen.queryByText("trawler is not answering")).toBeNull();
 });
+
+// Regression (review round 1, correctness + altitude): the pane's failure and the
+// list's are two independent facts, and folding them into one boolean let a
+// latched pane failure speak for the list. Both tests fail before the fix.
+function paneApi(listAnswer: () => Promise<FlowSummary[]>, flowAnswer: () => Promise<FlowView>) {
+  const api: TrawlerApi = {
+    listFlows: () => listAnswer(),
+    connectionCount: async () => 0,
+    caCertPem: async () => PEM,
+    getFlow: () => flowAnswer(),
+    getBody: async () => ({ bytes: new Uint8Array(), contentType: null }),
+    stream: () => () => {},
+  };
+  return api;
+}
+
+test("a failed detail fetch does not speak for the list — a refused query keeps its own sentence", async () => {
+  let list: () => Promise<FlowSummary[]> = async () => [HTTPS];
+  const api = paneApi(
+    () => list(),
+    () => Promise.reject(new ApiError(500, "GET /flows/f1 failed: 500")),
+  );
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+  await waitFor(() => expect(screen.getByTestId("detail-loading")).toBeInTheDocument());
+
+  // The core is plainly alive: it answers the listing, and it answered the pane
+  // with a 500. Now refuse the query.
+  list = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
+
+  const region = await screen.findByTestId("empty");
+  expect(region).toHaveTextContent("4xz is not a status");
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
+test("a listing that answers clears a latched pane failure, so the band cannot stick on a live core", async () => {
+  let flow: () => Promise<FlowView> = () =>
+    Promise.reject(new TypeError("Failed to fetch"));
+  const api = paneApi(async () => [HTTPS], () => flow());
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+
+  // The pane's silence raises the band, which is the design: one cause, said once.
+  await screen.findByTestId("band");
+
+  // But the list keeps answering, and a core that answers the listing is not a
+  // core that is failing to answer — so the band may not outlive that proof.
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "example" } });
+
+  await waitFor(() => expect(screen.queryByTestId("band")).toBeNull());
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
