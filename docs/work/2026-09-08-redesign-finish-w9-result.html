@@ -272,7 +272,7 @@
       web-ui.html's v7 for UC-4's gains and the pane width.</p>
     </div>
 
-    <h2 id="review">Seven review rounds, and what they were actually for</h2>
+    <h2 id="review">Eight review rounds, and what they were actually for</h2>
     <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
     corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
     refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
@@ -285,9 +285,12 @@
     evidence notes. Round 7 found the same retired claim a fourth time, in the <code>test/v2</code> note
     rewritten onto the tip that round, and its code sweep came back empty with every suite re-run green.
     Nineteen candidates over seven rounds; <strong>nine verified, every one of them a false sentence in
-    this WU's own report or notes rather than a line of code.</strong></p>
+    this WU's own report or notes rather than a line of code.</strong> Round 8 raised two and verified
+    none: it read the corrected note where round 7 had read the false one, and refuting it turned up
+    something worth keeping — a claim about a git note is unverifiable without the notes-ref commit that
+    holds the state it describes. Twenty-one candidates over eight rounds, nine verified.</p>
     <div class="callout" data-c="lesson">
-      <strong>The pattern is the finding.</strong> Seven rounds found nothing wrong with the rename — the
+      <strong>The pattern is the finding.</strong> Eight rounds found nothing wrong with the rename — the
       dimensions that judge code came back clean every time. What they found, nine times over, was this
       report claiming more than the tree supported — a total nobody counted, several counts that did not
       match their own lists, a check reported as passed in a form that could not be met, and a claim
@@ -357,7 +360,23 @@
               over verbatim, so it brought the original false clause with it and then disagreed with the
               report it accompanies. Corrected in place on the tip. Round 7's code sweep found nothing
               and re-ran every suite green: 832 unit and integration tests, 32 e2e, lint,
-              <code>tsc</code>, <code>fmt</code> and <code>clippy</code>.</td></tr>
+              <code>tsc</code>, <code>fmt</code> and <code>clippy</code>.
+              <br><strong>Checkable at <code>git show 0f47698:&lt;ae26033's note path&gt;</code></strong> —
+              a note is mutable and correcting one destroys the state it replaced, so
+              <code>git notes show</code> cannot show what round 7 saw. Only
+              <code>refs/notes/test</code>'s own commit history can, and round 8 proved the point by
+              reading the corrected note and reporting this finding as unsupported.</td></tr>
+          <tr><td>Round 8 · round 7's finding never happened — the note already held the corrected
+          text</td>
+              <td><strong>Refuted, and it is the most useful refutation of the seven rounds.</strong>
+              Notes are mutable: <code>git notes show ae26033</code> returns the note as it stands
+              <em>now</em>, which is the corrected version. The state round 7 actually read is preserved
+              in <code>refs/notes/test</code> at <code>0f47698</code> (19:06:40), where the clause reads
+              <em>“all eight assertions green UNEDITED, which was the plan's stated check”</em>; the
+              overwrite landed at <code>ba48c69</code> (19:14:23). <strong>The trap is general:</strong>
+              any review that reads a git note is reading a mutable surface, and a claim about what a
+              note once said needs a notes-ref commit beside it or it cannot be checked — which is why
+              the row above now carries one.</td></tr>
           <tr><td><strong>Round 6 · the report said the tip carried
           <code>test/v2</code>, <code>doc/v1</code> and <code>cr/v3</code></strong></td>
               <td><strong>Verified, and it was the oldest defect in the document.</strong> The sentence
