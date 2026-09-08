@@ -1,0 +1,144 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W6 (wu/export/controls-build) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W6
+branch: wu/export/controls-build
+base: d31286592450f9c9baaac561a4d65377324f50a4
+head: 2c1db7b68484b1d6d10e2632985c0f3f1079e92a
+diff_sha256: aa568884296b71e084385d2928a79ca8567e08550c7d1a5afadefed3c147062b
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 59, verified: 18, waived: 1 }
+rounds:
+  - round: 1
+    found: 11
+    verified: 3
+    tip: 9d8b63ad0207e80d122bf6b384bcef9c42661f5b
+    detail: >-
+      Recorded in full on the cr note at 9d8b63a (FAIL). A T2 doc calling design run 11 "archived"; openFile
+      and its browser fallback shipping untested; and the export and import sharing one in-flight slot, so
+      dismissing the import ask mid-export cleared the export's line.
+  - round: 2
+    found: 10
+    verified: 4
+    tip: 9a19f7d8106ed6718c32f3b5585811af95277b96
+    detail: >-
+      Recorded in full on the cr note at 9a19f7d. Round 1's fix was half a fix - guarding the shared slot's
+      CLEAR left its SET unguarded, so it became two independent flags; an abandoned import still called
+      onDone() on the mounted parent; exportHar was made to throw the server's sentence like the other two
+      doors, over a verifier that leaned on this WU's own plan rather than the design the plan cites; and a
+      stale per-suite count.
+  - round: 3
+    found: 5
+    verified: 5
+    tip: d6bcc686e9bdc5273350b6f7893813cbbb847634
+    detail: >-
+      Recorded in full on the cr note at d6bcc68. Correctness returned an EMPTY list and all five confirmed
+      findings were false statements in the WU's own record, two in an earlier version of its test/v2 note.
+  - round: 4
+    found: 9
+    verified: 3
+    tip: 46c4435e7ebbcd5f131b6aaecf215d47199baeae
+    detail: >-
+      Recorded in full on the cr note at 46c4435 (PASS). Three more false statements. Eight across rounds 3
+      and 4, all one class, none in the code.
+  - round: 5
+    found: 6
+    verified: 0
+    tip: 7178de99e94b6389971ff78546cb511ec4631885
+    detail: >-
+      Five finders over the five code dimensions; all six candidates refuted. The strongest was a clear
+      fired mid-export truncating the file, refuted on the server: export_har clones the flows out under the
+      store's single Mutex and serialises the whole body with no .await, so a clear lands strictly before or
+      after the snapshot. This round's note carried verdict PASS and it was WRONG to - see round 6.
+  - round: 6
+    found: 8
+    verified: 2
+    tip: b895d2c6d691bdb8a3ec3cf0a584e8404188ca10
+    detail: >-
+      The first round with a design finder, because the WU had by then added a design artifact. It found
+      what five rounds of code review structurally could not. CORRECTNESS: the focus fix two commits earlier
+      was half a fix - the textarea went read-only, but "choose a file…" beside it is a real disabled
+      control, and the picker never holds focus itself (Tauri's dialog is another window, the browser
+      fallback's input is never in the DOM), so a keyboard user still owned focus when the import disabled
+      it. DESIGN: the reversal of motion-informs was argued in a design file the same WU retired, leaving
+      both amended receipts pointing at a path that no longer existed and the reasoning nowhere the
+      rulebook's model would look; DEC-39 now records it and DEC-16's order is actually followed. Six
+      refuted, two of them the design finder's own blockers - that authoring the design after the build is a
+      violation (DEC-25/28/29 name that history, and the governed component landed after the design anyway)
+      and that amending the two runs rewrote it (both keep their original wording and mark it overturned).
+  - round: 7
+    found: 7
+    verified: 2
+    tip: 2c1db7b68484b1d6d10e2632985c0f3f1079e92a
+    detail: >-
+      CORRECTNESS found the same defect a THIRD time, one dialog over: ClearDialog's confirm button disables
+      for the whole DELETE with no guard, and cancel staying enabled does not help because disabling the
+      focused element blurs to body rather than handing focus to a sibling. DESIGN found the retired
+      receipt marking familiar-idioms "satisfied" when the rulebook binds that slug to a screen - waived
+      below. Five refuted, the most valuable being the proposal to lift the focus guard into ModalShell:
+      its verifier found that E-REDESIGN.W10 BUILT exactly that generic focus-recovery, found a defect in it
+      in rounds 3, 4 and 5, and deleted it in round 6 rather than fix it a fourth time, because a shell-level
+      net can only recapture onto the first focusable - the dismiss button - and putting an in-flight Enter
+      on the dismiss is its own hazard. That refutation changed the fix.
+  - round: 8
+    found: 2
+    verified: 0
+    tip: 2c1db7b68484b1d6d10e2632985c0f3f1079e92a
+    detail: >-
+      Correctness was aimed at CLOSING the class rather than finding instance four: it enumerated every
+      control in every dialog the diff reaches - both asks, ProxyCloseDialog, the Notice/Disclosure/Select
+      subtrees, CaptureMenu's items - and returned an EMPTY list, confirming no remaining control is
+      disabled while it can hold focus, that CaptureMenu's aria-disabled items are never tab stops so cannot
+      suffer it at all, and that all three guards move focus synchronously before the state update that
+      disables. Both remaining candidates refuted: a shared focusable-resolver helper (the four sites are
+      not one operation - one needs no resolution at all, one resolves an ambiguous marker at mount, two
+      query a known wrapper mid-interaction; and the wrapper spans exist because Button does not forward
+      refs, so the root cause is elsewhere) and the three focus comments being one paragraph thrice (each
+      names a different target and why that one).
+refuted_notable: >-
+  Across eight rounds, 41 of 59 candidates were refuted, and three refutations changed what shipped rather
+  than merely clearing it. Round 5's clear-during-export was refuted on the store's Mutex, which is the
+  reason no client-side guard was added for it. Round 7's ModalShell lift was refuted on E-REDESIGN.W10's
+  deleted machinery, which is the reason the third focus fix is local and explicit like the first two.
+  Round 6's two design blockers were refuted on DEC-25/28/29, which is the reason the build-then-design-
+  then-retire history was left as it stands rather than reshaped.
+waivers:
+  - finding: "docs/work/components/spinner.html marks familiar-idioms satisfied, a slug the rulebook binds to a screen and reserves to a design run and its receipt; the same file correctly buckets four other screen-bound slugs as not applicable"
+    reason: >-
+      Verified real at low severity and left unfixed because it cannot be fixed. The file is retired: it
+      exists only at b53d433 and is absent from the tip, so correcting it means rewriting a commit that
+      carries an mr signature, which the workflow forbids (never amend a gated branch - it orphans the
+      notes). The over-answer is also factually true, a turning ring being the genre's in-flight mark, and
+      the file governs nothing at tip - Spinner's contract is its TSDoc per DEC-16. Recorded here rather
+      than silently dropped.
+design:
+  artifacts:
+    - docs/work/2026-09-05-export-run-10-capture-controls.html
+    - docs/work/2026-09-06-export-run-11-capture-controls.html
+    - docs/work/components/spinner.html
+  rulebook: a7f9ae3
+  findings: { found: 7, verified: 2, waived: 1 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: ebf4215b3c1f08f4ab5fd6de5ccea026a002f221
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+    - path: docs/work/components/spinner.html
+      blob: 81fd0afa3e982fdf3c3d08288933fc1f0a6359e9
+      built: [ui/src/components/Spinner.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: "the modal frame this file owned moved out to ui/src/ModalShell.tsx unchanged in behaviour - 5 insertions against 91 deletions, all of them the lifted block - and the file now calls the shared frame. Its three test ids are preserved verbatim and its own suite passes untouched, so no surface it renders was re-shaped and there was nothing for a design to decide"
+  note: >-
+    The spinner citation resolves at the design's last state reachable from this tip, per DEC-28: DEC-16
+    forced the file's retirement inside the WU that built it, because a component's contract is its TSDoc
+    and a second copy is the drift retirement exists to kill. Run 10 is in scope as run 11's superseded
+    predecessor and carries no `built` of its own; its receipt was amended in this range, which is what
+    pulled it back into Tier-3 (DEC-29).
+    One caveat the skill's instructions assume away: the trigger session authored both the code and the
+    design artifacts, so it is not an independent party to this block. What independence exists came from
+    the finders and verifiers, and it was not decorative - round 6's design finder is the only reader that
+    caught the retired file taking the motion-informs reasoning with it, and round 5's PASS, signed by this
+    same session over its own design accounting, was wrong.
+verdict: PASS
+date: 2026-09-08
