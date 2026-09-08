@@ -20,7 +20,7 @@ design:
       built: [ui/src/NotAnswering.tsx, ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/Layout.tsx]
   undesigned:
     - path: ui/src/FlowDetail.tsx
-      why: "one sentence swapped in a slot the pane already had. The !flow branch rendered a Notice reading 'loading this flow...'; it now renders a mute Notice reading 'could not load this flow' when the fetch came back with nothing, and the unchanged loading line otherwise. No zone, prop, layout or control moved - the run owns this pane's width only ('this run changes the box, never what is in it') and its absence table names the pane's load failure as a slot it deliberately did not design. Judged in round 3 (the second warn beside the band's) and again in round 5 (the reserved 'no longer captured' term): the tone is now mute so the band keeps the only alarm, and the wording names no cause so it does not occupy the reserved term. Recorded as a follow-up for the run that owns that sentence"
+      why: "one sentence swapped in a slot the pane already had. The !flow branch rendered a Notice reading 'loading this flow...'; it now renders a mute Notice reading 'could not load this flow' when the fetch came back with nothing, and the unchanged loading line otherwise. No zone, prop, layout or control moved - the run owns this pane's width only ('this run changes the box, never what is in it') and its absence table names the pane's load failure as a slot it deliberately did not design. Judged in round 3 (a second warn beside the band's) and again in round 5 (the reserved 'no longer captured' term): the tone is now mute so the band keeps the only alarm, and the wording names no cause so it does not occupy the reserved term. Recorded as a follow-up for the run that owns that sentence"
 verdict: PASS
 date: 2026-09-08
 notes: |
@@ -28,31 +28,33 @@ notes: |
   round's fix. That pattern was the real finding: three facts - the core is not
   answering, the core refused this query, this flow's fetch produced nothing -
   were encoded in two values with precedence baked into the encoding, so each fix
-  traded one wrong state for another. Round 4 split them into ,
-  and  with one owner each and moved precedence into the renderers; round
-  5 found the build had still invented a ranking between silence and a refusal
-  that the run never made; round 6 returned clean by case analysis, proving the
-  band and the row region structurally mutually exclusive and
-   unreachable.
+  traded one wrong state for another. Round 4 split them into silent, refused and
+  failed with one owner each and moved precedence into the renderers; round 5
+  found the build had still invented a ranking between silence and a refusal that
+  the run never made; round 6 returned clean by case analysis, proving the band
+  and the row region structurally mutually exclusive, and rows-present-with-a-
+  refusal unreachable because every path that sets a refusal empties the rows in
+  the same update.
   13 verified across the rounds: a latched pane failure speaking for the list,
   never expiring, and a straggling refresh un-doing a retry (r1); the listing
   counter clearing a pane failure without re-fetching, and no zone stating a pane
   failure with the list empty (r2); a second warn for one cause, the stream
   overwriting a refusal, a focus claim that never expired, a stale test title
   (r3); the pane reverting to a false "loading" when the core went silent after
-  it failed, and a refusal latched through a real outage (r4); an invented
-  precedence hiding a refusal, a refusal quoting a value never asked, and a
-  trailing clause false of the region below (r5).
-  Refuted and recorded as refuted, not silently acted on: the three test-double
-  factories in useFlows.test.ts and shellApi-vs-mockApi in App.test.tsx (both
-  follow the files' existing one-double-per-concern convention; merging yields a
-  config object with five knobs, which the reuse dimension explicitly excludes);
-  the retry's unconditional nonce bump (the design's "one cause, one retry",
-  costing one idempotent GET on a rare user click); the pane still reading
-  "loading this flow..." at round 1 (the run puts that sentence in A' by design -
-  later superseded by rounds 3-5, which is why the pane's own line exists now);
-  and a duplicated comment.
-  Recorded, not fixed: failureOf maps a 5xx listing to silence - a core answering
+  it had already failed, and a refusal latched through a real outage (r4); an
+  invented precedence hiding a refusal, a refusal quoting a value never asked,
+  and a trailing clause false of the region below (r5).
+  Refuted and recorded as refuted rather than silently acted on: the three
+  test-double factories in useFlows.test.ts and shellApi-vs-mockApi in
+  App.test.tsx (both follow those files' existing one-double-per-concern
+  convention; merging them yields a config object with five knobs, which the
+  reuse dimension explicitly excludes); the retry's unconditional nonce bump (the
+  design's "one cause, one retry", costing one idempotent GET on a rare
+  user-initiated click); the pane still reading "loading this flow..." as judged
+  at round 1 (the run puts that sentence in A-prime by design - superseded by
+  rounds 3-5, which is why the pane has its own line now); and a duplicated
+  comment.
+  Recorded, not fixed: a 5xx listing is read as silence, because a core answering
   with a server error leaves the rows exactly as unverified, which is what the
   sentence is for; and the pane's "could not load this flow" also covers a
   ring-dropped flow, whose precise sentence the run reserved as "no longer
