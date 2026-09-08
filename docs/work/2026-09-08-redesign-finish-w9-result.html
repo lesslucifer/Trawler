@@ -273,22 +273,28 @@
     </div>
 
     <h2 id="review">Eight review rounds, and what they were actually for</h2>
-    <p>Round 1 raised three candidates and refuted all three. Round 2 — re-run because the round-1
-    corrections changed the tree, so <code>cr/v3</code> had to bind the tip that merges — raised nine,
-    refuted six and <strong>verified three</strong>. Round 3 — re-run for the same reason, and aimed at
-    claim accuracy because that is where rounds 1 and 2 found everything — raised two and
-    <strong>verified one</strong>. Round 4 raised one and verified it — a false sentence inside round
-    3's own correction. Round 5 raised one and verified it — a third copy of the claim round 3 had
-    already found false, left standing in a table the correction did not visit. Round 6 swept both
-    documents sentence by sentence instead of spot-checking, and verified two: a phrase attributed to a
-    document that does not contain it, and this report's oldest false claim — that the tip carried its
-    evidence notes. Round 7 found the same retired claim a fourth time, in the <code>test/v2</code> note
-    rewritten onto the tip that round, and its code sweep came back empty with every suite re-run green.
-    Nineteen candidates over seven rounds; <strong>nine verified, every one of them a false sentence in
-    this WU's own report or notes rather than a line of code.</strong> Round 8 raised two and verified
-    none: it read the corrected note where round 7 had read the false one, and refuting it turned up
-    something worth keeping — a claim about a git note is unverifiable without the notes-ref commit that
-    holds the state it describes. Twenty-one candidates over eight rounds, nine verified.</p>
+    <p>Round 1 refuted everything it raised. Round 2 — re-run because the round-1 corrections changed
+    the tree, so <code>cr/v3</code> had to bind the tip that merges — was the first to verify anything,
+    and what it verified were three false claims in this report. Round 3 was aimed at claim accuracy for
+    that reason and found another. Round 4 found one inside round 3's own correction. Round 5 found a
+    third copy of the claim round 3 had already corrected twice, left standing in a table the correction
+    did not visit. Round 6 swept both documents sentence by sentence instead of spot-checking, and
+    verified two: a phrase attributed to a document that does not contain it, and this report's oldest
+    false claim — that the tip carried its evidence notes. Round 7 found the same retired claim a fourth
+    time, in the <code>test/v2</code> note rewritten onto the tip that round, and its code sweep came
+    back empty with every suite re-run green.
+    Round 8 verified nothing and raised two, both resting on the same mistake: it read the
+    <code>test/v2</code> note in its corrected state and concluded round 7's finding had been invented,
+    then flagged the <code>doc/v1</code> note for repeating that finding. Refuting them turned up the one
+    lesson worth carrying out of this review — a claim about a git note is unverifiable without the
+    notes-ref commit holding the state it describes.</p>
+    <p><strong>Every candidate of every round is a row below, and the rows are the count.</strong> The
+    running tallies that stood here are gone: round 9 caught the last of them claiming two round-8
+    candidates over a table that listed one, which is the same defect as the grep row's invented total
+    and the deviations row's short list. This report has now been wrong about its own arithmetic four
+    times, so it keeps none — a document should not assert a number a reader cannot see it enumerate.
+    <strong>Nine verified findings across the eight rounds, every one of them a false sentence in this
+    WU's own report or notes and not one in a line of code.</strong></p>
     <div class="callout" data-c="lesson">
       <strong>The pattern is the finding.</strong> Eight rounds found nothing wrong with the rename — the
       dimensions that judge code came back clean every time. What they found, nine times over, was this
@@ -305,7 +311,7 @@
       <table data-c="tbl-review">
         <thead><tr><th>Candidate</th><th>Verdict, and what settled it</th></tr></thead>
         <tbody>
-          <tr><td>Editing <span class="badge id">DEC-31</span> and <span class="badge id">DEC-32</span>
+          <tr><td><strong>Round 1 ·</strong> editing <span class="badge id">DEC-31</span> and <span class="badge id">DEC-32</span>
           in place violates <code>documentation-system.html</code>'s <em>“Append-only: never
           rewritten”</em> — raised as a <strong>blocker</strong>, twice</td>
               <td><strong>Refuted.</strong> The rule governs a ruling and its reversal — <em>“a reversal
@@ -318,12 +324,17 @@
               naming the switch's positions inside them. Reverting instead would have left two T2 docs
               teaching a label the code no longer renders, which is what <em>code wins conflicts</em> and
               same-session distillation exist to prevent.</td></tr>
-          <tr><td>The Outcome row's grep claim is false, because
+          <tr><td><strong>Round 1 ·</strong> the Outcome row's grep claim is false, because
           <span class="badge id">DEC-21</span>'s rejected-alternatives table is a fourth kind of hit</td>
               <td><strong>Refuted</strong> as a defect — the report disclosed DEC-21 twice with its
               reasoning, so no reader of it was misled. <strong>Corrected anyway, by the author:</strong>
               the row now names three buckets instead of two. A summary sentence in the artifact the
               signer reads should not need the rest of the document to be accurate.</td></tr>
+          <tr><td>Round 1 · correctness · reuse · simplification · efficiency</td>
+              <td>Clean, no candidates. Each independently confirmed the wire is unchanged
+              (<code>api.test.ts</code>'s two query strings), the effect's dependency shape is unchanged,
+              the registry's own citation suites still resolve, and the <code>ariaLabel</code> wrinkle is
+              pre-existing and correctly a follow-up rather than a finding.</td></tr>
           <tr><td><strong>Round 2 · three claims in this report were false</strong> — the Outcome row's
           <em>“27 hits”</em>, the callout's <em>“five more that name the decode chain”</em>, and the
           evidence row's <em>“unedited except for two titles”</em></td>
@@ -353,62 +364,6 @@
               wrong”</em> — which also could not land here, since a rule-bearing edit needs a signature
               this WU has no channel for. The record did move out of <code>evidence</code> into its own
               section, matching W6.</td></tr>
-          <tr><td><strong>Round 7 · the <code>test/v2</code> note still said
-          <em>“all eight assertions green UNEDITED”</em></strong></td>
-              <td><strong>Verified — the same claim, a fourth carrier.</strong> The note was rewritten
-              onto this tip in round 6 by editing its <code>rounds:</code> field and carrying the rest
-              over verbatim, so it brought the original false clause with it and then disagreed with the
-              report it accompanies. Corrected in place on the tip. Round 7's code sweep found nothing
-              and re-ran every suite green: 832 unit and integration tests, 32 e2e, lint,
-              <code>tsc</code>, <code>fmt</code> and <code>clippy</code>.
-              <br><strong>Checkable at <code>git show 0f47698:&lt;ae26033's note path&gt;</code></strong> —
-              a note is mutable and correcting one destroys the state it replaced, so
-              <code>git notes show</code> cannot show what round 7 saw. Only
-              <code>refs/notes/test</code>'s own commit history can, and round 8 proved the point by
-              reading the corrected note and reporting this finding as unsupported.</td></tr>
-          <tr><td>Round 8 · round 7's finding never happened — the note already held the corrected
-          text</td>
-              <td><strong>Refuted, and it is the most useful refutation of the seven rounds.</strong>
-              Notes are mutable: <code>git notes show ae26033</code> returns the note as it stands
-              <em>now</em>, which is the corrected version. The state round 7 actually read is preserved
-              in <code>refs/notes/test</code> at <code>0f47698</code> (19:06:40), where the clause reads
-              <em>“all eight assertions green UNEDITED, which was the plan's stated check”</em>; the
-              overwrite landed at <code>ba48c69</code> (19:14:23). <strong>The trap is general:</strong>
-              any review that reads a git note is reading a mutable surface, and a claim about what a
-              note once said needs a notes-ref commit beside it or it cannot be checked — which is why
-              the row above now carries one.</td></tr>
-          <tr><td><strong>Round 6 · the report said the tip carried
-          <code>test/v2</code>, <code>doc/v1</code> and <code>cr/v3</code></strong></td>
-              <td><strong>Verified, and it was the oldest defect in the document.</strong> The sentence
-              had stood since the first result commit. The notes were real but attached to
-              <code>7d7eba7</code>, and five doc-only correction commits had moved the tip past them —
-              so a merge would have been refused for missing evidence, or worse, landed with the
-              evidence orphaned on a commit nobody would look at. The sentence now states where the
-              notes go and that the gate enforces it, rather than claiming they are already there.</td></tr>
-          <tr><td>Round 6 · the follow-up attributed “body view” to the rulebook</td>
-              <td><strong>Verified.</strong> The rulebook contains the phrase nowhere — a grep matches it
-              only inside “body view<em>ers</em>” in the use-case index. The three surfaces that really
-              say it are <span class="badge id">DEC-31</span>, the registry docstring and the fixture,
-              and the row now names those.</td></tr>
-          <tr><td><strong>Round 5 · the Evidence table still said
-          <em>“all eight assertions unedited”</em></strong></td>
-              <td><strong>Verified.</strong> Round 3 found that claim false and round 3's own fix
-              corrected it in the Outcome table and the What-changed table — and missed the third copy,
-              in the evidence row for that very test. For two rounds this document asserted the claim in
-              one table and recorded it as false in another. Fixed by grepping the file for the retired
-              wording rather than trusting recall, which is now the habit the callout names.</td></tr>
-          <tr><td><strong>Round 4 · round 3's correction claimed the plan's surfaces table
-          <em>“lists them all”</em></strong></td>
-              <td><strong>Verified.</strong> Eight of the nine files are in that table with an in/out
-              reason; <code>api.test.ts</code> appears only in the plan's test plan. The correction is
-              now stated as eight-and-one, and the row enumerates all nine files rather than asserting a
-              number over a shorter list — which is how the same miscount got in twice.</td></tr>
-          <tr><td>Round 4 · the code and the five T2 edits, all five dimensions</td>
-              <td>Clean, no candidates. <code>aria-checked</code> is bound to the active segment, so the
-              unit test's <code>toBeChecked()</code> asserts the real thing; the e2e's exact-text
-              absence selector is the strategy already proven in that file; and <code>getBody</code>'s
-              boolean covering two of the core's three <code>?decode=</code> values is the shape it
-              already had before this diff.</td></tr>
           <tr><td><strong>Round 3 · the report claimed <code>SegmentedControl</code>'s eight assertions
           passed <em>unedited</em></strong></td>
               <td><strong>Verified.</strong> The fixture rename reaches inside seven of the eight tests,
@@ -429,11 +384,64 @@
               preference, URL parameter, data attribute or selector. The one fixture still reading
               <code>decode (raw | decoded)</code> is a frozen density-calibration specimen under
               <code>xtask/fixtures/</code> that predates the base. Order, default and dispatch stand.</td></tr>
-          <tr><td>Round 1 · correctness · reuse · simplification · efficiency</td>
-              <td>Clean, no candidates. Each independently confirmed the wire is unchanged
-              (<code>api.test.ts</code>'s two query strings), the effect's dependency shape is unchanged,
-              the registry's own citation suites still resolve, and the <code>ariaLabel</code> wrinkle is
-              pre-existing and correctly a follow-up rather than a finding.</td></tr>
+          <tr><td><strong>Round 4 · round 3's correction claimed the plan's surfaces table
+          <em>“lists them all”</em></strong></td>
+              <td><strong>Verified.</strong> Eight of the nine files are in that table with an in/out
+              reason; <code>api.test.ts</code> appears only in the plan's test plan. The correction is
+              now stated as eight-and-one, and the row enumerates all nine files rather than asserting a
+              number over a shorter list — which is how the same miscount got in twice.</td></tr>
+          <tr><td>Round 4 · the code and the five T2 edits, all five dimensions</td>
+              <td>Clean, no candidates. <code>aria-checked</code> is bound to the active segment, so the
+              unit test's <code>toBeChecked()</code> asserts the real thing; the e2e's exact-text
+              absence selector is the strategy already proven in that file; and <code>getBody</code>'s
+              boolean covering two of the core's three <code>?decode=</code> values is the shape it
+              already had before this diff.</td></tr>
+          <tr><td><strong>Round 5 · the Evidence table still said
+          <em>“all eight assertions unedited”</em></strong></td>
+              <td><strong>Verified.</strong> Round 3 found that claim false and round 3's own fix
+              corrected it in the Outcome table and the What-changed table — and missed the third copy,
+              in the evidence row for that very test. For two rounds this document asserted the claim in
+              one table and recorded it as false in another. Fixed by grepping the file for the retired
+              wording rather than trusting recall, which is now the habit the callout names.</td></tr>
+          <tr><td><strong>Round 6 · the report said the tip carried
+          <code>test/v2</code>, <code>doc/v1</code> and <code>cr/v3</code></strong></td>
+              <td><strong>Verified, and it was the oldest defect in the document.</strong> The sentence
+              had stood since the first result commit. The notes were real but attached to
+              <code>7d7eba7</code>, and five doc-only correction commits had moved the tip past them —
+              so a merge would have been refused for missing evidence, or worse, landed with the
+              evidence orphaned on a commit nobody would look at. The sentence now states where the
+              notes go and that the gate enforces it, rather than claiming they are already there.</td></tr>
+          <tr><td>Round 6 · the follow-up attributed “body view” to the rulebook</td>
+              <td><strong>Verified.</strong> The rulebook contains the phrase nowhere — a grep matches it
+              only inside “body view<em>ers</em>” in the use-case index. The three surfaces that really
+              say it are <span class="badge id">DEC-31</span>, the registry docstring and the fixture,
+              and the row now names those.</td></tr>
+          <tr><td><strong>Round 7 · the <code>test/v2</code> note still said
+          <em>“all eight assertions green UNEDITED”</em></strong></td>
+              <td><strong>Verified — the same claim, a fourth carrier.</strong> The note was rewritten
+              onto this tip in round 6 by editing its <code>rounds:</code> field and carrying the rest
+              over verbatim, so it brought the original false clause with it and then disagreed with the
+              report it accompanies. Corrected in place on the tip. Round 7's code sweep found nothing
+              and re-ran every suite green: 832 unit and integration tests, 32 e2e, lint,
+              <code>tsc</code>, <code>fmt</code> and <code>clippy</code>.
+              <br><strong>Checkable at <code>git show 0f47698:&lt;ae26033's note path&gt;</code></strong> —
+              a note is mutable and correcting one destroys the state it replaced, so
+              <code>git notes show</code> cannot show what round 7 saw. Only
+              <code>refs/notes/test</code>'s own commit history can, and round 8 proved the point by
+              reading the corrected note and reporting this finding as unsupported.</td></tr>
+          <tr><td>Round 8 · two candidates — that round 7's finding never happened because the note
+          already held the corrected text, and that the <code>doc/v1</code> note repeated that finding
+          as fact</td>
+              <td><strong>Refuted, and it is the most useful refutation of the seven rounds.</strong>
+              Notes are mutable: <code>git notes show ae26033</code> returns the note as it stands
+              <em>now</em>, which is the corrected version. The state round 7 actually read is preserved
+              in <code>refs/notes/test</code> at <code>0f47698</code> (19:06:40), where the clause reads
+              <em>“all eight assertions green UNEDITED, which was the plan's stated check”</em>; the
+              overwrite landed at <code>ba48c69</code> (19:14:23). <strong>The trap is general:</strong>
+              any review that reads a git note is reading a mutable surface, and a claim about what a
+              note once said needs a notes-ref commit beside it or it cannot be checked — which is why
+              the row above now carries one. The second candidate falls with the first: the
+              <code>doc/v1</code> note repeats a finding that was real.</td></tr>
         </tbody>
       </table>
 
