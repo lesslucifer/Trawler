@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W5
+base: eac4f1078d7199b440caeb18d7ef463e4723ee47
+tip: bd0aff3d619a76c10467da650d94b150fe6ad51a
+diff_sha256: 4baa74f5fa6bef7425ae103c9bf9079c4e21c1ad6eb6b3add84236409b774bd2
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-08
