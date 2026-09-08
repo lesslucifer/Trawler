@@ -181,11 +181,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return retry();
   }, [retry]);
 
+  // The claim on focus lasts exactly one attempt: it is consumed when that
+  // attempt settles, whether or not the band went with it. Left armed, a retry
+  // that failed would still be waiting hours later to pull focus out of whatever
+  // the user was doing when the core happened to come back on its own.
   useEffect(() => {
-    if (notAnswering || !retried.current) return;
+    if (!retried.current || retrying) return;
     retried.current = false;
-    mainRef.current?.focus();
-  }, [notAnswering]);
+    if (!notAnswering) mainRef.current?.focus();
+  }, [notAnswering, retrying]);
 
   if (state.phase !== "proven") {
     return (
@@ -288,7 +292,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             key={selectedId}
             api={client}
             flow={detail}
-            failed={detailFailed}
+            // The connection is already stated once — in the band, or in the
+            // row region when there are no rows. A pane that added its own
+            // sentence for that same cause would be the second voice the run
+            // refused it. What it still owns is a failure the shell is silent
+            // about: a dropped flow, a refused id.
+            failed={detailFailed && !notAnswering}
             onClose={() => setSelectedId(null)}
           />
         )

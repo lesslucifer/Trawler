@@ -392,7 +392,7 @@ test("host options are every host seen, not only those the current filter leaves
   expect(offered).toContain("any host");
 });
 
-test("the status filter stays free text, deferred rather than half-converted", async () => {
+test("the status filter stays free text, because the useful set is unknowable", async () => {
   const { api } = mockApi(() => [flow({ id: "f1" })]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
@@ -773,4 +773,36 @@ test("a pane failure is stated even when the list is empty for its own reason", 
   // The list says its own thing; the pane still says its own.
   expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
   expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
+});
+
+// Regression (review round 3): the pane owns only the failures the shell is
+// silent about. When the connection is already stated, a second sentence for the
+// same cause is the voice the design run refused.
+test("a pane failure defers to the connection statement rather than repeating it", async () => {
+  const api = paneApi(
+    () => Promise.reject(new TypeError("Failed to fetch")),
+    () => Promise.reject(new TypeError("Failed to fetch")),
+  );
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByText("trawler is not answering");
+
+  expect(screen.getAllByText("trawler is not answering")).toHaveLength(1);
+  expect(screen.queryByTestId("detail-failed")).toBeNull();
+});
+
+// The focus move belongs to the retry, not to every recovery: a core that comes
+// back on its own must not yank focus out from under someone who is typing.
+test("a connection that recovers on its own does not move focus", async () => {
+  let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
+  const { api } = shellApi(() => answer());
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByText("trawler is not answering");
+
+  const field = screen.getByLabelText("filter");
+  field.focus();
+  answer = async () => [HTTPS];
+  fireEvent.change(field, { target: { value: "example" } });
+
+  await waitFor(() => expect(screen.queryByText("trawler is not answering")).toBeNull());
+  expect(document.activeElement).toBe(field);
 });

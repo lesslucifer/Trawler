@@ -110,8 +110,12 @@ export function useFlows(api: TrawlerApi) {
         setLastConnectionAt(Date.now());
       },
       // A core that dies under an open window sends nothing — so the dropped
-      // stream is the only thing that can say so before the next keystroke.
-      onDown: () => setFailure({ kind: "unreachable" }),
+      // stream is the only thing that can say so before the next keystroke. It
+      // never overwrites a failure already stated: a refused query stays refused
+      // whatever the transport does, and the listing settles which is true. Not
+      // replacing an unreachable with an identical one also keeps a reconnect
+      // cadence from re-rendering the list every few seconds for the whole outage.
+      onDown: () => setFailure((stated) => stated ?? { kind: "unreachable" }),
       // The stream came back; whether the listing did is the listing's to say.
       onUp: debouncedRefresh,
     });

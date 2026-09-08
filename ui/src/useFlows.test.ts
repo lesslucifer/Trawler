@@ -371,3 +371,34 @@ test("a straggling refresh cannot overwrite the answer a later one already gave"
   expect(result.current.failure).toBeNull();
   expect(result.current.flows).toHaveLength(1);
 });
+
+// Regression (review round 3): a stream blip is not a verdict on the query. The
+// core answered "no" and is still answering "no" — replacing that with "not
+// answering" hides the one message the user can act on.
+test("a dropped stream does not overwrite a refusal the core already gave", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
+  const f = streamApi();
+  const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  act(() => result.current.update("status", "4xz"));
+  await waitFor(() => expect(result.current.failure).toEqual({ kind: "rejected", value: "4xz" }));
+
+  act(() => f.fireDown());
+  expect(result.current.failure).toEqual({ kind: "rejected", value: "4xz" });
+});
+
+// The reconnect cadence fires `error` repeatedly for the whole outage; each one
+// replacing an identical value would re-render the virtualized list every tick.
+test("a stream that stays down does not restate the same failure", async () => {
+  const f = streamApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  act(() => f.fireDown());
+  const first = result.current.failure;
+  act(() => f.fireDown());
+  expect(result.current.failure).toBe(first);
+});
