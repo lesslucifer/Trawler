@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W6 result — the controls, built</h1>
       <p>One <code>⋮</code> trigger, three worded acts, two asks and a marked row. The three doors the API has had since W2 reach a person, and two things the design could not change itself — the window's minimum width and the CORS grant hiding the export's filename — are paid here.</p>
-      <div class="meta">v4 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
+      <div class="meta">v5 · 2026-09-08 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W6</span> ·
         <a href="2026-09-08-export-w6-controls-build-plan.html">WU plan</a> ·
         <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> ·
         <a href="2026-09-04-export-plan.html#w6">epic plan</a></div>
@@ -113,10 +113,13 @@
     what <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a> already scopes it to.</p>
 
     <h2 id="review">The review rounds</h2>
-    <p>Two rounds. <strong>Round 1</strong>: five finders over the WU diff, eleven candidates, eight
-    refuted by their verifiers and three confirmed. <strong>Round 2</strong> re-read the fix and found that
-    one of those three had been fixed only halfway. Every confirmed finding carries a regression test
-    written red first.</p>
+    <p>Four rounds, and the shape of them is the finding. <strong>Round 1</strong>: five finders, eleven
+    candidates, eight refuted and three confirmed. <strong>Round 2</strong> re-read the fix and found one of
+    those three had been fixed only halfway. <strong>Rounds 3 and 4</strong> found nothing wrong with the
+    code at all — round 3's correctness finder traced every export/import interleaving and returned empty —
+    and eight further wrong statements in this WU's own record, two of them inside the evidence note itself.
+    Every confirmed code finding carries a regression test written red first; six of the tests counted below
+    exist because of these rounds.</p>
     <table data-c="review-round">
       <thead><tr><th>What it found</th><th>What it moved</th></tr></thead>
       <tbody>
@@ -166,6 +169,30 @@
         </tr>
       </tbody>
     </table>
+    <p><strong>Rounds 3 and 4 judged the record, and the record kept losing.</strong> Neither found a
+    defect in the code. Between them they found eight false statements, every one of the same kind: a number
+    that had been written down rather than measured, and then carried forward when the thing it counted
+    moved.</p>
+    <table data-c="review-rounds-3-4">
+      <thead><tr><th>Round</th><th>What was false</th><th>True value</th></tr></thead>
+      <tbody>
+        <tr><td>3</td><td>The test note's <code>224 lib unit</code> and <code>42 tests/api.rs</code> — neither had ever been run.</td><td>221 and 41.</td></tr>
+        <tr><td>3</td><td>The note's unit <code>count: 69</code> against an itemisation summing to 66, with <code>body.test.ts</code> missing from the list entirely — the very file round 1 forced into existence.</td><td>68, itemised including it.</td></tr>
+        <tr><td>3</td><td>The note claimed both rounds were "recorded on the cr note". Only round 1's existed; round 2's had not been written when the sentence was.</td><td>Written, on the tip each round judged.</td></tr>
+        <tr><td>3</td><td>"73 new across <em>six</em> suites", introducing a list of seven.</td><td>Seven.</td></tr>
+        <tr><td>4</td><td>"eight of them added by the review rounds" — the same guessed-number habit, one round later.</td><td>Six: four in <code>CaptureControls.test.tsx</code>, two in <code>body.test.ts</code>.</td></tr>
+        <tr><td>4</td><td>This section opened "Two rounds" while the same document's later paragraph discussed round 3, and the note said three.</td><td>Four, and rounds 3 and 4 now have this table.</td></tr>
+      </tbody>
+    </table>
+    <p>This is one defect class, eight times — <em>a value moves and a sentence quoting the old value
+    survives</em> — and it is the identical class
+    <a href="2026-09-06-export-w9-controls-redesign-result.html">W9's result</a> named for itself, six times
+    over, one WU earlier. Two runs in a row have now spent their review budget on it. The structural answer
+    W9 reached was to stop writing counts that a later round falsifies; the answer here was narrower and
+    duller — every figure in this result and in the evidence note is now read off a run rather than
+    remembered. That the same class survived W9's fix is the thing worth carrying to the epic, not the
+    individual numbers.</p>
+
     <p><strong>One refutation not accepted.</strong> A finder said <code>exportHar</code> threw a
     status-shaped message where the other two doors throw the server's sentence. Its verifier refuted it —
     <code>exportHar</code> is a <code>GET</code>, the file's readers are all status-shaped, and
@@ -192,7 +219,7 @@
       <thead><tr><th>Check</th><th>Result</th></tr></thead>
       <tbody>
         <tr><td><code>pnpm test</code> (vitest)</td>
-        <td><strong>814 passed</strong> in 47 files, up from 741 in 44 — 73 new across seven suites (eight of them added by the review rounds): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (22), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches). Counted by running each file, not by counting <code>test(</code> calls — a <code>test.each</code> block yields more cases than it has calls, which is how round 2's stale figure got written.</td></tr>
+        <td><strong>814 passed</strong> in 47 files, up from 741 in 44 — 73 new across seven suites (six of them added by the review rounds — four in <code>CaptureControls.test.tsx</code>, two in <code>body.test.ts</code>): <code>api.test.ts</code> (+11: the four methods' request shapes, the filename read and its fallback, a refusal surfaced verbatim, an empty refusal, the <code>cleared</code> listener, the provenance mark), <code>CaptureMenu.test.tsx</code> (14), <code>CaptureControls.test.tsx</code> (22), <code>ModalShell.test.tsx</code> (11), <code>FlowList.test.tsx</code> (+6), <code>App.test.tsx</code> (+7, the integration layer), and <code>body.test.ts</code> (+2, <code>openFile</code>'s two branches). Counted by running each file, not by counting <code>test(</code> calls — a <code>test.each</code> block yields more cases than it has calls, which is how round 2's stale figure got written.</td></tr>
         <tr><td><code>pnpm lint</code> (design/vocabulary)</td>
         <td>clean. One <code>design-allow</code> pragma, on the same offset-from-the-trigger shape <code>Select</code>'s popup already carries; the gap in it is a token.</td></tr>
         <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full suite: <strong>221</strong> lib unit (+1, the CORS grant), <strong>41</strong> <code>tests/api.rs</code> (+2), 3 <code>tests/ca.rs</code>, 6 <code>tests/e2e_capture.rs</code>, 4 <code>tests/e2e_h2.rs</code>, plus the window-minimum guard in <code>xtask</code>. Every figure here was read off a run, after a stale build artifact made one of them lie — see below.</td></tr>
