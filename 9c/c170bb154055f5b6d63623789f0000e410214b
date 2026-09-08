@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W6
+changes:
+  - path: docs/work/2026-09-08-redesign-finish-w6-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before any code. Carries W4's seven-row handoff plus the eighth its result assigned here, the per-state table for the four absences and the band, and the one thing the build had to decide that the design could not: how the client tells an unreachable core from a query the core answered and refused, since listFlows threw the same untyped Error for both. Also states the scope guard - App.tsx hosts the onboarding branch, so the band goes on the proven branch only and no Onboarding/ProxyCloseDialog/setup file may be opened"
+  - path: docs/work/2026-09-08-redesign-finish-w6-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with the eight rows, an evidence row per claim, and three sections the plan could not have written. 'Two things the design left to the build' records why a 404 on the pane's fetch is excluded from the shell's band (it is the ring dropping the selected flow - a cause W4's absence table reserves for the pane's own design) and why the SSE stream's own errors had to stop being ignored (W4's Interaction table gives the unreachable row a user act of 'nothing', and none of the three named .catch sites can fire on a dead core). 'Review round 1' records the three verified defects and the five refuted candidates, including the reading it corrected in this same doc: row 8 no longer claims the pane stops showing 'loading this flow...', because the design deliberately puts that sentence in A' and the review established the pane's own text is unchanged. Seven deviations, including a self-inflicted one worth naming: three new test doubles were rebuilt per render and one test caught it"
+t2_waived: "UC-4's two gains and UC-5's pane width are real at this tip, but the epic plan puts every T2 write-back at W10 so the living documents are rewritten once rather than at each WU. Nothing here makes a T2 doc FALSE - UC-4's filter-bar sentence was the one claim that went stale, and W5 corrected it when the core changed. What W10 inherits is listed in the result's distillation section: UC-4's two rendered statements and the class end to end, UC-5's pane width, DEC-36 for the 520px/1440 pair with W4's six rejected candidates, the rulebook's 'not answering' lexicon term, and roadmap rows for the minimum-window arrangement W4 escalated and for WebdriverIO's *= selector matching nothing in this app"
+date: 2026-09-08
