@@ -53,6 +53,6 @@ changes:
   - path: docs/work/
     tier: T3
     action: removed
-    distills: "The epic plan, eight WU plans, eight WU results, one design run and the epic result - eighteen documents git rm'd into the gitignored docs/.archive/ per DEC-3, each only after what it carried had a living home above. docs/work/ is empty at the epic tip. Their content stays addressable in the commits that added them. The onboarding design run is NOT among them: it never entered this branch and is archived by E-ONBOARD when it adopts it."
+    distills: "The epic plan, eight WU plans, eight WU results, one design run and the epic result - nineteen documents git rm'd into the gitignored docs/.archive/ per DEC-3, each only after what it carried had a living home above. docs/work/ is empty at the epic tip. Their content stays addressable in the commits that added them. The onboarding design run is NOT among them: it never entered this branch and is archived by E-ONBOARD when it adopts it."
 t2_waived: none
 date: 2026-09-09
