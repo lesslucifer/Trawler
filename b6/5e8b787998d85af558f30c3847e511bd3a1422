@@ -1,0 +1,18 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+branch: epic/export
+tests:
+  unit:
+    count: 2
+    what: "a cleared capture that then loses its core is not told nothing ever arrived, and a refusal is not hidden by the silence that followed it, both in ui/src/FlowList.test.tsx - the first covers the clause dropping for cleared, the second the refusal branch moving ahead of the silence. FilterQuery::into_filter keeps its existing coverage in tests/api.rs: the rewrite is one idiom for two refusals whose messages and status codes are unchanged, so no assertion moved."
+  integration:
+    waived: "no contract changed - the two refusals answer with the same message and the same 400 they already did, and the shell's five causes are unit-visible"
+  e2e:
+    waived: "the epic's own e2e on the tip covers the flow this commit sits inside; a silent core with a cleared capture is a shell state the app-half spec cannot induce without killing the core mid-spec"
+suite:
+  rust: "614 tests green (cargo test --all), 0 failed"
+  ui_unit: "934 tests green across 51 files (pnpm test)"
+  clippy: "clean under pedantic with --workspace --all-targets, -D warnings"
+  tsc: "clean"
+date: 2026-09-09
