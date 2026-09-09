@@ -128,11 +128,8 @@ test("a URI with no parseable host contributes no option", async () => {
 function feedApi(answer: () => Promise<FlowSummary[]>) {
   const api: TrawlerApi = apiStub({
     listFlows: () => answer(),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
   });
   return api;
 }
@@ -227,12 +224,8 @@ function view(id: string): FlowView {
 
 function detailApi(answer: () => Promise<FlowView>) {
   const api: TrawlerApi = apiStub({
-    listFlows: async () => [],
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: () => answer(),
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
   });
   return api;
 }
@@ -280,8 +273,6 @@ function streamApi() {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const api: TrawlerApi = apiStub({
     listFlows: () => answer(),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
     stream: (h) => {
@@ -331,11 +322,8 @@ test("a straggling refresh cannot overwrite the answer a later one already gave"
   const api: TrawlerApi = apiStub({
     listFlows: () =>
       new Promise<FlowSummary[]>((resolve, reject) => pending.push({ resolve, reject })),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
   });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(pending).toHaveLength(1)); // the mount's own refresh
@@ -452,11 +440,8 @@ test("a refusal names the value that was asked, not whatever the box holds now",
       new Promise<FlowSummary[]>((_, reject) =>
         calls.push({ status: filter.status ?? "", reject }),
       ),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
   });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(calls).toHaveLength(1)); // the mount's own listing

@@ -64,19 +64,21 @@ function Absence({
   const refill = `send traffic through the proxy — ${defaultProxyAddr()}`;
   return (
     <div data-testid="empty" className="flex justify-center p-12">
-      {silent && refused === null ? (
-        // The clause is a claim about why this region is empty, so it is made
-        // only when it is this region's own truth: a filter that excludes
-        // everything is not a window nothing has reached.
-        <NotAnswering
-          trailing={filtered ? undefined : "nothing has reached the window"}
-          retrying={retrying}
-          onRetry={onRetry}
-        />
-      ) : refused !== null ? (
+      {refused !== null ? (
         // A rejection, not a failure: the API answered and said no, so there is
         // no ⚠ and no retry — the correction is more typing.
         <Notice detail="type a code (404) or a class (4xx)">{`${refused} is not a status`}</Notice>
+      ) : silent ? (
+        // The clause is a claim about why this region is empty, so it is made
+        // only when it is this region's own truth. Neither a filter that
+        // excludes everything nor a capture the user just emptied is a window
+        // nothing has reached — in both the traffic arrived and something else
+        // is why the region is bare.
+        <NotAnswering
+          trailing={filtered || cleared ? undefined : "nothing has reached the window"}
+          retrying={retrying}
+          onRetry={onRetry}
+        />
       ) : cleared ? (
         <Notice detail={refill}>capture cleared</Notice>
       ) : filtered ? (

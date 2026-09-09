@@ -75,8 +75,9 @@ test("connectionCount reads /stats and returns the connections tally", async () 
 });
 
 // A bare CONNECT tunnel never becomes a flow, so a `connection` event must bump
-// the counter (onConnection) and must NOT trigger the flow-list refetch (onEvent).
-test("stream routes a connection event to onConnection only, never onEvent", () => {
+// One fake EventSource for every stream test: they all need the same thing —
+// a handle on the listeners the client registered, so the test can fire one.
+function stubEventSource() {
   const listeners: Record<string, EventListener[]> = {};
   class FakeSource {
     onopen: (() => void) | null = null;
@@ -87,6 +88,12 @@ test("stream routes a connection event to onConnection only, never onEvent", () 
     close() {}
   }
   vi.stubGlobal("EventSource", FakeSource);
+  return listeners;
+}
+
+// the counter (onConnection) and must NOT trigger the flow-list refetch (onEvent).
+test("stream routes a connection event to onConnection only, never onEvent", () => {
+  const listeners = stubEventSource();
 
   const onEvent = vi.fn();
   const onConnection = vi.fn();
@@ -261,14 +268,7 @@ test("apiAddr follows the configured base URL, without its scheme", () => {
 // The stream's own health is a separate channel from its events: it is what the
 // shell reads to say a core died under an open window, with no user act at all.
 test("stream reports its transport going down and coming back", () => {
-  const listeners: Record<string, EventListener[]> = {};
-  class FakeSource {
-    addEventListener(name: string, fn: EventListener) {
-      (listeners[name] ??= []).push(fn);
-    }
-    close() {}
-  }
-  vi.stubGlobal("EventSource", FakeSource);
+  const listeners = stubEventSource();
 
   const onEvent = vi.fn();
   const onDown = vi.fn();
@@ -284,14 +284,7 @@ test("stream reports its transport going down and coming back", () => {
 });
 
 test("stream listens for cleared — the server emits it and nothing was listening", () => {
-  const listeners: Record<string, EventListener[]> = {};
-  class FakeSource {
-    addEventListener(name: string, fn: EventListener) {
-      (listeners[name] ??= []).push(fn);
-    }
-    close() {}
-  }
-  vi.stubGlobal("EventSource", FakeSource);
+  const listeners = stubEventSource();
 
   const onEvent = vi.fn();
   createApi("http://x").stream({ onEvent });

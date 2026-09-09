@@ -48,18 +48,16 @@ impl FilterQuery {
     /// live here rather than in each endpoint, so the export and the clear refuse
     /// exactly what the listing refuses.
     fn into_filter(self) -> Result<FlowFilter, &'static str> {
-        let source = match self.source.as_deref() {
-            None => None,
-            Some(value) => {
-                Some(view::parse_source(value).ok_or("source must be captured or imported")?)
-            }
-        };
+        let source = self
+            .source
+            .as_deref()
+            .map(|value| view::parse_source(value).ok_or("source must be captured or imported"))
+            .transpose()?;
         let status = self
             .status
             .as_deref()
-            .map(str::parse::<StatusMatch>)
-            .transpose()
-            .map_err(|()| STATUS_GRAMMAR)?;
+            .map(|value| value.parse::<StatusMatch>().map_err(|()| STATUS_GRAMMAR))
+            .transpose()?;
         Ok(FlowFilter {
             host: self.host,
             method: self.method,

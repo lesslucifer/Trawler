@@ -275,7 +275,7 @@ test("a clear that emptied a filtered view says it was cleared, not that the fil
   expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared");
 });
 
-// Four causes, four sentences, and an order between them. The order is the point:
+// Five causes, five sentences, and an order between them. The order is the point:
 // an empty list means nothing when the list could not be fetched, so a failure
 // outranks both empties rather than sharing a region with them.
 test("a core that is not answering takes the empty region from both empties", () => {
@@ -308,6 +308,16 @@ test("the silence says nothing reached the window only when nothing did", () => 
 // The run ranked "not answering" above the two empties and never against a
 // refusal, so the build does not either: the refusal keeps the region it earned
 // and the silence is stated above it by the shell.
+// The same reasoning that keeps the clause off a filtered region keeps it off a
+// cleared one: the traffic arrived, the user emptied it, and saying nothing has
+// reached the window would be the shell inventing a history it can see is wrong.
+test("a cleared capture that then loses its core is not told nothing ever arrived", () => {
+  render(<FlowList flows={[]} silent cleared />);
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("trawler is not answering");
+  expect(region).not.toHaveTextContent("nothing has reached the window");
+});
+
 test("a refusal is not hidden by the silence that followed it", () => {
   render(<FlowList flows={[]} silent refused="4xz" />);
   const region = screen.getByTestId("empty");
