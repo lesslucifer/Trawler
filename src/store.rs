@@ -63,37 +63,40 @@ impl Ring {
             .filter(|flow| filter.matches(flow))
     }
 
-    /// Removes one flow from the map and debits what it actually held. The
-    /// order is the caller's to mend: eviction pops the row it already took
-    /// from the front, while a removal has to find it.
-    fn debit(&mut self, id: FlowId) -> Option<Flow> {
-        let (_, flow) = self.flows.remove(&id)?;
+    /// Removes one flow from the map and debits what it actually held, handing
+    /// back the sequence with it: the order is the caller's to mend, and the
+    /// sequence is what lets it find the row by search rather than by walk.
+    /// Eviction needs neither — it pops the row it already took from the front.
+    fn debit(&mut self, id: FlowId) -> Option<(u64, Flow)> {
+        let (seq, flow) = self.flows.remove(&id)?;
         self.total_bytes = self.total_bytes.saturating_sub(flow.retained_bytes());
-        Some(flow)
+        Some((seq, flow))
     }
 
     /// Drops `doomed` from both the order and the map. A single removal mends
-    /// the order by finding its one row, because rebuilding the whole order
-    /// would cost a full scan and a hash probe per row — paid under the lock
-    /// the live capture path contends on, and the ring is bounded by retained
-    /// bytes rather than row count, so a capture of body-less exchanges grows
-    /// it without limit.
+    /// the order by searching out its one row on the sequence `debit` handed
+    /// back, because rebuilding the whole order would cost a full scan and a
+    /// hash probe per row — paid under the lock the live capture path contends
+    /// on, and the ring is bounded by retained bytes rather than row count, so
+    /// a capture of body-less exchanges grows it without limit. A bulk removal
+    /// has no such shortcut: every surviving row has to be asked about, so it
+    /// pays the one pass `retain` makes.
     fn unlink(&mut self, doomed: &[FlowId]) -> Vec<FlowId> {
-        let removed: Vec<FlowId> =
-            doomed.iter().filter(|id| self.debit(**id).is_some()).copied().collect();
+        let removed: Vec<(u64, FlowId)> =
+            doomed.iter().filter_map(|id| self.debit(*id).map(|(seq, _)| (seq, *id))).collect();
         match removed.as_slice() {
             [] => {}
-            [id] => {
-                if let Some(at) = self.order.iter().position(|(_, row)| row == id) {
+            [(seq, _)] => {
+                if let Ok(at) = self.order.binary_search_by_key(seq, |(seq, _)| *seq) {
                     self.order.remove(at);
                 }
             }
             _ => {
-                let gone: HashSet<FlowId> = removed.iter().copied().collect();
+                let gone: HashSet<FlowId> = removed.iter().map(|(_, id)| *id).collect();
                 self.order.retain(|(_, id)| !gone.contains(id));
             }
         }
-        removed
+        removed.into_iter().map(|(_, id)| id).collect()
     }
 
     /// Takes the row and stamps it with the sequence that keeps `order` sorted.
@@ -404,15 +407,15 @@ impl Store {
 
         // The cursor is positioned over the unfiltered order, so it stays valid
         // when a client narrows the filter between pages.
-        let walk: Box<dyn Iterator<Item = &FlowId>> = match after {
-            None => Box::new(ring.newest_first()),
+        let place = match after {
+            None => ring.order.len(),
             Some(cursor) => match ring.place_of(cursor) {
-                Some(place) => Box::new(ring.older_than(place)),
+                Some(place) => place,
                 None => return FlowPage::default(),
             },
         };
 
-        let mut matching = ring.matching(walk, filter);
+        let mut matching = ring.matching(ring.older_than(place), filter);
         let flows: Vec<Flow> = matching.by_ref().take(limit).cloned().collect();
         // Peeking one past the page is what lets a full final page report no
         // cursor, so a caller stops on `next_cursor` rather than on an empty page.
