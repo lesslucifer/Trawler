@@ -1,11 +1,13 @@
 #![allow(clippy::unwrap_used)]
-
 //! E-EXPORT end to end: real traffic through the running proxy, paged out of the
 //! listing, exported as HAR, cleared, and read back — over ephemeral ports and a
 //! local origin, never the public network.
 
+mod common;
+
 use std::collections::HashSet;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::Request;
@@ -14,12 +16,13 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::Router;
 use bytes::Bytes;
-use rcgen::{BasicConstraints, CertificateParams, ExtendedKeyUsagePurpose, IsCa, Issuer, KeyPair};
 use serde_json::Value;
 use tempfile::{tempdir, TempDir};
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use trawler::{serve, Config, RunningServer};
+
+use common::tls_origin;
 
 const BROWSER_CURL: &str = concat!(
     "curl 'http://api.example.com/v1/things?page=2' \\\n",
@@ -51,31 +54,16 @@ async fn start_origin() -> (SocketAddr, JoinHandle<()>) {
     (addr, task)
 }
 
-fn gen_certs() -> (String, String, String) {
-    let ca_key = KeyPair::generate().unwrap();
-    let mut ca_params = CertificateParams::new(Vec::new()).unwrap();
-    ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-    let ca_pem = ca_params.self_signed(&ca_key).unwrap().pem();
-    let issuer = Issuer::new(ca_params, ca_key);
-
-    let leaf_key = KeyPair::generate().unwrap();
-    let mut leaf_params = CertificateParams::new(vec!["localhost".to_owned()]).unwrap();
-    leaf_params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
-    let leaf = leaf_params.signed_by(&leaf_key, &issuer).unwrap();
-    (ca_pem, leaf.pem(), leaf_key.serialize_pem())
-}
-
-async fn start_https_origin(leaf_pem: String, leaf_key_pem: String) -> (u16, JoinHandle<()>) {
-    use axum_server::tls_rustls::RustlsConfig;
+fn start_https_origin() -> (String, u16, JoinHandle<()>) {
+    let (ca_pem, server_config) = tls_origin(&["http/1.1"]);
     let app = Router::new().route("/secure", get(|| async { "top-secret" }));
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
-    let config =
-        RustlsConfig::from_pem(leaf_pem.into_bytes(), leaf_key_pem.into_bytes()).await.unwrap();
+    let tls = axum_server::tls_rustls::RustlsConfig::from_config(Arc::new(server_config));
     let task = tokio::spawn(async move {
-        let _ = axum_server::from_tcp_rustls(listener, config).serve(app.into_make_service()).await;
+        let _ = axum_server::from_tcp_rustls(listener, tls).serve(app.into_make_service()).await;
     });
-    (port, task)
+    (ca_pem, port, task)
 }
 
 struct Harness {
@@ -93,8 +81,7 @@ impl Harness {
     async fn setup() -> Self {
         trawler::init_crypto();
         let (origin, origin_task) = start_origin().await;
-        let (upstream_ca_pem, leaf_pem, leaf_key_pem) = gen_certs();
-        let (https_port, https_task) = start_https_origin(leaf_pem, leaf_key_pem).await;
+        let (upstream_ca_pem, https_port, https_task) = start_https_origin();
 
         let ca_dir = tempdir().unwrap();
         let config = Config {

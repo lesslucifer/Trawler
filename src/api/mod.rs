@@ -30,7 +30,8 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
             "/flows/import",
             // axum's 2 MB default would reject documents far smaller than the
             // store's own capacity, a bound no part of the contract implies.
-            post(routes::import_flows).layer(DefaultBodyLimit::max(state.store.max_bytes())),
+            post(routes::import_flows)
+                .layer(DefaultBodyLimit::max(import_body_limit(state.store.max_bytes()))),
         )
         .route("/stats", get(routes::stats))
         .route("/flows/{id}", get(routes::get_flow).delete(routes::delete_flow))
@@ -41,6 +42,22 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
         .layer(middleware::from_fn(allow_cross_origin))
         .with_state(state)
 }
+
+/// The ring's cap counts raw retained body bytes; the document that carries them
+/// counts base64 — a third larger for every body that is not text — plus the JSON
+/// that frames all of them. Bounding the import door by the cap alone would
+/// therefore refuse the store its own export of a capture it was holding legally,
+/// which is the one document the round trip must always accept. The door admits
+/// the expansion instead: still a bound, still derived from the single ceiling
+/// that exists, and generous enough that the parser rather than the transport is
+/// what refuses a document too big to hold.
+fn import_body_limit(ring_cap: usize) -> usize {
+    ring_cap.saturating_mul(DOCUMENT_EXPANSION)
+}
+
+/// Base64's 4/3 rounded up to 2, so headers, URLs and JSON punctuation are
+/// covered by the same factor rather than by a second guess.
+const DOCUMENT_EXPANSION: usize = 2;
 
 /// The native app is a cross-origin client (its webview origin is not the API's),
 /// so every response carries an open CORS grant and preflights short-circuit.
@@ -99,6 +116,47 @@ mod tests {
             let response = router.clone().oneshot(request).await.expect("response");
             assert_eq!(response.status(), expected, "route {path}");
         }
+    }
+
+    // The round trip the epic exists for must not be refused by the transport at
+    // the one place it is most likely to matter: a capture of binary bodies filling
+    // the ring, whose document is base64 and so larger than the ring itself.
+    #[tokio::test]
+    async fn a_full_ring_of_binary_bodies_re_imports_its_own_export() {
+        use crate::test_support::{captured, FlowBuilder};
+
+        const RING_CAP: usize = 4096;
+        let store = Arc::new(Store::new(RING_CAP, 8));
+        store.insert(
+            FlowBuilder::new()
+                .uri("http://binary.example.com/blob")
+                .status(200)
+                .resp_body(captured(&vec![0xffu8; RING_CAP * 3 / 4]))
+                .build(),
+        );
+        let router = super::router(Arc::clone(&store), Arc::new("PEM".into()));
+
+        let export = Request::builder().uri("/flows/export").body(Body::empty()).expect("request");
+        let exported = router.clone().oneshot(export).await.expect("response");
+        assert_eq!(exported.status(), StatusCode::OK);
+        let document = axum::body::to_bytes(exported.into_body(), usize::MAX).await.expect("bytes");
+        assert!(
+            document.len() > RING_CAP,
+            "the premise: base64 makes the document outweigh the ring it came from ({} bytes)",
+            document.len()
+        );
+
+        let reimport = Request::builder()
+            .method("POST")
+            .uri("/flows/import")
+            .body(Body::from(document))
+            .expect("request");
+        let response = router.oneshot(reimport).await.expect("response");
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "the store must accept the document it just produced"
+        );
     }
 
     // `export` is a static segment sharing a prefix with `/flows/{id}`; axum

@@ -167,7 +167,8 @@ impl Store {
     }
 
     /// The ring's byte cap — the honest ceiling on how much capture the store can
-    /// hold, and so on how large a document the import route accepts.
+    /// hold, counted in retained body bytes. What a document carrying that capture
+    /// weighs on the wire is larger and is the API boundary's to size.
     pub fn max_bytes(&self) -> usize {
         self.inner.lock().expect("store lock").max_bytes
     }
