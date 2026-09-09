@@ -4,8 +4,7 @@ epic: E-EXPORT
 branch: epic/export
 tests:
   unit:
-    count: 0
-    what: "no new assertion: both changes are behaviour-preserving and the ring's existing 51 tests hold them - the_order_stays_sorted_through_eviction_and_both_removal_paths covers the sorted invariant the removal's binary search now relies on, a_cursor_resolves_to_its_own_place_and_to_nothing_once_removed covers the gap closing after a removal, and the paging property test covers the walk the boxed iterator used to carry."
+    waived: "no new assertion is owed: both changes are behaviour-preserving and the ring's existing 51 tests hold them - the_order_stays_sorted_through_eviction_and_both_removal_paths covers the sorted invariant the removal's binary search now relies on, a_cursor_resolves_to_its_own_place_and_to_nothing_once_removed covers the gap closing after a removal, and the paging property test covers the walk the boxed iterator used to carry."
   integration:
     waived: "no contract touched - Store's surface is unchanged; debit and unlink are private to Ring"
   e2e:
