@@ -145,7 +145,12 @@ export function CaptureControls({
         </div>
       )}
       {asking === "clear" && (
-        <ClearDialog count={count} onClear={clear} onCancel={() => setAsking(null)} />
+        <ClearDialog
+          count={count}
+          onClear={clear}
+          onFailedAfterCancel={(reason) => setFailure({ act: "clear", reason })}
+          onCancel={() => setAsking(null)}
+        />
       )}
       {asking === "import" && (
         <ImportDialog
@@ -164,16 +169,26 @@ export function CaptureControls({
 function ClearDialog({
   count,
   onClear,
+  onFailedAfterCancel,
   onCancel,
 }: {
   count: number;
   onClear: () => Promise<void>;
+  onFailedAfterCancel: (reason: string) => void;
   onCancel: () => void;
 }) {
   const [failure, setFailure] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const exit = useRef<HTMLSpanElement>(null);
+  // Cancel and Esc stay live for the length of the request, so the dialog the
+  // refusal was meant for can be gone by the time it arrives. Same arming as
+  // ImportDialog's, and for the same StrictMode reason.
+  const listening = useRef(true);
+  useEffect(() => {
+    listening.current = true;
+    return () => void (listening.current = false);
+  }, []);
 
   const confirm = () => {
     setFailure(null);
@@ -185,6 +200,13 @@ function ClearDialog({
     setClearing(true);
     if (dontShowAgain) void dismissNotice(NOTICE_KEY.clear).catch(() => {});
     onClear().catch((error: unknown) => {
+      // A clear the user walked away from still failed, and the capture they
+      // are looking at is still full. The header slot says so where the dialog
+      // no longer can.
+      if (!listening.current) {
+        onFailedAfterCancel(reasonOf(error));
+        return;
+      }
       setFailure(reasonOf(error));
       setClearing(false);
     });
@@ -273,6 +295,10 @@ function ImportDialog({
   };
 
   const run = async (call: () => Promise<number>) => {
+    // `choose` awaits the picker and then the read, and the ask can be dismissed
+    // in that window. An import nobody is listening for must not start: it would
+    // arm the header slot with no one left to disarm it.
+    if (!listening.current) return;
     // Both buttons are about to be disabled, and a browser blurs a focused
     // control when that happens — to <body>, outside the dialog, where
     // ModalShell never sees Esc. Read-only is what keeps the textarea focusable

@@ -4,6 +4,8 @@
 //! spelled differently, consumes the flags that never reach the wire, and
 //! refuses everything else naming the token it did not understand.
 
+use std::collections::HashSet;
+
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use bytes::Bytes;
@@ -157,11 +159,21 @@ impl Flag {
     }
 }
 
+/// Which side of the command a header came from. `-H` states a header outright;
+/// `-u`, `-b` and `--compressed` only expand into one. curl lets the statement
+/// win whichever came first, so the two have to stay tellable apart until the
+/// request is built.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum HeaderOrigin {
+    Stated,
+    Expanded,
+}
+
 #[derive(Default)]
 struct Command {
     method: Option<String>,
     url: Option<String>,
-    headers: Vec<Header>,
+    headers: Vec<(HeaderOrigin, Header)>,
     cookies: Vec<String>,
     data: Vec<Vec<u8>>,
 }
@@ -244,15 +256,18 @@ impl Command {
                 if !credentials.contains(':') {
                     return Err(CurlError::UserWithoutPassword);
                 }
-                self.headers.push(Header {
-                    name: "Authorization".into(),
-                    value: format!("Basic {}", STANDARD.encode(credentials)),
-                });
+                self.headers.push((
+                    HeaderOrigin::Expanded,
+                    Header {
+                        name: "Authorization".into(),
+                        value: format!("Basic {}", STANDARD.encode(credentials)),
+                    },
+                ));
             }
-            Flag::Compressed => self.headers.push(Header {
-                name: "Accept-Encoding".into(),
-                value: COMPRESSED_ACCEPT_ENCODING.into(),
-            }),
+            Flag::Compressed => self.headers.push((
+                HeaderOrigin::Expanded,
+                Header { name: "Accept-Encoding".into(), value: COMPRESSED_ACCEPT_ENCODING.into() },
+            )),
             Flag::Ignored { .. } => {}
         }
         Ok(())
@@ -286,7 +301,10 @@ impl Command {
         }
         let sends_nothing = value.is_empty() && !header.ends_with(';');
         if !sends_nothing {
-            self.headers.push(Header { name: name.to_owned(), value: value.to_owned() });
+            self.headers.push((
+                HeaderOrigin::Stated,
+                Header { name: name.to_owned(), value: value.to_owned() },
+            ));
         }
         Ok(())
     }
@@ -297,8 +315,12 @@ impl Command {
             return Err(CurlError::NotAbsoluteUrl(uri));
         }
         if !self.cookies.is_empty() {
-            self.headers.push(Header { name: "Cookie".into(), value: self.cookies.join("; ") });
+            self.headers.push((
+                HeaderOrigin::Expanded,
+                Header { name: "Cookie".into(), value: self.cookies.join("; ") },
+            ));
         }
+        let headers = self.headers;
         let body = self.data.join(&b'&');
         let method = self
             .method
@@ -307,7 +329,7 @@ impl Command {
             method,
             uri,
             version: "HTTP/1.1".to_owned(),
-            headers: self.headers,
+            headers: stated_wins(headers),
             body: if body.is_empty() {
                 BodyRec::Empty
             } else {
@@ -315,6 +337,26 @@ impl Command {
             },
         })
     }
+}
+
+/// `-u`, `-b` and `--compressed` are shorthand for a header, not an override of
+/// one: real curl sends a single `Authorization`/`Cookie`/`Accept-Encoding` and
+/// the `-H` spelling of that name is the one it sends, whichever came first on
+/// the line. Dropping the expansion here rather than at the push is what makes
+/// the order not matter.
+fn stated_wins(headers: Vec<(HeaderOrigin, Header)>) -> Vec<Header> {
+    let stated: HashSet<String> = headers
+        .iter()
+        .filter(|(origin, _)| *origin == HeaderOrigin::Stated)
+        .map(|(_, header)| header.name.to_ascii_lowercase())
+        .collect();
+    headers
+        .into_iter()
+        .filter(|(origin, header)| {
+            *origin == HeaderOrigin::Stated || !stated.contains(&header.name.to_ascii_lowercase())
+        })
+        .map(|(_, header)| header)
+        .collect()
 }
 
 fn spelled(flag: &str, value: &[u8]) -> String {
@@ -378,6 +420,9 @@ fn double_quoted(bytes: &mut ByteStream<'_>, word: &mut Vec<u8>) -> Result<(), C
             b'\\' => match bytes.next() {
                 Some(escaped @ (b'"' | b'\\' | b'$' | b'`')) => word.push(escaped),
                 Some(b'\n') => {}
+                Some(b'\r') => {
+                    bytes.next_if_eq(&b'\n');
+                }
                 Some(other) => word.extend([b'\\', other]),
                 None => return Err(CurlError::UnterminatedQuote),
             },
@@ -512,6 +557,14 @@ mod tests {
             assert_eq!(words("curl \\\n  -H \\\r\n 'x' \"a\\\nb\""), ["curl", "-H", "x", "ab"]);
         }
 
+        /// A command pasted out of a Windows terminal arrives CRLF-ended, and a
+        /// continuation inside a quoted value has to fold there too - otherwise
+        /// the value keeps a stray backslash and a raw CR.
+        #[test]
+        fn a_crlf_continuation_folds_inside_double_quotes_as_it_does_outside() {
+            assert_eq!(words("\"a\\\r\nb\""), ["ab"]);
+        }
+
         #[test]
         fn adjacent_quoted_segments_form_one_word() {
             assert_eq!(words(r#"a'b'"c"d$'e'"#), ["abcde"]);
@@ -592,6 +645,34 @@ mod tests {
         fn headers_keep_their_order_and_values_lose_the_space_after_the_colon() {
             let flow = parse("curl http://a/ -H 'B: 2' --header 'A:1' -H 'C:  x: y '");
             assert_eq!(headers(&flow), [("B", "2"), ("A", "1"), ("C", "x: y")]);
+        }
+
+        /// `-u`, `-b` and `--compressed` expand into a header rather than
+        /// override one, so curl sends the `-H` spelling of that name and only
+        /// that one - whichever of the two was written first.
+        #[test]
+        fn a_stated_header_beats_the_flag_that_would_expand_into_the_same_name() {
+            for command in [
+                "curl http://a/ --compressed -H 'Accept-Encoding: gzip' -u u:p \
+                 -H 'Authorization: Bearer t' -b 'a=1' -H 'Cookie: c=d'",
+                "curl http://a/ -H 'Accept-Encoding: gzip' --compressed \
+                 -H 'Authorization: Bearer t' -u u:p -H 'Cookie: c=d' -b 'a=1'",
+            ] {
+                assert_eq!(
+                    headers(&parse(command)),
+                    [("Accept-Encoding", "gzip"), ("Authorization", "Bearer t"), ("Cookie", "c=d")],
+                    "the expansion must stand aside, not double the header"
+                );
+            }
+        }
+
+        #[test]
+        fn a_flag_still_expands_when_no_header_states_that_name() {
+            let flow = parse("curl http://a/ --compressed -u u:p -b 'a=1' -H 'X: 1'");
+            assert_eq!(
+                headers(&flow).iter().map(|(name, _)| *name).collect::<Vec<_>>(),
+                ["Accept-Encoding", "Authorization", "X", "Cookie"]
+            );
         }
 
         #[test]

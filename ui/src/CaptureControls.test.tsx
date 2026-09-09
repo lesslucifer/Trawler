@@ -681,3 +681,38 @@ test("the clear ask keeps its focus hold, and its esc, while the clear runs", as
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await act(async () => land?.());
 });
+
+// Both found by the epic-close review. The two asks each had a window where the
+// answer arrived after the dialog it was meant for had gone, and neither the
+// slot nor the header was told.
+test("an import abandoned while the picker is still open never arms the slot it cannot disarm", async () => {
+  let release: ((file: { name: string; bytes: Uint8Array }) => void) | undefined;
+  vi.spyOn(files, "openFile").mockReturnValue(new Promise((resolve) => (release = resolve)));
+  const importHar = vi.fn(async () => 1);
+  mount({ importHar });
+
+  choose(CAPTURE_COPY.importName);
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.choose }));
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  await act(async () => release?.({ name: "s.har", bytes: new Uint8Array([1]) }));
+  expect(importHar).not.toHaveBeenCalled();
+  expect(slot()).toHaveTextContent("6 flows");
+});
+
+test("a clear that fails after the ask was cancelled still says so in the header", async () => {
+  let refuse: ((error: Error) => void) | undefined;
+  const clearFlows = vi.fn(async () => new Promise<number>((_, reject) => (refuse = reject)));
+  mount({ clearFlows });
+
+  await openClear();
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
+  await waitFor(() => expect(clearFlows).toHaveBeenCalled());
+
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  await act(async () => refuse?.(new Error("the core went away")));
+  expect(screen.getByTestId("clear-failed")).toHaveTextContent("the core went away");
+});

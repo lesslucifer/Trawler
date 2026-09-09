@@ -20,8 +20,13 @@ pub struct Store {
 }
 
 struct Ring {
-    order: VecDeque<FlowId>,
-    flows: HashMap<FlowId, Flow>,
+    /// Ascending by `seq`, so a cursor's place is found by binary search rather
+    /// than by walking every newer row — the walk is what made paging through a
+    /// long capture cost the square of its length, under the lock the live
+    /// capture path contends on.
+    order: VecDeque<(u64, FlowId)>,
+    flows: HashMap<FlowId, (u64, Flow)>,
+    next_seq: u64,
     total_bytes: usize,
     max_bytes: usize,
 }
@@ -30,7 +35,20 @@ impl Ring {
     /// Newest-first is the listing order every read shares, so both `list` and
     /// `page` walk through here rather than each spelling out the reversal.
     fn newest_first(&self) -> impl Iterator<Item = &FlowId> {
-        self.order.iter().rev()
+        self.order.iter().rev().map(|(_, id)| id)
+    }
+
+    /// Where the cursor's row sits in `order`, or `None` once the ring has let
+    /// it go. `order` is sorted by `seq` by construction — rows are only ever
+    /// appended, and removal keeps what is left in place.
+    fn place_of(&self, cursor: FlowId) -> Option<usize> {
+        let (seq, _) = self.flows.get(&cursor)?;
+        self.order.binary_search_by_key(seq, |(seq, _)| *seq).ok()
+    }
+
+    /// The rows older than `place`, newest of them first — where a page resumes.
+    fn older_than(&self, place: usize) -> impl Iterator<Item = &FlowId> {
+        self.order.range(..place).rev().map(|(_, id)| id)
     }
 
     /// Resolves ids to flows and applies the filter — the second half of the
@@ -40,14 +58,16 @@ impl Ring {
         ids: impl Iterator<Item = &'a FlowId> + 'a,
         filter: &'a FlowFilter,
     ) -> impl Iterator<Item = &'a Flow> + 'a {
-        ids.filter_map(|id| self.flows.get(id)).filter(|flow| filter.matches(flow))
+        ids.filter_map(|id| self.flows.get(id))
+            .map(|(_, flow)| flow)
+            .filter(|flow| filter.matches(flow))
     }
 
     /// Removes one flow from the map and debits what it actually held. The
     /// order is the caller's to mend: eviction pops the row it already took
     /// from the front, while a removal has to find it.
     fn debit(&mut self, id: FlowId) -> Option<Flow> {
-        let flow = self.flows.remove(&id)?;
+        let (_, flow) = self.flows.remove(&id)?;
         self.total_bytes = self.total_bytes.saturating_sub(flow.retained_bytes());
         Some(flow)
     }
@@ -64,22 +84,30 @@ impl Ring {
         match removed.as_slice() {
             [] => {}
             [id] => {
-                if let Some(at) = self.order.iter().position(|row| row == id) {
+                if let Some(at) = self.order.iter().position(|(_, row)| row == id) {
                     self.order.remove(at);
                 }
             }
             _ => {
                 let gone: HashSet<FlowId> = removed.iter().copied().collect();
-                self.order.retain(|id| !gone.contains(id));
+                self.order.retain(|(_, id)| !gone.contains(id));
             }
         }
         removed
     }
 
+    /// Takes the row and stamps it with the sequence that keeps `order` sorted.
+    fn admit(&mut self, id: FlowId, flow: Flow) {
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        self.order.push_back((seq, id));
+        self.flows.insert(id, (seq, flow));
+    }
+
     fn evict(&mut self) -> Vec<FlowId> {
         let mut evicted = Vec::new();
         while self.total_bytes > self.max_bytes && self.order.len() > 1 {
-            let Some(oldest) = self.order.pop_front() else {
+            let Some((_, oldest)) = self.order.pop_front() else {
                 break;
             };
             if self.debit(oldest).is_some() {
@@ -208,6 +236,7 @@ impl Store {
             inner: Mutex::new(Ring {
                 order: VecDeque::new(),
                 flows: HashMap::new(),
+                next_seq: 0,
                 total_bytes: 0,
                 max_bytes,
             }),
@@ -245,8 +274,7 @@ impl Store {
         let evicted = {
             let mut ring = self.inner.lock().expect("store lock");
             ring.total_bytes += flow.retained_bytes();
-            ring.order.push_back(id);
-            ring.flows.insert(id, flow);
+            ring.admit(id, flow);
             ring.evict()
         };
         let _ = self.tx.send(FlowEvent::RequestCaptured { flow_id: id, req });
@@ -257,7 +285,7 @@ impl Store {
         let event_res = res.clone();
         let evicted = {
             let mut ring = self.inner.lock().expect("store lock");
-            let Some(flow) = ring.flows.get_mut(&id) else {
+            let Some((_, flow)) = ring.flows.get_mut(&id) else {
                 return;
             };
             let before = flow.retained_bytes();
@@ -291,8 +319,7 @@ impl Store {
             let mut ring = self.inner.lock().expect("store lock");
             for flow in flows {
                 ring.total_bytes += flow.retained_bytes();
-                ring.order.push_back(flow.id);
-                ring.flows.insert(flow.id, flow);
+                ring.admit(flow.id, flow);
             }
             ring.evict()
         };
@@ -311,7 +338,7 @@ impl Store {
     }
 
     pub fn get(&self, id: FlowId) -> Option<Flow> {
-        self.inner.lock().expect("store lock").flows.get(&id).cloned()
+        self.inner.lock().expect("store lock").flows.get(&id).map(|(_, flow)| flow.clone())
     }
 
     /// Removes every flow the filter selects — the whole capture when the filter
@@ -374,15 +401,16 @@ impl Store {
     /// already holds.
     pub fn page(&self, filter: &FlowFilter, limit: usize, after: Option<FlowId>) -> FlowPage {
         let ring = self.inner.lock().expect("store lock");
-        let mut walk = ring.newest_first();
 
         // The cursor is positioned over the unfiltered order, so it stays valid
         // when a client narrows the filter between pages.
-        if let Some(cursor) = after {
-            if !walk.any(|id| *id == cursor) {
-                return FlowPage::default();
-            }
-        }
+        let walk: Box<dyn Iterator<Item = &FlowId>> = match after {
+            None => Box::new(ring.newest_first()),
+            Some(cursor) => match ring.place_of(cursor) {
+                Some(place) => Box::new(ring.older_than(place)),
+                None => return FlowPage::default(),
+            },
+        };
 
         let mut matching = ring.matching(walk, filter);
         let flows: Vec<Flow> = matching.by_ref().take(limit).cloned().collect();
@@ -845,6 +873,91 @@ mod tests {
         let second = s.page(&filter(), 2, first.next_cursor);
         assert_eq!(uris(&second.flows), vec!["http://keep/0"]);
         assert_eq!(second.next_cursor, None);
+    }
+
+    /// The binary search that finds a cursor is only sound while `order` stays
+    /// ascending by seq, and eviction, single removal and bulk removal each mend
+    /// the order their own way.
+    #[test]
+    fn the_order_stays_sorted_through_eviction_and_both_removal_paths() {
+        let s = store();
+        let ids: Vec<FlowId> = (0..40)
+            .map(|i| {
+                let flow = FlowBuilder::new().uri(&format!("http://h/{i}")).build();
+                let id = flow.id;
+                s.insert(flow);
+                id
+            })
+            .collect();
+        s.remove(ids[7]);
+        s.remove_matching(&FlowFilter { host: Some("h".into()), ..Default::default() });
+        for i in 40..60 {
+            s.insert(FlowBuilder::new().uri(&format!("http://h/{i}")).build());
+        }
+
+        let ring = s.inner.lock().expect("store lock");
+        let seqs: Vec<u64> = ring.order.iter().map(|(seq, _)| *seq).collect();
+        assert!(
+            seqs.windows(2).all(|pair| pair[0] < pair[1]),
+            "order must stay ascending: {seqs:?}"
+        );
+        for (seq, id) in &ring.order {
+            assert_eq!(
+                ring.flows.get(id).map(|(s, _)| *s),
+                Some(*seq),
+                "a row's seq must agree with its place"
+            );
+        }
+    }
+
+    /// The cursor's place is now found by binary search rather than by walking,
+    /// so the walk's correctness rests on the search landing on the right row.
+    /// A long capture paged to its end is where an off-by-one would show as a
+    /// skipped or repeated row rather than as a wrong answer on page one.
+    #[test]
+    fn a_long_capture_pages_to_its_end_without_skipping_or_repeating_a_row() {
+        let s = store();
+        for i in 0..5_000 {
+            s.insert(FlowBuilder::new().uri(&format!("http://h/{i}")).build());
+        }
+        let mut walked = Vec::new();
+        let mut cursor = None;
+        loop {
+            let page = s.page(&FlowFilter::default(), 7, cursor);
+            walked.extend(page.flows.iter().map(|flow| flow.id));
+            match page.next_cursor {
+                Some(next) => cursor = Some(next),
+                None => break,
+            }
+        }
+        assert_eq!(walked.len(), 5_000);
+        assert_eq!(walked.iter().copied().collect::<HashSet<_>>().len(), 5_000);
+        assert_eq!(walked, s.list(&FlowFilter::default()).iter().map(|f| f.id).collect::<Vec<_>>());
+    }
+
+    /// `place_of` is the whole of the cursor resume, so it answers for a row the
+    /// ring holds and refuses one it has let go.
+    #[test]
+    fn a_cursor_resolves_to_its_own_place_and_to_nothing_once_removed() {
+        let s = store();
+        let ids: Vec<FlowId> = (0..5)
+            .map(|i| {
+                let flow = FlowBuilder::new().uri(&format!("http://h/{i}")).build();
+                let id = flow.id;
+                s.insert(flow);
+                id
+            })
+            .collect();
+        {
+            let ring = s.inner.lock().expect("store lock");
+            for (place, id) in ids.iter().enumerate() {
+                assert_eq!(ring.place_of(*id), Some(place));
+            }
+        }
+        s.remove(ids[2]);
+        let ring = s.inner.lock().expect("store lock");
+        assert_eq!(ring.place_of(ids[2]), None);
+        assert_eq!(ring.place_of(ids[3]), Some(2), "the rows after it close the gap");
     }
 
     #[test]
