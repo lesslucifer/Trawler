@@ -21,12 +21,16 @@ const hit = () => fetch(`${ports.control}/hit`);
 // the app then never re-forces onboarding — so the UC-4 list checks are folded in
 // here after the reveal rather than living in a separate spec.
 async function pointAppAtCore() {
-  // sessionStorage survives the reload; the fresh page reads it before React
+  // sessionStorage survives the refresh; the fresh page reads it before React
   // mounts, so both the launch /flows read and the SSE stream bind the port.
-  await browser.execute((api: string) => {
-    window.sessionStorage.setItem("__TRAWLER_API__", api);
-    location.reload();
-  }, ports.api);
+  await browser.execute(
+    (api: string) => window.sessionStorage.setItem("__TRAWLER_API__", api),
+    ports.api,
+  );
+  // The navigation is the driver's own, not one the page starts: reloading from
+  // inside `execute` tears the document down while the driver is still waiting
+  // for that call to answer, and the lost answer takes the session with it.
+  await browser.refresh();
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
