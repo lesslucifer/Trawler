@@ -183,6 +183,17 @@ test("a dismissed ask clears immediately with the live filter", async () => {
   expect(onCleared).toHaveBeenCalledOnce();
 });
 
+test("a refused clear with the ask suppressed says so in the header", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
+  const { onCleared } = mount({ clearFlows: vi.fn().mockRejectedValue(new Error("the store is busy")) });
+
+  fireEvent.click(clearButton());
+
+  expect(await screen.findByTestId("clear-failed")).toHaveTextContent("the store is busy");
+  expect(onCleared).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
 test("import opens with focus in the textarea and the file picker before the act", () => {
   mount();
   choose(CAPTURE_COPY.importName);

@@ -46,6 +46,7 @@ flowchart LR
         <tr><td>W10 was blocked until W6 merged.</td><td>Resolved before implementation: W6 had merged as <code>e666529</code>, and this branch already used that merge as its base. The plan was corrected after its required pre-edit snapshot.</td></tr>
         <tr><td>The epic e2e already uses clear.</td><td><strong>Deferred to the epic gate.</strong> The current WebDriver flow suite does not drive the clear control. This WU supplies its mandatory integration contract in <code>App.test.tsx</code>; the epic still owes its planned export → clear → import user path.</td></tr>
         <tr><td>A later settings screen restores suppressed asks.</td><td>Still deferred as planned. The keyed store makes the keys closed and independent, but W10 adds no restoration screen.</td></tr>
+        <tr><td>The ask carries a refused clear's reason.</td><td><strong>True only while an ask opens.</strong> Suppressing it removed the surface the refusal was rendered on, and the header's remaining slot was labelled for exports alone — so a rejected direct clear reported itself as an export failure. Closed by giving the header failure the act that produced it, so the two refusals stay tellable apart.</td></tr>
       </tbody>
     </table>
     </div>
@@ -55,7 +56,7 @@ flowchart LR
     <table data-c="evidence-table">
       <thead><tr><th>Level</th><th>What ran</th><th>Result</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge id">unit · UI</span></td><td>Full Vitest suite, including the header control, menu shape, checkbox persistence, browser fallback, and close-confirm migration.</td><td>49 files · 839 tests · green</td></tr>
+        <tr><td><span class="badge id">unit · UI</span></td><td>Full Vitest suite, including the header control, menu shape, checkbox persistence, browser fallback, close-confirm migration, and a refused direct clear naming its own act.</td><td>49 files · 840 tests · green</td></tr>
         <tr><td><span class="badge id">unit · Tauri</span></td><td>Key parsing, isolation, marker writes, unknown-key refusal, and legacy remote filename.</td><td>21 tests · green</td></tr>
         <tr><td><span class="badge id">integration</span></td><td>Preference dismissed → filtered header clear → no dialog → bus-owned list refill.</td><td><code>App.test.tsx</code> · green</td></tr>
         <tr><td><span class="badge id">core regression</span></td><td>Whole Rust workspace.</td><td>221 lib · 41 API · 3 CA · 6 capture e2e · 4 H2 e2e · green</td></tr>
@@ -70,7 +71,7 @@ flowchart LR
     <table data-c="distillation-table">
       <thead><tr><th>Tier</th><th>Write-back</th></tr></thead>
       <tbody>
-        <tr><td>T2 use case</td><td><code>docs/use-cases/web-ui.html</code> now states the direct clear control, live-count name, confirm-only persistence, and silent filtered path.</td></tr>
+        <tr><td>T2 use case</td><td><code>docs/use-cases/web-ui.html</code> now states the direct clear control, live-count name, confirm-only persistence, the silent filtered path, and where a refusal lands once no ask is open to hold it.</td></tr>
         <tr><td>T2 index</td><td><code>docs/use-cases/use-cases-index.html</code> no longer claims all three actions sit behind one trigger.</td></tr>
         <tr><td>T2 design rules</td><td>No change. W10 applies the existing <code>familiar-idioms</code>, <code>keyboard-parity</code>, <code>focus-returns-to-origin</code>, and <code>calm-microcopy</code> rules; it introduces no reusable rule or vocabulary member.</td></tr>
         <tr><td>T3 plan</td><td>The sequencing warning is resolved against the actual W6 merge.</td></tr>

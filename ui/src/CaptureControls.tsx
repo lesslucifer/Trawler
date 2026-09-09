@@ -58,7 +58,10 @@ export function CaptureControls({
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [asking, setAsking] = useState<"clear" | "import" | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  // The act rides with its reason: a suppressed clear opens no dialog, so its
+  // refusal lands in the same header slot an export failure uses, and only the
+  // act can tell the two sentences apart once they are there.
+  const [failure, setFailure] = useState<{ act: "export" | "clear"; reason: string } | null>(null);
 
   const exportHar = async () => {
     setFailure(null);
@@ -69,7 +72,7 @@ export function CaptureControls({
       // outcome and not a success: the line clears and nothing claims a file.
       await saveBody(bytes, filename);
     } catch (error) {
-      setFailure(reasonOf(error));
+      setFailure({ act: "export", reason: reasonOf(error) });
     } finally {
       setExporting(false);
     }
@@ -82,11 +85,12 @@ export function CaptureControls({
   };
 
   const requestClear = async () => {
+    setFailure(null);
     if (await noticeDismissed(NOTICE_KEY.clear)) {
       try {
         await clear();
       } catch (error) {
-        setFailure(reasonOf(error));
+        setFailure({ act: "clear", reason: reasonOf(error) });
       }
     } else {
       setAsking("clear");
@@ -136,8 +140,8 @@ export function CaptureControls({
       </IconButton>
       <CaptureMenu acts={acts} label={CAPTURE_COPY.trigger} />
       {failure !== null && (
-        <div data-testid="export-failed">
-          <Notice tone="warn">{failure}</Notice>
+        <div data-testid={`${failure.act}-failed`}>
+          <Notice tone="warn">{failure.reason}</Notice>
         </div>
       )}
       {asking === "clear" && (
