@@ -1,0 +1,53 @@
+schema: test/v2
+level: epic
+epic: E-EXPORT
+branch: epic/export
+tests:
+  e2e:
+    count: 2
+    what: "tests/e2e_export.rs - the epic plan's e2e step table walked in order over serve(Config) on ephemeral ports against a local HTTP origin and a local TLS origin (the shared test_support::tls_origin helper): four real exchanges through the proxy (plain GET, POST with a JSON body, decrypted HTTPS, an SSE stream), the listing paged one row at a time and compared against its own order, GET /flows/export parsed as HAR 1.2 with the streamed body carrying size -1 and a streaming comment rather than an empty text, the export filtered and compared, a live /stream subscriber receiving the cleared event naming every removed flow while /stats stays put, the exported bytes re-imported and compared field for field with source flipped and both body endpoints read back, a truncated copy refused 400 with the store unchanged, and a browser-shaped curl command landing as a request-only marked flow followed by one carrying -F refused by name. ui/e2e/specs/capture.spec.ts - the app half through the real Tauri window over the same core: clear behind its ask, a pasted curl command as a marked row, and the ask silenced so the next clear is direct."
+  integration:
+    count: 1
+    what: "every WU landed its own - tests/api.rs covers the four endpoints this epic added or changed (paging envelope and its refusals, export shape and filter, import for both formats and their refusals, clear all/filtered/one and the 404), src/store.rs covers page/import/remove_matching/remove against the ring, and the UI's bounded contract is CaptureControls.test.tsx and CaptureMenu.test.tsx. The back-merge added one integration this epic owns rather than inherits: the status grammar now lives in FilterQuery::into_filter, so the export and the clear refuse exactly what the listing refuses, asserted in tests/api.rs."
+  unit:
+    count: 1
+    what: "614 Rust tests and 936 UI unit tests at this tip, including three properties this epic added: the no-duplicate/no-skip paging invariant over insert/page interleavings, the ring's byte accounting under removals, and toCurl -> parse round-tripping to the same request. The HAR parser is additionally fuzzed with arbitrary bytes for the never-panics claim. Plus a_full_ring_of_binary_bodies_re_imports_its_own_export, added by the close review, which reds at exactly 413 without its fix."
+boundary:
+  what: "the app-half e2e drives clear (with and without its ask) and the curl paste, not export-to-file or import-from-file"
+  why: "in binary mode Tauri defines __TAURI_INTERNALS__.invoke non-writable AND non-configurable and does not consult the wdio Tauri service's mock registry, which is browser-mode only. Assignment, redefinition and replacing the holder were each tried and each refused by the runtime, so the native save and open panels can be neither answered nor passed. Bending ui/src/ to carry a test-only file seam was rejected: the limit is the harness's. The two file acts are proven over the real engine in tests/e2e_export.rs and against a stubbed native layer in CaptureControls.test.tsx, and the split is recorded as deviation 8 of the epic result."
+quirks:
+  - quirk: "a body HAR cannot express (streamed, too large, read error) must not read as an empty body"
+    test: "tests/e2e_export.rs asserts the SSE entry's content has no text, size -1 and a streaming comment; per-variant unit tests in src/api/har.rs"
+  - quirk: "timings phases may not be negative even when the total is HAR's -1"
+    test: "har_timings unit tests in src/api/har.rs"
+  - quirk: "a clear is not an eviction - a subscriber must be able to tell them apart"
+    test: "tests/e2e_export.rs (the cleared event over a live subscriber) and the FlowsCleared/FlowEvicted unit tests in src/api/view.rs"
+  - quirk: "a refused import leaves the store exactly as it was"
+    test: "tests/e2e_export.rs (a truncated document) and a_refused_import_says_why_and_stores_nothing in tests/api.rs"
+  - quirk: "an unsupported curl flag is refused by name rather than ignored"
+    test: "tests/e2e_export.rs (-F) and the per-flag unit tests in src/api/curl.rs"
+  - quirk: "the import door is sized by the document, not by the ring - a base64 HAR of a full ring outweighs the ring"
+    test: "a_full_ring_of_binary_bodies_re_imports_its_own_export in src/api/mod.rs, found by the epic-scope review"
+    residual: "the guarantee stops at the body-dominated case, because Ring::evict fires on total_bytes and retained_bytes counts no header. Recorded as a backlog row, not tested, because no constant bound exists to assert - the fixes are a row-weighted ring or a streaming parse."
+  - quirk: "a capture the user just emptied is not a window nothing has reached"
+    test: "a cleared capture that then loses its core is not told nothing ever arrived, in ui/src/FlowList.test.tsx - the silent-core clause drops for cleared exactly as it already did for a filter; found by the merge review. Its neighbour, a refusal is not hidden by the silence that followed it, holds the reordering that puts the refusal ahead of the silence."
+  - quirk: "a flag that expands into a header stands aside when -H states that name"
+    test: "a_stated_header_beats_the_flag_that_would_expand_into_the_same_name in src/api/curl.rs, both orders - real curl sends one Authorization/Cookie/Accept-Encoding and sends the -H spelling; the parser sent two. Reds without its fix. a_flag_still_expands_when_no_header_states_that_name holds the other half."
+  - quirk: "a CRLF continuation folds inside double quotes as it does outside"
+    test: "a_crlf_continuation_folds_inside_double_quotes_as_it_does_outside in src/api/curl.rs - a command pasted out of a Windows terminal kept a stray backslash and a raw CR. Reds without its fix."
+  - quirk: "an import the user abandoned before it started must not arm the header slot"
+    test: "an import abandoned while the picker is still open never arms the slot it cannot disarm, in ui/src/CaptureControls.test.tsx - the ask can be dismissed while the picker or the read is still pending, and the import then armed a slot no listener was left to disarm. Reds without its fix."
+  - quirk: "a clear that fails after its ask was cancelled still has something to say"
+    test: "a clear that fails after the ask was cancelled still says so in the header, in ui/src/CaptureControls.test.tsx - cancel and esc stay live for the length of the request, so the refusal outlived the dialog it was written for. Reds without its fix."
+  - quirk: "a cursor resumes by search, not by walking every newer row"
+    test: "a_long_capture_pages_to_its_end_without_skipping_or_repeating_a_row, a_cursor_resolves_to_its_own_place_and_to_nothing_once_removed and the_order_stays_sorted_through_eviction_and_both_removal_paths in src/store.rs. The ring now carries a sequence and order stays ascending by it, so place_of binary-searches. Measured at 20k rows paged 10 at a time: 0.32 s walking, 0.08 s searching."
+    residual: "no test asserts the cost itself. A timing bound loose enough not to flake is one the walking version also passes, and a work counter would be a test-only seam in the ring - so the three tests above guard the search's correctness and the measurement above is the evidence for its cost."
+  - quirk: "the flows spec kills the core, so nothing may run after it"
+    test: "ui/e2e/wdio.conf.ts orders onboarding -> capture -> flows explicitly, with the reason beside it; found when the back-merge put the capture spec after the kill and its before-hook failed on a dead socket."
+suite:
+  rust: "621 tests green (cargo test --all), 0 failed"
+  ui_unit: "936 tests green across 51 files (pnpm test)"
+  ui_e2e: "3 spec files green (cargo xtask ui e2e), eight consecutive runs - 6 + 3 + 26 specs, no failure. The intermittent 2-passed-1-failed seen before the spec reordering does not recur; flows.spec wall-time still varies from 6 s to 65 s, which is the WebKit driver, not an assertion."
+  clippy: "clean under pedantic with --workspace --all-targets, -D warnings"
+  tsc: "clean (npx tsc --noEmit) - the check that caught main's stubs and fixtures predating this epic's four API methods and its source field, which vitest strips types past"
+date: 2026-09-09
