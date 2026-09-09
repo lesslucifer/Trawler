@@ -1,0 +1,10 @@
+schema: doc/v1
+level: commit
+epic: E-EXPORT
+changes:
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: edited
+    distills: "two deferred rows. The streaming row now covers both directions, because raising the import ceiling doubled that side's worst-case peak and a streaming parse is the one fix for either. A second row records what the close review found underneath: the ring is weighted by body bytes, so a header-heavy capture accumulates rows nothing bounds and its own export outgrows any constant multiple of the cap - deferred is the fix (a row-weighted ring, or a streaming parse), not the finding. v6 -> v7."
+t2_waived: none
+date: 2026-09-09
