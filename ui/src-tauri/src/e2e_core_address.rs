@@ -6,7 +6,7 @@
 // it, and a navigation is what the shell cannot survive here: WKWebView stops
 // the custom-scheme tasks the Tauri IPC rides on, and wry answers a stopped task
 // with an Objective-C exception across a nounwind boundary, which aborts the
-// process. The e2e used to reload for exactly this and paid for it in flakes.
+// process.
 const CORE_ADDRESS_VAR: &str = "TRAWLER_E2E_API";
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
