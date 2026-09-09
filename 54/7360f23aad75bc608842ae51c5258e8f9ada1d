@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W10
+branch: wu/redesign-finish/epic-close
+tests:
+  unit:
+    waived: "docs-only diff - no src/ or ui/src/ file moves. The epic gate treats a diff with no code and no design artifact as exempt rather than waived; this field says so explicitly so a reader does not go looking for the tests that would otherwise be missing."
+  integration:
+    waived: "docs-only diff - same reason. The contract this WU restates in T2 was built and proven at W5, W6 and W9, each with its own integration evidence; restating a proven contract in a document adds no seam to assert."
+  e2e:
+    count: 0
+    covers: "No assertion added, and running the suite IS this WU's requirement rather than its side effect: the epic plan's W10 says 'run the epic e2e over both remaining contracts against the real window'. cargo xtask ui e2e at this tip, exit 0, 32 passing - 26 in flows.spec.ts against the real WebKit window and an ephemeral run(Config) core, 6 in onboarding.spec.ts. The three assertions this epic added all pass in the same run as everything E-REDESIGN left green: a status class narrows to that class while 2xx and 5xx traffic is present and an exact code still narrows to the code (W6); the core is killed under the open window and the band appears above rows whose count is unchanged, against its quiet-proxy control - a reachable core whose filter matches nothing renders the absence instead, which is the assertion that proves the two screens differ rather than that one of them renders (W6); and the switch names its views raw and pretty while still yielding minified source one way and indented JSON the other (W9). onboarding.spec.ts is UNEDITED across the whole epic and green here, which is this epic's standing evidence that the re-design left for E-ONBOARD rather than leaking in through a shared file."
+suite: "cargo xtask ui e2e 32/32 exit 0 - pnpm test 832/832 across 46 files - cargo test 98/98 - cargo fmt + cargo clippy pedantic clean - cargo xtask verify-doc green on the W10 plan (wu-plan), the W10 result (wu-result), web-ui.html, dec-36, dec-34, dec-32, decisions-index and design-rules-index. verify-doc red twice during the WU, both times correctly: once because UC-4 cited DEC-36 before the file existed, and once because the W10 result linked the epic plan and its own plan after the archive commit removed them - the second was fixed the way the tool's own fix line says, by dropping the href and marking the citation archived."
+rounds: "Recorded on the cr/v3 note and in the result report; this note asserts only what it ran."
+date: 2026-09-09
