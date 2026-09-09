@@ -1,0 +1,50 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W10
+changes:
+  - path: docs/work/2026-09-09-redesign-finish-w10-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before the work. Its substance is the ledger: E-REDESIGN's twelve follow-ups each given a disposition, because that list lives in an archived untracked document that cannot be edited, so the only way to strike a row is to answer it somewhere a reader can reach. Also states the one ordering constraint of the whole close - nothing is archived until what it carried is somewhere else - and names the four new backlog rows with the evidence behind each. Archived at this tip with everything else."
+  - path: docs/work/2026-09-09-redesign-finish-w10-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with the six write-backs, the twelve dispositions, the suites that ran, and two stated deviations - four backlog rows where the plan's distillation table said three (its own cards listed four, and four is the honest count), and DEC-32 edited without the plan naming it. This is the one T3 document that stays for the merge; it leaves at the epic close, and its two links to the now-archived plans were dropped and marked archived rather than left pointing at files no reader can open."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: edited
+    distills: "UC-4 gains three contract-level rows from W6 - the list states a core that is not answering, above rows it does not discard and with no user act required, because the dropped SSE stream is the signal; a refused query quotes the value it refused, in the row region, with no retry, and never beside the connection statement; and a long value is readable further because the pane is a chosen width. The stale clause 'the control catches up with the class after the core does' is gone, because it did (W6). UC-5 gains only the width's observable half - it already carried raw | pretty from W9. The provenance callout names the three assertions W6 and W9 added, including the quiet-proxy control. v6 -> v7."
+  - path: docs/decisions/dec-36-the-pane-and-the-window.html
+    tier: T2
+    action: added
+    distills: "W4's Q1, the epic plan's expected DEC-36: the pane at 520px and the default window at 1440 as ONE decision, on the identity path = window - pane - 612. Carries all six rejected alternatives with the number that killed each - including min(40%, 520px), rejected because it was measured (8px from the fixed choice at 1280, identical above 1300) rather than argued - and the escalation the run refused to hide: no valid arrangement below 1132px with the pane open, up from 992, against a declared minimum window of 800. Every figure in the record reproduces from the one equation at its head."
+  - path: docs/decisions/dec-32-body-is-the-main-zone.html
+    tier: T2
+    action: edited
+    distills: "one line naming the pane its numbers were written against, since DEC-36 makes 380px history. The ruling, the alternatives and the numbers themselves are untouched - a wider pane moves the clamp's cost, it does not remove it."
+  - path: docs/decisions/dec-34-fixed-height-rows-truncate.html
+    tier: T2
+    action: edited
+    distills: "the criterion for the second sighting its own consequences asked for and never defined: mono, inert, unbounded, visibly cut - all four - plus the candidate W4 tested and refused. The identity bar wanted CopyText, because a pane has height to spend, so a surface that can grow downwards is not a second sighting however much it resembles one. The three conditions and the escape are untouched."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: edited
+    distills: "DEC-36's row, because T2 is read index-first and an unindexed record does not exist. DEC-32's summary gains the same 'pane of the time' qualifier as the record itself. v16 -> v17."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: edited
+    distills: "UC-4's summary line names the two gains a reader would otherwise have to open the contract to find - either status resolution, and a core that is not answering stated rather than frozen over. v2 -> v3."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: edited
+    distills: "the lexicon gains 'not answering' - said of the control API and never of the proxy, since capture health and transport health are different facts - with offline, disconnected, down, unreachable and error in its never column. NOT a rule amendment: no predicate, slug or tier moves, and nothing this epic's two runs escalated argued a rule was wrong rather than a design."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: edited
+    distills: "the living backlog rewritten once, at the close, as the epic plan requires. Two rows struck with what closed them (W1's skeleton correction, W9's rename); the E-ONBOARD row marked unblocked now the shell/list track has merged; four rows added - the 1132px arrangement, Tier-1's blindness to a mockup's mounted JSX, gate check 8's untyped report, and WebdriverIO's *= selector that matches nothing without erroring; and the Consequences paragraph says what the two redesign-track epics did to a sequence they do not themselves appear in. Nothing outstanding now lives only in an archived report. v6 -> v7."
+  - path: docs/work/
+    tier: T3
+    action: removed
+    distills: "sixteen documents git rm'd into the gitignored docs/.archive/ per DEC-3 - the epic plan, seven WU plans, seven WU results and the shell/list design run - after the ten write-backs above, never before. Their content stays addressable in the commits that added them. Only this WU's result remains, and it leaves at the epic close."
+t2_waived: none
+date: 2026-09-09
