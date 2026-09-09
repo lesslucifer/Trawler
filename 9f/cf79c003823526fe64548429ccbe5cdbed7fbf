@@ -1,0 +1,7 @@
+schema: doc/v1
+level: commit
+epic: E-EXPORT
+branch: epic/export
+changes: []
+t2_waived: "a private data structure resolving a lookup by search rather than by walk states no fact any tier records"
+date: 2026-09-09
