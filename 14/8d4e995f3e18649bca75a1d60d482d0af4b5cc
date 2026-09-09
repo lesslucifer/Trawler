@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 148d4e995f3e18649bca75a1d60d482d0af4b5cc
+base: aad6c3b6cf08ab805989a2c56c05fedb2bcba1da
+tier: key
+signer: vuluu
+report: docs/.archive/2026-09-09-redesign-finish-epic-result.html
+report_sha256: 5aa21ac5749084c05f42735e70939e5ab07b3d421b607b69fea2f8b250f75b69
+date: 2026-09-09
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDagPLnDKHHykhLHJZaAwRliKBrqyZAQMY+aOifKoaDh0VR4qN4WkZ3au
+  LPZlTS/GqTe0ppNCFPNR3HlBm14IEJ
+  -----END SSH SIGNATURE-----
