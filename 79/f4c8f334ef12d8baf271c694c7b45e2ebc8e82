@@ -8,8 +8,9 @@ tests:
   integration:
     waived: "no contract touched - the specs' subject is unchanged, only the way each one points the window at the run's core"
   e2e:
+    count: 3
     what: "the suite is the change's own subject: ui/e2e/specs/{onboarding,capture,flows}.spec.ts stopped reloading from inside browser.execute and let the driver navigate instead. Measured over 38 runs across the two states: about one failure in six before, one in twenty-three after."
-    partial: "a real improvement, not the fix - the residual was the app aborting on the reload itself, which 00269b9 removes. Read that commit's note for what the reload was doing to WKWebView's scheme tasks."
+    covers: "a real improvement, not the fix - the residual was the app aborting on the reload itself, which 00269b9 removes. Read that commit's note for what the reload was doing to WKWebView's scheme tasks."
 suite:
   ui_e2e: "3 spec files green (cargo xtask ui e2e) - 6 + 3 + 26 specs, when the session survived"
   rust: "620 tests green (cargo test --all), 0 failed"
