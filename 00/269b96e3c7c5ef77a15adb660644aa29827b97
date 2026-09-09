@@ -4,10 +4,12 @@ epic: E-EXPORT
 branch: epic/export
 tests:
   unit:
+    count: 3
     what: "ui/src-tauri/src/e2e_core_address.rs holds three: the address becomes the global api.ts resolves first, an absent or blank one injects nothing so a hand-launched app keeps its shipped default, and a quoted address cannot close the string literal it lands in. cargo test --features e2e in ui/src-tauri: 24 green."
   integration:
     waived: "no contract touched - the injected global is the one ui/src/api.ts already resolves first, and the plugin is compiled only under the e2e feature, so no shipped surface changes"
   e2e:
+    count: 3
     what: "the suite is the subject: ui/e2e stops navigating the window entirely, because a reload is what was aborting the app. 3 spec files green (cargo xtask ui e2e), 6 + 3 + 26 specs, measured over 30 consecutive runs - 30 green, no crash report, against 1 in 6 before any fix and 1 in 23 after the first. The epic note on the tip carries the crash-report evidence and the mechanism."
 suite:
   ui_e2e: "3 spec files green - 6 + 3 + 26 specs, in about 13 s (from 45-72 s)"
