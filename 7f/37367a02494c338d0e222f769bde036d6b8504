@@ -4,7 +4,6 @@ epic: E-EXPORT
 branch: epic/export
 tests:
   unit:
-    count: 0
     waived: "the commit moves a comment between two tests that both already exist and both still pass; it changes no code and asserts nothing new"
   integration:
     waived: "no contract touched"
