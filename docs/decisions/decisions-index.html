@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v17 · 2026-09-09 · Trawler</div>
+      <div class="meta">v19 · 2026-09-09 · Trawler</div>
     </div>
   </header>
   <main>
@@ -340,6 +340,76 @@
             no valid arrangement below 1132&nbsp;px with the pane open, up from 992, against a declared minimum of
             800 — escalated with the arithmetic rather than fixed by re-deciding the row grammar</td>
           <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-37-har-as-the-interchange-format.html"><code>dec-37-har-as-the-interchange-format.html</code></a></td>
+          <td><span class="badge id">DEC-37</span></td>
+          <td><strong>HAR 1.2 is the one interchange format</strong>, chosen because the tools a recipient already
+            runs can open it — Trawler's own JSON, a second native format and multi-format support all rejected.
+            Where HAR requires a field Trawler has no truthful value for, the answer is <strong>HAR's own sentinel,
+            never an invented number</strong>: header-block sizes, the wire reason phrase and the timing phase
+            breakdown are reported unavailable rather than guessed. The body states HAR cannot express
+            (streamed · too large · read error) carry <strong>no text plus a comment naming the reason</strong>, so a
+            skipped body is never indistinguishable from an empty one; a too-large body reports the size it had,
+            because that size is known. Round-trip fidelity is stated in both directions — what is preserved, and
+            the five facts that are not. The export never decodes bodies: the file records the wire</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-38-imported-flows-are-marked.html"><code>dec-38-imported-flows-are-marked.html</code></a></td>
+          <td><span class="badge id">DEC-38</span></td>
+          <td><strong>An imported flow is a first-class flow carrying a closed-enum
+            <code>source</code> mark</strong> (<code>captured</code> | <code>imported</code>), in the same
+            byte-weighted ring and under the same read paths — a second store beside the ring and a free-text
+            provenance both rejected. The costs are stated rather than hidden: an import can evict a live capture,
+            and a re-imported file yields fresh ids over its original instants. A bad <code>?source=</code> is
+            refused, never served as a silently empty listing. <strong>All-or-nothing import</strong>: the document
+            parses whole before the store is touched, so "never a partially-populated store" is structural, and the
+            body's bytes outrank a <code>size</code> that disagrees — the ring must weigh what it holds. The CORS
+            grant gains <code>POST</code> for the first mutating method, <strong>extending DEC-12 rather than
+            reversing it</strong>: still loopback-bound, still nothing a local <code>curl</code> cannot reach</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-39-curl-parser-accepts-what-a-browser-emits.html"><code>dec-39-curl-parser-accepts-what-a-browser-emits.html</code></a></td>
+          <td><span class="badge id">DEC-39</span></td>
+          <td><strong>The curl parser accepts what a browser's "Copy as cURL" and the app's own copy-as-curl
+            emit, and refuses every other token naming it</strong> — never reimplementing curl, never ignoring
+            what it does not understand, because a silently dropped flag yields a flow subtly unlike the pasted
+            request. Flags that <em>are</em> headers (<code>-u</code>, <code>-b</code>, <code>--compressed</code>)
+            expand; curl's runtime defaults are never invented, which is what keeps <code>toCurl → parse</code> an
+            exact inverse. The command travels as the raw body under <code>?format=curl</code>, and the refusal
+            is HAR import's plain-text <code>400</code>, written to be rendered verbatim on the paste target</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-40-the-predecessor-is-the-checklist.html"><code>dec-40-the-predecessor-is-the-checklist.html</code></a></td>
+          <td><span class="badge id">DEC-40</span></td>
+          <td><strong>A design run that supersedes another closes by walking the predecessor and classifying
+            every answer in it as held, changed, or dropped</strong> — close step ① in
+            <a href="../design-flow.html#close">design-flow</a>, first because every later step reads the new
+            run. A changed answer leaves a false statement, which review finds; a <em>dropped</em> answer
+            leaves nothing, so a reader testing the new run's statements has no location at which it is wrong.
+            Found by E-EXPORT.W9, where six inherited answers had moved in silence: every round that read
+            only the new run found none of them, and the three that opened the predecessor found all six.
+            Nothing machine-checks it — Tier-3 is the only reader that can, and it must be handed the
+            predecessor's path. Rejected: leaving it to the review, a receipt item, a vocabulary Proposal</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-41-motion-informs-bans-decoration-not-progress.html"><code>dec-41-motion-informs-bans-decoration-not-progress.html</code></a></td>
+          <td><span class="badge id">DEC-41</span></td>
+          <td><strong><code>motion-informs</code> forbids animation that carries no information, not
+            animation</strong> — so an in-flight indicator may turn. Design runs 10 and 11 both receipted the
+            slug as a ban on spinners (<em>"never a spinner or a bar"</em>, then <em>"nothing animates"</em>),
+            going further than the rule's own text, whose test is <em>"what does this animation tell the
+            user?"</em>. A ring reporting a running transfer answers it; the ~2 s expiry clause governs
+            transient acknowledgements, not progress whose duration belongs to the transfer. The runs' real
+            concern is kept as a constraint: the indicator animates only itself, sits in a reserved box that
+            displaces nothing, and is never the only channel. The rulebook text is unchanged — nothing in it
+            was wrong, two applications of it were. Found by E-EXPORT.W6's review, which caught the reasoning
+            living only in a design file the same WU retired. Rejected: editing the rulebook, deleting the
+            runs' original wording</td>          <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
     </table>

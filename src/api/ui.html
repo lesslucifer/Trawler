@@ -95,7 +95,7 @@
   for (const id of ['q', 'host', 'method', 'status']) $(id).addEventListener('input', debounced);
 
   const stream = new EventSource('/stream');
-  for (const name of ['request', 'response', 'lagged']) stream.addEventListener(name, debounced);
+  for (const name of ['request', 'response', 'cleared', 'lagged']) stream.addEventListener(name, debounced);
   stream.onopen = () => $('live').classList.add('on');
   stream.onerror = () => $('live').classList.remove('on');
 

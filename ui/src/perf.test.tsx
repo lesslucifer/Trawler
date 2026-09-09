@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { apiStub } from "./apiStub";
 import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { BodyViewer } from "./BodyViewer";
 import { FlowList } from "./FlowList";
@@ -29,6 +30,7 @@ const flow = (i: number, host: string): FlowSummary => ({
   method: "GET",
   uri: `https://${host}/v2/resource/${i}?page=${i % 7}`,
   status: 200,
+  source: "captured",
   request_body_state: "empty",
   response_body_state: "captured",
 });
@@ -78,7 +80,7 @@ describe("the flow list's time column", () => {
 describe("the live feed's host accumulation", () => {
   const fakeApi = (list: FlowSummary[]) => {
     let handlers: StreamHandlers | undefined;
-    const api: TrawlerApi = {
+    const api: TrawlerApi = apiStub({
       // A fresh array per call, so a caller can tell one refresh's result from
       // the last one's by identity — the list's contents never change.
       listFlows: async () => [...list],
@@ -94,7 +96,7 @@ describe("the live feed's host accumulation", () => {
         handlers = h;
         return () => {};
       },
-    };
+    });
     return { api, fireEvent: () => handlers?.onEvent?.() };
   };
 
@@ -169,6 +171,7 @@ describe("the body pane's size report", () => {
       method: "GET",
       uri: "https://api.example.com/big.txt",
       status: 200,
+      source: "captured",
       request_http_version: "HTTP/1.1",
       response_http_version: "HTTP/1.1",
       request_headers: [],

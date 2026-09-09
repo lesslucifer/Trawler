@@ -11,13 +11,16 @@
       <h1>Use Cases — UI surfaces</h1>
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
-      UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD).</p>
-      <div class="meta">v7 · 2026-09-09 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD),
+      the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
+      capture (UC-7).</p>
+      <div class="meta">v11 · 2026-09-09 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
-      UC-ONBOARD by <span class="badge id">E-UISETUP</span> · all three native surfaces re-designed and
-      rebuilt by <span class="badge id">E-REDESIGN</span> · UC-4's failure states, status class and pane
-      width by <span class="badge id">E-RFINISH</span></div>
-    </div>
+      UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
+      all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
+      UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
+      UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
+      + UC-7 by <span class="badge id">E-EXPORT</span></div>    </div>
   </header>
   <main>
 
@@ -141,6 +144,62 @@
       unchanged.</p>
     </div>
 
+    <div data-c="uc-4-capture-controls">
+      <h3 id="uc-4-capture-controls">The capture-management controls</h3>
+      <p>The flow list is where UC-6 and UC-7 reach a person rather than only a client
+      (<span class="badge id">E-EXPORT</span> W6, built from the capture-controls design run). These are
+      the first controls in the app that change server state. Export and import sit behind a
+      <code>⋮</code> trigger at the header's trailing edge; clear is the <code>⌫</code> shortcut beside it.
+      Both sit past the filters that scope them. Beside them a fixed-width slot reads the count those filters selected, and reads
+      <em>exporting…</em> or <em>importing…</em> while a transfer runs — the same box either way, so
+      starting one moves nothing else in the row. A turning ring joins the in-flight line, and a second
+      one turns inside the menu in place of the running act's own face: reopening the menu mid-transfer
+      is the one way to ask why an act is withheld, so the answer is there and not only in the header.</p>
+      <p>Each act wears a face, and none of the three is minted for the menu: <code>↓</code> is the save
+      glyph the app already spends on writing something out, <code>↑</code> is the very mark an imported
+      row carries in the list below, and <code>⌫</code> is the erase the third act is. The box holding
+      them is drawn whether or not it is filled, so every label hangs off one left edge, and none of the
+      faces reaches the accessible name — the label is what the act is called.</p>
+      <table data-c="uc-4-acts">
+        <tr><th>Act</th><th>What a user gets</th></tr>
+        <tr><td><strong>export as har…</strong></td>
+        <td>The filtered capture, through the OS save dialog, under the filename the server stamped
+        rather than one the app invented. Dismissing that dialog is an outcome, not a failure: the line
+        clears and nothing claims a file was written.</td></tr>
+        <tr><td><strong>import…</strong></td>
+        <td>One modal taking either way in, and not evenly: the paste offers the file, not the reverse.
+        The <code>curl</code> target is what opens focused and what the primary button acts on, so the
+        words lead with it too — the title names the command before the <code>.har</code> file, and the
+        target states its own act instead of opening on an <em>…or</em> that made the one thing the ask
+        is mainly for read as an aside. Choosing a file stays one muted button beside it.
+        A refusal is the server's own sentence
+        (<a href="../decisions/dec-39-curl-parser-accepts-what-a-browser-emits.html">DEC-39</a>), shown
+        verbatim under the text that caused it, with the text left in place to edit. While the import
+        runs the ask says so on its own surface — a ring beside <em>importing…</em> — and holds the
+        command <em>read-only</em> rather than disabled: that target is what the ask opened focused on,
+        and disabling it would drop focus to <code>&lt;body&gt;</code>, outside the dialog, taking Esc
+        with it. A slow import keeps its one keyboard exit.</td></tr>
+        <tr><td><strong>clear</strong></td>
+        <td>The header's <code>⌫</code> shortcut is named for the live filtered count. By default it opens a
+        modal ask titled with that count, whose initial focus is on the answer that does nothing — the act
+        behind it cannot be undone. The consequence carries the only alarm on the screen; the button carries
+        none. A checked <em>don't show this again</em> is persisted only when clear is confirmed. Later clicks
+        clear the live filter immediately, with no ask; cancelling never changes the preference. With no ask
+        open there is no dialog to carry a refusal, so a clear the store rejects states its reason beside the
+        control instead — the same header slot an export failure uses, and each names the act it came from.</td></tr>
+      </table>
+      <p>Two things the list itself gained. An <strong>imported row carries a <code>↑</code> mark</strong>
+      in its time cell, with its own accessible name, so a capture someone handed you is tellable from
+      live traffic without a column of its own
+      (<a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a>). And a
+      <strong>cleared list gets a third absence of its own</strong> — "capture cleared", with the same
+      remedy the never-captured one gives, because after a clear the remedy genuinely is the same and the
+      heading is what says which nothing this is.</p>
+      <p>Every one of the three refills the list <strong>from the event bus, never from its own
+      response</strong>: the responses carry counts, not rows, and two sources of truth for one list is a
+      race. The <code>cleared</code> event exists for exactly this.</p>
+    </div>
+
     <div class="callout" data-c="uc-4-provenance">
       <p>Pinned by the epic e2e (<code>ui/e2e/specs/flows.spec.ts</code>, <code>cargo xtask ui e2e</code>):
       WebdriverIO drives the real WebKit window against an ephemeral <code>run(Config)</code> core — empty
@@ -156,6 +215,57 @@
       contracts (<code>GET /flows</code>, <code>GET /stream</code>) are consumed unchanged; the CORS grant
       is the one API-response addition. UC-3 (web shell) stays valid — both surfaces are clients of the
       same API.</p>
+    </div>
+
+    <h2 id="listing-paging">UC-3 · UC-4 — the listing pages, opt-in</h2>
+    <div data-c="listing-paging-contract">
+      <p>Both surfaces read one listing contract, and it is bounded only when a client asks:</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GET /flows</code>, with or without filters</td>
+            <td>the whole filtered capture, newest-first, as a bare JSON array — unbounded, and unchanged by paging's arrival</td>
+          </tr>
+          <tr>
+            <td><code>GET /flows?limit=n</code></td>
+            <td>an envelope: at most <em>n</em> rows plus the <code>next_cursor</code> that continues the walk, <code>null</code> once the walk reaches the oldest row the ring still holds</td>
+          </tr>
+          <tr>
+            <td><code>GET /flows?source=captured</code> · <code>?source=imported</code></td>
+            <td>only that provenance. Every row carries its <code>source</code>, because the ring
+            now holds flows the proxy never saw (<a href="#uc-6">UC-6</a>) and a listing that
+            mixes a live capture with a colleague's file has to say which is which</td>
+          </tr>
+          <tr>
+            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is neither</td>
+            <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
+          </tr>
+        </tbody>
+      </table>
+      <ul>
+        <li><strong>The cursor names a row, not an offset</strong> — the id of the page's last
+        row, resolved against the ring's order. So a flow captured mid-walk lands newer than
+        the cursor and is never served twice (a client watching live gets it on
+        <code>GET /stream</code>; a paged read is a read of the past), and eviction of rows the
+        walk has not reached yet simply shortens it. Paging composes with every filter and
+        re-slices the same listing rather than defining a second one.</li>
+        <li><strong>A cursor the ring no longer holds ends the walk</strong> — an empty, final
+        page, whether the row was evicted under memory pressure or deleted
+        (<a href="#uc-7">UC-7</a>): the walk cannot resume from a row that is gone, and the cause
+        does not change the answer. It never restarts at the newest row, which would re-serve
+        every row the client already holds.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="listing-paging-provenance">
+      <p>Delivered by <span class="badge id">E-EXPORT.W1</span>. Pinned by the paging tests in
+      <code>tests/api.rs</code> (the unparameterised summary row's field set is locked; a cursor
+      walk yields exactly the unpaged listing, filtered and unfiltered; each refusal) and by
+      <code>Store::page</code>'s unit and property tests in <code>src/store.rs</code> — the
+      no-duplicate/no-skip invariant is proven over interleaved inserts, evictions and page
+      reads, not by example. Neither surface pages today: both read the unparameterised listing,
+      which is why the contract had to stay additive.</p>
     </div>
 
     <h2 id="uc-5">UC-5 — Inspect a captured flow in the native app</h2>
@@ -340,6 +450,267 @@ flowchart TD
       handshake bumps <code>/stats</code> + emits <code>connection</code>, records no flow), the status
       derivation + probe-parser unit tests, and the UC-ONBOARD e2e spine. Why these reversals were approved:
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>.</p>
+    </div>
+
+    <h2 id="uc-6">UC-6 — Take the capture out as a HAR file, and bring one back</h2>
+    <div data-c="uc-6-export-contract">
+      <p><code>GET /flows/export</code> answers with the currently filtered capture as a single
+      <strong>HAR 1.2</strong> document — the interchange format the tools in this space already
+      read — served as <code>application/json</code> with a
+      <code>Content-Disposition</code> naming a <code>.har</code> file, so a browser or the
+      native app saves it under a timestamped name.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GET /flows/export</code></td>
+            <td>every captured exchange as a <code>log.entries</code> element — method, URL, both
+            HTTP versions, headers (order and duplicates preserved), query string, cookies,
+            status and reason, the time it was captured, its duration and a
+            <code>timings</code> block, and its bodies</td>
+          </tr>
+          <tr>
+            <td><code>GET /flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code></td>
+            <td>the same document over the filtered set: <strong>the export selects exactly what
+            the listing with those parameters lists</strong>, in the same order — the same filter,
+            not a second implementation of it</td>
+          </tr>
+          <tr>
+            <td>an empty capture, or a filter matching nothing</td>
+            <td><code>200</code> with <code>log.entries: []</code> — a valid, empty HAR file, not
+            a <code>404</code>: the client asked what is captured and the answer is "nothing"</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Two consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>A body Trawler never captured is marked as such, never exported as
+        empty.</strong> A streamed body, one skipped for being too large, and one lost to a read
+        error each appear as a body with <em>no text</em> and a comment naming the reason —
+        so a 4&nbsp;MB event stream is never indistinguishable from a <code>204</code>. A
+        too-large body additionally reports the size it had, because that size is known and is
+        exactly why the bytes were dropped. Only a genuinely empty body is a measured zero.
+        Every other fact Trawler does not hold — the raw header-block sizes, the wire reason
+        phrase, a cookie's optional attributes — is HAR's own "unavailable" sentinel rather
+        than an invented value. The timings are the one place HAR forbids that sentinel: an
+        exchange whose duration was never measured reports an unknown total with its phases
+        zeroed, because a negative phase is a value no reader accepts.</li>
+        <li><strong>A flow still awaiting its response is omitted</strong> from the file, because
+        HAR requires a response on every entry and there is nothing truthful to put there. So an
+        export taken mid-exchange can hold one entry fewer than the listing shows.</li>
+      </ul>
+      <p>The exported bytes are the bytes captured, with the <code>Content-Encoding</code> that
+      describes them still attached — the file stays a faithful record of the wire, and
+      <code>GET /flows/{id}/{leg}/body?decode=1</code> remains the decoding surface. The export
+      is never paged: a HAR file split across pages is not a HAR file, so the filter is the way
+      to export less.</p>
+    </div>
+
+    <div data-c="uc-6-import-contract">
+      <h3 id="uc-6-import">Bringing one back</h3>
+      <p><code>POST /flows/import</code> takes a HAR 1.2 document — Trawler's own export, or one
+      any conforming tool wrote — and its entries become flows in the listing, each marked
+      <strong><code>source: "imported"</code></strong>. An imported flow is otherwise an
+      <em>ordinary</em> flow: the same <code>GET /flows/{id}</code>, the same body endpoints and
+      their <code>?decode=1</code>, the same <code>/stream</code> announcement as it lands, and
+      the same ring rules — it evicts by retained bytes like anything else, so a large import can
+      push a live capture out.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /flows/import</code> + a HAR 1.2 document</td>
+            <td><code>200</code> with <code>{ "imported": n }</code> — the count, because a client
+            that posted a 900-entry file needs to know whether all 900 landed. The entries
+            <strong>add</strong> to the capture; replacing it is a clear followed by an import,
+            not a mode hidden inside a <code>POST</code></td>
+          </tr>
+          <tr>
+            <td>a malformed or hostile document — not JSON, a version other than 1.2, no
+            <code>log.entries</code>, an entry with no request, an unparseable timestamp, an
+            impossible status, a body whose base64 is not base64</td>
+            <td><code>400</code> with a reason, and an entry-level fault <strong>names its
+            index</strong>. All-or-nothing: the whole document parses before the store is
+            touched, so a refused import changes nothing at all — never a partially-populated
+            capture</td>
+          </tr>
+          <tr>
+            <td><code>log.entries: []</code></td>
+            <td><code>200</code> with <code>{ "imported": 0 }</code> — a valid document saying
+            nothing was captured, which is not an error; the same reading an empty export has</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Three consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>Fresh ids, original timestamps.</strong> An id is this store's handle and must
+        be unique here, so an imported flow takes a new one; the instant the exchange happened is
+        the captured truth and is preserved, so an imported capture sorts by when it
+        <em>happened</em>, not when it was read. Import the same file twice and you get two
+        independent sets of flows carrying the same instants.</li>
+        <li><strong>A body the file does not carry comes back as an explicit not-captured, never
+        as empty.</strong> Trawler's own markers restore the exact state (streamed, too-large with
+        the size it had, read error). A <em>foreign</em> writer's body with no text but a size
+        claiming one existed becomes a not-captured too — calling it empty would assert a
+        4&nbsp;MB response was a <code>204</code>. Only a measured zero is empty.</li>
+        <li><strong>What the format cannot carry is dropped, not invented.</strong> The derived
+        and unretained fields — the query string, the parsed-out cookies, the timing phases, the
+        reason phrase, the header-block sizes — are read past in silence, because each was either
+        derived from a header the flow still carries or was never Trawler's to hold. A body's
+        bytes outrank a <code>size</code> that disagrees with them: the ring weighs what it
+        actually holds.</li>
+      </ul>
+    </div>
+
+    <div data-c="uc-6-curl-contract">
+      <h3 id="uc-6-curl">A single request, pasted</h3>
+      <p>The same door takes one <code>curl</code> command — the inverse of UC-5's copy-as-curl —
+      under <code>POST /flows/import?format=curl</code>, with the command as the raw text body. It
+      becomes <strong>one request-only flow</strong>: method, URL, headers and body as the command
+      states them, <code>source: "imported"</code>, no response and no duration, because nothing
+      was sent — the shape a captured flow already has between its request and its reply, so every
+      reading endpoint and the app's row already know how to show it.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /flows/import?format=curl</code> + what a browser's "Copy as cURL"
+            (Chrome, Firefox, Safari — bash shape) or Trawler's own copy-as-curl emits: the URL,
+            <code>-X</code>, <code>-H</code>, the <code>-d</code> family, <code>-b</code>,
+            <code>-u</code>, <code>--compressed</code>, in single, double or <code>$'…'</code>
+            quoting with backslash line-continuations</td>
+            <td><code>200</code> with <code>{ "imported": 1 }</code>. <code>-u</code>, <code>-b</code>
+            and <code>--compressed</code> arrive as the <code>Authorization</code>, <code>Cookie</code>
+            and <code>Accept-Encoding</code> headers they stand for; several <code>-d</code> join with
+            <code>&amp;</code>; the method defaults to <code>GET</code>, or <code>POST</code> when a
+            body flag is present, as curl's own does. Nothing curl would add at run time —
+            <code>Host</code>, <code>User-Agent</code>, <code>Accept</code>, a <code>Content-Type</code>
+            for <code>-d</code> — is invented</td>
+          </tr>
+          <tr>
+            <td>the same command carrying transfer-only flags — <code>-s</code>, <code>-k</code>,
+            <code>-L</code>, <code>-o file</code>, <code>--connect-timeout 5</code> and the rest of
+            an enumerated list</td>
+            <td>the same flow: they shape curl's own behaviour and never reach the wire, so they are
+            consumed in silence — the one silent case</td>
+          </tr>
+          <tr>
+            <td>anything else — <code>-F</code>, <code>-T</code>, <code>--data-urlencode</code>, an
+            unknown flag, a second URL, no URL, a URL that is not absolute <code>http(s)</code>, a
+            value curl would read from a file (<code>-d @body</code>, <code>-b jar</code>), a
+            <code>-u</code> with no password, a header with no colon, an unterminated quote, a first
+            word that is not <code>curl</code></td>
+            <td><code>400</code> with a one-sentence reason <strong>naming the token</strong> —
+            <code>unsupported flag -F</code>, <code>a second URL: "http://other/"</code> — and the
+            capture unchanged. Refused rather than guessed, because a silently dropped flag yields
+            a flow subtly unlike the request that was pasted</td>
+          </tr>
+          <tr>
+            <td><code>?format=</code> anything but <code>har</code> or <code>curl</code></td>
+            <td><code>400 format must be har or curl</code>; absent means HAR, unchanged</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The flow's instant is the moment it was read. Windows <code>cmd</code>'s "Copy as cURL"
+      shape (<code>^</code> continuations) is not spoken and is refused, not half-read. Why the
+      boundary sits exactly here, which headers are expanded and which are never invented, and
+      where the <code>toCurl</code> round trip stops:
+      <a href="../decisions/dec-39-curl-parser-accepts-what-a-browser-emits.html">DEC-39</a>.</p>
+    </div>
+
+    <div class="callout" data-c="uc-6-export-provenance">
+      <p>Export delivered by <span class="badge id">E-EXPORT.W2</span>, import and the
+      <code>source</code> mark by <span class="badge id">E-EXPORT.W3</span>, the curl paste by
+      <span class="badge id">E-EXPORT.W7</span> (<code>src/api/curl.rs</code>, its
+      <code>toCurl</code> inverse proven as a property against a mirror anchored to the app's own
+      pinned outputs); the route a person takes to all three is
+      <a href="#uc-4-capture-controls">UC-4's capture-management controls</a>
+      (<span class="badge id">E-EXPORT.W6</span>). Both HAR directions live in
+      <code>src/api/har.rs</code> — the
+      parser is defined against the projection it inverts, so the two cannot drift into a format
+      Trawler writes but cannot read — and the exported document's shape is snapshot-locked in
+      <code>tests/api.rs</code>. Round-trip fidelity is proven as a <em>property</em> over
+      generated flows, not by example, and the parser's never-panics claim the same way. The
+      export-selects-what-the-listing-lists guarantee holds by construction (both endpoints build
+      the same filter) and is asserted endpoint-to-endpoint. Why HAR and only HAR, and what a
+      round-trip does and does not preserve:
+      <a href="../decisions/dec-37-har-as-the-interchange-format.html">DEC-37</a>; why an imported
+      flow is a first-class flow carrying a mark, and the CORS widening its <code>POST</code>
+      required: <a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a>.</p>
+    </div>
+
+
+    <h2 id="uc-7">UC-7 — Clear the capture</h2>
+    <div data-c="uc-7-contract">
+      <p>A debugging session accumulates noise, and reproducing a bug against a clean listing is
+      the reason the ring needed a third door. <code>DELETE /flows</code> removes what the
+      listing filters select and <code>DELETE /flows/{id}</code> removes exactly one — and every
+      live subscriber learns of it on <code>/stream</code>, so an interface never discovers a
+      clear by refetching.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>DELETE /flows</code></td>
+            <td><code>200</code> with <code>{ "removed": n }</code> — the whole capture is gone,
+            with <strong>no row kept back</strong>. The count is the same envelope the import
+            answers with, so both mutating endpoints report what they did</td>
+          </tr>
+          <tr>
+            <td><code>DELETE /flows?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…&amp;source=…</code></td>
+            <td>only the matching rows leave: <strong>a delete selects exactly what the listing
+            with those parameters lists</strong> — the same filter as the listing and the export,
+            not a third implementation. Every survivor stays whole: still listed, still readable
+            at <code>GET /flows/{id}</code> and at both body endpoints</td>
+          </tr>
+          <tr>
+            <td>a filter matching nothing</td>
+            <td><code>200</code> with <code>{ "removed": 0 }</code> — the request expresses an end
+            state and that state is already true. An unrecognised <code>source=</code> is the
+            exception: <code>400</code> with a reason, because a destructive request must never
+            act on a set the caller did not name</td>
+          </tr>
+          <tr>
+            <td><code>DELETE /flows/{id}</code></td>
+            <td><code>200</code> with <code>{ "removed": 1 }</code>; <code>404</code> when that id
+            is not in the ring — the one delete that 404s, because here the client named something
+            specific that does not exist — and <code>400</code> when the id is not a flow id</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Three consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>A cleared store is empty, not restarted.</strong> The connection tally
+        <code>GET /stats</code> reports is untouched by any delete, and the proxy keeps running:
+        the tally is a monotonic "traffic reached us" measure, not storage. Clearing the capture
+        is not a way to reset the session.</li>
+        <li><strong>The clear arrives as one event for the whole batch</strong> —
+        <code>event: cleared</code> carrying every id that left — not one event per flow, so
+        emptying a full ring cannot lag a subscriber past the stream's buffer and drop it into the
+        <code>lagged</code> gap. It is a <em>distinct</em> event from the ring's own
+        <code>evicted</code>: an interface that conflated them would announce "capture cleared"
+        every time memory pressure dropped a row.</li>
+        <li><strong>Removing is not replacing.</strong> Loading someone else's capture over your
+        own is a delete followed by an import — two operations the client already has — rather
+        than a destructive mode hidden inside the <code>POST</code>.</li>
+        <li><strong>A delete can end another client's paging walk.</strong> If the removed row was
+        the <code>cursor</code> some client is paging from, that client's next page is empty and
+        final — the same answer eviction has always given, because the walk cannot resume from a
+        row that is gone and the cause does not change the answer
+        (<a href="#listing-paging">the listing contract</a>).</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="uc-7-provenance">
+      <p>Delivered by <span class="badge id">E-EXPORT.W4</span>; the app's own clear control —
+      the modal ask, and the absence a cleared list lands on — is
+      <a href="#uc-4-capture-controls">UC-4's capture-management controls</a>
+      (<span class="badge id">E-EXPORT.W6</span>). The API half is the whole contract above: both routes converge on
+      one <code>Store</code> removal, which shares its unlinking with eviction so the ring's byte
+      accounting cannot differ between the two — the invariant is asserted as a property over
+      arbitrary sequences of inserts, imports, evictions and removals. Why the mutating methods
+      widened the CORS grant without reversing the read-only reasoning behind it:
+      <a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a>.</p>
     </div>
 
   </main>

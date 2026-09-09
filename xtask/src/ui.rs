@@ -113,4 +113,27 @@ mod tests {
         let err = run(&["specimens", "--rebuild-everything"], Path::new(".")).unwrap_err();
         assert!(err.contains("usage:"));
     }
+
+    // The flow list's header holds one line down to 846px once the capture acts
+    // sit behind one trigger (E-EXPORT.W9, Tune T8), so a window the user can
+    // drag below that reaches a width where the header wraps to two lines. The
+    // e2e overlay adds no window block, so it inherits this one.
+    #[test]
+    fn the_window_cannot_be_dragged_narrower_than_the_header_holds_one_line() {
+        let repo = crate::repo_root().expect("repo root");
+        let config = std::fs::read_to_string(repo.join("ui/src-tauri/tauri.conf.json"))
+            .expect("tauri.conf.json");
+        // JSON is a YAML subset, so the reader already in the tree parses it.
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&config).expect("valid json");
+        let min_width = parsed["app"]["windows"][0]["minWidth"].as_u64().expect("minWidth");
+        assert!(min_width >= 850, "minWidth is {min_width}, and the header wraps below 846");
+
+        let overlay = std::fs::read_to_string(repo.join("ui/src-tauri/tauri.conf.e2e.json"))
+            .expect("tauri.conf.e2e.json");
+        let overlay: serde_yaml::Value = serde_yaml::from_str(&overlay).expect("valid json");
+        assert!(
+            overlay["app"]["windows"].is_null(),
+            "the overlay declares its own windows, so it no longer inherits the minimum"
+        );
+    }
 }

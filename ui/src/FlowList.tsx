@@ -7,7 +7,11 @@ import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./
 
 const ROW_HEIGHT = 30;
 
-const COLUMNS = "110px 70px 180px 1fr 70px 90px";
+// Cell 1 is sized by the timestamp import produces, not by the mark it also
+// holds: a HAR handed over from another machine was captured on another day, so
+// TimestampText's cross-day form (115.2px) plus the mark's reserved 16px box is
+// what the column has to hold. The mark itself never enters the arithmetic.
+const COLUMNS = "160px 70px 180px 1fr 70px 90px";
 
 function HeaderRow() {
   return (
@@ -26,50 +30,79 @@ function HeaderRow() {
   );
 }
 
-// The region is empty for four unrelated reasons and none of them may share a
+// The region is empty for five unrelated reasons and none of them may share a
 // sentence: telling someone to send traffic they have already sent, or to retry
 // a query the core will refuse identically forever, is the failure each separate
-// wording exists to prevent.
+// wording exists to prevent. A user who just cleared the capture is exactly the
+// person the never-captured wording would insult, which is why clearing gets a
+// heading of its own; the remedy is shared with it because after a clear it
+// genuinely is the same remedy.
 //
-// A silent core outranks both empties, because an empty list means nothing when
+// A silent core outranks every empty, because an empty list means nothing when
 // the list could not be fetched — that is the run's rule. It does NOT outrank a
 // refusal: the run never ranked those two against each other, and they are not
 // alternatives, so when both are true the refusal stands here and the shell
-// states the silence above it rather than in its place.
+// states the silence above it rather than in its place. A clear ranks under both
+// and over the two query absences: it is the only cause no property of the list
+// can carry, but it is a fact about content, and a list that could not be
+// fetched or a query that was refused has no content to explain.
 function Absence({
   filtered,
+  cleared,
   silent,
   refused,
   retrying,
   onRetry,
 }: {
   filtered: boolean;
+  cleared: boolean;
   silent: boolean;
   refused: string | null;
   retrying: boolean;
   onRetry: () => void;
 }) {
+  const refill = `send traffic through the proxy — ${defaultProxyAddr()}`;
   return (
     <div data-testid="empty" className="flex justify-center p-12">
-      {silent && refused === null ? (
-        // The clause is a claim about why this region is empty, so it is made
-        // only when it is this region's own truth: a filter that excludes
-        // everything is not a window nothing has reached.
-        <NotAnswering
-          trailing={filtered ? undefined : "nothing has reached the window"}
-          retrying={retrying}
-          onRetry={onRetry}
-        />
-      ) : refused !== null ? (
+      {refused !== null ? (
         // A rejection, not a failure: the API answered and said no, so there is
         // no ⚠ and no retry — the correction is more typing.
         <Notice detail="type a code (404) or a class (4xx)">{`${refused} is not a status`}</Notice>
+      ) : silent ? (
+        // The clause is a claim about why this region is empty, so it is made
+        // only when it is this region's own truth. Neither a filter that
+        // excludes everything nor a capture the user just emptied is a window
+        // nothing has reached — in both the traffic arrived and something else
+        // is why the region is bare.
+        <NotAnswering
+          trailing={filtered || cleared ? undefined : "nothing has reached the window"}
+          retrying={retrying}
+          onRetry={onRetry}
+        />
+      ) : cleared ? (
+        <Notice detail={refill}>capture cleared</Notice>
       ) : filtered ? (
         <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
       ) : (
-        <Notice detail={`send traffic through the proxy — ${defaultProxyAddr()}`}>no flows yet</Notice>
+        <Notice detail={refill}>no flows yet</Notice>
       )}
     </div>
+  );
+}
+
+// The mark wears the door's own face — the same ↑ the import control puts in the
+// row — and its box is reserved whether or not it is drawn, so every timestamp
+// shares one left edge. Not a column and not a component: one conditional
+// character with an accessible name, in one cell of one screen.
+function ImportMark({ imported }: { imported: boolean }) {
+  return (
+    <span
+      aria-label={imported ? "imported" : undefined}
+      title={imported ? "imported" : undefined}
+      className="inline-block w-4 text-ink-mute"
+    >
+      {imported ? "↑" : ""}
+    </span>
   );
 }
 
@@ -78,6 +111,7 @@ export function FlowList({
   selectedId,
   onSelect,
   filtered = false,
+  cleared = false,
   silent = false,
   refused = null,
   retrying = false,
@@ -87,6 +121,7 @@ export function FlowList({
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   filtered?: boolean;
+  cleared?: boolean;
   silent?: boolean;
   refused?: string | null;
   retrying?: boolean;
@@ -141,6 +176,7 @@ export function FlowList({
         <HeaderRow />
         <Absence
           filtered={filtered}
+          cleared={cleared}
           silent={silent}
           refused={refused}
           retrying={retrying}
@@ -189,6 +225,7 @@ export function FlowList({
                 }}
               >
                 <span data-wire="started_at">
+                  <ImportMark imported={flow.source === "imported"} />
                   <TimestampText timestamp={flow.started_at} />
                 </span>
                 <span data-wire="method">

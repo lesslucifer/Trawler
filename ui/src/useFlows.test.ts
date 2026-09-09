@@ -2,23 +2,20 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { useFlowDetail, useFlows } from "./useFlows";
 import { ApiError } from "./api";
 import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
+import { apiStub } from "./apiStub";
 
 // Fake API with a hand-resolved /stats promise and a captured stream handler set,
 // so a test can interleave a live `connection` bump with the seed's resolution.
 function fakeApi() {
   let handlers: StreamHandlers | undefined;
   let resolveStats: ((n: number) => void) | null = null;
-  const api: TrawlerApi = {
-    listFlows: async () => [],
+  const api = apiStub({
     connectionCount: () => new Promise<number>((res) => (resolveStats = res)),
-    caCertPem: async () => "",
-    getFlow: async () => { throw new Error("unused"); },
-    getBody: async () => { throw new Error("unused"); },
     stream: (h) => {
       handlers = h;
       return () => {};
     },
-  };
+  });
   return {
     api,
     fireConnection: () => handlers?.onConnection?.(),
@@ -88,15 +85,7 @@ test("a live connection is stamped with its time; the /stats seed stamps nothing
 // leave the user no way to pick another.
 function hostApi(pages: FlowSummary[][]) {
   let page = 0;
-  const api: TrawlerApi = {
-    listFlows: async () => pages[Math.min(page++, pages.length - 1)],
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
-    getFlow: async () => { throw new Error("unused"); },
-    getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
-  };
-  return api;
+  return apiStub({ listFlows: async () => pages[Math.min(page++, pages.length - 1)] });
 }
 
 function summary(id: string, uri: string): FlowSummary {
@@ -107,6 +96,7 @@ function summary(id: string, uri: string): FlowSummary {
     method: "GET",
     uri,
     status: 200,
+    source: "captured",
     request_body_state: "empty",
     response_body_state: "empty",
   };
@@ -136,14 +126,11 @@ test("a URI with no parseable host contributes no option", async () => {
 // A listing that fails has two causes and the shell says a different sentence for
 // each, so the hook must not flatten them into "something went wrong".
 function feedApi(answer: () => Promise<FlowSummary[]>) {
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows: () => answer(),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
-  };
+  });
   return api;
 }
 
@@ -236,14 +223,10 @@ function view(id: string): FlowView {
 }
 
 function detailApi(answer: () => Promise<FlowView>) {
-  const api: TrawlerApi = {
-    listFlows: async () => [],
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
+  const api: TrawlerApi = apiStub({
     getFlow: () => answer(),
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
-  };
+  });
   return api;
 }
 
@@ -288,17 +271,15 @@ test("a bumped nonce re-runs the detail fetch, so the shell's retry covers the p
 function streamApi() {
   let handlers: StreamHandlers | undefined;
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows: () => answer(),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
     stream: (h) => {
       handlers = h;
       return () => {};
     },
-  };
+  });
   return {
     api,
     fireDown: () => handlers?.onDown?.(),
@@ -338,15 +319,12 @@ test("a stream that comes back re-asks, and a listing that answers clears the st
 // retry that appears to work and then silently un-works itself.
 test("a straggling refresh cannot overwrite the answer a later one already gave", async () => {
   const pending: { resolve: (rows: FlowSummary[]) => void; reject: (e: unknown) => void }[] = [];
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows: () =>
       new Promise<FlowSummary[]>((resolve, reject) => pending.push({ resolve, reject })),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
-  };
+  });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(pending).toHaveLength(1)); // the mount's own refresh
 
@@ -378,7 +356,7 @@ test("a straggling refresh cannot overwrite the answer a later one already gave"
 test("a dropped stream records the silence without unsaying the refusal", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
-  const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
+  const api: TrawlerApi = apiStub({ ...f.api, listFlows: () => answer() });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
@@ -398,7 +376,7 @@ test("a dropped stream records the silence without unsaying the refusal", async 
 test("a refusal does not outlive the value it was about", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
-  const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
+  const api: TrawlerApi = apiStub({ ...f.api, listFlows: () => answer() });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
@@ -418,7 +396,7 @@ test("a refusal does not outlive the value it was about", async () => {
 test("a silence on the refused value itself leaves the refusal standing", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
-  const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
+  const api: TrawlerApi = apiStub({ ...f.api, listFlows: () => answer() });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
@@ -457,17 +435,14 @@ test("silence ends when a listing arrives, not when the stream reconnects", asyn
 // sentence becomes " is not a status".
 test("a refusal names the value that was asked, not whatever the box holds now", async () => {
   const calls: { status: string; reject: (e: unknown) => void }[] = [];
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows: (filter) =>
       new Promise<FlowSummary[]>((_, reject) =>
         calls.push({ status: filter.status ?? "", reject }),
       ),
-    connectionCount: async () => 0,
-    caCertPem: async () => "",
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
-    stream: () => () => {},
-  };
+  });
   const { result } = renderHook(() => useFlows(api));
   await waitFor(() => expect(calls).toHaveLength(1)); // the mount's own listing
 

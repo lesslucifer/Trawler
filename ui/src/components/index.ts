@@ -26,6 +26,7 @@ export type { SegmentOption } from "./SegmentedControl";
 export { Select } from "./Select";
 export type { SelectOption } from "./Select";
 export { SourceSurface } from "./SourceSurface";
+export { Spinner } from "./Spinner";
 export { StatusDot } from "./StatusDot";
 export { StatusLine } from "./StatusLine";
 export { StatusPill } from "./StatusPill";

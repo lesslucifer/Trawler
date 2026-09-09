@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import {
   defaultProxyTarget,
   proxyOffSnippet,
@@ -8,7 +8,8 @@ import {
   type HostOs,
 } from "./setup";
 import type { CloseMode } from "./closeConfirm";
-import { Button, Checkbox, IconButton, Notice } from "./components/index";
+import { Button, Checkbox, Notice } from "./components/index";
+import { ModalShell } from "./ModalShell";
 import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
 
 // The quit-time proxy dialog, three modes driven by the live proxy status
@@ -42,93 +43,6 @@ export const CLOSE_COPY = {
   done: "the proxy is off. you can quit safely.",
   failed: "couldn't turn the proxy off — try the steps below.",
 } as const;
-
-// summary is a native tab stop, so it belongs here: a trap whose stop list
-// disagrees with the browser's tab ring wraps at the wrong element.
-const FOCUSABLE =
-  'a[href], button:not([disabled]), summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Build-local by warrant: no registry entry owns modality, and a general Dialog
-// drawn from the app's only dialog would generalise from a sample of one.
-function ModalShell({
-  title,
-  onCancel,
-  children,
-  testId,
-  mode,
-}: {
-  title: string;
-  onCancel: () => void;
-  children: ReactNode;
-  testId: string;
-  mode: string;
-}) {
-  const panel = useRef<HTMLDivElement>(null);
-  const invoker = useRef<Element | null>(null);
-
-  useEffect(() => {
-    invoker.current = document.activeElement;
-    // The action the dialog is asking about, not the first thing in the DOM: that
-    // is the ✕, and an opening dialog must not put its destructive escape under
-    // the first Enter — nor the manual-steps summary, which answers nothing.
-    const panelEl = panel.current;
-    const action = panelEl?.querySelector<HTMLElement>('[data-opener="true"] button');
-    (action ?? panelEl?.querySelector<HTMLElement>(FOCUSABLE))?.focus();
-    return () => {
-      (invoker.current as HTMLElement | null)?.focus?.();
-    };
-  }, []);
-
-  const trap = (event: React.KeyboardEvent) => {
-    if (event.key === "Escape") {
-      // A nested control that already consumed it — Select closing its popup —
-      // marks the event handled. Dismissing a dropdown is not dismissing the
-      // dialog.
-      if (!event.defaultPrevented) onCancel();
-      return;
-    }
-    if (event.key !== "Tab" || !panel.current) return;
-    const stops = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    if (stops.length === 0) return;
-    const edge = event.shiftKey ? stops[0] : stops[stops.length - 1];
-    if (document.activeElement === edge) {
-      event.preventDefault();
-      (event.shiftKey ? stops[stops.length - 1] : stops[0]).focus();
-    }
-  };
-
-  return (
-    <div
-      data-testid={testId}
-      data-mode={mode}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onKeyDown={trap}
-      className="fixed inset-0 z-modal flex items-center justify-center bg-scrim"
-    >
-      <button
-        type="button"
-        aria-hidden="true"
-        tabIndex={-1}
-        data-testid="proxy-close-backdrop"
-        onClick={onCancel}
-        className="absolute inset-0 h-full w-full cursor-default"
-      />
-      <div
-        ref={panel}
-        data-testid="proxy-close-panel"
-        className="relative w-full max-w-dialog-max rounded-lg border border-hairline bg-canvas p-4 text-ink"
-      >
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <h2 className="font-serif text-title italic">{title}</h2>
-          <IconButton glyph="close" label="cancel" onClick={onCancel} />
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 // Shared by every mode: pick the target, read the steps, copy the command. It is
 // the whole content in "remote" (nothing to act on) and the fallback beneath the
@@ -202,7 +116,7 @@ export function ProxyCloseDialog({
       <ModalShell
         title={copy.title}
         onCancel={onCancel}
-        testId="proxy-close-dialog"
+        testId="proxy-close"
         mode={mode}
       >
         <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
@@ -251,7 +165,7 @@ export function ProxyCloseDialog({
     <ModalShell
       title={copy.title}
       onCancel={onCancel}
-      testId="proxy-close-dialog"
+      testId="proxy-close"
       mode={mode}
     >
       <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>

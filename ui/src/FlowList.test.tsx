@@ -11,6 +11,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
     method: "GET",
     uri: "http://example.com/a/b?x=1",
     status: 200,
+    source: "captured",
     request_body_state: "empty",
     response_body_state: "captured",
     ...over,
@@ -226,7 +227,55 @@ test("the status column is centred with its label rather than sharing the durati
   );
 });
 
-// Four causes, four sentences, and an order between them. The order is the point:
+test("an imported row carries the mark, with its own text channel — colour is never the only one", () => {
+  render(<FlowList flows={[flow({ id: "i", source: "imported" })]} />);
+  const mark = screen.getByLabelText("imported");
+  expect(mark).toHaveTextContent("↑");
+  // Ink, not chromatic: being imported is a provenance, not an outcome.
+  expect(mark.className).toContain("text-ink-mute");
+});
+
+test("a captured row still holds the mark's box, so every timestamp shares one left edge", () => {
+  const { container } = render(<FlowList flows={[flow({ id: "c", source: "captured" })]} />);
+  const cell = container.querySelector('[data-wire="started_at"]');
+  const reserve = cell?.firstElementChild;
+  expect(screen.queryByLabelText("imported")).toBeNull();
+  expect(reserve).toHaveTextContent("");
+  expect(reserve?.className).toContain("w-4");
+});
+
+test("cell 1 is sized by the cross-day timestamp an import produces, not by the mark", () => {
+  const { container } = render(<FlowList flows={[flow()]} />);
+  const row = container.querySelector('[data-testid="flow-row"]') as HTMLElement;
+  expect(row.style.gridTemplateColumns.split(" ")[0]).toBe("160px");
+});
+
+test("a cleared list gets its own heading — telling someone to send traffic they just sent is the bug", () => {
+  render(<FlowList flows={[]} cleared />);
+  const absence = screen.getByTestId("empty");
+  expect(absence).toHaveTextContent("capture cleared");
+  expect(absence).not.toHaveTextContent("no flows yet");
+  // Same remedy as the never-captured absence, because after a clear it is.
+  expect(absence).toHaveTextContent(defaultProxyAddr());
+});
+
+test("the three absences never share a sentence", () => {
+  const heading = (props: { filtered?: boolean; cleared?: boolean }) => {
+    const { unmount } = render(<FlowList flows={[]} {...props} />);
+    const text = screen.getByTestId("empty").textContent ?? "";
+    unmount();
+    return text;
+  };
+  const wordings = [heading({}), heading({ filtered: true }), heading({ cleared: true })];
+  expect(new Set(wordings).size).toBe(3);
+});
+
+test("a clear that emptied a filtered view says it was cleared, not that the filter excludes everything", () => {
+  render(<FlowList flows={[]} filtered cleared />);
+  expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared");
+});
+
+// Five causes, five sentences, and an order between them. The order is the point:
 // an empty list means nothing when the list could not be fetched, so a failure
 // outranks both empties rather than sharing a region with them.
 test("a core that is not answering takes the empty region from both empties", () => {
@@ -254,6 +303,16 @@ test("the silence says nothing reached the window only when nothing did", () => 
   render(<FlowList flows={[]} filtered silent />);
   expect(screen.getByTestId("empty")).not.toHaveTextContent("nothing has reached the window");
   expect(screen.getByTestId("empty")).toHaveTextContent("trawler is not answering");
+});
+
+// The same reasoning that keeps the clause off a filtered region keeps it off a
+// cleared one: the traffic arrived, the user emptied it, and saying nothing has
+// reached the window would be the shell inventing a history it can see is wrong.
+test("a cleared capture that then loses its core is not told nothing ever arrived", () => {
+  render(<FlowList flows={[]} silent cleared />);
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("trawler is not answering");
+  expect(region).not.toHaveTextContent("nothing has reached the window");
 });
 
 // The run ranked "not answering" above the two empties and never against a
@@ -306,5 +365,4 @@ test("with no failure the two inherited empties are unchanged", () => {
 test("rows on screen leave the empty region absent whatever the failure", () => {
   render(<FlowList flows={three} silent />);
   expect(screen.queryByTestId("empty")).toBeNull();
-  expect(screen.getAllByTestId("flow-row")).toHaveLength(3);
-});
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(3);});

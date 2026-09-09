@@ -4,6 +4,9 @@ import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
 import { ApiError, apiAddr } from "./api";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
+import { apiStub } from "./apiStub";
+import { CAPTURE_COPY } from "./CaptureControls";
+import * as files from "./body";
 import type { OnbState } from "./onboardingMachine";
 import { CA_FILENAME, guidedSteps, TUNNEL_GRACE_MS } from "./setup";
 
@@ -46,6 +49,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
     method: "GET",
     uri: "http://example.com/",
     status: 200,
+    source: "captured",
     request_body_state: "empty",
     response_body_state: "empty",
     ...over,
@@ -57,7 +61,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 function mockApi(store: () => FlowSummary[], connections = 0) {
   let onEvent = () => {};
   let onConnection = () => {};
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows: vi.fn(async (filter: Filter) => {
       // Close enough to FlowFilter::matches (store.rs) for these tests: q really
       // is a case-insensitive substring of the URI, while host is matched there
@@ -85,12 +89,19 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
       bytes: new TextEncoder().encode('{"greeting":"hello"}'),
       contentType: "application/json",
     })),
+    // The three doors answer what the server answers and nothing more: the list
+    // refills from the bus, so a test must fire an event to see rows move —
+    // which is exactly the dependency the screen has on the real system.
+    exportHar: vi.fn(async () => ({ bytes: new TextEncoder().encode("{}"), filename: "trawler-x.har" })),
+    importHar: vi.fn(async () => 1),
+    importCurl: vi.fn(async () => 1),
+    clearFlows: vi.fn(async () => 1),
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onConnection = handlers.onConnection ?? (() => {});
       return () => {};
     }),
-  };
+  });
   return {
     api,
     fire: () => act(() => onEvent()),
@@ -536,14 +547,178 @@ test("selecting a different flow resets the copy button (no stale 'copied')", as
   vi.unstubAllGlobals();
 });
 
+// UC-4 amended (E-EXPORT.W6): the flow list's first controls that change server
+// state. The bounded contract is the whole surface — the acts reached from the
+// real header beside the real filters, the list refilling from the bus rather
+// than from a mutation's own response, and the absence that only a clear can
+// produce.
+const captureTrigger = () => screen.getByRole("button", { name: CAPTURE_COPY.trigger });
+const clearCapture = (count: number) => fireEvent.click(screen.getByRole("button", { name: `clear ${count} ${count === 1 ? "flow" : "flows"}` }));
+async function chooseAct(label: string) {
+  fireEvent.click(captureTrigger());
+  fireEvent.click(await screen.findByRole("menuitem", { name: label }));
+}
+
+test("the clear shortcut and transfer menu sit past the filters", async () => {
+  const { api } = mockApi(() => [flow()]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  const header = document.querySelector("header") as HTMLElement;
+  const controls = [...header.querySelectorAll("button, input")];
+  // The trailing edge: everything the user narrows the list with comes first,
+  // then clear, then the transfer menu.
+  expect(controls.indexOf(screen.getByRole("button", { name: "clear 1 flow" }))).toBe(controls.length - 2);
+  expect(controls.indexOf(captureTrigger())).toBe(controls.length - 1);
+  expect(screen.queryByRole("menu")).toBeNull();
+  expect(within(header).getByTestId("capture-slot")).toHaveTextContent("1 flow");
+});
+
+test("export is scoped by whatever the filters selected, not by the whole capture", async () => {
+  const rows = [flow({ id: "f1", uri: "http://example.com/" }), flow({ id: "f2", uri: "http://other.test/" })];
+  const { api } = mockApi(() => rows);
+  vi.spyOn(files, "saveBody").mockResolvedValue("/tmp/x.har");
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+
+  await chooseHost("other.test");
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
+
+  await chooseAct(CAPTURE_COPY.exportAct);
+  await waitFor(() => expect(api.exportHar).toHaveBeenCalledWith({ host: "other.test" }));
+});
+
+test("clearing empties the list into an absence only a clear produces, and the count follows", async () => {
+  let rows = [flow({ id: "f1" }), flow({ id: "f2" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+
+  clearCapture(2);
+  expect(await screen.findByRole("dialog")).toHaveAttribute("aria-label", "clear 2 flows?");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
+  await waitFor(() => expect(api.clearFlows).toHaveBeenCalled());
+
+  // The server announces the clear and the list refills from the bus — the
+  // response carries a count, not rows, so it could not refill it anyway.
+  rows = [];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+  expect(screen.getByTestId("capture-slot")).toHaveTextContent("0 flows");
+});
+
+test("the cleared absence gives way as soon as rows come back", async () => {
+  let rows = [flow({ id: "f1" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  clearCapture(1);
+  await screen.findByRole("dialog");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
+  rows = [];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+
+  rows = [flow({ id: "f2" })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("flow-row")).toBeInTheDocument());
+
+  rows = [];
+  fire();
+  // Emptied by eviction this time, not by a clear — so it is not that absence.
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("no flows yet"));
+});
+
+test("narrowing after a clear reads as the filter's absence, not as the clear's", async () => {
+  let rows = [flow({ id: "f1", uri: "http://example.com/" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  clearCapture(1);
+  await screen.findByRole("dialog");
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
+  rows = [];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "nothing" } });
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter"));
+});
+
+test("a dismissed clear ask sends the live filter and refills from the bus without a dialog", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
+  let rows = [flow({ id: "f1", uri: "http://example.com/" }), flow({ id: "f2", uri: "http://other.test/" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+
+  await chooseHost("other.test");
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
+  clearCapture(1);
+
+  await waitFor(() => expect(api.clearFlows).toHaveBeenCalledWith({ host: "other.test" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+
+  rows = [flow({ id: "f1", uri: "http://example.com/" })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+});
+
+test("an imported file lands as marked rows the list gets from the bus", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  vi.spyOn(files, "openFile").mockResolvedValue({
+    name: "session.har",
+    bytes: new TextEncoder().encode('{"log":{"entries":[]}}'),
+  });
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getByTestId("empty")).toBeInTheDocument());
+
+  await chooseAct(CAPTURE_COPY.importName);
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.choose }));
+  await waitFor(() => expect(api.importHar).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  rows = [flow({ id: "i1", source: "imported" })];
+  fire();
+  await waitFor(() => expect(screen.getByLabelText("imported")).toBeInTheDocument());
+});
+
+test("a pasted command lands as a request-only row, and a refusal keeps the paste on screen", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  (api.importCurl as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    new Error("unsupported flag --data-urlencode"),
+  );
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getByTestId("empty")).toBeInTheDocument());
+
+  await chooseAct(CAPTURE_COPY.importName);
+  const paste = screen.getByRole("textbox", { name: CAPTURE_COPY.pasteLabel });
+  fireEvent.change(paste, { target: { value: "curl --data-urlencode 'q=1' http://x/" } });
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+
+  expect(await screen.findByTestId("import-failed")).toHaveTextContent("unsupported flag --data-urlencode");
+  expect(screen.getByTestId("empty")).toBeInTheDocument(); // nothing was stored
+
+  fireEvent.change(paste, { target: { value: "curl http://x/" } });
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.import }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  rows = [flow({ id: "p1", source: "imported", status: null, duration_ms: null })];
+  fire();
+  await waitFor(() => expect(screen.getByLabelText("imported")).toBeInTheDocument());
+});
+
 // The shell's connection states, driven through a core whose answer the test
 // controls: the whole point is what the SCREEN does when the API stops answering
 // or refuses, not what the hook holds.
 function shellApi(answer: () => Promise<FlowSummary[]>) {
   const listFlows = vi.fn((_filter: Filter) => answer());
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows,
-    connectionCount: async () => 0,
     caCertPem: async () => PEM,
     getFlow: async (id: string): Promise<FlowView> => ({
       ...flow({ id }),
@@ -554,9 +729,7 @@ function shellApi(answer: () => Promise<FlowSummary[]>) {
       request_body: { state: "empty" },
       response_body: { state: "empty" },
     }),
-    getBody: async () => ({ bytes: new Uint8Array(), contentType: null }),
-    stream: () => () => {},
-  };
+  });
   return { api, listFlows };
 }
 
@@ -691,14 +864,11 @@ test("the onboarding phase renders no connection band", async () => {
 // list's are two independent facts, and folding them into one boolean let a
 // latched pane failure speak for the list. Both tests fail before the fix.
 function paneApi(listAnswer: () => Promise<FlowSummary[]>, flowAnswer: () => Promise<FlowView>) {
-  const api: TrawlerApi = {
+  const api: TrawlerApi = apiStub({
     listFlows: () => listAnswer(),
-    connectionCount: async () => 0,
     caCertPem: async () => PEM,
     getFlow: () => flowAnswer(),
-    getBody: async () => ({ bytes: new Uint8Array(), contentType: null }),
-    stream: () => () => {},
-  };
+  });
   return api;
 }
 
@@ -858,5 +1028,4 @@ test("a core that goes silent after refusing a query states both, hiding neither
   // The refusal keeps its own region; the silence is stated above it.
   expect(screen.getByTestId("empty")).toHaveTextContent("4xz is not a status");
   // And the band makes no claim about rows that are not there.
-  expect(band).not.toHaveTextContent("the rows below are the last it sent");
-});
+  expect(band).not.toHaveTextContent("the rows below are the last it sent");});

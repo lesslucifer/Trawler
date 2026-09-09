@@ -35,8 +35,13 @@
         <tr>
           <td><a href="web-ui.html#uc-4"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-4</span></td>
-          <td>Watch live, filterable traffic in the native desktop app (Warp-styled, cross-origin API client) — filters at either status resolution (<code>404</code> or <code>4xx</code>), and states a core that is not answering rather than freezing on its last rows</td>
+          <td>Watch live, filterable traffic in the native desktop app (Warp-styled, cross-origin API client) — filters at either status resolution (<code>404</code> or <code>4xx</code>), states a core that is not answering rather than freezing on its last rows, and puts export and import behind one header menu with clear as a direct, optionally unconfirmed shortcut</td>
           <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="web-ui.html#listing-paging"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-3 · UC-4</span></td>
+          <td>The shared listing contract pages on opt-in <code>limit</code> + <code>cursor</code>; unparameterised it stays the whole filtered capture</td>          <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
           <td><a href="web-ui.html#uc-5"><code>web-ui.html</code></a></td>
@@ -48,6 +53,18 @@
           <td><a href="web-ui.html#uc-onboard"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-ONBOARD</span></td>
           <td>Guided onboarding to the first captured flow — two-truths per-step status (local probe or observed traffic), connection-seen signal, capture-only list reveal</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="web-ui.html#uc-6"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-6</span></td>
+          <td>The HAR 1.2 round trip: out over <code>GET /flows/export</code> — the export selects what the listing lists — and back in over <code>POST /flows/import</code>, whose entries become ordinary flows marked <code>imported</code> and selectable by that mark. A body Trawler never captured is marked as such in both directions, never treated as empty; a malformed document is refused whole, changing nothing. The same door under <code>?format=curl</code> takes one pasted <code>curl</code> command — what a browser's "Copy as cURL" emits — as a request-only imported flow, refusing any flag outside that set by name</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="web-ui.html#uc-7"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-7</span></td>
+          <td>Clearing the capture: <code>DELETE /flows</code> removes what the listing filters select — the same filter, no third implementation — and <code>DELETE /flows/{id}</code> removes one, 404 when it is not there. Every live subscriber learns of it as one <code>cleared</code> event for the batch, distinct from the ring's own eviction. A cleared store is empty, not restarted: the connection tally and the running proxy are untouched</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

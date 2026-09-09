@@ -4,15 +4,15 @@ import { FlowDetail } from "./FlowDetail";
 import { toCurl } from "./flow";
 import { CONFIRM_MS } from "./components/index";
 import type { FlowView, TrawlerApi } from "./api";
+import { apiStub } from "./apiStub";
 
-const stubApi = (): TrawlerApi => ({
-  listFlows: vi.fn(),
-  connectionCount: vi.fn(async () => 0),
-  caCertPem: vi.fn(async () => ""),
-  getFlow: vi.fn(),
-  getBody: vi.fn(async () => ({ bytes: new TextEncoder().encode("body!"), contentType: "text/plain" })),
-  stream: vi.fn(),
-});
+const stubApi = (): TrawlerApi =>
+  apiStub({
+    getBody: vi.fn(async () => ({
+      bytes: new TextEncoder().encode("body!"),
+      contentType: "text/plain",
+    })),
+  });
 
 function view(over: Partial<FlowView> = {}): FlowView {
   return {
@@ -22,6 +22,7 @@ function view(over: Partial<FlowView> = {}): FlowView {
     method: "GET",
     uri: "http://example.com/a?x=1",
     status: 200,
+    source: "captured",
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/2.0",
     request_headers: [{ name: "Accept", value: "application/json" }],

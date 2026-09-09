@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9e85db9f34851f0dfacb66">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-40: the predecessor run is the checklist</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-40 — a re-run's close walks the run it supersedes, because a dropped answer is not reviewable from the near side</h1>
+      <p>Every review a design run gets asks whether the run's own statements are true. That question cannot
+        reach an answer the run stopped making — there is no statement to test. So a re-run closes by walking
+        its predecessor and classifying every answer in it, and the design flow makes that step ①.</p>
+      <div class="meta">DEC-40 · 2026-09-07 · Trawler · E-EXPORT.W9 round 11 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>A re-run inherits a predecessor's answers and is trusted to say which ones moved. Two failure shapes
+      follow, and only one of them is reviewable:</p>
+    <table data-c="two-shapes">
+      <thead><tr><th>What the re-run did</th><th>What it leaves behind</th><th>Can a reader of the new run find it?</th></tr></thead>
+      <tbody>
+        <tr><td>Changed an answer and said so</td><td>a delta note</td><td><span class="badge auto">nothing to find</span> — it is disclosed</td></tr>
+        <tr><td>Changed an answer silently</td><td>a false statement, or two statements that disagree</td><td><span class="badge auto">yes</span> — read the document and test it</td></tr>
+        <tr><td><strong>Dropped an answer</strong></td><td><strong>nothing</strong></td><td><span class="badge approval">no</span> — every statement present is true, and the absent one has no location to be wrong at</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">The third row is the whole record. Reviewing the new run is a search over statements;
+      a dropped answer contributes none, so the search space does not contain it.</div>
+
+    <p>E-EXPORT.W9 ran the experiment without meaning to. It re-ran a superseded design over sixteen review
+      rounds — the count is <em>as at this record</em>, and the split below is what matters, not the
+      total — and the rounds divide exactly on which document they read:</p>
+    <table data-c="rounds">
+      <thead><tr><th>Rounds</th><th>What they read</th><th>Inherited answers found moved in silence</th></tr></thead>
+      <tbody>
+        <tr><td>every other round<br><span class="kd">1 – 7, 9, 11 – 14 at this record</span></td><td>the new run only, asking whether its statements were true</td><td><strong>0</strong> — and every statement they tested <em>was</em> true. They found other defects, in quantity; none was an inherited answer</td></tr>
+        <tr><td>8</td><td>one inherited answer, checked against the predecessor</td><td><strong>1</strong> — the predecessor had the focus answer right and the re-run had flipped it</td></tr>
+        <tr><td>9b</td><td>the same, one answer further</td><td><strong>1</strong></td></tr>
+        <tr><td>10</td><td>the predecessor end to end, every answer classified</td><td><strong>4</strong>, each of which had survived every earlier round</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Six in total, and every one of them from one of the three rounds that opened the
+      predecessor. Every round that did not was not careless; each was asking a question that cannot
+      return these six — which is why the ratio, not the tally, is the finding.</div>
+
+    <h2 id="choice">Choice</h2>
+    <div class="callout" data-c="choice">
+      <strong>When a design run supersedes another, closing it begins with a walk of the predecessor: stage by
+      stage, over the <em>old</em> run, classify every answer in it as held, changed, or dropped.</strong> The
+      predecessor's answers are the checklist, and an unclassified one is the defect. A held answer is cited
+      rather than left to be inferred. This is close step ① in
+      <a href="../design-flow.html#close">design-flow</a>, and it is first because the later steps all read the
+      new run.
+    </div>
+    <p>Nothing machine-checks it. <a href="../design-flow.html#review-tier">Tier-3</a> is the only reader that
+      can, and it must be handed the predecessor's path — a reviewer given only the new run is structurally in
+      the position of every round that found none of the six.</p>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Leave it to the review</strong> — reviewers should walk the predecessor</td>
+          <td>they will, once told which document that is and that the walk is owed. Absent both, the review
+            reads what it was given; W9's new-run-only rounds are the demonstration. The obligation has to sit
+            where the predecessor's identity is known, which is the run's own close</td></tr>
+        <tr><td><strong>Make it a receipt item</strong> — a table of the predecessor's answers with a verdict each</td>
+          <td>the receipt is the run's claim about itself against the rulebook, and its coverage is checked
+            against the rulebook on disk. A predecessor is not a rulebook and has no fixed row set, so the
+            check would be the walk, unverifiable, wearing a checked item's badge</td></tr>
+        <tr><td><strong>File it as a vocabulary Proposal</strong> — how W9 first recorded the lesson</td>
+          <td>Proposals is for entries the design needed and the vocabulary lacked. A process step is not
+            vocabulary, and filing it there leaves the flow unchanged while looking as though something
+            landed</td></tr>
+        <tr><td><strong>Put the numbered step last</strong>, after the run is otherwise green</td>
+          <td>the walk is what tells the later steps what to fix. Run it last and its findings arrive after
+            <code>verify-doc</code> and the archive flag, i.e. as a reopen</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li><strong><a href="../design-flow.html#close">design-flow</a> §7 owns the step</strong>: ① walks the
+        predecessor, and the four steps that were ①–④ are now ②–⑤. The step exists only when there is a
+        predecessor.</li>
+      <li><strong>Tier-3 is told the predecessor's path.</strong> That is the only reader that can refuse an
+        unclassified answer, and it cannot do so from the new run alone.</li>
+      <li><strong>A held answer is cited, not silent.</strong> Silence is indistinguishable from a drop, so the
+        walk's output is text in the run, not a private pass.</li>
+      <li><strong>The incident stays here.</strong> The flow doc states the mechanism; the six reversals, the
+        round-by-round split and the design they were about are E-EXPORT.W9's own record — this record is
+        where that history is kept.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

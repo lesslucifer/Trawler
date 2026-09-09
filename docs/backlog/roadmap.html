@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Roadmap &amp; Backlog</h1>
       <p>The product roadmap — two pillars and the epic sequence that delivers them — plus the living backlog of deferred work carried across epics.</p>
-      <div class="meta">v7 · 2026-09-09 · Trawler · <a href="backlog-index.html">index</a></div>
+      <div class="meta">v8 · 2026-09-09 · Trawler · <a href="backlog-index.html">index</a> — E-EXPORT landed, and its close review left two rows</div>
     </div>
   </header>
   <main>
@@ -94,25 +94,29 @@
         <tr><td><code>verify-dod range</code> does not apply <a href="../decisions/workflow-gates.html">DEC-2</a>'s tip rule, so an epic whose tip is a code commit cannot be pushed on its own branch</td><td>DEC-2 already decided this: <em>“the walk skips the epic tip when it is a non-merge commit — one commit cannot carry both an epic-level and a commit-level <code>test</code> note, and the tip's own diff is covered by the epic gate itself.”</em> <code>Gate::walk</code> implements it. <code>range()</code> in <code>xtask/src/lib.rs</code>, wired to <code>pre-push</code>, does not — it judges every single-parent commit at commit level, so an epic tip carrying the epic-level notes the merge gate demands reads there as the wrong level plus one phantom <code>doc/v1</code> path per doc the epic touched. <strong>Not an open design question: a decided rule missing at a second call site.</strong> Pre-existing and checkable — <code>cargo xtask verify-dod range 541fa55 e7e787f</code> fails today on <span class="badge id">E-REDESIGN</span>'s own tip. It bites only a code commit at a tip, since merges are skipped by the walk (three fields, not two) and docs-only commits return before both checks; E-RFINISH met it because its gate found a real defect and the fix landed last. Until it is ported, the epic branch is pushed by pushing <code>main</code> (the epic's commits ride the merge's second parent and are never walked) or by ending the epic on a docs-only commit, which is what this row is. <strong>Not <code>--no-verify</code></strong>. Fold into whichever WU next opens the gate.</td></tr>
         <tr><td>WebdriverIO's <code>*=</code> partial-text selector matches nothing against this app, silently</td><td>In the embedded WebKit provider it never matches and never errors — three E-RFINISH.W6 e2e runs failed against a screen that was rendering correctly, at a full build cycle each. Worked around by giving the zone a <code>data-testid</code>, which is what every other zone in the suite already uses. Fold into whichever WU next writes an e2e spec; worth a row because the failure mode is silence.</td></tr>
         <tr><td><code>BodyViewer</code> re-decodes the whole body on every render, and the JSON/XML over-cap fallback re-encodes it to count bytes</td><td>W3 plumbed a <code>size</code> through <code>BodyViewer</code> → <code>TextRenderer</code> so the cut marker's total is taken rather than re-derived, but only on the <code>text</code> dispatch. A JSON or XML body over the 128 KiB render cap falls back to <code>TextRenderer</code> with no <code>size</code>, so <code>byteLength(text)</code> encodes the whole body — up to the 10 MiB capture cap — on every render, which is exactly the cost W3 existed to remove. It is not a one-line fix: <code>Dispatch</code> feeds those kinds through the lossy <code>bodyText</code> and has no <code>whole</code> flag to gate a size with, so passing one blindly would print a wrong total for a non-UTF-8 body — the CutMarker inversion W3's own round 1 fixed. W3 recorded the re-decode half and addressed it to “whichever WU next opens BodyViewer”; W9 opened the file for the <code>raw | pretty</code> relabel and did not carry it, and E-RFINISH's close did not surface it — <strong>found at the epic gate</strong>. Deferred rather than fixed there because this epic's own discipline is that a performance fix lands behind a benchmark, and <code>ui/bench/body.bench.tsx</code> does not cover the fallback path. Fold into whichever WU next opens <code>BodyViewer</code>, with the bench extended first.</td></tr>
-        <tr><td>Small non-epic items — per-host bypass list, further decoders</td><td>Fold into whichever epic touches their seam first.</td></tr>
+        <tr><td>Streaming the capture in both directions, and the peak memory a one-shot body costs</td><td>Deferred at <span class="badge id">E-EXPORT</span>'s plan review for the export, and the epic's own close review found the import half owes the same. <strong>Export:</strong> <code>GET /flows/export</code> serializes the whole filtered capture into one in-memory response; W2's review measured roughly <strong>4×</strong> the 256&nbsp;MB cap on binary bodies, because the cloned flows, the base64-expanded document and the serialized JSON are all live at once — so the bound is that multiple, not the cap. <strong>Import:</strong> <code>POST /flows/import</code> holds the raw body, the deserialized HAR tree and the decoded flows at once, and its admission ceiling is now twice the cap (the epic close raised it, because the old one refused the store its own export), so its peak scales with that. A streaming parse is the one fix for both. Revisit when a real capture proves either too heavy.</td></tr>
+        <tr><td>The ring is weighted by body bytes, so a header-heavy capture has no export size any multiple of the cap can bound</td><td>Found by <span class="badge id">E-EXPORT</span>'s close review. A capture of body-less exchanges — polling, heartbeats, chatty auth traffic — accumulates rows the ring's byte cap does not bound, so its own HAR export can outgrow any constant multiple of that cap. The mechanism, and what the import door therefore does and does not guarantee, are stated where they bind: <code>import_body_limit</code> in <code>src/api/mod.rs</code>. What is deferred is the fix, not the finding — two candidates, neither this epic's to choose: weight the ring by whole rows rather than body bytes, or stream the parse. Revisit with whichever epic next touches the ring's accounting.</td></tr>        <tr><td>Small non-epic items — per-host bypass list, further decoders</td><td>Fold into whichever epic touches their seam first.</td></tr>
       </tbody>
     </table>
 
     <h3 id="rmap-consequences">Consequences</h3>
     <p>Landed so far: <span class="badge id">E-UISHELL</span> and <span class="badge id">E-H2</span>
     (Wave 1) and <span class="badge id">E-UIFOUND</span> and <span class="badge id">E-UIINSPECT</span>
-    (Wave 2 — the native UI foundation, see the DEC-12 reversal above, and the flow inspector on it:
-    UC-5, with the <code>?decode=1</code> chain completed server-side). Two epics since have worked
-    <em>over</em> that surface rather than adding to the sequence: <span class="badge id">E-REDESIGN</span>
-    put all five shipped screens through the design flow, and <span class="badge id">E-RFINISH</span> paid
-    the debt it named — four false registry docstrings, three performance costs behind a committed
-    benchmark, the pane width and window as one decision
+    and <span class="badge id">E-EXPORT</span>
+    (Wave 2 — the native UI foundation, see the DEC-12 reversal above; the flow inspector on it:
+    UC-5, with the <code>?decode=1</code> chain completed server-side; and the capture's three new
+    doors: HAR export and import, a pasted <code>curl</code> command as a flow, <code>DELETE /flows</code>,
+    opt-in paging, and the app's first mutating controls — UC-6, UC-7,
+    <a href="../decisions/dec-37-har-as-the-interchange-format.html">DEC-37</a>–<a href="../decisions/dec-39-curl-parser-accepts-what-a-browser-emits.html">DEC-39</a>).
+    Two epics have also worked <em>over</em> that surface rather than adding to the sequence:
+    <span class="badge id">E-REDESIGN</span> put all five shipped screens through the design flow, and
+    <span class="badge id">E-RFINISH</span> paid the debt it named — four false registry docstrings, three
+    performance costs behind a committed benchmark, the pane width and window as one decision
     (<a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a>), a status filter that reads a
     class end to end, and a flow list that states a core that is not answering instead of freezing on its
     last rows. Next epic to continue is <span class="badge id">E-UISETUP</span> (guided onboarding — W1
     already merged on its epic branch), whose two shipped screens are re-designed by
-    <span class="badge id">E-ONBOARD</span>, now unblocked; <span class="badge id">E-EXPORT</span> is
-    available as an independent Wave 2 Function track. This roadmap is living — updated in place as
+    <span class="badge id">E-ONBOARD</span>, now unblocked. This roadmap is living — updated in place as
     epics land; a
     strategic reversal (dropping a pillar, resequencing a wave) is recorded as a
     <a href="../decisions/decisions-index.html">decision</a> and then reflected here. The

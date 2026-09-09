@@ -12,6 +12,15 @@ const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as {
 const rowCount = () => $$('[data-testid="flow-row"]').length;
 const hit = () => fetch(`${ports.control}/hit`);
 
+// The window is already bound to this run's core: the launcher handed it the
+// address in the environment and the shell injected it before the first script
+// ran, so a spec only waits for the screen it painted. Nothing here navigates —
+// a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
+// answers a stopped one with an Objective-C exception that aborts the app.
+async function shellIsUp() {
+  await $("header").waitForExist({ timeout: 15_000 });
+}
+
 // UC-ONBOARD (E-UISETUP, rebuilt by E-REDESIGN.W10) end to end: the real Tauri
 // window against a real ephemeral core.
 // A fresh launch with no decrypted flow shows onboarding; a real proxied HTTPS
@@ -20,19 +29,9 @@ const hit = () => fetch(`${ports.control}/hit`);
 // the list ones (the tests below are ordered), since capture latches everProven and
 // the app then never re-forces onboarding — so the UC-4 list checks are folded in
 // here after the reveal rather than living in a separate spec.
-async function pointAppAtCore() {
-  // sessionStorage survives the reload; the fresh page reads it before React
-  // mounts, so both the launch /flows read and the SSE stream bind the port.
-  await browser.execute((api: string) => {
-    window.sessionStorage.setItem("__TRAWLER_API__", api);
-    location.reload();
-  }, ports.api);
-  await $("header").waitForExist({ timeout: 15_000 });
-}
-
 describe("UC-ONBOARD — onboard to the first captured flow", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
   });
 
   it("a fresh launch shows onboarding, not the flow list", async () => {

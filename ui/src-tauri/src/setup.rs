@@ -384,20 +384,39 @@ pub fn proxy_status(host: String, port: u16) -> String {
     classify(active_system_proxy(std::env::consts::OS), &host, port).as_str().into()
 }
 
-// The remote-device notice's "don't show again" is a durable user preference, so
-// it lives in the app config dir (survives reboots). The file logic is pure (dir
-// injected) so it stays unit-testable off a real app.
-fn notice_dismissed_path(config_dir: &Path) -> std::path::PathBuf {
-    config_dir.join("remote-notice-dismissed")
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum NoticeKey {
+    RemoteNotice,
+    ClearAsk,
 }
 
-fn notice_is_dismissed(config_dir: &Path) -> bool {
-    notice_dismissed_path(config_dir).exists()
+impl TryFrom<&str> for NoticeKey {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "remote-notice" => Ok(Self::RemoteNotice),
+            "clear-ask" => Ok(Self::ClearAsk),
+            _ => Err(format!("unknown notice key: {value}")),
+        }
+    }
 }
 
-fn mark_notice_dismissed(config_dir: &Path) -> std::io::Result<()> {
+fn notice_dismissed_path(config_dir: &Path, key: NoticeKey) -> std::path::PathBuf {
+    let filename = match key {
+        NoticeKey::RemoteNotice => "remote-notice-dismissed",
+        NoticeKey::ClearAsk => "clear-ask-dismissed",
+    };
+    config_dir.join(filename)
+}
+
+fn notice_is_dismissed(config_dir: &Path, key: NoticeKey) -> bool {
+    notice_dismissed_path(config_dir, key).exists()
+}
+
+fn mark_notice_dismissed(config_dir: &Path, key: NoticeKey) -> std::io::Result<()> {
     std::fs::create_dir_all(config_dir)?;
-    std::fs::write(notice_dismissed_path(config_dir), [])
+    std::fs::write(notice_dismissed_path(config_dir, key), [])
 }
 
 fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -405,15 +424,16 @@ fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
 }
 
 #[tauri::command]
-pub fn remote_notice_dismissed(app: tauri::AppHandle) -> bool {
-    config_dir(&app).map(|d| notice_is_dismissed(&d)).unwrap_or(false)
+pub fn notice_dismissed(app: tauri::AppHandle, key: String) -> Result<bool, String> {
+    let key = NoticeKey::try_from(key.as_str())?;
+    Ok(config_dir(&app).map(|dir| notice_is_dismissed(&dir, key)).unwrap_or(false))
 }
 
 #[tauri::command]
-pub fn dismiss_remote_notice(app: tauri::AppHandle) {
-    if let Ok(dir) = config_dir(&app) {
-        let _ = mark_notice_dismissed(&dir);
-    }
+pub fn dismiss_notice(app: tauri::AppHandle, key: String) -> Result<(), String> {
+    let key = NoticeKey::try_from(key.as_str())?;
+    let dir = config_dir(&app)?;
+    mark_notice_dismissed(&dir, key).map_err(|error| error.to_string())
 }
 
 #[cfg(test)]
@@ -606,12 +626,24 @@ mod tests {
     }
 
     #[test]
-    fn remote_notice_dismissal_persists_in_the_given_config_dir() {
-        let dir = std::env::temp_dir().join("trawler-test-notice-cfg");
+    fn notice_dismissals_are_keyed_and_keep_the_remote_filename() {
+        let dir =
+            std::env::temp_dir().join(format!("trawler-test-notice-cfg-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        assert!(!notice_is_dismissed(&dir), "fresh install ⇒ notice shows");
-        mark_notice_dismissed(&dir).unwrap();
-        assert!(notice_is_dismissed(&dir), "don't-show-again persists (created the dir)");
+
+        assert!(!notice_is_dismissed(&dir, NoticeKey::RemoteNotice));
+        assert!(!notice_is_dismissed(&dir, NoticeKey::ClearAsk));
+
+        mark_notice_dismissed(&dir, NoticeKey::ClearAsk).unwrap();
+        assert!(notice_is_dismissed(&dir, NoticeKey::ClearAsk));
+        assert!(!notice_is_dismissed(&dir, NoticeKey::RemoteNotice));
+
+        std::fs::write(dir.join("remote-notice-dismissed"), []).unwrap();
+        assert!(notice_is_dismissed(&dir, NoticeKey::RemoteNotice));
+        assert_eq!(NoticeKey::try_from("remote-notice"), Ok(NoticeKey::RemoteNotice));
+        assert_eq!(NoticeKey::try_from("clear-ask"), Ok(NoticeKey::ClearAsk));
+        assert!(NoticeKey::try_from("other").is_err());
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

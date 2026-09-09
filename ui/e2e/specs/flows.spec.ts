@@ -37,15 +37,12 @@ const recordClipboard = () =>
   });
 const lastCopied = () => browser.execute(() => (window as unknown as { __copied?: string }).__copied);
 
-// Point the real Tauri window at the ephemeral core (runtime config, no rebuild)
-// with a plain WebDriver eval — no Tauri invoke bridge.
-async function pointAppAtCore() {
-  // sessionStorage survives the reload; the fresh page reads it before React
-  // mounts, so both the fetch and the SSE stream bind the ephemeral port.
-  await browser.execute((api: string) => {
-    window.sessionStorage.setItem("__TRAWLER_API__", api);
-    location.reload();
-  }, ports.api);
+// The window is already bound to this run's core: the launcher handed it the
+// address in the environment and the shell injected it before the first script
+// ran, so a spec only waits for the screen it painted. Nothing here navigates —
+// a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
+// answers a stopped one with an Objective-C exception that aborts the app.
+async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
@@ -57,7 +54,7 @@ async function pointAppAtCore() {
 // green paint.
 describe("UC-4 — watch live traffic in the native app", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit(); // a decrypted flow reveals the list (leaves onboarding, UC-ONBOARD)
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
@@ -214,16 +211,21 @@ describe("UC-4 — watch live traffic in the native app", () => {
     const box = async (sel: string) =>
       browser.execute((s: string) => {
         const r = document.querySelector(s)!.getBoundingClientRect();
-        return { top: Math.round(r.top), w: Math.round(r.width) };
+        return { top: r.top, w: Math.round(r.width) };
       }, sel);
 
     const host = await box('button[aria-label="host"]');
     const method = await box('button[aria-label="method"]');
     const status = await box('input[aria-label="status"]');
 
-    // One row: the controls share a top edge, so the header did not wrap.
-    expect(host.top).toBe(method.top);
-    expect(method.top).toBe(status.top);
+    // One row: the controls share a top edge, so the header did not wrap. Within
+    // a pixel, not to the pixel — the row centres on its tallest child (the
+    // capture controls, 28px) and the status input is a quarter-pixel taller than
+    // the two dropdowns, so their centred tops differ by an eighth of a pixel. A
+    // wrap moves a control by a whole row; this tolerance cannot hide one.
+    const sameRow = (a: number, b: number) => expect(Math.abs(a - b)).toBeLessThan(1);
+    sameRow(host.top, method.top);
+    sameRow(method.top, status.top);
     // Select's own 132px floor is respected rather than crushed by the caller's width.
     expect(host.w).toBeGreaterThanOrEqual(132);
     expect(method.w).toBeGreaterThanOrEqual(132);
@@ -257,7 +259,7 @@ describe("UC-4 — watch live traffic in the native app", () => {
 // the response leg first; the pane's data-leg then scopes the selector.
 describe("UC-5 — inspect a captured flow in the native app", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit(); // a decrypted flow reveals the list (leaves onboarding, UC-ONBOARD)
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
@@ -467,7 +469,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
 // screen, which is exactly what the shipped build did before this WU.
 describe("UC-4 — the list says when it cannot reach the API", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,

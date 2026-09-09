@@ -8,10 +8,33 @@ use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
 use crate::event::FlowEvent;
-use crate::flow::{BodyRec, Flow, Header, NotCapturedReason};
+use crate::flow::{BodyRec, Flow, FlowId, FlowSource, Header, NotCapturedReason};
+use crate::store::FlowPage;
 
-fn rfc3339(t: SystemTime) -> String {
+/// The timestamp format every projection puts on the wire, defined once so the
+/// REST views and the HAR export cannot come to render an instant differently.
+pub(super) fn rfc3339(t: SystemTime) -> String {
     OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
+}
+
+/// The provenance vocabulary the wire uses, both directions in one place: the
+/// projections below render it and the listing's filter parses it back, so a
+/// token can never be spelled one way out and another way in. It lives here
+/// rather than on `FlowSource` because nothing below this boundary needs the
+/// string form — the store filters on the enum itself.
+pub(super) fn source_token(source: FlowSource) -> &'static str {
+    match source {
+        FlowSource::Captured => "captured",
+        FlowSource::Imported => "imported",
+    }
+}
+
+pub(super) fn parse_source(value: &str) -> Option<FlowSource> {
+    match value {
+        "captured" => Some(FlowSource::Captured),
+        "imported" => Some(FlowSource::Imported),
+        _ => None,
+    }
 }
 
 #[derive(Serialize)]
@@ -65,6 +88,7 @@ impl From<&BodyRec> for BodyView {
 #[derive(Serialize)]
 pub struct FlowView {
     pub id: String,
+    pub source: &'static str,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -82,6 +106,7 @@ impl From<&Flow> for FlowView {
     fn from(flow: &Flow) -> Self {
         Self {
             id: flow.id.to_string(),
+            source: source_token(flow.source),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -106,6 +131,7 @@ impl From<&Flow> for FlowView {
 #[derive(Serialize)]
 pub struct FlowSummary {
     pub id: String,
+    pub source: &'static str,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -119,6 +145,7 @@ impl From<&Flow> for FlowSummary {
     fn from(flow: &Flow) -> Self {
         Self {
             id: flow.id.to_string(),
+            source: source_token(flow.source),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -126,6 +153,24 @@ impl From<&Flow> for FlowSummary {
             status: flow.response.as_ref().map(|r| r.status),
             request_body_state: flow.request.body.state(),
             response_body_state: flow.response.as_ref().map(|r| r.body.state()),
+        }
+    }
+}
+
+/// The envelope returned by `GET /flows` when paging was asked for. The
+/// unparameterised listing stays a bare array — a shape that cannot carry a
+/// cursor, and one every existing client already reads.
+#[derive(Serialize)]
+pub struct FlowPageView {
+    pub flows: Vec<FlowSummary>,
+    pub next_cursor: Option<String>,
+}
+
+impl From<&FlowPage> for FlowPageView {
+    fn from(page: &FlowPage) -> Self {
+        Self {
+            flows: page.flows.iter().map(FlowSummary::from).collect(),
+            next_cursor: page.next_cursor.map(|id| id.to_string()),
         }
     }
 }
@@ -155,6 +200,12 @@ pub fn sse_event(event: &FlowEvent) -> (&'static str, Value) {
         FlowEvent::FlowEvicted { flow_id } => {
             ("evicted", json!({ "flow_id": flow_id.to_string() }))
         }
+        FlowEvent::FlowsCleared { flow_ids } => (
+            "cleared",
+            json!({
+                "flow_ids": flow_ids.iter().map(FlowId::to_string).collect::<Vec<_>>(),
+            }),
+        ),
         FlowEvent::ConnectionSeen { authority } => {
             ("connection", json!({ "authority": authority }))
         }
@@ -171,7 +222,7 @@ pub fn sse_lagged(skipped: u64) -> (&'static str, Value) {
 mod tests {
     use super::{sse_event, BodyView, FlowSummary, FlowView};
     use crate::event::FlowEvent;
-    use crate::flow::{BodyRec, NotCapturedReason, ResponseRec};
+    use crate::flow::{BodyRec, FlowSource, NotCapturedReason, ResponseRec};
     use crate::test_support::{captured, FlowBuilder};
     use serde_json::json;
 
@@ -234,6 +285,30 @@ mod tests {
         assert_eq!(v["response_headers"], json!([]));
     }
 
+    // The listing filter parses back exactly what the projections render, so a
+    // token cannot be spelled one way out and another way in.
+    #[test]
+    fn source_tokens_round_trip_through_their_wire_spelling() {
+        for source in [FlowSource::Captured, FlowSource::Imported] {
+            assert_eq!(super::parse_source(super::source_token(source)), Some(source));
+        }
+        assert_eq!(super::parse_source("Captured"), None);
+        assert_eq!(super::parse_source("proxied"), None);
+        assert_eq!(super::parse_source(""), None);
+    }
+
+    // A client that filters on a field it cannot see in the rows it gets back
+    // has to re-fetch to confirm, so the mark is on both projections.
+    #[test]
+    fn both_projections_carry_the_provenance_mark() {
+        let captured_flow = FlowBuilder::new().status(200).build();
+        let imported = FlowBuilder::new().status(200).build().imported();
+        for (flow, expected) in [(&captured_flow, "captured"), (&imported, "imported")] {
+            assert_eq!(serde_json::to_value(FlowView::from(flow)).unwrap()["source"], expected);
+            assert_eq!(serde_json::to_value(FlowSummary::from(flow)).unwrap()["source"], expected);
+        }
+    }
+
     #[test]
     fn flow_summary_is_lean() {
         let flow = FlowBuilder::new()
@@ -274,6 +349,16 @@ mod tests {
         let (name, data) = sse_event(&FlowEvent::FlowEvicted { flow_id: flow.id });
         assert_eq!(name, "evicted");
         assert_eq!(data["flow_id"], flow.id.to_string());
+
+        let other = FlowBuilder::new().uri("http://y/").build();
+        let (name, data) =
+            sse_event(&FlowEvent::FlowsCleared { flow_ids: vec![flow.id, other.id] });
+        assert_eq!(name, "cleared");
+        assert_eq!(
+            data,
+            json!({ "flow_ids": [flow.id.to_string(), other.id.to_string()] }),
+            "the batch arrives as one event carrying every id that left"
+        );
 
         let (name, data) =
             sse_event(&FlowEvent::ConnectionSeen { authority: "example.com:443".into() });

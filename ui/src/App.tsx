@@ -12,13 +12,13 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
+import { CaptureControls } from "./CaptureControls";
 import {
   Field,
   HTTP_METHODS,
   MethodLabel,
   Select,
   StatusDot,
-  TonedText,
   type SelectOption,
 } from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
@@ -45,6 +45,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const client = useMemo(() => api ?? createApi(), [api]);
   const { filter, flows, hosts, connections, lastConnectionAt, silent, refused, retrying, retry, update } =
     useFlows(client);
+  // Which absence an empty list shows turns on WHY it is empty, and a clear is
+  // the one reason no property of the list can carry. The flag disarms as soon
+  // as rows return or the query moves, so it can only ever describe the emptiness
+  // it caused.
+  const [clearedEmpty, setClearedEmpty] = useState(false);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
@@ -79,6 +84,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Which absence the list shows turns on whether the user narrowed it, so an
   // empty-but-blank field must not count as an active filter.
   const hasFilter = Object.values(filter).some((v) => (v ?? "") !== "");
+
+  const updateFilter = useCallback(
+    (key: keyof typeof filter, value: string) => {
+      setClearedEmpty(false);
+      update(key, value);
+    },
+    [update],
+  );
+
+  useEffect(() => {
+    if (flows.length > 0) setClearedEmpty(false);
+  }, [flows]);
 
   const proxyAddr = defaultProxyAddr();
 
@@ -251,7 +268,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             placeholder="filter — free text"
             className="min-w-field flex-1"
             value={filter.q ?? ""}
-            onChange={(e) => update("q", e.target.value)}
+            onChange={(e) => updateFilter("q", e.target.value)}
           />
           <Select
             label="host"
@@ -259,7 +276,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             className="w-field-lg"
             options={hostOptions(hosts)}
             value={filter.host || ANY}
-            onChange={(id) => update("host", id === ANY ? "" : id)}
+            onChange={(id) => updateFilter("host", id === ANY ? "" : id)}
           />
           <Select
             label="method"
@@ -268,7 +285,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             searchable={false}
             options={METHOD_OPTIONS}
             value={filter.method || ANY}
-            onChange={(id) => update("method", id === ANY ? "" : id)}
+            onChange={(id) => updateFilter("method", id === ANY ? "" : id)}
           />
           {/* Free text, on its second and durable leg: a Select can offer only
               values capture has already seen, and filtering for a 404 before one
@@ -278,13 +295,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           <Field
             aria-label="status"
             placeholder="status — 404 or 4xx"
-            className="w-field"
+            className="mr-2 w-field"
             value={filter.status ?? ""}
-            onChange={(e) => update("status", e.target.value)}
+            onChange={(e) => updateFilter("status", e.target.value)}
           />
-          <TonedText tone="muted" className="whitespace-nowrap">
-            {flows.length} {flows.length === 1 ? "flow" : "flows"}
-          </TonedText>
+          <CaptureControls
+            api={client}
+            filter={filter}
+            count={flows.length}
+            onCleared={() => setClearedEmpty(true)}
+          />
         </>
       }
       detail={
@@ -305,6 +325,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         selectedId={selectedId}
         onSelect={setSelectedId}
         filtered={hasFilter}
+        cleared={clearedEmpty}
         silent={silent}
         refused={refused}
         retrying={retrying}

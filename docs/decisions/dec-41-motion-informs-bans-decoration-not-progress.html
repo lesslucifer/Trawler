@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9ffc9f9f34851f0dfacd00">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-41: motion-informs bans decoration, not progress</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-41 — <code>motion-informs</code> bans decoration, not progress: a spinner is allowed</h1>
+      <p>Two design runs read the rule as a ban on spinners and receipted it that way. Both went further
+        than the rule they were applying. This records the reading that stands, so a third run does not
+        re-derive it.</p>
+      <div class="meta">Decided 2026-09-08 · E-EXPORT.W6 · supersedes run 10 and run 11 on this slug alone</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="what">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>An in-flight indicator may animate.</strong> <code>motion-informs</code> forbids animation
+      that carries no information; a turning ring reports that an act the user started is still running,
+      which is a state change and the one fact they are waiting on. What the rule still forbids is
+      decoration — a hover glow, a panel sliding for style — and what it still requires is that the screen
+      not move: the indicator occupies a reserved box and displaces nothing around it.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <table data-c="history">
+      <tr><th>Where</th><th>What it said</th></tr>
+      <tr><td>Run 10 (<code>2026-09-05-export-run-10</code>)</td><td><em>"nothing animates; in-flight is a disabled control plus a static word, never a spinner or a bar"</em>, and in its stage log, <em>"the reason it is a word and not a spinner"</em>.</td></tr>
+      <tr><td>Run 11 (<code>2026-09-06-export-run-11</code>), which supersedes run 10</td><td><em>"nothing animates, and nothing moves"</em> — carrying its predecessor's verdict forward without re-testing it, which is the failure mode <a href="dec-40-the-predecessor-is-the-checklist.html">DEC-40</a> exists to catch.</td></tr>
+      <tr><td>The rulebook itself, unchanged throughout</td><td><em>"Motion and transience only communicate state change; nothing animates for decoration; transient feedback expires (~2 s)."</em> Its reviewer question: <em>"For each animation: what does it tell the user? 'Nothing' fails."</em></td></tr>
+    </table>
+    <p>The rule and the receipts disagreed, and the receipts were the stricter of the two. Because a
+    receipt is where a reviewer looks for a slug's settled reading, two runs' worth of over-application
+    had hardened into an apparent prohibition that the rule's own text never carried.</p>
+
+    <h2 id="reading">The reading, against the rule's three clauses</h2>
+    <table data-c="clauses">
+      <tr><th>Clause</th><th>Applied to a progress ring</th></tr>
+      <tr><td><em>"only communicate state change"</em></td><td><strong>Passes.</strong> A running transfer is a state, its running-ness is the change, and the ring is the only thing on screen reporting it continuously. Answer the rule's own question — what does this tell the user? — and the answer is "your export has not finished", which is not nothing.</td></tr>
+      <tr><td><em>"nothing animates for decoration"</em></td><td><strong>Not engaged.</strong> This is the clause both runs leaned on, and it is conditional: it bans animation <em>for decoration</em>, not animation. The DON'T the rule ships — hover glow, panels sliding for style — is the decoration it means.</td></tr>
+      <tr><td><em>"transient feedback expires (~2 s)"</em></td><td><strong>Not engaged.</strong> It governs an acknowledgement that must not linger, which is why the rule's own DO is a confirm chip that appears and expires. A progress indicator's duration belongs to the transfer, not the designer; a ring that expired after two seconds while a 73MB export continued would report the opposite of the truth.</td></tr>
+    </table>
+
+    <h2 id="kept">What the runs got right, and is kept</h2>
+    <p>Their real concern was a screen that twitches while the user is reading it, and that concern is
+    upheld as a constraint on any in-flight indicator:</p>
+    <div class="cards" data-c="constraints">
+      <div class="card">
+        <h3>It may turn</h3>
+        <p>Animation confined to the indicator itself.</p>
+      </div>
+      <div class="card">
+        <h3>It may not move anything</h3>
+        <p>Run 11's <em>"nothing moves"</em> stands in full. The indicator sits in a box whose width is
+        reserved whether or not it is drawn, so arriving and leaving displaces no neighbour — the same
+        reason the capture header's count slot is fixed-width.</p>
+      </div>
+      <div class="card">
+        <h3>It is never the only channel</h3>
+        <p>A word names what is awaited beside it. The ring is <code>aria-hidden</code>; the sentence is
+        what a screen reader gets.</p>
+      </div>
+    </div>
+
+    <h2 id="scope">Scope</h2>
+    <p>This settles the slug's reading, not a screen's design. A run may still decide a particular surface
+    is better served by a word alone — what it may no longer do is cite <code>motion-informs</code> as the
+    reason it had no choice. The rulebook text is unchanged because nothing in it was wrong; what was
+    wrong was two applications of it, and both receipts now record the reversal in place rather than
+    losing it.</p>
+
+    <div class="callout" data-c="built">
+      <p><strong>Built as</strong> <code>Spinner</code>, a T1 entry in the component collection, whose
+      contract is its TSDoc (<a href="dec-16-design-file-retirement.html">DEC-16</a>). Its design file was
+      retired at build; the citation resolves at its last state, per
+      <a href="dec-28-citation-after-retirement.html">DEC-28</a>.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

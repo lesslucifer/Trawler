@@ -15,6 +15,26 @@ const APP_BINARY = resolve(here, "../src-tauri/target/release/trawler-ui");
 // core's ports cross to the spec via this file — never a shared variable.
 export const PORTS_FILE = resolve(here, ".core-ports.json");
 
+// The app reads its core's address from this variable at window creation, before
+// its first script runs (`e2e_core_address` in the shell). The launcher spawns
+// the app, so exporting it here is what puts it in the app's environment — and it
+// is why no spec ever navigates the window: a reload mid-run stops the WKWebView
+// scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
+const CORE_ADDRESS_VAR = "TRAWLER_E2E_API";
+
+// The app writes its dismissed-notice markers into the real user config dir, so
+// they outlive a run. A marker left by an earlier one would silence the clear ask
+// the capture spec exists to assert, and the spec's own last case leaves one
+// behind — so the run starts and ends without them.
+const NOTICE_MARKERS = [
+  "clear-ask-dismissed",
+  "remote-notice-dismissed",
+].map((name) => resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name));
+
+function clearNoticeMarkers() {
+  for (const marker of NOTICE_MARKERS) rmSync(marker, { force: true });
+}
+
 let harness: ChildProcessWithoutNullStreams | undefined;
 
 function startCore(): Promise<void> {
@@ -28,6 +48,7 @@ function startCore(): Promise<void> {
     rl.once("line", (line) => {
       clearTimeout(timer);
       writeFileSync(PORTS_FILE, line);
+      process.env[CORE_ADDRESS_VAR] = JSON.parse(line).api;
       rl.close();
       res();
     });
@@ -39,9 +60,12 @@ export const config: WebdriverIO.Config = {
   runner: "local",
   // One core for the whole run, specs sequential (maxInstances 1) — so a captured
   // flow persists across specs. Onboarding's "fresh launch shows onboarding" is only
-  // true before any flow exists, so it MUST run first; the inspector spec then reuses
-  // the revealed list. Order is explicit, not alphabetical-by-accident.
-  specs: ["./specs/onboarding.spec.ts", "./specs/flows.spec.ts"],
+  // true before any flow exists, so it MUST run first. The flows spec MUST run last:
+  // its closing pair kills the core to prove the shell states a silence, and the
+  // harness exits the process rather than draining it, so nothing can follow. The
+  // capture spec sits between them — it empties the capture, which the flows spec
+  // refills from its own hits. Order is explicit, not alphabetical-by-accident.
+  specs: ["./specs/onboarding.spec.ts", "./specs/capture.spec.ts", "./specs/flows.spec.ts"],
   maxInstances: 1,
 
   services: [["@wdio/tauri-service", { driverProvider: "embedded" }]],
@@ -63,6 +87,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 60_000 },
 
   onPrepare: async () => {
+    clearNoticeMarkers();
     await startCore();
   },
   onComplete: async () => {
@@ -74,5 +99,6 @@ export const config: WebdriverIO.Config = {
     }
     harness?.kill();
     rmSync(PORTS_FILE, { force: true });
+    clearNoticeMarkers();
   },
 };

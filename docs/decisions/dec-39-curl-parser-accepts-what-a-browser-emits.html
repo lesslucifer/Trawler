@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9bf1929f34851f0dfac7aa">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-39: the curl parser accepts what a browser emits</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-39 — The curl parser accepts what a browser emits, expands only the flags that are headers, and refuses the rest by name</h1>
+      <p>A pasted <code>curl</code> command is the inverse of copy-as-curl, not a reimplementation of curl. The parser's boundary is the set a developer actually pastes; everything outside it is a refusal that names the token, never a guess.</p>
+      <div class="meta">DEC-39 · 2026-09-05 · Trawler · E-EXPORT.W7 · minted as DEC-32 on the E-EXPORT branch, renumbered at the E-REDESIGN merge · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The app already serializes a captured request as a <code>curl</code> command
+    (<a href="../use-cases/web-ui.html#uc-5">UC-5</a>), and E-EXPORT was asked at plan review for
+    the inverse: paste a command, get a flow. <code>curl</code> has several hundred flags and a full
+    shell grammar sits in front of any pasted line, so the question was never <em>whether</em> to
+    parse it but <strong>where to stop</strong> — and what to do at the edge.</p>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>Accept what a developer actually pastes — a browser's "Copy as cURL" and Trawler's
+      own <code>toCurl</code> — and refuse everything else naming the flag.</strong> The accepted
+      set is closed and enumerated in code: the method, the URL, headers, the <code>-d</code>
+      family, cookies, basic auth and <code>--compressed</code>, plus the shell quoting those tools
+      emit. A second, equally closed list of transfer-only flags is consumed in silence. A token in
+      neither list is a <code>400</code> whose body names it.</p>
+    </div>
+    <div class="diagram" data-c="three-fates">
+      <pre class="mermaid">
+flowchart LR
+  T["a token of the pasted command"] --> A{"in the accepted set?"}
+  A -->|"yes"| E["becomes part of the request
+(-u · -b · --compressed expand into the header they are)"]
+  A -->|"no"| I{"in the transfer-only set?"}
+  I -->|"yes"| S["consumed — it never reached the wire"]
+  I -->|"no"| R["400 · unsupported flag -F
+the store untouched"]
+      </pre>
+      <div class="caption">Hình 1 — three fates and no fourth: nothing is guessed. The two lists are the arms of one lookup in <code>src/api/curl.rs</code>, so the code and this record can only disagree if the code changes.</div>
+    </div>
+    <table data-c="alternatives">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Reimplement curl's command line</td>
+          <td>Hundreds of flags, most of which change nothing about the request on the wire, and a
+          permanent compatibility obligation to a tool that adds flags every release. The parser's
+          job is to read what people paste, and what people paste is what four tools emit</td>
+        </tr>
+        <tr>
+          <td>Accept everything, ignore what is not understood</td>
+          <td>The one thing a paste target must never do. <code>-F</code> ignored turns a multipart
+          upload into a bare POST; <code>-G</code> ignored moves a body that curl would have put in
+          the query string. Each produces a flow <em>subtly unlike</em> the request the user pasted,
+          and the user has no way to see the difference. A refusal is one edit away; a silent
+          divergence is a wrong bug report</td>
+        </tr>
+        <tr>
+          <td>Shell out to a real <code>curl</code></td>
+          <td>It would run the request — which is E-REPLAY's capability, not an import — need a
+          network, and make the parser's behaviour depend on whichever curl the machine has. Tests
+          could not be hermetic</td>
+        </tr>
+        <tr>
+          <td>A shell-words dependency for the tokenizer</td>
+          <td>The subset is small, each refusal needs its own wording, and bash's <code>$'…'</code>
+          — which Chrome emits for any body carrying a control character or a <code>!</code> — is
+          outside what the common crates read. Written in the crate, no new dependency</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="headers">Which headers exist that the user did not type</h2>
+    <p>curl adds headers of its own when it runs — <code>Host</code>, <code>User-Agent: curl/8.x</code>,
+    <code>Accept: */*</code>, <code>Content-Length</code>, and <code>Content-Type:
+    application/x-www-form-urlencoded</code> for any <code>-d</code>. Some flags, meanwhile, are
+    headers spelled differently. The rule separates the two:</p>
+    <table data-c="expansion-rule">
+      <thead><tr><th>Kind</th><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A flag that <em>is</em> a header — <code>-u</code>, <code>-b</code>, <code>--compressed</code></td>
+          <td><strong>expanded</strong> into <code>Authorization: Basic …</code>, <code>Cookie</code>,
+          <code>Accept-Encoding</code></td>
+          <td>Dropping it changes what the request is: a request without its credentials is a
+          different request. The header is the flag's entire meaning</td>
+        </tr>
+        <tr>
+          <td>curl's runtime defaults</td>
+          <td><strong>never invented</strong></td>
+          <td>The flow records the <em>command</em>, not one tool's runtime. A request copied out of
+          Chrome was sent by Chrome, and stamping it <code>User-Agent: curl/8.x</code> would be a
+          lie about the capture. It is also what makes <code>toCurl → parse</code> an exact
+          inverse: a flow that grew headers on every round trip would not be the same flow</td>
+        </tr>
+        <tr>
+          <td>Headers in disguise a browser never emits — <code>-A</code>, <code>-e</code>, <code>-r</code>, <code>-I</code></td>
+          <td><strong>refused</strong>, like any flag outside the set</td>
+          <td>Each is one <code>-H</code> away, and the refusal says which flag. Widening the set is
+          a deliberate reopening of this record, not an accretion</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="wire">The wire</h2>
+    <table data-c="wire">
+      <thead><tr><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The command travels as the <strong>raw request body</strong>, UTF-8 text, not
+          JSON-wrapped</td>
+          <td>A wrapper adds a quoting layer to an input whose whole difficulty is quoting. The paste
+          target sends what was pasted; the same bytes work from a shell with
+          <code>--data-binary @-</code></td>
+        </tr>
+        <tr>
+          <td>Selected by <code>?format=curl</code> on the existing <code>POST /flows/import</code>;
+          an unknown value is refused naming <code>format</code></td>
+          <td>One door, two formats, one <code>{ "imported": n }</code> envelope. A silently
+          defaulted format would parse a curl command as JSON and refuse it for the wrong reason —
+          the same refuse-by-name rule <code>?source=</code> already follows</td>
+        </tr>
+        <tr>
+          <td>The refusal is <code>400</code> with the reason as the body — HAR import's shape</td>
+          <td>The paste target renders the reason verbatim under the textarea (the capture-controls
+          design), so every reason is written for a person: one lowercase sentence, the offending
+          token quoted. The design run pinned this contract before the parser existed, and the
+          parser was built to it</td>
+        </tr>
+        <tr>
+          <td>The flow is stamped with the moment it was read, carries <code>HTTP/1.1</code>, and has
+          no response</td>
+          <td>Nothing happened on a wire; the only truthful instant is when the flow came to exist,
+          and the request-only shape is one the store, the API and the UI already handle between a
+          request and its reply</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="round-trip">What the inverse guarantees, and where it stops</h2>
+    <p>Any flow rendered by <code>toCurl</code> and parsed back compares equal on method, URI,
+    headers and body — proven as a property over generated flows, with the serializer mirrored in
+    Rust and that mirror anchored to the literal outputs the TypeScript test file pins. The
+    boundary is curl's own, not the parser's:</p>
+    <table data-c="boundary">
+      <thead><tr><th>Not round-tripped</th><th>Because</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>a header whose value is blank</td>
+          <td><code>toCurl</code> writes it as <code>-H 'Name: '</code>, which curl reads as "send no
+          such header" and drops. The parser agrees with curl; the loss is in the serialization,
+          and <code>Name;</code> is curl's spelling for an empty value that is actually sent</td>
+        </tr>
+        <tr>
+          <td>a <code>GET</code> carrying a body</td>
+          <td><code>toCurl</code> omits <code>-X</code> for <code>GET</code> and writes the body as
+          <code>--data-raw</code>; curl — and the parser — make that a <code>POST</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences">
+      <thead><tr><th>Consequence</th><th>Where it binds</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The accepted and ignored sets are closed; adding to either reopens this record rather
+          than growing a match arm quietly</td>
+          <td><code>src/api/curl.rs</code> · this decision</td>
+        </tr>
+        <tr>
+          <td>Windows <code>cmd</code>'s "Copy as cURL" shape (<code>^</code> continuations) is
+          refused, not half-read — the stray <code>^</code> is named as an unexpected argument</td>
+          <td><a href="../use-cases/web-ui.html#uc-6">UC-6</a></td>
+        </tr>
+        <tr>
+          <td>A pasted command is a second <em>format</em> behind the import door and the same
+          <code>imported</code> mark — not a second capture format, and not a third provenance</td>
+          <td><a href="dec-37-har-as-the-interchange-format.html">DEC-37</a> ·
+          <a href="dec-38-imported-flows-are-marked.html">DEC-38</a></td>
+        </tr>
+        <tr>
+          <td>The parser never runs the request; firing a pasted command at a server is a
+          different capability</td>
+          <td>E-REPLAY</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The flag tables and the tokenizer's grammar are code and live only in
+    <code>src/api/curl.rs</code>. This record states <em>why</em> the boundary sits where it does;
+    it never copies the tables.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
