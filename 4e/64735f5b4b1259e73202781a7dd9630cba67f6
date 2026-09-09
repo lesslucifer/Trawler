@@ -1,0 +1,13 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+tests:
+  unit:
+    waived: "no behaviour changes. The commit corrects import_body_limit's doc comment - round 2 established that no constant can bound the document, because Ring::evict fires on total_bytes and Flow::retained_bytes counts no header - and records the two structural fixes as backlog rows. The bound itself, and the test that pins it, are untouched from eacf389. There is no assertion to write about a comment, and the residual it now names cannot be asserted precisely because no constant bound exists to compare against."
+  integration:
+    waived: "no bounded contract moves - one doc comment and two backlog rows."
+  e2e:
+    waived: "same - nothing executable changed."
+what: "The correction round 2 found in round 1's own fix: the door now states that it guarantees the body-dominated round trip and no further, and names why no larger constant would help. The residual is a loud 413, never a silent truncation."
+suite: "608 Rust tests green, clippy clean under pedantic with --workspace --all-targets"
+date: 2026-09-09
