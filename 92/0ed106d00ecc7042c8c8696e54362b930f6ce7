@@ -1,0 +1,81 @@
+schema: cr/v3
+scope: "epic E-EXPORT -> main"
+epic: E-EXPORT
+branch: epic/export
+base: f1f84d297d6d5b0f15bd5c57198dd2ba89791770
+head: 920ed106d00ecc7042c8c8696e54362b930f6ce7
+diff_sha256: 3564ce6f88dacbf0e2ee23392aa74a77521207e388db0e4cfb017e6c23cbd488
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+rounds: 2
+findings: { found: 9, verified: 1, waived: 0 }
+notes: >-
+  Re-run against the epic's new tip after the e2e flake fix. Round 1 was six
+  isolated finders over the whole range, one adversarial verifier per candidate:
+  8 candidates, 1 verified. That one was fixed in 920ed10 - a trailing
+  backward-looking sentence in the new guardrail comment, the only "used to" in
+  the tree, saying nothing the mechanism sentence above it had not already said.
+  Round 2 re-swept the fixed tip and verified nothing new. The seven refuted:
+  three spec-file duplication claims (shellIsUp, the ports block, rowCount),
+  refuted because the base already carries them byte-identical and the diff
+  shrinks each copy rather than adding a pattern; a pub-vs-pub(crate) claim on
+  e2e_core_address::init, refuted because the module is private so the item
+  exports nothing either way; a Store::page lock-hold claim, refuted because
+  page is new and strictly bounded where the pre-existing list it sits beside
+  walks the whole ring unbounded, and docs/architecture.html specifies the
+  synchronous mutex; and two design claims against the spinner artifact - a
+  familiar-idioms binds="screen" over-answering claim, refuted because binds is
+  scope-of-blame not scope-of-mention, and a motion-informs escalation claim,
+  refuted because DEC-41 is exactly the escalation it said was missing. The
+  duplication claim was raised twice by independent finders and refuted once on
+  evidence from the base tree; round 2 raised it a third time and it is counted
+  there, not re-verified. Round 2's correctness finder went further than
+  refuting: it traced @wdio/cli's own source to prove the launcher awaits
+  onPrepare before the service hook spawns the app, so the exported address is
+  in the environment by then; it confirmed api.ts resolves the injected global
+  ahead of the SSE bind; and it checked the one thing removing every reload
+  could have broken - the per-describe state reset flows.spec used to get free -
+  finding the detail panel keyed on the selected id, so the barrier each block
+  waits on still holds without a navigation.
+  The caller scoped this run to code: docs/ prose was not judged.
+waivers: []
+design:
+  artifacts: [docs/work/components/spinner.html]
+  rulebook: 7d9c884
+  findings: { found: 2, verified: 0, waived: 0 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: ebf4215b3c1f08f4ab5fd6de5ccea026a002f221
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+    - path: docs/work/components/spinner.html
+      blob: 81fd0afa3e982fdf3c3d08288933fc1f0a6359e9
+      built: [ui/src/components/Spinner.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: >-
+        The modal frame this file owned was lifted out to ui/src/ModalShell.tsx
+        unchanged - 5 insertions against 91 deletions, all of them the moved
+        block - and the file now calls the shared frame. Its three test ids
+        survive verbatim and its own suite passes untouched, so no surface it
+        renders was re-shaped and there was nothing for a design to decide.
+walk_waivers:
+  - seam: b65e8b7879
+    why: >-
+      A standalone commit rendering ui/src/FlowList.tsx, which the walk cannot
+      classify because design accounting lives on a WU's cr note and a
+      standalone commit has none. The edit adds no surface: it drops the
+      silent-core clause for a cleared region exactly as it already dropped for
+      a filtered one, and reorders an existing five-branch chain so the refusal
+      is stated before the silence. Both are covered by this run's design
+      verdict above, which judged FlowList.tsx under run 11's citation.
+  - seam: e1f1417352
+    why: >-
+      A standalone commit rendering ui/src/CaptureControls.tsx, same
+      classification gap. It is an earlier review's fix pass: an import
+      abandoned before it starts no longer arms the header slot, and a clear
+      that fails after its ask was cancelled reports into the slot the parent
+      already owns. No element, layout or state was added to the surface - the
+      failure Notice and the slot both already existed - so there is no shape a
+      design would have decided.
+verdict: PASS
+date: 2026-09-09
