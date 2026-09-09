@@ -1,0 +1,24 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W10 -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W10
+branch: wu/export/clear-shortcut
+base: e6665296b1e43a353cc38353310c30fce71ddc84
+head: c6a2576730f371be425f1dedbb7e09207c9d68ba
+diff_sha256: b342dfd6134413b091444882cfd839816e5a392303eb999a06dca18958c7298e
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 0, waived: 0 }
+waivers: []
+design:
+  artifacts: []
+  undesigned:
+    - path: ui/src/CaptureControls.tsx
+      why: >-
+        No new surface. The edit moves the clear act from a CaptureMenu item to
+        an IconButton already in the header's existing cluster, adds one
+        Checkbox to the existing ClearDialog, and gives the existing failure
+        Notice the act that produced it. Every element is an existing member of
+        the component collection in its existing layout, so there is no shape
+        for a design to decide.
+verdict: PASS
+date: 2026-09-09
