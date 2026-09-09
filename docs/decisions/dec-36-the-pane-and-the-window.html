@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa0c39c9f34851f0dfacd4a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-36: the pane width and the window are one decision</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .num{text-align:right;font-variant-numeric:tabular-nums}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-36 — the pane width and the window are one decision</h1>
+      <p>The flow detail pane is <strong>520&nbsp;px</strong> and the app's default window is
+         <strong>1440</strong>. Neither number is decidable alone: a wider pane inside the window the app
+         opened at pays for every character it gains out of the path column beside it.</p>
+      <div class="meta">DEC-36 · 2026-09-09 · Trawler · E-RFINISH.W4 (designed) · W6 (built) ·
+        the observable half of <a href="dec-32-body-is-the-main-zone.html">DEC-32</a> · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The pane shipped at <code>380px</code> — a token nobody chose, inherited from the first shell.
+       <a href="dec-32-body-is-the-main-zone.html">DEC-32</a> makes the headers clamp at three lines with
+       <em>more</em>&nbsp;/&nbsp;<em>less</em> beneath, so how much of a long value a reader sees before
+       acting <em>is</em> the pane's width. A 900-character cookie is thirty lines at 380 and twenty at
+       520. E-REDESIGN recorded the cost and deferred the width to a design run, because a width chosen at
+       a merge seam is a width nobody designed.</p>
+    <div class="callout warn" data-c="the-identity">
+      <strong>The screen is one identity, split.</strong> <code>path = window − pane − 612</code>, where
+      612&nbsp;px is the flow row's fixed tracks. Every pixel the pane takes comes out of the path cell in
+      the list — the one column whose content is unbounded. So a pane width proposed without a window is
+      half an answer, and the half it omits is the one that gets worse.
+    </div>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <strong>Pane <code>520px</code>, default window <code>1440</code> — one decision, two configuration
+      values.</strong> The pane is the <code>pane</code> token in
+      <code>ui/tailwind.config.js</code> and the window is <code>ui/src-tauri/tauri.conf.json</code>;
+      neither is ever an inline magnitude — a width is legal only as a member of a declared scale
+      (<a href="dec-17-closed-vocabulary.html">DEC-17</a>).
+    </div>
+    <table data-c="tbl-arithmetic">
+      <thead><tr><th>At the default window</th><th class="num">pane</th><th class="num">path cell</th><th class="num">clamped header value</th></tr></thead>
+      <tbody>
+        <tr><td>before — 380 in 1200</td><td class="num">380</td><td class="num bad">208&nbsp;px</td><td class="num bad">~108 characters</td></tr>
+        <tr><td>after — 520 in 1440</td><td class="num">520</td><td class="num good">308&nbsp;px</td><td class="num good">~168 characters</td></tr>
+      </tbody>
+    </table>
+    <p>Both halves of the identity improve because the window moved further than the pane did. Widening
+       the pane alone would have bought the header value 60 characters at the cost of 140&nbsp;px of every
+       path on screen — which is why the two numbers land together or not at all.</p>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Keep <code>380</code></td>
+          <td>It is the shape DEC-32's clamp was written to survive, not one anybody chose for it. Thirty
+            lines of cookie behind a <em>more</em> is the cost the epic opened to price.</td></tr>
+        <tr><td><code>440</code></td>
+          <td>27 characters of header value for 60&nbsp;px off every path. The trade is real at every
+            width; this one is simply a bad rate.</td></tr>
+        <tr><td><code>560</code> and above</td>
+          <td>The path cell stops holding a recognisable endpoint before the header value stops needing
+            <em>more</em>. Past 520 the pane is winning an argument the list is paying for.</td></tr>
+        <tr><td>A bounded share — <code>min(40%, 520px)</code></td>
+          <td>Measured, not argued: 8&nbsp;px from the fixed choice at 1280 and <em>identical</em> above
+            1300. It buys nothing at the widths the app is used at, and costs a rule every reader of the
+            layout has to hold.</td></tr>
+        <tr><td>A draggable split</td>
+          <td>Three things the shell does not have — a stored preference, a drag affordance, and a minimum
+            on both sides — for a gain the run could not show is needed. The default in the epic plan's
+            open question was a fixed width, and the evidence did not overturn it.</td></tr>
+        <tr><td>Raising the app's minimum window</td>
+          <td>It would narrow a capability the list alone uses today: the flow list is usable in a narrow
+            window when no flow is selected, and the minimum exists for that case, not for this one.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">What this forces</h2>
+    <table data-c="tbl-forces">
+      <thead><tr><th>Who</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Any WU opening the shell's grid</strong></td>
+          <td>The two values move together or the identity above is violated. A pane widened without its
+            window is a change to the list, made silently, in a file about the pane.</td></tr>
+        <tr><td><strong><a href="dec-32-body-is-the-main-zone.html">DEC-32</a></strong></td>
+          <td>Unchanged as a ruling, and now measurable: the clamp's cost has a number, and the number is
+            a decision rather than an accident.</td></tr>
+        <tr><td><strong>Whoever next arranges the flow row</strong></td>
+          <td><span class="bad">The shell has no valid arrangement below 1132&nbsp;px with the pane
+            open</span>, and <code>tauri.conf.json</code> declares a minimum of 800. This decision moved
+            that threshold from 992 — a known defect, made wider, deliberately. Below it the row region
+            scrolls horizontally while the column-label row above it does not, so the labels and the cells
+            they name come apart. Both fixes (the row's column widths, a second arrangement of the whole
+            screen) decide the row grammar E-RFINISH's non-goals reserved, so the run escalated the
+            arithmetic instead of hiding it and the roadmap carries the row.</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

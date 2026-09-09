@@ -97,6 +97,20 @@
         proposal awaiting its second call site.</li>
     </ul>
 
+    <div class="callout" data-c="second-sighting-test">
+      <p><strong>What counts as the second sighting</strong> (E-RFINISH.W4, the shell and flow-list second
+      pass). A sighting is an element that is <strong>mono, inert, unbounded and visibly cut</strong> — all
+      four. The criterion is here rather than in the run that wrote it so the next design tests against it
+      instead of judging by resemblance.</p>
+      <p>That run tested four candidates and the answer was <strong>no</strong>. The one the first pass
+      predicted — the flow detail panel's identity bar — shipped and refused: it wanted
+      <code>CopyText</code>, which wraps and is never cut, <em>because a pane has height to spend</em>. The
+      truncating cell is a consequence of the fixed-height row, so a surface that can grow downwards is not
+      a second sighting however much it looks like one. Proposing the entry on a sample of one screen was
+      rejected in the same breath: one call site cannot show which of the four properties the component is
+      actually for.</p>
+    </div>
+
     <div class="callout warn" data-c="not-this">
       <p><strong>What this record does not do.</strong> It does not excuse the Tier-1 blindness the
         same run found — that <code>wrap-not-truncate</code>'s predicate cannot read a mockup's
