@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: c6a2576730f371be425f1dedbb7e09207c9d68ba
+base: e6665296b1e43a353cc38353310c30fce71ddc84
+tier: key
+signer: vuluu
+report: docs/work/2026-09-09-export-w10-clear-shortcut-result.html
+report_sha256: ef75f4f2ece99e079414d777d41ac100caa26e868c67aea69b868cf073eedfe5
+date: 2026-09-09
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDJ7f4RwJnLk44rd+lg5w+5y5sWkGj/aPaRoGzzvM8YFtN7bpumyRIHU4
+  LXJ601+yomwGUWfkoWgKQqGilcimYB
+  -----END SSH SIGNATURE-----
