@@ -1,0 +1,14 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+tests:
+  unit:
+    count: 1
+    what: "a_full_ring_of_binary_bodies_re_imports_its_own_export in src/api/mod.rs - the regression test for this commit's one behaviour change. It builds a 4 KiB ring, fills three quarters of it with a binary body, asserts the premise that the export outweighs the ring it came from, and then that POSTing that document back to /flows/import is accepted. It reds at exactly 413 against the unfixed limit, which is the check that it proves something rather than merely passing."
+  integration:
+    waived: "no bounded contract moves. The import route, its refusals and its envelope are unchanged; what changed is the size of document the transport admits before the handler sees it, and that is exactly what the unit test above drives through the composed router."
+  e2e:
+    waived: "the epic's own tests/e2e_export.rs already drives export -> clear -> import over the real engine, and it stays green. Reproducing the near-cap boundary end to end would mean booting an engine with a deliberately tiny ring to assert what the router-level test asserts directly."
+what: "Three findings the epic-scope review confirmed. The import door's body limit now sizes the document rather than the ring; tests/e2e_export.rs consumes trawler::test_support::tls_origin instead of hand-rolling CA and leaf generation; and architecture.html's CORS row cites DEC-36#cors, which owns the widening, alongside DEC-12, which does not."
+suite: "608 Rust tests green, clippy clean under pedantic with --workspace --all-targets"
+date: 2026-09-09
