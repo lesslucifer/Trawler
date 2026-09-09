@@ -1,0 +1,30 @@
+schema: doc/v1
+level: wu
+epic: E-EXPORT
+wu: E-EXPORT.W10
+changes:
+  - path: docs/work/2026-09-08-export-w10-clear-shortcut-plan.html
+    tier: T3
+    action: edit
+    distilled_to:
+      - docs/use-cases/web-ui.html
+      - docs/use-cases/use-cases-index.html
+  - path: docs/work/2026-09-09-export-w10-clear-shortcut-result.html
+    tier: T3
+    action: add
+    distilled_to:
+      - docs/use-cases/web-ui.html
+      - docs/use-cases/use-cases-index.html
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: edit
+    distills: >-
+      the direct clear control and its live-count name, confirm-only
+      persistence of the suppression, the silent filtered path a dismissed ask
+      leaves, and where a refusal lands once no ask is open to hold it.
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: edit
+    distills: >-
+      the index no longer claims all three capture actions sit behind one
+      trigger.
