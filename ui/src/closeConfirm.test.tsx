@@ -5,14 +5,14 @@ import { useProxyCloseConfirm } from "./closeConfirm";
 const ADDR = "127.0.0.1:7420";
 
 // A fake Tauri window + invoke: captures the onCloseRequested handler so a test can
-// fire a close, stubs proxy_status / remote_notice_dismissed per case, and records
+// fire a close, stubs proxy_status / notice_dismissed per case, and records
 // which commands + destroy() ran.
 function fakeDeps(status: "ours" | "foreign" | "none", noticeDismissed = false) {
   let closeHandler: (e: { preventDefault: () => void }) => void = () => {};
   const destroy = vi.fn(async () => {});
   const invoke = vi.fn(async (cmd: string) => {
     if (cmd === "proxy_status") return status;
-    if (cmd === "remote_notice_dismissed") return noticeDismissed;
+    if (cmd === "notice_dismissed") return noticeDismissed;
     return undefined;
   });
   const win = {
@@ -94,7 +94,7 @@ test("remote + don't-show-again: persists the dismissal then quits", async () =>
   await act(async () => {
     await result.current.acknowledge(true);
   });
-  expect(f.invoke).toHaveBeenCalledWith("dismiss_remote_notice");
+  expect(f.invoke).toHaveBeenCalledWith("dismiss_notice", { key: "remote-notice" });
   expect(f.destroy).toHaveBeenCalledOnce();
 });
 
@@ -105,7 +105,7 @@ test("remote + quit without checking the box: quits, does not persist", async ()
   await act(async () => {
     await result.current.acknowledge(false);
   });
-  expect(f.invoke).not.toHaveBeenCalledWith("dismiss_remote_notice");
+  expect(f.invoke).not.toHaveBeenCalledWith("dismiss_notice", { key: "remote-notice" });
   expect(f.destroy).toHaveBeenCalledOnce();
 });
 

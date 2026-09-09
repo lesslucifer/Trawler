@@ -546,19 +546,22 @@ test("selecting a different flow resets the copy button (no stale 'copied')", as
 // than from a mutation's own response, and the absence that only a clear can
 // produce.
 const captureTrigger = () => screen.getByRole("button", { name: CAPTURE_COPY.trigger });
+const clearCapture = (count: number) => fireEvent.click(screen.getByRole("button", { name: `clear ${count} ${count === 1 ? "flow" : "flows"}` }));
 async function chooseAct(label: string) {
   fireEvent.click(captureTrigger());
   fireEvent.click(await screen.findByRole("menuitem", { name: label }));
 }
 
-test("the acts sit past the filters, behind one trigger, and take no room until asked for", async () => {
+test("the clear shortcut and transfer menu sit past the filters", async () => {
   const { api } = mockApi(() => [flow()]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
   const header = document.querySelector("header") as HTMLElement;
   const controls = [...header.querySelectorAll("button, input")];
-  // The trailing edge: everything the user narrows the list with comes first.
+  // The trailing edge: everything the user narrows the list with comes first,
+  // then clear, then the transfer menu.
+  expect(controls.indexOf(screen.getByRole("button", { name: "clear 1 flow" }))).toBe(controls.length - 2);
   expect(controls.indexOf(captureTrigger())).toBe(controls.length - 1);
   expect(screen.queryByRole("menu")).toBeNull();
   expect(within(header).getByTestId("capture-slot")).toHaveTextContent("1 flow");
@@ -584,8 +587,8 @@ test("clearing empties the list into an absence only a clear produces, and the c
   render(<App api={api} initialState={PROVEN} />);
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
 
-  await chooseAct(CAPTURE_COPY.clearAct);
-  expect(screen.getByRole("dialog")).toHaveAttribute("aria-label", "clear 2 flows?");
+  clearCapture(2);
+  expect(await screen.findByRole("dialog")).toHaveAttribute("aria-label", "clear 2 flows?");
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
   await waitFor(() => expect(api.clearFlows).toHaveBeenCalled());
 
@@ -603,7 +606,8 @@ test("the cleared absence gives way as soon as rows come back", async () => {
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  await chooseAct(CAPTURE_COPY.clearAct);
+  clearCapture(1);
+  await screen.findByRole("dialog");
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
   rows = [];
   fire();
@@ -625,7 +629,8 @@ test("narrowing after a clear reads as the filter's absence, not as the clear's"
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  await chooseAct(CAPTURE_COPY.clearAct);
+  clearCapture(1);
+  await screen.findByRole("dialog");
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
   rows = [];
   fire();
@@ -633,6 +638,25 @@ test("narrowing after a clear reads as the filter's absence, not as the clear's"
 
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "nothing" } });
   await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter"));
+});
+
+test("a dismissed clear ask sends the live filter and refills from the bus without a dialog", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
+  let rows = [flow({ id: "f1", uri: "http://example.com/" }), flow({ id: "f2", uri: "http://other.test/" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+
+  await chooseHost("other.test");
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
+  clearCapture(1);
+
+  await waitFor(() => expect(api.clearFlows).toHaveBeenCalledWith({ host: "other.test" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+
+  rows = [flow({ id: "f1", uri: "http://example.com/" })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
 });
 
 test("an imported file lands as marked rows the list gets from the bus", async () => {

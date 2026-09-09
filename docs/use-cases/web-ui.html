@@ -117,9 +117,9 @@
       <h3 id="uc-4-capture-controls">The capture-management controls</h3>
       <p>The flow list is where UC-6 and UC-7 reach a person rather than only a client
       (<span class="badge id">E-EXPORT</span> W6, built from the capture-controls design run). These are
-      the first controls in the app that change server state, and they sit
-      behind one <code>⋮</code> trigger at the header's trailing edge, past the filters that scope them.
-      Beside it a fixed-width slot reads the count those filters selected, and reads
+      the first controls in the app that change server state. Export and import sit behind a
+      <code>⋮</code> trigger at the header's trailing edge; clear is the <code>⌫</code> shortcut beside it.
+      Both sit past the filters that scope them. Beside them a fixed-width slot reads the count those filters selected, and reads
       <em>exporting…</em> or <em>importing…</em> while a transfer runs — the same box either way, so
       starting one moves nothing else in the row. A turning ring joins the in-flight line, and a second
       one turns inside the menu in place of the running act's own face: reopening the menu mid-transfer
@@ -148,10 +148,14 @@
         command <em>read-only</em> rather than disabled: that target is what the ask opened focused on,
         and disabling it would drop focus to <code>&lt;body&gt;</code>, outside the dialog, taking Esc
         with it. A slow import keeps its one keyboard exit.</td></tr>
-        <tr><td><strong>clear…</strong></td>
-        <td>A modal ask titled with the count it will remove, whose initial focus is on the answer that
-        does nothing — the act behind it cannot be undone. The consequence carries the only alarm on the
-        screen; the button carries none.</td></tr>
+        <tr><td><strong>clear</strong></td>
+        <td>The header's <code>⌫</code> shortcut is named for the live filtered count. By default it opens a
+        modal ask titled with that count, whose initial focus is on the answer that does nothing — the act
+        behind it cannot be undone. The consequence carries the only alarm on the screen; the button carries
+        none. A checked <em>don't show this again</em> is persisted only when clear is confirmed. Later clicks
+        clear the live filter immediately, with no ask; cancelling never changes the preference. With no ask
+        open there is no dialog to carry a refusal, so a clear the store rejects states its reason beside the
+        control instead — the same header slot an export failure uses, and each names the act it came from.</td></tr>
       </table>
       <p>Two things the list itself gained. An <strong>imported row carries a <code>↑</code> mark</strong>
       in its time cell, with its own accessible name, so a capture someone handed you is tellable from

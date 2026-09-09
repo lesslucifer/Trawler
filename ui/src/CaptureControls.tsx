@@ -3,14 +3,16 @@ import type { Filter, TrawlerApi } from "./api";
 import { openFile, saveBody, type ChosenFile } from "./body";
 import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
 import { ModalShell } from "./ModalShell";
-import { Button, Notice, Spinner, TonedText } from "./components/index";
+import { Button, Checkbox, IconButton, Notice, Spinner, TonedText } from "./components/index";
+import { dismissNotice, noticeDismissed, NOTICE_KEY } from "./noticePreference";
 
 export const CAPTURE_COPY = {
   trigger: "capture actions",
   exportAct: "export as har…",
   importAct: "import…",
   importName: "import a curl command or a har file",
-  clearAct: "clear…",
+  clearAct: "clear",
+  clearPreference: "don't show this again",
   exporting: "exporting…",
   importing: "importing…",
   clearConsequence: "the capture is not saved anywhere",
@@ -24,8 +26,7 @@ export const CAPTURE_COPY = {
 
 // Each act wears the face the app already spends on its direction: ↓ is
 // IconButton's save, ↑ is the mark FlowList prints on an imported row, and ⌫ is
-// the only one minted here — the two directions move data, the third erases it,
-// which is the boundary the menu's own hairline already draws.
+// the clear shortcut's erase face.
 export const CAPTURE_GLYPH = {
   export: "↓",
   import: "↑",
@@ -57,7 +58,10 @@ export function CaptureControls({
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [asking, setAsking] = useState<"clear" | "import" | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  // The act rides with its reason: a suppressed clear opens no dialog, so its
+  // refusal lands in the same header slot an export failure uses, and only the
+  // act can tell the two sentences apart once they are there.
+  const [failure, setFailure] = useState<{ act: "export" | "clear"; reason: string } | null>(null);
 
   const exportHar = async () => {
     setFailure(null);
@@ -68,7 +72,7 @@ export function CaptureControls({
       // outcome and not a success: the line clears and nothing claims a file.
       await saveBody(bytes, filename);
     } catch (error) {
-      setFailure(reasonOf(error));
+      setFailure({ act: "export", reason: reasonOf(error) });
     } finally {
       setExporting(false);
     }
@@ -78,6 +82,19 @@ export function CaptureControls({
     await api.clearFlows(filter);
     setAsking(null);
     onCleared();
+  };
+
+  const requestClear = async () => {
+    setFailure(null);
+    if (await noticeDismissed(NOTICE_KEY.clear)) {
+      try {
+        await clear();
+      } catch (error) {
+        setFailure({ act: "clear", reason: reasonOf(error) });
+      }
+    } else {
+      setAsking("clear");
+    }
   };
 
   // Export wins the slot when both run: it is the one whose act the menu is
@@ -105,13 +122,6 @@ export function CaptureControls({
       busy: importing,
       run: () => setAsking("import"),
     },
-    {
-      id: "clear",
-      label: CAPTURE_COPY.clearAct,
-      glyph: CAPTURE_GLYPH.clear,
-      separated: true,
-      run: () => setAsking("clear"),
-    },
   ];
 
   return (
@@ -125,10 +135,13 @@ export function CaptureControls({
           {slot}
         </TonedText>
       </span>
+      <IconButton label={`${CAPTURE_COPY.clearAct} ${flowCount(count)}`} onClick={() => void requestClear()}>
+        {CAPTURE_GLYPH.clear}
+      </IconButton>
       <CaptureMenu acts={acts} label={CAPTURE_COPY.trigger} />
       {failure !== null && (
-        <div data-testid="export-failed">
-          <Notice tone="warn">{failure}</Notice>
+        <div data-testid={`${failure.act}-failed`}>
+          <Notice tone="warn">{failure.reason}</Notice>
         </div>
       )}
       {asking === "clear" && (
@@ -159,6 +172,7 @@ function ClearDialog({
 }) {
   const [failure, setFailure] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const exit = useRef<HTMLSpanElement>(null);
 
   const confirm = () => {
@@ -169,6 +183,7 @@ function ClearDialog({
     // enabled, so focus goes there for the length of the request.
     exit.current?.querySelector("button")?.focus();
     setClearing(true);
+    if (dontShowAgain) void dismissNotice(NOTICE_KEY.clear).catch(() => {});
     onClear().catch((error: unknown) => {
       setFailure(reasonOf(error));
       setClearing(false);
@@ -183,6 +198,9 @@ function ClearDialog({
           <Notice tone="warn">{failure}</Notice>
         </div>
       )}
+      <Checkbox checked={dontShowAgain} onChange={setDontShowAgain} disabled={clearing} className="mt-3">
+        {CAPTURE_COPY.clearPreference}
+      </Checkbox>
       <div className="mt-3 flex justify-end gap-chrome-gap">
         <span ref={exit} data-opener="true">
           <Button onClick={onCancel} frame="bare" tone="mute">

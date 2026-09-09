@@ -1,15 +1,26 @@
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import { CaptureControls, CAPTURE_COPY, CAPTURE_GLYPH } from "./CaptureControls";
 import { apiStub } from "./apiStub";
 import type { Filter, TrawlerApi } from "./api";
 import * as files from "./body";
 
-afterEach(() => vi.restoreAllMocks());
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => false) }));
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.mocked(invoke).mockReset().mockResolvedValue(false);
+});
 
 const trigger = () => screen.getByRole("button", { name: CAPTURE_COPY.trigger });
 const slot = () => screen.getByTestId("capture-slot");
+const clearButton = (count = 6) => screen.getByRole("button", { name: `${CAPTURE_COPY.clearAct} ${count} flows` });
+const openClear = async (count = 6) => {
+  fireEvent.click(clearButton(count));
+  await screen.findByRole("dialog");
+};
 const choose = (label: string) => {
   fireEvent.click(trigger());
   fireEvent.click(screen.getByRole("menuitem", { name: label }));
@@ -91,11 +102,11 @@ test("a failed export says so beside the control, in the server's words", async 
   expect(slot()).toHaveTextContent("6 flows");
 });
 
-test("clear asks first, names the scope in the title, and focuses the answer that does nothing", () => {
+test("clear asks first, names the scope in the title, and focuses the answer that does nothing", async () => {
   const clearFlows = vi.fn(async () => 6);
   mount({ clearFlows }, { count: 214 });
 
-  choose(CAPTURE_COPY.clearAct);
+  await openClear(214);
   const dialog = screen.getByRole("dialog");
   expect(dialog).toHaveAttribute("aria-label", "clear 214 flows?");
   expect(screen.getByTestId("clear-ask-panel")).toHaveTextContent(CAPTURE_COPY.clearConsequence);
@@ -104,9 +115,9 @@ test("clear asks first, names the scope in the title, and focuses the answer tha
   expect(clearFlows).not.toHaveBeenCalled();
 });
 
-test("the consequence is the only alarm — the answer itself carries none", () => {
+test("the consequence is the only alarm — the answer itself carries none", async () => {
   mount();
-  choose(CAPTURE_COPY.clearAct);
+  await openClear();
   const warn = screen.getByTestId("clear-ask-panel").querySelector('[data-tone="warn"]');
   expect(warn).toHaveTextContent(CAPTURE_COPY.clearConsequence);
   expect(screen.getByRole("button", { name: CAPTURE_COPY.clear }).className).not.toContain("warn");
@@ -115,10 +126,10 @@ test("the consequence is the only alarm — the answer itself carries none", () 
 test.each([
   ["cancel", () => fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.cancel }))],
   ["Esc", () => fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" })],
-])("changing your mind via %s clears nothing", (_name, dismiss) => {
+])("changing your mind via %s clears nothing", async (_name, dismiss) => {
   const clearFlows = vi.fn(async () => 0);
   const { onCleared } = mount({ clearFlows });
-  choose(CAPTURE_COPY.clearAct);
+  await openClear();
   dismiss();
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(clearFlows).not.toHaveBeenCalled();
@@ -129,7 +140,7 @@ test("confirming clears what the filter selects and tells the screen an absence 
   const clearFlows = vi.fn(async () => 3);
   const { onCleared } = mount({ clearFlows }, { filter: { method: "GET" } });
 
-  choose(CAPTURE_COPY.clearAct);
+  await openClear();
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
 
   await waitFor(() => expect(clearFlows).toHaveBeenCalledWith({ method: "GET" }));
@@ -139,12 +150,48 @@ test("confirming clears what the filter selects and tells the screen an absence 
 
 test("a refused clear keeps the ask open and says why", async () => {
   const { onCleared } = mount({ clearFlows: vi.fn().mockRejectedValue(new Error("the store is busy")) });
-  choose(CAPTURE_COPY.clearAct);
+  await openClear();
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
 
   expect(await screen.findByTestId("clear-failed")).toHaveTextContent("the store is busy");
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   expect(onCleared).not.toHaveBeenCalled();
+});
+
+test("the suppression preference is written only when a checked ask is confirmed", async () => {
+  mount({ clearFlows: vi.fn(async () => 1) });
+  await openClear();
+  fireEvent.click(screen.getByRole("checkbox", { name: CAPTURE_COPY.clearPreference }));
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.cancel }));
+  expect(invoke).not.toHaveBeenCalledWith("dismiss_notice", { key: "clear-ask" });
+
+  await openClear();
+  fireEvent.click(screen.getByRole("checkbox", { name: CAPTURE_COPY.clearPreference }));
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("dismiss_notice", { key: "clear-ask" }));
+});
+
+test("a dismissed ask clears immediately with the live filter", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
+  const clearFlows = vi.fn(async () => 2);
+  const { onCleared } = mount({ clearFlows }, { filter: { host: "api.example.com" } });
+
+  fireEvent.click(clearButton());
+
+  await waitFor(() => expect(clearFlows).toHaveBeenCalledWith({ host: "api.example.com" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(onCleared).toHaveBeenCalledOnce();
+});
+
+test("a refused clear with the ask suppressed says so in the header", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
+  const { onCleared } = mount({ clearFlows: vi.fn().mockRejectedValue(new Error("the store is busy")) });
+
+  fireEvent.click(clearButton());
+
+  expect(await screen.findByTestId("clear-failed")).toHaveTextContent("the store is busy");
+  expect(onCleared).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).toBeNull();
 });
 
 test("import opens with focus in the textarea and the file picker before the act", () => {
@@ -514,7 +561,7 @@ test("each act wears its own face without changing what the act is called", () =
   );
   expect(Object.keys(faces).join(" ")).toContain(CAPTURE_GLYPH.export);
   expect(Object.keys(faces).join(" ")).toContain(CAPTURE_GLYPH.import);
-  expect(Object.keys(faces).join(" ")).toContain(CAPTURE_GLYPH.clear);
+  expect(clearButton().textContent).toBe(CAPTURE_GLYPH.clear);
 
   // Every face is distinct: a shared glyph would say two acts are the same act.
   const glyphs = Object.values(CAPTURE_GLYPH);
@@ -522,7 +569,7 @@ test("each act wears its own face without changing what the act is called", () =
 
   expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.exportAct })).toBeInTheDocument();
   expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.importName })).toBeInTheDocument();
-  expect(screen.getByRole("menuitem", { name: CAPTURE_COPY.clearAct })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.clearAct })).toBeNull();
 });
 
 // Reopening the menu mid-transfer is the one way to ask "why is this act
@@ -546,7 +593,7 @@ test("the act that is running turns a ring where its face was", async () => {
   const running = screen.getByRole("menuitem", { name: CAPTURE_COPY.exportAct });
   expect(spinners(running)).toHaveLength(1);
   expect(running.textContent).not.toContain(CAPTURE_GLYPH.export);
-  expect(spinners(screen.getByRole("menuitem", { name: CAPTURE_COPY.clearAct }))).toHaveLength(0);
+  expect(spinners(clearButton())).toHaveLength(0);
 
   await act(async () => release?.());
 });
@@ -618,7 +665,7 @@ test("the clear ask keeps its focus hold, and its esc, while the clear runs", as
   let land: (() => void) | undefined;
   mount({ clearFlows: vi.fn(async () => new Promise<number>((resolve) => (land = () => resolve(1)))) });
 
-  choose(CAPTURE_COPY.clearAct);
+  await openClear();
   const go = screen.getByRole("button", { name: CAPTURE_COPY.clear });
   go.focus();
   expect(go).toHaveFocus();
