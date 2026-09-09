@@ -1,5 +1,5 @@
 schema: test/v2
-level: wu
+level: working-unit
 epic: E-EXPORT
 wu: E-EXPORT.W10
 tests:
