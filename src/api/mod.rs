@@ -43,20 +43,26 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
         .with_state(state)
 }
 
-/// The ring's cap counts raw retained body bytes; the document that carries them
+/// The ring's cap counts retained body bytes; the document that carries them
 /// counts base64 — a third larger for every body that is not text — plus the JSON
-/// that frames all of them. Bounding the import door by the cap alone would
-/// therefore refuse the store its own export of a capture it was holding legally,
-/// which is the one document the round trip must always accept. The door admits
-/// the expansion instead: still a bound, still derived from the single ceiling
-/// that exists, and generous enough that the parser rather than the transport is
-/// what refuses a document too big to hold.
+/// that frames all of them. Bounding the import door by the cap alone therefore
+/// refuses the store its own export of a body-heavy capture it was holding
+/// legally, so the door admits the expansion.
+///
+/// What this guarantees is exactly the body-dominated case, which is the case the
+/// cap is expressed in. It cannot guarantee more: `Ring::evict` fires on
+/// `total_bytes`, and `Flow::retained_bytes` counts no header, URL or cookie, so a
+/// capture of body-less exchanges holds unbounded rows and exports a document no
+/// multiple of the cap can bound. No constant is available to fix that — only a
+/// ring weighted by whole rows, or a streaming parse, and both are the roadmap's
+/// deferred work rather than this door's to decide. The residual is a loud 413 on
+/// a capture whose bytes are mostly headers, never a silent truncation.
 fn import_body_limit(ring_cap: usize) -> usize {
     ring_cap.saturating_mul(DOCUMENT_EXPANSION)
 }
 
-/// Base64's 4/3 rounded up to 2, so headers, URLs and JSON punctuation are
-/// covered by the same factor rather than by a second guess.
+/// Base64's 4/3, rounded up to 2 so the JSON framing rides the same factor rather
+/// than a second guess.
 const DOCUMENT_EXPANSION: usize = 2;
 
 /// The native app is a cross-origin client (its webview origin is not the API's),
@@ -118,9 +124,9 @@ mod tests {
         }
     }
 
-    // The round trip the epic exists for must not be refused by the transport at
-    // the one place it is most likely to matter: a capture of binary bodies filling
-    // the ring, whose document is base64 and so larger than the ring itself.
+    // The body-dominated case the cap is expressed in — the one `import_body_limit`
+    // can actually guarantee: a capture of binary bodies filling the ring, whose
+    // document is base64 and so outweighs the ring it came from.
     #[tokio::test]
     async fn a_full_ring_of_binary_bodies_re_imports_its_own_export() {
         use crate::test_support::{captured, FlowBuilder};
