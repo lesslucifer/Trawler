@@ -1,0 +1,84 @@
+schema: cr/v3
+scope: "epic E-EXPORT (epic/export) -> main"
+epic: E-EXPORT
+branch: epic/export
+base: aad6c3b6cf08ab805989a2c56c05fedb2bcba1da
+head: ccf77d7d978705687702ffb1c9f336961407b9fe
+diff_sha256: 9c709ada6160b6a973f1d66adca1101b76c2e10f58255e2b29815d344c17072b
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+rounds: 4
+findings: { found: 19, verified: 6, waived: 0 }
+review_scope:
+  code_only: "The caller scoped rounds 2-4's re-reviews to code. Round 1 ran all six dimensions over the whole diff including the doc changes; later rounds' doc-prose candidates were dropped on that instruction rather than refuted, except the one that was verified and refuted before the instruction landed. Every finding recorded below is a code or code-adjacent finding."
+verified_findings:
+  - round: 1
+    location: src/api/mod.rs
+    finding: "/flows/import bounded its body by Store::max_bytes, which counts raw retained body bytes, while the document carrying them is base64 inside JSON - so a capture of binary bodies legally filling the ring produced an export the store refused with 413."
+    severity: important
+    fixed_in: eacf389
+    regression_test: "a_full_ring_of_binary_bodies_re_imports_its_own_export - a 4 KiB ring three quarters full of binary, asserting the export outweighs the ring and then that the import is accepted. Reds at exactly 413 without the fix."
+  - round: 1
+    location: tests/e2e_export.rs
+    finding: "hand-rolled CA and leaf generation duplicating trawler::test_support::tls_origin, which tests/e2e_h2.rs already consumes the same way. e2e_capture.rs's copy predates the helper; this one did not."
+    severity: important
+    fixed_in: eacf389
+  - round: 1
+    location: docs/architecture.html
+    finding: "the CORS row asserted the grant was widened to the methods its mutating routes need but cited only DEC-12, written before any mutating route existed."
+    severity: important
+    fixed_in: eacf389
+  - round: 2
+    location: src/api/mod.rs
+    finding: "round 1's own fix overclaimed. No constant can bound the document: Ring::evict fires on total_bytes and Flow::retained_bytes counts no header, URL or cookie, so a capture of body-less exchanges holds unbounded rows and exports a document outgrowing any multiple of the cap. The remedy was the claim, not the number."
+    severity: important
+    fixed_in: 4e64735
+    recorded: "the two structural fixes - a row-weighted ring, or a streaming parse - are backlog rows rather than epic-close work."
+  - round: 2
+    location: src/api/mod.rs
+    finding: "raising the admission ceiling doubles the import's worst-case peak memory, which is a distinct fact from the already-recorded export peak."
+    severity: nit
+    remedy: "recorded, not fixed - a streaming parse is the one fix for both directions and it is already deferred."
+  - round: 3
+    location: src/api/mod.rs
+    finding: "the residual was stated in full both on import_body_limit and in the backlog row beside it, with neither pointing at the other."
+    severity: important
+    fixed_in: ccf77d7
+    remedy: "the code keeps the statement - a reader deciding whether the bound is safe is reading the function, and the shorter comment is what overclaimed a round earlier."
+refuted:
+  - "e2e spec helpers duplicated across three files - rubric excludes forcing abstraction, and hit() is not identical across them"
+  - "CaptureMenu reimplements Select's popup shell - design run 11 explicitly authorised building it local without minting a registry entry"
+  - "clearFlows duplicates the imported() helper - different fields, different response shapes, different contracts"
+  - "Store::page's next_cursor combinator - limit==0 is unreachable through the only caller, and the paging proptests pin the behaviour"
+  - "the Spinner design receipt's confirm-at-point verdict - the rule targets feedback placement, which the receipt answers; and the artifact is retired"
+  - "import_body_limit's and DOCUMENT_EXPANSION's comments say the same thing - they answer why-not-the-bare-cap and why-2 respectively"
+  - "the doubled limit couples an unbounded cost to an operator-set ring size - the coupling predates the diff and the API is loopback-bound"
+  - "ClearDialog disables its confirm with no progress line - design run 11 classed clear as fast and export and import as slow, and the code moves focus to cancel instead"
+  - "the import comment is a 13-line essay - the file's own precedent is the same length, and the shorter version is what overclaimed"
+design:
+  artifacts: [docs/work/components/spinner.html]
+  rulebook: a7f9ae3becf27694bfc1ffb9f0b43f87c9abb7e2
+  findings: { found: 2, verified: 0, waived: 0 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: ebf4215b3c1f08f4ab5fd6de5ccea026a002f221
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+    - path: docs/work/components/spinner.html
+      blob: 81fd0afa3e982fdf3c3d08288933fc1f0a6359e9
+      built: [ui/src/components/Spinner.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: "the modal frame this file owned moved out to ui/src/ModalShell.tsx unchanged in behaviour - 5 insertions against 91 deletions, all of them the lifted block - and the file now calls the shared frame. Its three test ids are preserved verbatim and its own suite passes untouched, so no surface it renders was re-shaped and there was nothing for a design to decide."
+  note: >-
+    Both citations resolve at their design's last state reachable from this tip, per DEC-28: DEC-16 retired
+    spinner.html inside the WU that built it, and DEC-3 archived run 11 out of the tree at this close. The
+    design scope was byte-identical across all four rounds - neither fix commit touched a UI-rendering file
+    or a design artifact - so rounds 2-4 did not re-run the dimension over unchanged bytes; round 2 confirmed
+    the rulebook blob and the artifact's last state were unchanged before standing on round 1's verdict.
+    Run 10 is archived as the superseded predecessor and carries no : it is a design run, not a
+    component design file, so components·unbuilt never counted it and no drop record is owed.
+    The independence caveat W6's note recorded holds here too: this session authored the epic-close code it
+    is orchestrating a review of. It did not judge that code - the finders and verifiers did, and it was not
+    decorative, since round 2's finders overturned round 1's own fix and round 3's overturned round 2's.
+verdict: PASS
+date: 2026-09-09
