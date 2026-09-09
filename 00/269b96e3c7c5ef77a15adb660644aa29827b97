@@ -1,0 +1,58 @@
+schema: doc/v1
+level: epic
+epic: E-EXPORT
+branch: epic/export
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: edited
+    distills: "UC-6 (take a capture out and bring one back - the HAR file both ways plus the single-request curl paste) and UC-7 (clear the capture, announced on /stream, empty rather than restarted) as new records; UC-3's listing contract amended for opt-in paging, and UC-4's surface for the capture-management controls. Each provenance callout names the route a person actually takes. The back-merge merged this against E-RFINISH's own UC-4 amendments, so the header line now credits both epics and every DEC citation follows the renumbering below."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: edited
+    distills: "the two new ids and their one-line contracts, merged with E-RFINISH's UC-4 summary so the row names status resolution, the not-answering statement and the capture controls together."
+  - path: docs/decisions/dec-37-har-as-the-interchange-format.html
+    tier: T2
+    action: added
+    distills: "why HAR 1.2 and only HAR; how a body state the format cannot express is represented (a reason comment and a -1 size, never an empty text); and what round-trip fidelity preserves and what it does not - cookie attributes and queryString stated as non-preservation rather than debt. Numbered 35 when written; shifted to 37 at the close, because E-RFINISH landed DEC-35 first."
+  - path: docs/decisions/dec-38-imported-flows-are-marked.html
+    tier: T2
+    action: added
+    distills: "why an imported flow is a first-class flow carrying a source rather than a separate collection - same detail endpoints, same events, same eviction - and the CORS widening the mutating methods require, extending DEC-12's loopback reasoning rather than reversing it. Shifted from 36."
+  - path: docs/decisions/dec-39-curl-parser-accepts-what-a-browser-emits.html
+    tier: T2
+    action: added
+    distills: "where the curl parser's boundary sits: the flags a browser's Copy as cURL and Trawler's own toCurl emit, -u and --compressed expanded because dropping them changes the request, transfer-only flags consumed silently, and everything else refused naming the flag. Shifted from 37."
+  - path: docs/decisions/dec-40-the-predecessor-is-the-checklist.html
+    tier: T2
+    action: added
+    distills: "W9's rule for a design re-run: a run over a screen a closed run already designed answers to that run - every prior answer kept or overturned on the record. Shifted from 38."
+  - path: docs/decisions/dec-41-motion-informs-bans-decoration-not-progress.html
+    tier: T2
+    action: added
+    distills: "the reading of the motion rule that W6's Spinner forced: the ban is on motion as decoration, not on motion reporting that something is running. Shifted from 39."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: edited
+    distills: "rows for this epic's five records at their settled numbers, after E-RFINISH's DEC-35 and DEC-36. v17/v18 -> v19. The merge review found the back-merge had left one row 7 cells wide where two rows had run together; the missing cell and row break are restored."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: edited
+    distills: "the epic's open question 5, answered by W5 and carried by W9: export is the correct name for the file operation, and the rulebook's reserved meaning bans it only as a synonym for copy. Plus the rule amendments W9's and W6's runs escalated."
+  - path: docs/design-flow.html
+    tier: T1
+    action: edited
+    distills: "the process facts W9's re-run and W6's build proved, recorded where the design flow is specified. Landed inside those WUs with their own authorisation; the citation now points at DEC-40."
+  - path: docs/architecture.html
+    tier: T1
+    action: edited
+    distills: "the seam line the ingest falsified - the control API is no longer described as purely a subscriber and reader - and the Store's one-line contract names the clear beside the ring's own eviction. Landed in W3 and W4 with their own authorisation. The close review added the citation that was missing: the CORS row asserted the widening but linked only DEC-12, which predates every mutating route, and now also cites DEC-38#cors."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: edited
+    distills: "E-EXPORT moved into landed-so-far with the doors it added and the three decisions that explain them, merged with E-RFINISH's own rewrite of the same paragraph and table. Two rows this close added: streaming the capture in both directions, carrying W2's measurement that the export peaks at roughly 4x the ring cap and now the import half whose ceiling this epic raised; and the ring's body-byte weighting, which is why the import door guarantees only the body-dominated round trip. v7/v7 -> v8."
+archived:
+  note: "twenty-one T3 documents (the epic plan, nine WU plans, nine WU results, two design runs and the epic result) were git rm'd into the gitignored docs/.archive/ in 9b2b097, plus the untracked W6 pre-MR runbook. They net to nothing in this endpoint diff because the range both added and removed them; their content stays addressable in the commits that added them. Nothing was archived before what it carried was somewhere else. Their DEC citations were renumbered with the rest at the back-merge, so an archived reader is not sent to a number that now means something else."
+  distilled_to: "docs/use-cases/web-ui.html - docs/use-cases/use-cases-index.html - docs/decisions/dec-37..dec-41 - docs/decisions/decisions-index.html - docs/design-rules/design-rules-index.html - docs/design-flow.html - docs/architecture.html - docs/backlog/roadmap.html"
+t2_waived: "the e2e flake fix states no new fact a T2 doc owes either - how a test harness points a window at its core is harness shape, and the account of the abort it removed lives in this epic's test/v2 note and in deviation 11 of the archived epic result, rewritten at the close (docs/.archive/ is gitignored, so that edit is not in this diff). The close review's five fixes state no new fact a T2 doc owes: three restore behaviour a record already claimed - DEC-39's curl boundary (a flag expands into a header curl sends once) and UC-6/UC-7's acts answering for themselves - and two are internal, the ring's cursor now resolving by search rather than by walk with no contract moved."
+date: 2026-09-09
