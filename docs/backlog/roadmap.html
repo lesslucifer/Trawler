@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Roadmap &amp; Backlog</h1>
       <p>The product roadmap — two pillars and the epic sequence that delivers them — plus the living backlog of deferred work carried across epics.</p>
-      <div class="meta">v5 · 2026-07-12 · Trawler · <a href="backlog-index.html">index</a></div>
+      <div class="meta">v6 · 2026-09-09 · Trawler · <a href="backlog-index.html">index</a> — E-EXPORT landed</div>
     </div>
   </header>
   <main>
@@ -87,6 +87,7 @@
         <tr><td><s>UI asset path set for the manual-review <code>is_ui</code> check</s></td><td><strong>Moot</strong> — <a href="../decisions/workflow-gates.html#dec-10">DEC-10</a> (E-MRSIG.W9) made WU mr always-required and deleted the <code>is_ui</code> predicate; E-UIFOUND owns a UI path set again only if a future check needs one.</td></tr>
         <tr><td><code>BodyViewer</code>'s view switch is labelled <code>decoded | raw</code>; its confirmed contract settles fork D4 on <code>raw | pretty</code></td><td>One word doing two jobs — the transport switch wearing the pretty-print switch's name. <strong>Ruled: <code>raw | pretty</code> is correct and the build is what changes.</strong> Deferred out of E-DFLOW.W6 because a rulebook revision that quietly edits UI copy is one nobody can trust; <code>one-term-per-concept</code> catches it on any Tier-3 pass meanwhile (<a href="../design-rules/design-rules-index.html#known-violations">rulebook · where a live violation goes</a>). Fold into whichever epic next opens BodyViewer.</td></tr>
         <tr><td><code>component-design.html</code>'s file skeleton still prescribes the pre-bundle <code>tw-config.js</code> loading shape</td><td>DEC-26 made a design file mount from <code>specimens.bundle.js</code>, but the T1 skeleton was never updated, so the spec and the artifacts built to it disagree. Found by E-REDESIGN.W1's review, whose own three files follow DEC-26 rather than the skeleton. Deferred because E-REDESIGN's non-goals forbid changing the flow spec mid-epic. Fold into whichever epic next revises the design-flow specs.</td></tr>
+        <tr><td>Streaming a cap-sized export, and the peak memory a one-shot response costs</td><td>Deferred at <span class="badge id">E-EXPORT</span>'s plan review and unchanged by the epic: <code>GET /flows/export</code> serializes the whole filtered capture into one in-memory response. <strong>E-EXPORT.W2's review quantified the ceiling</strong> — at the 256&nbsp;MB default cap, an export of binary bodies peaked at roughly <strong>4×</strong> the cap, because the cloned flows, the base64-expanded document and the serialized JSON are all live at once. So the bound is that multiple, not the cap. Response streaming is the fix that also caps the memory; revisit when a real capture proves the one-shot response too heavy.</td></tr>
         <tr><td>Small non-epic items — per-host bypass list, further decoders</td><td>Fold into whichever epic touches their seam first.</td></tr>
       </tbody>
     </table>
@@ -94,11 +95,15 @@
     <h3 id="rmap-consequences">Consequences</h3>
     <p>Landed so far: <span class="badge id">E-UISHELL</span> and <span class="badge id">E-H2</span>
     (Wave 1) and <span class="badge id">E-UIFOUND</span> and <span class="badge id">E-UIINSPECT</span>
-    (Wave 2 — the native UI foundation, see the DEC-12 reversal above, and the flow inspector on it:
-    UC-5, with the <code>?decode=1</code> chain completed server-side). Next epic to continue is
+    and <span class="badge id">E-EXPORT</span>
+    (Wave 2 — the native UI foundation, see the DEC-12 reversal above; the flow inspector on it:
+    UC-5, with the <code>?decode=1</code> chain completed server-side; and the capture's three new
+    doors: HAR export and import, a pasted <code>curl</code> command as a flow, <code>DELETE /flows</code>,
+    opt-in paging, and the app's first mutating controls — UC-6, UC-7,
+    <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a>–<a href="../decisions/dec-37-curl-parser-accepts-what-a-browser-emits.html">DEC-37</a>).
+    Next epic to continue is
     <span class="badge id">E-UISETUP</span> (guided onboarding — W1 already merged on its epic
-    branch), with <span class="badge id">E-EXPORT</span>
-    available as an independent Wave 2 Function track. This roadmap is living — updated in place as
+    branch). This roadmap is living — updated in place as
     epics land; a
     strategic reversal (dropping a pillar, resequencing a wave) is recorded as a
     <a href="../decisions/decisions-index.html">decision</a> and then reflected here. The
