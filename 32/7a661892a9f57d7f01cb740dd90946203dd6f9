@@ -45,7 +45,7 @@ changes:
   - path: docs/component-design.html
     tier: T1
     action: updated
-    distills: "The epic's one T1 edit (W1), carrying its Reviewed-By trailer: the file skeleton prescribes the specimens.bundle.js mount DEC-26 established, replacing the pre-bundle tw-config.js shape the spec still carried. It landed first so both of this epic's design runs were built to a spec that matches the gate that judges them."
+    distills: "One of the epic's two T1 edits (W1), both in one Reviewed-By-trailered commit - the plan expected a single T1 file and W1's own plan disclosed the second: the file skeleton prescribes the specimens.bundle.js mount DEC-26 established, replacing the pre-bundle tw-config.js shape the spec still carried. It landed first so both of this epic's design runs were built to a spec that matches the gate that judges them."
   - path: docs/design-flow.html
     tier: T1
     action: updated
