@@ -5,7 +5,6 @@ import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
 const acts = (over: Partial<Record<string, Partial<CaptureAct>>> = {}): CaptureAct[] => [
   { id: "export", label: "export as har…", run: vi.fn(), ...over.export },
   { id: "import", label: "import…", name: "import a har file or a curl command", run: vi.fn(), ...over.import },
-  { id: "clear", label: "clear…", separated: true, run: vi.fn(), ...over.clear },
 ];
 
 const trigger = () => screen.getByRole("button", { name: "capture actions" });
@@ -23,18 +22,16 @@ test("at rest the header carries one trigger and nothing else", () => {
   expect(screen.queryByRole("menu")).toBeNull();
 });
 
-test("the menu names the three acts as words, in the order out, in, empty", () => {
+test("the menu names the two transfer acts in out-then-in order", () => {
   mount();
   open();
-  expect(items().map((i) => i.textContent)).toEqual(["export as har…", "import…", "clear…"]);
+  expect(items().map((i) => i.textContent)).toEqual(["export as har…", "import…"]);
 });
 
-test("only the irreversible act carries a boundary above it", () => {
+test("the transfer-only menu has no separator", () => {
   mount();
   open();
-  const separated = items().filter((i) => i.className.includes("border-t"));
-  expect(separated).toHaveLength(1);
-  expect(separated[0]).toHaveTextContent("clear…");
+  expect(items().filter((i) => i.className.includes("border-t"))).toHaveLength(0);
 });
 
 test("an item whose label leans on the menu carries the fuller accessible name", () => {
@@ -48,8 +45,8 @@ test("an item whose label leans on the menu carries the fuller accessible name",
 test("clicking an act runs it and closes the menu", () => {
   const list = mount();
   open();
-  fireEvent.click(screen.getByText("clear…"));
-  expect(list[2].run).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByText("import…"));
+  expect(list[1].run).toHaveBeenCalledOnce();
   expect(screen.queryByRole("menu")).toBeNull();
 });
 
@@ -69,12 +66,11 @@ test("the keyboard opens, moves without acting, and takes the moved-to item", ()
   trigger().focus();
   fireEvent.keyDown(trigger(), { key: "Enter" });
   fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
-  fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
-  // Two moves and nothing has run — movement is not selection.
+  // Movement alone does not run the highlighted act.
   expect(list.every((a) => (a.run as ReturnType<typeof vi.fn>).mock.calls.length === 0)).toBe(true);
 
   fireEvent.keyDown(screen.getByRole("menu"), { key: "Enter" });
-  expect(list[2].run).toHaveBeenCalledOnce();
+  expect(list[1].run).toHaveBeenCalledOnce();
 });
 
 test("↑↓ stop at the ends rather than wrapping", () => {
@@ -157,15 +153,15 @@ test("the face's box is reserved even for an act that has none", () => {
 
   const boxes = items().map((i) => i.firstElementChild);
   expect(boxes.every((b) => b?.className.includes("w-4"))).toBe(true);
-  expect(boxes.map((b) => b?.textContent)).toEqual(["↓", "", ""]);
+  expect(boxes.map((b) => b?.textContent)).toEqual(["↓", ""]);
 });
 
 test("a running act turns a ring in place of its face, and only that act", () => {
-  mount(acts({ export: { glyph: "↓", busy: true }, clear: { glyph: "⌫" } }));
+  mount(acts({ export: { glyph: "↓", busy: true }, import: { glyph: "↑" } }));
   open();
 
   const running = screen.getByRole("menuitem", { name: "export as har…" });
   expect(running.querySelectorAll('[data-testid="spinner"]')).toHaveLength(1);
   expect(running.textContent).toBe("export as har…");
-  expect(screen.getByRole("menuitem", { name: "clear…" }).textContent).toBe("⌫clear…");
+  expect(screen.getByRole("menuitem", { name: "import a har file or a curl command" }).textContent).toBe("↑import…");
 });

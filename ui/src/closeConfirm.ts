@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { splitProxyAddr } from "./setup";
+import { dismissNotice, noticeDismissed, NOTICE_KEY } from "./noticePreference";
 
 // Quit-time proxy check (E-UISETUP.W5). Keys off the ACTUAL system proxy status,
 // not off whether we set it this session — so a proxy the user pointed at Trawler
@@ -43,7 +44,7 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
         if (status === "ours" || status === "foreign") {
           e.preventDefault();
           setMode(status);
-        } else if (!(await deps.invoke<boolean>("remote_notice_dismissed"))) {
+        } else if (!(await noticeDismissed(NOTICE_KEY.remote, deps.invoke))) {
           e.preventDefault();
           setMode("remote");
         }
@@ -81,7 +82,7 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     keep: quit,
     // Info-only notice: optionally persist "don't show again", then quit.
     acknowledge: (dontShowAgain: boolean) =>
-      (dontShowAgain ? deps.invoke("dismiss_remote_notice").catch(() => {}) : Promise.resolve()).then(quit),
+      (dontShowAgain ? dismissNotice(NOTICE_KEY.remote, deps.invoke).catch(() => {}) : Promise.resolve()).then(quit),
     cancel: () => setMode(null),
   };
 }

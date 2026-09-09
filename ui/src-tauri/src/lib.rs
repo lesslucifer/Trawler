@@ -10,8 +10,8 @@ pub fn run() {
             setup::set_proxy,
             setup::unset_proxy,
             setup::proxy_status,
-            setup::remote_notice_dismissed,
-            setup::dismiss_remote_notice
+            setup::notice_dismissed,
+            setup::dismiss_notice
         ]);
     #[cfg(feature = "e2e")]
     let builder =

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa0bccb9f34851f0dfacd22" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W10 result: clear is direct and its ask can stay away</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W10 result — clear is direct, and its ask can stay away</h1>
+      <p>The capture header now gives clear one direct control; a confirmed preference removes the ask from later clears without losing the live filter or event-bus refill.</p>
+      <div class="meta">v1 · 2026-09-09 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W10</span> · <a href="2026-09-08-export-w10-clear-shortcut-plan.html">its plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+    <div class="diagram" data-c="outcome-diagram">
+      <pre class="mermaid">
+flowchart LR
+  C["⌫ clear N flows"] --> P{"clear ask dismissed?"}
+  P -- no --> A["ask + consequence + don't show again"]
+  A -->|confirm| D["DELETE /flows + live filter"]
+  P -- yes --> D
+  D --> B["bus event refills the list"]
+      </pre>
+      <div class="caption">Figure 1 — both paths share the same filtered mutation and the same bus-owned list refresh; only the ask is optional.</div>
+    </div>
+    <table data-c="outcome-table">
+      <thead><tr><th>Requirement</th><th>Result</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Clear leaves the menu</td><td><span class="badge auto">delivered</span> <code>⌫</code> sits between the live count and the two-act transfer menu; its accessible name includes the filtered count.</td><td><code>CaptureControls.test.tsx</code> · <code>CaptureMenu.test.tsx</code></td></tr>
+        <tr><td>The ask can be silenced</td><td><span class="badge auto">delivered</span> the checkbox writes only on confirm; cancel and Esc write nothing.</td><td><code>CaptureControls.test.tsx</code></td></tr>
+        <tr><td>Later clears skip the ask</td><td><span class="badge auto">delivered</span> the preference read falls back to “not dismissed” outside Tauri, and a dismissed ask clears directly.</td><td><code>noticePreference.test.ts</code> · <code>App.test.tsx</code></td></tr>
+        <tr><td>The store becomes enumerable</td><td><span class="badge auto">delivered</span> two closed keys map to separate marker files; the old remote marker filename remains valid.</td><td><code>setup.rs</code> unit test</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="deviations">Deviations and resolved facts</h2>
+    <div data-item="deviations">
+    <table data-c="deviations-table">
+      <thead><tr><th>Plan statement</th><th>What happened</th></tr></thead>
+      <tbody>
+        <tr><td>W10 was blocked until W6 merged.</td><td>Resolved before implementation: W6 had merged as <code>e666529</code>, and this branch already used that merge as its base. The plan was corrected after its required pre-edit snapshot.</td></tr>
+        <tr><td>The epic e2e already uses clear.</td><td><strong>Deferred to the epic gate.</strong> The current WebDriver flow suite does not drive the clear control. This WU supplies its mandatory integration contract in <code>App.test.tsx</code>; the epic still owes its planned export → clear → import user path.</td></tr>
+        <tr><td>A later settings screen restores suppressed asks.</td><td>Still deferred as planned. The keyed store makes the keys closed and independent, but W10 adds no restoration screen.</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+    <table data-c="evidence-table">
+      <thead><tr><th>Level</th><th>What ran</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit · UI</span></td><td>Full Vitest suite, including the header control, menu shape, checkbox persistence, browser fallback, and close-confirm migration.</td><td>49 files · 839 tests · green</td></tr>
+        <tr><td><span class="badge id">unit · Tauri</span></td><td>Key parsing, isolation, marker writes, unknown-key refusal, and legacy remote filename.</td><td>21 tests · green</td></tr>
+        <tr><td><span class="badge id">integration</span></td><td>Preference dismissed → filtered header clear → no dialog → bus-owned list refill.</td><td><code>App.test.tsx</code> · green</td></tr>
+        <tr><td><span class="badge id">core regression</span></td><td>Whole Rust workspace.</td><td>221 lib · 41 API · 3 CA · 6 capture e2e · 4 H2 e2e · green</td></tr>
+        <tr><td><span class="badge id">static</span></td><td>Rust format and clippy, ESLint design vocabulary, TypeScript and Vite production build.</td><td>green; Vite retains its pre-existing large-chunk warning</td></tr>
+        <tr><td><span class="badge id">e2e</span></td><td>WU-level native WebDriver run.</td><td><strong>waived:</strong> the epic owns the real export → clear → import path; W10 adds the bounded UI integration test and records that the epic test is still outstanding.</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+    <table data-c="distillation-table">
+      <thead><tr><th>Tier</th><th>Write-back</th></tr></thead>
+      <tbody>
+        <tr><td>T2 use case</td><td><code>docs/use-cases/web-ui.html</code> now states the direct clear control, live-count name, confirm-only persistence, and silent filtered path.</td></tr>
+        <tr><td>T2 index</td><td><code>docs/use-cases/use-cases-index.html</code> no longer claims all three actions sit behind one trigger.</td></tr>
+        <tr><td>T2 design rules</td><td>No change. W10 applies the existing <code>familiar-idioms</code>, <code>keyboard-parity</code>, <code>focus-returns-to-origin</code>, and <code>calm-microcopy</code> rules; it introduces no reusable rule or vocabulary member.</td></tr>
+        <tr><td>T3 plan</td><td>The sequencing warning is resolved against the actual W6 merge.</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <ul>
+        <li>The epic e2e must drive export → header clear → import through the built native app.</li>
+        <li>A later settings WU must enumerate and restore the two suppressed asks.</li>
+      </ul>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -136,13 +136,9 @@ flowchart LR
 
     <h2 id="sequencing">Sequencing — the one thing this plan cannot decide</h2>
     <div class="callout warn" data-c="sequencing">
-      <p>W10 modifies <code>CaptureControls.tsx</code> and <code>CaptureMenu.tsx</code> as W6 leaves them.
-      <strong>W6 is not merged</strong> — <code>wu/export/controls-build</code> is eight commits ahead of
-      <code>epic/export</code>, sitting at its manual-review gate, and carries further uncommitted work.
-      A W10 branched off <code>epic/export</code> would not contain the controls it edits.</p>
-      <p>So W10 stacks on W6's tip and inherits its merge order. It cannot start until W6's working tree
-      is committed, and the docs half of that commit needs <code>cargo xtask mr commit</code> — which the
-      agent never runs.</p>
+      <p><strong>Resolved before implementation.</strong> W6 merged into <code>epic/export</code> as
+      <code>e666529</code>, and W10 was branched from that merge. The controls it edits are therefore in its
+      base; W10 has no stacked-branch merge-order dependency.</p>
     </div>
 
   </main>
