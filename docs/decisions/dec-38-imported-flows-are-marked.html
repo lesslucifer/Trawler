@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — DEC-36: imported flows are marked, not separated</title>
+  <title>Trawler — DEC-38: imported flows are marked, not separated</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>DEC-36 — An imported flow is a first-class flow carrying a provenance mark, not a second collection beside the ring</h1>
+      <h1>DEC-38 — An imported flow is a first-class flow carrying a provenance mark, not a second collection beside the ring</h1>
       <p>The ring now holds flows the proxy never saw. One closed-enum field on the domain model says so — and the first mutating method it enables is what widened the CORS grant.</p>
-      <div class="meta">DEC-36 · 2026-09-04 · Trawler · E-EXPORT.W3, amended by W4 and W7 · minted as DEC-31 on the E-EXPORT branch, renumbered at the E-REDESIGN merge · status: active</div>
+      <div class="meta">DEC-38 · 2026-09-04 · Trawler · E-EXPORT.W3, amended by W4 and W7 · minted as DEC-31 on the E-EXPORT branch, renumbered at the E-REDESIGN merge · status: active</div>
     </div>
   </header>
   <main>
 
     <h2 id="context">Context</h2>
-    <p>Until <a href="dec-35-har-as-the-interchange-format.html">DEC-35</a>'s import half landed,
+    <p>Until <a href="dec-37-har-as-the-interchange-format.html">DEC-37</a>'s import half landed,
     every flow in the store came from the proxy — so nothing recorded that fact, because nothing
     else could produce a flow. <code>POST /flows/import</code> breaks that assumption: a listing
     can now mix a live capture with a colleague's file, and a user who cannot tell them apart
@@ -166,7 +166,7 @@ by retained bytes, either kind"]
         </tr>
         <tr>
           <td>The export inherits <code>?source=</code> with no export change, because both
-            endpoints build the same filter — the guarantee DEC-35 already relies on</td>
+            endpoints build the same filter — the guarantee DEC-37 already relies on</td>
           <td><a href="../use-cases/web-ui.html#uc-6">UC-6</a></td>
         </tr>
         <tr>
@@ -178,7 +178,7 @@ by retained bytes, either kind"]
           <td>A pasted curl command is a second <em>format</em> behind the same import endpoint
           and the same mark, not a third provenance — the mark says "the proxy never saw this",
           whatever the file or the command it came from</td>
-          <td>E-EXPORT.W7 · <a href="dec-37-curl-parser-accepts-what-a-browser-emits.html">DEC-37</a></td>
+          <td>E-EXPORT.W7 · <a href="dec-39-curl-parser-accepts-what-a-browser-emits.html">DEC-39</a></td>
         </tr>
         <tr>
           <td>The API's contract line is no longer "reader only" — it reads, subscribes and

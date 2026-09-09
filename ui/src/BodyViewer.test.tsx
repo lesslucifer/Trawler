@@ -123,6 +123,19 @@ test("an image body renders through ImageRenderer over an object URL", async () 
   unmount();
 });
 
+// Both positions are decoded — they differ in re-indenting — so "decoded"
+// labelled what the two share. The absence assertion is the one that catches a
+// half-done rename.
+test("the switch names the two views the lexicon settled on, never 'decoded'", async () => {
+  const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
+  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  await screen.findByTestId("body-json");
+
+  expect(screen.getByRole("radio", { name: "pretty" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "raw" })).not.toBeChecked();
+  expect(screen.queryByRole("radio", { name: "decoded" })).toBeNull();
+});
+
 test("the raw segment refetches undecoded and dispatches on the bytes, not the type", async () => {
   const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
   render(<BodyViewer api={api} flow={flow()} leg="response" />);
@@ -132,6 +145,11 @@ test("the raw segment refetches undecoded and dispatches on the bytes, not the t
 
   await screen.findByTestId("body-text");
   expect(api.getBody).toHaveBeenLastCalledWith(flow().id, "response", false);
+
+  fireEvent.click(screen.getByRole("radio", { name: "pretty" }));
+
+  await screen.findByTestId("body-json");
+  expect(api.getBody).toHaveBeenLastCalledWith(flow().id, "response", true);
 });
 
 test("a text body over TEXT_MAX states its truncation instead of swallowing it", async () => {

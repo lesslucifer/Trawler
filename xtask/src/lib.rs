@@ -31,6 +31,7 @@ usage:
   cargo xtask dod list [--epic <id>]
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
   cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
+  cargo xtask ui bench                                        (pnpm install + run the perf benchmarks)
   cargo xtask ui e2e                                          (build e2e app + drive the real window via WebdriverIO)
   cargo xtask ui specimens [--check]                          (compile the collection for design files; --check renders each over file://)
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";

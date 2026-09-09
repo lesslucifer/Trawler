@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — DEC-39: motion-informs bans decoration, not progress</title>
+  <title>Trawler — DEC-41: motion-informs bans decoration, not progress</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>DEC-39 — <code>motion-informs</code> bans decoration, not progress: a spinner is allowed</h1>
+      <h1>DEC-41 — <code>motion-informs</code> bans decoration, not progress: a spinner is allowed</h1>
       <p>Two design runs read the rule as a ban on spinners and receipted it that way. Both went further
         than the rule they were applying. This records the reading that stands, so a third run does not
         re-derive it.</p>
@@ -30,7 +30,7 @@
     <table data-c="history">
       <tr><th>Where</th><th>What it said</th></tr>
       <tr><td>Run 10 (<code>2026-09-05-export-run-10</code>)</td><td><em>"nothing animates; in-flight is a disabled control plus a static word, never a spinner or a bar"</em>, and in its stage log, <em>"the reason it is a word and not a spinner"</em>.</td></tr>
-      <tr><td>Run 11 (<code>2026-09-06-export-run-11</code>), which supersedes run 10</td><td><em>"nothing animates, and nothing moves"</em> — carrying its predecessor's verdict forward without re-testing it, which is the failure mode <a href="dec-38-the-predecessor-is-the-checklist.html">DEC-38</a> exists to catch.</td></tr>
+      <tr><td>Run 11 (<code>2026-09-06-export-run-11</code>), which supersedes run 10</td><td><em>"nothing animates, and nothing moves"</em> — carrying its predecessor's verdict forward without re-testing it, which is the failure mode <a href="dec-40-the-predecessor-is-the-checklist.html">DEC-40</a> exists to catch.</td></tr>
       <tr><td>The rulebook itself, unchanged throughout</td><td><em>"Motion and transience only communicate state change; nothing animates for decoration; transient feedback expires (~2 s)."</em> Its reviewer question: <em>"For each animation: what does it tell the user? 'Nothing' fails."</em></td></tr>
     </table>
     <p>The rule and the receipts disagreed, and the receipts were the stricter of the two. Because a

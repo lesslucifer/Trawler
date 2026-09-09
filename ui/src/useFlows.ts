@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Filter, FlowSummary, FlowView, TrawlerApi } from "./api";
-import { toRow } from "./flow";
+import { ApiError, type Filter, type FlowSummary, type FlowView, type TrawlerApi } from "./api";
+import { hostOf } from "./flow";
 
 const DEBOUNCE_MS = 150;
+
+// Whether the core answered, and what it said, are two facts and not two values
+// of one. A core can be silent about a query it would have refused, and a
+// refusal it already gave does not stop being true when the stream blips. Held
+// together they need a precedence rule inside the state; held apart, precedence
+// belongs where it is a design decision — in what each zone renders.
+//
+// `status` is the only /flows parameter with a grammar to violate, so a 400 is
+// always about the value in that box, which is why a refusal can name it.
+function refusalOf(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400;
+}
 
 // Live flow feed, ported from the web shell: server-side filtering (the API owns
 // the semantics) + a debounced refetch on filter change and on any SSE lifecycle
@@ -10,6 +22,15 @@ const DEBOUNCE_MS = 150;
 export function useFlows(api: TrawlerApi) {
   const [filter, setFilter] = useState<Filter>({});
   const [flows, setFlows] = useState<FlowSummary[]>([]);
+  // The core is not answering. Two things observe it — a listing that did not
+  // come back, and the stream dropping — and both write here. Rows already on
+  // screen survive it: they were true when they arrived, and discarding evidence
+  // on a transient failure is the worse error.
+  const [silent, setSilent] = useState(false);
+  // The status value the core refused, or null. Distinct from silence: the core
+  // answered, and what it said was no.
+  const [refused, setRefused] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
   // tunnel but no flow). Onboarding reads it as "traffic has reached Trawler at
@@ -28,20 +49,63 @@ export function useFlows(api: TrawlerApi) {
   const filterRef = useRef(filter);
   filterRef.current = filter;
 
+  // Four things trigger a listing — the filter effect, an SSE event, the stream
+  // coming back, and retry — so responses can land out of order. Only the newest
+  // request may write: a straggler is answering a question already answered, and
+  // letting it through un-does a retry the user just watched succeed.
+  const latest = useRef(0);
+
+  // Two-armed `then` rather than `catch`, so a throw from the success arm is
+  // never read as a failed fetch.
   const refresh = useCallback(() => {
-    api
-      .listFlows(filterRef.current)
-      .then((list) => {
+    const mine = ++latest.current;
+    // What was asked, captured with the request: by the time a refusal comes
+    // back the box may hold something the core has never judged.
+    const asked = filterRef.current.status ?? "";
+    return api.listFlows(filterRef.current).then(
+      (list) => {
+        if (mine !== latest.current) return;
         setFlows(list);
         setHosts((known) => merge(known, list));
-      })
-      .catch(() => {});
+        setRefused(null);
+        setSilent(false);
+      },
+      (error: unknown) => {
+        if (mine !== latest.current) return;
+        if (refusalOf(error)) {
+          // The core answered, so it is not silent — and a refused query has no
+          // answer to show, so the rows go with it and the count reads what is
+          // on screen.
+          setFlows([]);
+          setRefused(asked);
+          setSilent(false);
+          return;
+        }
+        // No answer, or one the core should not have given. Either way the rows
+        // are unverified rather than absent, so they stay.
+        setSilent(true);
+        // A refusal is about the value it was asked with. Silence on a
+        // different value teaches nothing about it, but leaves it describing
+        // something the box no longer holds — so it goes. Silence on the
+        // refused value itself leaves it standing.
+        setRefused((refusal) => (refusal === asked ? refusal : null));
+      },
+    );
   }, [api]);
 
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const debouncedRefresh = useCallback(() => {
     clearTimeout(timer.current);
     timer.current = setTimeout(refresh, DEBOUNCE_MS);
+  }, [refresh]);
+
+  // Undebounced on purpose — the user asked for this one fetch, and its whole
+  // in-flight window is rendered (fork D4), so it may not begin 150ms after the
+  // button says it has.
+  const retry = useCallback(() => {
+    clearTimeout(timer.current);
+    setRetrying(true);
+    return refresh().finally(() => setRetrying(false));
   }, [refresh]);
 
   useEffect(() => {
@@ -54,6 +118,7 @@ export function useFlows(api: TrawlerApi) {
     // after a bump already landed, and its count predates that connection. Merge as
     // a floor (max) inside the functional updater so the stale seed can never regress
     // a value live events have already advanced — the counter is monotonic anyway.
+    // A failed seed says nothing the listing has not already said, so it stays quiet.
     api.connectionCount().then((c) => setConnections((n) => Math.max(n, c))).catch(() => {});
     const close = api.stream({
       onEvent: debouncedRefresh,
@@ -61,6 +126,13 @@ export function useFlows(api: TrawlerApi) {
         setConnections((n) => n + 1);
         setLastConnectionAt(Date.now());
       },
+      // A core that dies under an open window sends nothing — so the dropped
+      // stream is the only thing that can say so before the next keystroke. It
+      // says only that: a refusal the core already gave is a separate fact and
+      // stays exactly as it was.
+      onDown: () => setSilent(true),
+      // The stream came back; whether the listing did is the listing's to say.
+      onUp: debouncedRefresh,
     });
     return close;
   }, [api, debouncedRefresh]);
@@ -70,13 +142,24 @@ export function useFlows(api: TrawlerApi) {
     [],
   );
 
-  return { filter, flows, hosts, connections, lastConnectionAt, update };
+  return {
+    filter,
+    flows,
+    hosts,
+    connections,
+    lastConnectionAt,
+    silent,
+    refused,
+    retrying,
+    retry,
+    update,
+  };
 }
 
-function merge(known: string[], list: FlowSummary[]): string[] {
+export function merge(known: string[], list: FlowSummary[]): string[] {
   const seen = new Set(known);
   for (const flow of list) {
-    const { host } = toRow(flow);
+    const host = hostOf(flow.uri);
     if (host) seen.add(host);
   }
   return seen.size === known.length ? known : [...seen].sort();
@@ -84,23 +167,33 @@ function merge(known: string[], list: FlowSummary[]): string[] {
 
 // Fetches GET /flows/{id} when the selection changes; null clears it. A cancel
 // flag drops a stale response if the selection moves before the fetch resolves.
-export function useFlowDetail(api: TrawlerApi, id: string | null) {
+// `failed` is what separates a fetch that did not produce a flow from one still
+// in flight — without it the pane holds "loading this flow…" forever, which is
+// the one claim that is false in both cases. It says only that: the pane names
+// no cause, because the causes it would have to tell apart (a dropped flow, a
+// refused id, a dead core) are the shell's or a later run's to word.
+// `nonce` lets the shell's retry re-run this fetch alongside the listing.
+export function useFlowDetail(api: TrawlerApi, id: string | null, nonce = 0) {
   const [flow, setFlow] = useState<FlowView | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setFlow(null);
+    setFailed(false);
     if (id == null) return;
     let cancelled = false;
-    api
-      .getFlow(id)
-      .then((f) => {
+    api.getFlow(id).then(
+      (f) => {
         if (!cancelled) setFlow(f);
-      })
-      .catch(() => {});
+      },
+      () => {
+        if (!cancelled) setFailed(true);
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [api, id]);
+  }, [api, id, nonce]);
 
-  return flow;
+  return { flow, failed };
 }

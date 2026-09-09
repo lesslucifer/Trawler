@@ -19,7 +19,7 @@ use uuid::Uuid;
 use super::view::{self, FlowPageView, FlowSummary, FlowView};
 use super::{curl, decode, har};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
-use crate::store::{FlowFilter, Store};
+use crate::store::{FlowFilter, StatusMatch, Store, STATUS_GRAMMAR};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,15 +36,17 @@ pub struct AppState {
 pub struct FilterQuery {
     host: Option<String>,
     method: Option<String>,
-    status: Option<u16>,
+    status: Option<String>,
     content_type: Option<String>,
     q: Option<String>,
     source: Option<String>,
 }
 
 impl FilterQuery {
-    /// Fails rather than ignoring an unrecognised `source`: an empty listing
-    /// reads to a caller exactly like "nothing matched".
+    /// Fails rather than ignoring an unrecognised `source` or `status`: an empty
+    /// listing reads to a caller exactly like "nothing matched". Both refusals
+    /// live here rather than in each endpoint, so the export and the clear refuse
+    /// exactly what the listing refuses.
     fn into_filter(self) -> Result<FlowFilter, &'static str> {
         let source = match self.source.as_deref() {
             None => None,
@@ -52,10 +54,16 @@ impl FilterQuery {
                 Some(view::parse_source(value).ok_or("source must be captured or imported")?)
             }
         };
+        let status = self
+            .status
+            .as_deref()
+            .map(str::parse::<StatusMatch>)
+            .transpose()
+            .map_err(|()| STATUS_GRAMMAR)?;
         Ok(FlowFilter {
             host: self.host,
             method: self.method,
-            status: self.status,
+            status,
             content_type: self.content_type,
             q: self.q,
             source,

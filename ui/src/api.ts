@@ -74,6 +74,20 @@ export function filterParams(filter: Filter): URLSearchParams {
   return params;
 }
 
+// The API answered and refused. Its absence is the other outcome: a fetch that
+// rejects never produces one, so `instanceof ApiError` is how a caller tells a
+// core that said no from a core that said nothing — the distinction the shell
+// renders as two different sentences.
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 declare global {
   interface Window {
     __TRAWLER_API__?: string;
@@ -94,6 +108,13 @@ export function defaultBaseUrl(): string {
   return import.meta.env.VITE_TRAWLER_API ?? "http://127.0.0.1:7421";
 }
 
+// The address the shell's connection sentences name. Derived, never written
+// down: DEC-12 keeps the API location configurable, so the words on screen have
+// to follow it.
+export function apiAddr(): string {
+  return defaultBaseUrl().replace(/^https?:\/\//, "");
+}
+
 // The proxy address resolves the same way as the base URL (DEC-12: configurable,
 // never hardcoded in component code). Both snippets and the native set-proxy
 // command consume it as data.
@@ -111,6 +132,12 @@ export interface StreamHandlers {
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
   // Onboarding stamps its arrival and judges it by recency; the flow list ignores it.
   onConnection?: () => void;
+  // The stream itself went down or came back. This is the only signal that
+  // arrives without the user doing anything, so it is what lets the shell state
+  // a core that died under an open window rather than waiting for the next
+  // keystroke to discover it.
+  onDown?: () => void;
+  onUp?: () => void;
 }
 
 export interface TrawlerApi {
@@ -122,7 +149,7 @@ export interface TrawlerApi {
   connectionCount(): Promise<number>;
   caCertPem(): Promise<string>;
   getFlow(id: string): Promise<FlowView>;
-  getBody(id: string, leg: Leg, decode: boolean): Promise<BodyFetch>;
+  getBody(id: string, leg: Leg, pretty: boolean): Promise<BodyFetch>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -133,7 +160,7 @@ export function createApi(baseUrl?: string): TrawlerApi {
   return {
     async listFlows(filter) {
       const res = await fetch(`${base()}/flows?${filterParams(filter)}`);
-      if (!res.ok) throw new Error(`GET /flows failed: ${res.status}`);
+      if (!res.ok) throw new ApiError(res.status, `GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
     },
     async exportHar(filter) {
@@ -172,33 +199,34 @@ export function createApi(baseUrl?: string): TrawlerApi {
     },
     async connectionCount() {
       const res = await fetch(`${base()}/stats`);
-      if (!res.ok) throw new Error(`GET /stats failed: ${res.status}`);
+      if (!res.ok) throw new ApiError(res.status, `GET /stats failed: ${res.status}`);
       return ((await res.json()) as { connections: number }).connections;
     },
     async caCertPem() {
       const res = await fetch(`${base()}/ca.crt`);
-      if (!res.ok) throw new Error(`GET /ca.crt failed: ${res.status}`);
+      if (!res.ok) throw new ApiError(res.status, `GET /ca.crt failed: ${res.status}`);
       return res.text();
     },
     async getFlow(id) {
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}`);
-      if (!res.ok) throw new Error(`GET /flows/${id} failed: ${res.status}`);
+      if (!res.ok) throw new ApiError(res.status, `GET /flows/${id} failed: ${res.status}`);
       return (await res.json()) as FlowView;
     },
-    async getBody(id, leg, decode) {
-      // Raw asks for `source`, not the stored bytes: a compressed body's stored
-      // form is a hex dump of gzip frames, which answers no question a reader
-      // has. `source` reverses only the transport encoding, so raw stays the
-      // bytes the server sent — unindented and untranscoded.
-      const query = decode ? "?decode=1" : "?decode=source";
+    async getBody(id, leg, pretty) {
+      // Both views are decoded — the parameter picks which resolution. Raw asks
+      // for `source`, not the stored bytes: a compressed body's stored form is a
+      // hex dump of gzip frames, which answers no question a reader has.
+      // `source` reverses only the transport encoding, so raw stays the bytes
+      // the server sent — unindented and untranscoded.
+      const query = pretty ? "?decode=1" : "?decode=source";
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}/${leg}/body${query}`);
-      if (!res.ok) throw new Error(`GET ${leg} body for ${id} failed: ${res.status}`);
+      if (!res.ok) throw new ApiError(res.status, `GET ${leg} body for ${id} failed: ${res.status}`);
       return {
         bytes: new Uint8Array(await res.arrayBuffer()),
         contentType: res.headers.get("content-type"),
       };
     },
-    stream({ onEvent, onConnection }) {
+    stream({ onEvent, onConnection, onDown, onUp }) {
       const source = new EventSource(`${base()}/stream`);
       // `connection` is deliberately absent here: a bare tunnel never becomes a
       // flow, so it must not trigger a /flows refetch — only bump the counter.
@@ -206,6 +234,10 @@ export function createApi(baseUrl?: string): TrawlerApi {
         source.addEventListener(name, onEvent);
       }
       if (onConnection) source.addEventListener("connection", onConnection);
+      // EventSource reconnects on its own, so `error` is "the stream is not up
+      // right now" rather than "give up"; `open` is the recovery it pairs with.
+      if (onDown) source.addEventListener("error", onDown);
+      if (onUp) source.addEventListener("open", onUp);
       return () => source.close();
     },
   };

@@ -1652,7 +1652,7 @@ mod tests {
         }
 
         // The WU's central claim, and an all-inputs one: whatever the ring can
-        // hold, exported and read back, compares equal on exactly what DEC-35
+        // hold, exported and read back, compares equal on exactly what DEC-37
         // says the format preserves — and the property names the unpreserved
         // facts too, so the boundary is documented rather than assumed.
         proptest! {

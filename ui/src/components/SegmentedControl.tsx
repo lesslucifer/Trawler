@@ -12,7 +12,7 @@ export interface SegmentOption {
  *   mean is the tenant's business logic
  * @anatomy bordered inline group · hairline dividers · active segment filled soft,
  *   inactive muted · radiogroup semantics, roving tabindex
- * @use any always-visible mutually exclusive view/mode switch: decode (raw | decoded)
+ * @use any always-visible mutually exclusive view/mode switch: the body view (raw | pretty)
  *   · leg (request | response)
  * @avoid actions (that is a button) · multi-select · tabs that own panels (tablist)
  *   · >4 options · domain rules in the control — defaults, persistence, visibility

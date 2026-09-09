@@ -124,7 +124,7 @@ sequenceDiagram
         <tr><td>Compact live events</td><td>SSE carries lifecycle notifications (ids, method/uri/status, body <em>state</em>), not encoded bodies; clients fetch detail on demand.</td></tr>
         <tr><td>View-side decoding</td><td>Capture stores raw bytes faithfully; decoding (content-encoding reversal, charset→UTF-8, JSON/XML pretty-print) is an opt-in read transform (<code>?decode=1</code>), isolated in one place.</td></tr>
         <tr><td>Control endpoints on the API port</td><td>Everything a client needs — including the CA certificate download — is served off the API port, not the forward-proxy port.</td></tr>
-        <tr><td>Open CORS on loopback</td><td>Loopback-bound API carries an open CORS grant so an out-of-process webview client can reach it — widened to the methods its mutating routes need, and adding no exposure beyond the bind address (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a> for the grant, <a href="decisions/dec-36-imported-flows-are-marked.html#cors">DEC-36</a> for the widening).</td></tr>
+        <tr><td>Open CORS on loopback</td><td>Loopback-bound API carries an open CORS grant so an out-of-process webview client can reach it — widened to the methods its mutating routes need, and adding no exposure beyond the bind address (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a> for the grant, <a href="decisions/dec-38-imported-flows-are-marked.html#cors">DEC-38</a> for the widening).</td></tr>
         <tr><td>UI out of process</td><td>The native app is a separate project and a network client only, so a headless core build stays GUI-free (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
       </tbody>
     </table>

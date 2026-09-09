@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
+    "bench": "vitest bench --run",
     "tauri": "tauri"
   },
   "dependencies": {

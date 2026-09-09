@@ -52,10 +52,12 @@ export const config: WebdriverIO.Config = {
   runner: "local",
   // One core for the whole run, specs sequential (maxInstances 1) — so a captured
   // flow persists across specs. Onboarding's "fresh launch shows onboarding" is only
-  // true before any flow exists, so it MUST run first; the inspector spec then reuses
-  // the revealed list. The capture spec goes last because it empties that list.
-  // Order is explicit, not alphabetical-by-accident.
-  specs: ["./specs/onboarding.spec.ts", "./specs/flows.spec.ts", "./specs/capture.spec.ts"],
+  // true before any flow exists, so it MUST run first. The flows spec MUST run last:
+  // its closing pair kills the core to prove the shell states a silence, and the
+  // harness exits the process rather than draining it, so nothing can follow. The
+  // capture spec sits between them — it empties the capture, which the flows spec
+  // refills from its own hits. Order is explicit, not alphabetical-by-accident.
+  specs: ["./specs/onboarding.spec.ts", "./specs/capture.spec.ts", "./specs/flows.spec.ts"],
   maxInstances: 1,
 
   services: [["@wdio/tauri-service", { driverProvider: "embedded" }]],

@@ -3,6 +3,7 @@ import {
   bodyNotice,
   bodyText,
   byteLength,
+  decodeBody,
   formEntries,
   formPairCut,
   hexDump,
@@ -340,3 +341,41 @@ test("openFile's browser fallback settles on a chosen file and on a dismissal al
   inputs[3].dispatchEvent(new Event("change"));
   await expect(unreadable).rejects.toThrow("no longer there");
 });
+
+describe("decodeBody", () => {
+  it("reports a whole decode, and returns what the lenient decoder returns", () => {
+    const bytes = new TextEncoder().encode("résumé — naïve");
+
+    expect(decodeBody(bytes)).toEqual({ text: bodyText(bytes), whole: true });
+  });
+
+  it("calls a body whole when it carries a replacement character of its own", () => {
+    const bytes = new TextEncoder().encode("lost: \uFFFD");
+
+    expect(decodeBody(bytes)).toEqual({ text: "lost: \uFFFD", whole: true });
+    expect(byteLength(bodyText(bytes))).toBe(bytes.length);
+  });
+
+  it("reports a lossy decode, and still returns the text to render", () => {
+    const bytes = new Uint8Array([0x68, 0x69, 0xff, 0xfe]);
+    const decoded = decodeBody(bytes);
+
+    expect(decoded.whole).toBe(false);
+    expect(decoded.text).toBe(bodyText(bytes));
+    expect(byteLength(decoded.text)).toBeGreaterThan(bytes.length);
+  });
+
+  // A mark is consumed rather than decoded, so the text comes out shorter than
+  // the bytes without a single one being replaced. The body's size stays its
+  // bytes' — that is what a save writes — and the text's is no longer it.
+  it("calls a body carrying a byte-order mark whole, though the mark leaves its text", () => {
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("hi")]);
+    const decoded = decodeBody(bytes);
+
+    expect(decoded).toEqual({ text: "hi", whole: true });
+    expect(byteLength(decoded.text)).toBe(bytes.length - 3);
+  });
+
+  it("reports an empty body whole — there is no byte to fail on", () => {
+    expect(decodeBody(new Uint8Array())).toEqual({ text: "", whole: true });
+  });});

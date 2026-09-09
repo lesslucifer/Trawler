@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v18 · 2026-09-06 · Trawler</div>
+      <div class="meta">v19 · 2026-09-09 · Trawler</div>
     </div>
   </header>
   <main>
@@ -265,7 +265,7 @@
           <td><span class="badge id">DEC-32</span></td>
           <td><strong>A detail panel never scrolls as a whole; the body is its main zone and every other zone is
             bounded.</strong> Against real traffic the built flow detail put a four-screen header table (three
-            cookies, a token, a CSP, each wrapping to thirty lines in a 380px pane) above the body, and WebKit let
+            cookies, a token, a CSP, each wrapping to thirty lines in the 380px pane of the time — 520 since DEC-36) above the body, and WebKit let
             that table's overflow leak past its scroll container into the window. Settled: identity row and flow
             line are chrome at natural height; the headers take their natural height up to 35% of the panel
             (<code>max-h-zone-cap</code>) and scroll inside, the heading naming the row count; the body takes the
@@ -308,8 +308,39 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-35-har-as-the-interchange-format.html"><code>dec-35-har-as-the-interchange-format.html</code></a></td>
+          <td><a href="dec-35-citations-resolve-or-fail.html"><code>dec-35-citations-resolve-or-fail.html</code></a></td>
           <td><span class="badge id">DEC-35</span></td>
+          <td><strong>A docstring citation resolves against the tree, or it fails a test</strong> — DEC-16 makes a
+            built component's TSDoc its retired design file, so an entry naming deleted code is the contract lying,
+            and seven such claims across five of the 28 entries survived a design run, a Tier-3 review and a merge
+            gate. A citation is a <em>path</em> or a <em>two-hump name</em> (the hump is what leaves <code>Inter</code>,
+            <code>JSON</code> and <code>STANDING</code> unasked); a name resolves through an export, a module basename,
+            an imported binding or a <code>package.json</code> dependency, a path through <code>git ls-files</code> by
+            full path or bare basename. <strong>Every source is derived from the tree, so there is no allowlist</strong>
+            — the rejected option, and the one the next annoyed reader will reach for. Also rejected: requiring full
+            paths in prose (<code>decode.rs</code> is true), verifying a <code>:N</code> pin's line (nothing can know
+            what it should say), widening the registry's emitted entry with <code>@anatomy</code>, and wiring it into
+            <code>verify-doc</code> mid-epic. Enforces DEC-30's thesis; a prose claim naming no identifier is still
+            only a reader's job</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-36-the-pane-and-the-window.html"><code>dec-36-the-pane-and-the-window.html</code></a></td>
+          <td><span class="badge id">DEC-36</span></td>
+          <td><strong>The pane width and the window are one decision</strong> — the flow detail pane is
+            <code>520px</code> and the app's default window is <code>1440</code>, because
+            <code>path = window − pane − 612</code>: every pixel the pane takes comes out of the list's one
+            unbounded column. The 380 it shipped at was a token nobody chose, and under DEC-32's three-line clamp
+            the pane's width <em>is</em> how much of a long value a reader sees before acting — ~108 characters
+            before, ~168 after, with the path cell going 208 → 308&nbsp;px in the same move. Rejected: keeping 380,
+            440 (27 characters for 60&nbsp;px of every path), 560+, a bounded share <code>min(40%, 520px)</code>
+            (measured 8&nbsp;px from the fixed choice at 1280 and identical above 1300), a draggable split (a stored
+            preference, a drag affordance and a minimum on both sides, for an unshown gain), and raising the minimum
+            window (it narrows a capability the list alone uses). <strong>Carries a known defect made wider</strong>:
+            no valid arrangement below 1132&nbsp;px with the pane open, up from 992, against a declared minimum of
+            800 — escalated with the arithmetic rather than fixed by re-deciding the row grammar</td>
+          <td><a href="dec-37-har-as-the-interchange-format.html"><code>dec-37-har-as-the-interchange-format.html</code></a></td>
+          <td><span class="badge id">DEC-37</span></td>
           <td><strong>HAR 1.2 is the one interchange format</strong>, chosen because the tools a recipient already
             runs can open it — Trawler's own JSON, a second native format and multi-format support all rejected.
             Where HAR requires a field Trawler has no truthful value for, the answer is <strong>HAR's own sentinel,
@@ -322,8 +353,8 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-36-imported-flows-are-marked.html"><code>dec-36-imported-flows-are-marked.html</code></a></td>
-          <td><span class="badge id">DEC-36</span></td>
+          <td><a href="dec-38-imported-flows-are-marked.html"><code>dec-38-imported-flows-are-marked.html</code></a></td>
+          <td><span class="badge id">DEC-38</span></td>
           <td><strong>An imported flow is a first-class flow carrying a closed-enum
             <code>source</code> mark</strong> (<code>captured</code> | <code>imported</code>), in the same
             byte-weighted ring and under the same read paths — a second store beside the ring and a free-text
@@ -337,8 +368,8 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-37-curl-parser-accepts-what-a-browser-emits.html"><code>dec-37-curl-parser-accepts-what-a-browser-emits.html</code></a></td>
-          <td><span class="badge id">DEC-37</span></td>
+          <td><a href="dec-39-curl-parser-accepts-what-a-browser-emits.html"><code>dec-39-curl-parser-accepts-what-a-browser-emits.html</code></a></td>
+          <td><span class="badge id">DEC-39</span></td>
           <td><strong>The curl parser accepts what a browser's "Copy as cURL" and the app's own copy-as-curl
             emit, and refuses every other token naming it</strong> — never reimplementing curl, never ignoring
             what it does not understand, because a silently dropped flag yields a flow subtly unlike the pasted
@@ -349,8 +380,8 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-38-the-predecessor-is-the-checklist.html"><code>dec-38-the-predecessor-is-the-checklist.html</code></a></td>
-          <td><span class="badge id">DEC-38</span></td>
+          <td><a href="dec-40-the-predecessor-is-the-checklist.html"><code>dec-40-the-predecessor-is-the-checklist.html</code></a></td>
+          <td><span class="badge id">DEC-40</span></td>
           <td><strong>A design run that supersedes another closes by walking the predecessor and classifying
             every answer in it as held, changed, or dropped</strong> — close step ① in
             <a href="../design-flow.html#close">design-flow</a>, first because every later step reads the new
@@ -363,8 +394,8 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-39-motion-informs-bans-decoration-not-progress.html"><code>dec-39-motion-informs-bans-decoration-not-progress.html</code></a></td>
-          <td><span class="badge id">DEC-39</span></td>
+          <td><a href="dec-41-motion-informs-bans-decoration-not-progress.html"><code>dec-41-motion-informs-bans-decoration-not-progress.html</code></a></td>
+          <td><span class="badge id">DEC-41</span></td>
           <td><strong><code>motion-informs</code> forbids animation that carries no information, not
             animation</strong> — so an in-flight indicator may turn. Design runs 10 and 11 both receipted the
             slug as a ban on spinners (<em>"never a spinner or a bar"</em>, then <em>"nothing animates"</em>),
@@ -375,8 +406,7 @@
             displaces nothing, and is never the only channel. The rulebook text is unchanged — nothing in it
             was wrong, two applications of it were. Found by E-EXPORT.W6's review, which caught the reasoning
             living only in a design file the same WU retired. Rejected: editing the rulebook, deleting the
-            runs' original wording</td>
-          <td><span class="badge auto">active</span></td>
+            runs' original wording</td>          <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
     </table>

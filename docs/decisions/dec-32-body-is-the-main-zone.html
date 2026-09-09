@@ -35,6 +35,10 @@
     thirty lines. The body — the zone the reader clicked the row to see — sat below all of it. And in WebKit the
     overflow of that table leaked past its scroll container into the document, so the <em>window</em> gained four
     screens of empty scroll below the app.</p>
+    <p class="meta">The numbers on this page are the 380&nbsp;px pane this record was written against. The pane
+    is <strong>520&nbsp;px</strong> since <a href="dec-36-the-pane-and-the-window.html">DEC-36</a>, which makes the
+    same cookie twenty lines rather than thirty. The ruling is unchanged — a wider pane moves the cost, it does not
+    remove it.</p>
     <div class="callout" data-c="why-a-decision">
       <p><strong>The design was right about the data and wrong about the space.</strong> Every header must still be
       readable in full, in wire order, with duplicates preserved, and copyable whole. What a fixed-height panel
@@ -84,7 +88,7 @@
 │   more                                  ▼   │
 ├─────────────────────────────────────────────┤
 │ BODY                                        │  primary · takes the rest,
-│ [decoded│raw]           [copy body] [↓]     │  scrolls inside
+│ [pretty│raw]            [copy body] [↓]     │  scrolls inside
 │ {                                           │
 │   "greeting": "hello",                      │
 │   …                                         │

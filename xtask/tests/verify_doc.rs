@@ -429,3 +429,112 @@ fn this_repo_s_own_docs_resolve_every_link_they_ship() {
         .unwrap();
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
 }
+
+// ─── the specs against their own gate ───────────────────────────────────────
+//
+// DEC-26 replaced the pre-bundle trio with one classic tag and moved the checks
+// with it; the two T1 specs that tell an author what to load did not move, and
+// nothing said so - a design file is refused by check-render.mjs and a run by
+// `assets·specimen`, each for a path its own spec dictated. The specs and the
+// gate are two statements of one shape, so they are asserted against each other
+// here rather than re-read by the next agent who copies a template.
+
+/// Every `src` a spec PRESCRIBES - written escaped inside a template block, which
+/// is what separates it from the spec's own `<head>`.
+fn prescribed_script_srcs(html: &str) -> Vec<String> {
+    html.split("&lt;script")
+        .skip(1)
+        .filter_map(|tail| {
+            let tag = tail.split("&gt;").next()?;
+            let at = tag.find("src=\"")? + "src=\"".len();
+            Some(tag[at..].split('"').next()?.to_string())
+        })
+        .collect()
+}
+
+/// Where a relative `src` written in `base`'s folder actually lands, repo-rooted.
+fn resolved_from(base: &str, relative: &str) -> String {
+    let mut parts: Vec<&str> = base.split('/').filter(|s| !s.is_empty()).collect();
+    for segment in relative.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
+}
+
+#[test]
+fn resolved_from_walks_the_relative_path_it_is_given() {
+    assert_eq!(
+        resolved_from("docs/work", "../../doc-assets/components/specimens.bundle.js"),
+        "doc-assets/components/specimens.bundle.js"
+    );
+    assert_eq!(
+        resolved_from("docs/work/components", "../../../doc-assets/components/x.js"),
+        "doc-assets/components/x.js"
+    );
+    assert_eq!(resolved_from("docs/work", "./a/b.js"), "docs/work/a/b.js");
+}
+
+#[test]
+fn the_design_specs_prescribe_assets_that_exist_where_their_artifact_sits() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    // Each spec is read from the folder ITS artifact lives in - a run is
+    // docs/work/<run>.html, a component design docs/work/components/<name>.html -
+    // so the two correct depths differ and both must land on the same directory.
+    for (spec, artifact_dir) in [
+        ("docs/design-flow.html", "docs/work"),
+        ("docs/component-design.html", "docs/work/components"),
+    ] {
+        let html = std::fs::read_to_string(root.join(spec)).unwrap();
+        let assets: Vec<String> = prescribed_script_srcs(&html)
+            .into_iter()
+            .filter(|src| src.contains("doc-assets/"))
+            .collect();
+        assert!(
+            assets.iter().any(|src| src.ends_with("specimens.bundle.js")),
+            "{spec} prescribes no specimens.bundle.js - an artifact built from it loads no \
+             collection to mount from, and check-render.mjs refuses it"
+        );
+        for src in assets {
+            let landed = resolved_from(artifact_dir, &src);
+            assert_eq!(
+                landed.rsplit_once('/').unwrap().0,
+                "doc-assets/components",
+                "{spec} prescribes {src}, which from {artifact_dir}/ resolves to {landed}"
+            );
+            assert!(
+                root.join("doc-assets/components").is_dir(),
+                "doc-assets/components/ is missing from the tree"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_run_spec_spells_the_bundle_src_the_gate_matches_literally() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    let flow = std::fs::read_to_string(root.join("docs/design-flow.html")).unwrap();
+    assert!(
+        flow.contains(&format!("src=\"{}\"", xtask::doc::BUNDLE)),
+        "design-flow.html's mockup template must spell {} verbatim - check_assets matches the \
+         src string, so a run pasted from a template that differs by one level fails \
+         assets·specimen for a bundle it does load",
+        xtask::doc::BUNDLE
+    );
+}
+
+#[test]
+fn the_component_spec_prescribes_the_babel_tag_its_mount_needs() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    let spec = std::fs::read_to_string(root.join("docs/component-design.html")).unwrap();
+    assert!(
+        prescribed_script_srcs(&spec).iter().any(|src| src.contains("babel")),
+        "the skeleton mounts from window.Trawler in a text/babel block, which needs Babel in \
+         the head - without it the mount never runs and every spec-* host renders empty"
+    );
+}

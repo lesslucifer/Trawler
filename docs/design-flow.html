@@ -250,10 +250,10 @@ scroll / overflow: &lt;which zone is pinned · which region scrolls · every
       <p class="kd"><code>data-item="mockup"</code> — the tagged element contains the state toggle</p>
     <div class="stage">
       <p><strong>Question:</strong> assembled, does it hold together as one screen?</p>
-      <p><strong>Form:</strong> a <strong>real build that mounts the real components</strong> — load the CDN plus <code>doc-assets/components/specimens.bundle.js</code> and render each composed element from <code>window.Trawler</code>. Stateful (a toggle across the states the Interaction table named).</p>
+      <p><strong>Form:</strong> a <strong>real build that mounts the real components</strong> — load the CDN plus <code>doc-assets/components/specimens.bundle.js</code> (<code>../../</code> from <code>docs/work/</code>, the folder a run lives in) and render each composed element from <code>window.Trawler</code>. Stateful (a toggle across the states the Interaction table named).</p>
       <div class="tmpl" data-c="tmpl-mockup">
         <pre>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
-&lt;script src="../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;
+&lt;script src="../../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;
 &lt;script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"&gt;&lt;/script&gt;
 
 &lt;div class="app"&gt;
@@ -317,7 +317,7 @@ soft:
     <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Hard rules leave the receipt and become predicates; each one still unimplemented is printed on every verify.</p>
 
     <h2 id="close">7 · Close the run <span class="badge id">a step, not a side effect</span></h2>
-    <p class="kd"><strong>Why ① is first, and why it walks the old run rather than reading the new one:</strong> a changed answer leaves a false statement behind, which review finds. A <em>dropped</em> answer leaves nothing — and a reader testing the new run's statements has no location at which the absent one is wrong. The predecessor's answers are the only checklist that names it (<a href="decisions/dec-38-the-predecessor-is-the-checklist.html">DEC-38</a>).</p>
+    <p class="kd"><strong>Why ① is first, and why it walks the old run rather than reading the new one:</strong> a changed answer leaves a false statement behind, which review finds. A <em>dropped</em> answer leaves nothing — and a reader testing the new run's statements has no location at which the absent one is wrong. The predecessor's answers are the only checklist that names it (<a href="decisions/dec-40-the-predecessor-is-the-checklist.html">DEC-40</a>).</p>
     <p><strong>Edits are batched, not cycled:</strong> apply all changes in one pass, <code>verify-doc</code> once, then batch residuals and verify again. The norm is <strong>edit twice, verify twice</strong> — never twelve edit→verify cycles.</p>
     <table data-c="tbl-close">
       <thead><tr><th>#</th><th>Do</th><th>What refuses it</th></tr></thead>
