@@ -1,0 +1,9 @@
+schema: dod/v1
+level: epic
+epic: E-RFINISH
+branch: HEAD
+base: aad6c3b6cf08ab805989a2c56c05fedb2bcba1da
+tip: 148d4e995f3e18649bca75a1d60d482d0af4b5cc
+diff_sha256: 694a50f535e991e8ebc79670f4b825ec5ad20daec24e4e3608a5c843981bddd4
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-09-09
