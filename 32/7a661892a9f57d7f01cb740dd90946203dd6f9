@@ -41,7 +41,7 @@ changes:
   - path: docs/backlog/roadmap.html
     tier: T2
     action: updated
-    distills: "The living backlog, rewritten once at the close. Two rows struck with what closed them; the E-ONBOARD row added at the v2 amendment rather than at the close, so the deferral was findable while it mattered, and marked unblocked now the shell/list track has merged; four rows added - the 1132px arrangement, Tier-1's blindness to a mockup's mounted JSX, gate check 8's untyped report, and WebdriverIO's *= selector that matches nothing without erroring. The Consequences paragraph says what the two redesign-track epics did to a sequence they do not appear in. v6 -> v7."
+    distills: "The living backlog, rewritten once at the close. Two rows struck with what closed them; the E-ONBOARD row added at the v2 amendment rather than at the close, so the deferral was findable while it mattered, and marked unblocked now the shell/list track has merged; four rows added - the 1132px arrangement, Tier-1's blindness to a mockup's mounted JSX, gate check 8's untyped report, and WebdriverIO's *= selector that matches nothing without erroring. The Consequences paragraph says what the two redesign-track epics did to a sequence they do not appear in. v5 -> v7 - v6 was the v2 amendment that added the E-ONBOARD row mid-epic, so the deferral was findable while it mattered rather than at the close."
   - path: docs/component-design.html
     tier: T1
     action: updated
