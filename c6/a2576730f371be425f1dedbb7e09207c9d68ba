@@ -1,0 +1,22 @@
+schema: test/v2
+level: wu
+epic: E-EXPORT
+wu: E-EXPORT.W10
+tests:
+  unit:
+    count: 840
+    covers: >-
+      the header's clear shortcut named for the live count, the two-act menu,
+      confirm-only persistence of don't show this again, the keyed notice store
+      including its closed key set and legacy remote filename, the browser
+      fallback that answers not-dismissed instead of throwing, and a refused
+      direct clear rendering under its own act rather than under export's.
+  integration:
+    count: 1
+    covers: >-
+      preference dismissed then a filtered header clear: no dialog opens, the
+      live filter reaches the store, and the list refills from the event bus.
+  e2e:
+    waived: >-
+      the epic owns the export -> clear -> import native path; this WU adds the
+      bounded UI integration contract and records the epic test as outstanding.
