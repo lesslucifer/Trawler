@@ -75,7 +75,7 @@ design:
     design scope was byte-identical across all four rounds - neither fix commit touched a UI-rendering file
     or a design artifact - so rounds 2-4 did not re-run the dimension over unchanged bytes; round 2 confirmed
     the rulebook blob and the artifact's last state were unchanged before standing on round 1's verdict.
-    Run 10 is archived as the superseded predecessor and carries no : it is a design run, not a
+    Run 10 is archived as the superseded predecessor and carries no built list of its own: it is a design run, not a
     component design file, so components·unbuilt never counted it and no drop record is owed.
     The independence caveat W6's note recorded holds here too: this session authored the epic-close code it
     is orchestrating a review of. It did not judge that code - the finders and verifiers did, and it was not
