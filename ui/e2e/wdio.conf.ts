@@ -15,6 +15,19 @@ const APP_BINARY = resolve(here, "../src-tauri/target/release/trawler-ui");
 // core's ports cross to the spec via this file — never a shared variable.
 export const PORTS_FILE = resolve(here, ".core-ports.json");
 
+// The app writes its dismissed-notice markers into the real user config dir, so
+// they outlive a run. A marker left by an earlier one would silence the clear ask
+// the capture spec exists to assert, and the spec's own last case leaves one
+// behind — so the run starts and ends without them.
+const NOTICE_MARKERS = [
+  "clear-ask-dismissed",
+  "remote-notice-dismissed",
+].map((name) => resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name));
+
+function clearNoticeMarkers() {
+  for (const marker of NOTICE_MARKERS) rmSync(marker, { force: true });
+}
+
 let harness: ChildProcessWithoutNullStreams | undefined;
 
 function startCore(): Promise<void> {
@@ -40,8 +53,9 @@ export const config: WebdriverIO.Config = {
   // One core for the whole run, specs sequential (maxInstances 1) — so a captured
   // flow persists across specs. Onboarding's "fresh launch shows onboarding" is only
   // true before any flow exists, so it MUST run first; the inspector spec then reuses
-  // the revealed list. Order is explicit, not alphabetical-by-accident.
-  specs: ["./specs/onboarding.spec.ts", "./specs/flows.spec.ts"],
+  // the revealed list. The capture spec goes last because it empties that list.
+  // Order is explicit, not alphabetical-by-accident.
+  specs: ["./specs/onboarding.spec.ts", "./specs/flows.spec.ts", "./specs/capture.spec.ts"],
   maxInstances: 1,
 
   services: [["@wdio/tauri-service", { driverProvider: "embedded" }]],
@@ -63,6 +77,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 60_000 },
 
   onPrepare: async () => {
+    clearNoticeMarkers();
     await startCore();
   },
   onComplete: async () => {
@@ -74,5 +89,6 @@ export const config: WebdriverIO.Config = {
     }
     harness?.kill();
     rmSync(PORTS_FILE, { force: true });
+    clearNoticeMarkers();
   },
 };

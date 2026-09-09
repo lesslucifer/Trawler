@@ -161,16 +161,21 @@ describe("UC-4 — watch live traffic in the native app", () => {
     const box = async (sel: string) =>
       browser.execute((s: string) => {
         const r = document.querySelector(s)!.getBoundingClientRect();
-        return { top: Math.round(r.top), w: Math.round(r.width) };
+        return { top: r.top, w: Math.round(r.width) };
       }, sel);
 
     const host = await box('button[aria-label="host"]');
     const method = await box('button[aria-label="method"]');
     const status = await box('input[aria-label="status"]');
 
-    // One row: the controls share a top edge, so the header did not wrap.
-    expect(host.top).toBe(method.top);
-    expect(method.top).toBe(status.top);
+    // One row: the controls share a top edge, so the header did not wrap. Within
+    // a pixel, not to the pixel — the row centres on its tallest child (the
+    // capture controls, 28px) and the status input is a quarter-pixel taller than
+    // the two dropdowns, so their centred tops differ by an eighth of a pixel. A
+    // wrap moves a control by a whole row; this tolerance cannot hide one.
+    const sameRow = (a: number, b: number) => expect(Math.abs(a - b)).toBeLessThan(1);
+    sameRow(host.top, method.top);
+    sameRow(method.top, status.top);
     // Select's own 132px floor is respected rather than crushed by the caller's width.
     expect(host.w).toBeGreaterThanOrEqual(132);
     expect(method.w).toBeGreaterThanOrEqual(132);
