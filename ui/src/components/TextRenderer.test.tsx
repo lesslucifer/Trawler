@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { TEXT_MAX } from "../body";
+import { byteLength, TEXT_MAX } from "../body";
 import { TextRenderer } from "./TextRenderer";
 
 describe("TextRenderer", () => {
@@ -44,6 +44,24 @@ describe("TextRenderer", () => {
     render(<TextRenderer text={"a".repeat(TEXT_MAX + 5000)} />);
 
     expect(screen.getByText(/⚠ showing 128 KiB of 133 KiB — save to see all/)).toBeInTheDocument();
+  });
+
+  // The fetch that produced the text already counted its bytes; re-deriving the
+  // count means encoding the whole body to read one number off it.
+  it("states the size its caller already knew", () => {
+    const text = "é".repeat(TEXT_MAX + 5000);
+    render(<TextRenderer text={text} size={2 * (TEXT_MAX + 5000)} />);
+
+    expect(screen.getByText(/⚠ showing 256 KiB of 266 KiB — save to see all/)).toBeInTheDocument();
+  });
+
+  it("derives the same size when its caller cannot supply one", () => {
+    const text = "é".repeat(TEXT_MAX + 5000);
+
+    const supplied = render(<TextRenderer text={text} size={byteLength(text)} />);
+    const derived = render(<TextRenderer text={text} />);
+
+    expect(derived.container.textContent).toBe(supplied.container.textContent);
   });
 
   it("states the cut in warn tone, never a silent ellipsis", () => {

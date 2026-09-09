@@ -12,10 +12,11 @@
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD).</p>
-      <div class="meta">v5 · 2026-09-06 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v7 · 2026-09-09 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span> · all three native surfaces re-designed and
-      rebuilt by <span class="badge id">E-REDESIGN</span></div>
+      rebuilt by <span class="badge id">E-REDESIGN</span> · UC-4's failure states, status class and pane
+      width by <span class="badge id">E-RFINISH</span></div>
     </div>
   </header>
   <main>
@@ -60,8 +61,12 @@
         to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.
         <strong>The two keys the API matches exactly are chosen, not typed</strong>: method from the closed
         set of verbs, host from the hosts capture has seen, each with an "any" option that clears it. Free
-        text and status stay typed — the API substring-matches the first, and the second is deferred
-        (a status <em>class</em> query is not expressible against the current API at all).</li>
+        text and status stay typed — the API substring-matches the first, and reads the second at either
+        resolution: <code>status=404</code> is the exact code and <code>status=4xx</code> the class, with
+        anything that names neither refused as a stated <code>400</code> rather than an empty list
+        (<span class="badge id">E-RFINISH</span>). The status control takes either resolution and says so
+        in its placeholder — <code>status — 404 or 4xx</code> — and a refusal is rendered rather than
+        swallowed (below).</li>
         <li>The app is a pure <em>cross-origin</em> client of <code>127.0.0.1:7421</code> — it reaches no
         core internals; everything it shows is equally reachable with <code>curl</code>. Because the
         webview origin differs from the API's, every API response carries an open CORS grant
@@ -100,6 +105,33 @@
         <td><code>GET</code>/<code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code> read
         apart at a glance in the method column, which previously carried no tone.</td></tr>
       </table>
+      <p>Three further capabilities came from <span class="badge id">E-RFINISH</span> W5/W6, designed at
+      the shell and flow-list second pass (<em>archived</em>). The first two are the same underlying
+      change: a failed fetch was discarded three times over, so the screen could not tell an unreachable
+      API from a quiet proxy.</p>
+      <table data-c="uc-4-gains-rfinish">
+        <tr><th>Gain</th><th>Why it is a contract change and not a restyle</th></tr>
+        <tr><td>The list <strong>states a core that is not answering</strong></td>
+        <td>A full-width band under the header says the API did not answer, names the address, says the
+        rows below are the last it sent, and offers a retry — <em>above rows it does not discard</em>,
+        because discarding evidence on a transient failure is the worse error. It appears with the user
+        doing nothing: the dropped SSE stream is the signal, so a core that dies under an idle window is
+        stated rather than waiting for the next keystroke. Previously the list simply froze, and a stale
+        list is indistinguishable from a quiet proxy.</td></tr>
+        <tr><td>A <strong>refused query says which value it refused</strong></td>
+        <td>A query the API answered and rejected is its own sentence in the row region, quoting the value
+        that was asked (<code>4xz is not a status · type a code (404) or a class (4xx)</code>) — with no
+        retry, because retrying an answered request cannot help. It is not the connection statement and
+        never appears alongside it: the API answering and saying no is a different fact from the API not
+        answering. Typing a letter in the status box previously stalled the list with no explanation — the
+        one state on this screen the user's own keystroke caused.</td></tr>
+        <tr><td>A long value is <strong>readable without expanding it</strong></td>
+        <td>The detail pane is 520&nbsp;px in a window that opens at 1440
+        (<a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a>) — a header value clamp
+        shows about 168 characters where it showed about 108, and the list's path cell gains 100&nbsp;px in
+        the same move. The width and the window are one decision: a wider pane alone makes the screen worse
+        at the size the app opens at.</td></tr>
+      </table>
       <p><strong>One rule is knowingly unmet, and now bounded.</strong> The host and path cells truncate
       rather than wrap, because a virtualized fixed-height row cannot both wrap and stay one line. The full
       value stays reachable — the path on the row's title, both in the detail pane's URI — and the cut is
@@ -114,7 +146,12 @@
       WebdriverIO drives the real WebKit window against an ephemeral <code>run(Config)</code> core — empty
       layout renders, a proxied request appears live carrying every column, the status pill carries its
       reason phrase, the filter narrows and restores, an unmatched filter states its own absence, the
-      keyboard alone selects a row and opens its detail, and a second request appends without refresh. Unit + integration layers (Vitest + Testing Library) cover the status-color
+      keyboard alone selects a row and opens its detail, and a second request appends without refresh. Three
+      assertions came with the second pass: a status class narrows the list to that class while 2xx and 5xx
+      traffic is present and an exact code still narrows to the code; the core is killed under the open
+      window and the band appears above rows whose count is unchanged; and its control — a reachable core
+      whose filter matches nothing — renders the absence instead, which is what proves the two screens
+      differ. Unit + integration layers (Vitest + Testing Library) cover the status-color
       mapping, the typed client, filter→params, and the layout+list against a mock API. Existing API
       contracts (<code>GET /flows</code>, <code>GET /stream</code>) are consumed unchanged; the CORS grant
       is the one API-response addition. UC-3 (web shell) stays valid — both surfaces are clients of the
@@ -144,7 +181,11 @@
         height up to about a third of the panel and scroll inside it, the heading naming how many there are;
         the body takes the rest and scrolls inside itself. A header value taller than three lines — a
         cookie, a token, a policy — is clamped with <em>more</em> / <em>less</em> under its name: lines are
-        hidden, never characters, the value still copies whole, and one act shows all of it.</li>
+        hidden, never characters, the value still copies whole, and one act shows all of it. How much a
+        clamped value shows before that act is the panel's width, and the width is a chosen number:
+        520&nbsp;px, with the app's default window at 1440 to pay for it
+        (<a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a>, <span class="badge id">E-RFINISH</span>) —
+        about 168 characters of a 900-character cookie instead of about 108.</li>
         <li><strong>Esc dismisses the panel</strong>, as does ✕, and focus returns to the list that opened
         it, so a keyboard user lands back on the row they came from.</li>
         <li><strong>Bodies render by content type</strong> over
@@ -153,7 +194,7 @@
         checkerboard, form-urlencoded as decoded key/value rows (each value individually
         copyable), other text as text, anything else as a toned hex dump.</li>
         <li><strong>Raw shows the source, not the compression frames</strong>: the
-        <strong>raw / decoded</strong> toggle switches between the bytes the server sent
+        <strong>raw / pretty</strong> toggle switches between the bytes the server sent
         (<code>?decode=source</code> — transport encoding reversed, nothing re-indented or
         transcoded) and the fully rendered view (<code>?decode=1</code> — decompressed,
         charset-normalised, JSON/XML pretty-printed). A gzipped JSON body therefore reads as its minified
@@ -179,7 +220,7 @@
         opens in the right application.</li>
         <li>The <code>?decode=1</code> contract is server-side — gzip/deflate/brotli reversal,
         charset→UTF-8, JSON + XML pretty-printing — so <code>curl</code> and the web shell gain
-        the same decoded view the app shows.</li>
+        the same pretty view the app shows.</li>
       </ul>
     </div>
 

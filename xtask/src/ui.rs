@@ -18,6 +18,11 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
             pnpm(&dir, &["tauri", "dev"], &[])?;
             Ok((0, String::new()))
         }
+        ["bench"] => {
+            pnpm(&dir, &["install"], &[])?;
+            pnpm(&dir, &["bench"], &[])?;
+            Ok((0, "ui bench complete".to_string()))
+        }
         ["e2e"] => e2e(&dir),
         ["specimens"] => specimens(repo, "build-specimens.mjs"),
         ["specimens", "--check"] => specimens(repo, "check-render.mjs"),
@@ -94,6 +99,13 @@ mod tests {
     fn unknown_ui_subcommand_is_usage_error() {
         let err = run(&["frobnicate"], Path::new(".")).unwrap_err();
         assert!(err.contains("usage:"));
+    }
+
+    #[test]
+    fn bench_takes_no_arguments_and_is_documented() {
+        let err = run(&["bench", "--forever"], Path::new(".")).unwrap_err();
+        assert!(err.contains("usage:"));
+        assert!(super::super::USAGE.contains("cargo xtask ui bench"));
     }
 
     #[test]

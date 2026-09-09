@@ -80,7 +80,7 @@ export default {
       "field-lg": "160px",
       "pane-narrow": "208px",
       "pane-label": "256px",
-      pane: "380px",
+      pane: "520px",
       "listing-max": "184px",
       "body-max": "256px",
       "dialog-max": "384px",

@@ -4,6 +4,7 @@ import { json } from "@codemirror/lang-json";
 import type { ReactElement } from "react";
 import * as collection from "./index";
 import { registry } from "../../../scripts/design-registry.mjs";
+import { reachable, refusals, unresolved } from "../../../scripts/design-citations.mjs";
 
 // The collection's own contract (E-DFLOW.W5), the part no per-component test can
 // reach: the roster is a vocabulary, not a folder — every T1/T2 name is exported
@@ -195,6 +196,21 @@ describe("@avoid alternatives are reachable — every redirect resolves to an ex
     expect(REGISTRY.Notice.avoid).toContain("CopyButton");
     expect(REGISTRY.Notice.redirects).toContain("CopyButton");
     expect(REGISTRY.Notice.redirects).not.toContain("Button");
+  });
+});
+
+describe("every name a docstring cites is reachable, not only its @avoid redirects", () => {
+  // The redirects above are the subset the barrel can answer for. DEC-16 makes
+  // the whole block the retired design file, so an @anatomy pinned to a deleted
+  // file and a @use naming a deleted component are the same defect as a redirect
+  // with no destination (DEC-30) — and the tree is the only judge of all three.
+
+  it("no component's TSDoc names a file, module or type the tree cannot reach", () => {
+    expect(unresolved()).toEqual({});
+  });
+
+  it("the tree is what resolves them — a name nothing owns is refused", () => {
+    expect(refusals("built from a GhostTable", reachable())).toEqual(["GhostTable"]);
   });
 });
 

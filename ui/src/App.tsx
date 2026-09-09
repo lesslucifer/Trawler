@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
@@ -7,6 +7,7 @@ import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
 import { Layout } from "./Layout";
+import { NotAnswering } from "./NotAnswering";
 import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
@@ -42,10 +43,12 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, hosts, connections, lastConnectionAt, update } = useFlows(client);
+  const { filter, flows, hosts, connections, lastConnectionAt, silent, refused, retrying, retry, update } =
+    useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const detail = useFlowDetail(client, selectedId);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const { flow: detail, failed: detailFailed } = useFlowDetail(client, selectedId, retryNonce);
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
@@ -157,6 +160,36 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
+  // The connection has one owner, written by both things that observe it — a
+  // listing that did not arrive, and the stream going down — so the band and the
+  // row region can never disagree about it. The pane's own failed fetch is a
+  // third fact and stays the pane's: it can be true of a core answering
+  // everything else, and a zone that borrows another zone's failure ends up
+  // speaking for a question it was never asked.
+  const notAnswering = silent;
+
+  // Retry removes its own button, and Button leaves focus on nothing when it
+  // stops existing — so the shell places it, keyed on the band actually leaving
+  // rather than on which fetch cleared it. The list region is the target because
+  // it exists whether or not the fresh listing has rows.
+  const mainRef = useRef<HTMLElement>(null);
+  const retried = useRef(false);
+  const retryConnection = useCallback(() => {
+    retried.current = true;
+    setRetryNonce((n) => n + 1);
+    return retry();
+  }, [retry]);
+
+  // The claim on focus lasts exactly one attempt: it is consumed when that
+  // attempt settles, whether or not the band went with it. Left armed, a retry
+  // that failed would still be waiting hours later to pull focus out of whatever
+  // the user was doing when the core happened to come back on its own.
+  useEffect(() => {
+    if (!retried.current || retrying) return;
+    retried.current = false;
+    if (!notAnswering) mainRef.current?.focus();
+  }, [notAnswering, retrying]);
+
   if (state.phase !== "proven") {
     return (
       <Layout
@@ -194,6 +227,21 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   return (
     <Layout
+      mainRef={mainRef}
+      band={
+        // The statement sits immediately above what it is about. With rows, that
+        // is the rows; with a refusal standing in their place, it is the refusal
+        // — the core answered that query and then stopped answering, and both
+        // are true. With neither, there is nothing above to qualify and the
+        // sentence moves into the row region instead.
+        notAnswering && (flows.length > 0 || refused !== null) ? (
+          <NotAnswering
+            trailing={flows.length > 0 ? "the rows below are the last it sent" : undefined}
+            retrying={retrying}
+            onRetry={retryConnection}
+          />
+        ) : undefined
+      }
       header={
         <>
           {dot}
@@ -222,15 +270,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             value={filter.method || ANY}
             onChange={(id) => update("method", id === ANY ? "" : id)}
           />
-          {/* Status stays free text deliberately. A dropdown of seen codes is
-              possible, but the useful query is a class (4xx) and FlowFilter.status
-              is a u16 — so neither control expresses what a user actually wants.
-              Deferred to a later epic to design the interaction, not half-converted. */}
+          {/* Free text, on its second and durable leg: a Select can offer only
+              values capture has already seen, and filtering for a 404 before one
+              arrives is the debugging act. The set is not knowable, so no closed
+              control serves this key — and no keypad hint either, now that a
+              class is a letter. */}
           <Field
             aria-label="status"
-            placeholder="status"
-            inputMode="numeric"
-            className="w-field-sm"
+            placeholder="status — 404 or 4xx"
+            className="w-field"
             value={filter.status ?? ""}
             onChange={(e) => update("status", e.target.value)}
           />
@@ -245,13 +293,23 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             key={selectedId}
             api={client}
             flow={detail}
+            failed={detailFailed}
             onClose={() => setSelectedId(null)}
           />
         )
       }
     >
       {closeDialog}
-      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} filtered={hasFilter} />
+      <FlowList
+        flows={flows}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        filtered={hasFilter}
+        silent={silent}
+        refused={refused}
+        retrying={retrying}
+        onRetry={retryConnection}
+      />
     </Layout>
   );
 }

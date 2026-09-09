@@ -63,6 +63,42 @@ async fn list_flows_orders_and_filters() {
 }
 
 #[tokio::test]
+async fn status_filter_accepts_a_class_a_code_and_refuses_the_rest() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    for (uri, status) in [
+        ("http://x/ok", 200),
+        ("http://x/missing", 404),
+        ("http://x/teapot", 418),
+        ("http://x/boom", 500),
+    ] {
+        store.insert(FlowBuilder::new().uri(uri).status(status).build());
+    }
+    let r = router_with(store);
+
+    let uris = |v: &Value| {
+        let mut found: Vec<String> =
+            v.as_array().unwrap().iter().map(|f| f["uri"].as_str().unwrap().to_string()).collect();
+        found.sort();
+        found
+    };
+
+    let (status, v) = json(&r, "/flows?status=4xx").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(uris(&v), vec!["http://x/missing", "http://x/teapot"]);
+
+    let (status, v) = json(&r, "/flows?status=404").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(uris(&v), vec!["http://x/missing"]);
+
+    for refused in ["9xx", "999", "abc", "40x"] {
+        let (status, _, body) = get(&r, &format!("/flows?status={refused}")).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{refused} should be refused");
+        let stated = String::from_utf8(body).unwrap();
+        assert!(stated.contains("4xx"), "{refused} should be told the grammar, got {stated:?}");
+    }
+}
+
+#[tokio::test]
 async fn stats_reports_the_connection_tally() {
     let store = Arc::new(Store::new(1_000_000, 64));
     let r = router_with(store.clone());
