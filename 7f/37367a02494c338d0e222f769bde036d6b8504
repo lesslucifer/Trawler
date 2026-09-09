@@ -1,7 +1,0 @@
-schema: doc/v1
-level: commit
-epic: E-EXPORT
-branch: epic/export
-changes: []
-t2_waived: "a comment moved between two tests states no fact any tier owns"
-date: 2026-09-09
