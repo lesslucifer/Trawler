@@ -1,0 +1,20 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+tests:
+  e2e:
+    count: 2
+    what: "tests/e2e_export.rs — one test walking the epic plan's e2e step table in order over serve(Config) on ephemeral ports, against a local HTTP origin and a local TLS origin the core is given as an extra upstream root: four real exchanges through the proxy (plain GET, POST with a JSON body, decrypted HTTPS, an SSE stream), then GET /flows?limit=1 followed to the end and compared against the listing's own order, GET /flows/export parsed as HAR 1.2 (postData text, a base64 response body, a text body over the MITM leg, and the streamed body carrying size -1 with a streaming comment rather than an empty text), the export filtered by q and compared, a live /stream subscriber receiving the cleared event naming every removed flow while /stats stays put, the exported bytes re-imported and compared field for field with source flipped to imported and both body endpoints read back, a truncated copy refused 400 with the store still holding exactly four, and a browser-shaped multi-line curl command landing as a request-only marked flow (with --compressed expanded) followed by one carrying -F refused by name. ui/e2e/specs/capture.spec.ts — three specs through the real Tauri window over the same core: the clear behind its ask empties the list and the slot, a pasted curl command returns one marked row, and silencing the ask makes the next clear direct."
+  unit:
+    waived: "the diff adds no unit-testable surface — two test files, one spec-list entry and two corrections to existing e2e harness code. Every predicate these tests drive is already unit- and integration-covered by W1–W7, W9 and W10; what this commit adds is the composition, which only an e2e can exercise."
+  integration:
+    waived: "no bounded contract changes. Nothing under src/, xtask/ or ui/src/ is touched, so there is no seam here whose contract an integration test could assert that its own WU did not already assert."
+boundary:
+  what: "the app half drives clear (with and without its ask) and the curl paste, not export-to-file or import-from-file"
+  why: "in binary mode Tauri defines __TAURI_INTERNALS__.invoke non-writable AND non-configurable and does not consult the wdio Tauri service's mock registry, which is browser-mode only — assignment, redefinition and replacing the holder were all tried and all refused by the runtime, so the native save and open panels can be neither answered nor passed. Those two acts are covered by tests/e2e_export.rs over the real engine and by CaptureControls.test.tsx against a stubbed native layer."
+suite:
+  rust: "603 tests green (cargo test --all), 0 failed"
+  ui_unit: "840 tests green across 49 files (pnpm test)"
+  ui_e2e: "31 specs green across three spec files (cargo xtask ui e2e)"
+  clippy: "clean under pedantic with --workspace --all-targets, -D warnings"
+date: 2026-09-09
