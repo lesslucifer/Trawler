@@ -1,0 +1,7 @@
+schema: doc/v1
+level: commit
+epic: E-EXPORT
+branch: epic/export
+changes: []
+t2_waived: "how the e2e harness points a window at its core states no fact any tier records; the epic's own flake account lives in its test/v2 note and in deviation 11 of the archived epic result"
+date: 2026-09-09
