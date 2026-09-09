@@ -84,6 +84,11 @@ export function useFlows(api: TrawlerApi) {
         // No answer, or one the core should not have given. Either way the rows
         // are unverified rather than absent, so they stay.
         setSilent(true);
+        // A refusal is about the value it was asked with. Silence on a
+        // different value teaches nothing about it, but leaves it describing
+        // something the box no longer holds — so it goes. Silence on the
+        // refused value itself leaves it standing.
+        setRefused((refusal) => (refusal === asked ? refusal : null));
       },
     );
   }, [api]);

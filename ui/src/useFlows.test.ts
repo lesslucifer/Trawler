@@ -391,6 +391,47 @@ test("a dropped stream records the silence without unsaying the refusal", async 
   expect(result.current.silent).toBe(true);
 });
 
+// Regression (epic gate): a refusal is about the value that was asked. When the
+// box moves on and the request for the NEW value comes back with no answer, the
+// old refusal describes nothing a reader can see — the row region would quote a
+// value the box no longer holds and the core never judged.
+test("a refusal does not outlive the value it was about", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
+  const f = streamApi();
+  const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  act(() => result.current.update("status", "4xz"));
+  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+
+  answer = () => Promise.reject(new TypeError("dead socket"));
+  act(() => result.current.update("status", "200"));
+  await waitFor(() => expect(result.current.silent).toBe(true));
+  expect(result.current.refused).toBeNull();
+});
+
+// Its pair: asking the SAME refused value again and getting no answer teaches
+// nothing new about it, so the refusal stands rather than flickering off on a
+// transient failure.
+test("a silence on the refused value itself leaves the refusal standing", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
+  const f = streamApi();
+  const api: TrawlerApi = { ...f.api, listFlows: () => answer() };
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  act(() => result.current.update("status", "4xz"));
+  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+
+  answer = () => Promise.reject(new TypeError("dead socket"));
+  act(() => result.current.update("q", "x"));
+  await waitFor(() => expect(result.current.silent).toBe(true));
+  expect(result.current.refused).toBe("4xz");
+});
+
 // A listing that arrives is the only thing that ends the silence — the stream
 // coming back is a reason to ask again, not an answer in itself.
 test("silence ends when a listing arrives, not when the stream reconnects", async () => {
