@@ -1,0 +1,62 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W10 epic-close -> epic/redesign-finish"
+epic: E-RFINISH
+wu: E-RFINISH.W10
+branch: wu/redesign-finish/epic-close
+base: 20d8be401f25a2eafa10fad84263293b2ea0f8c5
+head: 547360f23aad75bc608842ae51c5258e8f9ada1d
+diff_sha256: d2ca4c49ee452ac092cffcbdc132dd9e44579d41fb012f9190c136916bc4c488
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+rounds: 1
+findings: { found: 11, verified: 0, waived: 0 }
+notes: >-
+  Five isolated finders over a documentation-only diff, eleven candidates, eleven fresh
+  verifiers, none survived. design-scope reports no design artifact in the range and the diff
+  renders no .tsx, so no design dimension ran and this note carries no design section.
+
+  Correctness returned CLEAN and it is the dimension that mattered: for a diff whose entire
+  purpose is moving facts up a tier, a false sentence is the defect. It re-derived rather than
+  trusted - 612 as the flow row's fixed tracks, independently summed from FlowList's COLUMNS
+  (110+70+180+70+90 = 520, plus five 12px gaps = 60, plus 32px of px-4 padding); pane 520px in
+  tailwind.config.js and width 1440 / minWidth 800 in tauri.conf.json; the 1200 -> 1440 change
+  isolated to one commit (2733640, W6); 992 and 1132 against the archived W4 run; 26 + 6 e2e
+  assertions counted from the spec files; 832 ui tests over 46 files and 98 cargo tests by
+  running both suites; sixteen archived documents against the delete list; and the ledger's
+  twelve rows against E-REDESIGN's own follow-up table. Every href resolves.
+
+  The one candidate with teeth was the docstring count: the roadmap and the result say W2 paid
+  "four false registry docstrings" while DEC-35, still in the tree, says seven claims across
+  five of the 28 entries were false. Refuted on units and on framing. Four is the count of
+  named docstrings the epic plan inherited (Notice, CopyButton, TonedText, Field); seven-across-
+  five is what W2 found once it looked, a superset that includes CutMarker. Both flagged
+  sentences scope themselves out loud - the roadmap says "the debt it NAMED", and the ledger's
+  own premise is that each row states the follow-up as E-REDESIGN wrote it and then gives its
+  disposition, which is why the sibling rows read "refused two of the three planned fixes" and
+  "found a fourth swallowed failure the list of three had missed". The row also links DEC-35 in
+  the same breath, so the true figures are one click from the named count and no reader is left
+  holding two numbers with no way to reconcile them. A reader can only be misled downwards here,
+  and the delivery was larger than the name.
+
+  The other ten: three reuse candidates (108/168 stated in both UC-4 and UC-5, DEC-32 restating
+  the thirty-to-twenty delta, the 1132px fact in three carriers) all refuted because the
+  one-fact-per-tier rule governs tiers and index-reached topic files, not two contracts inside
+  one document, and because every restatement links its owner - and because the roadmap's
+  Deferred backlog and the decisions index restating a record's numbers is pre-existing house
+  style, verified against the same files at the base (DEC-12's roadmap row does exactly this).
+  Four simplification candidates refuted: the Consequences section was already prose before this
+  diff and the five items it names appear nowhere else in that file; DEC-36's paragraph under
+  its table introduces the counterfactual the table does not hold and carries the record's
+  actual argument; the result's two e2e rows make different claims and mirror the epic plan's
+  own control row; and the "malformed parenthesis" opens four words earlier on the preceding
+  line. Two altitude nits refuted (a missing px on a repeat mention, which is this file's own
+  convention, and a provenance line that three of the five sibling write-backs also omit while
+  the linked DEC-36 carries it). One efficiency nit refuted: the Consequences sentence cites
+  DEC-36 because it is new in this diff and unreachable from the roadmap otherwise.
+
+  Altitude confirmed the boundaries independently: no T1 file touched, no file under
+  Onboarding.tsx, ProxyCloseDialog.tsx or setup.ts, the non-goals (the 1132px arrangement, the
+  two xtask items) turned into owned backlog rows rather than fixed, and the test/v2 and doc/v1
+  notes' claims - the waivers, the distillation list, and the docs-only assertion - all true
+  against the tree.
+verdict: PASS
+date: 2026-09-09
