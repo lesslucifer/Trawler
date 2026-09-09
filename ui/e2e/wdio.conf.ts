@@ -15,6 +15,13 @@ const APP_BINARY = resolve(here, "../src-tauri/target/release/trawler-ui");
 // core's ports cross to the spec via this file — never a shared variable.
 export const PORTS_FILE = resolve(here, ".core-ports.json");
 
+// The app reads its core's address from this variable at window creation, before
+// its first script runs (`e2e_core_address` in the shell). The launcher spawns
+// the app, so exporting it here is what puts it in the app's environment — and it
+// is why no spec ever navigates the window: a reload mid-run stops the WKWebView
+// scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
+const CORE_ADDRESS_VAR = "TRAWLER_E2E_API";
+
 // The app writes its dismissed-notice markers into the real user config dir, so
 // they outlive a run. A marker left by an earlier one would silence the clear ask
 // the capture spec exists to assert, and the spec's own last case leaves one
@@ -41,6 +48,7 @@ function startCore(): Promise<void> {
     rl.once("line", (line) => {
       clearTimeout(timer);
       writeFileSync(PORTS_FILE, line);
+      process.env[CORE_ADDRESS_VAR] = JSON.parse(line).api;
       rl.close();
       res();
     });

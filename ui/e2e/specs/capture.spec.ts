@@ -29,17 +29,12 @@ async function openAct(name: string) {
   await item.click();
 }
 
-async function pointAppAtCore() {
-  // sessionStorage survives the refresh; the fresh page reads it before React
-  // mounts, so both the fetch and the SSE stream bind the ephemeral port.
-  await browser.execute(
-    (api: string) => window.sessionStorage.setItem("__TRAWLER_API__", api),
-    ports.api,
-  );
-  // The navigation is the driver's own, not one the page starts: reloading from
-  // inside `execute` tears the document down while the driver is still waiting
-  // for that call to answer, and the lost answer takes the session with it.
-  await browser.refresh();
+// The window is already bound to this run's core: the launcher handed it the
+// address in the environment and the shell injected it before the first script
+// ran, so a spec only waits for the screen it painted. Nothing here navigates —
+// a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
+// answers a stopped one with an Objective-C exception that aborts the app.
+async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
@@ -57,7 +52,7 @@ async function pointAppAtCore() {
 // stubbed native layer in `CaptureControls.test.tsx`.
 describe("UC-6 / UC-7 — empty the capture, and bring a flow back", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit();
     await hit("/json");
     await browser.waitUntil(async () => (await rowCount()) >= 2, {

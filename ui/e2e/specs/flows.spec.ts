@@ -37,19 +37,12 @@ const recordClipboard = () =>
   });
 const lastCopied = () => browser.execute(() => (window as unknown as { __copied?: string }).__copied);
 
-// Point the real Tauri window at the ephemeral core (runtime config, no rebuild)
-// with a plain WebDriver eval — no Tauri invoke bridge.
-async function pointAppAtCore() {
-  // sessionStorage survives the refresh; the fresh page reads it before React
-  // mounts, so both the fetch and the SSE stream bind the ephemeral port.
-  await browser.execute(
-    (api: string) => window.sessionStorage.setItem("__TRAWLER_API__", api),
-    ports.api,
-  );
-  // The navigation is the driver's own, not one the page starts: reloading from
-  // inside `execute` tears the document down while the driver is still waiting
-  // for that call to answer, and the lost answer takes the session with it.
-  await browser.refresh();
+// The window is already bound to this run's core: the launcher handed it the
+// address in the environment and the shell injected it before the first script
+// ran, so a spec only waits for the screen it painted. Nothing here navigates —
+// a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
+// answers a stopped one with an Objective-C exception that aborts the app.
+async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
@@ -61,7 +54,7 @@ async function pointAppAtCore() {
 // green paint.
 describe("UC-4 — watch live traffic in the native app", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit(); // a decrypted flow reveals the list (leaves onboarding, UC-ONBOARD)
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
@@ -266,7 +259,7 @@ describe("UC-4 — watch live traffic in the native app", () => {
 // the response leg first; the pane's data-leg then scopes the selector.
 describe("UC-5 — inspect a captured flow in the native app", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit(); // a decrypted flow reveals the list (leaves onboarding, UC-ONBOARD)
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
@@ -476,7 +469,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
 // screen, which is exactly what the shipped build did before this WU.
 describe("UC-4 — the list says when it cannot reach the API", () => {
   before(async () => {
-    await pointAppAtCore();
+    await shellIsUp();
     await hit();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
