@@ -1,0 +1,18 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+branch: epic/export
+tests:
+  unit:
+    count: 6
+    what: "one per fix, each proven to red without it: a_stated_header_beats_the_flag_that_would_expand_into_the_same_name and a_flag_still_expands_when_no_header_states_that_name in src/api/curl.rs; a_crlf_continuation_folds_inside_double_quotes_as_it_does_outside in src/api/curl.rs; two in ui/src/CaptureControls.test.tsx for the abandoned import and the clear that fails after its ask was cancelled; and for the ring's cursor, a_long_capture_pages_to_its_end_without_skipping_or_repeating_a_row, a_cursor_resolves_to_its_own_place_and_to_nothing_once_removed and the_order_stays_sorted_through_eviction_and_both_removal_paths in src/store.rs."
+  integration:
+    waived: "no contract moved - every refusal, status code and message is the one the endpoint already answered with; the ring's sequence is private to Ring and never crosses Store's surface"
+  e2e:
+    waived: "covered by the epic's own e2e on the tip"
+suite:
+  rust: "620 tests green (cargo test --all), 0 failed"
+  ui_unit: "936 tests green across 51 files (pnpm test)"
+  clippy: "clean under pedantic with --workspace --all-targets, -D warnings"
+  tsc: "clean"
+date: 2026-09-09
