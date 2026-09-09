@@ -1,0 +1,76 @@
+schema: cr/v3
+scope: "epic E-EXPORT -> main"
+epic: E-EXPORT
+branch: epic/export
+base: f1f84d297d6d5b0f15bd5c57198dd2ba89791770
+head: 79f4c8f334ef12d8baf271c694c7b45e2ebc8e82
+diff_sha256: 93d02c9b3e200e51eda8d946055472b1020cca156ba2d55f2de4ffa0b3430b50
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+rounds: 3
+findings: { found: 20, verified: 11, waived: 2 }
+notes: >-
+  Three rounds, each five isolated finders plus the design finder, one
+  adversarial verifier per candidate. Round 1 raised 11 candidates and verified
+  5; round 2 raised 6 and verified 4; round 3 raised none in any dimension.
+  Nine verified findings were fixed with a named regression test apiece, every
+  one of them proven to red without its fix. The two below survive as waivers.
+  The caller scoped this run to code: docs/ prose was not judged.
+waivers:
+  - finding: "Ring stores rows as anonymous tuples rather than a named Entry { seq, flow }"
+    reason: >-
+      Verified real, but the verifier downgraded its own severity to nit and
+      found the finder's account of it wrong: the enumerated site count was
+      inaccurate, every site already binds meaningful names rather than .0/.1,
+      and the two tuple types are distinct enough that a swapped field would not
+      compile. Ring is private to one module. A named struct is taste here, and
+      the close is not where taste rewrites a data structure that three rounds
+      of correctness finders have just cleared.
+  - finding: "a stale clear-failed banner can render beside a freshly reopened clear ask"
+    reason: >-
+      Verified real and reproduced, at nit severity. The banner is true: that
+      clear did fail and the capture is still full. The dialog beside it is the
+      same act, not an unrelated one. Suppressing a correct statement to tidy a
+      narrow double race - cancel mid-flight, then reopen before the first
+      request settles - would trade an awkward moment for a silent one, which is
+      the trade this epic's absence work exists to refuse.
+design:
+  artifacts: [docs/work/components/spinner.html]
+  rulebook: 7d9c884
+  findings: { found: 3, verified: 0, waived: 0 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+      blob: ebf4215b3c1f08f4ab5fd6de5ccea026a002f221
+      built: [ui/src/CaptureControls.tsx, ui/src/CaptureMenu.tsx, ui/src/ModalShell.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+    - path: docs/work/components/spinner.html
+      blob: 81fd0afa3e982fdf3c3d08288933fc1f0a6359e9
+      built: [ui/src/components/Spinner.tsx]
+  undesigned:
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: >-
+        The modal frame this file owned was lifted out to ui/src/ModalShell.tsx
+        unchanged - 5 insertions against 91 deletions, all of them the moved
+        block - and the file now calls the shared frame. Its three test ids
+        survive verbatim and its own suite passes untouched, so no surface it
+        renders was re-shaped and there was nothing for a design to decide.
+walk_waivers:
+  - seam: b65e8b7879
+    why: >-
+      A standalone commit rendering ui/src/FlowList.tsx, which the walk cannot
+      classify because design accounting lives on a WU's cr note and a
+      standalone commit has none. The edit adds no surface: it drops the
+      silent-core clause for a cleared region exactly as it already dropped for
+      a filtered one, and reorders an existing five-branch chain so the refusal
+      is stated before the silence. Both are covered by this run's design
+      verdict above, which judged FlowList.tsx under run 11's citation.
+  - seam: e1f1417352
+    why: >-
+      A standalone commit rendering ui/src/CaptureControls.tsx, same
+      classification gap. It is this review's own fix pass: an import abandoned
+      before it starts no longer arms the header slot, and a clear that fails
+      after its ask was cancelled reports into the slot the parent already
+      owns. No element, layout or state was added to the surface - the failure
+      Notice and the slot both already existed - so there is no shape a design
+      would have decided.
+verdict: PASS
+date: 2026-09-09
