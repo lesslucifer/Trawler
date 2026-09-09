@@ -1,0 +1,58 @@
+schema: doc/v1
+epic: E-RFINISH
+branch: epic/redesign-finish
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "Both native contracts this epic touched, as they now stand. UC-4 gains three observable capabilities: the list states a core that is not answering - above rows it does not discard, naming the address, offering a retry, and appearing with the user doing nothing because the dropped SSE stream is the signal; a refused query quotes the value it refused, in the row region, with no retry, and never beside the connection statement, since an API that answers and says no is a different fact from one that does not answer; and a long value is readable further because the pane is a chosen width. Its filter sentence now reads the status parameter at either resolution - 404 the exact code, 4xx the class, anything naming neither refused as a stated 400 - and the stale clause promising the control would catch up with the core is gone, because it did. UC-5 gains raw | pretty as the terms its switch settles on and the observable half of the width. UC-ONBOARD is deliberately untouched: E-ONBOARD restates the contract it changes. v5 -> v7."
+  - path: docs/decisions/dec-35-citations-resolve-or-fail.html
+    tier: T2
+    action: added
+    distills: "A docstring citation resolves against the tree or it fails a test (W2). DEC-16 makes a built component's TSDoc its retired design file, so an entry naming deleted code is the contract lying - and seven such claims across five of the 28 entries had survived a design run, a Tier-3 review and a merge gate. What may resolve is derived from the tree, never transcribed: there is no allowlist, which is the rejected option and the one the next annoyed reader will reach for."
+  - path: docs/decisions/dec-36-the-pane-and-the-window.html
+    tier: T2
+    action: added
+    distills: "The pane width and the window are one decision (W4 designed, W6 built): 520px in a window that opens at 1440, on the identity path = window - pane - 612, because every pixel the pane takes comes out of the list's one unbounded column. Six rejected alternatives, each with the number that killed it, including the bounded share min(40%, 520px) that was measured rather than argued. Carries the consequence the run refused to hide: no valid arrangement below 1132px with the pane open, up from 992, against a declared minimum window of 800 - a known defect this epic made wider, deliberately, with the arithmetic published."
+  - path: docs/decisions/dec-34-fixed-height-rows-truncate.html
+    tier: T2
+    action: updated
+    distills: "The criterion for the second sighting its own consequences had asked for and never defined: mono, inert, unbounded, visibly cut - all four - plus the candidate W4 tested and refused, since the identity bar wanted CopyText because a pane has height to spend. The three conditions and the escape are untouched."
+  - path: docs/decisions/dec-31-leg-is-panel-scoped.html
+    tier: T2
+    action: updated
+    distills: "The cell describing what the body pane owns names the shipped positions, raw | pretty. An incidental description of the pane's copy; the leg-scoping ruling stands."
+  - path: docs/decisions/dec-32-body-is-the-main-zone.html
+    tier: T2
+    action: updated
+    distills: "The panel sketch's control row re-aligned to the shipped labels, and one line naming which pane the record's numbers were written against now that DEC-36 has moved it. The zoning ruling is untouched - a wider pane moves the clamp's cost, it does not remove it."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "Rows for DEC-35 and DEC-36, because T2 is read index-first and an unindexed record does not exist; DEC-32's summary gains the same 'pane of the time' qualifier as the record. v15 -> v17."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: "UC-5's summary reads raw/pretty; UC-4's names the two gains a reader would otherwise have to open the contract to find. v1 -> v3."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "The lexicon gains 'not answering' - said of the control API and never of the proxy, since capture health and transport health are different facts - and display-equals-payload's OK example loses the pair that illustrated the very form the lexicon forbids. NO rule amendment: no predicate, slug or tier moves. Nothing either design run escalated argued a rule was wrong rather than a design, so DEC-14's provision for rulebook growth at distillation went unused."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "The living backlog, rewritten once at the close. Two rows struck with what closed them; the E-ONBOARD row added at the v2 amendment rather than at the close, so the deferral was findable while it mattered, and marked unblocked now the shell/list track has merged; four rows added - the 1132px arrangement, Tier-1's blindness to a mockup's mounted JSX, gate check 8's untyped report, and WebdriverIO's *= selector that matches nothing without erroring. The Consequences paragraph says what the two redesign-track epics did to a sequence they do not appear in. v6 -> v7."
+  - path: docs/component-design.html
+    tier: T1
+    action: updated
+    distills: "The epic's one T1 edit (W1), carrying its Reviewed-By trailer: the file skeleton prescribes the specimens.bundle.js mount DEC-26 established, replacing the pre-bundle tw-config.js shape the spec still carried. It landed first so both of this epic's design runs were built to a spec that matches the gate that judges them."
+  - path: docs/design-flow.html
+    tier: T1
+    action: updated
+    distills: "The same correction where the flow spec restates the skeleton (W1), so the two T1 documents cannot disagree about what a design file loads."
+  - path: docs/work/
+    tier: T3
+    action: removed
+    distills: "The epic plan, eight WU plans, eight WU results, one design run and the epic result - eighteen documents git rm'd into the gitignored docs/.archive/ per DEC-3, each only after what it carried had a living home above. docs/work/ is empty at the epic tip. Their content stays addressable in the commits that added them. The onboarding design run is NOT among them: it never entered this branch and is archived by E-ONBOARD when it adopts it."
+t2_waived: none
+date: 2026-09-09
