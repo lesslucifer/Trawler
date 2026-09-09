@@ -1,0 +1,7 @@
+schema: doc/v1
+level: commit
+epic: E-EXPORT
+branch: epic/export
+changes: []
+t2_waived: "the five fixes state no new fact a T2 doc owes: three restore behaviour a record already claimed - DEC-39's curl boundary and UC-6/UC-7's acts answering for themselves - and two are internal to the ring"
+date: 2026-09-09
