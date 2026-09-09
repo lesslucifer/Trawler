@@ -1,0 +1,58 @@
+schema: doc/v1
+level: epic
+epic: E-EXPORT
+branch: epic/export
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: edited
+    distills: "UC-6 (take a capture out and bring one back — the HAR file both ways plus the single-request curl paste) and UC-7 (clear the capture, announced on /stream, empty rather than restarted) as new records; UC-3's listing contract amended for opt-in paging, and UC-4's surface for the capture-management controls. Each provenance callout names the route a person actually takes, which W6 filled in where the earlier text had deferred to 'the app's own controls follow in the same epic'."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: edited
+    distills: "the two new ids and their one-line contracts, because T2 is read index-first and an unindexed record does not exist."
+  - path: docs/decisions/dec-35-har-as-the-interchange-format.html
+    tier: T2
+    action: added
+    distills: "why HAR 1.2 and only HAR; how a body state the format cannot express is represented (a reason comment and a -1 size, never an empty text); and what round-trip fidelity preserves and what it does not — cookie attributes and queryString stated as non-preservation rather than debt."
+  - path: docs/decisions/dec-36-imported-flows-are-marked.html
+    tier: T2
+    action: added
+    distills: "why an imported flow is a first-class flow carrying a source rather than a separate collection — same detail endpoints, same events, same eviction — and the CORS widening the mutating methods require, extending DEC-12's loopback reasoning rather than reversing it."
+  - path: docs/decisions/dec-37-curl-parser-accepts-what-a-browser-emits.html
+    tier: T2
+    action: added
+    distills: "where the curl parser's boundary sits: the flags a browser's Copy as cURL and Trawler's own toCurl emit, -u and --compressed expanded because dropping them changes the request, transfer-only flags consumed silently, and everything else refused naming the flag because a silently ignored flag produces a flow subtly unlike the one pasted."
+  - path: docs/decisions/dec-38-the-predecessor-is-the-checklist.html
+    tier: T2
+    action: added
+    distills: "W9's rule for a design re-run: a run over a screen a closed run already designed answers to that run — every prior answer kept or overturned on the record — rather than starting from the screen as if nothing had been decided."
+  - path: docs/decisions/dec-39-motion-informs-bans-decoration-not-progress.html
+    tier: T2
+    action: added
+    distills: "the reading of the motion rule that W6's Spinner forced: the ban is on motion as decoration, not on motion reporting that something is running. Written because W6's rounds had over-read the rule into refusing a spinner at all."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: edited
+    distills: "rows for all five new records."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: edited
+    distills: "the epic's open question 5, answered by W5 and carried by W9: export is the correct name for the file operation, and the rulebook's reserved meaning bans it only as a synonym for copy — putting bytes on the clipboard is a different act. Plus the rule amendments W9's and W6's runs escalated."
+  - path: docs/design-flow.html
+    tier: T1
+    action: edited
+    distills: "the process facts W9's re-run and W6's build proved, recorded where the design flow is specified rather than left in a run nobody reads twice. Landed inside those WUs with their own authorisation."
+  - path: docs/architecture.html
+    tier: T1
+    action: edited
+    distills: "the seam line the ingest falsified, plus the citation the epic-scope review found missing - the CORS row asserted the grant was widened to the methods its mutating routes need but linked only DEC-12, which predates every mutating route and says nothing about widening; it now also cites DEC-36#cors, which owns that why. The control API is no longer described as purely a subscriber and reader — HAR import inserts flows the proxy never saw and a clear takes out what the listing selects, both through the same ring rules — and the Store's one-line contract names the clear beside the ring's own eviction. Landed in W3 and W4 with their own authorisation; re-checked at this close against the shipped code and nothing further is false."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: edited
+    distills: "E-EXPORT moved into landed-so-far with the doors it added and the three decisions that explain them, and struck from the sentence that offered it as an available track. The Deferred backlog gains the row the plan promised — streaming a cap-sized export — carrying W2's measurement that peak memory is roughly 4x the ring cap rather than bounded at it, so the row states the real ceiling. v5 -> v6."
+archived:
+  note: "twenty-one T3 documents (the epic plan, nine WU plans, nine WU results, two design runs and the epic result) were git rm'd into the gitignored docs/.archive/ in 9b2b097, plus the untracked W6 pre-MR runbook. They net to nothing in this endpoint diff because the range both added and removed them; their content stays addressable in the commits that added them. Nothing was archived before what it carried was somewhere else — every WU distilled at its own close, and the roadmap took the last two facts in the commit before the archiving one."
+  distilled_to: "docs/use-cases/web-ui.html · docs/use-cases/use-cases-index.html · docs/decisions/dec-35..dec-39 · docs/decisions/decisions-index.html · docs/design-rules/design-rules-index.html · docs/design-flow.html · docs/architecture.html · docs/backlog/roadmap.html"
+t2_waived: none
+date: 2026-09-09
