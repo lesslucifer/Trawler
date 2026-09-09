@@ -1,24 +1,26 @@
 schema: test/v2
-level: epic
+level: commit
 epic: E-RFINISH
-branch: epic/redesign-finish
+branch: fix/rfinish-refusal
 tests:
-  e2e:
-    count: 32
-    where: "ui/e2e/specs/flows.spec.ts (26) + ui/e2e/specs/onboarding.spec.ts (6), run by cargo xtask ui e2e"
-    note: "The epic's proof, run at its close against the real Tauri/WebKit window and an ephemeral run(Config) core. flows.spec.ts held 22 at the epic's base and holds 26 now; the four added are this epic's contract gains. UC-4 gains three: a status class narrows the list to that class and an exact code to that code, asserted against captured traffic holding a 200, a 404 and a 500 so that 'not 2xx' cannot pass for 'is 4xx'; the core is killed under the open window and the list states it, above rows it does not discard and with the count unchanged; and a retry against a still-dead core leaves the statement standing with the button usable. Its control is the fourth and the one that makes the set mean anything - a reachable core whose filter matches nothing renders the absence and explicitly NOT the connection statement, which is what proves an unreachable API and a quiet proxy are different screens rather than merely that one of them renders. UC-5's existing toggle spec was renamed and extended rather than duplicated: the switch names its views raw and pretty, no segment named decoded survives, and the toggle still yields minified source one way and indented JSON the other, proven over two body kinds. onboarding.spec.ts (6) is UNEDITED across the whole epic and green - the standing control that the setup/quit re-design left for E-ONBOARD rather than leaking in through a shared file; git diff main..HEAD reports no change to it, to Onboarding.tsx, to ProxyCloseDialog.tsx or to setup.ts."
-  integration:
-    count: 46
-    where: "ui/src/**/*.test.ts(x) (Vitest, screens mounted against a mock API) + tests/api.rs (Rust, against an ephemeral core)"
-    note: "44 Vitest files at the epic's base, 46 now. The epic's one capture-core contract change is proven at the API seam before anything rendered against it (W5): GET /flows?status=4xx returns only 4xx, ?status=404 still returns exactly 404s, and ?status=9xx is a stated 400 rather than a silent empty list. On the UI side App.test.tsx pins the wire call the designed control makes, and useFlows.test.ts holds the failure model the six review rounds produced - a listing that did not come back, a query the core refused, and one flow's fetch that produced nothing, each owned by its own value."
   unit:
-    count: 834
-    where: "cd ui && pnpm test - 46 files; plus cargo test 98 across the Rust crate"
-    note: "741 ui tests at the epic's base, 834 at its tip. The last two were added at the epic GATE, not in a WU: the wide review found a refusal outliving the value it was about (W5 gave the core a refusable parameter, W6 built the failure model over it, and the transition between them is visible only from the seam), and the fix landed as a standalone commit with its regression pinned RED first and its pair - silence on the refused value itself leaves the refusal standing - asserted beside it. Every WU carries unit tests for what it added or changed; W3 additionally carries a committed benchmark (ui/bench/) with a recorded before and after number per cost, which is what let it REFUSE two of its three planned fixes rather than keep them on the argument that they looked better. The pre-commit hook ran fmt + clippy on every commit."
-verified:
-  - "cargo xtask ui e2e - exit 0, 32 passing across 2 spec files, against a real ephemeral core."
-  - "cd ui && pnpm test - 834 passed, 46 files, 0 failed. tsc --noEmit and eslint clean."
-  - "cargo test - 98 passed, 0 failed. cargo clippy pedantic and cargo fmt clean."
-  - "cargo xtask verify-doc green on every governed document the epic wrote or edited."
-waived: none
+    count: 2
+    covers: >-
+      ui/src/useFlows.test.ts - the defect the epic gate's wide review found across the W5/W6 seam,
+      and its pair. "a refusal does not outlive the value it was about" was verified RED against the
+      pre-fix hook (it failed with expected '4xz' to be null, which is the symptom exactly: the row
+      region quoting a value the box no longer holds and the core never judged). Its pair, "a
+      silence on the refused value itself leaves the refusal standing", passes both before and after
+      on purpose - it pins W6's round-3 ruling so an overcorrection that clears the refusal on ANY
+      silence is caught rather than shipped. Both drive the real hook through renderHook with a
+      scripted TrawlerApi; neither touches production code beyond the one line under test.
+suite: >-
+  pnpm test 834/834 across 46 files (832 before, 2 added) - tsc --noEmit clean (it caught an invalid
+  filter key in the second test, fixed before commit) - eslint clean - cargo xtask ui e2e 32/32 -
+  cargo test --all green across the workspace - cargo fmt and cargo clippy pedantic clean.
+notes: >-
+  A standalone code commit outside a Working Unit, so it carries commit-level evidence. It lands
+  through a merge rather than sitting on the epic branch as a bare commit: the epic tip must carry
+  epic-level evidence and a standalone commit must carry commit-level evidence, and one commit
+  cannot carry both notes at once.
 date: 2026-09-09
