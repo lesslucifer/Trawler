@@ -308,9 +308,10 @@ pub fn is_doc(path: &str) -> bool {
 }
 
 // Rule-bearing files configure the workflow itself, so their commits need a
-// human signature at commit time (DEC-10): T0 (CLAUDE.md) and T1 (flat docs/).
+// human signature at commit time (DEC-10): T0 (CLAUDE.md and the AGENTS.md door
+// Codex reads it through) and T1 (flat docs/).
 pub fn is_rule_bearing(path: &str) -> bool {
-    path == "CLAUDE.md" || tier_of(path) == Some("T1")
+    path == "CLAUDE.md" || path == "AGENTS.md" || tier_of(path) == Some("T1")
 }
 
 pub fn is_expected_tracked_doc(path: &str) -> bool {
@@ -562,6 +563,7 @@ t2_waived: null
         assert!(!is_doc("ui/app.tsx"));
 
         assert!(is_rule_bearing("CLAUDE.md"), "T0 is rule-bearing");
+        assert!(is_rule_bearing("AGENTS.md"), "the Codex door to T0 is rule-bearing too");
         assert!(is_rule_bearing("docs/workflow.html"), "flat T1 is rule-bearing");
         assert!(!is_rule_bearing("docs/use-cases/capture.html"), "T2 is not");
         assert!(!is_rule_bearing("docs/decisions/event-bus.html"), "T2 is not");

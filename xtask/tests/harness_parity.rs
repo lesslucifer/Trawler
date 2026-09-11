@@ -13,8 +13,8 @@ use std::process::{Command, Output, Stdio};
 
 use tempfile::TempDir;
 
-const POST_COMMAND: &str = r#"root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$CLAUDE_PROJECT_DIR"); bash "$root/.claude/hooks/verify-doc-post.sh""#;
-const STOP_COMMAND: &str = r#"root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$CLAUDE_PROJECT_DIR"); bash "$root/.claude/hooks/verify-doc-stop.sh""#;
+const POST_COMMAND: &str = r#"root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$CLAUDE_PROJECT_DIR"); export TRAWLER_HOOK_ROOT="$root"; bash "$root/.claude/hooks/verify-doc-post.sh""#;
+const STOP_COMMAND: &str = r#"root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$CLAUDE_PROJECT_DIR"); export TRAWLER_HOOK_ROOT="$root"; bash "$root/.claude/hooks/verify-doc-stop.sh""#;
 
 const RED_READY_DOC: &str = "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
      <main data-artifact=\"wu-result\"><p data-item=\"outcome\">only this</p></main>\
@@ -22,7 +22,7 @@ const RED_READY_DOC: &str = "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\">
      </body></html>";
 
 fn repo_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
+    xtask::repo_root().unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn link_target(path: &Path) -> PathBuf {

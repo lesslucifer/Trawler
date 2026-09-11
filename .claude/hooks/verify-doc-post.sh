@@ -33,7 +33,7 @@ while IFS= read -r path; do
 done <<<"$paths"
 [ "${#docs[@]}" -gt 0 ] || exit 0
 
-root=$(git rev-parse --show-toplevel 2>/dev/null) || root="${CLAUDE_PROJECT_DIR:-.}"
+root="${TRAWLER_HOOK_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-.}")}"
 cd "$root" || exit 0
 
 out=$(${XTASK_BIN:-cargo xtask} verify-doc "${docs[@]}" 2>&1)
