@@ -428,47 +428,50 @@ flowchart LR
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
+      <p>
+        All four were settled by the owner in the 2026-09-11 review round; the direction below
+        is what W1 and W2 build, and what DEC-42 records. Nothing is left open.
+      </p>
       <table>
-        <thead><tr><th>#</th><th>Question</th><th>Proposed default</th></tr></thead>
+        <thead><tr><th>#</th><th>Question</th><th>Decision — owner, 2026-09-11</th></tr></thead>
         <tbody>
           <tr>
             <td>1</td>
             <td>Does Codex follow a symlinked <em>skill root</em>, not just a symlinked skill
               folder?</td>
-            <td><strong>Assume yes</strong> — the docs promise symlinked skill folders are
-              followed, and a repository-root link is the only form that keeps a future skill
-              from needing a second step. W2 verifies it in a live session; if the link is
-              missed, the fallback is one link per skill
-              (<code>.agents/skills/&lt;name&gt;</code> →
-              <code>../../.claude/skills/&lt;name&gt;</code>), and the parity test enumerates
-              <code>.claude/skills/*</code> either way.</td>
+            <td><strong>Confirmed: yes.</strong> The repository-root symlink stands, so a skill
+              added to <code>.claude/skills/</code> never needs a second step. W1 keeps the
+              per-skill fallback (<code>.agents/skills/&lt;name&gt;</code> →
+              <code>../../.claude/skills/&lt;name&gt;</code>) as a recorded contingency in
+              DEC-42, and the parity test enumerates <code>.claude/skills/*</code> either
+              way.</td>
           </tr>
           <tr>
             <td>2</td>
             <td>Does Codex accept a symlinked <code>.codex/hooks.json</code>, and does its trust
               hash follow the target?</td>
-            <td><strong>Assume yes, and assert the contract, not the mechanism:</strong> the
-              parity test requires both harnesses to resolve to the same command set, so a small
-              real <code>.codex/hooks.json</code> is an acceptable fallback if the link
-              misbehaves. Observed consequence to record in DEC-42: an edit to the shared config
-              re-prompts trust, which is the intended review point, not a defect.</td>
+            <td><strong>Confirmed: yes.</strong> The link stands, and W1's parity test asserts
+              the contract rather than the mechanism — both harnesses resolve to one command set
+              — so a small real <code>.codex/hooks.json</code> stays legal if a future change
+              forces the split. DEC-42 records that editing the shared config re-prompts trust:
+              the intended review point, not a defect.</td>
           </tr>
           <tr>
             <td>3</td>
             <td>What if a future committed setting is Claude-only?</td>
-            <td><strong>Keep the shared file hooks-only</strong> (enforced by the parity test)
-              and put local Claude settings in the untracked
+            <td><strong>Confirmed, as proposed.</strong> The shared file stays hooks-only
+              (enforced by the parity test); Claude-local settings go in the untracked
               <code>.claude/settings.local.json</code>. A genuinely committed Claude-only
-              section forces the split: a real <code>.codex/hooks.json</code> carrying the same
-              definitions, with the parity test as the drift alarm.</td>
+              section forces the split — a real <code>.codex/hooks.json</code> carrying the same
+              definitions — with the parity test as the drift alarm.</td>
           </tr>
           <tr>
             <td>4</td>
             <td>Is the <code>/hooks</code> trust step a gap in the epic's evidence?</td>
-            <td><strong>Accepted and named.</strong> Trust is a per-machine store Codex manages;
-              the epic proves the configuration contract and records the operator step in
-              DEC-42, exactly as <code>.mr-allowed</code> is provisioned per machine and never
-              asserted by a test.</td>
+            <td><strong>Confirmed, as proposed: accepted and named.</strong> Trust is a
+              per-machine store Codex manages; the epic proves the configuration contract and
+              records the operator step in DEC-42, exactly as <code>.mr-allowed</code> is
+              provisioned per machine and never asserted by a test.</td>
           </tr>
         </tbody>
       </table>
