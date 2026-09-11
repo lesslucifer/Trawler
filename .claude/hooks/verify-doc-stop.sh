@@ -4,7 +4,8 @@
 # Backstop for docs edited around the file tools (shell, scripts).
 set -u
 
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+root=$(git rev-parse --show-toplevel 2>/dev/null) || root="${CLAUDE_PROJECT_DIR:-.}"
+cd "$root" || exit 0
 
 files=$(git ls-files --cached --others --exclude-standard -- 'docs/*.html' 'docs/**/*.html' 2>/dev/null | sort -u)
 [ -n "$files" ] || exit 0
