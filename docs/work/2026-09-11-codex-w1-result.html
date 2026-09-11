@@ -113,8 +113,9 @@
             <td><code>xtask/tests/harness_parity.rs</code> — 5 tests: the three link doors, the
               shared-config lock, and the committed command string run from a subdirectory and from
               a linked worktree with cwd-relative targets. <code>xtask/tests/doc_hooks.rs</code> —
-              14 tests, of which 6 are the Codex-shaped cases: red parity, green, non-HTML,
-              vanished target, multi-file, and the round-1 regression below.</td>
+              15 tests, of which 7 are the Codex-shaped cases: red parity, green, non-HTML,
+              vanished target, multi-file, and the two review regressions below (a cwd-relative
+              target from a subdirectory, and a target whose path contains a space).</td>
           </tr>
           <tr>
             <td>Review</td>
@@ -125,11 +126,16 @@
               elsewhere and skipped verification silently — is fixed in <code>b98bba8</code> with
               the named regression test; the verified nits it shared a mechanism with are fixed
               too (one batched <code>verify-doc</code> call, no second root resolution on the post
-              path). Two nits are accepted rather than fixed: the <code>Stop</code> path keeps its
-              own root resolution (one extra ~10 ms per turn, and removing it would couple the
-              config string to the script), and the <code>Delete</code> patch-header alternative
-              stays (it is part of the documented patch grammar and now costs nothing).
-              Round 2 runs on this tip.</td>
+              path). <strong>Round 2 failed on code</strong>: the batched call word-split a path
+              containing a space and skipped the doc, and a session whose cwd is
+              <code>ui/src-tauri</code> — its own cargo workspace — could not run
+              <code>cargo xtask</code> at all; both are fixed in <code>f4bc80d</code>, each with a
+              named regression test. Two nits are accepted rather than fixed: the hook command's
+              <code>git rev-parse</code> must locate the script before any payload is read (~10 ms
+              per edit, and the alternative is the absolute path this WU deleted), and the
+              <code>Delete</code> patch-header alternative stays (it is part of the documented
+              patch grammar and now costs nothing). The final round runs on this tip; its verdict
+              is the <code>cr/v3</code> note attached to it.</td>
           </tr>
           <tr>
             <td>Suite</td>
