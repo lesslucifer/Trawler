@@ -180,6 +180,19 @@ mod post_tool_use {
         assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
         assert!(stderr(&out).contains("item·deviations"), "{}", stderr(&out));
     }
+
+    #[test]
+    fn codex_patch_naming_a_path_with_a_space_is_verified() {
+        let dir = TempDir::new().unwrap();
+        let spaced = dir.path().join("a doc dir");
+        std::fs::create_dir_all(&spaced).unwrap();
+        std::fs::write(spaced.join("red.html"), red_ready_doc()).unwrap();
+
+        let path = spaced.join("red.html");
+        let out = run_hook("verify-doc-post.sh", dir.path(), &apply_patch_json(&[&path]));
+        assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+        assert!(stderr(&out).contains("item·deviations"), "{}", stderr(&out));
+    }
 }
 
 mod stop {
