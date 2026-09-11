@@ -1,0 +1,12 @@
+schema: cr/v3
+scope: "WU codex-doors -> epic/codex"
+epic: E-CODEX
+wu: E-CODEX.W1
+branch: wu/codex/doors
+base: f6fd4a97e8860da331da216cfa5fa3210cf78ffd
+head: 7b5cf9511ab3a942fe0c724e67918474b2ba2a9e
+diff_sha256: 1deaa836771b8f7e6ebca7e7e5fb6e81fd2cc170d247c4bddbce2b7c18fa0bcf
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 14, verified: 6, waived: 0 }
+verdict: FAIL
+date: 2026-09-11
