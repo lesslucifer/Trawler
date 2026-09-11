@@ -255,6 +255,16 @@ mod stop {
     }
 
     #[test]
+    fn a_doc_path_with_a_space_does_not_hide_the_other_docs() {
+        let repo = Repo::new();
+        repo.write("docs/a b.html", red_ready_doc());
+        repo.write("docs/green.html", green_ready_doc());
+        let out = run_hook("verify-doc-stop.sh", &repo.path, "{}");
+        assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+        assert!(stderr(&out).contains("a b.html"), "{}", stderr(&out));
+    }
+
+    #[test]
     fn drafts_and_green_docs_allow_the_turn_to_end() {
         let repo = Repo::new();
         repo.write("docs/green.html", green_ready_doc());
