@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/verify-doc-post.sh\""
+            "command": "root=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$CLAUDE_PROJECT_DIR\"); bash \"$root/.claude/hooks/verify-doc-post.sh\""
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/verify-doc-stop.sh\""
+            "command": "root=$(git rev-parse --show-toplevel 2>/dev/null || echo \"$CLAUDE_PROJECT_DIR\"); bash \"$root/.claude/hooks/verify-doc-stop.sh\""
           }
         ]
       }
