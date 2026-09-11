@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa41fad9f34851f0dface00">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-42: one source, two harnesses</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-42 — one source, two harnesses: the agent config is Claude's, read through symlinks</h1>
+      <p>The workflow's authoring-time guarantees are harness guarantees, and a Codex session was outside all of them. The canonical artifacts stay where the gate, the husky hooks and the T1 docs already name them; Codex reaches them through four links.</p>
+      <div class="meta">Decided 2026-09-11 · E-CODEX.W1 · extends <a href="work-planning.html">DEC-4</a>'s "the harness executes them" to both harnesses</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong><code>CLAUDE.md</code> and <code>.claude/</code> are the single sources; Codex reads
+      them through four symlinks, and nothing is copied.</strong> <code>AGENTS.md</code> →
+      <code>CLAUDE.md</code>; <code>.agents/skills</code> → <code>.claude/skills</code>;
+      <code>.codex/hooks.json</code> → <code>.claude/settings.json</code>; <code>.codex/hooks</code> →
+      <code>.claude/hooks</code>. The shared hooks file stays hooks-only and its commands resolve the
+      active git root; one <code>verify-doc-post.sh</code> reads both harnesses' edit payloads. Codex's
+      per-machine hook trust (<code>/hooks</code>) is an operator step, not a repo artifact.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>
+      The work-planning standard states the premise of its own checks: hooks are versioned in
+      <code>.claude/settings.json</code>, <em>"the harness executes them, not the agent, and in an
+      AI-first repo every author is a harness session, so authoring-time coverage is total"</em>. In a
+      Codex session none of the three promises held — T0 was not read (Codex looks for
+      <code>AGENTS.md</code>), the <code>cr/v3</code> skill was not discovered (Codex scans
+      <code>.agents/skills/</code>), and the doc-feedback hook fired but parsed a payload field Codex
+      never sends, so it exited 0 on every edit. Nothing failed loudly: a skipped check and a passing
+      check print the same nothing. The tree already carried the cost — the hand-made
+      <code>AGENTS.md</code> copy had drifted from <code>CLAUDE.md</code> at line 80 before it was ever
+      committed, which is what a second source does.
+    </p>
+
+    <h2 id="doors">The four doors</h2>
+    <table data-c="doors">
+      <thead><tr><th>Canonical (tracked)</th><th>Codex door</th><th>Mechanism</th><th>What keeps it honest</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>CLAUDE.md</code></td>
+          <td><code>AGENTS.md</code></td>
+          <td>symlink</td>
+          <td>the parity test refuses a regular file and a target that is not the tracked T0 blob</td>
+        </tr>
+        <tr>
+          <td><code>.claude/skills/</code></td>
+          <td><code>.agents/skills</code></td>
+          <td>symlink of the repository skill root</td>
+          <td>every <code>.claude/skills/*/SKILL.md</code> is read back through the Codex path and must carry <code>name</code> + <code>description</code></td>
+        </tr>
+        <tr>
+          <td><code>.claude/settings.json</code></td>
+          <td><code>.codex/hooks.json</code></td>
+          <td>symlink, plus a harness-neutral command</td>
+          <td>both paths canonicalize to one file; the test locks the file's bytes, so a Claude-only setting cannot slip in unnoticed</td>
+        </tr>
+        <tr>
+          <td><code>.claude/hooks/</code></td>
+          <td><code>.codex/hooks</code></td>
+          <td>symlink</td>
+          <td>each script reads byte-identically through both paths</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="hook-contract">The hook contract</h2>
+    <table data-c="hook-contract">
+      <thead><tr><th>Field</th><th>Claude</th><th>Codex</th><th>How one script carries both</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Matcher</td>
+          <td><code>Write|Edit</code></td>
+          <td><code>apply_patch</code>, matched by the aliases <code>Write</code>/<code>Edit</code></td>
+          <td>one regex over the tool name; no change was needed</td>
+        </tr>
+        <tr>
+          <td>The edited file</td>
+          <td><code>tool_input.file_path</code></td>
+          <td><code>tool_input.command</code> — the patch text</td>
+          <td>prefer <code>file_path</code>; otherwise read the <code>*** Add/Update/Delete File:</code> and <code>*** Move to:</code> headers, and verify every <code>.html</code> among them</td>
+        </tr>
+        <tr>
+          <td>Script location</td>
+          <td><code>CLAUDE_PROJECT_DIR</code> in the environment</td>
+          <td>none; the session's working directory</td>
+          <td><code>root=$(git rev-parse --show-toplevel 2&gt;/dev/null || echo "$CLAUDE_PROJECT_DIR")</code> — the active worktree when git answers, Claude's variable otherwise</td>
+        </tr>
+        <tr>
+          <td><code>Stop</code> payload</td>
+          <td>not read</td>
+          <td>not read</td>
+          <td>identical already; only the shared root resolution was added</td>
+        </tr>
+        <tr>
+          <td>Exit code 2</td>
+          <td>refuses the turn / feeds the reason back</td>
+          <td>same contract</td>
+          <td>the problem blocks stay on stderr, unchanged</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <strong>The coverage boundary is unchanged by this record.</strong> <code>PostToolUse</code> sees
+      edits the harness routes through its edit tool. A doc written by a shell command or an MCP tool is
+      missed in <em>both</em> harnesses; the turn-end <code>Stop</code> backstop is what catches it, which
+      is why that hook exists and why it is not the redundant one.
+    </div>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Move canonical to <code>AGENTS.md</code> and <code>.codex/</code></td>
+          <td>Would rename the T0 the gate hard-codes (<code>is_rule_bearing</code>), the commit-msg hook text, the husky hook comments, four T1/T2 docs and the <code>cr/v3</code> rulebook path — all for a name, while the alias costs one line and no code.</td>
+        </tr>
+        <tr>
+          <td>A project <code>.codex/config.toml</code> with <code>project_doc_fallback_filenames = ["CLAUDE.md"]</code></td>
+          <td>Covers T0 only, invents a second config language for the same fact, is invisible in the file tree, and leaves the skill and hook doors unsolved. Kept as a fallback for T0 alone if the symlink ever stops being read.</td>
+        </tr>
+        <tr>
+          <td>Keep the <code>.codex</code> copies and add a drift test</td>
+          <td>A copy drifts in the window before any test runs — this tree proved it: the existing copy had already diverged at line 80. The link removes the window instead of watching it.</td>
+        </tr>
+        <tr>
+          <td>One symlink per skill instead of the skill root</td>
+          <td>Every new skill would need a second step, and a forgotten step is invisible. The per-skill form stays recorded as the contingency if Codex ever stops following a symlinked skill root.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">What follows from it</h2>
+    <ul data-c="consequences">
+      <li><strong>The shared file stays hooks-only.</strong> <code>.claude/settings.json</code> is now
+        Codex's hooks file too, and the parity test locks its bytes, so a committed Claude-only setting
+        reds the test instead of failing Codex silently. Local Claude settings belong in the untracked
+        <code>.claude/settings.local.json</code>.</li>
+      <li><strong>If a committed Claude-only section is ever needed</strong>, the split is mechanical:
+        a real <code>.codex/hooks.json</code> carrying the same definitions, with the parity test still
+        asserting that both harnesses resolve to the same command set — the contract, not the link.</li>
+      <li><strong>Editing the shared config re-prompts Codex's hook trust.</strong> That is the intended
+        review point: the trust store is keyed to the hook definition, so a change to the gates asks the
+        human once. <code>/hooks</code> is a per-machine step and no test can assert it, exactly like
+        <code>.mr-allowed</code>.</li>
+      <li><strong>Rule-bearing docs keep their names.</strong> <code>CLAUDE.md</code> is still T0 and
+        still needs a <code>Reviewed-By</code> trailer; <code>AGENTS.md</code> is a second name for the
+        same bytes, so a commit that edits the rules is caught exactly as before.</li>
+      <li><strong>The drift alarm is <code>xtask/tests/harness_parity.rs</code>.</strong> Copy, one-sided
+        skill, divergent hook definitions and a hard-coded path each red it by construction.</li>
+    </ul>
+
+    <h2 id="where">Where this lives</h2>
+    <table data-c="where">
+      <thead><tr><th>Artifact</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>The doors</td><td><code>AGENTS.md</code> · <code>.agents/skills</code> · <code>.codex/hooks.json</code> · <code>.codex/hooks</code></td></tr>
+        <tr><td>The shared definitions</td><td><code>.claude/settings.json</code> · <code>.claude/hooks/verify-doc-*.sh</code></td></tr>
+        <tr><td>The drift alarm</td><td><code>xtask/tests/harness_parity.rs</code> · <code>xtask/tests/doc_hooks.rs</code></td></tr>
+        <tr><td>The process text it amends</td><td><a href="../work-planning.html">work-planning.html</a> · <a href="../workflow.html">workflow.html</a> · <a href="../documentation-system.html">documentation-system.html</a> — the T1 wording edits land with the epic's e2e (E-CODEX.W2)</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
