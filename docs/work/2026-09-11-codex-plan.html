@@ -46,9 +46,9 @@
         <tr>
           <td>T0 rules load in every session.</td>
           <td>Codex reads <code>AGENTS.md</code>, not <code>CLAUDE.md</code>. The
-            <code>AGENTS.md</code> in the tree is an untracked hand-made copy — and it has
-            already drifted: line 80 still names itself (see below), the only byte that
-            differs from <code>CLAUDE.md</code>. A copy drifted before it was even committed.</td>
+            <code>AGENTS.md</code> in the tree is an untracked hand-made copy, and the two
+            already differ — at line 80, where each file names itself. Two names, two texts,
+            one rule: the copy drifted before it was even committed.</td>
           <td><code>AGENTS.md</code> (untracked copy)</td>
         </tr>
         <tr>
@@ -92,7 +92,8 @@
       only once the Codex hook layer loads at all, and today <code>.codex/</code> is untracked:
       a fresh clone has no Codex hooks, and Codex only loads project hooks from a
       <code>.codex/</code> layer the user has reviewed and trusted (<code>/hooks</code>).
-      Params carry no check either: <code>jq</code> simply returns empty and the script exits 0.
+      A missing payload field also fails open: the script's only guard is the path it parses,
+      so an empty one is a silent success.
     </div>
 
     <h2 id="shape">The shape of the fix</h2>
@@ -377,8 +378,9 @@ flowchart LR
           <tr>
             <td>3</td>
             <td>Read the hook definitions out of <code>.codex/hooks.json</code> as Codex would,
-              run the <code>PostToolUse</code> command string in a temp repo with a Codex
-              <code>apply_patch</code> payload writing a red ready doc.</td>
+              and run the <code>PostToolUse</code> command string in a temp repo that shares the
+              repository's <code>.claude/</code> — a stand-in for a second worktree — with a
+              Codex <code>apply_patch</code> payload writing a red ready doc.</td>
             <td>Exit 2, and the problem blocks name the missing checklist items — the identical
               verdict the Claude payload produces.</td>
           </tr>
@@ -389,7 +391,7 @@ flowchart LR
           </tr>
           <tr>
             <td>5</td>
-            <td>Run the <code>Stop</code> command string in a temp repo holding a tracked red
+            <td>Run the <code>Stop</code> command string in that temp repo holding a tracked red
               doc.</td>
             <td>Exit 2 with the refusal text: the backstop survives the shared config.</td>
           </tr>
