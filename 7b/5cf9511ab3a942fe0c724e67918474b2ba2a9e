@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-CODEX
+wu: E-CODEX.W1
+branch: wu/codex/doors
+tests:
+  unit:
+    waived: "no Rust logic is added or changed under src/ or xtask/src: the code-path files in this diff are the tests that enforce the harness contract, and the T0 rule they sit beside stays pinned by the pre-existing notes::tests"
+  integration:
+    count: 10
+    covers: "harness parity (5): AGENTS.md, .agents/skills, .codex/hooks.json and .codex/hooks each resolve to the tracked blob, the shared config is locked hooks-only with no absolute path, and the committed command string finds the script from a subdirectory and from a linked worktree. Codex payload parity (5): the apply_patch text reds the doc the file_path payload reds, stays silent on green, non-HTML and vanished targets, and reports every red doc in one patch."
+  e2e:
+    waived: "the epic four-door flow against the committed config is E-CODEX.W2 by the epic plan; this WU contract is the links and the payload parity, which the integration suite asserts directly"
+date: 2026-09-11
