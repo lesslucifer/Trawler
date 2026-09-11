@@ -1,0 +1,23 @@
+schema: doc/v1
+epic: E-CODEX
+wu: E-CODEX.W1
+branch: wu/codex/doors
+changes:
+  - path: docs/decisions/dec-42-one-source-two-harnesses.html
+    tier: T2
+    action: added
+    distills: "the canonical/alias arrangement, the hook payload contract, the rejected alternatives and the per-machine trust step"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index row for DEC-42"
+  - path: docs/work/2026-09-11-codex-w1-plan.html
+    tier: T3
+    action: added
+    distilled_to: [docs/decisions/dec-42-one-source-two-harnesses.html]
+  - path: docs/work/2026-09-11-codex-w1-result.html
+    tier: T3
+    action: added
+    distilled_to: [docs/decisions/dec-42-one-source-two-harnesses.html]
+t2_waived: null
+date: 2026-09-12
