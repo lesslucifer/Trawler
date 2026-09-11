@@ -1,0 +1,15 @@
+schema: test/v2
+level: working-unit
+epic: E-CODEX
+wu: E-CODEX.W1
+branch: wu/codex/doors
+tests:
+  unit:
+    count: 1
+    covers: "notes::tests pins is_rule_bearing over the T0 pair - CLAUDE.md and its AGENTS.md door - beside the T1/T2/T3 cases"
+  integration:
+    count: 13
+    covers: "harness parity (5): AGENTS.md, .agents/skills, .codex/hooks.json and .codex/hooks each resolve to the tracked blob, the shared config is locked hooks-only with no absolute path, and the committed command string finds the script from a subdirectory and from a linked worktree driven by cwd-relative targets. Codex payload parity (7): the apply_patch text reds the doc the file_path payload reds, stays silent on green, non-HTML and vanished targets, reports every red doc in one patch, verifies a cwd-relative target where the session stands, and verifies a target whose path contains a space. Stop hook (1): a doc path containing a space no longer hides the other docs from the turn-end check."
+  e2e:
+    waived: "the epic four-door flow against the committed config is E-CODEX.W2 by the epic plan; this WU contract is the links and the payload parity, which the integration suite asserts directly"
+date: 2026-09-12
