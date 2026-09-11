@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa420779f34851f0dface05" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-CODEX.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-CODEX.W1 — the four doors are live</h1>
+      <p>Delivered: one tracked source per artifact, one shared hook config, one script that reads both harnesses' edit payloads — with the drift alarm wired.</p>
+      <div class="meta">Written 2026-09-11 · Trawler · T3 WU result · <span class="badge id">E-CODEX.W1</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>
+        <strong>Delivered against the requirement.</strong> A Codex session now reaches the same
+        sources a Claude session reads, and the paths are links rather than copies:
+      </p>
+      <table data-c="landed">
+        <thead><tr><th>Requirement clause</th><th>What landed</th><th>Expected result</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Reads the tracked T0 rules</td>
+            <td><code>AGENTS.md</code> → <code>CLAUDE.md</code> (mode 120000); the byte-identical
+              proof is <code>cmp AGENTS.md CLAUDE.md</code>, asserted in <code>harness_parity</code></td>
+            <td>1 · 6</td>
+          </tr>
+          <tr>
+            <td>Discovers every repository skill with the bytes the gate pins</td>
+            <td><code>.agents/skills</code> → <code>.claude/skills</code>; every
+              <code>SKILL.md</code> is read back through the Codex path and must carry
+              <code>name</code> + <code>description</code></td>
+            <td>2 · 6</td>
+          </tr>
+          <tr>
+            <td>Gets the same <code>verify-doc</code> verdict as Claude</td>
+            <td><code>verify-doc-post.sh</code> prefers <code>tool_input.file_path</code> and falls
+              back to the <code>apply_patch</code> text, verifying every <code>.html</code> the patch
+              names; red ⇒ exit 2 with the same blocks, green/non-HTML/vanished ⇒ silent</td>
+            <td>5</td>
+          </tr>
+          <tr>
+            <td>From anywhere — any worktree, any subdirectory</td>
+            <td>Both command strings resolve
+              <code>root=$(git rev-parse --show-toplevel 2&gt;/dev/null || echo "$CLAUDE_PROJECT_DIR")</code>;
+              no absolute path survives in the config</td>
+            <td>3 · 4</td>
+          </tr>
+          <tr>
+            <td>From one tracked source per artifact</td>
+            <td><code>.codex/hooks.json</code> → <code>.claude/settings.json</code> (one definition
+              set), <code>.codex/hooks</code> → <code>.claude/hooks</code> (one script tree)</td>
+            <td>3 · 4</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The untracked copies this WU replaced are gone — the hand-made <code>AGENTS.md</code> that had
+        drifted at line 80, the duplicated <code>.codex/hooks.json</code> with its absolute worktree
+        path, and the two <code>.codex/hooks/*.sh</code> copies. The empty
+        <code>.agents/skills/code-review/</code> placeholder was removed too; its content was nothing.
+      </p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations">
+        <thead><tr><th>#</th><th>Planned</th><th>What happened</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>DEC-42 and its index row land at the epic's distillation (W2)</td>
+            <td><strong>They land here</strong>, in this WU's third commit</td>
+            <td>This WU's only code-path files are its own tests, so the doc gate's code-change rule
+              would have needed a <code>t2_waived</code> for the ruling this WU makes. The decision is
+              this WU's truth, and landing it here lets the review judge the ruling beside the
+              arrangement it describes. W2 keeps the three T1 wording edits, the e2e and the epic
+              result.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>The payload tests live in the new <code>harness_parity.rs</code></td>
+            <td>The payload cases extend the existing <code>xtask/tests/doc_hooks.rs</code>; the
+              file-level parity cases are the new file</td>
+            <td>That suite already owns the hook-run helper (<code>run_hook</code>) and the
+              Claude-shaped cases the new ones are compared against — keeping red-vs-red in one file
+              is what makes the parity assertion readable. The WU plan's file column named only
+              <code>harness_parity.rs</code>; the diff touches both.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Kind</th><th>Pointer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Commits</td>
+            <td><code>e1655f3</code> the four doors + the shared command ·
+              <code>127a87a</code> the payload-tolerant script + tests ·
+              <code>5d232b8</code> DEC-42 + index</td>
+          </tr>
+          <tr>
+            <td>Integration tests</td>
+            <td><code>xtask/tests/harness_parity.rs</code> — 5 tests: the three link doors, the
+              shared-config lock, and the committed command string run from a subdirectory and from a
+              linked worktree. <code>xtask/tests/doc_hooks.rs</code> — 13 tests, of which 5 are the
+              Codex-shaped cases (red parity, green, non-HTML, vanished target, multi-file).</td>
+          </tr>
+          <tr>
+            <td>Suite</td>
+            <td><code>cargo test --all --all-features</code> green; the two trawler-lib socket tests
+              fail inside the sandbox only (bind denied) and pass outside it — unrelated to this
+              diff.</td>
+          </tr>
+          <tr>
+            <td>Docs</td>
+            <td><a href="../decisions/dec-42-one-source-two-harnesses.html">DEC-42</a> + its index row;
+              this plan/result pair under <code>docs/work/</code></td>
+          </tr>
+          <tr>
+            <td>Plan</td>
+            <td><code>docs/work/2026-09-11-codex-w1-plan.html</code> (written before the code)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">
+      <a href="../decisions/dec-42-one-source-two-harnesses.html">DEC-42</a> (new, T2) carries the
+      rule: canonical stays <code>CLAUDE.md</code> + <code>.claude/</code>, Codex reads it through
+      four symlinks, the shared hooks file stays hooks-only with worktree-resolving commands, one
+      script reads both payload shapes, and the <code>/hooks</code> trust step is per machine.
+      <code>docs/decisions/decisions-index.html</code> is indexed. The three T1 wording edits
+      (<code>workflow.html</code>, <code>work-planning.html</code>,
+      <code>documentation-system.html</code>) remain E-CODEX.W2's, per the epic plan, and are
+      rule-bearing so they land under a <code>Reviewed-By</code> trailer.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li><strong>The manual smoke, by a human, once:</strong> a Codex session must review and trust
+        the project hooks (<code>/hooks</code>) before they run — the per-machine step DEC-42 records
+        and no test can assert. W2's epic result notes it as the one uncovered step.</li>
+      <li><strong>E-CODEX.W2</strong> — the four-door e2e against the committed config, the three T1
+        wording edits, and the epic result report.</li>
+      <li><strong>Nothing deferred from this WU.</strong> The coverage boundary both harnesses share
+        (a doc written by a shell command or an MCP tool is not seen by <code>PostToolUse</code>)
+        is unchanged by design and carried by the <code>Stop</code> backstop.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
