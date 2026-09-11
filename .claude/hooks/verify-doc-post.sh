@@ -15,22 +15,23 @@ paths=$(printf '%s' "$input" | jq -r '
     | select(test("^\\*\\*\\* (Add|Update|Delete) File: |^\\*\\*\\* Move to: "))
     | sub("^\\*\\*\\* (Add|Update|Delete) File: |^\\*\\*\\* Move to: "; "")
   end' 2>/dev/null) || exit 0
-[ -n "$paths" ] || exit 0
 
-root=$(git rev-parse --show-toplevel 2>/dev/null) || root="${CLAUDE_PROJECT_DIR:-.}"
-cd "$root" || exit 0
-
-status=0
+# Targets stay relative to the session's cwd, exactly as the harness named them,
+# so the hook never changes directory and never second-guesses the patch.
+docs=""
 while IFS= read -r path; do
   case "$path" in
     *.html) ;;
     *) continue ;;
   esac
   [ -f "$path" ] || continue
-  out=$(${XTASK_BIN:-cargo xtask} verify-doc "$path" 2>&1)
-  rc=$?
-  [ "$rc" -eq 1 ] || continue
-  printf '%s\n' "$out" >&2
-  status=2
+  docs="${docs:+$docs }$path"
 done <<<"$paths"
-exit $status
+[ -n "$docs" ] || exit 0
+
+# shellcheck disable=SC2086 # the newline-separated list is the argument list
+out=$(${XTASK_BIN:-cargo xtask} verify-doc $docs 2>&1)
+rc=$?
+[ "$rc" -eq 1 ] || exit 0
+printf '%s\n' "$out" >&2
+exit 2

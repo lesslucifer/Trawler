@@ -157,9 +157,8 @@ fn the_shared_command_finds_the_script_from_a_subdirectory_and_a_linked_worktree
     git(&main, &["config", "commit.gpgsign", "false"]);
     symlink(repo_root().join(".claude"), main.join(".claude")).unwrap();
 
-    let red = main.join("sub/red.html");
-    fs::write(&red, RED_READY_DOC).unwrap();
-    let out = run(POST_COMMAND, &main.join("sub"), &codex_payload(&red));
+    fs::write(main.join("sub/red.html"), RED_READY_DOC).unwrap();
+    let out = run(POST_COMMAND, &main.join("sub"), &codex_payload(Path::new("red.html")));
     assert_eq!(out.status.code(), Some(2), "from a subdirectory: {}", stderr(&out));
 
     git(&main, &["add", "-A"]);
@@ -167,23 +166,13 @@ fn the_shared_command_finds_the_script_from_a_subdirectory_and_a_linked_worktree
     let linked = dir.path().join("linked");
     git(&main, &["worktree", "add", "-q", linked.to_str().unwrap()]);
     assert!(fs::symlink_metadata(linked.join(".claude")).unwrap().file_type().is_symlink());
-    let red = linked.join("red.html");
-    fs::write(&red, RED_READY_DOC).unwrap();
-    let out = run(POST_COMMAND, &linked, &codex_payload(&red));
+    fs::write(linked.join("red.html"), RED_READY_DOC).unwrap();
+    let out = run(POST_COMMAND, &linked, &codex_payload(Path::new("red.html")));
     assert_eq!(out.status.code(), Some(2), "from a linked worktree: {}", stderr(&out));
 }
 
 fn git(repo: &Path, args: &[&str]) {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(repo)
-        .args(args)
-        .env_remove("GIT_DIR")
-        .env_remove("GIT_WORK_TREE")
-        .env_remove("GIT_INDEX_FILE")
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "git {args:?}: {}", stderr(&out));
+    xtask::git::git(repo, args).unwrap_or_else(|e| panic!("{e}"));
 }
 
 fn run(command: &str, cwd: &Path, payload: &str) -> Output {

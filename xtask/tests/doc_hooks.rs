@@ -11,6 +11,10 @@ fn hooks_dir() -> PathBuf {
 }
 
 fn run_hook(script: &str, project_dir: &Path, stdin_json: &str) -> Output {
+    run_hook_in(script, project_dir, project_dir, stdin_json)
+}
+
+fn run_hook_in(script: &str, project_dir: &Path, cwd: &Path, stdin_json: &str) -> Output {
     let mut child = Command::new("bash")
         .arg(hooks_dir().join(script))
         .env_remove("GIT_DIR")
@@ -18,7 +22,7 @@ fn run_hook(script: &str, project_dir: &Path, stdin_json: &str) -> Output {
         .env_remove("GIT_INDEX_FILE")
         .env("XTASK_BIN", env!("CARGO_BIN_EXE_xtask"))
         .env("CLAUDE_PROJECT_DIR", project_dir)
-        .current_dir(project_dir)
+        .current_dir(cwd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -158,6 +162,23 @@ mod post_tool_use {
         assert_eq!(out.status.code(), Some(2));
         let err = stderr(&out);
         assert!(err.contains("first.html") && err.contains("second.html"), "{err}");
+    }
+
+    #[test]
+    fn codex_patch_naming_a_relative_path_is_verified_where_the_session_stands() {
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("sub");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(sub.join("result.html"), red_ready_doc()).unwrap();
+
+        let out = run_hook_in(
+            "verify-doc-post.sh",
+            dir.path(),
+            &sub,
+            &apply_patch_json(&[Path::new("result.html")]),
+        );
+        assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+        assert!(stderr(&out).contains("item·deviations"), "{}", stderr(&out));
     }
 }
 
