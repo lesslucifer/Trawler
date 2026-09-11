@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-CODEX — one source, two harnesses</h1>
       <p>A Codex session in this repo reads the same T0 rules, loads the same code-review skill, and runs the same verify-doc hooks a Claude session does — through symlinks, with one payload-tolerant hook script.</p>
-      <div class="meta">Draft v1 · 2026-09-11 · Trawler · T3 epic plan · <span class="badge id">E-CODEX</span></div>
+      <div class="meta">Draft v2 · 2026-09-11 · Trawler · T3 epic plan · <span class="badge id">E-CODEX</span></div>
     </div>
   </header>
   <main>
@@ -119,6 +119,28 @@ flowchart LR
       <div class="caption">Four links, no second copy. Three of them are pure symlinks; the hook entry additionally needs one harness-neutral command string and a payload-tolerant script, because the two harnesses name the edited file differently.</div>
     </div>
 
+    <div class="callout" data-c="one-script">
+      <strong>Can one script serve both harnesses?</strong> Yes — it already does, for the most
+      part. A hook here is a plain <code>bash</code> command that reads one JSON object on stdin
+      and uses exit code 2 to hand a reason back to the session; both harnesses honour exactly
+      that contract, which is why the copy in <code>.codex/hooks/</code> is byte-identical
+      today. Only two things differ, and one of them matters:
+      <ul>
+        <li><strong>Matching: nothing to do.</strong> Both matchers are regexes over the tool
+          name, and Codex aliases its <code>apply_patch</code> tool to <code>Edit</code> and
+          <code>Write</code> — so the existing <code>Write|Edit</code> matcher already fires in
+          both harnesses.</li>
+        <li><strong>Reading the edited file: the one gap.</strong> Claude sends
+          <code>tool_input.file_path</code>; Codex sends <code>tool_input.command</code>, the
+          patch text. A script that knows only the first finds no path and exits 0 — a silent
+          success, indistinguishable from a green doc. That is the addition W1 makes.</li>
+      </ul>
+      The <code>Stop</code> hook reads nothing from stdin, so its script is already
+      harness-independent. The coverage boundary is identical in both harnesses too: a doc
+      written through a shell command or an MCP tool is not seen by <code>PostToolUse</code> in
+      either, and the turn-end backstop is what catches it.
+    </div>
+
     <h2 id="use-cases">Use-case requirements</h2>
     <p data-item="use-cases">
       <strong>A process epic — it delivers no <code>UC-*</code> behaviour and changes
@@ -210,131 +232,85 @@ flowchart LR
       <tbody>
         <tr>
           <td><span class="badge id">W1</span></td>
-          <td>The T0 door: <code>AGENTS.md</code> becomes a symlink to <code>CLAUDE.md</code>.</td>
-          <td>G1 — T0 is read</td>
-          <td><code>AGENTS.md</code></td>
+          <td>All four doors in one increment: the T0 link, the skills link, and the hook entry
+            (one shared config, one script tree, a payload-tolerant
+            <code>verify-doc-post.sh</code>), with the parity tests that pin them.</td>
+          <td>G1–G5</td>
+          <td><code>AGENTS.md</code> · <code>.agents/skills</code> · <code>.codex/hooks.json</code> ·
+            <code>.codex/hooks</code> · <code>.claude/settings.json</code> ·
+            <code>.claude/hooks/verify-doc-post.sh</code> ·
+            <code>xtask/tests/harness_parity.rs</code></td>
           <td>none</td>
         </tr>
         <tr>
           <td><span class="badge id">W2</span></td>
-          <td>The skills door: <code>.agents/skills</code> becomes a symlink to <code>.claude/skills</code>.</td>
-          <td>G2 — <code>$code-review</code> loads</td>
-          <td><code>.agents/skills</code></td>
-          <td>none</td>
-        </tr>
-        <tr>
-          <td><span class="badge id">W3</span></td>
-          <td>The hook door: one shared config, harness-neutral commands, and a script that reads both payload shapes.</td>
-          <td>G3 · G4 · G5</td>
-          <td><code>.codex/hooks.json</code> · <code>.codex/hooks</code> · <code>.claude/settings.json</code> · <code>.claude/hooks/verify-doc-post.sh</code></td>
-          <td>none — parallel with W1/W2</td>
-        </tr>
-        <tr>
-          <td><span class="badge id">W4</span></td>
-          <td>The epic e2e, and the truth lands: parity + flow tests, DEC-42, the three T1 edits, the index row.</td>
+          <td>The epic e2e, and the truth lands: the flow test, DEC-42, the three T1 edits, the
+            index row.</td>
           <td>G6 — and every gate below it</td>
-          <td><code>xtask/tests/*</code> · <code>xtask/Cargo.toml</code> · <code>docs/decisions/</code> · T1 docs</td>
-          <td>W1 · W2 · W3</td>
+          <td><code>xtask/tests/e2e_codex_harness.rs</code> · <code>xtask/Cargo.toml</code> ·
+            <code>docs/decisions/</code> · T1 docs</td>
+          <td>E-CODEX.W1</td>
         </tr>
       </tbody>
     </table>
-    <p class="caption">Read left to right: W1 and W2 are pure symlinks and can land independently; W3 is the one place a link alone is not sufficient, because a Codex edit arrives as patch text rather than a file path.</p>
+    <p class="caption">W1 is one WU because the epic's requirement is one sentence about one session — three separate links would be two WUs of a single <code>ln -s</code> and a third whose only test is the pair that went with them. W2 exists because the e2e cannot be written until every door is real, and it is where the distillation lands.</p>
 
     <div data-item="wu-summaries">
 
       <div data-wu="E-CODEX.W1">
-        <h3 id="w1">E-CODEX.W1 — T0 behind the Codex door</h3>
+        <h3 id="w1">E-CODEX.W1 — every door a Codex session goes through</h3>
         <p data-item="wu-summary">
-          Replace the untracked hand-made <code>AGENTS.md</code> copy with a symlink to
-          <code>CLAUDE.md</code>, so the file Codex reads is the file the gate, the husky hooks
-          and the <code>mr</code> rules already name. Canonical stays <code>CLAUDE.md</code>:
-          moving the name would force edits in <code>xtask/src/notes.rs</code>
-          (<code>is_rule_bearing</code>), the commit-msg hook text, and four T1/T2 docs, for no
-          gain — an alias costs nothing. No T0 content change, and no gate change: a commit
-          editing <code>CLAUDE.md</code> still reds without a <code>Reviewed-By</code> trailer.
+          The epic's core in one increment, because one sentence covers all of it: with four
+          links in place a Codex session reads the tracked T0 rules, discovers every repository
+          skill with the bytes the gate pins, and receives the same <code>verify-doc</code>
+          verdict a Claude session receives for the same edit — from one tracked source per
+          artifact. Concretely: replace the untracked <code>AGENTS.md</code> copy with a symlink
+          to <code>CLAUDE.md</code> (canonical stays <code>CLAUDE.md</code> — moving the name
+          would touch <code>is_rule_bearing</code>, the commit-msg hook text and four docs for
+          no gain); symlink the repository skill root (<code>.agents/skills</code> →
+          <code>.claude/skills</code>) rather than each skill, so a skill added to
+          <code>.claude/skills/</code> is reachable with no second step; and fix the one place a
+          link is not sufficient — <code>.codex/hooks.json</code> →
+          <code>.claude/settings.json</code> with harness-neutral commands
+          (<code>${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}</code>),
+          <code>.codex/hooks</code> → <code>.claude/hooks</code>, and
+          <code>verify-doc-post.sh</code> reading both payload shapes. The <code>Stop</code> hook
+          reads no stdin and needs only the shared path resolution. No T0 content change, no gate
+          change.
         </p>
         <p data-item="wu-maps-to">
-          E-CODEX · G1 · serves the T0 rule that every AI agent session runs under the same
-          charter.
+          E-CODEX · G1–G5 · the T0 charter, the <code>cr/v3</code> rulebook, and the
+          authoring-time hook contract.
         </p>
         <p data-item="wu-expected">
-          <code>git ls-files -s AGENTS.md</code> shows mode <code>120000</code> pointing at
-          <code>CLAUDE.md</code>; the parity test reds if <code>AGENTS.md</code> is ever a
-          regular file, or if its target is not the tracked T0 blob; and
+          <code>git ls-files -s</code> shows mode <code>120000</code> for <code>AGENTS.md</code>
+          and both <code>.codex</code> doors, each resolving to its canonical tracked blob;
+          every <code>.claude/skills/&lt;name&gt;/SKILL.md</code> resolves byte-identically
+          under <code>.agents/skills/</code> and carries <code>name</code> +
+          <code>description</code>; the Codex-shaped payload for a red ready doc exits 2 with
+          the same problem blocks the Claude-shaped payload produces for that file, while a
+          green doc, a non-HTML patch and a missing target stay silent; the shared config's only
+          top-level key is <code>hooks</code> and its command string resolves from a worktree
+          and from a subdirectory; and each parity test reds on its drift — a copied
+          <code>AGENTS.md</code>, a one-sided skill, divergent hook definitions.
           <code>is_rule_bearing</code>'s T0 clause is untouched, proven by the existing gate
           tests still passing.
         </p>
-        <p data-item="wu-deps">none.</p>
+        <p data-item="wu-deps">none — the first WU.</p>
       </div>
 
       <div data-wu="E-CODEX.W2">
-        <h3 id="w2">E-CODEX.W2 — every repository skill behind the Codex door</h3>
+        <h3 id="w2">E-CODEX.W2 — the epic e2e, and the truth lands</h3>
         <p data-item="wu-summary">
-          Symlink the repository skill root (<code>.agents/skills</code> →
-          <code>.claude/skills</code>) rather than each skill, so a skill added to
-          <code>.claude/skills/</code> is reachable from Codex with no second step. Codex
-          documents that it follows symlinked skill folders; this WU verifies the load path and
-          the frontmatter contract (<code>name</code> + <code>description</code>) for every
-          repository skill, and proves the gate is unaffected: the <code>cr/v3</code> rulebook
-          still resolves at <code>.claude/skills/code-review/</code>, byte-identical.
-        </p>
-        <p data-item="wu-maps-to">
-          E-CODEX · G2 · serves the <code>cr/v3</code> evidence note, whose rulebook blob and
-          reviewer both live in the code-review skill.
-        </p>
-        <p data-item="wu-expected">
-          For every <code>.claude/skills/&lt;name&gt;/SKILL.md</code>,
-          <code>.agents/skills/&lt;name&gt;/SKILL.md</code> resolves to the same bytes and the
-          frontmatter carries both required keys; the parity test reds when the link becomes a
-          copy or when a skill is added on one side only.
-        </p>
-        <p data-item="wu-deps">none.</p>
-      </div>
-
-      <div data-wu="E-CODEX.W3">
-        <h3 id="w3">E-CODEX.W3 — one hook config, both payload shapes</h3>
-        <p data-item="wu-summary">
-          The one place a symlink is not sufficient. Three parts, one contract: (a)
-          <code>.codex/hooks.json</code> becomes a symlink to <code>.claude/settings.json</code>,
-          whose two command strings become harness-neutral —
-          <code>${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}</code>, so Claude's
-          variable wins when it exists and Codex resolves the active worktree's root otherwise
-          (Codex's own recommendation for repository hooks); (b) <code>.codex/hooks</code>
-          becomes a symlink to <code>.claude/hooks</code>, so there is one script tree; (c)
-          <code>verify-doc-post.sh</code> learns the Codex payload — when
-          <code>tool_input.file_path</code> is absent it extracts the targets from the
-          <code>tool_input.command</code> patch text (<code>*** Add/Update/Delete File:</code>
-          and <code>*** Move to:</code>) and verifies every <code>.html</code> among them,
-          feeding back all problems as one block. The <code>Stop</code> hook reads no stdin and
-          needs only the shared path resolution.
-        </p>
-        <p data-item="wu-maps-to">
-          E-CODEX · G3 (hooks fire and check), G4 (worktree-correct paths), G5 (authored once).
-        </p>
-        <p data-item="wu-expected">
-          The Codex-shaped payload for a red ready doc exits 2 with the same problem blocks the
-          Claude-shaped payload produces for the same file; a green doc, a non-HTML patch and a
-          patch whose targets do not exist are all silent; a multi-file patch checks every
-          <code>.html</code> it names; both harnesses' definitions come from one file whose only
-          top-level key is <code>hooks</code>; and the committed command string resolves from a
-          worktree and from a subdirectory.
-        </p>
-        <p data-item="wu-deps">none — independent of W1/W2; may land in parallel.</p>
-      </div>
-
-      <div data-wu="E-CODEX.W4">
-        <h3 id="w4">E-CODEX.W4 — the epic e2e, and the truth lands</h3>
-        <p data-item="wu-summary">
-          Two test files plus the distillation. The parity suite pins the file-level contract
-          every WU above creates (symlink modes, target identity, one hook definition set,
-          frontmatter keys), and the e2e plays the epic's whole flow the way Codex consumes it:
-          resolve T0 through <code>AGENTS.md</code>, resolve the code-review skill through
-          <code>.agents/skills/</code>, then run the <em>committed</em> hook command string —
-          read out of the shared config, not hand-typed — with both payload shapes and assert
-          the same verdict. Distillation: a new T2 decision record fixing the canonical/alias
-          arrangement, the payload contract and the trust step; the three T1 wording edits; the
-          decisions index row. The T1 edits are rule-bearing, so they are staged and handed over
-          for <code>cargo xtask mr commit --as &lt;id&gt;</code> — never run by an agent.
+          The epic-level proof plus the close. The e2e plays the epic's whole flow the way Codex
+          consumes it: resolve T0 through <code>AGENTS.md</code>, resolve the code-review skill
+          through <code>.agents/skills/</code>, then run the <em>committed</em> hook command
+          string — read out of the shared config, not hand-typed — with both payload shapes and
+          assert the same verdict. Distillation: a new T2 decision record fixing the
+          canonical/alias arrangement, the payload contract and the per-machine trust step; the
+          three T1 wording edits; the decisions index row. The T1 edits are rule-bearing, so they
+          are staged and handed over for <code>cargo xtask mr commit --as &lt;id&gt;</code> —
+          never run by an agent.
         </p>
         <p data-item="wu-maps-to">
           E-CODEX · G6 and the epic's own e2e obligation; absorbs the whole epic into T2/T1.
@@ -345,7 +321,7 @@ flowchart LR
           doc; DEC-42, the index row and the three T1 docs state the new rule; the epic result
           report records the manual <code>/hooks</code> smoke as the one step no test covers.
         </p>
-        <p data-item="wu-deps">E-CODEX.W1, E-CODEX.W2, E-CODEX.W3 — the flow needs all four doors.</p>
+        <p data-item="wu-deps">E-CODEX.W1 — the flow needs all four doors.</p>
       </div>
 
     </div>
