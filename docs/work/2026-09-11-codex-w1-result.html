@@ -105,20 +105,37 @@
             <td>Commits</td>
             <td><code>e1655f3</code> the four doors + the shared command ·
               <code>127a87a</code> the payload-tolerant script + tests ·
-              <code>5d232b8</code> DEC-42 + index</td>
+              <code>5d232b8</code> DEC-42 + index ·
+              <code>b98bba8</code> the review-round fix</td>
           </tr>
           <tr>
             <td>Integration tests</td>
             <td><code>xtask/tests/harness_parity.rs</code> — 5 tests: the three link doors, the
-              shared-config lock, and the committed command string run from a subdirectory and from a
-              linked worktree. <code>xtask/tests/doc_hooks.rs</code> — 13 tests, of which 5 are the
-              Codex-shaped cases (red parity, green, non-HTML, vanished target, multi-file).</td>
+              shared-config lock, and the committed command string run from a subdirectory and from
+              a linked worktree with cwd-relative targets. <code>xtask/tests/doc_hooks.rs</code> —
+              14 tests, of which 6 are the Codex-shaped cases: red parity, green, non-HTML,
+              vanished target, multi-file, and the round-1 regression below.</td>
+          </tr>
+          <tr>
+            <td>Review</td>
+            <td><strong>Round 1 failed</strong> (the <code>cr/v3</code> note on
+              <code>7b5cf95</code>): 14 candidates, 6 verified, 8 refuted. The one important
+              finding — the hook cd'd to the git root, so a Codex session launched in a
+              subdirectory had its cwd-relative <code>apply_patch</code> targets resolved
+              elsewhere and skipped verification silently — is fixed in <code>b98bba8</code> with
+              the named regression test; the verified nits it shared a mechanism with are fixed
+              too (one batched <code>verify-doc</code> call, no second root resolution on the post
+              path). Two nits are accepted rather than fixed: the <code>Stop</code> path keeps its
+              own root resolution (one extra ~10 ms per turn, and removing it would couple the
+              config string to the script), and the <code>Delete</code> patch-header alternative
+              stays (it is part of the documented patch grammar and now costs nothing).
+              Round 2 runs on this tip.</td>
           </tr>
           <tr>
             <td>Suite</td>
-            <td><code>cargo test --all --all-features</code> green; the two trawler-lib socket tests
-              fail inside the sandbox only (bind denied) and pass outside it — unrelated to this
-              diff.</td>
+            <td><code>cargo xtask gate0</code> and <code>cargo test --all --all-features</code>
+              green; the two trawler-lib socket tests fail inside the sandbox only (bind denied)
+              and pass outside it — unrelated to this diff.</td>
           </tr>
           <tr>
             <td>Docs</td>
