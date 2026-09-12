@@ -1,0 +1,24 @@
+schema: cr/v3
+scope: "WU wu/simpwf/preflight -> epic/simpwf"
+epic: E-SIMPWF
+wu: E-SIMPWF.W2
+branch: wu/simpwf/preflight
+base: f3e64abc278f008b5ea99c1b6b00fa4158f8e0c9
+head: 78671c349c92f44235ffabf8cbcfe7edf8c95737
+diff_sha256: ee173b5ade0ebdc88229568b00ccfe5c55a47644525240c2e7a10ad08d025128
+review_run: "one round of five finders (correctness, reuse, simplification, efficiency, altitude) over f3e64abc27..14f698a, recorded in docs/work/2026-09-12-simpwf-w2-result.html; no adversarial verifier pass claimed, and no design finder - cargo xtask design-scope reports no artifact in the range. The round fixes landed in 5719d58 and the rule-bearing T1 doc commit is 78671c3, so this note is bound to a tip the finders did not see: that delta was read before PASS, and it carries the five fixes plus documentation rather than new behaviour"
+owner_ruling: "E-SIMPWF reworks the review flow itself, so the owner ruled its WUs are not code-reviewed: this note records what the finders raised and waives it, and the human mr/v1 sign-off is the review (docs/work/2026-09-12-simpwf-plan.html#wu-review-evidence)"
+findings: { found: 10, fixed: 5, waived: 5 }
+waivers:
+  - finding: "Notes::Paperwork drops the cr/v3 note, so the identity check runs over two notes where the merge runs over three - a real divergence on 1-notes"
+    reason: "documented rather than closed: loading a stale round note to check its identity would refuse reviews the merge would then pass, and DEC-43 states the divergence and why the note is not loaded"
+  - finding: "an exempt diff short-circuits before the tree check, so a red tree on a docs-only diff exits 0"
+    reason: "the plan promised exactly this - a diff with nothing to review owes no green - and DEC-43 names cargo xtask gate0 as the way to ask about a tree on its own"
+  - finding: "the preflight computes the range diff_sha256 and clones every touched doc into judged, reading neither"
+    reason: "one scope-resolving path for both commands is how the preflight and the gate cannot read different ranges, and one git diff in front of a five-agent fleet is the cheaper half of that trade"
+  - finding: "the integration suite re-declares the temp-repo harness a fifth time (dod_gate.rs, tally.rs, mr.rs, gate0_cache.rs)"
+    reason: "the same borrowing W1 recorded: rewiring five suites onto one builder is a change to the harnesses rather than to the preflight, and this epic WUs are read by the owner"
+  - finding: "the command module unit tests restate substrings the integration suite asserts end-to-end; one asserts wording rather than behaviour"
+    reason: "the strings are the product - a refusal sentence changing should break a test that names it - and the blocking count line is asserted nowhere else"
+verdict: PASS
+date: 2026-09-12
