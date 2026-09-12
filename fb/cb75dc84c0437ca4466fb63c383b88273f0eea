@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W1
+branch: wu/simpwf/measure-the-gate
+tests:
+  unit: { count: 16, covers: "xtask/src/tally.rs - record encoding and its terminator, strict and torn-line parsing, one stray byte, aggregation, the per-tip headline, an unreadable range that is not a zero, the per-level summary, a lossy-bounded file, the empty and unreadable readings" }
+  integration: { count: 8, covers: "xtask/tests/tally.rs - a red WU gate records its refused check ids, a green tip records the rounds its own first-parent line paid, a back-merged branch contributes none, and the tally is local (target/, untracked, no note ref)" }
+  e2e: { waived: "a local measurement written beside the verdict, adding no flow of its own; the epic e2e drives the gated path (WU plan, test plan)" }
