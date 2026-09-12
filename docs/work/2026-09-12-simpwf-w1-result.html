@@ -32,8 +32,8 @@
           </tr>
           <tr>
             <td>How many review rounds each tip needed</td>
-            <td>the <code>cr</code> notes attached to commits in the run's <code>base..tip</code> range, counted
-            at record time and printed per tip</td>
+            <td>the <code>cr</code> notes on the tip's own first-parent line from the gate's base, counted at
+            record time and printed per tip</td>
           </tr>
           <tr>
             <td>One command prints it</td>
@@ -52,7 +52,7 @@
     <div class="diagram" data-c="reading-diagram">
       <pre class="mermaid">
 flowchart LR
-  A["one gate run"] --> B["target/.gate-tally<br/>date · level · status · tip · base<br/>rounds · epic · wu · checks"]
+  A["one gate run"] --> B["target/.gate-tally<br/>date · level · status · tip · base<br/>branch · rounds · epic · wu · checks"]
   B --> C["cargo xtask tally"]
   C --> D["N tips · M refused · R review rounds<br/><br/>commit        x of y tips refused<br/>    check id            n<br/><br/>review rounds per tip<br/>    level sha identity R rounds checks"]
       </pre>
@@ -78,10 +78,10 @@ flowchart LR
         <tbody>
           <tr>
             <td>Which gate entry points record</td>
-            <td><code>verify-dod wu|epic</code> (and so the merge hook), <code>verify-dod commit</code>, and each
-            commit inside <code>verify-dod range</code>. The epic walk's internal re-verification of a seam is
-            <em>not</em> a separate record: its refusals already appear on the epic run as
-            <code>7·walk·&lt;check&gt;</code>.</td>
+            <td><code>verify-dod wu|epic</code> (and so the merge hook) and <code>verify-dod commit</code>. The
+            epic walk's internal re-verification of a seam is <em>not</em> a separate record — its refusals already
+            appear on the epic run as <code>7·walk·&lt;check&gt;</code> — and neither is the pre-push
+            <code>range</code> sweep, which re-checks commits that already paid their own gate.</td>
           </tr>
           <tr>
             <td>Equal-check ordering in the printed refusal list</td>
@@ -89,6 +89,44 @@ flowchart LR
           </tr>
         </tbody>
       </table>
+      <p data-c="review-round-1"><strong>The first review round changed five things</strong>, all of them found
+      by finders rather than by the author, and all now covered by tests:</p>
+      <table>
+        <thead><tr><th>Found</th><th>Changed to</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Rounds summed a range that a back-merge can fill with another branch's reviewed work, so an epic
+            tip was billed for its WUs' rounds and the total counted them twice</td>
+            <td>rounds are counted on the tip's own first-parent line, and a merged-in branch's rounds stay with
+            the branch that paid them</td>
+          </tr>
+          <tr>
+            <td>The pre-push <code>range</code> sweep recorded one line per pushed commit, re-scanning the notes
+            ref once per commit</td>
+            <td>the sweep records nothing; a gate run is an invocation that computes a report</td>
+          </tr>
+          <tr>
+            <td>One non-UTF-8 byte (or any read error) made the whole file read as empty, printing "no gate runs
+            recorded yet" over a file that held records</td>
+            <td>the file is read lossily and per line; a torn or unparsable line is dropped, never the reading</td>
+          </tr>
+          <tr>
+            <td>A record was appended with several unbuffered writes, and a torn or status-less line still parsed
+            — an unknown status even outranked <code>red</code> in the aggregation</td>
+            <td>one write per record; a line is accepted only with its status, level and trailing
+            <code>checks</code> field intact</td>
+          </tr>
+          <tr>
+            <td>The record was written before the receipt it describes, so a run whose receipt write failed still
+            showed green</td>
+            <td>a green record is written only after the receipt is on the tip</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Three further points the review raised are recorded as waivers on the <code>cr/v3</code> note rather than
+      fixed here — the file has no schema-stable contract to hold, the test harness repeats a shape the suite
+      already repeats five times, and a hand-written line format is what a local reading wants. Each carries its
+      reason there.</p>
     </div>
 
     <h2 id="evidence">Evidence</h2>
@@ -99,19 +137,21 @@ flowchart LR
           <tr>
             <td>The measurement itself</td>
             <td><code>xtask/src/tally.rs</code> — record shape, round counting, aggregation;
-            <code>xtask/src/lib.rs</code> — the three recording sites and the <code>tally</code> subcommand</td>
+            <code>xtask/src/lib.rs</code> — the two recording sites, the best-effort helper they share, and the
+            <code>tally</code> subcommand</td>
           </tr>
           <tr>
-            <td>Unit tests (9 in the module, incl. 7 new)</td>
-            <td>line round-trip, absent identity, malformed line (skipped, never poisoning the rest), a tip's
-            union of checks with its largest round count, exempt-is-not-a-refusal, the per-level summary, the
-            empty file</td>
+            <td>Unit tests (12 in the module)</td>
+            <td>line round-trip, absent identity, malformed and torn lines (dropped, never poisoning the rest),
+            one stray byte, a tip's union of checks with its largest round count, an unreadable range that is not
+            a zero, exempt-is-not-a-refusal, the per-level summary, the cap, the empty file</td>
           </tr>
           <tr>
             <td>Integration tests — the WU's contract, over a real temp git repo
-            (<code>xtask/tests/tally.rs</code>, 7)</td>
+            (<code>xtask/tests/tally.rs</code>, 8)</td>
             <td>a red WU gate records <code>1·notes</code> and <code>8·manual-review</code>; a green WU tip whose
-            range carries a FAIL note and a PASS note records <code>rounds=2</code>; the file lands under
+            own line carries a FAIL note and a PASS note records <code>rounds=2</code>; a tip that back-merged
+            another branch's reviewed work still records only its own rounds; the file lands under
             <code>target/</code>, is untracked, and <code>refs/notes</code> is unchanged by a gate run;
             <code>cargo xtask tally</code> prints the per-level refusals and the per-tip rounds; two runs on one
             tip collapse to one row; a deleted tally changes no verdict; an empty tally says so</td>

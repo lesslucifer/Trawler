@@ -83,15 +83,17 @@ flowchart LR
         </tr>
         <tr>
           <td><strong>gate run</strong></td>
-          <td>one invocation of <code>verify-dod wu|epic</code> (including the merge hook), <code>verify-dod
-          commit</code>, or one commit inside <code>verify-dod range</code>. Green, red and exempt runs are all
-          recorded: a green tip still paid for its rounds.</td>
+          <td>one invocation that computes a report: <code>verify-dod wu|epic</code> (including the merge hook)
+          or <code>verify-dod commit</code>. Green, red and exempt runs are all recorded — a green tip still paid
+          for its rounds. The pre-push <code>range</code> sweep is not one: it re-checks commits that already paid
+          their own gate. Neither is a refusal that never reaches a report, such as an octopus merge.</td>
         </tr>
         <tr>
           <td><strong>review round</strong></td>
-          <td>one <code>cr</code> note written on a commit in the run's <code>base..tip</code> range. The code
-          review writes its note on the tip it judged whether the verdict is PASS or FAIL, so a range carrying a
-          FAIL note and a PASS note paid two rounds.</td>
+          <td>one <code>cr</code> note written on a commit on the tip's own line — the first-parent chain from the
+          run's base to the tip. The code review writes its note on the tip it judged, PASS or FAIL, so a line
+          carrying a FAIL note and a PASS note paid two rounds, and reviewed work merged in from another branch
+          contributes none of its rounds.</td>
         </tr>
         <tr>
           <td><strong>tip</strong></td>
@@ -104,14 +106,15 @@ flowchart LR
     <table data-c="record-table">
       <thead><tr><th>Field</th><th>Why it is in the record</th></tr></thead>
       <tbody>
-        <tr><td><code>date</code> · <code>level</code> · <code>tip</code> · <code>base</code></td>
-        <td>which run this was, at which gate level, over which range — the key the aggregation groups on</td></tr>
+        <tr><td><code>date</code> · <code>level</code> · <code>tip</code> · <code>base</code> · <code>branch</code></td>
+        <td>which run this was, at which gate level, over which range; the aggregation groups on level + tip</td></tr>
         <tr><td><code>status</code> — green · exempt · red</td>
         <td>an exempt run passed no check, which is not the same as passing every check</td></tr>
         <tr><td><code>epic</code> · <code>wu</code></td>
         <td>the identity the tip's notes already carry, so a printed row names the unit rather than a bare sha</td></tr>
         <tr><td><code>rounds</code></td>
-        <td>the review rounds the work behind this tip paid (the term above)</td></tr>
+        <td>the review rounds the tip's own line paid (the term above), or empty when the range could not be read —
+        an unreadable reading is never recorded as a zero</td></tr>
         <tr><td><code>checks</code></td>
         <td>the check ids that refused, in the order the gate reported them; empty on a green or exempt run</td></tr>
       </tbody>
@@ -121,7 +124,9 @@ flowchart LR
     <code>key=value</code> record per line, appended by the gate. <code>target/</code> is gitignored, so the
     file leaves no trace in history; <code>cargo clean</code> wipes it with the build artifacts it sits
     beside — deliberately, because a measurement that survives a clean clone is a claim, not a measurement.
-    Same shape and same reason as Gate 0's <code>target/.gate0-green</code> cache.</p>
+    Same shape and same reason as Gate 0's <code>target/.gate0-green</code> cache. It is a reading, not a
+    history, so it is bounded: past 2048 records the oldest half goes, and a half-written line is dropped rather
+    than counted.</p>
 
     <h2 id="expected">Expected result</h2>
     <div data-item="expected">
@@ -134,8 +139,8 @@ flowchart LR
             <td>the command's output, from <code>target/.gate-tally</code></td>
           </tr>
           <tr>
-            <td>A tip whose range carries a FAIL note and a PASS note prints <strong>2 rounds</strong>; a tip with
-            one PASS prints 1</td>
+            <td>A tip whose own line carries a FAIL note and a PASS note prints <strong>2 rounds</strong>; a tip
+            with one PASS prints 1, and reviewed work it merged from another branch adds none</td>
             <td>the "review rounds per tip" table</td>
           </tr>
           <tr>
@@ -184,14 +189,17 @@ flowchart LR
           <tr>
             <td><span class="badge id">unit</span> every commit</td>
             <td><code>xtask/src/tally.rs</code> — a record round-trips through its line encoding; a malformed line
-            is skipped rather than poisoning the file; aggregation unions a tip's refused ids and keeps the
-            largest round count; a missing file summarises as "no gate runs recorded".</td>
+            or a torn one is skipped rather than poisoning the file; one stray byte does not blank the reading;
+            aggregation unions a tip's refused ids and keeps the largest round count; a range that cannot be read
+            is not a zero; the file is bounded when it outgrows its cap; a missing file summarises as "no gate
+            runs recorded".</td>
           </tr>
           <tr>
             <td><span class="badge id">integration</span> this WU</td>
             <td><code>xtask/tests/tally.rs</code>, driving the real gate over a real temp git repo: a red WU gate
-            records its refused check id under <code>working-unit</code>; a green WU tip whose range carries a
-            FAIL note and a PASS note records <code>rounds=2</code>; the tally lands under <code>target/</code> and
+            records its refused check id under <code>working-unit</code>; a green WU tip whose own line carries a
+            FAIL note and a PASS note records <code>rounds=2</code>; a tip that merged another branch's reviewed
+            work still records only its own rounds; the tally lands under <code>target/</code> and
             <code>refs/notes/*</code> gains no ref; <code>cargo xtask tally</code> prints the per-level refusal
             counts and the per-tip rounds; a re-run on one tip collapses to one row.</td>
           </tr>

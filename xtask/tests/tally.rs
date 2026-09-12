@@ -162,7 +162,8 @@ fn a_green_wu_tip_records_the_review_rounds_it_paid() {
     assert_eq!(entry.epic.as_deref(), Some("E9"));
     assert_eq!(entry.wu.as_deref(), Some("E9.W1"));
     assert!(entry.checks.is_empty());
-    assert_eq!(entry.rounds, 2, "a FAIL round and a PASS round were paid: {entry:?}");
+    assert_eq!(entry.branch.as_deref(), Some("wu/x/one"));
+    assert_eq!(entry.rounds, Some(2), "a FAIL round and a PASS round were paid: {entry:?}");
 }
 
 #[test]
@@ -180,7 +181,35 @@ fn a_red_wu_gate_records_the_check_ids_that_refused() {
     assert_eq!(entry.status, "red");
     assert!(entry.checks.contains(&"1·notes".to_string()), "{entry:?}");
     assert!(entry.checks.contains(&"8·manual-review".to_string()), "{entry:?}");
-    assert_eq!(entry.rounds, 0, "nothing was reviewed: {entry:?}");
+    assert_eq!(entry.rounds, Some(0), "nothing was reviewed: {entry:?}");
+}
+
+#[test]
+fn the_rounds_are_the_tips_own_line_not_everything_it_merged() {
+    let (repo, first) = wu_branch();
+    let base = repo.sha("epic/x");
+
+    // Another branch's reviewed work, merged into this one: its cr note is
+    // reachable from the tip, but it is not a round this line paid for.
+    repo.git(&["checkout", "-q", "-b", "wu/x/other", &base]);
+    repo.write("src/other.rs", "pub fn other() {}\n");
+    let other = repo.commit("E9.W9: another unit's work");
+    repo.note("cr", &other, &cr_note(&base, &repo.diff_sha(&base, &other), "PASS"));
+    repo.git(&["checkout", "-q", "wu/x/one"]);
+    repo.git(&["merge", "-q", "--no-ff", "-m", "back-merge", "wu/x/other"]);
+
+    bless_second_round(&repo, &first);
+    let (code, message) = repo.xtask(&["verify-dod", "wu", "wu/x/one", "--target", "epic/x"]);
+    assert_eq!(code, 0, "{message}");
+
+    let entries = repo.tally();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(
+        entries[0].rounds,
+        Some(2),
+        "the two rounds this line paid, not the one it merged: {:?}",
+        entries[0]
+    );
 }
 
 #[test]

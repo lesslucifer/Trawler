@@ -76,7 +76,7 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
             let mut report = gate.verify(Level::Commit, sha, &parent)?;
             let (tip, base) = (report.tip.clone(), report.base.clone());
             gate.check_commit_trailer(&mut report, &tip, &base)?;
-            let _ = tally::record(repo, &report);
+            record(repo, &report);
             Ok((i32::from(!report.green()), format_report(&report)))
         }
         ["hook", level] => hook(repo, level),
@@ -160,19 +160,26 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
 fn gate_run(repo: &Path, level: Level, tip: &str, target: &str) -> Result<(i32, String), String> {
     let gate = Gate { repo };
     let report = gate.verify(level, tip, target)?;
-    // The tally is a measurement taken on the way past, never evidence: a run
-    // whose record cannot be written (a read-only tree) gates exactly as it did
-    // before, and no check ever reads the file back.
-    let _ = tally::record(repo, &report);
     if report.exempt {
+        record(repo, &report);
         return Ok((0, format_report(&report)));
     }
     if report.green() {
         gate.write_receipt(&report)?;
+        record(repo, &report);
         Ok((0, format!("{} - dod/v1 receipt written", format_report(&report))))
     } else {
+        record(repo, &report);
         Ok((1, format_report(&report)))
     }
+}
+
+// The tally is a measurement taken on the way past, never evidence: the verdict
+// is already decided (and, on green, already receipted), and a checkout where
+// the file cannot be written - a read-only tree - gates exactly as it did
+// before. No check reads it back.
+fn record(repo: &Path, report: &gate::Report) {
+    let _ = tally::write(repo, report);
 }
 
 fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
@@ -245,7 +252,6 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
         if let [commit, first] = parts.as_slice() {
             let mut report = gate.verify(Level::Commit, commit, first)?;
             gate.check_commit_trailer(&mut report, commit, first)?;
-            let _ = tally::record(repo, &report);
             if !report.green() {
                 let _ = writeln!(out, "standalone commit {}:", gate::short(commit));
                 let _ = writeln!(out, "{}", format_report(&report));
