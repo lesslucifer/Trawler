@@ -146,7 +146,7 @@
         <tr>
           <td>The Rust counter misses an attribute written with arguments
           (<code>#[tokio::test(flavor = "multi_thread")]</code>), and counts attribute text that appears inside
-          a string literal — its own unit file counted 12 where 9 declarations exist</td>
+          a string literal — at the reviewed tip its own unit file counted 12 where 9 declarations existed</td>
           <td>important</td>
           <td>fixed in part, stated in full: argument-carrying attributes count now. The line-rule limit
           (text that spells an attribute is counted; another form is not) is recorded in DEC-44 rather than
