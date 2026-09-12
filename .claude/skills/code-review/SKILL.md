@@ -88,7 +88,9 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
   review subject, not a free pass. `doc/v1` is not read: what a document says
   about the code is the plan's and the human's business, not this run's;
 - the return format: a list of candidate findings, each
-  `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`.
+  `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`
+  — the severity rows in `rubric.md` say which is which, and a finder's severity
+  is a proposal the verifier re-judges.
 
 ## 3b · The design dimension is not part of this run
 
@@ -112,6 +114,9 @@ reasoning. Its prompt:
 - resolve uncertainty to false-positive — with no human filter downstream, a
   false positive costs more than a missed nit; recall comes from five
   overlapping finders;
+- **judge the severity** against `rubric.md`'s severity rows rather than
+  inheriting the finder's: this verdict reads yours, and uncertainty between two
+  rows resolves *upward*;
 - return `{verdict: real|false-positive, severity, evidence: <why>}`.
 
 Refuted findings are dropped from the verdict; mention them briefly when
@@ -122,8 +127,15 @@ returning to the caller (§7) so finder quality stays visible.
 - Match the trigger's `--waive` declarations against verified findings;
   record each waiver with its reason (citing a `docs/decisions/` record where
   one applies).
-- **PASS** = Gate 0 green and zero verified findings left unwaived.
-  Anything else is **FAIL** — evidence is written either way.
+- **PASS** = Gate 0 green and zero verified **blockers or importants** left
+  unwaived. Anything else is **FAIL** — evidence is written either way.
+- **A verified nit does not fail the review, and is never silently dropped.**
+  Every one goes in the note's `nits:` list with a disposition — `fixed:
+  "<what changed>"` when the fix is already inside the range this note binds, or
+  `waived: "<reason>"`. An empty sentence is no disposition, and the merge gate
+  refuses an undecided nit under `3·review-nits` — so the cheap pass buys a
+  recorded decision, not an unread list. Nothing here licenses a post-verdict
+  fix: a later commit still moves `CODE_SHA` and still orphans this note.
 
 ## 6 · Evidence — YAML note on the reviewed tip
 
@@ -153,7 +165,12 @@ findings: { found: <n>, verified: <n>, waived: <n> }
 waivers:
   - finding: "<summary>"
     reason: "<reason>"
-verdict: PASS   # PASS | FAIL
+nits:                           # every verified nit, each one decided
+  - finding: "<summary>"
+    fixed: "<what changed>"     # the fix is inside the range this note binds
+  - finding: "<summary>"
+    waived: "<reason>"          # accepted as it stands
+verdict: PASS   # PASS | FAIL — nits never decide it
 date: <YYYY-MM-DD>
 ```
 
@@ -171,8 +188,8 @@ cover.
 ## 7 · Return to the caller
 
 Report: the verdict; the table of verified findings with severities and
-verifier evidence; waivers applied; refuted candidates in one line; the note
-ref. On `FAIL`,
+verifier evidence; waivers applied; the nits and how each was dispositioned;
+refuted candidates in one line; the note ref. On `FAIL`,
 state the loop explicitly: the trigger session fixes — a correctness bug gets
 its failing, named regression test **first** (per `docs/testing-strategy.html`),
 cleanups stay behavior-preserving with the suite green — then re-runs this

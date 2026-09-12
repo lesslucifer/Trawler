@@ -83,6 +83,11 @@ pub struct CrNote {
     pub base: String,
     pub diff_sha256: String,
     pub verdict: String,
+    /// The verified findings the verdict no longer fails on, each with what was
+    /// decided about it. Absent on every note written before the severity rule,
+    /// which is exactly what an empty list means.
+    #[serde(default)]
+    pub nits: Vec<Nit>,
     #[serde(default)]
     pub walk_waivers: Vec<WalkWaiver>,
     #[serde(default)]
@@ -246,6 +251,48 @@ impl<'a> DesignCarrier<'a> {
     }
 }
 
+/// A verified nit and what was decided about it. Recording one costs the verdict
+/// nothing; leaving it undecided is what the gate refuses, so the severity rule
+/// buys a cheaper pass without buying an unread list.
+#[derive(Deserialize)]
+pub struct Nit {
+    pub finding: String,
+    #[serde(flatten)]
+    pub disposition: Option<Disposition>,
+}
+
+/// The two ways a nit is answered. `Fixed` names a change already inside the
+/// range this note binds - a fix landing after the verdict moves the code hash
+/// and orphans the note, which is the binding's job, not this field's.
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Disposition {
+    Fixed(String),
+    Waived(String),
+}
+
+impl Disposition {
+    fn sentence(&self) -> &str {
+        match self {
+            Self::Fixed(what) | Self::Waived(what) => what,
+        }
+    }
+}
+
+impl Nit {
+    pub fn decided(&self) -> bool {
+        self.disposition.as_ref().is_some_and(|d| !d.sentence().trim().is_empty())
+    }
+
+    pub fn missing(&self) -> &'static str {
+        match self.disposition {
+            None => "no disposition",
+            Some(Disposition::Fixed(_)) => "an empty fixed",
+            Some(Disposition::Waived(_)) => "an empty waiver",
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct WalkWaiver {
     pub seam: String,
@@ -402,7 +449,7 @@ pub fn is_expected_tracked_doc(path: &str) -> bool {
 mod tests {
     use super::{
         is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DesignCarrier,
-        DesignNote, DocNote, TestNote,
+        DesignNote, DocNote, Nit, TestNote, CR_SCHEMAS,
     };
 
     #[test]
@@ -459,6 +506,44 @@ date: 2026-07-05
         assert_eq!(note.verdict, "PASS");
         assert_eq!(note.base, "aaaa");
         assert!(note.walk_waivers.is_empty(), "absent walk_waivers defaults empty");
+    }
+
+    // The severity rule's whole surface: a nit costs the verdict nothing, so the
+    // only thing left to get wrong is recording one nobody decided about.
+    #[test]
+    fn a_nit_is_decided_by_a_non_empty_fixed_or_waiver() {
+        let note: CrNote = serde_yaml::from_str(
+            "\
+schema: cr/v4
+base: aaaa
+diff_sha256: cccc
+verdict: PASS
+nits:
+  - finding: \"loop variable named x\"
+    fixed: \"renamed to frame\"
+  - finding: \"two branches could share a helper\"
+    waived: \"the helper would take three flags\"
+  - finding: \"stale doc comment\"
+    waived: \"   \"
+  - finding: \"nobody decided\"
+",
+        )
+        .expect("parses");
+        let decided: Vec<bool> = note.nits.iter().map(Nit::decided).collect();
+        assert_eq!(decided, vec![true, true, false, false]);
+        assert_eq!(note.nits[2].missing(), "an empty waiver");
+        assert_eq!(note.nits[3].missing(), "no disposition");
+    }
+
+    #[test]
+    fn absent_nits_is_an_empty_list_on_every_review_contract() {
+        for schema in CR_SCHEMAS {
+            let note: CrNote = serde_yaml::from_str(&format!(
+                "schema: {schema}\nbase: a\ndiff_sha256: c\nverdict: PASS\n"
+            ))
+            .expect("parses");
+            assert!(note.nits.is_empty(), "{schema} defaults to no nits");
+        }
     }
 
     // The bump is for enforcement: a v2 note has no design section and cannot be
