@@ -11,7 +11,7 @@
       <h1>E-SIMPWF — the workflow costs less to obey</h1>
       <p>Cut the two costs that dominate a unit of work — hand-authoring facts the tooling already knows, and re-running the whole
       review when nothing it judged changed — without lowering a bar the gate holds today.</p>
-      <div class="meta">Draft v1 · 2026-09-12 · Trawler · T3 · epic/simpwf → main · E-SIMPWF</div>
+      <div class="meta">Draft v4 · 2026-09-12 · Trawler · T3 · epic/simpwf → main · E-SIMPWF</div>
     </div>
   </header>
   <main>
@@ -91,10 +91,11 @@ flowchart TD
       </tbody>
     </table>
     <div class="callout warn" data-c="rule-exception">
-      <p><strong>One named exception, owned elsewhere.</strong> The design dimension of the review judges design artifacts,
-      which are docs by definition. It stays exactly as it is — this epic touches no design predicate — and the question of
-      whether it should exist at all belongs to the design epic. Everything else on this page is about the other five
-      dimensions, which become purely code.</p>
+      <p><strong>The design dimension is separated too, not exempt.</strong> The ruling covers it: the code review's five
+      dimensions are code-only, and the design dimension stops being one of them. Its judgment moves to its own step with its
+      own carrier, so <code>9·design</code> keeps working while nothing about design runs through the code review — no finder,
+      no verdict, no binding. What that step finally looks like, and whether the design flow keeps its 17-row receipt, is the
+      design epic's call, and it opens after this one.</p>
     </div>
 
     <h2 id="use-cases">Use-case requirements</h2>
@@ -110,8 +111,8 @@ flowchart TD
         <thead><tr><th>Promised</th><th>What is observably true afterwards</th></tr></thead>
         <tbody>
           <tr><td>The review judges code, and nothing else</td><td>Its subject, its fingerprint and its inputs are the code
-          paths. No <code>docs/**</code> file is judged by it, cited by it or covered by its binding, and a diff that changes
-          no code asks for no <code>cr/v3</code> note.</td></tr>
+          paths. No <code>docs/**</code> file is judged by it, cited by it or covered by its binding, the design dimension has
+          left it for its own step, and a diff that changes no code asks for no <code>cr/v3</code> note.</td></tr>
           <tr><td>A doc change cannot void a code review</td><td>A commit that touches only docs leaves an existing PASS valid
           at the merge gate and demands no review; a commit that touches code still voids it.</td></tr>
           <tr><td>Nothing can void a review after it runs</td><td>The review refuses to start while any tree-changing check is
@@ -132,8 +133,8 @@ flowchart TD
         <thead><tr><th>Deliberately out of scope</th><th>Why</th></tr></thead>
         <tbody>
           <tr><td>The design flow and its receipt</td><td>The 17-row receipt per design run and the staged design flow are a
-          cost of their own; the owner ruled them a separate epic. This epic adds a roadmap row for it and touches no design
-          predicate.</td></tr>
+          cost of their own; the owner ruled them a separate epic, opening after this one. This epic adds its roadmap row and
+          separates the design dimension out of the code review, but simplifies nothing about the flow itself.</td></tr>
           <tr><td>The mounted-mockup blind spot</td><td>Tier-1 cannot read a <code>type="text/babel"</code> block, so the
           mockup predicates are green over markup they never read. Already a deferred roadmap row; it belongs to the design
           epic.</td></tr>
@@ -159,23 +160,22 @@ flowchart TD
       <tbody>
         <tr data-wu="E-SIMPWF.W1">
           <td>Measure the gate</td>
-          <td data-item="wu-summary">A local tally — never a git note — of every check id that refused, per gate level, and of
-          how many review rounds each tip needed; one command prints it.</td>
+          <td data-item="wu-summary">A local tally in the shape of Gate 0's cache — never a git note — of every check id that
+          refused, per gate level, and of how many review rounds each tip needed; one command prints it.</td>
           <td data-item="wu-maps-to">The epic intent: every later cut is chosen from counts, per DEC-11's measure-then-adopt
           discipline.</td>
           <td data-item="wu-expected">After an epic closes, the owner can name which checks refused and how many review rounds
-          its tips paid, without reading transcripts.</td>
+          its tips paid, without reading transcripts — and the tally is never evidence a gate trusts.</td>
           <td data-item="wu-deps">none</td>
         </tr>
         <tr data-wu="E-SIMPWF.W2">
           <td>The paperwork finishes before the exam</td>
-          <td data-item="wu-summary">A preflight the review runs first refuses while anything tree-changing is still red: the
-          code-affecting checks because they would void the PASS about to be bought, and the doc predicates because on a
-          harness without the authoring hooks this is the only place they run at all.</td>
-          <td data-item="wu-maps-to">The re-run cost — a PASS a later code fix orphans — and the authoring checks that a
-          harness without hooks never fires.</td>
-          <td data-item="wu-expected">A failing test, a malformed note or a red doc stops the review before any finder spawns,
-          in one block that names the blocker.</td>
+          <td data-item="wu-summary">A preflight the review runs first refuses while any check that could void the PASS is
+          still red — the suite, clippy, the notes the review reads — so no finder spawns against a tree that is still going to
+          move. No doc predicate runs here; the owner ruled the commit- and merge-level doc checks useless.</td>
+          <td data-item="wu-maps-to">The re-run cost: a PASS that a later code fix orphans.</td>
+          <td data-item="wu-expected">A failing test or a malformed note stops the review before any finder spawns, in one
+          block that names the blocker.</td>
           <td data-item="wu-deps">none</td>
         </tr>
         <tr data-wu="E-SIMPWF.W3">
@@ -200,13 +200,15 @@ flowchart TD
         <tr data-wu="E-SIMPWF.W6">
           <td>The review is code-only <em>(the headline)</em></td>
           <td data-item="wu-summary">The code review's subject, binding and inputs shrink to the code paths: it stops judging,
-          stops reading and stops being invalidated by documentation. A doc change is answered by the doc predicate at authoring
-          time and by the human sign-off, and a doc-only commit leaves a PASS standing.</td>
+          stops reading and stops being invalidated by documentation, and the design dimension leaves it for a step of its own.
+          A doc change is answered by the doc predicate at authoring time and by the human sign-off, and a doc-only commit
+          leaves a PASS standing.</td>
           <td data-item="wu-maps-to">The rule this epic lands, and a whole-diff binding that had put documentation inside a
           code review's blast radius.</td>
           <td data-item="wu-expected">The review's scope and its recomputed fingerprint name code paths only; no <code>docs/</code>
-          path is judged, cited or bound; a diff that changes no code demands no <code>cr/v3</code> note; and the five code
-          dimensions are unchanged in what they look for.</td>
+          path is judged, cited or bound; the design dimension is a judged step of its own rather than a sixth finder; a diff
+          that changes no code demands no <code>cr/v3</code> note; and the five code dimensions are unchanged in what they look
+          for.</td>
           <td data-item="wu-deps">none — decided outright by the owner, so it waits on no measurement.</td>
         </tr>
         <tr data-wu="E-SIMPWF.W7">
@@ -238,7 +240,10 @@ flowchart TD
             path appears in either, and the gate recomputes the same subset</td></tr>
           <tr><td>A diff that changes no code</td>
             <td>No <code>cr/v3</code> note is demanded at all</td></tr>
-          <tr><td>A failing test, a malformed note and a red doc, each in front of the review</td>
+          <tr><td>A diff carrying a design artifact</td>
+            <td>The code review spawns no design finder and its binding ignores the artifact; the design step's own verdict is
+            what <code>9·design</code> reads</td></tr>
+          <tr><td>A failing test and a malformed note, each in front of the review</td>
             <td>The preflight refuses before a finder spawns, naming the blocker</td></tr>
           <tr><td>A doc-only commit after a PASS, then a code commit</td>
             <td>The first leaves the PASS valid and the second voids it</td></tr>
@@ -253,13 +258,14 @@ flowchart TD
       <table data-c="distillation-table">
         <thead><tr><th>Truth this epic creates</th><th>Where it lands</th></tr></thead>
         <tbody>
-          <tr><td>The rule that the code review is code-only, the preflight and the verdict rule</td>
+          <tr><td>The rule that the code review is code-only, its design dimension separated out, the preflight and the verdict
+            rule</td>
             <td><a href="../workflow.html">workflow.html</a> — the process standard, edited once the code enforces it</td></tr>
-          <tr><td>Doc verification happens at authoring time; the merge gate holds existence and identity</td>
+          <tr><td>Doc verification happens at authoring time only — no commit- or merge-level doc format check exists</td>
             <td><a href="../work-planning.html">work-planning.html</a> — the trigger section, made explicit rather than implied</td></tr>
           <tr><td>Note schemas and the measurement's shape</td>
             <td><a href="../testing-strategy.html">testing-strategy.html</a> — only if a note schema actually changes</td></tr>
-          <tr><td>Why the light path, the split fingerprint and the severity rule are shaped as they are</td>
+          <tr><td>Why the code-only rule, the design dimension's separation and the severity rule are shaped as they are</td>
             <td><a href="../decisions/decisions-index.html">decisions/</a> — a record each, minted in the WU that decides it</td></tr>
           <tr><td>The design flow as its own epic, and the mounted-mockup blind spot</td>
             <td><a href="../backlog/roadmap.html">roadmap.html</a> — the follow-up this epic deliberately does not take</td></tr>
@@ -270,26 +276,38 @@ flowchart TD
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
+      <p>None left open: plan review answered all five. They are recorded with their answers because each one is a decision a
+      WU implements, and two of them changed the plan.</p>
       <table data-c="open-questions-table">
-        <thead><tr><th>Undecided</th><th>Proposed default</th></tr></thead>
+        <thead><tr><th>Question</th><th>Answer at plan review</th><th>What it changed</th></tr></thead>
         <tbody>
-          <tr><td>Does the code-only rule of W6 also silence the design dimension, which judges design artifacts — docs by
+          <tr><td>Does the code-only rule silence the design dimension too, which judges design artifacts — docs by
             definition?</td>
-            <td>No. The design finder stays the named exception until the design epic rules on it, so the rule this epic lands
-            reads "the code review judges code", with design artifacts owned separately.</td></tr>
-          <tr><td>Does the code-only review still read the test note, which declares waivers such as a skipped integration
-            layer?</td>
-            <td>Yes — <code>test/v2</code> is a claim about the tests backing this code, so an unjustified waiver stays a code
-            finding. The plan, the result report and <code>doc/v1</code> are not read by any finder.</td></tr>
-          <tr><td>Does the measurement of W1 live in a note or only locally?</td>
-            <td>Locally, in the shape of Gate 0's cache — a number to choose with, never evidence a gate trusts.</td></tr>
+            <td><strong>Yes.</strong></td>
+            <td>The design dimension stops being a finder of the code review and is separated into a judged step of its own, so
+            <code>9·design</code> keeps a carrier. Simplifying the design flow itself stays the design epic's work.</td></tr>
+          <tr><td>Does the code-only review still read the test note?</td>
+            <td><strong>Yes</strong> — it may read it to understand the scenario more clearly.</td>
+            <td><code>test/v2</code> stays an input. The plan, the result report and <code>doc/v1</code> do not.</td></tr>
+          <tr><td>Is the measurement of W1 a note, or local?</td>
+            <td><strong>Local.</strong></td>
+            <td>W1 keeps its tally in a local file in the shape of Gate 0's cache, never a git note and never gate evidence.</td></tr>
           <tr><td>Do the authoring-time doc checks need a harness-independent backstop?</td>
-            <td>No new commit-time check. The review preflight of W2 reads every doc on any harness, which is where a
-            malformed doc can still be caught before the fleet runs.</td></tr>
+            <td><strong>No</strong> — no doc format check at commit or merge level; the owner finds them useless.</td>
+            <td>The W2 preflight drops the doc predicates and covers only what can void the PASS. The consequence is stated
+            below rather than hidden.</td></tr>
           <tr><td>Does the design epic open before or after this one closes?</td>
-            <td>After — this epic's distillation writes its roadmap row, and the two never judge each other's seams.</td></tr>
+            <td><strong>After.</strong></td>
+            <td>This epic's distillation writes its roadmap row; the two never judge each other's seams.</td></tr>
         </tbody>
       </table>
+      <div class="callout warn" data-c="doc-checks-consequence">
+        <p><strong>The consequence, stated rather than hidden.</strong> The doc predicates run only where the authoring hooks
+        fire. On a harness that does not run them, nothing reads the document at all: the merge gate still holds that the docs
+        a diff touched are listed in <code>doc/v1</code> and that the human's signature names its result report, but no check
+        opens the file. That is accepted here, on the owner's ruling that the commit- and merge-level doc checks are useless —
+        this epic adds none.</p>
+      </div>
     </div>
 
     <h2 id="order">Order and stopping rules</h2>
