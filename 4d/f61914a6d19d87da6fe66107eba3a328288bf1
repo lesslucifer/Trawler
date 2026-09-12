@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W3
+branch: wu/simpwf/note-tool
+tests:
+  unit: { count: 14, covers: "the count rule and the kinds it refuses; the identity split from the wu id and the ids it refuses; both notes rendered from one identity block; the counted and waived layer renderers; a doc entry's derived tier against a decided action; a tier the path denies; both distilled_to shapes; a sentence surviving its scalar; the action vocabulary" }
+  integration: { count: 14, covers: "the real command over a real temp git repo - both notes written and the gate's own note checks left green; the printed range equal to the gate's recomputation; an omitted changed doc, a phantom path and a zero-test required layer refused with the gate's own ids and fix lines; a file absent at the tip and a kind the counter does not know refused under 0-judgment; a malformed judgment and a malformed wu id refused with nothing written; the template's derived paths and tiers and its write-nothing guarantee; an exempt diff reported; a standalone commit with and without a doc change; and a run leaving every other note ref and the local tally untouched" }
+  e2e: { waived: "the epic's e2e carries this WU's row - the note-writing command against a real tip's diff, whose written notes pass the gate with no hand-edited derived field. W3 adds the authoring step that produces those notes rather than a branch of the gated path (WU plan, test plan)" }
