@@ -580,6 +580,25 @@ impl Gate<'_> {
         surfaces: &Surfaces,
     ) -> Result<(), String> {
         let artifacts = design_artifacts_of(docs);
+        // A `design/v1` note pins the bytes it judged; the section a `cr/v3` note
+        // carried was pinned by that note's own binding instead. The pin covers
+        // every design path the range ships - the artifacts it changes and the
+        // rendered files it owes an answer for (DEC-46) - so it is read before the
+        // artifact rules below rather than under them: a build against a design it
+        // did not touch changes no artifact and still pins the surfaces it
+        // rendered, and a pin read only when an artifact moved is a pin that case
+        // never has to match.
+        if let Some(DesignCarrier::Note(note)) = source.carrier {
+            let bound = self.design_sha256(report, &artifacts, surfaces)?;
+            if note.design_sha256 != bound {
+                report.failures.push(Failure::new(
+                    DESIGN,
+                    "the design verdict is pinned to different bytes than the design paths this tip ships"
+                        .to_string(),
+                    "re-run the design step on this exact tip and write its verdict again".to_string(),
+                ));
+            }
+        }
         // Nothing judged, nothing claimed: a build's note carries a design
         // section for its citation and its drops alone, and a verdict or a
         // rulebook pin over an empty judgment would be a claim about no design.
@@ -616,19 +635,6 @@ impl Gate<'_> {
             });
             return Ok(());
         };
-        // A `design/v1` note pins the bytes it judged; the section a `cr/v3` note
-        // carried was pinned by that note's own binding instead.
-        if let DesignCarrier::Note(note) = &carrier {
-            let bound = self.design_sha256(report, &artifacts, surfaces)?;
-            if note.design_sha256 != bound {
-                report.failures.push(Failure::new(
-                    DESIGN,
-                    "the design verdict is pinned to different bytes than the design paths this tip ships"
-                        .to_string(),
-                    "re-run the design step on this exact tip and write its verdict again".to_string(),
-                ));
-            }
-        }
         for path in artifacts.iter().filter(|p| !carrier.judged(p)) {
             report.failures.push(Failure::new(
                 DESIGN,
@@ -868,9 +874,9 @@ impl Gate<'_> {
                 ));
             }
         }
-        let undesigned: Vec<&crate::notes::Excused> =
-            carrier.iter().flat_map(|d| d.undesigned().iter()).collect();
-        for record in undesigned.into_iter().filter(|r| untouched(&r.path)) {
+        for record in
+            carrier.into_iter().flat_map(|d| d.undesigned().iter()).filter(|r| untouched(&r.path))
+        {
             report.failures.push(Failure::new(
                 check,
                 format!("{} is declared undesigned, and this diff does not render it", record.path),

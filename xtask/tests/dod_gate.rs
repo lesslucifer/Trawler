@@ -2418,6 +2418,50 @@ fn the_handoff_accounting_travels_on_the_design_note() {
     assert!(report.green(), "the citation lands on its own note: {}", format_report(&report));
 }
 
+// W4 round 2 - the pin covers every design path the range ships, and a build
+// against a design it did not touch ships only rendered files. A pin read only
+// where an artifact moved would leave exactly that case - the common one - bound
+// to nothing, so a stale pin on a citation-only note reds here.
+#[test]
+fn a_citation_only_design_note_is_still_pinned_to_the_bytes_it_judged() {
+    let repo = wu_building_a_component();
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    repo.note("cr", &tip, &cr_note_v4(&base, &code_sha(&repo, &base, &tip)));
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
+    let cites = format!(
+        "implements:\n  - path: {COMPONENT_DESIGN}\n    blob: {}\n    built: [ui/src/components/StatusPill.tsx]\n",
+        &blob[..7]
+    );
+    let honest = design_note(&repo, &[], "PASS", &cites);
+    assert!(!honest.contains("design_sha256: \n"), "the diff ships a rendered file to pin");
+
+    let stale = honest
+        .lines()
+        .map(|line| {
+            if line.starts_with("design_sha256:") {
+                format!("design_sha256: {}", "0".repeat(64))
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    repo.note("design", &tip, &format!("{stale}\n"));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("pinned to different bytes"),
+        "the red names the pin: {}",
+        format_report(&report)
+    );
+
+    repo.note("design", &tip, &honest);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the honest pin greens: {}", format_report(&report));
+}
+
 // The other half of the same move: an epic's drop record travels with the verdict
 // too. Reading it off the review note alone would refuse an epic for a drop it did
 // record - so here a `cr/v4` epic with no design section greens on `design/v1`.
