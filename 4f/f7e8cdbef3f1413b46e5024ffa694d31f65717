@@ -1,0 +1,20 @@
+schema: cr/v3
+scope: "WU wu/simpwf/note-tool -> epic/simpwf"
+epic: E-SIMPWF
+wu: E-SIMPWF.W3
+branch: wu/simpwf/note-tool
+base: cb12f84493a55c49a996c5534205dd4558d93897
+head: 4ff7e8cdbef3f1413b46e5024ffa694d31f65717
+diff_sha256: 27a057df20c8e7e8b92abe2197bf2e433a793a071afa42c7cae0778d99d8babe
+review_run: "one round of five finders (correctness, reuse, simplification, efficiency, altitude) over cb12f84493..5928f8413f, recorded in docs/work/2026-09-12-simpwf-w3-result.html; no adversarial verifier pass claimed, and no design finder - cargo xtask design-scope reports no artifact in the range. The round's fixes landed in c367efc; the tip since carries that fix set, the result report's one-sentence correction, and the owner's rule-bearing T1 doc commit (4df6191), so this note is bound to a tip the finders did not see: that delta was read before PASS and it carries fixes and documentation rather than new behaviour"
+owner_ruling: "E-SIMPWF reworks the review flow itself, so the owner ruled its WUs are not put through the code-review skill: this note records what the finders raised and dispositions each finding, and the human mr/v1 sign-off is the review (docs/work/2026-09-12-simpwf-plan.html#wu-review-evidence)"
+findings: { found: 12, fixed: 9, documented: 1, waived: 2 }
+waivers:
+  - finding: "at epic level the writer never runs Gate::check_tracked_docs, so notes write epic returns 0 for a tip the epic merge refuses"
+    reason: "documented, not closed: that check reads the delivered tree rather than the notes, and its repair is a git commit. DEC-44 states the boundary by subject, as DEC-43 drew the preflight's"
+  - finding: "each named test file costs one git show where one batch read would fetch them all"
+    reason: "a judgment names a handful of files, and git cat-file --batch plumbing would be more code than the subprocesses it saves; DEC-44 records the trade rather than assuming it"
+  - finding: "the integration suite re-declares the temp-repo harness a sixth time"
+    reason: "the same borrowing W1 and W2 recorded: rewiring the suites onto one builder is a change to the harnesses rather than to the writer, and this epic's WUs are read by the owner"
+verdict: PASS
+date: 2026-09-12
