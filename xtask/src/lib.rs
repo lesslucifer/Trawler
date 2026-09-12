@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod tally;
 pub mod ui;
 pub mod wizard;
 
@@ -24,6 +25,7 @@ usage:
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
+  cargo xtask tally                                          (local gate tally: refused check ids per level, review rounds per tip)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
@@ -46,6 +48,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
         ["design-scope", base, head] => design_scope(repo, base, head),
+        ["tally"] => tally::run(repo),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
@@ -73,6 +76,7 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
             let mut report = gate.verify(Level::Commit, sha, &parent)?;
             let (tip, base) = (report.tip.clone(), report.base.clone());
             gate.check_commit_trailer(&mut report, &tip, &base)?;
+            let _ = tally::record(repo, &report);
             Ok((i32::from(!report.green()), format_report(&report)))
         }
         ["hook", level] => hook(repo, level),
@@ -156,6 +160,10 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
 fn gate_run(repo: &Path, level: Level, tip: &str, target: &str) -> Result<(i32, String), String> {
     let gate = Gate { repo };
     let report = gate.verify(level, tip, target)?;
+    // The tally is a measurement taken on the way past, never evidence: a run
+    // whose record cannot be written (a read-only tree) gates exactly as it did
+    // before, and no check ever reads the file back.
+    let _ = tally::record(repo, &report);
     if report.exempt {
         return Ok((0, format_report(&report)));
     }
@@ -237,6 +245,7 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
         if let [commit, first] = parts.as_slice() {
             let mut report = gate.verify(Level::Commit, commit, first)?;
             gate.check_commit_trailer(&mut report, commit, first)?;
+            let _ = tally::record(repo, &report);
             if !report.green() {
                 let _ = writeln!(out, "standalone commit {}:", gate::short(commit));
                 let _ = writeln!(out, "{}", format_report(&report));
