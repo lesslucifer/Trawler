@@ -37,16 +37,16 @@
         <tr>
           <td><strong>Re-running</strong></td>
           <td>The review fleet — five finders plus a design finder, and one adversarial verifier per candidate finding.</td>
-          <td>Its PASS is stamped with a fingerprint of the whole diff, so <em>any</em> later change — a doc fix, a design run
-          that still needed closing, a nit — voids it and buys the fleet again.</td>
+          <td>Its PASS is stamped with a fingerprint of the whole diff, so <em>any</em> later change — a nit, a failing test, a
+          fix found after the review — voids it and buys the fleet again.</td>
         </tr>
       </tbody>
     </table>
     <div class="diagram" data-c="waste-diagram">
       <pre class="mermaid">
 flowchart TD
-  A["WU finishes, review PASSes<br/>six finders + verifiers"] --> B["a later check reds:<br/>a doc predicate, an open design run, a nit"]
-  B --> C["the fix edits a file<br/>a new commit changes the fingerprint"]
+  A["WU finishes, review PASSes<br/>six finders + verifiers"] --> B["a later check reds:<br/>a failing test, a nit,<br/>a fix found after the review"]
+  B --> C["the fix edits code<br/>a new commit changes the fingerprint"]
   C --> D["the PASS is void<br/>the fleet runs again"]
   D --> E["the human's signature is void too<br/>Touch ID again"]
       </pre>
@@ -69,15 +69,12 @@ flowchart TD
       <table data-c="expected-table">
         <thead><tr><th>Promised</th><th>What is observably true afterwards</th></tr></thead>
         <tbody>
-          <tr><td>A single unit of work lands small</td><td>A one-commit code change merges to <code>main</code> as one
-          collapsed unit — one branch, one merge, one review, one signature, one <code>dod/v1</code> receipt — and a change
-          spanning several units is refused that shape.</td></tr>
           <tr><td>Nothing can void a review after it runs</td><td>The review refuses to start while any tree-changing check is
           red, so a PASS cannot be orphaned by paperwork fixed afterwards.</td></tr>
           <tr><td>Derived facts stop being hand-typed</td><td>The test and doc notes are written by a command that computes
           hashes, identity, tiers, paths and counts; the gate accepts them on the first attempt.</td></tr>
-          <tr><td>A doc fix stops costing a code review</td><td>A commit that touches only docs leaves an existing PASS valid at
-          the merge gate; a commit that touches code still voids it.</td></tr>
+          <tr><td>The review judges code, never docs</td><td>A commit that touches only docs leaves an existing PASS valid and
+          is answered by the doc predicate and the human sign-off alone; a commit that touches code still voids it.</td></tr>
           <tr><td>A nit stops costing a fleet round</td><td>A tip passes with nits recorded and dispositioned in its note; an
           undispositioned nit is still refused.</td></tr>
           <tr><td>The next cuts are chosen from counts</td><td>Which check ids refused, how often, and how many review rounds
@@ -99,6 +96,8 @@ flowchart TD
           epic.</td></tr>
           <tr><td>One document per unit</td><td>Rejected on the record: a plan legitimately changes mid-flight, and folding the
           plan into the result would hide that. The two-file shape stays.</td></tr>
+          <tr><td>A light path that lands single-unit changes in one merge</td><td>Dropped at plan review: the owner ruled it
+          not needed now. Single-unit work keeps today's epic shape, and why it was dropped stays recorded here.</td></tr>
           <tr><td>The human signature</td><td>Never waivable, never moved, never made cheaper by lowering the bar. The number of
           signatures falls only where the number of units falls.</td></tr>
           <tr><td>The seam walk for multi-unit epics</td><td>It is the only re-inspection of seams and the backstop against a
@@ -143,16 +142,6 @@ flowchart TD
           mismatch is impossible rather than repaired.</td>
           <td data-item="wu-deps">W2 — the preflight is where the shape is refused before the review runs.</td>
         </tr>
-        <tr data-wu="E-SIMPWF.W4">
-          <td>Small work lands small</td>
-          <td data-item="wu-summary">A change that is one unit lands as one collapsed unit straight to <code>main</code> — one
-          plan doc, one result doc, one review, one signature, no epic branch and no walk — while anything spanning several
-          units keeps today's epic shape.</td>
-          <td data-item="wu-maps-to">The ceremony floor that every code change, however small, pays today.</td>
-          <td data-item="wu-expected">A one-commit code change lands through one merge with one <code>dod/v1</code> receipt and
-          one <code>mr/v1</code> signature; a multi-unit epic is refused the light shape.</td>
-          <td data-item="wu-deps">W2, W3 — a light path is only safe when the preflight exists and the notes are tool-written.</td>
-        </tr>
         <tr data-wu="E-SIMPWF.W5">
           <td>A nit does not restart the exam</td>
           <td data-item="wu-summary">Only blockers and importants fail a review; a verified nit is recorded and must be
@@ -163,12 +152,12 @@ flowchart TD
           <td data-item="wu-deps">W1 — the effect on recall is measured, not asserted.</td>
         </tr>
         <tr data-wu="E-SIMPWF.W6">
-          <td>A doc fix does not void a code exam</td>
-          <td data-item="wu-summary">The review's fingerprint covers the code paths it judged and the doc note covers the docs,
-          so a doc-only commit after a PASS leaves that PASS standing.</td>
-          <td data-item="wu-maps-to">The re-run cost: a whole-diff binding that orphans a review nothing had invalidated.</td>
-          <td data-item="wu-expected">A doc-only commit after a PASS leaves the review valid at the gate; a code commit still
-          voids it.</td>
+          <td>The review is code-only</td>
+          <td data-item="wu-summary">The code review's scope and fingerprint cover code paths: a doc change is answered by the
+          doc predicate at authoring time and by the human sign-off, never by the fleet.</td>
+          <td data-item="wu-maps-to">A whole-diff binding that puts documentation inside a code review's blast radius.</td>
+          <td data-item="wu-expected">A doc-only commit after a PASS leaves the PASS valid and needs no review — what docs
+          already get at the gate, now extended to the binding — while a code commit still voids it.</td>
           <td data-item="wu-deps">W1 — the decision record cites measured rounds, not an assumption.</td>
         </tr>
         <tr data-wu="E-SIMPWF.W7">
@@ -179,10 +168,12 @@ flowchart TD
           <td data-item="wu-expected">A fix confined to one file re-runs at most the dimensions whose findings touched it, with
           the A/B showing no known-real finding escapes — and if one does, this WU is dropped and the epic closes without
           it.</td>
-          <td data-item="wu-deps">W1, W6 — the measurement decides it and the split fingerprint is its precondition.</td>
+          <td data-item="wu-deps">W1, W6 — the measurement decides it and the code-only scope is its precondition.</td>
         </tr>
       </tbody>
     </table>
+    <p data-c="wu-gap"><strong>W4 is a gap on purpose.</strong> The single-unit light path was dropped at plan review — the
+    owner ruled it not needed now — and the ids are not renumbered, so the gap records the drop rather than hiding it.</p>
 
     <h2 id="e2e-plan">E2E test plan</h2>
     <div data-item="e2e-plan">
@@ -191,9 +182,6 @@ flowchart TD
       <table data-c="e2e-table">
         <thead><tr><th>Drives</th><th>Refuses unless</th></tr></thead>
         <tbody>
-          <tr><td>The light path: one collapsed unit branched, noted, reviewed at a PASS, signed, merged to <code>main</code></td>
-            <td>One <code>dod/v1</code> receipt exists at the merge, the review was not re-run, and the signature was taken
-            once</td></tr>
           <tr><td>The full path beside it: an epic carrying two WU seams, merged to <code>main</code></td>
             <td>The walk still re-verifies both seams, and the light shape is refused where the change spans several units</td></tr>
           <tr><td>A red doc, an open design run and a malformed note, each in front of the review</td>
@@ -211,7 +199,7 @@ flowchart TD
       <table data-c="distillation-table">
         <thead><tr><th>Truth this epic creates</th><th>Where it lands</th></tr></thead>
         <tbody>
-          <tr><td>The light path, the preflight, the verdict rule and the split fingerprint</td>
+          <tr><td>The preflight, the verdict rule and the code-only review</td>
             <td><a href="../workflow.html">workflow.html</a> — the process standard, edited once the code enforces it</td></tr>
           <tr><td>Doc verification happens at authoring time; the merge gate holds existence and identity</td>
             <td><a href="../work-planning.html">work-planning.html</a> — the trigger section, made explicit rather than implied</td></tr>
@@ -231,11 +219,10 @@ flowchart TD
       <table data-c="open-questions-table">
         <thead><tr><th>Undecided</th><th>Proposed default</th></tr></thead>
         <tbody>
-          <tr><td>Is the Working Unit level sacred, or is the light path of W4 in scope?</td>
-            <td>In scope, for genuinely single-unit work only; a multi-unit change keeps the epic shape and the walk.</td></tr>
-          <tr><td>Does the split fingerprint of W6 also apply to design artifacts?</td>
-            <td>No — a design artifact is judged by the design dimension, which belongs to the design epic. The split here
-            covers code paths against documentation.</td></tr>
+          <tr><td>Does the code-only rule of W6 also silence the design dimension, which judges design artifacts — docs by
+            definition?</td>
+            <td>No. The design finder stays the named exception until the design epic rules on it, so the rule this epic lands
+            reads "the code review judges code", with design artifacts owned separately.</td></tr>
           <tr><td>Does the measurement of W1 live in a note or only locally?</td>
             <td>Locally, in the shape of Gate 0's cache — a number to choose with, never evidence a gate trusts.</td></tr>
           <tr><td>Do the authoring-time doc checks need a harness-independent backstop?</td>
@@ -252,15 +239,14 @@ flowchart TD
       <pre class="mermaid">
 flowchart LR
   W1["W1 measure"] --> W2["W2 preflight"] --> W3["W3 note tool"]
-  W3 --> W4["W4 light path"]
   W1 --> W5["W5 nits"]
-  W1 --> W6["W6 split fingerprint"] --> W7["W7 scoped re-verify<br/>droppable"]
+  W1 --> W6["W6 the review is code-only"] --> W7["W7 scoped re-verify<br/>droppable"]
       </pre>
-      <div class="caption">W1 first because it decides the rest. W2 and W3 only remove wasted passes. W4 is the structural win. W5–W7 each trade something away and are adopted only on measurement.</div>
+      <div class="caption">W1 first because it decides the rest. W2 and W3 only remove wasted passes. W5–W7 each trade something away and are adopted only on measurement.</div>
     </div>
     <div class="callout warn" data-c="stopping-rule">
       <p><strong>Stopping rule.</strong> A WU that lowers a bar — W5, W6, W7 — is dropped rather than argued for if its
-      measurement does not hold. The epic still closes: W1–W4 stand on their own, and each of W5–W7 is named in the epic
+      measurement does not hold. The epic still closes: W1–W3 stand on their own, and each of W5–W7 is named in the epic
       result either as landed or as measured-and-rejected, with the number that decided it.</p>
     </div>
 
