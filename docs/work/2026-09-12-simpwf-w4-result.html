@@ -213,6 +213,17 @@
       </table>
       <p>Verdict: <strong>PASS</strong>, with both nits dispositioned — recorded, and waived with the reason
       above, in the <code>cr/v4</code> note on the tip.</p>
+      <div class="callout" data-c="signing-gate-finding">
+        <strong>Found after the round, at the signing gate.</strong> <code>mr confirm</code> read the review
+        note its own way — the whole-diff hash, on every schema — so the first tip carrying a <code>cr/v4</code>
+        note was refused as a stale review while the merge gate would have greened it, and a doc commit landing
+        after a PASS re-opened a review it had not orphaned. Fixed in <code>789ed56</code>: one
+        <code>reviewed_binding</code> rule, read the way <code>5·diff-binding</code> reads it — the code subset
+        for <code>cr/v4</code>, the whole diff for the schemas before it, nothing for a <code>cr/v4</code> note
+        over a diff that changes no code — and the refusals name the review rather than a schema that has moved
+        on. Tests: <code>each_review_schema_is_bound_to_what_it_declared</code>,
+        <code>a_code_free_diff_binds_no_review</code>, and over a real repo
+        <code>a_doc_commit_after_a_cr_v4_pass_still_signs</code> with its two siblings.</div>
     </div>
 
     <h2 id="distillation">Distillation</h2>
