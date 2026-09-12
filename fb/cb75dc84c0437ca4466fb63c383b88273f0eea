@@ -1,0 +1,32 @@
+schema: cr/v3
+scope: "WU wu/simpwf/measure-the-gate -> epic/simpwf"
+epic: E-SIMPWF
+wu: E-SIMPWF.W1
+branch: wu/simpwf/measure-the-gate
+base: 5834e959d3c4834f8271eefca069bb7b29a11fd2
+head: fbcb75dc84c0437ca4466fb63c383b88273f0eea
+diff_sha256: 175b35738854627a24a53af9ae67e23198b9e19bee4c1c9450056b399f25d8d5
+review_run: "two rounds of five finders (correctness, reuse, simplification, efficiency, altitude) on this branch; findings fixed or waived, no adversarial verifier pass claimed"
+owner_ruling: "E-SIMPWF reworks the review flow itself, so the owner ruled its WUs are not code-reviewed: this note records what the finders raised and waives it, and the human mr/v1 sign-off is the review (docs/work/2026-09-12-simpwf-plan.html#wu-review-evidence)"
+findings: { found: 72, fixed: 13, waived: 59 }
+waivers:
+  - finding: "the test harness and the green-WU note fixtures restate xtask/tests/dod_gate.rs (a sixth private copy; tests/common/gitrepo.rs exists)"
+    reason: "a real borrowing, left on purpose: rewiring six suites onto a shared builder is a change to the harnesses, not to the measurement, and this epic's WUs are read by the owner (plan, wu-review-evidence)"
+  - finding: "record encoding is a hand-written key=value line format where the crate's other persisted records are serde structs"
+    reason: "this file is a local reading a reader greps, not evidence that ships; the strict parser plus the terminator is what the tests pin"
+  - finding: "LEVELS re-enumerates gate::Level::as_note_level"
+    reason: "three strings used for parse validation and print order; deriving them needs as_note_level to become const, which nothing else asks for"
+  - finding: "review_rounds counts any entry under refs/notes/cr, including one the gate would refuse to parse as cr/v2|cr/v3"
+    reason: "a note on that ref records that a review run wrote there; reading each note body to mirror the gate's schema check would cost one notes-show per commit on the tip's line"
+  - finding: "rounds are recorded when the gate runs, not recomputed at print time, so a tip re-gated after it landed (base == tip) records 0"
+    reason: "the row shows the reading the gate took, and the aggregation keeps the largest one seen for that tip; re-deriving at print time would need the fork point the row does not hold"
+  - finding: "date and base are written and parsed but never printed or asserted"
+    reason: "the record is the artifact a reader opens beside the tip and the check ids; when a run happened and over what range is what makes a line readable"
+  - finding: "a hook record carries no branch or unit identity, because the hook passes the resolved MERGE_HEAD sha"
+    reason: "the hook has no branch name to hand over and a tip whose notes are absent has no identity to read; the level and the tip still name the run"
+  - finding: "the cap's read-modify-write can drop a record appended by a concurrent gate run between its read and its write"
+    reason: "appends are single writes; the truncation only runs past 2048 records, and a lost line there is a reading, not evidence"
+  - finding: "every gate run pays three extra process spawns (~17ms, ~12% of a WU gate) and appends a line for a reading that may never be read"
+    reason: "measured and accepted: this is the number W5 and W7 are adopted or dropped on, and the push sweep no longer multiplies it per commit"
+verdict: PASS
+date: 2026-09-12
