@@ -11,7 +11,7 @@
       <h1>E-SIMPWF — the workflow costs less to obey</h1>
       <p>Cut the two costs that dominate a unit of work — hand-authoring facts the tooling already knows, and re-running the whole
       review when nothing it judged changed — without lowering a bar the gate holds today.</p>
-      <div class="meta">Draft v4 · 2026-09-12 · Trawler · T3 · epic/simpwf → main · E-SIMPWF</div>
+      <div class="meta">Draft v5 · 2026-09-12 · Trawler · T3 · epic/simpwf → main · E-SIMPWF</div>
     </div>
   </header>
   <main>
@@ -57,6 +57,10 @@ flowchart TD
     <strong>144 candidate findings and 47 verified</strong>, needed a second round on one WU, and its close took three review
     rounds. DEC-11 separately measured that landing a gate-heavy epic cost 45–106 minutes of active agent time, with the review
     fleet at a stable ~25% and main-loop generation at 32–56%.</p>
+    <p data-c="fleet-cost">A third cost is neither of those: the fleet's own size. Five finders plus a design finder, and one
+    adversarial verifier per candidate finding, is a shape the skill states rather than a number anyone counted against what
+    each finder returns — and a fixed shape that a new subsystem might justify is paid by every one-line fix. W6 counts it and
+    cuts what the count does not justify; a cut that does not hold is dropped rather than argued for.</p>
 
     <h2 id="rule">The rule this epic lands</h2>
     <p><strong>The code review judges code, and only code.</strong> Documentation is not its business at any point — not as a
@@ -153,8 +157,9 @@ flowchart TD
     </div>
 
     <h2 id="working-units">The working units</h2>
-    <p data-c="wu-headline"><strong>W6 is the headline</strong> — the one rule this epic lands outright, on the owner's
-    direction rather than on a measurement. The table stays in id order; W4 is absent on purpose.</p>
+    <p data-c="wu-headline"><strong>W4 is the headline</strong> — the one rule this epic lands outright, on the owner's
+    direction rather than on a measurement. The table stays in id order, and the ids are contiguous since the owner's plan
+    amendment of 2026-09-12 moved the code-only unit into the freed W4 slot and gave W6 a subject of its own.</p>
     <table data-item="wu-summaries" data-c="wu-summaries-table">
       <thead><tr><th>WU</th><th>What it builds</th><th>Maps to</th><th>Expected outcome</th><th>Depends on</th></tr></thead>
       <tbody>
@@ -188,16 +193,7 @@ flowchart TD
           mismatch is impossible rather than repaired.</td>
           <td data-item="wu-deps">W2 — the preflight is where the shape is refused before the review runs.</td>
         </tr>
-        <tr data-wu="E-SIMPWF.W5">
-          <td>A nit does not restart the exam</td>
-          <td data-item="wu-summary">Only blockers and importants fail a review; a verified nit is recorded and must be
-          dispositioned — fixed, or waived with a reason — in the note the gate reads.</td>
-          <td data-item="wu-maps-to">The re-run cost: a whole fleet round spent on one small finding.</td>
-          <td data-item="wu-expected">A tip passes with recorded, dispositioned nits; an undispositioned nit is refused; the
-          epic's A/B against known-real findings shows recall held.</td>
-          <td data-item="wu-deps">W1 — the effect on recall is measured, not asserted.</td>
-        </tr>
-        <tr data-wu="E-SIMPWF.W6">
+        <tr data-wu="E-SIMPWF.W4">
           <td>The review is code-only <em>(the headline)</em></td>
           <td data-item="wu-summary">The code review's subject, binding and inputs shrink to the code paths: it stops judging,
           stops reading and stops being invalidated by documentation, and the design dimension leaves it for a step of its own.
@@ -211,6 +207,28 @@ flowchart TD
           for.</td>
           <td data-item="wu-deps">none — decided outright by the owner, so it waits on no measurement.</td>
         </tr>
+        <tr data-wu="E-SIMPWF.W5">
+          <td>A nit does not restart the exam</td>
+          <td data-item="wu-summary">Only blockers and importants fail a review; a verified nit is recorded and must be
+          dispositioned — fixed, or waived with a reason — in the note the gate reads.</td>
+          <td data-item="wu-maps-to">The re-run cost: a whole fleet round spent on one small finding.</td>
+          <td data-item="wu-expected">A tip passes with recorded, dispositioned nits; an undispositioned nit is refused; the
+          epic's A/B against known-real findings shows recall held.</td>
+          <td data-item="wu-deps">W1 — the effect on recall is measured, not asserted.</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W6">
+          <td>The fleet shrinks to what its numbers justify <em>(experiment — droppable)</em></td>
+          <td data-item="wu-summary">A count of what one review round actually costs — finders spawned, candidates raised and
+          verified, and each finder's yield against the prompt, context pack and transcript it spends — and the cut the count
+          supports: a finder folded, a context pack shortened, a prompt made simpler.</td>
+          <td data-item="wu-maps-to">The third cost, neither authoring nor re-running: a fleet sized by the skill's say-so
+          rather than by what each finder returns.</td>
+          <td data-item="wu-expected">A round's fleet cost is countable from artifacts the review already writes; every cut
+          names the number that justifies it, and the A/B against known-real findings shows none escapes — and if no cut
+          survives its number, this WU is measured and rejected, and the epic closes without it.</td>
+          <td data-item="wu-deps">W1, W4 — the tally counts the rounds it weighs, and the code-only scope is the fleet being
+          sized.</td>
+        </tr>
         <tr data-wu="E-SIMPWF.W7">
           <td>Re-check only what changed <em>(experiment — droppable)</em></td>
           <td data-item="wu-summary">After a corrective fix the review re-runs only the dimensions the delta can reach, reusing
@@ -219,12 +237,16 @@ flowchart TD
           <td data-item="wu-expected">A fix confined to one file re-runs at most the dimensions whose findings touched it, with
           the A/B showing no known-real finding escapes — and if one does, this WU is dropped and the epic closes without
           it.</td>
-          <td data-item="wu-deps">W1, W6 — the measurement decides it and the code-only scope is its precondition.</td>
+          <td data-item="wu-deps">W1, W4 — the measurement decides it and the code-only scope is its precondition.</td>
         </tr>
       </tbody>
     </table>
-    <p data-c="wu-gap"><strong>W4 is a gap on purpose.</strong> The single-unit light path was dropped at plan review — the
-    owner ruled it not needed now — and the ids are not renumbered, so the gap records the drop rather than hiding it.</p>
+    <p data-c="wu-gap"><strong>W4 was a gap, and the owner filled it — plan amendment, 2026-09-12.</strong> The single-unit
+    light path was dropped at plan review and its id was left empty so the drop stayed visible. The code-only unit then moved
+    from W6 into that slot, and W6 took a subject of its own, so the ids now run without a hole. The drop still stands where it
+    was recorded — the non-goals table above — and nothing here revives it. Two landed records, W2's and W3's result reports,
+    name the code-only unit as W6 in their follow-up tables; they are signed at the tip they closed, so they are read through
+    this amendment rather than rewritten.</p>
 
     <div class="callout warn" data-c="wu-review-evidence">
       <p><strong>How this epic's Working Units are reviewed — owner's ruling, 2026-09-12.</strong> E-SIMPWF
@@ -234,7 +256,7 @@ flowchart TD
       a reason, because the review is the owner's own reading at the merge. What replaces it is the human
       sign-off (<code>mr/v1</code>), unchanged and never waivable: the owner reads the WU result and authorises
       the tip. This ruling is evidence-shape for this epic only; it changes no gate check and no rule outside it,
-      and W6 — which removes the review's documentation scope — still stands as planned.</p>
+      and W4 — which removes the review's documentation scope — still stands as planned.</p>
     </div>
 
     <h2 id="e2e-plan">E2E test plan</h2>
@@ -278,6 +300,9 @@ flowchart TD
             <td><a href="../testing-strategy.html">testing-strategy.html</a> — only if a note schema actually changes</td></tr>
           <tr><td>Why the code-only rule, the design dimension's separation and the severity rule are shaped as they are</td>
             <td><a href="../decisions/decisions-index.html">decisions/</a> — a record each, minted in the WU that decides it</td></tr>
+          <tr><td>What a review round's fleet actually costs, and which of its parts the numbers did not justify</td>
+            <td><a href="../workflow.html">workflow.html</a> — the process standard names the fleet the measurement endorses;
+            an experiment that does not hold leaves it as it is, and the epic result says so with the number</td></tr>
           <tr><td>The design flow as its own epic, and the mounted-mockup blind spot</td>
             <td><a href="../backlog/roadmap.html">roadmap.html</a> — the follow-up this epic deliberately does not take</td></tr>
           <tr><td>This plan and its result</td><td>Archived out of git at the epic gate, per DEC-3</td></tr>
@@ -325,17 +350,19 @@ flowchart TD
     <div class="diagram" data-c="order-diagram">
       <pre class="mermaid">
 flowchart LR
-  W1["W1 measure"] --> W6["W6 the review is code-only<br/>the headline"]
-  W6 --> W2["W2 preflight"] --> W3["W3 note tool"]
+  W1["W1 measure"] --> W4["W4 the review is code-only<br/>the headline"]
+  W4 --> W2["W2 preflight"] --> W3["W3 note tool"]
   W1 --> W5["W5 nits"]
-  W6 --> W7["W7 scoped re-verify<br/>droppable"]
+  W1 --> W6["W6 the fleet's weight<br/>droppable"]
+  W4 --> W6
+  W4 --> W7["W7 scoped re-verify<br/>droppable"]
       </pre>
-      <div class="caption">W1 measures, W6 lands the rule the owner decided, W2 and W3 only remove wasted passes. W5 and W7 each trade something away and are adopted only on measurement.</div>
+      <div class="caption">W1 measures, W4 lands the rule the owner decided, W2 and W3 only remove wasted passes. W5, W6 and W7 each trade something away and are adopted only on measurement.</div>
     </div>
     <div class="callout warn" data-c="stopping-rule">
-      <p><strong>Stopping rule.</strong> A WU that lowers a bar — W5 and W7 — is dropped rather than argued for if its
-      measurement does not hold. The epic still closes: W6 is a decision and W1–W3 stand on their own, and each of W5 and W7 is named in the epic
-      result either as landed or as measured-and-rejected, with the number that decided it.</p>
+      <p><strong>Stopping rule.</strong> A WU that lowers a bar — W5, W6 and W7 — is dropped rather than argued for if its
+      measurement does not hold. The epic still closes: W4 is a decision and W1–W3 stand on their own, and each of W5, W6 and W7
+      is named in the epic result either as landed or as measured-and-rejected, with the number that decided it.</p>
     </div>
 
   </main>
