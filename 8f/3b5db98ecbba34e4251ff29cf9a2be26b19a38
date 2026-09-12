@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W1
+branch: wu/simpwf/measure-the-gate
+changes:
+  - path: docs/decisions/dec-42-the-gate-tally-is-local-measurement.html
+    tier: T2
+    action: added
+    distills: "why the tally is local measurement, what a review round is, and that an unreadable range is not a zero"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "registers DEC-42"
+  - path: docs/work/2026-09-12-simpwf-w1-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan - archived with the epic"
+  - path: docs/work/2026-09-12-simpwf-w1-result.html
+    tier: T3
+    action: added
+    distills: "the WU result, including what the first review round changed - archived with the epic"
