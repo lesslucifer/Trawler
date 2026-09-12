@@ -36,6 +36,9 @@
       untouched. On success it prints the range it pinned —
       <code>base</code>, <code>head</code>, <code>diff_sha256</code> — which is what the review writes
       into its <code>cr/v3</code> note, so the notes and the verdict are about one diff.</p>
+      <p data-c="exempt-rule">A diff the merge exempts — no code and no design artifact in the range — is
+      reported as exempt and written nothing for. The gate returns before it reads a note and no review is
+      asked for, so demanding one here would be this command inventing work the workflow does not owe.</p>
     </div>
 
     <h2 id="why">Why it needed deciding</h2>
@@ -88,10 +91,12 @@
           <td>each layer's <code>count</code></td>
           <td><span class="badge auto">derived</span></td>
           <td>the files the judgment names, read at the tip, counted by the declaration the language writes:
-          <code>#[test]</code> and <code>#[tokio::test]</code> for Rust — which is what a
-          <code>proptest!</code> property carries in this tree — and <code>it(</code>/<code>test(</code> for
-          TypeScript. A file the counter does not know, or one the tip does not hold, is refused rather than
-          counted as zero</td>
+          <code>#[test]</code> and <code>#[tokio::test]</code> (arguments and all) for Rust — which is what a
+          <code>proptest!</code> property carries in this tree — and <code>it(</code>, <code>test(</code> and
+          their <code>.each(</code> tables for TypeScript. It is a line rule over the file's text, and that is
+          stated rather than implied: an attribute written in another form is not counted, and text that spells
+          one is. A file the counter does not know, or one the tip does not hold, is refused rather than
+          counted as zero — so the rule's misses are loud, never a silent zero</td>
         </tr>
         <tr>
           <td><code>covers</code>, <code>waived</code>, <code>t2_waived</code></td>
@@ -105,7 +110,9 @@
           <td>the agent: what happened to the document and what it now carries. The action is validated
           against the documented vocabulary (<code>added | updated | archived | deleted</code>) because the
           gate reads only <code>archived</code> and would otherwise pass a typo; an <code>archived</code>
-          entry's lineage is the gate's own <code>distilled_to</code> rule</td>
+          entry's lineage is the gate's own <code>distilled_to</code> rule. <code>--template</code> prints the
+          derived <code>tier</code> inside each entry so the skeleton round-trips: the field is read, and a
+          judgment whose tier contradicts its path is refused rather than quietly overwritten</td>
         </tr>
         <tr>
           <td>the verdict, the design verdict, the human signature</td>
@@ -136,7 +143,11 @@ flowchart LR
     whatever is on disk. The preflight is what proves the checkout <em>is</em> that tip and the tree is
     green (<a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>) — this command
     is a writer, not a second gate, and it leaves the review's own evidence, the design verdict, the
-    signature, and the checks that judge the merge to the steps that own them.</p>
+    signature, and the checks that judge the merge to the steps that own them. That line is drawn by subject,
+    as DEC-43 drew the preflight's: this command runs the checks that judge <em>the notes it writes</em>
+    (<code>2·manifest</code>, <code>6·doc-note</code> and the retirement order), and not the ones that read
+    the delivered tree instead — an epic tip's tracked-doc set, an unbuilt design, a design run left open.
+    Their repair is a commit, not a judgment about what a note says.</p>
     <pre data-c="usage">cargo xtask notes write wu &lt;tip&gt;                     # target inferred: epic/&lt;slug&gt;
 cargo xtask notes write epic epic/simpwf --target main
 cargo xtask notes write wu &lt;tip&gt; --template           # the derived skeleton; writes nothing</pre>
@@ -163,10 +174,13 @@ cargo xtask notes write wu &lt;tip&gt; --template           # the derived skelet
           <td><a href="../testing-strategy.html">testing-strategy.html</a> §Testing DoD, unchanged</td>
         </tr>
         <tr>
-          <td>The gate and the writer share one implementation of a note's facts — the same
-          <code>check_manifest</code>, the same <code>check_docs</code> — so an authoring refusal and a merge
-          refusal are the same sentence</td>
-          <td><code>xtask/src/gate.rs</code> (<code>check_manifest</code>, <code>Gate::check_docs</code>)</td>
+          <td>The gate and the writer share one implementation of the range and of a note's facts — the same
+          <code>Gate::range</code>, the same doc-path set, the same <code>check_manifest</code> and
+          <code>check_docs</code>, and one scope-to-target resolver across the gate, the preflight and this
+          command — so neither the range a note is written about nor the sentence refusing it can drift</td>
+          <td><code>xtask/src/gate.rs</code> (<code>range</code>, <code>doc_paths</code>,
+          <code>is_gated</code>, <code>check_manifest</code>, <code>Gate::check_docs</code>) and
+          <code>xtask/src/lib.rs</code> (<code>scope_target</code>)</td>
         </tr>
       </tbody>
     </table>
