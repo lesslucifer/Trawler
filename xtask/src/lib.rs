@@ -63,12 +63,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
 
 fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
-        ["wu", tip, rest @ ..] => {
-            let target = target_flag(rest)
-                .or_else(|| infer_wu_target(tip))
-                .ok_or("cannot infer the epic from the branch name; pass --target <epic-branch>")?;
-            gate_run(repo, Level::Wu, tip, &target)
-        }
+        ["wu", tip, rest @ ..] => gate_run(repo, Level::Wu, tip, &wu_scope(tip, rest)?),
         ["epic", tip, rest @ ..] => {
             let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
             gate_run(repo, Level::Epic, tip, &target)
@@ -89,23 +84,28 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     }
 }
 
-// Same two levels, and the same target inference, as `verify-dod wu|epic`: the
-// preflight must resolve the scope the review will pin, so it reads the base the
-// merge gate will read and cannot refuse a tip the gate would judge differently.
+// The review's two scopes, resolved by the same rule and the same error line as
+// `verify-dod wu|epic`: the preflight must pin the base the merge gate will pin,
+// or it would judge a different range than the note it protects. A standalone
+// commit carries no review, so it has no preflight either (SKILL.md §2).
 fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
-        ["wu", tip, rest @ ..] => {
-            let target = target_flag(rest)
-                .or_else(|| infer_wu_target(tip))
-                .ok_or("cannot infer the epic from the branch name; pass --target <epic-branch>")?;
-            preflight::run(repo, Level::Wu, tip, &target)
-        }
+        ["wu", tip, rest @ ..] => preflight::run(repo, Level::Wu, tip, &wu_scope(tip, rest)?),
         ["epic", tip, rest @ ..] => {
             let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
             preflight::run(repo, Level::Epic, tip, &target)
         }
         _ => Err(USAGE.to_string()),
     }
+}
+
+// The epic a WU branch belongs to: named by the caller, or inferred from the
+// branch. One helper because two commands now resolve it, and a disagreement
+// here would gate one range and preflight another.
+fn wu_scope(tip: &str, rest: &[&str]) -> Result<String, String> {
+    target_flag(rest).or_else(|| infer_wu_target(tip)).ok_or_else(|| {
+        "cannot infer the epic from the branch name; pass --target <epic-branch>".to_string()
+    })
 }
 
 // The review and the merge gate must not each decide for themselves what a

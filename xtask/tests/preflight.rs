@@ -169,6 +169,46 @@ fn an_unproven_tree_refuses_under_the_tree_check() {
     assert!(said.contains("before the review runs"), "the fix is stated: {said}");
 }
 
+// Gate 0 proves the working tree; the review binds base..tip. So a green read off
+// a different commit, or off uncommitted work, would vouch for bytes the verdict
+// is not about - the two ways a checkout can lie to a review.
+#[test]
+fn a_checkout_on_another_commit_does_not_vouch_for_the_reviewed_tip() {
+    let (repo, tip) = wu_branch();
+    repo.note("test", &tip, &test_note());
+    repo.note("doc", &tip, &doc_note());
+    repo.write("src/other.rs", "pub fn elsewhere() {}\n");
+    let head = repo.commit("a later commit on the branch");
+    repo.prove_gate0_green();
+
+    let (code, said) = repo.preflight("wu", &tip);
+    assert_eq!(
+        code, 1,
+        "the checked-out tree is not the tip's, so its green is not the tip's: {said}"
+    );
+    assert!(said.contains("FAIL  0·tree"), "got: {said}");
+    assert!(said.contains("not the reviewed tip"), "got: {said}");
+    assert!(said.contains("check out the reviewed tip"), "the fix is stated: {said}");
+    assert!(
+        said.contains(&head[..10]),
+        "the checkout's own sha is named, so the block says what to look at: {said}"
+    );
+}
+
+#[test]
+fn uncommitted_work_refuses_before_the_review() {
+    let (repo, tip) = wu_branch();
+    repo.note("test", &tip, &test_note());
+    repo.note("doc", &tip, &doc_note());
+    repo.prove_gate0_green();
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\npub fn mid_edit() {}\n");
+
+    let (code, said) = repo.preflight("wu", &tip);
+    assert_eq!(code, 1, "a diff that is about to move cannot be reviewed yet: {said}");
+    assert!(said.contains("FAIL  0·tree"), "got: {said}");
+    assert!(said.contains("uncommitted changes"), "got: {said}");
+}
+
 #[test]
 fn a_diff_that_asks_for_no_review_is_never_refused_and_demands_no_note() {
     let repo = Repo::new();

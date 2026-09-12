@@ -95,7 +95,10 @@ flowchart LR
           <td><code>0·tree</code></td>
           <td>the working tree, through Gate 0's three commands: <code>fmt --all --check</code>,
           <code>clippy --workspace</code> with <code>-D warnings</code>, and the suite — skipped when the tree
-          is byte-identical to the last green run (the cache it already keeps)</td>
+          is byte-identical to the last green run (the cache it already keeps). The checkout must also be the
+          reviewed tip, with nothing uncommitted: Gate 0 proves a working tree, while the review binds
+          <code>base..tip</code>, and a green read off another commit vouches for bytes the verdict is not
+          about</td>
           <td>the repair is a commit. A suite fixed after the verdict is a diff that is no longer the diff the
           note pins, so the review is bought twice for a finding the fleet never saw</td>
         </tr>
@@ -184,9 +187,10 @@ flowchart LR
             <td><code>xtask/src/preflight.rs</code>, and <code>xtask/src/gate.rs</code>'s shared note checks</td>
           </tr>
           <tr>
-            <td>The preflight and the merge gate can never disagree about <code>1·notes</code> or
-            <code>2·manifest</code>: one function answers both</td>
-            <td>a test that runs both over one tip and compares the two refusals</td>
+            <td>The preflight makes no check of its own beyond the tree: its note refusals are the gate's own
+            blocks, carrying the gate's check ids and the gate's fix lines</td>
+            <td>the malformed, absent and zero-layer cases in the integration suite, each asserting the gate's
+            own wording rather than a paraphrase</td>
           </tr>
           <tr>
             <td>Running it changes nothing: no note, no receipt, no <code>refs/notes/*</code> ref, no entry in

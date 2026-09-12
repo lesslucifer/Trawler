@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::gate::{format_failures, short, Failure, Gate, Level, Report};
 use crate::gate0;
+use crate::git::git;
 
 // The review's first step, and the only refusal in it that is still cheap: run
 // before a finder spawns, it settles what the review is about to read - the tree
@@ -21,7 +22,7 @@ pub fn run(
     if report.exempt {
         return Ok((0, exempt(&report)));
     }
-    if let Some(tree) = tree_failure(repo)? {
+    if let Some(tree) = tree_failure(repo, &report.tip)? {
         report.failures.insert(0, tree);
     }
     if report.green() {
@@ -33,16 +34,40 @@ pub fn run(
 
 const TREE: &str = "0·tree";
 
-// Gate 0's verdict, in the gate's own block shape. `cargo xtask gate0` already
-// skips itself when the working tree is byte-identical to the last green run, so
-// this costs nothing on the path a review normally takes.
-fn tree_failure(repo: &Path) -> Result<Option<Failure>, String> {
+// The tree has to be the reviewed tip's tree, and not merely some tree in the
+// same checkout: Gate 0 proves the working tree, while the review binds
+// `base..tip`, so a green read off another commit - or off uncommitted work -
+// would vouch for bytes the verdict is not about. Both print under the one check,
+// because both mean the same thing: the green proves nothing about this diff.
+fn tree_failure(repo: &Path, tip: &str) -> Result<Option<Failure>, String> {
+    let head = git(repo, &["rev-parse", "HEAD"])?;
+    if head != tip {
+        return Ok(Some(tree_blocker(
+            format!(
+                "the checkout is on {}, not the reviewed tip {} - Gate 0 measures the working tree, not a named commit",
+                short(&head),
+                short(tip)
+            ),
+            format!("check out the reviewed tip (git checkout {tip}), then run the preflight again"),
+        )));
+    }
+    if !git(repo, &["status", "--porcelain", "--untracked-files=no"])?.is_empty() {
+        return Ok(Some(tree_blocker(
+            "the working tree has uncommitted changes - the review binds a diff, and the commit that lands them is a different one".to_string(),
+            "commit or stash them, then run the preflight again".to_string(),
+        )));
+    }
     let (code, said) = gate0::gate0(repo)?;
-    Ok((code != 0).then(|| Failure {
-        check: TREE.to_string(),
-        what: said,
-        fix: "get fmt, clippy and the suite green before the review runs - a fix that lands after the verdict orphans it and buys the fleet again".to_string(),
+    Ok((code != 0).then(|| {
+        tree_blocker(
+            said,
+            "get fmt, clippy and the suite green before the review runs - a fix that lands after the verdict orphans it and buys the fleet again".to_string(),
+        )
     }))
+}
+
+fn tree_blocker(what: String, fix: String) -> Failure {
+    Failure { check: TREE.to_string(), what, fix }
 }
 
 fn exempt(report: &Report) -> String {

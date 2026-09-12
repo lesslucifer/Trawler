@@ -41,6 +41,11 @@ It refuses on exactly three things:
   local per-checkout file — never a git note, never synced). Any tree change —
   code, test, or whitespace — invalidates the cache and re-runs the full trio,
   so a skip can never vouch for a tree it did not verify.
+- **The checkout** — the tree Gate 0 measures has to be the tree being reviewed:
+  `HEAD` must be the tip you named, with nothing uncommitted. A green read off
+  another commit (or off a working tree that is about to be committed) vouches
+  for bytes the verdict is not about, and the refusal says which of the two it
+  found.
 - **The notes this review reads** — `test/v2` and `doc/v1` on the reviewed tip:
   present, parseable, carrying one identity block, and with the manifest holding
   the test layer this level needs. The same code the merge gate judges them with.
@@ -49,7 +54,15 @@ It refuses on exactly three things:
 
 A non-zero exit ⇒ stop, report its blocks to the caller, spawn no agents, write
 no evidence. An exempt diff — one that asks for no review at all — needs none:
-report that and stop.
+report that and stop; the preflight measures no tree for a diff that asks for
+nothing, so `cargo xtask gate0` is how to ask about the tree on its own.
+
+**WU and epic scopes only.** The preflight protects a verdict the merge gate
+binds, and those are the two levels it binds — a WU branch against its epic, or
+an epic against `main`. A caller reviewing any other scope (§1 permits recent
+commits, a single ref, the working tree) has no note to orphan: run
+`cargo xtask gate0` yourself, read the notes you need, and go on. Never point
+the preflight at a tip without naming the scope whose notes you actually read.
 
 ## 3 · Find — five isolated finders, in parallel (six with §3b)
 
