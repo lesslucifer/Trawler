@@ -195,8 +195,11 @@
             <code>cr/v3</code> note as the whole-diff fingerprint its schema was written against. The comparison branches
             on the schema the tip declared, never on what the note happens to contain</td></tr>
           <tr><td><strong>The notes beside it</strong></td>
-            <td><code>test/v2</code>, <code>doc/v1</code> and <code>design/v1</code> are untouched by the fingerprint:
-            none of them is a claim about the code diff</td></tr>
+            <td><code>test/v2</code> and <code>doc/v1</code> are untouched by it: neither is a claim about the code
+            diff. <code>design/v1</code> pins its own paths instead — <code>design_sha256</code>, over the artifacts
+            it judged and the rendered files it accounts for — so an artifact rewritten after the verdict is refused
+            even though the review's binding cannot move for it. <em>Amended while building this WU:</em> the first
+            draft left the design note unbound, which let a rewritten artifact keep a verdict about other bytes</td></tr>
         </tbody>
       </table>
     </div>

@@ -12,10 +12,18 @@
       <p>E-SIMPWF.W2 puts one refusal in front of the review fleet: the tree Gate 0 proves, and the
         notes the finders are about to read. This records where that boundary is, why the doc
         predicates are not on the near side of it, and what that costs.</p>
-      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W2 · active</div>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W2 · active — inputs narrowed by
+      <a href="dec-45-the-review-binds-the-code-it-judged.html">DEC-45</a></div>
     </div>
   </header>
   <main>
+
+    <div class="callout warn" data-c="narrowed">
+      <p><strong>Narrowed by DEC-45 (E-SIMPWF.W4), the criterion unchanged.</strong> The review stopped
+      reading <code>doc/v1</code>, and a doc note can no longer orphan a PASS — so the preflight stops
+      asking for it and refuses on the tree and <code>test/v2</code> alone. Everything below about the
+      boundary is what it was; the list of notes on the near side of it is one shorter.</p>
+    </div>
 
     <h2 id="decision">The decision</h2>
     <div class="callout" data-c="decision">
@@ -62,7 +70,8 @@
           second fleet.</td>
         </tr>
         <tr>
-          <td><code>1·notes</code> — <code>test/v2</code> and <code>doc/v1</code> on the reviewed tip:
+          <td><code>1·notes</code> — <code>test/v2</code> on the reviewed tip (and <code>doc/v1</code>
+          until DEC-45 narrowed it):
           present, parseable, one identity block</td>
           <td>these are what the finders read: a waiver is a review subject, not a free pass. A note
           that is missing or unreadable is an input the review is about to read and the caller is about
@@ -128,7 +137,8 @@
       are useless, and this epic adds none.</p>
     </div>
     <p>The preflight is not a second gate. It runs the merge gate's own code for <code>1·notes</code> and
-    <code>2·manifest</code> over the notes it reads — <code>test/v2</code> and <code>doc/v1</code> — so a
+    <code>2·manifest</code> over the notes it reads — <code>test/v2</code>, and <code>doc/v1</code> until
+    <a href="dec-45-the-review-binds-the-code-it-judged.html">DEC-45</a> narrowed the review's inputs — so a
     refusal it prints is the gate's own block, with the gate's own fix line rather than a paraphrase of
     it. The <code>cr/v3</code> note is deliberately not loaded: it is the exam's own output, and the round
     that follows writes it after this runs, so the identity check covers the two notes the review reads

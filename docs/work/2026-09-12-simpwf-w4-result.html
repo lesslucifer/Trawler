@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa5742f9f34851f0dfacf07" data-artifact="wu-result">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF.W4 result (code-only review)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF.W4 — the review is code-only, and the design verdict has its own note</h1>
+      <p>The code review binds the code paths it judged — <code>cr/v4</code>, a docs-only commit can no
+      longer void a PASS, and a diff that changes no code owes no review. The design dimension left for a
+      step of its own, on <code>design/v1</code>, which <code>9·design</code> reads.</p>
+      <div class="meta">v1 · 2026-09-12 · Trawler · T3 WU result · <span class="badge id">E-SIMPWF.W4</span> ·
+      <code>wu/simpwf/code-only</code> → <code>epic/simpwf</code> ·
+      <a href="2026-09-12-simpwf-plan.html">epic plan</a> ·
+      <a href="2026-09-12-simpwf-w4-plan.html">WU plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>The rule the epic lands outright is in the tree and in the gate. A review note is <code>cr/v4</code>
+      and its <code>diff_sha256</code> is the hash of <code>git diff BASE..HEAD -- &lt;the code paths&gt;</code>;
+      the note is demanded only when the diff touches a code path; the design verdict travels as
+      <code>design/v1</code> on <code>refs/notes/design</code>, written by a design step of its own and read by
+      <code>9·design</code> and nothing else. The five code rubrics, the severities and the adversarial
+      verifier are untouched.</p>
+      <table data-c="outcome-table">
+        <thead><tr><th>Promised</th><th>What is observably true</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The review's world is the code</td>
+            <td><code>Gate::code_sha256</code> hashes <code>names.filter(is_code)</code> and nothing else;
+            <code>check_review</code> compares a <code>cr/v4</code> note against that hash; a
+            <code>cr/v2</code>/<code>cr/v3</code> note is still compared against the whole diff, so the epic
+            walk re-reads W1–W3's seams under the contract they shipped</td>
+          </tr>
+          <tr>
+            <td>A document cannot void a PASS</td>
+            <td><code>a_docs_only_commit_leaves_the_review_binding_where_it_was</code>: a plan lands after the
+            verdict, the same note is re-attached to the moved tip, and the gate is green — while the same
+            note on a tip whose code moved reds <code>5·diff-binding</code></td>
+          </tr>
+          <tr>
+            <td>A code-free diff owes no review</td>
+            <td>A design-run-only WU greens on its <code>design/v1</code> note with no <code>cr</code> note at
+            all, and a malformed <code>doc/v1</code> no longer stops the preflight — <code>test/v2</code>
+            still does</td>
+          </tr>
+          <tr>
+            <td>The design dimension has a carrier of its own</td>
+            <td><code>design_source</code> reads the <code>design/v1</code> note for a <code>cr/v4</code> tip
+            (or none), and the legacy section for a <code>cr/v2</code>/<code>cr/v3</code> one;
+            <code>check_design</code>, <code>check_design_pin</code> and <code>check_handoff</code> all read
+            through one <code>DesignCarrier</code> shape</td>
+          </tr>
+          <tr>
+            <td>The design verdict binds the bytes it judged</td>
+            <td><code>design_sha256</code> covers the artifacts in scope and the rendered files owed;
+            <code>a_design_verdict_is_void_when_the_artifact_moves</code> reds <code>9·design</code> when a run
+            is rewritten after its verdict</td>
+          </tr>
+          <tr>
+            <td>Nothing about the review's judgment moved</td>
+            <td><code>rubric.md</code> and <code>design-rubric.md</code> are unchanged; the skill diff is
+            scope, inputs and note shape</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations-table">
+        <thead><tr><th>Planned</th><th>What happened, and why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The plan's fingerprint section left the design note unbound — "the notes beside it are
+            untouched by the fingerprint"</td>
+            <td><strong>Amended while building.</strong> Binding nothing on <code>design/v1</code> left a hole
+            the old whole-diff binding had covered: a design artifact rewritten after the verdict kept a
+            verdict about other bytes, and a docs-only edit would not move a code binding to catch it. The note
+            now pins <code>design_sha256</code> over its own paths, and the plan's row says so</td>
+          </tr>
+          <tr>
+            <td>The plan promised one byte-identical binding across the writer, the skill and the gate</td>
+            <td><code>cargo xtask notes write</code> now prints a <code>code_sha256</code> line beside the
+            range, so the review pins what it judged without recomputing the subset by hand. This is the
+            plan's promise with the tool it names made to carry it</td>
+          </tr>
+          <tr>
+            <td>The plan named the two decision records and the design step's skill</td>
+            <td>Landed as planned: <code>dec-45</code>, <code>dec-46</code>, and
+            <code>.claude/skills/design-review/SKILL.md</code>. The design rubric stays where the plan said it
+            stays — <code>.claude/skills/code-review/design-rubric.md</code> — and moving it is the design
+            epic's call</td>
+          </tr>
+          <tr>
+            <td>The epic's four e2e rows for this WU</td>
+            <td>Proven where they are answerable now: over a real temp git repo, the real gate and the real
+            notes, in <code>xtask/tests/dod_gate.rs</code> and <code>preflight.rs</code>. The epic-level run —
+            the whole flow, hooks and gate, at close — is the epic gate's, as the epic's own e2e plan says</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence-table">
+        <thead><tr><th>What</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The contracts: <code>cr/v4</code> in the accepted list, <code>design/v1</code> as a schema of
+            its own, the note and the one carrier shape every check reads</td>
+            <td><code>xtask/src/notes.rs</code> — <code>CR_SCHEMAS</code>, <code>DESIGN_SCHEMAS</code>,
+            <code>DesignNote</code>, <code>DesignCarrier</code></td>
+          </tr>
+          <tr>
+            <td>The subset hash both bindings use, and the empty case that means "no subject"</td>
+            <td><code>xtask/src/git.rs</code> — <code>diff_sha256_paths</code>;
+            <code>xtask/src/gate.rs</code> — <code>code_sha256</code>, <code>design_sha256</code></td>
+          </tr>
+          <tr>
+            <td>Where a verdict comes from, what the review refuses, and what the preflight still stops on</td>
+            <td><code>xtask/src/gate.rs</code> — <code>design_source</code>, <code>check_review</code>,
+            <code>check_design</code>, <code>check_design_pin</code>, <code>check_handoff</code>,
+            <code>load_notes</code></td>
+          </tr>
+          <tr>
+            <td>The writer prints the binding the review pins</td>
+            <td><code>xtask/src/notes_write.rs</code> — <code>Range::code_sha256</code>, the printed range</td>
+          </tr>
+          <tr>
+            <td>The two procedures: five finders over the code paths, and the design step on its own note</td>
+            <td><code>.claude/skills/code-review/SKILL.md</code> ·
+            <code>.claude/skills/design-review/SKILL.md</code></td>
+          </tr>
+          <tr>
+            <td>Unit tests (2 new, in the library): the note's fields through the carrier shape; which note a
+            verdict is read from for a <code>cr/v2</code>, <code>cr/v3</code> and <code>cr/v4</code> tip</td>
+            <td><code>xtask/src/notes.rs</code>, <code>xtask/src/gate.rs</code> — 269 unit tests green</td>
+          </tr>
+          <tr>
+            <td>Integration tests (5 new): the doc-after-PASS and the code-after-PASS pair; a
+            <code>cr/v4</code> note bound to the whole diff refused; a design-only WU owing
+            <code>design/v1</code> and no review; a verdict voided when its artifact moves; the hand-off
+            accounting on the design note</td>
+            <td><code>xtask/tests/dod_gate.rs</code> — 87 tests green</td>
+          </tr>
+          <tr>
+            <td>Integration test (1 new): a malformed <code>doc/v1</code> no longer stops the preflight, and
+            the merge gate still reads it</td>
+            <td><code>xtask/tests/preflight.rs</code> — 11 tests green</td>
+          </tr>
+          <tr>
+            <td>The printed range is the gate's recomputation, now including the code subset</td>
+            <td><code>xtask/tests/notes_write.rs</code> — 14 tests green</td>
+          </tr>
+          <tr>
+            <td>Gate 0 (fmt · clippy <code>-D warnings</code> · the whole suite) and
+            <code>cargo xtask verify-doc</code> over every doc this WU touches</td>
+            <td>green at each commit and at the tip</td>
+          </tr>
+          <tr>
+            <td>Commits</td>
+            <td>plan <code>f4e5bd8</code> · implementation and distillation as below · the rule-bearing
+            <code>workflow.html</code> and <code>design-flow.html</code> staged for the owner's
+            <code>mr commit</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table data-c="distillation-table">
+        <thead><tr><th>Truth this WU created</th><th>Where it landed</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The review's subject, binding and inputs; what a doc-only commit does to a PASS; a code-free
+            diff owing no review</td>
+            <td><a href="../workflow.html">workflow.html</a> — the levels table, DoD-W, the sign-last order,
+            the note table (<code>cr/v4</code>), the gate's checks 3 and 9, the walk waivers, and who judges</td>
+          </tr>
+          <tr>
+            <td>Where the design dimension's verdict lives now, and that it is a step of its own</td>
+            <td><a href="../workflow.html">workflow.html</a> and
+            <a href="../design-flow.html">design-flow.html</a> — the note table's <code>design/v1</code> row and
+            the Tier-3 rows that named the <code>cr/v3</code> carrier</td>
+          </tr>
+          <tr>
+            <td>Why the binding is a subset, and why a design-only diff cannot owe a review</td>
+            <td><a href="../decisions/dec-45-the-review-binds-the-code-it-judged.html">DEC-45</a> ·
+            <a href="../decisions/dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a> ·
+            <a href="../decisions/decisions-index.html">the decisions index</a></td>
+          </tr>
+          <tr>
+            <td>The preflight's boundary, narrowed but not moved</td>
+            <td><a href="../decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>,
+            annotated as narrowed by DEC-45 — the criterion unchanged, the inputs one shorter</td>
+          </tr>
+          <tr>
+            <td>This plan and its result</td><td>Archived out of git at the epic gate, per DEC-3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups-table">
+        <thead><tr><th>Open</th><th>Who owns it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The design records that name the old carrier — DEC-15, DEC-24, DEC-25, DEC-28, DEC-29 — and
+            the design rubric's home, still under <code>.claude/skills/code-review/</code></td>
+            <td>the design epic, per E-SIMPWF's roadmap row; DEC-46 says how to read them until then</td>
+          </tr>
+          <tr>
+            <td><code>xtask/tests/e2e_design_flow.rs</code> drives the design flow through
+            <code>cr/v3</code> notes with design sections. It stays green on the legacy carrier, but it no
+            longer exercises the carrier a new tip ships</td>
+            <td>the design epic, with the step it owns</td>
+          </tr>
+          <tr>
+            <td>What one review round costs now — finders spawned, per-finder yield, prompt and context
+            weight — and which part the number does not justify</td>
+            <td>E-SIMPWF.W6, the unit the plan amendment added; this WU is the fleet it measures</td>
+          </tr>
+          <tr>
+            <td>Two landed reports, W2's and W3's, name this unit as W6 in their follow-up tables</td>
+            <td>read through the epic plan's amendment of 2026-09-12; signed records are not rewritten</td>
+          </tr>
+          <tr>
+            <td>A re-review that re-runs only the dimensions a delta can reach</td>
+            <td>E-SIMPWF.W7, whose precondition — a code-only scope — now exists</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

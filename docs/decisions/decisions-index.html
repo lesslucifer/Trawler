@@ -473,6 +473,41 @@
             (that is the preflight's build, DEC-43), and accepting an uncountable file as zero</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-45-the-review-binds-the-code-it-judged.html"><code>dec-45-the-review-binds-the-code-it-judged.html</code></a></td>
+          <td><span class="badge id">DEC-45</span></td>
+          <td><strong>The code review binds the code paths it judged, and nothing else</strong> — the note is
+            <code>cr/v4</code> and its <code>diff_sha256</code> is the hash of
+            <code>git diff BASE..HEAD -- &lt;the paths <code>is_code</code> names&gt;</code>, so a docs-only commit
+            landing after a PASS neither voids the verdict nor buys the fleet again while a code edit still reds
+            <code>5·diff-binding</code>. A <code>cr</code> note is demanded iff the diff touches a code path; a review
+            present on a code-free tip is ignored rather than judged, and a <code>cr/v2</code>/<code>cr/v3</code> note
+            keeps the whole-diff comparison its schema was written about, so every merged tip and every seam the epic
+            walk re-verifies is untouched. The review's inputs shrink with it: the preflight stops on the tree and
+            <code>test/v2</code> only, since a doc note can no longer orphan the PASS (DEC-43's criterion, restated).
+            Rejected: dropping the binding (a post-verdict fix would keep a PASS for unreviewed code), keeping the
+            whole-diff hash and merely not demanding the note (the cost stays), and redefining
+            <code>diff_sha256</code> inside <code>cr/v3</code> without a schema bump</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-46-the-design-verdict-has-its-own-note.html"><code>dec-46-the-design-verdict-has-its-own-note.html</code></a></td>
+          <td><span class="badge id">DEC-46</span></td>
+          <td><strong>The design dimension's verdict travels as <code>design/v1</code> on
+            <code>refs/notes/design</code></strong> — the section a <code>cr/v3</code> note carried (artifacts judged,
+            rulebook blob, its own verdict, the hand-off citations and drops), written by a design step of its own
+            (<code>.claude/skills/design-review/SKILL.md</code>, told what to judge by
+            <code>cargo xtask design-scope</code>) and read by <code>9·design</code> and only it. The note pins
+            <code>design_sha256</code> over the range's design paths, so an artifact rewritten after the verdict or a
+            rulebook that moved is refused rather than silently covered; a <code>cr/v2</code>/<code>cr/v3</code> tip
+            still has its <code>design:</code> section read from its own note, and a <code>cr/v4</code> tip or one with
+            no review is read from the design note. The code review spawns no design finder and carries no
+            <code>design:</code> section. Rejected: keeping the section on the <code>cr</code> note (a code-free
+            design diff would owe a review), reading the verdict off the design run's receipt (the hand-off is a fact
+            about the build, not the run), and keeping no note at all (the gate can see what a diff carries, never
+            that anyone read it)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
