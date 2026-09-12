@@ -2210,3 +2210,210 @@ fn every_check_8_cause_keeps_the_check_id_and_the_receipts_shape() {
     let receipt: DodReceipt = serde_yaml::from_str(&body).unwrap();
     assert_eq!(receipt.tip, tip);
 }
+
+// ─── W4: the review binds the code it judged ────────────────────────────────
+//
+// The review's subject, its fingerprint and its inputs are the code paths. The
+// tests below are that promise: a document cannot void a PASS, a diff that
+// changes no code owes no review, the code the review did judge still binds it,
+// and the design verdict travels on the note W4 gave it.
+
+/// What the review binds: the range's code paths, and only those.
+fn code_sha(repo: &Repo, base: &str, tip: &str) -> String {
+    let paths: Vec<String> = xtask::git::diff_names(&repo.path, base, tip)
+        .unwrap()
+        .into_iter()
+        .filter(|p| xtask::notes::is_code(p))
+        .collect();
+    xtask::git::diff_sha256_paths(&repo.path, base, tip, &paths).unwrap()
+}
+
+fn cr_note_v4(base: &str, sha: &str) -> String {
+    format!(
+        "schema: cr/v4\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\nverdict: PASS\ndate: 2026-09-12\n",
+        identity("E9", Some("E9.W1"))
+    )
+}
+
+/// The design step's note: the section a `cr/v3` note carried, on the note W4
+/// gave it, pinned to the design paths it read - the artifacts it judged and the
+/// rendered files it accounts for.
+fn design_note(repo: &Repo, artifacts: &[&str], verdict: &str, extra: &str) -> String {
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let (_, owed) = repo.gate().surfaces(&tip, &base);
+    let mut paths: Vec<String> = artifacts.iter().map(|a| (*a).to_string()).collect();
+    paths.extend(owed);
+    paths.sort();
+    paths.dedup();
+    let sha = xtask::git::diff_sha256_paths(&repo.path, &base, &tip, &paths).unwrap();
+    format!(
+        "schema: design/v1\n{}base: {base}\ndesign_sha256: {sha}\nverdict: {verdict}\nartifacts: [{}]\nrulebook: {}\n{extra}date: 2026-09-12\n",
+        identity("E9", Some("E9.W1")),
+        artifacts.join(", "),
+        pin_of(repo, &tip)
+    )
+}
+
+const WU_TEST_NOTE: &str = "  integration: { count: 1, covers: \"the review's binding\" }\n";
+const DOCS_ONLY_TEST_NOTE: &str =
+    "  integration: { waived: \"the diff changes no code to test\" }\n";
+
+#[test]
+fn a_docs_only_commit_leaves_the_review_binding_where_it_was() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let sha = code_sha(&repo, &base, &tip);
+    allow_file(&repo);
+    let notes = |tip: &str, changes: &str| {
+        repo.note("test", tip, &test_note("working-unit", "E9", Some("E9.W1"), WU_TEST_NOTE));
+        repo.note("doc", tip, &doc_note("E9", Some("E9.W1"), changes, None));
+        repo.note("mr", tip, &wu_mr_note(&repo, tip));
+    };
+    repo.note("cr", &tip, &cr_note_v4(&base, &sha));
+    notes(&tip, WU_CHANGES);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+
+    // A document lands after the verdict. The note copy that rides it is the same
+    // one - its hash covers the code paths, which did not move - so no fleet runs.
+    let plan = "docs/work/one-plan.html";
+    repo.write(plan, "<html>the plan the review never reads</html>\n");
+    let moved = repo.commit("the plan lands after the review");
+    let changes = format!(
+        "{WU_CHANGES}  - path: {plan}\n    tier: T3\n    action: added\n    distills: \"the plan\"\n"
+    );
+    repo.note("cr", &moved, &cr_note_v4(&base, &sha));
+    notes(&moved, &changes);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "a document cannot void a PASS: {}", format_report(&report));
+
+    // The same note, on a tip whose code moved: the binding is what refuses it.
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\npub fn also() {}\n");
+    let code_moved = repo.commit("the code moves after the review");
+    repo.note("cr", &code_moved, &cr_note_v4(&base, &sha));
+    notes(&code_moved, &changes);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
+}
+
+// A `cr/v4` note that binds the whole diff is binding bytes the review no longer
+// judges: the schema says which subset its hash is, and the gate reads it that way.
+#[test]
+fn a_review_bound_to_the_whole_diff_is_refused() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let whole = diff_sha256(&repo.path, &base, &tip).unwrap();
+    bless_wu(&repo, &tip);
+    repo.note("cr", &tip, &cr_note_v4(&base, &whole));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
+
+    repo.note("cr", &tip, &cr_note_v4(&base, &code_sha(&repo, &base, &tip)));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
+/// A WU whose diff carries a closed design run and its result report, and no code.
+fn design_only_wu() -> Repo {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write(
+        DESIGN_RUN,
+        "<html><body><main data-artifact=\"design-run\" data-status=\"archived\"><p>the run</p></main></body></html>\n",
+    );
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.commit("the fourth design run and its result");
+    repo
+}
+
+fn design_only_notes(repo: &Repo, tip: &str) {
+    let changes = format!(
+        "  - path: {DESIGN_RUN}\n    tier: T3\n    action: added\n    distills: \"the fourth run\"\n  - path: {WU_RESULT}\n    tier: T3\n    action: added\n    distills: \"the result\"\n"
+    );
+    allow_file(repo);
+    repo.note("test", tip, &test_note("working-unit", "E9", Some("E9.W1"), DOCS_ONLY_TEST_NOTE));
+    repo.note(
+        "doc",
+        tip,
+        &doc_note(
+            "E9",
+            Some("E9.W1"),
+            &changes,
+            Some("a design run and its result; no T2 contract moved"),
+        ),
+    );
+    repo.note("mr", tip, &wu_mr_note(repo, tip));
+}
+
+#[test]
+fn a_design_only_diff_owes_a_design_note_and_no_review() {
+    let repo = design_only_wu();
+    let tip = repo.sha("wu/x/one");
+    design_only_notes(&repo, &tip);
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        !format_report(&report).contains("1·notes"),
+        "a diff that changes no code owes no review: {}",
+        format_report(&report)
+    );
+
+    repo.note("design", &tip, &design_note(&repo, &[DESIGN_RUN], "PASS", ""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the design verdict carries it: {}", format_report(&report));
+}
+
+#[test]
+fn a_design_verdict_is_void_when_the_artifact_moves() {
+    let repo = design_only_wu();
+    let tip = repo.sha("wu/x/one");
+    design_only_notes(&repo, &tip);
+    let verdict = design_note(&repo, &[DESIGN_RUN], "PASS", "");
+    repo.note("design", &tip, &verdict);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+
+    repo.write(
+        DESIGN_RUN,
+        "<html><body><main data-artifact=\"design-run\" data-status=\"archived\"><p>the run, revised after the verdict</p></main></body></html>\n",
+    );
+    let moved = repo.commit("revise the run after the verdict");
+    design_only_notes(&repo, &moved);
+    repo.note("design", &moved, &verdict);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"9·design"),
+        "a verdict pinned to other bytes is not a verdict about these: {}",
+        format_report(&report)
+    );
+}
+
+// The hand-off accounting moved with the verdict: a build that renders a file
+// answers for it on the design note, and the review's own note says nothing.
+#[test]
+fn the_handoff_accounting_travels_on_the_design_note() {
+    let repo = wu_building_a_component();
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    repo.note("cr", &tip, &cr_note_v4(&base, &code_sha(&repo, &base, &tip)));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("StatusPill.tsx"), "the red names the surface");
+
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
+    let cites = format!(
+        "implements:\n  - path: {COMPONENT_DESIGN}\n    blob: {}\n    built: [ui/src/components/StatusPill.tsx]\n",
+        &blob[..7]
+    );
+    repo.note("design", &tip, &design_note(&repo, &[], "PASS", &cites));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the citation lands on its own note: {}", format_report(&report));
+}

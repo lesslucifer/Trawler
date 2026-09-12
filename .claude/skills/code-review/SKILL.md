@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical gate, five isolated finders plus a design finder when the diff carries a design artifact, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
+description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical preflight, five isolated finders over the diff's code paths, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip. The review judges code and nothing else: no document is its subject, and a diff that changes no code asks for no review at all. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
 ---
 
 # Code review — orchestration
@@ -9,6 +9,12 @@ A review run is **read-only**: no agent in it edits the tree or commits.
 Fixing belongs to the session that triggered the run (§7). What to review
 lives in `rubric.md` next to this file — finders read it; this file only
 sequences the run.
+
+**The subject is code.** `src/`, `xtask/`, `tests/`, `ui/src/`, `ui/e2e/` —
+the paths `notes::is_code` names, one definition shared with the gate. A
+document is never judged, cited or bound here: the design dimension left this
+run for a step of its own (§3b), and a diff that changes no code path asks for
+no review, no note and no finders at all.
 
 ## 1 · Resolve scope
 
@@ -20,8 +26,10 @@ sequences the run.
 - Pin full SHAs now: `BASE=$(git merge-base <base> <head>)` and
   `HEAD_R=$(git rev-parse <head>)`. Merge-base, not the base tip — commits
   that landed on the base branch after the fork must not pollute the diff.
-- The reviewed diff is `git diff BASE..HEAD_R`, plus `git diff HEAD_R` when
-  the working tree is in scope.
+- The reviewed diff is `git diff BASE..HEAD_R -- <the code paths>`, plus the
+  working-tree half when it is in scope. The paths are the five prefixes above;
+  read them off `cargo xtask notes write`'s `code_sha256` line when it printed
+  one, so the bytes you judge and the bytes you bind are the same ones.
 - Optional, repeatable: `--waive "<finding summary>: <reason>"` — the
   trigger's waiver declarations, applied at the verdict (§5).
 
@@ -46,9 +54,11 @@ It refuses on exactly three things:
   another commit (or off a working tree that is about to be committed) vouches
   for bytes the verdict is not about, and the refusal says which of the two it
   found.
-- **The notes this review reads** — `test/v2` and `doc/v1` on the reviewed tip:
-  present, parseable, carrying one identity block, and with the manifest holding
-  the test layer this level needs. The same code the merge gate judges them with.
+- **The note this review reads** — `test/v2` on the reviewed tip: present,
+  parseable, carrying the identity block, and with the manifest holding the test
+  layer this level needs. The same code the merge gate judges it with. `doc/v1`
+  is not read here and cannot void this PASS, so the preflight no longer stops on
+  it (DEC-43, restated by DEC-45).
 - **Nothing else.** No `cr/v3` note (this review writes it), no design section,
   no `mr/v1` (the human signs last), no doc-note coverage, and no doc predicate.
 
@@ -64,7 +74,7 @@ commits, a single ref, the working tree) has no note to orphan: run
 `cargo xtask gate0` yourself, read the notes you need, and go on. Never point
 the preflight at a tip without naming the scope whose notes you actually read.
 
-## 3 · Find — five isolated finders, in parallel (six with §3b)
+## 3 · Find — five isolated finders, in parallel
 
 Spawn five subagents **in a single message** (fresh context each), one per
 dimension in `rubric.md`. Each finder prompt contains exactly:
@@ -74,49 +84,20 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
   principles, and the exclusions;
 - the scope (`BASE..HEAD_R`, plus working tree if in scope) — the finder runs
   `git diff` itself and may read any file in the repo, including the tip's
-  `test/v2` and `doc/v1` notes (`git notes --ref=test|doc show HEAD_R`):
-  declared waivers and distillation claims are review subjects, not free
-  passes;
+  `test/v2` note (`git notes --ref=test show HEAD_R`): a declared waiver is a
+  review subject, not a free pass. `doc/v1` is not read: what a document says
+  about the code is the plan's and the human's business, not this run's;
 - the return format: a list of candidate findings, each
   `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`.
 
-## 3b · The design dimension — a sixth finder, when the diff earns it
+## 3b · The design dimension is not part of this run
 
-Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints three things — the
-design **artifacts** in scope with the rulebook blob to pin, the **new surfaces**
-the diff adds (a `@tier` component, a screen), and every other **rendered file**
-it touches (any non-test `.tsx` under `ui/src/`) — the same function the merge
-gate uses, so the two can never disagree about any of them.
-
-- **No artifact** ⇒ no design finder, and the note carries no `design:` section
-  unless a surface or a rendered file is listed.
-- **One or more artifacts** ⇒ spawn the design finder alongside the other five,
-  in the same message. Its prompt: the instruction to read
-  `.claude/skills/code-review/design-rubric.md` first, the artifact paths the
-  command printed, the scope, and the same return format as §3. It is Tier-3 of
-  the design flow — soft rules and the new-component warrant, never the hard
-  rules Tier-1 already owns.
-- **One or more new surfaces** ⇒ no finder runs, but the note owes
-  `design.implements`: one `{path, blob, built}` per design the build was built
-  from, the blob being `git rev-parse <HEAD_R>:<the design>` — or, when the WU
-  retired the design it read (DEC-16 forces this inside the build WU), the blob
-  at its last state, `git rev-parse <the last commit that held it>:<the design>`,
-  which `design-scope` prints (DEC-28) — and `built` naming
-  the files that design produced. This is a citation, not a judgment — nothing
-  here judges the code against the design. A new surface takes **only** a
-  citation; no reason excuses one.
-- **One or more rendered files touched** ⇒ each is covered by a citation's
-  `built` list, or named in `design.undesigned: [{path, why}]`. Write the `why`
-  yourself, as a statement of fact about this diff — *what did the edit do, and
-  what made a design unnecessary*. "No design" is not a reason; "a copy fix
-  inside the existing layout" is. You are the independent party here, so this is
-  the one place the record can be trusted: a builder excusing its own work is
-  what the field exists to prevent. If the edit did re-shape a surface and no
-  design covers it, say so and **FAIL** — the gate cannot see that, only you can.
-
-Its candidates go through §4 verification like any other. The design verdict is
-`PASS` when no design finding survives verification unwaived, and it is recorded
-whether or not the overall review passes.
+A diff that carries a design artifact, or renders a file under `ui/src/`, owes
+the design dimension's verdict — on the design step's own `design/v1` note, which
+`9·design` reads. That step is not this one: this run spawns no design finder,
+reads no design artifact, and its note carries no `design:` section, so a
+document can neither be judged here nor void anything judged here. Run
+`.claude/skills/design-review/SKILL.md` for it, over the same scope.
 
 ## 4 · Verify — one fresh verifier per candidate, in parallel
 
@@ -146,57 +127,42 @@ returning to the caller (§7) so finder quality stays visible.
 
 ## 6 · Evidence — YAML note on the reviewed tip
 
-- `DIFF_SHA=$(git diff --no-color --no-ext-diff BASE..HEAD_R | shasum -a 256 | cut -d' ' -f1)`
-  (pipe the working-tree diff in as well when it was in scope). The flags
-  match `cargo xtask verify-dod`'s recomputation — the binding must be
-  byte-identical.
-- The note body is one YAML document, contract `cr/v3`.
+- `CODE_SHA=$(git diff --no-color --no-ext-diff BASE..HEAD_R -- <the code paths> | shasum -a 256 | cut -d' ' -f1)`
+  (add the working-tree half the same way when it was in scope). The paths are
+  the five prefixes from the top of this file; the flags match `cargo xtask
+  verify-dod`'s recomputation — the binding must be byte-identical. A diff with
+  no code path has no hash to write, and asks for no note at all.
+- The note body is one YAML document, contract `cr/v4`.
   `cargo xtask verify-dod` parses it at every merge gate (see
   `docs/workflow.html`): a Working Unit is not merge-ready and an epic is
-  not complete without a `PASS` note whose `diff_sha256` matches the tip
-  being merged — so a later rewrite of the branch visibly orphans its
-  evidence.
+  not complete without a `PASS` note whose `diff_sha256` matches the code the
+  tip changes — so a later code edit visibly orphans its evidence, and a
+  document landing after it does not.
 
 ```yaml
-schema: cr/v3
+schema: cr/v4
 scope: "WU capture-pagination -> epic/capture"   # the caller's label
 epic: E-CAP                     # identity block — matches the tip's other notes
 wu: E-CAP.W2                    # working-unit scope only
 branch: wu/capture/pagination   # informative; the ids are the truth
 base: <full sha — the merge-base pinned in §1>
 head: <full sha — the reviewed tip; the note is attached to it>
-diff_sha256: <DIFF_SHA>
+diff_sha256: <CODE_SHA>         # the code paths, and only them
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
 findings: { found: <n>, verified: <n>, waived: <n> }
 waivers:
   - finding: "<summary>"
     reason: "<reason>"
-design:                         # §3b — present iff design-scope listed anything
-  artifacts: [docs/work/<the run>.html]   # every artifact it listed, none omitted
-  rulebook: <blob it printed>   # what the design dimension judged against
-  findings: { found: <n>, verified: <n>, waived: <n> }
-  verdict: PASS                 # PASS | FAIL — artifacts only; omit when nothing was judged
-  implements:                   # one per design the build read; omit when none was listed
-    - path: docs/work/components/<the design>.html
-      blob: <git rev-parse HEAD_R:<that path>, or <the last commit that held it>:<that path> once this WU retired it (DEC-28)>
-      built: [ui/src/components/<what it produced>.tsx]   # the rendered files it covers
-  undesigned:                   # every other rendered file the diff touched
-    - path: ui/src/<the file>.tsx
-      why: "<what the edit did, and what made a design unnecessary>"
 verdict: PASS   # PASS | FAIL
 date: <YYYY-MM-DD>
 ```
 
-The `design:` block is what `verify-dod`'s `9·design` check reads: a
-design-bearing tip whose note omits it, judges fewer artifacts than the diff
-carries, or pins a rulebook the tip does not ship, is refused at the merge — as
-is a tip that adds a new surface and cites no design, or cites one whose path or
-blob the tip does not ship, or leaves a rendered file neither cited nor
-declared. The accounting is checked both ways: a `built` or `undesigned` entry
-naming a file the diff does not render is refused as readily as one left out,
-and a file given both answers is refused for contradicting itself. On a diff
-that renders nothing and carries no artifact the block is absent, and no check
-asks for it.
+There is no `design:` block on this note, and there is nothing to write in its
+place: `verify-dod`'s `9·design` check reads the design step's own `design/v1`
+note (`.claude/skills/design-review/SKILL.md`), which is what a design-bearing
+or surface-rendering diff owes. A note carrying one anyway is a claim this run
+cannot make — the verdict would be about documents the binding above does not
+cover.
 
 - Attach it: `git notes --ref=cr add -f -m "<yaml>" HEAD_R`.
 - The pre-push hook syncs `refs/notes/*` to origin automatically. Audit any

@@ -123,6 +123,7 @@ struct Range {
     tip: String,
     base: String,
     diff_sha256: String,
+    code_sha256: String,
     names: Vec<String>,
     branch: Option<String>,
 }
@@ -133,10 +134,21 @@ impl Range {
     fn resolve(repo: &Path, level: Level, tip_ref: &str, rest: &[&str]) -> Result<Self, String> {
         let target = crate::scope_target(level, tip_ref, rest)?;
         let (tip, base, names, diff_sha256) = Gate { repo }.range(tip_ref, &target)?;
+        // What the review binds: the code paths, not the documents this tool is
+        // about to write a note for. Empty when the range changes no code.
+        let code_sha256 = Gate { repo }.code_sha256(&base, &tip, &names)?;
         // The branch label rides on a named ref, exactly as the receipt's does: a
         // tip named by sha carries none, because there is no branch it names.
         let branch = (tip_ref != tip).then(|| tip_ref.to_string());
-        Ok(Self { tip_ref: tip_ref.to_string(), tip, base, diff_sha256, names, branch })
+        Ok(Self {
+            tip_ref: tip_ref.to_string(),
+            tip,
+            base,
+            diff_sha256,
+            code_sha256,
+            names,
+            branch,
+        })
     }
 
     /// The judgment skeleton: the derived half, so no path or tier is typed. It
@@ -152,6 +164,9 @@ impl Range {
         );
         let _ = writeln!(out, "# range: base {} tip {}", self.base, self.tip);
         let _ = writeln!(out, "# diff_sha256: {}", self.diff_sha256);
+        if !self.code_sha256.is_empty() {
+            let _ = writeln!(out, "# code_sha256: {}", self.code_sha256);
+        }
         match level {
             Level::Wu => {
                 let _ = writeln!(
@@ -755,8 +770,17 @@ fn exempt(level: Level, range: &Range) -> String {
 }
 
 fn written(level: Level, range: &Range, wrote: &[&str]) -> String {
+    let binding = if range.code_sha256.is_empty() {
+        "this range changes no code, so no review binds it: the cr note is not asked for"
+            .to_string()
+    } else {
+        format!(
+            "code_sha256: {}\nthe review binds the code paths in its cr/v4 note, and the design step pins what it judged in design/v1",
+            range.code_sha256
+        )
+    };
     format!(
-        "notes write {} on {}: {} written\nbase: {}\nhead: {}\ndiff_sha256: {}\nthe review pins this same range in its cr/v3 note",
+        "notes write {} on {}: {} written\nbase: {}\nhead: {}\ndiff_sha256: {}\n{binding}",
         level.as_note_level(),
         short(&range.tip),
         wrote.join(" + "),

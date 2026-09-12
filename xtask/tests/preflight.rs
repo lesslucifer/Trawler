@@ -226,6 +226,24 @@ fn a_diff_that_asks_for_no_review_is_never_refused_and_demands_no_note() {
     );
 }
 
+// W4: the review reads no doc note, and a doc note can no longer void a PASS - so
+// a malformed one is not a blocker in front of the fleet, while the note the
+// finders do read still stops it.
+#[test]
+fn a_malformed_doc_note_no_longer_stops_the_review() {
+    let (repo, tip) = wu_branch();
+    repo.note("test", &tip, &test_note());
+    repo.note("doc", &tip, "schema: doc/v1\nchanges: [\n");
+    repo.prove_gate0_green();
+
+    let (code, said) = repo.preflight("wu", &tip);
+    assert_eq!(code, 0, "a note the review does not read cannot stop it: {said}");
+
+    let (gate_code, gate) = repo.xtask(&["verify-dod", "wu", &tip, "--target", "epic/x"]);
+    assert_eq!(gate_code, 1, "the merge gate still reads it: {gate}");
+    assert!(gate.contains("doc/v1"), "got: {gate}");
+}
+
 // The preflight is not a second gate: it asks for the notes the review reads and
 // never for the evidence the review writes. The gate, on the same tip, asks for
 // both - which is the one difference that makes the preflight a preflight.
@@ -238,11 +256,11 @@ fn the_preflight_never_asks_for_the_note_the_review_writes() {
 
     let (preflight_code, preflight) = repo.preflight("wu", &tip);
     assert_eq!(preflight_code, 0, "the exam's own evidence is not a precondition: {preflight}");
-    assert!(!preflight.contains("cr/v3"), "got: {preflight}");
+    assert!(!preflight.contains("cr/v4"), "got: {preflight}");
 
     let (gate_code, gate) = repo.xtask(&["verify-dod", "wu", &tip, "--target", "epic/x"]);
     assert_eq!(gate_code, 1, "the merge gate still demands it: {gate}");
-    assert!(gate.contains("no cr/v3 note on tip"), "got: {gate}");
+    assert!(gate.contains("no cr/v4 note on tip"), "got: {gate}");
 }
 
 #[test]
