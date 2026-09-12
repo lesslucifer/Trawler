@@ -156,6 +156,46 @@
       </div>
     </div>
 
+    <h2 id="review">The review round this WU's own rule caught</h2>
+    <div>
+      <p>E-SIMPWF's WUs are not put through the code-review skill — the epic changes the review flow itself, so the
+      reading is the author's and the gate is the human sign-off. That reading found two faults in the contract's
+      first shape, both in the same field, and both of the kind this WU exists to make legible.</p>
+      <table data-c="round-table">
+        <thead><tr><th>Finding</th><th>Severity</th><th>What it did</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>A nit could carry both dispositions</td>
+            <td>important</td>
+            <td><code>#[serde(flatten)] Option&lt;Disposition&gt;</code> parsed <code>fixed:</code> and
+            <code>waived:</code> on one entry, silently keeping the first. The note is the evidence; evidence that
+            accepts a contradiction and reports one half of it is the thing this rule exists to prevent.</td>
+            <td>Two plain <code>Option&lt;String&gt;</code> fields replace the flattened enum — the shape
+            <code>DocChange</code> already uses — and both-present is a named fault.</td>
+          </tr>
+          <tr>
+            <td>A nit naming nothing counted as a decision</td>
+            <td>important</td>
+            <td><code>finding: ""</code> with a waiver passed: a decision about nothing, recorded as a decision. The
+            exact twin of the empty-sentence rule the whole design leans on, missing from the half that names the
+            subject.</td>
+            <td><code>fault()</code> refuses an empty <code>finding</code> before it looks at the disposition.</td>
+          </tr>
+          <tr>
+            <td>An unknown disposition key (<code>fixd:</code>)</td>
+            <td>refuted</td>
+            <td>Probed alongside the two above; it already parsed as no disposition and was already refused. No
+            change.</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Both fixes carry their own failing-first regression test
+      (<code>a_nit_naming_nothing_or_deciding_twice_is_no_decision</code>, and two more rows in the gate's test), and
+      the simplification is the reason to prefer the landed shape on its own terms: no flatten subtlety, one
+      <code>fault()</code> naming every way an entry fails to be a decision.</p>
+    </div>
+
     <h2 id="deviations">Deviations</h2>
     <div data-item="deviations">
       <table>
@@ -198,7 +238,8 @@
             <td>A nit is decided by a non-empty <code>fixed</code> or <code>waived</code>, and by nothing else</td>
             <td><code>xtask/src/notes.rs</code> —
             <code>a_nit_is_decided_by_a_non_empty_fixed_or_waiver</code>: four entries, the blank waiver and the bare
-            finding both undecided, each naming what it is missing.</td>
+            finding both undecided, each naming its fault — and
+            <code>a_nit_naming_nothing_or_deciding_twice_is_no_decision</code> for the two the round found.</td>
           </tr>
           <tr>
             <td>An absent section is an empty list on every review contract</td>
@@ -208,8 +249,8 @@
           <tr>
             <td>The gate refuses the undecided nit and only it</td>
             <td><code>xtask/src/gate.rs</code> —
-            <code>an_undecided_nit_is_the_only_nit_the_gate_refuses</code>: dispositioned nits add no failure, two
-            undecided ones add exactly two <code>3·review-nits</code>, and the same note with no code hash to bind
+            <code>an_undecided_nit_is_the_only_nit_the_gate_refuses</code>: dispositioned nits add no failure, four
+            faulty ones (bare, blank, doubly-dispositioned, unnamed) add exactly four <code>3·review-nits</code>, and the same note with no code hash to bind
             refuses nothing.</td>
           </tr>
           <tr>
@@ -221,7 +262,7 @@
           </tr>
           <tr>
             <td>Nothing else moved</td>
-            <td><code>cargo test --all-features</code>: 306 passed, 0 failed. <code>cargo clippy --all-targets
+            <td><code>cargo test --all-features</code>: 308 passed, 0 failed. <code>cargo clippy --all-targets
             --all-features -D warnings</code> clean under pedantic; <code>cargo fmt</code> clean.</td>
           </tr>
           <tr>
@@ -234,7 +275,7 @@
       <table data-c="layers-table">
         <thead><tr><th>Layer</th><th>Count</th><th>Covers</th></tr></thead>
         <tbody>
-          <tr><td>unit</td><td class="num">3</td><td>The contract's parse and decision rule, and the gate's refusal</td></tr>
+          <tr><td>unit</td><td class="num">4</td><td>The contract's parse and decision rule, and the gate's refusal</td></tr>
           <tr><td>integration</td><td class="num">1</td><td><code>verify-dod</code> over a real tree at a real WU seam</td></tr>
           <tr><td>e2e</td><td class="num">waived</td><td>The epic's e2e row carries the full flow; this WU adds no new flow to drive, and the seam behaviour it introduces is proven at the integration level through the same binary and hook the e2e uses</td></tr>
         </tbody>
