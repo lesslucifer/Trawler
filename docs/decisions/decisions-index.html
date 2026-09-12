@@ -449,6 +449,30 @@
             backstop</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-44-the-note-tool-derives-what-the-tooling-knows.html"><code>dec-44-the-note-tool-derives-what-the-tooling-knows.html</code></a></td>
+          <td><span class="badge id">DEC-44</span></td>
+          <td><strong>The notes a review reads are written by one command that derives every field git can
+            answer</strong> — <code>cargo xtask notes write &lt;wu|epic|commit&gt; &lt;tip&gt;</code> takes one
+            judgment document (the two notes minus their derived fields: no <code>count</code>, no
+            <code>tier</code>, no identity, no range) and writes the tip's <code>test/v2</code> and
+            <code>doc/v1</code>, computing the range (<code>base</code>, <code>head</code>,
+            <code>diff_sha256</code> — which it prints for the review's <code>cr/v3</code> note to pin), the
+            identity block from the declared WU id, the branch label, every changed doc path and its tier
+            (plus a design retired at bytes the base never held, DEC-29), and each layer's count read from the
+            test files the judgment names at the tip. The judgment keeps what no command can read: the
+            <code>covers</code> sentences, the waivers, and each doc's action, distillation and lineage. It
+            writes nothing unless the notes it derived would pass the gate's own <code>2·manifest</code> and
+            <code>6·doc-note</code> (the same functions the merge calls), and refuses a judgment that
+            disagrees with the range or with itself under <code>0·judgment</code>; a file kind it cannot count
+            is refused rather than counted as zero, and the action vocabulary
+            (<code>added|updated|archived|deleted</code>) is enforced because the gate reads only
+            <code>archived</code>. <code>--template</code> prints the derived skeleton and writes nothing.
+            Rejected: one document per note (two chances to disagree about the shared identity), typing the
+            counts and validating them afterwards (the repair this removes), counting by running the suite
+            (that is the preflight's build, DEC-43), and accepting an uncountable file as zero</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
