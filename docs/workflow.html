@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v15 · 2026-09-03 · Trawler · T1 process doc</div>
+      <div class="meta">v16 · 2026-09-12 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -55,7 +55,7 @@ flowchart TD
   B --> W["branch wu/&lt;epic&gt;/&lt;slug&gt;"]
   W --> DS["UI work: the design WU lands its closed design first,<br/>the build WU cites it — same epic"]
   DS --> C["commits — hooks enforce DoD-C"]
-  C --> R["write test/v2 + doc/v1 notes,<br/>code review → cr/v3 PASS on tip"]
+  C --> R["write test/v2 + doc/v1 notes,<br/>preflight, code review → cr/v3 PASS on tip"]
   R --> MR["human signs off → mr/v1 note attesting<br/>the WU result report (sign-what-you-read)"]
   MR --> G1{"merge --no-ff into the epic<br/>hook: verify-dod wu"}
   G1 -- red: merge refused --> C
@@ -94,7 +94,7 @@ flowchart TD
       <tbody>
         <tr><td>WU plan doc + epic-plan summary block written before the code; WU result report written at completion — contents per <a href="work-planning.html">the work-planning standard</a>, checklist-verified at authoring time</td><td><span class="badge auto">harness hooks (verify-doc)</span> · existence + exact bytes = <span class="badge auto">gate check 8</span> (the <code>mr/v1</code> attestation) · substance = review (judgment)</td></tr>
         <tr><td>Integration test(s) assert the WU contract; wire contracts snapshot-locked</td><td><span class="badge auto">gate check 2</span> (integration ≥ 1 or waived) · adequacy = review</td></tr>
-        <tr><td><code>test/v2</code> + <code>doc/v1</code> notes on the tip; review PASS bound to this exact diff</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
+        <tr><td><code>test/v2</code> + <code>doc/v1</code> notes on the tip; the review <strong>preflight</strong> clear on the tree and those notes — or exempt, when the diff asks for no review; review PASS bound to this exact diff</td><td><span class="badge auto">gate checks 1–6</span> · the preflight is what refuses while <code>0·tree</code>/<code>1·notes</code>/<code>2·manifest</code> are red, before a finder spawns (<a href="decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>)</td></tr>
         <tr><td>T2 synthesis: use-case/decision updated, or <code>t2_waived</code> with reason</td><td><span class="badge auto">gate check 6</span> · adequacy = epic review</td></tr>
         <tr><td><em>UI only:</em> every UI-rendering file the diff touches is <strong>accounted for</strong> — cited to the closed design it was built from (path + blob), or declared <code>undesigned</code> with a reason. An <em>added</em> surface may only be cited (<a href="#design-handoff">design → build</a>)</td><td><span class="badge auto">gate check 9</span></td></tr>
         <tr><td>A listed <code>mr/v1</code> note attesting the WU result report — a human read the result and authorised the tip (always, not waivable). <strong>Signed last</strong>: <code>mr confirm</code> refuses until <code>test/v2</code>, <code>doc/v1</code> and a diff-bound <code>cr/v3</code> PASS are already on the tip (<a href="#sign-last">why</a>)</td><td><span class="badge auto">gate check 8</span></td></tr>
@@ -231,7 +231,7 @@ flowchart TD
       <tbody>
         <tr><td>1</td><td>the work, its tests, its docs, the result report</td><td>everything that changes the tree</td></tr>
         <tr><td>2</td><td><code>test/v2</code> + <code>doc/v1</code> on the tip</td><td>writing the receipt is the act that carries adding the test and settling the docs — a missing receipt means the tree may still move</td></tr>
-        <tr><td>3</td><td>the code-review skill → <code>cr/v3</code> <strong>PASS</strong>, diff-bound</td><td>independent judgment, so the human signs something already checked</td></tr>
+        <tr><td>3</td><td><code>cargo xtask preflight</code> — Gate 0 plus the notes the review reads — then the code-review skill → <code>cr/v3</code> <strong>PASS</strong>, diff-bound</td><td>independent judgment, so the human signs something already checked; the preflight is the last point where a red suite or a malformed note is still repaired for free (<a href="decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>)</td></tr>
         <tr><td>4</td><td><code>cargo xtask mr confirm</code></td><td>the first binding that costs a person; it goes last</td></tr>
         <tr><td>5</td><td><code>merge --no-ff</code></td><td>the gate re-checks every note against the final diff</td></tr>
       </tbody>
@@ -324,6 +324,7 @@ cargo xtask verify-dod epic epic/&lt;slug&gt;           # target defaults to mai
 cargo xtask verify-dod commit &lt;sha&gt;               # standalone commit check
 cargo xtask verify-dod hook &lt;wu|epic&gt;             # merge-hook mode: tip = MERGE_HEAD, target = HEAD
 cargo xtask verify-dod range &lt;old&gt; &lt;new&gt;          # pre-push mode: standalone commits in a pushed range
+cargo xtask preflight wu|epic &lt;tip&gt; [--target &lt;ref&gt;]  # the review's first step: gate0 + the notes the review reads, before any finder spawns
 cargo xtask mr commit -m &lt;msg&gt; --as &lt;id&gt;          # T0/T1 doc commit: append a Reviewed-By trailer (identity must be listed)
 cargo xtask mr confirm &lt;wu|epic&gt; &lt;tip&gt; --as &lt;id&gt; [--report &lt;path&gt;]  # mr/v1 note attesting the result report
 cargo xtask dod list [--epic E-CAP]               # query receipts
@@ -394,7 +395,10 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
     <h2 id="judges">Who judges</h2>
 
     <p>Every <em>judgment</em> above is a run of the <strong>code-review skill</strong>
-    (<code>.claude/skills/code-review/</code>): Gate 0 mechanical preflight, five fresh-context finders
+    (<code>.claude/skills/code-review/</code>), and it opens with a mechanical refusal rather than a
+    judgment: <code>cargo xtask preflight</code> runs Gate 0 and the notes the finders read
+    (<a href="decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>), so a red
+    suite or a malformed note stops the run before an agent is spawned. Then five fresh-context finders
     (one rubric dimension each) plus a sixth — the design finder — whenever the diff carries a design
     artifact, one adversarial verifier per finding that tries to refute it, verdict,
     and the <code>cr/v3</code> note. The triggering session orchestrates but never judges its own diff;
