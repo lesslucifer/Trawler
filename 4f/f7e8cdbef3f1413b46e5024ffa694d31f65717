@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W3
+branch: wu/simpwf/note-tool
+base: cb12f84493a55c49a996c5534205dd4558d93897
+tip: 4ff7e8cdbef3f1413b46e5024ffa694d31f65717
+diff_sha256: 27a057df20c8e7e8b92abe2197bf2e433a793a071afa42c7cae0778d99d8babe
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-12
