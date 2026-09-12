@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa4fdd69f34851f0dface7e" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF.W1 result (measure the gate)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF.W1 — the gate counts its own refusals</h1>
+      <p>Delivered: <code>cargo xtask tally</code> reads a local record the gate appends on every run —
+      the refused check ids per level, and the review rounds each tip paid.</p>
+      <div class="meta">v1 · 2026-09-12 · Trawler · T3 WU result · <span class="badge id">E-SIMPWF.W1</span> ·
+      <code>wu/simpwf/measure-the-gate</code> · <a href="2026-09-12-simpwf-w1-plan.html">WU plan</a> ·
+      <a href="2026-09-12-simpwf-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>Delivered against the WU plan's requirement, with no scope moved. Every gate run appends one
+      record to <code>target/.gate-tally</code>; <code>cargo xtask tally</code> aggregates it.</p>
+      <table>
+        <thead><tr><th>Promised</th><th>Shipped</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Every check id that refused, per gate level</td>
+            <td>one record per gate run at <code>commit</code>, <code>working-unit</code> and <code>epic</code>,
+            carrying the ids the gate reported; the summary counts them per level, most frequent first</td>
+          </tr>
+          <tr>
+            <td>How many review rounds each tip needed</td>
+            <td>the <code>cr</code> notes attached to commits in the run's <code>base..tip</code> range, counted
+            at record time and printed per tip</td>
+          </tr>
+          <tr>
+            <td>One command prints it</td>
+            <td><code>cargo xtask tally</code> — totals, refusals by level, then one line per tip</td>
+          </tr>
+          <tr>
+            <td>Never a git note, and never gate evidence</td>
+            <td>a file under the gitignored <code>target/</code>, in the shape of Gate 0's cache; no gate check
+            reads it, so deleting it changes no verdict — asserted by test</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="shape">What the reading looks like</h2>
+    <div class="diagram" data-c="reading-diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["one gate run"] --> B["target/.gate-tally<br/>date · level · status · tip · base<br/>rounds · epic · wu · checks"]
+  B --> C["cargo xtask tally"]
+  C --> D["N tips · M refused · R review rounds<br/><br/>commit        x of y tips refused<br/>    check id            n<br/><br/>review rounds per tip<br/>    level sha identity R rounds checks"]
+      </pre>
+      <div class="caption">The file is append-only and line-oriented; the aggregation unions the check ids a tip ever refused and keeps the largest round count it showed.</div>
+    </div>
+
+    <table data-c="terms-table">
+      <thead><tr><th>Reading</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td><code>status=green</code></td><td>the run passed every check it ran</td></tr>
+        <tr><td><code>status=exempt</code></td><td>docs/infra-only (or design-exempt): the run passed nothing, which is not the same as passing everything</td></tr>
+        <tr><td><code>status=red</code> + a <code>checks</code> list</td><td>the gate refused, and these are the ids it printed</td></tr>
+        <tr><td><code>rounds=n</code></td><td>the work behind the tip paid <em>n</em> review rounds — one <code>cr</code> note per round, PASS or FAIL, on the commit that round judged</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <p><strong>None from the plan.</strong> Two points the plan left to implementation, recorded so a reader
+      does not have to infer them from the code:</p>
+      <table>
+        <thead><tr><th>Point</th><th>Settled as</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Which gate entry points record</td>
+            <td><code>verify-dod wu|epic</code> (and so the merge hook), <code>verify-dod commit</code>, and each
+            commit inside <code>verify-dod range</code>. The epic walk's internal re-verification of a seam is
+            <em>not</em> a separate record: its refusals already appear on the epic run as
+            <code>7·walk·&lt;check&gt;</code>.</td>
+          </tr>
+          <tr>
+            <td>Equal-check ordering in the printed refusal list</td>
+            <td>most refusals first, check id ascending on a tie — so the list is stable between runs</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>What</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The measurement itself</td>
+            <td><code>xtask/src/tally.rs</code> — record shape, round counting, aggregation;
+            <code>xtask/src/lib.rs</code> — the three recording sites and the <code>tally</code> subcommand</td>
+          </tr>
+          <tr>
+            <td>Unit tests (9 in the module, incl. 7 new)</td>
+            <td>line round-trip, absent identity, malformed line (skipped, never poisoning the rest), a tip's
+            union of checks with its largest round count, exempt-is-not-a-refusal, the per-level summary, the
+            empty file</td>
+          </tr>
+          <tr>
+            <td>Integration tests — the WU's contract, over a real temp git repo
+            (<code>xtask/tests/tally.rs</code>, 7)</td>
+            <td>a red WU gate records <code>1·notes</code> and <code>8·manual-review</code>; a green WU tip whose
+            range carries a FAIL note and a PASS note records <code>rounds=2</code>; the file lands under
+            <code>target/</code>, is untracked, and <code>refs/notes</code> is unchanged by a gate run;
+            <code>cargo xtask tally</code> prints the per-level refusals and the per-tip rounds; two runs on one
+            tip collapse to one row; a deleted tally changes no verdict; an empty tally says so</td>
+          </tr>
+          <tr>
+            <td>Gate 0 (fmt · clippy · full suite) and <code>verify-doc</code> over every doc this WU touches</td>
+            <td>green before the result report was written, and re-run at the tip</td>
+          </tr>
+          <tr>
+            <td>Commits</td>
+            <td>plan <code>9a94f90</code> · implementation <code>77dd87c</code> · distillation
+            <code>996021c</code> · this result and the notes on the tip</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p><a href="../decisions/dec-42-the-gate-tally-is-local-measurement.html">DEC-42</a> carries what the code
+      cannot: why the measurement is local rather than a note, why a review round is a <code>cr</code> note in
+      the gate's range (with the three rejected definitions), and what it does and does not authorise. Registered
+      in <a href="../decisions/decisions-index.html">the decisions index</a> (v20).</p>
+      <p>No T1 change: the workflow standard's rules are what W2, W5 and W6 enforce, and the epic's distillation
+      plan routes them there. Nothing in this WU changes a note schema, a gate check or a merge rule.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <thead><tr><th>Carried by</th><th>What it needs</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><a href="2026-09-12-simpwf-plan.html#working-units">E-SIMPWF.W5</a> and
+            <span class="badge id">W7</span></td>
+            <td>their adoption or drop is argued from this tally; W7 is droppable by the epic's stopping rule, and
+            its decision record must state the count it was decided on</td>
+          </tr>
+          <tr>
+            <td>Nobody yet</td>
+            <td>the tally counts refusals and rounds only. If a later cut needs durations or token counts, that is
+            a new measurement with its own decision — deliberately not smuggled into this file.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
