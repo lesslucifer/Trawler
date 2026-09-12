@@ -1,0 +1,18 @@
+schema: cr/v4
+scope: "WU nits -> epic/simpwf — one round, the author's own reading of the diff. Two important findings verified and fixed in the range this note binds, one candidate refuted. No code-review fleet ran: E-SIMPWF changes the review flow itself, so the owner reads the result at the merge (epic plan, WU-review ruling)"
+epic: E-SIMPWF
+wu: E-SIMPWF.W5
+branch: wu/simpwf/nits
+base: 9f04af2473daba96c31da949459dc7ef076692fa
+head: d9f64fa422801e4e783647b017b6d5f8906f771f
+diff_sha256: 17c1ba11bfe5e5cde4851051954f836d0be66402558ad1fa35f4683948ca8a52
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 2, waived: 1 }
+waivers:
+  - finding: "no isolated code-review fleet judged this diff - five finders and their verifiers did not run"
+    reason: "E-SIMPWF's own ruling for its Working Units: the epic changes the review flow, so its WUs are not put through the code-review skill. The findings of the review that did run - the author's reading of the diff, recorded above and in the result report - are on this note, and the gate is the human sign-off (mr/v1), which is never waivable."
+nits:
+  - finding: "the gate's failure sentence names the finding verbatim, so a long finding makes a long red line"
+    waived: "the red is read by an agent repairing the note, and naming the finding is what makes the repair unambiguous; truncating would trade a legible refusal for a tidy one"
+verdict: PASS
+date: 2026-09-13
