@@ -42,8 +42,9 @@
       <thead><tr><th>Recorded</th><th>Why that, and not something else</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>Every gate run</strong>, green, red or exempt — <code>verify-dod
-          wu|epic|commit</code>, one commit inside <code>range</code>, and the merge hook</td>
+          <td><strong>Every gate run</strong>, green, red or exempt — <code>verify-dod wu|epic|commit</code>
+          and the merge hook. The pre-push <code>range</code> sweep records nothing: it re-checks commits that
+          already paid their own gate</td>
           <td>A tally of refusals alone would never show the denominator: <em>3 of 6 tips refused</em> is a
           different fact from <em>3 refusals</em>, and a green tip still paid for its rounds.</td>
         </tr>
@@ -84,9 +85,10 @@ flowchart LR
     (<a href="../workflow.html">workflow</a> §Evidence), PASS or FAIL. Attaching each round to the commit it
     judged is what makes the count recoverable later without a transcript: the notes are immutable, they
     survive on the branch, and a fix that produces a new commit adds a round rather than replacing one. The
-    count is taken over the tip's <strong>first-parent line</strong> from the gate's merge-base — the commits
-    the tip's own work added — because a branch that merged another's reviewed work in would otherwise bill
-    this tip for rounds it never paid.</p>
+    count is taken over the tip's <strong>first-parent line</strong> from the gate's merge-base: the commits
+    arranged as the tip's own line, because a branch that merged another's reviewed work in would otherwise
+    bill this tip for rounds it never paid. On an epic tip that line is the epic's own commits — each WU's
+    rounds are counted on the WU tip's row, where the merge put them.</p>
     <table data-c="rounds-table">
       <thead><tr><th>Rejected definition</th><th>Why it does not measure the same thing</th></tr></thead>
       <tbody>
@@ -160,8 +162,10 @@ flowchart LR
         </tr>
         <tr>
           <td>A reader who wants the rounds of a tip that predates this decision can still count them by hand
-          — the notes are in the range</td>
-          <td><code>git notes --ref=cr list</code> against <code>git rev-list base..tip</code></td>
+          — the notes are on the tip's line</td>
+          <td><code>git rev-list --first-parent base..tip</code> against the commits carrying
+          <code>refs/notes/cr</code>; a tip already merged has an empty range, so count from the fork point it
+          was reviewed against</td>
         </tr>
       </tbody>
     </table>

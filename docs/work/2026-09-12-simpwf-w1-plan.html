@@ -56,7 +56,8 @@
         </tbody>
       </table>
       <p>A process epic: no <code>UC-*</code> is delivered or changed. This WU adds one <code>xtask</code>
-      subcommand and one local file; it changes no gate check, no note schema and no merge behaviour.</p>
+      subcommand, one local file, and one append on the gate's way past — it adds no check the gate runs, no
+      note schema and no merge rule, and no verdict depends on the file.</p>
     </div>
 
     <h2 id="shape">The measurement's shape</h2>
@@ -205,9 +206,9 @@ flowchart LR
           </tr>
           <tr>
             <td><span class="badge id">e2e</span> the epic</td>
-            <td><strong>waived</strong> at this WU, and stated: the measurement is a read-only local command that
-            runs beside the workflow rather than a change to it, so it adds no flow of its own. The epic's e2e
-            (epic plan §E2E) drives the full gated path; W1 adds no branch to it.</td>
+            <td><strong>waived</strong> at this WU, and stated: the measurement is written beside the verdict it
+            describes — a local reading, not a step — so it adds no flow of its own, and no gate verdict depends
+            on it. The epic's e2e (epic plan §E2E) drives the full gated path; W1 adds no branch to it.</td>
           </tr>
         </tbody>
       </table>

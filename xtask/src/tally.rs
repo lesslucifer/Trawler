@@ -15,6 +15,9 @@ use crate::gate::{short, Report};
 const FILE_NAME: &str = ".gate-tally";
 const LEVELS: [&str; 3] = ["commit", "working-unit", "epic"];
 const STATUSES: [&str; 3] = ["exempt", "green", "red"];
+// The last field written and the first one required back: a tear anywhere
+// before it (or in it) leaves no terminator, so the half-record is dropped.
+const END: &str = "end=1";
 // A reading, not a history: past this the oldest half goes, so the file stays
 // bounded on a checkout that gates for years (P1).
 const KEEP: usize = 2048;
@@ -68,6 +71,7 @@ impl Entry {
             format!("epic={}", self.epic.as_deref().unwrap_or("-")),
             format!("wu={}", self.wu.as_deref().unwrap_or("-")),
             format!("checks={}", self.checks.join(",")),
+            END.to_string(),
         ];
         fields.join("\t")
     }
@@ -99,7 +103,8 @@ impl Entry {
                 .map(str::to_string)
                 .collect(),
         };
-        let known = LEVELS.contains(&entry.level.as_str())
+        let known = field("end") == Some("1")
+            && LEVELS.contains(&entry.level.as_str())
             && STATUSES.contains(&entry.status.as_str())
             && !entry.tip.is_empty();
         known.then_some(entry)
@@ -140,11 +145,21 @@ pub fn path(repo: &Path) -> PathBuf {
 fn review_rounds(repo: &Path, base: &str, tip: &str) -> Option<usize> {
     let range = format!("{base}..{tip}");
     let commits = crate::git::git(repo, &["rev-list", "--first-parent", &range]).ok()?;
-    let annotated: BTreeSet<String> = crate::git::git(repo, &["notes", "--ref=cr", "list"])
-        .unwrap_or_default()
-        .lines()
-        .filter_map(|line| line.split_whitespace().nth(1).map(str::to_string))
-        .collect();
+    let annotated = match crate::git::git(repo, &["notes", "--ref=cr", "list"]) {
+        Ok(listing) => listing
+            .lines()
+            .filter_map(|line| line.split_whitespace().nth(1).map(str::to_string))
+            .collect(),
+        // A checkout that has never carried a cr note has none to count; a ref
+        // that exists but cannot be listed is a reading that was not taken.
+        Err(_)
+            if crate::git::git(repo, &["rev-parse", "--verify", "-q", "refs/notes/cr"])
+                .is_err() =>
+        {
+            BTreeSet::new()
+        }
+        Err(_) => return None,
+    };
     Some(commits.lines().filter(|commit| annotated.contains(*commit)).count())
 }
 
@@ -163,7 +178,7 @@ pub fn write(repo: &Path, report: &Report) -> Result<(), String> {
     // One write, so two runs appending at once cannot interleave mid-record.
     handle.write_all(line.as_bytes()).map_err(|e| format!("append {}: {e}", file.display()))?;
     drop(handle);
-    bound(&file)
+    bound(&file, KEEP)
 }
 
 // Half the cap goes, oldest first, when the file outgrows it. A pure function
@@ -176,19 +191,19 @@ fn truncated(text: &str, keep: usize) -> Option<String> {
     Some(format!("{}\n", lines[lines.len() - keep / 2..].join("\n")))
 }
 
-fn bound(file: &Path) -> Result<(), String> {
-    let Ok(text) = std::fs::read_to_string(file) else { return Ok(()) };
-    let Some(kept) = truncated(&text, KEEP) else { return Ok(()) };
+fn bound(file: &Path, keep: usize) -> Result<(), String> {
+    // Lossy, so the one stray byte `entries` tolerates cannot disable the cap.
+    let Ok(bytes) = std::fs::read(file) else { return Ok(()) };
+    let text = String::from_utf8_lossy(&bytes);
+    let Some(kept) = truncated(&text, keep) else { return Ok(()) };
     std::fs::write(file, kept).map_err(|e| format!("bound {}: {e}", file.display()))
 }
 
 /// The records on disk. A missing file is an empty reading; a file that is not
 /// UTF-8 is read lossily so one stray byte cannot blank the whole tally.
 pub fn entries(repo: &Path) -> Vec<Entry> {
-    match std::fs::read(path(repo)) {
-        Ok(bytes) => String::from_utf8_lossy(&bytes).lines().filter_map(Entry::parse).collect(),
-        Err(_) => Vec::new(),
-    }
+    let bytes = std::fs::read(path(repo)).unwrap_or_default();
+    String::from_utf8_lossy(&bytes).lines().filter_map(Entry::parse).collect()
 }
 
 #[derive(Clone, Debug)]
@@ -263,17 +278,29 @@ fn count(n: usize, noun: &str) -> String {
     }
 }
 
-// Rounds the reader can add up: a row whose range could not be read has none to
-// add, and the summary says so instead of contributing a zero.
-fn total_rounds(rows: &[Row]) -> String {
-    let known: Vec<usize> = rows.iter().filter_map(|row| row.rounds).collect();
-    let unknown = rows.len() - known.len();
+// The headline counts tips, not rows: one commit gated at two levels is one tip
+// that paid its rounds once. A tip whose range could not be read contributes no
+// rounds, and the summary says so rather than adding a zero.
+fn headline(rows: &[Row]) -> (usize, usize, String) {
+    let mut tips: BTreeMap<&str, (bool, Option<usize>)> = BTreeMap::new();
+    for row in rows {
+        let tip = tips.entry(row.sha.as_str()).or_insert((false, None));
+        tip.0 |= row.status == "red";
+        tip.1 = match (tip.1, row.rounds) {
+            (Some(seen), Some(now)) => Some(seen.max(now)),
+            (seen, now) => seen.or(now),
+        };
+    }
+    let refused = tips.values().filter(|(red, _)| *red).count();
+    let known: Vec<usize> = tips.values().filter_map(|(_, rounds)| *rounds).collect();
+    let unknown = tips.len() - known.len();
     let total = count(known.iter().sum(), "review round");
-    if unknown == 0 {
+    let rounds = if unknown == 0 {
         total
     } else {
         format!("{total} ({unknown} tip(s) with an unreadable range)")
-    }
+    };
+    (tips.len(), refused, rounds)
 }
 
 fn refusal_rows<'a>(rows: &[&'a Row]) -> Vec<(&'a str, usize)> {
@@ -301,9 +328,8 @@ pub fn summarise(entries: &[Entry], file: &Path) -> String {
         return out;
     }
     let rows = collapse(entries);
-    let refused = rows.iter().filter(|row| row.status == "red").count();
-    let _ =
-        writeln!(out, "{} - {refused} refused - {}", count(rows.len(), "tip"), total_rounds(&rows));
+    let (tips, refused, rounds) = headline(&rows);
+    let _ = writeln!(out, "{} - {refused} refused - {rounds}", count(tips, "tip"));
     let _ = writeln!(out);
     let _ = writeln!(out, "refusals by level (tips where the check id appeared)");
     for level in LEVELS {
@@ -338,12 +364,33 @@ pub fn summarise(entries: &[Entry], file: &Path) -> String {
 }
 
 pub fn run(repo: &Path) -> Result<(i32, String), String> {
-    Ok((0, summarise(&entries(repo), &path(repo))))
+    let file = path(repo);
+    match std::fs::read(&file) {
+        Ok(bytes) => Ok(read(&bytes, &file)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok((0, summarise(&[], &file))),
+        Err(e) => Ok((1, format!("cannot read {}: {e}", file.display()))),
+    }
+}
+
+// A file that holds lines and yields no record is a reading that failed, not an
+// empty one: saying "no gate runs recorded yet" over it would be a lie.
+fn read(bytes: &[u8], file: &Path) -> (i32, String) {
+    let text = String::from_utf8_lossy(bytes);
+    let lines = text.lines().filter(|line| !line.trim().is_empty()).count();
+    let entries: Vec<Entry> = text.lines().filter_map(Entry::parse).collect();
+    if entries.is_empty() && lines > 0 {
+        return (
+            1,
+            format!("{} holds {lines} line(s) and none is a readable record", file.display()),
+        );
+    }
+    (0, summarise(&entries, file))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{collapse, entries, summarise, truncated, Entry, FILE_NAME};
+    use std::fmt::Write as _;
     use std::path::Path;
 
     fn entry(
@@ -395,8 +442,14 @@ mod tests {
     #[test]
     fn a_torn_record_is_dropped_rather_than_counted() {
         let whole = entry("working-unit", "abc123", "red", Some(1), &["1·notes"]).line();
-        let torn = &whole[..whole.find("\tchecks=").unwrap()];
-        assert_eq!(Entry::parse(torn), None, "a half-written line is not a record");
+        let at = whole.find("\tchecks=").unwrap();
+        for cut in [at, at + "\tchecks=1".len(), whole.len() - 1] {
+            assert_eq!(
+                Entry::parse(&whole[..cut]),
+                None,
+                "a half-written line is not a record (cut at {cut})"
+            );
+        }
     }
 
     #[test]
@@ -442,6 +495,42 @@ mod tests {
         let text =
             summarise(&[entry("working-unit", "abc123", "green", None, &[])], Path::new("/t"));
         assert!(text.contains("unreadable range"), "{text}");
+    }
+
+    #[test]
+    fn one_tip_gated_at_two_levels_is_one_tip_and_pays_its_rounds_once() {
+        let entries = vec![
+            entry("working-unit", "abc123", "green", Some(2), &[]),
+            entry("commit", "abc123", "green", Some(2), &[]),
+        ];
+        let text = summarise(&entries, Path::new("/t"));
+        assert!(text.contains("1 tip - 0 refused - 2 review rounds"), "{text}");
+    }
+
+    #[test]
+    fn a_file_of_unreadable_lines_is_not_an_empty_reading() {
+        let (code, message) =
+            super::read(b"not a record\nstill not one\n", Path::new("/t/.gate-tally"));
+        assert_eq!(code, 1);
+        assert!(message.contains("none is a readable record"), "{message}");
+    }
+
+    #[test]
+    fn a_stray_byte_does_not_disable_the_cap() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let file = dir.path().join("tally");
+        let mut text = String::new();
+        for n in 0..10 {
+            let _ = writeln!(text, "line {n}");
+        }
+        let mut bytes = text.into_bytes();
+        bytes.push(0xFF);
+        std::fs::write(&file, bytes).unwrap();
+
+        super::bound(&file, 4).unwrap();
+
+        let kept = String::from_utf8_lossy(&std::fs::read(&file).unwrap()).into_owned();
+        assert!(kept.lines().count() < 10, "the cap still applies: {kept:?}");
     }
 
     #[test]

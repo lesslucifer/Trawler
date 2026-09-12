@@ -89,8 +89,8 @@ flowchart LR
           </tr>
         </tbody>
       </table>
-      <p data-c="review-round-1"><strong>The first review round changed five things</strong>, all of them found
-      by finders rather than by the author, and all now covered by tests:</p>
+      <p data-c="review-round-1"><strong>Review round one changed five things</strong>, all of them found by
+      finders rather than by the author, and all now covered by tests:</p>
       <table>
         <thead><tr><th>Found</th><th>Changed to</th></tr></thead>
         <tbody>
@@ -123,10 +123,44 @@ flowchart LR
           </tr>
         </tbody>
       </table>
-      <p>Three further points the review raised are recorded as waivers on the <code>cr/v3</code> note rather than
-      fixed here — the file has no schema-stable contract to hold, the test harness repeats a shape the suite
-      already repeats five times, and a hand-written line format is what a local reading wants. Each carries its
-      reason there.</p>
+      <p data-c="review-round-2"><strong>Round two changed five more</strong>, and is where the epic's own ruling
+      shows: E-SIMPWF changes the review flow itself, so the owner ruled that its WUs carry no code review — its
+      <code>cr/v3</code> notes record the findings and waive them, and every WU of this epic is read by a human
+      instead. The five that were cheap and real were still fixed:</p>
+      <table>
+        <thead><tr><th>Found</th><th>Changed to</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The headline counted rows, not tips — one commit gated at two levels was two tips and its rounds
+            were added twice</td>
+            <td>the headline counts distinct tips and the largest round count each showed; the per-level rows still
+            show every gate level that judged it</td>
+          </tr>
+          <tr>
+            <td>A record torn inside its trailing <code>checks</code> field still parsed, so a truncated check id
+            could be counted</td>
+            <td>the record ends with a terminator field the parser requires, so a tear anywhere in the line drops
+            the record</td>
+          </tr>
+          <tr>
+            <td>One stray byte disabled the file's cap forever — the read that tolerates it and the read that
+            truncates disagreed</td>
+            <td>the cap reads lossily too, so it keeps bounding the file the reader can still read</td>
+          </tr>
+          <tr>
+            <td>A file holding only unreadable lines printed "no gate runs recorded yet" and exited 0</td>
+            <td>it says how many lines it could not read and exits 1; a missing file is still an empty reading</td>
+          </tr>
+          <tr>
+            <td>A <code>refs/notes/cr</code> that exists but cannot be listed recorded a zero</td>
+            <td>a missing ref is a genuine zero; a ref that fails to list records no round count at all</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The rest — duplicated test fixtures and note lister, a hand-written line format, the round-trip
+      <code>date</code>/<code>base</code> fields, the per-record subprocess cost, the merge hook's identity-less row
+      and the truncation's lost-update window — are recorded as waivers on the tip's <code>cr/v3</code> note with
+      their reasons, on the owner's ruling above.</p>
     </div>
 
     <h2 id="evidence">Evidence</h2>
@@ -137,7 +171,8 @@ flowchart LR
           <tr>
             <td>The measurement itself</td>
             <td><code>xtask/src/tally.rs</code> — record shape, round counting, aggregation;
-            <code>xtask/src/lib.rs</code> — the two recording sites, the best-effort helper they share, and the
+            <code>xtask/src/lib.rs</code> — the best-effort recording helper, its call sites (the exempt, green
+            and red arms of a WU/epic gate and the commit gate), and the
             <code>tally</code> subcommand</td>
           </tr>
           <tr>
