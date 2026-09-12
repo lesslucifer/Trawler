@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W5
+branch: HEAD
+tests:
+  unit: { count: 31, covers: "a nit is decided by a non-empty fixed or waiver and by nothing else, an absent nits section is an empty list on every review contract, and the gate refuses the undecided nit and only it - a dispositioned one adds no failure and a note with no code hash to bind refuses nothing" }
+  integration: { count: 1, covers: "verify-dod at a real WU seam through the real binary and merge hook: a cr/v4 note carrying an undecided nit is refused with 3·review-nits and the finding named, and the same tip merges once both nits are dispositioned" }
+  e2e: { waived: "the epic's e2e row carries the full flow; this WU adds no new flow to drive, and the seam behaviour it introduces is proven at the integration level through the same binary and hook that e2e uses" }
