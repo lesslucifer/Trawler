@@ -147,19 +147,20 @@ A signature binds the tree. Every later tree change - a fix, a missed test, a do
              tree settles BEFORE a human is asked to sign:
                1. test/v2 + doc/v1 notes on the tip   (writing the receipt is what
                   carries adding the test and settling the docs)
-               2. the code-review skill -> cr/v3 PASS bound to this exact diff
+               2. the code-review skill -> cr/v4 PASS bound to this exact diff
                3. THEN cargo xtask mr confirm";
 
 /// Why a tip is not ready to be signed, given what its notes say. Pure so the
-/// rule is testable without a repo: `review` is the tip's `cr/v3` as
-/// `(verdict, reviewed_diff)`, and `diff_hash` the diff about to be attested
-/// (`None` when no merge target is resolvable, which drops only the binding
-/// check — the gate re-checks it at merge time either way).
+/// rule is testable without a repo: `review` is the tip's code-review note as
+/// `(verdict, reviewed_diff)`, and `bound` the hash that note must carry to
+/// count as bound to this tip (`None` when no merge target is resolvable or the
+/// note binds nothing, which drops only the binding check — the gate re-checks
+/// it at merge time either way).
 fn unready_reasons(
     has_test: bool,
     has_doc: bool,
     review: Option<(&str, &str)>,
-    diff_hash: Option<&str>,
+    bound: Option<&str>,
 ) -> Vec<String> {
     let mut missing = Vec::new();
     if !has_test {
@@ -170,14 +171,14 @@ fn unready_reasons(
             .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
     }
     match review {
-        None => missing.push("no cr/v3 note - nobody has reviewed this tip".to_string()),
+        None => missing.push("no cr/v4 note - nobody has reviewed this tip".to_string()),
         Some((verdict, _)) if verdict != "PASS" => {
-            missing.push(format!("the cr/v3 verdict is {verdict} - fix and re-review"));
+            missing.push(format!("the review verdict is {verdict} - fix and re-review"));
         }
         Some((_, reviewed)) => {
-            if diff_hash.is_some_and(|h| h != reviewed) {
+            if bound.is_some_and(|h| h != reviewed) {
                 missing.push(
-                    "the cr/v3 note reviewed a different diff - re-review this tip".to_string(),
+                    "the review note judged a different diff - re-review this tip".to_string(),
                 );
             }
         }
@@ -185,14 +186,30 @@ fn unready_reasons(
     missing
 }
 
-/// [`unready_reasons`] against a real tip's notes.
-fn tip_unready(repo: &Path, tip: &str, diff_hash: Option<&str>) -> Vec<String> {
+/// What a review note of `schema` must carry to be bound to this range, read the
+/// way the merge gate reads it: `cr/v4` binds the bytes of the code paths the
+/// diff changes, the schemas before it bound the whole diff, and a `cr/v4` note
+/// over a diff that changes no code binds nothing.
+fn reviewed_binding(schema: &str, whole: &str, code: &str) -> Option<String> {
+    if schema != "cr/v4" {
+        return Some(whole.to_string());
+    }
+    (!code.is_empty()).then(|| code.to_string())
+}
+
+/// [`unready_reasons`] against a real tip's notes, over the `(whole, code)`
+/// hashes of the range being attested.
+fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>) -> Vec<String> {
     let cr = crate::git::parsed_note::<crate::notes::CrNote>(repo, "cr", tip);
+    let bound = cr
+        .as_ref()
+        .zip(range)
+        .and_then(|(c, (whole, code))| reviewed_binding(&c.schema, whole, code));
     unready_reasons(
         note(repo, "test", tip).is_some(),
         note(repo, "doc", tip).is_some(),
         cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
-        diff_hash,
+        bound.as_deref(),
     )
 }
 
@@ -461,11 +478,14 @@ fn mr_confirm(
         Some(t) => {
             let base = git(repo, &["merge-base", t, &tip])?;
             let hash = diff_sha256(repo, &base, &tip)?;
-            Some((base, hash))
+            let names = crate::git::diff_names(repo, &base, &tip)?;
+            let code = crate::gate::Gate { repo }.code_sha256(&base, &tip, &names)?;
+            Some((base, hash, code))
         }
         None => None,
     };
-    let unready = tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h)| h.as_str()));
+    let unready =
+        tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h, c)| (h.as_str(), c.as_str())));
     if !unready.is_empty() {
         let why = unready.iter().map(|r| format!("  - {r}")).collect::<Vec<_>>().join("\n");
         return Ok((1, format!("{} is not ready to sign:\n{why}\n{SIGN_LAST}", short(&tip))));
@@ -476,7 +496,7 @@ fn mr_confirm(
         write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity, &report, &rsha))?;
         return Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", short(&tip))));
     }
-    let (target, base, hash) = if let (Some(t), Some((base, hash))) = (target, reviewed) {
+    let (target, base, hash) = if let (Some(t), Some((base, hash, _))) = (target, reviewed) {
         (t, base, hash)
     } else {
         let t = wizard::ask(input, "merge target branch (e.g. epic/<slug> or main)")?;
@@ -1317,7 +1337,7 @@ mod tests {
         assert_eq!(r.len(), 3, "{r:?}");
         assert!(r[0].contains("test/v2"), "{r:?}");
         assert!(r[1].contains("doc/v1"), "{r:?}");
-        assert!(r[2].contains("cr/v3"), "{r:?}");
+        assert!(r[2].contains("cr/v4"), "{r:?}");
     }
 
     #[test]
@@ -1329,6 +1349,22 @@ mod tests {
         let stale = super::unready_reasons(true, true, Some(("PASS", "old")), Some("new"));
         assert_eq!(stale.len(), 1);
         assert!(stale[0].contains("different diff"), "{stale:?}");
+    }
+
+    // The same rule the merge gate's 5·diff-binding reads, so a tip it would
+    // green is a tip this refuses to call unready.
+    #[test]
+    fn each_review_schema_is_bound_to_what_it_declared() {
+        assert_eq!(super::reviewed_binding("cr/v4", "whole", "code"), Some("code".to_string()));
+        assert_eq!(super::reviewed_binding("cr/v3", "whole", "code"), Some("whole".to_string()));
+        assert_eq!(super::reviewed_binding("cr/v2", "whole", "code"), Some("whole".to_string()));
+    }
+
+    // A `cr/v4` note over a diff that changes no code judges no code path, so
+    // there is no hash to compare and the signature is not held on one.
+    #[test]
+    fn a_code_free_diff_binds_no_review() {
+        assert_eq!(super::reviewed_binding("cr/v4", "whole", ""), None);
     }
 
     // The binding check needs a diff to compare against; with no resolvable
