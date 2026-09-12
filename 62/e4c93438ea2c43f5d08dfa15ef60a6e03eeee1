@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W5
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-47-severity-decides-the-verdict.html"
+    tier: T2
+    action: added
+    distills: "why severity decides the verdict, why a nit is dispositioned evidence rather than a waiver, why uncertainty resolves upward, why cr/v4 absorbs the section, and the four rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-47 row"
+  - path: "docs/work/2026-09-13-simpwf-w5-plan.html"
+    tier: T3
+    action: added
+    distills: "the requirement sentence, the severity boundary, the note shape and the test plan"
+  - path: "docs/work/2026-09-13-simpwf-w5-result.html"
+    tier: T3
+    action: added
+    distills: "the A/B over E-RFINISH's recorded findings, the zero-round saving stated honestly, and the evidence per claim"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "gate check 3 states the severity rule and the two disposition forms, the cr/v4 note row says a verified nit does not fail the verdict, and the receipt's check list names review-nits"
