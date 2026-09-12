@@ -226,6 +226,17 @@ flowchart TD
     <p data-c="wu-gap"><strong>W4 is a gap on purpose.</strong> The single-unit light path was dropped at plan review — the
     owner ruled it not needed now — and the ids are not renumbered, so the gap records the drop rather than hiding it.</p>
 
+    <div class="callout warn" data-c="wu-review-evidence">
+      <p><strong>How this epic's Working Units are reviewed — owner's ruling, 2026-09-12.</strong> E-SIMPWF
+      changes the review flow itself, so its WUs are <em>not</em> put through the code-review skill. Each WU tip
+      still carries a <code>cr/v3</code> note — the gate reads one, and the diff binding is what makes the
+      evidence hang together — but the note records the findings of whatever review did run and waives them with
+      a reason, because the review is the owner's own reading at the merge. What replaces it is the human
+      sign-off (<code>mr/v1</code>), unchanged and never waivable: the owner reads the WU result and authorises
+      the tip. This ruling is evidence-shape for this epic only; it changes no gate check and no rule outside it,
+      and W6 — which removes the review's documentation scope — still stands as planned.</p>
+    </div>
+
     <h2 id="e2e-plan">E2E test plan</h2>
     <div data-item="e2e-plan">
       <p>The epic's proof is the whole flow over a real git tree, hermetic and driven by the real hooks and the real gate —

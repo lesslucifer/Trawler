@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v19 · 2026-09-09 · Trawler</div>
+      <div class="meta">v20 · 2026-09-12 · Trawler</div>
     </div>
   </header>
   <main>
@@ -410,6 +410,22 @@
             was wrong, two applications of it were. Found by E-EXPORT.W6's review, which caught the reasoning
             living only in a design file the same WU retired. Rejected: editing the rulebook, deleting the
             runs' original wording</td>          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-42-the-gate-tally-is-local-measurement.html"><code>dec-42-the-gate-tally-is-local-measurement.html</code></a></td>
+          <td><span class="badge id">DEC-42</span></td>
+          <td><strong>The gate's own measurement is local, and a review round is a <code>cr</code> note in
+            the gate's range</strong> — one record per gate run, appended to <code>target/.gate-tally</code>
+            (the shape of Gate 0's cache: gitignored, never synced, wiped by <code>cargo clean</code>),
+            holding the refused check ids and the rounds the work paid; <code>cargo xtask tally</code>
+            aggregates it. E-SIMPWF's stopping rule adopts or drops W5 and W7 on a number, so the number has
+            to exist before either is argued about, and the code review's note-per-round (PASS or FAIL, on
+            the tip it judged) is what makes rounds recoverable without a transcript. Rejected: keeping the
+            tally in <code>refs/notes</code> (a per-machine reading in the permanent chain), counting note
+            rewrites on one commit (a fix is a new commit, so it reports 1 where a tip paid 4), counting gate
+            refusals as rounds, and counting what a session says it did. No gate check ever reads the file:
+            delete it and every verdict is what it was</td>
+          <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
     </table>
