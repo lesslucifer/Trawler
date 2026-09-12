@@ -1,0 +1,15 @@
+schema: cr/v4
+scope: "WU code-only-review -> epic/simpwf — three rounds; one blocker and three important findings fixed, three nits fixed, six candidates refuted. The rounds stopped where the owner ruled: a round whose survivors are all nits ends the loop, so the last fix carries its own tests rather than another round. The owner reads the result at the merge, per E-SIMPWF's WU-review ruling"
+epic: E-SIMPWF
+wu: E-SIMPWF.W4
+branch: wu/simpwf/code-only
+base: 92d2509966dd7ffb487e38ea6f03b103832c0126
+head: c825ef984260f8afbce604431faf48a2d6deef7f
+diff_sha256: e58e54daf45152433f7a9ec38437b4da870524c7679899d4d6da37474d1a897e
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 15, verified: 7, waived: 1 }
+waivers:
+  - finding: "a new tip may still declare cr/v3 and keep its design verdict on the review note"
+    reason: "accepted on purpose: cr/v2 and cr/v3 are read where a tip shipped one, so every merged seam and every seam the epic walk re-verifies keeps the verdict it shipped (DEC-45, DEC-46). The standard, the writer and the skill now name cr/v4 and design/v1; retiring the older schemas is a deliberate later cut, not a hole in this rule."
+verdict: PASS
+date: 2026-09-13
