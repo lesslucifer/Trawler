@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W1
+branch: wu/simpwf/measure-the-gate
+tests:
+  unit: { count: 8, covers: "xtask/src/tally.rs - the record encoding, its parsing, the per-tip aggregation and the summary" }
+  integration: { count: 7, covers: "xtask/tests/tally.rs - a red WU gate records its refused check ids, a green tip records the rounds its cr notes show, and the file is local (target/, untracked, no note ref)" }
+  e2e: { waived: "a read-only local measurement that runs beside the workflow and adds no flow of its own; the epic e2e drives the gated path (WU plan, test plan)" }
