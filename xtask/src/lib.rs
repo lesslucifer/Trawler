@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod preflight;
 pub mod tally;
 pub mod ui;
 pub mod wizard;
@@ -25,6 +26,7 @@ usage:
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
+  cargo xtask preflight <wu|epic> <tip> [--target <ref>]      (the review's first step: gate0 + the notes it reads, before any finder spawns)
   cargo xtask tally                                          (local gate tally: refused check ids per level, review rounds per tip)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
@@ -48,6 +50,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
         ["design-scope", base, head] => design_scope(repo, base, head),
+        ["preflight", rest @ ..] => preflight_cmd(rest, repo),
         ["tally"] => tally::run(repo),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
@@ -82,6 +85,25 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         ["hook", level] => hook(repo, level),
         ["commit-msg", file] => mr::commit_msg_hook(repo, file),
         ["range", old, new] => range(repo, old, new),
+        _ => Err(USAGE.to_string()),
+    }
+}
+
+// Same two levels, and the same target inference, as `verify-dod wu|epic`: the
+// preflight must resolve the scope the review will pin, so it reads the base the
+// merge gate will read and cannot refuse a tip the gate would judge differently.
+fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+    match args {
+        ["wu", tip, rest @ ..] => {
+            let target = target_flag(rest)
+                .or_else(|| infer_wu_target(tip))
+                .ok_or("cannot infer the epic from the branch name; pass --target <epic-branch>")?;
+            preflight::run(repo, Level::Wu, tip, &target)
+        }
+        ["epic", tip, rest @ ..] => {
+            let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
+            preflight::run(repo, Level::Epic, tip, &target)
+        }
         _ => Err(USAGE.to_string()),
     }
 }
