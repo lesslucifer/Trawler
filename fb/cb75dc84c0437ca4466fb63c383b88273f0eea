@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-SIMPWF
 wu: E-SIMPWF.W1
-branch: wu/simpwf/measure-the-gate
 base: 5834e959d3c4834f8271eefca069bb7b29a11fd2
 tip: fbcb75dc84c0437ca4466fb63c383b88273f0eea
 diff_sha256: 175b35738854627a24a53af9ae67e23198b9e19bee4c1c9450056b399f25d8d5
