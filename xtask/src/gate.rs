@@ -1,11 +1,12 @@
+use std::cell::OnceCell;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
 
-use crate::git::{diff_names, diff_sha256, git, note, write_note};
+use crate::git::{diff_names, diff_sha256, diff_sha256_paths, git, note, write_note};
 use crate::notes::{
-    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DistilledTo,
-    DocChange, DocNote, TestNote, CR_SCHEMAS,
+    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DesignCarrier,
+    DesignNote, DistilledTo, DocChange, DocNote, TestNote, CR_SCHEMAS, DESIGN_SCHEMAS,
 };
 
 // What a fork card may be carried by when no decision record carries it: the TSDoc
@@ -110,6 +111,43 @@ struct ParsedNotes {
     test: Option<TestNote>,
     cr: Option<CrNote>,
     doc: Option<DocNote>,
+    design: Option<DesignNote>,
+}
+
+/// Which note carries this tip's design verdict, the check id a refusal lands
+/// under, and the note a refusal names. A `cr/v2`/`cr/v3` tip keeps the section it
+/// shipped - the epic walk re-reads tips that were merged under that contract - and
+/// a `cr/v4` tip, or one with no review at all, carries it on `design/v1` (DEC-46).
+// The surfaces a run may be asked for, resolved on first ask and kept for the
+// second.
+type Surfaces = OnceCell<(Vec<String>, Vec<String>)>;
+
+#[derive(Clone, Copy)]
+struct DesignSource<'a> {
+    carrier: Option<DesignCarrier<'a>>,
+    check: &'static str,
+    note: &'static str,
+    legacy: bool,
+}
+
+fn design_source<'a>(cr: Option<&'a CrNote>, design: Option<&'a DesignNote>) -> DesignSource<'a> {
+    match cr {
+        Some(cr) if cr.schema != "cr/v4" => {
+            let v3 = cr.schema == "cr/v3";
+            DesignSource {
+                carrier: cr.design.as_ref().map(DesignCarrier::Section),
+                check: if v3 { DESIGN } else { DESIGN_SCHEMA },
+                note: if v3 { "cr/v3" } else { "cr/v2" },
+                legacy: true,
+            }
+        }
+        _ => DesignSource {
+            carrier: design.map(DesignCarrier::Note),
+            check: DESIGN,
+            note: "design/v1",
+            legacy: false,
+        },
+    }
 }
 
 // Which notes a run reads off the tip. The preflight stops at the review's
@@ -230,14 +268,17 @@ impl Gate<'_> {
         let parsed = self.load_notes(&mut report, &names, Notes::All);
         check_manifest(&mut report, parsed.test.as_ref());
         if level != Level::Commit {
-            check_review(&mut report, parsed.cr.as_ref());
-            self.check_design(&mut report, parsed.cr.as_ref(), &judged);
-        }
-        // A citation is answered by the Working Unit that built the surface - its
-        // tip, or its tip's history (DEC-28). The epic re-asks the question where
-        // it is answerable: at every seam its walk re-verifies.
-        if level == Level::Wu {
-            self.check_handoff(&mut report, parsed.cr.as_ref());
+            let code_sha256 = self.code_sha256(&report.base, &report.tip, &names)?;
+            check_review(&mut report, parsed.cr.as_ref(), &code_sha256);
+            let source = design_source(parsed.cr.as_ref(), parsed.design.as_ref());
+            let surfaces = OnceCell::new();
+            self.check_design(&mut report, source, &judged, &surfaces)?;
+            // A citation is answered by the Working Unit that built the surface -
+            // its tip, or its tip's history (DEC-28). The epic re-asks the question
+            // where it is answerable: at every seam its walk re-verifies.
+            if level == Level::Wu {
+                self.check_handoff(&mut report, source, &surfaces);
+            }
         }
         if level == Level::Commit {
             Self::check_ui_outside_a_wu(&mut report, &names);
@@ -256,12 +297,29 @@ impl Gate<'_> {
             .parse_note::<TestNote>(report, &tip, "test", &["test/v2"], true, |n| n.schema.clone());
         let cr = if report.level == Level::Commit || notes == Notes::Paperwork {
             None
-        } else {
+        } else if names.iter().any(|p| is_code(p)) {
             self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, true, |n| n.schema.clone())
+        } else {
+            // A diff that changes no code is asked for no review: the note is read
+            // when the tip carries one, but its absence is not a refusal.
+            self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, false, |n| n.schema.clone())
         };
-        let doc = self.parse_note::<DocNote>(report, &tip, "doc", &["doc/v1"], doc_needed, |n| {
-            n.schema.clone()
-        });
+        let design = if report.level == Level::Commit || notes == Notes::Paperwork {
+            None
+        } else {
+            self.parse_note::<DesignNote>(report, &tip, "design", DESIGN_SCHEMAS, false, |n| {
+                n.schema.clone()
+            })
+        };
+        // The review reads no doc note and a doc note can no longer void a PASS,
+        // so the preflight does not stop on one (DEC-43, answered in W4).
+        let doc = if notes == Notes::Paperwork {
+            None
+        } else {
+            self.parse_note::<DocNote>(report, &tip, "doc", &["doc/v1"], doc_needed, |n| {
+                n.schema.clone()
+            })
+        };
         if let Some(t) = &test {
             report.epic.clone_from(&t.epic);
             report.wu.clone_from(&t.wu);
@@ -272,9 +330,10 @@ impl Gate<'_> {
                 test.as_ref().map(|n| (n.epic.clone(), n.wu.clone())),
                 cr.as_ref().map(|n| (n.epic.clone(), n.wu.clone())),
                 doc.as_ref().map(|n| (n.epic.clone(), n.wu.clone())),
+                design.as_ref().map(|n| (n.epic.clone(), n.wu.clone())),
             ],
         );
-        ParsedNotes { test, cr, doc }
+        ParsedNotes { test, cr, doc, design }
     }
 
     // `accepted` is the contract history, oldest first: an older schema still
@@ -513,58 +572,97 @@ impl Gate<'_> {
     // against the rulebook that diff ships. Everything below refuses a silence -
     // a design-bearing PASS that never mentions the design is exactly the
     // failure the schema bump exists to make visible.
-    fn check_design(&self, report: &mut Report, cr: Option<&CrNote>, docs: &[(String, String)]) {
-        let Some(cr) = cr else { return };
+    fn check_design(
+        &self,
+        report: &mut Report,
+        source: DesignSource<'_>,
+        docs: &[(String, String)],
+        surfaces: &Surfaces,
+    ) -> Result<(), String> {
         let artifacts = design_artifacts_of(docs);
+        // A `design/v1` note pins the bytes it judged; the section a `cr/v3` note
+        // carried was pinned by that note's own binding instead. The pin covers
+        // every design path the range ships - the artifacts it changes and the
+        // rendered files it owes an answer for (DEC-46) - so it is read before the
+        // artifact rules below rather than under them: a build against a design it
+        // did not touch changes no artifact and still pins the surfaces it
+        // rendered, and a pin read only when an artifact moved is a pin that case
+        // never has to match.
+        if let Some(DesignCarrier::Note(note)) = source.carrier {
+            let bound = self.design_sha256(report, &artifacts, surfaces)?;
+            if note.design_sha256 != bound {
+                report.failures.push(Failure::new(
+                    DESIGN,
+                    "the design verdict is pinned to different bytes than the design paths this tip ships"
+                        .to_string(),
+                    "re-run the design step on this exact tip and write its verdict again".to_string(),
+                ));
+            }
+        }
         // Nothing judged, nothing claimed: a build's note carries a design
         // section for its citation and its drops alone, and a verdict or a
         // rulebook pin over an empty judgment would be a claim about no design.
         if artifacts.is_empty() {
-            return;
+            return Ok(());
         }
-        let Some(design) = &cr.design else {
-            let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
-            report.failures.push(Failure::new(
-                check,
-                format!(
-                    "{} design artifact(s) in the diff and the {} note carries no design section",
-                    artifacts.len(),
-                    cr.schema
-                ),
-                format!(
-                    "re-run the code-review skill on {}: a diff carrying a design artifact activates the design finder, and its verdict is the cr/v3 note's design section",
-                    report.tip_ref
-                ),
-            ));
-            return;
+        let Some(carrier) = source.carrier else {
+            report.failures.push(if source.legacy {
+                Failure::new(
+                    source.check,
+                    format!(
+                        "{} design artifact(s) in the diff and the {} note carries no design section",
+                        artifacts.len(),
+                        source.note
+                    ),
+                    format!(
+                        "re-run the code-review skill on {}: a diff carrying a design artifact activates the design finder, and its verdict is the cr/v3 note's design section",
+                        report.tip_ref
+                    ),
+                )
+            } else {
+                Failure::new(
+                    source.check,
+                    format!(
+                        "{} design artifact(s) in the diff and the tip carries no {} note",
+                        artifacts.len(),
+                        source.note
+                    ),
+                    format!(
+                        "run the design step on {} (`cargo xtask design-scope <base> <tip>` lists what it must judge) and write its verdict as a design/v1 note - a diff that changes no code still owes it",
+                        report.tip_ref
+                    ),
+                )
+            });
+            return Ok(());
         };
-        for path in artifacts.iter().filter(|p| !design.judged(p)) {
+        for path in artifacts.iter().filter(|p| !carrier.judged(p)) {
             report.failures.push(Failure::new(
                 DESIGN,
                 format!("{path} is a design artifact the design section does not name"),
                 "the design dimension judges every design artifact in the diff - review it and list it under design.artifacts, or the PASS covers a design nobody read".to_string(),
             ));
         }
-        if design.verdict != "PASS" {
+        if carrier.verdict() != "PASS" {
             let stated =
-                if design.verdict.trim().is_empty() { "absent" } else { design.verdict.as_str() };
+                if carrier.verdict().trim().is_empty() { "absent" } else { carrier.verdict() };
             report.failures.push(Failure::new(
                 DESIGN,
                 format!("design verdict is {stated}"),
                 "fix the verified design findings and re-run the review until its design dimension passes".to_string(),
             ));
         }
-        self.check_design_pin(report, design);
+        self.check_design_pin(report, &carrier, source.check);
+        Ok(())
     }
 
     // The design verdict is a claim against a specific rulebook - the same claim
     // the run's own receipt makes, and the same way it went unchecked for three
     // Working Units. Read at the TIP, never the working tree: a seam is judged
     // against the rulebook that seam shipped.
-    fn check_design_pin(&self, report: &mut Report, design: &crate::notes::Design) {
+    fn check_design_pin(&self, report: &mut Report, carrier: &DesignCarrier<'_>, check: &str) {
         let Some(blob) = crate::doc::rulebook_blob(self.repo, &report.tip) else {
             report.failures.push(Failure::new(
-                DESIGN,
+                check,
                 "the tip carries no readable design rulebook to check the design pin against"
                     .to_string(),
                 "run the gate from a checkout where the tip's docs/design-rules/design-rules-index.html resolves".to_string(),
@@ -572,21 +670,21 @@ impl Gate<'_> {
             return;
         };
         let short_blob = crate::doc::pin_of(&blob);
-        if design.rulebook.len() < crate::doc::PIN_MIN {
+        if carrier.rulebook().len() < crate::doc::PIN_MIN {
             report.failures.push(Failure::new(
-                DESIGN,
+                check,
                 format!(
                     "the design section pins \"{}\", which names no rulebook blob",
-                    design.rulebook
+                    carrier.rulebook()
                 ),
                 format!("pin what the design dimension read: design.rulebook: {short_blob}"),
             ));
-        } else if !crate::doc::pin_matches(&design.rulebook, &blob) {
+        } else if !crate::doc::pin_matches(carrier.rulebook(), &blob) {
             report.failures.push(Failure::new(
-                DESIGN,
+                check,
                 format!(
                     "the design dimension judged against rulebook {}; this tip ships {short_blob}",
-                    design.rulebook
+                    carrier.rulebook()
                 ),
                 format!("the rulebook moved under the review - re-run it against this tip's rulebook and re-pin: design.rulebook: {short_blob}"),
             ));
@@ -624,7 +722,7 @@ impl Gate<'_> {
                 rendered.len(),
                 rendered.join(", ")
             ),
-            "UI work happens inside a Working Unit - the design accounting lives on its cr/v3 note, and a standalone commit has none".to_string(),
+            "UI work happens inside a Working Unit - the design accounting lives on its design/v1 note, and a standalone commit has none".to_string(),
         ));
     }
 
@@ -633,6 +731,18 @@ impl Gate<'_> {
     // citation or a stated reason answers for. The added set is not a subset of
     // the second - an `@tier` `.ts` is a registry entry that renders nothing - so
     // the two are unioned rather than nested.
+    // Both the design binding and the hand-over ask for the same pair, and
+    // computing it shells out once per added path: whichever asks first pays, and
+    // a run where neither asks pays nothing.
+    fn surfaces_once<'c>(
+        &self,
+        cell: &'c Surfaces,
+        tip: &str,
+        base: &str,
+    ) -> &'c (Vec<String>, Vec<String>) {
+        cell.get_or_init(|| self.surfaces(tip, base))
+    }
+
     pub fn surfaces(&self, tip: &str, base: &str) -> (Vec<String>, Vec<String>) {
         let added = self.new_surfaces(tip, base);
         let mut owed: Vec<String> = crate::git::changed_names(self.repo, base, tip)
@@ -646,6 +756,42 @@ impl Gate<'_> {
         (added, owed)
     }
 
+    // What the review binds: the bytes of the code paths the diff changes, and
+    // nothing else. A diff with no code path owes no review, so there is no hash
+    // to write or compare and the empty string says so rather than hashing an
+    // empty diff, which is what every diff without those paths would produce.
+    pub(crate) fn code_sha256(
+        &self,
+        base: &str,
+        tip: &str,
+        names: &[String],
+    ) -> Result<String, String> {
+        let paths: Vec<String> = names.iter().filter(|p| is_code(p)).cloned().collect();
+        if paths.is_empty() {
+            return Ok(String::new());
+        }
+        diff_sha256_paths(self.repo, base, tip, &paths)
+    }
+
+    // What the design step binds: the artifacts it judged and the rendered files
+    // it accounts for. A document the review never opened cannot move the code
+    // binding, and a file the design step never judged cannot move this one.
+    fn design_sha256(
+        &self,
+        report: &Report,
+        artifacts: &[String],
+        surfaces: &Surfaces,
+    ) -> Result<String, String> {
+        let mut paths: Vec<String> = artifacts.to_vec();
+        paths.extend(self.surfaces_once(surfaces, &report.tip, &report.base).1.iter().cloned());
+        paths.sort();
+        paths.dedup();
+        if paths.is_empty() {
+            return Ok(String::new());
+        }
+        diff_sha256_paths(self.repo, &report.base, &report.tip, &paths)
+    }
+
     // The other direction of the hand-over: a build answers for everything it
     // renders. An added surface names the design it was built from; anything else
     // names that design or the reason it needed none. A `cr/v2` note carries
@@ -653,24 +799,23 @@ impl Gate<'_> {
     // the design section - its silence is reported under the schema check the walk
     // drops at seams. This epic's own W5 seams added twenty components under that
     // schema.
-    fn check_handoff(&self, report: &mut Report, cr: Option<&CrNote>) {
-        let Some(cr) = cr else { return };
-        let (added, owed) = self.surfaces(&report.tip, &report.base);
+    fn check_handoff(&self, report: &mut Report, source: DesignSource<'_>, surfaces: &Surfaces) {
+        let DesignSource { carrier, check, note, .. } = source;
+        let (tip, base) = (report.tip.clone(), report.base.clone());
+        let (added, owed) = self.surfaces_once(surfaces, &tip, &base);
         if owed.is_empty() {
             return;
         }
-        let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
         let fix = format!(
             "account for each on the {} note: design.implements: [{{ path: <the design>, blob: <git rev-parse {}:<the design>, or <the last commit that held it>:<the design> once this WU retired it>, built: [<the files it produced>] }}], or design.undesigned: [{{ path, why }}] for a file that needed no design - an added surface takes only the citation. `cargo xtask design-scope` lists what the gate is asking about",
-            cr.schema,
+            note,
             short(&report.tip)
         );
-        let design = cr.design.as_ref();
-        let cited_any = design.and_then(|d| d.implements.as_ref()).is_some_and(|c| !c.is_empty());
-        if !cited_any && design.is_none_or(|d| d.undesigned.is_empty()) {
+        let cited_any = carrier.and_then(|d| d.implements()).is_some_and(|c| !c.is_empty());
+        if !cited_any && carrier.is_none_or(|d| d.undesigned().is_empty()) {
             // DEC-25's distinction, widened: an absent field is a silence and an
             // empty list is a stated nothing, and the red says which happened.
-            let stated_nothing = design.is_some_and(|d| d.implements.is_some());
+            let stated_nothing = carrier.is_some_and(|d| d.implements().is_some());
             let (what, hint) = if stated_nothing {
                 ("design.implements is empty", "an empty list is a stated nothing")
             } else {
@@ -687,9 +832,9 @@ impl Gate<'_> {
             ));
             return;
         }
-        for path in &owed {
-            let cited = design.is_some_and(|d| d.built().any(|built| built == path));
-            let claimed = design.is_some_and(|d| d.claims(path));
+        for path in owed {
+            let cited = carrier.is_some_and(|d| d.built().any(|built| built == path));
+            let claimed = carrier.is_some_and(|d| d.claims(path));
             if cited && claimed {
                 report.failures.push(Failure::new(
                     check,
@@ -703,7 +848,7 @@ impl Gate<'_> {
                     format!("only a design answers for a new surface - a reason does not. {fix}"),
                 ));
             } else if !cited {
-                match design.and_then(|d| d.undesigned_why(path)) {
+                match carrier.and_then(|d| d.undesigned_why(path)) {
                     Some(why) => report.waived.push(format!("{check} {path} undesigned: {why}")),
                     None if claimed => report.failures.push(Failure::new(
                         check,
@@ -719,7 +864,7 @@ impl Gate<'_> {
             }
         }
         let untouched = |path: &String| !owed.iter().any(|owed| owed == path);
-        for citation in design.and_then(|d| d.implements.as_ref()).into_iter().flatten() {
+        for citation in carrier.and_then(|d| d.implements()).into_iter().flatten() {
             self.check_citation(report, check, citation);
             for built in citation.built.iter().filter(|b| untouched(b)) {
                 report.failures.push(Failure::new(
@@ -729,7 +874,8 @@ impl Gate<'_> {
                 ));
             }
         }
-        for record in design.iter().flat_map(|d| d.undesigned.iter()).filter(|r| untouched(&r.path))
+        for record in
+            carrier.into_iter().flat_map(|d| d.undesigned().iter()).filter(|r| untouched(&r.path))
         {
             report.failures.push(Failure::new(
                 check,
@@ -957,9 +1103,12 @@ impl Gate<'_> {
         }
         let roster = crate::doc::roster_at(self.repo, &report.tip);
         let cr = self.tip_cr_note(&report.tip);
-        let drop_record = |path: &str| {
-            cr.as_ref().and_then(|c| c.design.as_ref()).and_then(|d| d.dropped_why(path))
-        };
+        // The drop travels with the verdict: a `cr/v3` epic carries it in its
+        // design section, a `cr/v4` one on `design/v1` (DEC-46). Reading only the
+        // review's note here would refuse an epic for a drop it recorded.
+        let design = crate::git::parsed_note::<DesignNote>(self.repo, "design", &report.tip);
+        let source = design_source(cr.as_ref(), design.as_ref());
+        let drop_record = |path: &str| source.carrier.and_then(|d| d.dropped_why(path));
         for path in designed {
             let Some(name) = crate::doc::component_designed(&path) else { continue };
             if roster.contains(&name) {
@@ -969,10 +1118,11 @@ impl Gate<'_> {
                 report.waived.push(format!("{UNBUILT} {path} dropped: {why}"));
                 continue;
             }
+            let note_name = if source.legacy { source.note } else { "design/v1" };
             report.failures.push(Failure::new(
                 UNBUILT,
                 format!("{path} designs {name}, which no component in the roster carries at the epic tip"),
-                format!("a design outlives its epic nowhere: build {name} in this epic, or record the drop on the epic's cr note - design.dropped: [{{ path: {path}, why: \"<why it went>\" }}]"),
+                format!("a design outlives its epic nowhere: build {name} in this epic, or record the drop on the epic's {note_name} note - dropped: [{{ path: {path}, why: \"<why it went>\" }}]"),
             ));
         }
     }
@@ -1273,8 +1423,28 @@ pub(crate) fn check_manifest(report: &mut Report, test: Option<&TestNote>) {
     }
 }
 
-fn check_review(report: &mut Report, cr: Option<&CrNote>) {
+/// What a review note of `schema` binds over a range, read in one place by the
+/// merge gate's `5·diff-binding` and by the confirm's readiness check, so a tip
+/// the gate would green is never a tip the confirm calls unready: `cr/v4` binds
+/// the bytes of the code paths the diff changes, the schemas before it bound the
+/// whole diff and a tip that declared one is still judged against what it
+/// declared, and a `cr/v4` note over a diff that changes no code binds nothing.
+pub fn reviewed_binding<'a>(schema: &str, whole: &'a str, code: &'a str) -> Option<&'a str> {
+    if schema != "cr/v4" {
+        return Some(whole);
+    }
+    (!code.is_empty()).then_some(code)
+}
+
+fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     let Some(cr) = cr else { return };
+    // A note nobody demanded proves nothing: a `cr/v4` note on a diff that changes
+    // no code judges no code path, so it binds nothing, refuses nothing and greens
+    // nothing.
+    let Some(bound) = reviewed_binding(&cr.schema, &report.diff_sha256, code_sha256) else {
+        return;
+    };
+    let bound = bound.to_string();
     if cr.verdict != "PASS" {
         report.failures.push(Failure::new(
             "3·review",
@@ -1294,10 +1464,14 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>) {
                 .to_string(),
         ));
     }
-    if cr.diff_sha256 != report.diff_sha256 {
+    if cr.diff_sha256 != bound {
         report.failures.push(Failure::new(
             "5·diff-binding",
-            "reviewed diff is not byte-identical to the diff being gated".to_string(),
+            if cr.schema == "cr/v4" {
+                "reviewed code is not byte-identical to the code this tip changes".to_string()
+            } else {
+                "reviewed diff is not byte-identical to the diff being gated".to_string()
+            },
             "the tip changed after review - re-run the review on this exact tip".to_string(),
         ));
     }
@@ -1373,7 +1547,81 @@ pub fn format_report(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{format_report, short, CrNote, Failure, Gate, Level, Report};
+    use super::{
+        design_source, format_report, short, CrNote, DesignCarrier, DesignNote, Failure, Gate,
+        Level, Report, Surfaces,
+    };
+
+    // W4: which note the checks read the design verdict from. A tip merged under an
+    // older contract keeps its own section - the epic walk re-reads those - and a
+    // `cr/v4` tip, or one with no review at all, is read from `design/v1`.
+    #[test]
+    fn the_design_verdict_is_read_from_the_note_the_tip_shipped() {
+        let legacy: CrNote = serde_yaml::from_str(
+            "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\ndesign:\n  artifacts: [d]\n  rulebook: r\n  verdict: PASS\n",
+        )
+        .unwrap();
+        let source = design_source(Some(&legacy), None);
+        assert!(source.legacy);
+        assert_eq!(source.note, "cr/v3");
+        assert_eq!(source.check, "9·design");
+        assert!(matches!(source.carrier, Some(DesignCarrier::Section(_))));
+
+        let v2: CrNote =
+            serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
+                .unwrap();
+        let source = design_source(Some(&v2), None);
+        assert_eq!(source.check, "9·design-schema");
+        assert!(source.carrier.is_none());
+
+        let v4: CrNote =
+            serde_yaml::from_str("schema: cr/v4\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
+                .unwrap();
+        let note: DesignNote =
+            serde_yaml::from_str("schema: design/v1\nbase: a\ndesign_sha256: c\nverdict: PASS\n")
+                .unwrap();
+        let source = design_source(Some(&v4), Some(&note));
+        assert!(!source.legacy);
+        assert_eq!(source.note, "design/v1");
+        assert!(matches!(source.carrier, Some(DesignCarrier::Note(_))));
+
+        let code_free = design_source(None, Some(&note));
+        assert!(matches!(code_free.carrier, Some(DesignCarrier::Note(_))));
+        assert!(design_source(None, None).carrier.is_none(), "nothing shipped, nothing read");
+    }
+
+    // Both notes on one tip is a reachable state - the two refs are written
+    // independently - so the precedence the legacy arm encodes is pinned: a tip
+    // that shipped a `cr/v3` section is read there, and a `design/v1` note beside
+    // it is not a second opinion the gate may pick instead.
+    #[test]
+    fn a_legacy_section_outranks_a_design_note_on_the_same_tip() {
+        let legacy: CrNote = serde_yaml::from_str(
+            "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\ndesign:\n  artifacts: [d]\n  rulebook: r\n  verdict: PASS\n",
+        )
+        .unwrap();
+        let note: DesignNote =
+            serde_yaml::from_str("schema: design/v1\nbase: a\ndesign_sha256: c\nverdict: FAIL\n")
+                .unwrap();
+        let source = design_source(Some(&legacy), Some(&note));
+        assert!(source.legacy);
+        assert_eq!(source.note, "cr/v3");
+        assert!(matches!(source.carrier, Some(DesignCarrier::Section(_))));
+        assert_eq!(source.carrier.map(|d| d.verdict()), Some("PASS"), "the section's verdict");
+    }
+
+    // One rule, read by the merge gate's 5·diff-binding and by the confirm's
+    // readiness check - a tip this greens is never a tip the confirm calls
+    // unready, and a `cr/v4` note over a code-free diff binds nothing.
+    #[test]
+    fn each_review_schema_is_bound_to_what_it_declared() {
+        use super::reviewed_binding;
+        assert_eq!(reviewed_binding("cr/v4", "whole", "code"), Some("code"));
+        assert_eq!(reviewed_binding("cr/v3", "whole", "code"), Some("whole"));
+        assert_eq!(reviewed_binding("cr/v2", "whole", "code"), Some("whole"));
+        assert_eq!(reviewed_binding("cr/v4", "whole", ""), None);
+        assert_eq!(reviewed_binding("cr/v3", "whole", ""), Some("whole"));
+    }
 
     fn report(failures: Vec<Failure>) -> Report {
         Report {
@@ -1518,7 +1766,11 @@ mod tests {
         let mut r = report(vec![]);
         r.base = from.to_string();
         r.tip = to.to_string();
-        Gate { repo: &built.repo }.check_handoff(&mut r, Some(&cr));
+        Gate { repo: &built.repo }.check_handoff(
+            &mut r,
+            design_source(Some(&cr), None),
+            &Surfaces::new(),
+        );
         (r.failures, r.waived)
     }
 
@@ -1816,7 +2068,7 @@ mod tests {
             let mut r = report(vec![]);
             r.base.clone_from(&base);
             r.tip.clone_from(&tip);
-            Gate { repo }.check_handoff(&mut r, Some(&cr));
+            Gate { repo }.check_handoff(&mut r, design_source(Some(&cr), None), &Surfaces::new());
             r.failures
         };
 
@@ -1877,7 +2129,7 @@ mod tests {
         let mut r = report(vec![]);
         r.base.clone_from(&base);
         r.tip.clone_from(&tip);
-        gate.check_handoff(&mut r, Some(&note));
+        gate.check_handoff(&mut r, design_source(Some(&note), None), &Surfaces::new());
         assert_eq!(r.failures.len(), 1, "{:?}", r.failures);
         assert!(r.failures[0].what.contains("new surface"), "{}", r.failures[0].what);
         assert!(

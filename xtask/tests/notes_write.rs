@@ -157,7 +157,7 @@ fn one_command_writes_both_notes_and_the_gate_reads_them_green() {
         );
     }
     assert!(
-        failures.iter().any(|(_, what)| what.contains("no cr/v3 note")),
+        failures.iter().any(|(_, what)| what.contains("no cr/v4 note")),
         "the review's own note is the one thing left to write: {failures:?}"
     );
 }
@@ -173,6 +173,15 @@ fn the_printed_range_is_the_one_the_gate_recomputes() {
     assert!(said.contains(&format!("base: {base}")), "the review pins this base: {said}");
     assert!(said.contains(&format!("head: {tip}")), "got: {said}");
     assert!(said.contains(&format!("diff_sha256: {diff}")), "got: {said}");
+    // The review binds the code paths, so the writer prints that hash too: a note
+    // that pinned the whole diff would be refused at the merge.
+    let code_paths: Vec<String> = xtask::git::diff_names(&repo.path, &base, &tip)
+        .unwrap()
+        .into_iter()
+        .filter(|p| xtask::notes::is_code(p))
+        .collect();
+    let code = xtask::git::diff_sha256_paths(&repo.path, &base, &tip, &code_paths).unwrap();
+    assert!(said.contains(&format!("code_sha256: {code}")), "got: {said}");
 }
 
 #[test]

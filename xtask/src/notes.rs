@@ -62,10 +62,16 @@ impl Layer {
     }
 }
 
-/// The review contracts the gate reads. `cr/v3` adds the design dimension's
-/// section; a `cr/v2` note is, by its own schema declaration, evidence written
-/// before that dimension existed.
-pub const CR_SCHEMAS: &[&str] = &["cr/v2", "cr/v3"];
+/// The review contracts the gate reads. `cr/v3` added the design dimension's
+/// section, `cr/v4` binds the code paths the review judged rather than the whole
+/// diff - so a document cannot void a PASS; an older note is immutable evidence,
+/// and the tip that declared one is still judged against what it declared.
+pub const CR_SCHEMAS: &[&str] = &["cr/v2", "cr/v3", "cr/v4"];
+
+/// The design dimension's own contract, now that its verdict travels on a note of
+/// its own: a diff can carry a design artifact and change no code, and such a diff
+/// owes the verdict without owing a review.
+pub const DESIGN_SCHEMAS: &[&str] = &["design/v1"];
 
 #[derive(Deserialize)]
 pub struct CrNote {
@@ -147,27 +153,96 @@ fn why_for<'a>(records: &'a [Excused], path: &str) -> Option<&'a str> {
     })
 }
 
-impl Design {
+/// The design dimension's verdict on a note of its own: the section a `cr/v3`
+/// note used to carry, moved off the review's note because the review no longer
+/// binds - and so can no longer certify - the documents it judged.
+#[derive(Deserialize)]
+pub struct DesignNote {
+    pub schema: String,
+    #[serde(default)]
+    pub epic: Option<String>,
+    #[serde(default)]
+    pub wu: Option<String>,
+    // Absent on a note that carries only a citation or a drop record - the same
+    // reason a `cr/v3` section's verdict is optional: a build's hand-over and an
+    // epic's drop are sections over nothing judged.
+    #[serde(default)]
+    pub base: String,
+    #[serde(default)]
+    pub design_sha256: String,
+    /// The verdict itself, in the shape a `cr/v3` section already carried it —
+    /// flattened, so the note's YAML stays flat and the two carriers cannot
+    /// drift into two shapes.
+    #[serde(flatten)]
+    pub design: Design,
+}
+
+/// The verdict, whichever note carries it: the `design:` section of a note merged
+/// before W4 (re-read at every seam the walk re-verifies), or a `design/v1` note.
+/// One shape, so the checks that read it cannot drift between the two.
+#[derive(Clone, Copy)]
+pub enum DesignCarrier<'a> {
+    Section(&'a Design),
+    Note(&'a DesignNote),
+}
+
+// The accessors hand back references with the carrier's own lifetime, not the
+// borrow of the carrier: a check that holds a `DesignCarrier` by value still reads
+// the verdict it points at.
+impl<'a> DesignCarrier<'a> {
+    // Both carriers hold the same shape, so the match happens once and every
+    // field reads through it.
+    fn design(&self) -> &'a Design {
+        match self {
+            Self::Section(d) => d,
+            Self::Note(n) => &n.design,
+        }
+    }
+
+    pub fn artifacts(&self) -> &'a [String] {
+        self.design().artifacts.as_slice()
+    }
+
+    pub fn rulebook(&self) -> &'a str {
+        &self.design().rulebook
+    }
+
+    pub fn verdict(&self) -> &'a str {
+        &self.design().verdict
+    }
+
+    pub fn dropped(&self) -> &'a [Excused] {
+        &self.design().dropped
+    }
+
+    pub fn implements(&self) -> Option<&'a Vec<Cited>> {
+        self.design().implements.as_ref()
+    }
+
+    pub fn undesigned(&self) -> &'a [Excused] {
+        &self.design().undesigned
+    }
+
     pub fn judged(&self, path: &str) -> bool {
-        self.artifacts.iter().any(|a| a == path)
+        self.artifacts().iter().any(|a| a == path)
     }
 
     // An empty reason is not a drop, for the same reason an empty waiver is not
     // a waiver: it records that something went, not why.
-    pub fn dropped_why(&self, path: &str) -> Option<&str> {
-        why_for(&self.dropped, path)
+    pub fn dropped_why(&self, path: &str) -> Option<&'a str> {
+        why_for(self.dropped(), path)
     }
 
-    pub fn undesigned_why(&self, path: &str) -> Option<&str> {
-        why_for(&self.undesigned, path)
+    pub fn undesigned_why(&self, path: &str) -> Option<&'a str> {
+        why_for(self.undesigned(), path)
     }
 
     pub fn claims(&self, path: &str) -> bool {
-        self.undesigned.iter().any(|r| r.path == path)
+        self.undesigned().iter().any(|r| r.path == path)
     }
 
-    pub fn built(&self) -> impl Iterator<Item = &str> {
-        self.implements.iter().flatten().flat_map(|c| c.built.iter()).map(String::as_str)
+    pub fn built(&self) -> impl Iterator<Item = &'a str> {
+        self.implements().into_iter().flatten().flat_map(|c| c.built.iter()).map(String::as_str)
     }
 }
 
@@ -326,8 +401,8 @@ pub fn is_expected_tracked_doc(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DocNote,
-        TestNote,
+        is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DesignCarrier,
+        DesignNote, DocNote, TestNote,
     };
 
     #[test]
@@ -404,8 +479,9 @@ verdict: PASS
 ";
         let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
         let design = note.design.expect("the design section");
-        assert_eq!(design.verdict, "PASS");
-        assert_eq!(design.rulebook, "796c547");
+        let design = DesignCarrier::Section(&design);
+        assert_eq!(design.verdict(), "PASS");
+        assert_eq!(design.rulebook(), "796c547");
         assert!(design.judged("docs/work/2026-08-13-dflow-run-4.html"));
         assert!(!design.judged("docs/work/components/button.html"), "unlisted is unjudged");
 
@@ -469,6 +545,7 @@ design:
 ";
         let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
         let design = note.design.expect("the design section");
+        let design = DesignCarrier::Section(&design);
         assert_eq!(
             design.dropped_why("docs/work/components/body-renderer.html"),
             Some("never built; the panel renders bodies inline")
@@ -480,6 +557,41 @@ design:
             serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
                 .expect("parses");
         assert!(v2.design.is_none(), "a v2 note can drop nothing");
+    }
+
+    // W4's contract, at the unit level: the verdict a design-bearing tip ships now
+    // travels on its own note, and the checks read it through one shape.
+    #[test]
+    fn a_design_note_carries_the_verdict_and_the_handoff_it_answers_for() {
+        let yaml = "\
+schema: design/v1
+epic: E9
+wu: E9.W1
+base: aaaa
+design_sha256: cccc
+verdict: PASS
+artifacts: [docs/work/2026-08-13-dflow-run-4.html]
+rulebook: 796c547
+implements:
+  - path: docs/work/components/status-pill.html
+    blob: 28f5437
+    built: [ui/src/components/StatusPill.tsx]
+undesigned:
+  - path: ui/src/FlowDetail.tsx
+    why: \"a copy fix; the layout is untouched\"
+";
+        let note: DesignNote = serde_yaml::from_str(yaml).expect("parses");
+        let carrier = DesignCarrier::Note(&note);
+        assert_eq!(note.design_sha256, "cccc");
+        assert_eq!(carrier.verdict(), "PASS");
+        assert_eq!(carrier.rulebook(), "796c547");
+        assert!(carrier.judged("docs/work/2026-08-13-dflow-run-4.html"));
+        assert_eq!(carrier.built().collect::<Vec<_>>(), vec!["ui/src/components/StatusPill.tsx"]);
+        assert!(carrier.claims("ui/src/FlowDetail.tsx"));
+        assert_eq!(
+            carrier.undesigned_why("ui/src/FlowDetail.tsx"),
+            Some("a copy fix; the layout is untouched")
+        );
     }
 
     #[test]

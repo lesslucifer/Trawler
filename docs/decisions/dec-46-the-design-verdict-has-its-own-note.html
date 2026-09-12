@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa5733f9f34851f0dfacf05">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-46: the design verdict has its own note</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-46 — the design verdict has its own note</h1>
+      <p>E-SIMPWF.W4 takes the design dimension out of the code review's note: the verdict travels as
+      <code>design/v1</code> on <code>refs/notes/design</code>, written by a design step of its own and read by
+      <code>9·design</code> — so a diff that carries a design artifact and no code owes the verdict without owing a
+      review.</p>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W4 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>The design dimension's verdict is a <code>design/v1</code> note on
+      <code>refs/notes/design</code>.</strong> It carries the section a <code>cr/v3</code> note carried: the artifacts
+      judged, the rulebook blob it was judged against, its own <code>verdict</code>, the hand-off citations
+      (<code>implements</code>) and the drops (<code>undesigned</code>, <code>dropped</code>). It is written by the
+      design step (<code>.claude/skills/design-review/SKILL.md</code>), which
+      <code>cargo xtask design-scope</code> tells what must be judged, and <code>9·design</code> reads it and only
+      it.</p>
+      <p data-c="binding-rule">The note pins <code>design_sha256</code>: the hash of the range's design paths — the
+      artifacts in scope and the rendered files the diff owes an answer for. The rulebook moved under a verdict, or
+      an artifact rewritten after it, is refused rather than silently covered.</p>
+      <p data-c="legacy-rule">A tip that declares <code>cr/v2</code> or <code>cr/v3</code> still has its
+      <code>design:</code> section read from its own note, exactly as before, so every already-merged tip — and every
+      seam the epic walk re-verifies — keeps the verdict it shipped. A <code>cr/v4</code> tip, or one with no review
+      at all, is read from the design note.</p>
+      <p data-c="review-rule">The code review spawns no design finder, reads no design artifact, and carries no
+      <code>design:</code> section. Its note has no field for one.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>A design artifact is a document. A Working Unit can write a design run and no code at all, and under
+    <a href="dec-45-the-review-binds-the-code-it-judged.html">DEC-45</a> such a diff asks for no review — the review
+    binds code, and there is none. If the design verdict still lived on the <code>cr</code> note, that diff would owe
+    a review note to carry a verdict about no code: the two rules would contradict each other, and the contradiction
+    would be resolved every time by whichever check ran last.</p>
+    <p>Keeping the verdict on the review's note also kept it inside the review's blast radius. W4's rule is that no
+    document is judged, cited or bound there; a design verdict is a judgment about documents, so it has to travel
+    somewhere else to be true.</p>
+
+    <h2 id="boundary">What moves, and what does not</h2>
+    <table data-c="boundary-table">
+      <thead><tr><th></th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>The verdict's carrier</td><td><code>design/v1</code> on <code>refs/notes/design</code>, written by the
+        design step</td></tr>
+        <tr><td>The check that reads it</td><td><code>9·design</code>, unchanged in id, and
+        <code>9·design-schema</code> for the one case it always covered: a <code>cr/v2</code> tip whose note cannot
+        carry a section</td></tr>
+        <tr><td>What is judged</td><td>The same artifacts <code>design-scope</code> prints, at the same last state for
+        a retired design (DEC-29, DEC-28), against the same rulebook pin</td></tr>
+        <tr><td>The hand-off accounting</td><td>The same <code>implements</code>/<code>undesigned</code> rules, on the
+        design note instead of the review's</td></tr>
+        <tr><td>The rubric</td><td>The same file, <code>.claude/skills/code-review/design-rubric.md</code>; moving it
+        into the design skill is the design epic's call, not a rename made here</td></tr>
+        <tr><td>The design flow's own cost</td><td>Untouched — the 17-row receipt and the staged flow stay the design
+        epic's subject</td></tr>
+        <tr><td>The older design records that name the old carrier</td><td>DEC-15, DEC-24, DEC-25, DEC-28 and DEC-29
+        describe the verdict as living on the <code>cr/v3</code> note. They are read through this record: the carrier
+        they name is where the verdict travelled then, and the rules they fix — what is judged, when a citation
+        resolves, how a retired design is read — are unchanged. Folding their wording into this one is the design
+        epic's edit, not a rewrite made here</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follows">What follows</h2>
+    <table data-c="follows-table">
+      <thead><tr><th>Follows from this</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A design-bearing diff owes a note whether or not it carries code</td>
+          <td><code>xtask/src/gate.rs</code> (<code>design_source</code>, <code>check_design</code>,
+          <code>check_handoff</code>)</td>
+        </tr>
+        <tr>
+          <td>The design step has a written procedure of its own</td>
+          <td><code>.claude/skills/design-review/SKILL.md</code></td>
+        </tr>
+        <tr>
+          <td>The code review's note shape loses the design block</td>
+          <td><code>.claude/skills/code-review/SKILL.md</code> §3b and §6</td>
+        </tr>
+        <tr>
+          <td>The workflow's note table names the new note and its writer</td>
+          <td><a href="../workflow.html">workflow.html</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Keep the design section on the <code>cr</code> note, and keep demanding a note for design-only diffs</td>
+          <td>It reinstates exactly the rule W4 removes — a diff that changes no code owing a code review — and makes
+          the review's note bind documents it does not judge</td>
+        </tr>
+        <tr>
+          <td>Read the verdict off the design run's own receipt</td>
+          <td>The run is authored before the build; the hand-off (which design a rendered file came from, which file
+          needs none) is a fact about the build's diff and has nowhere to live in a run</td>
+        </tr>
+        <tr>
+          <td>Let <code>9·design</code> re-derive everything from <code>design-scope</code> and keep no note</td>
+          <td>The gate can see which artifacts a diff carries and which files it renders; it cannot see that anyone
+          read them. The note is the judgment; the command is the question</td>
+        </tr>
+        <tr>
+          <td>One note for both steps, with two sections</td>
+          <td>That is today's <code>cr/v3</code>, and it is the thing that cannot answer a code-free diff</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

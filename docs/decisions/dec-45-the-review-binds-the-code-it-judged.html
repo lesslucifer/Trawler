@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa5733c9f34851f0dfacf03">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-45: the review binds the code it judged</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-45 — the review binds the code it judged</h1>
+      <p>E-SIMPWF.W4 makes the code review's subject, binding and inputs the code paths: the note is
+      <code>cr/v4</code>, its <code>diff_sha256</code> covers <code>is_code</code> and nothing else, and a diff that changes
+      no code path is asked for no review at all.</p>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W4 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>The code review binds the bytes of the code paths it judged.</strong> The note is
+      <code>cr/v4</code>, and its <code>diff_sha256</code> is the hash of <code>git diff --no-color --no-ext-diff
+      BASE..HEAD -- &lt;the paths <code>notes::is_code</code> names&gt;</code> — <code>src/</code>,
+      <code>xtask/</code>, <code>tests/</code>, <code>ui/src/</code>, <code>ui/e2e/</code>. A document the review never
+      opened cannot move it, so a docs-only commit landing after a PASS neither voids the verdict nor re-buys the
+      fleet; a code edit still voids it, and the note the gate wants is written by the same command that printed the
+      range, under the same flags.</p>
+      <p data-c="demand-rule">A <code>cr</code> note is demanded iff the diff touches a code path. A diff that changes
+      no code is not asked for one, and a review dropped on such a tip anyway refuses nothing and proves nothing —
+      there is no code subset its verdict could be about.</p>
+      <p data-c="version-rule">The schemas before it keep their own meaning: a <code>cr/v2</code> or
+      <code>cr/v3</code> note is judged against the whole-diff hash it was written about, so every tip merged before
+      this change — including this epic's own seams — re-verifies exactly as it did.</p>
+      <p data-c="preflight-rule">The preflight drops <code>doc/v1</code> from what it stops on. The review no longer
+      reads it, and a doc note can no longer orphan the PASS, which was DEC-43's whole criterion for what a preflight
+      may refuse.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>The PASS was bound to the whole diff. That made a document part of the review's blast radius twice over: the
+    finders were handed docs to judge, and any later doc commit moved the hash the gate recomputed, so the fleet ran
+    again to re-judge code that had not changed. E-SIMPWF measured the shape of that waste
+    (<a href="dec-42-the-gate-tally-is-local-measurement.html">DEC-42</a>) and the plan ruled the review code-only.
+    The binding is the piece that makes the rule real: without it, "the review judges code" would be a statement
+    about its prompts while its evidence still died of a README edit.</p>
+
+    <h2 id="boundary">What binds, and what does not</h2>
+    <table data-c="boundary-table">
+      <thead><tr><th>Thing</th><th>What happens to it</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A code path changes</td>
+          <td>The subset hash moves; <code>5·diff-binding</code> refuses until a review of this exact tip lands</td>
+          <td>the verdict is a claim about these bytes, and code is what it judged</td>
+        </tr>
+        <tr>
+          <td>A document changes</td>
+          <td>Nothing: the subset hash is unchanged, and the PASS stands on the new tip</td>
+          <td>no finder read it, no check of the review's compares it; the authoring-time doc checks and the human
+          sign-off are its gate</td>
+        </tr>
+        <tr>
+          <td>A diff changes no code path</td>
+          <td>No <code>cr</code> note is demanded or read; the gate asks for what the diff does owe</td>
+          <td>the review has no subject on such a diff, and a note about nothing is not evidence</td>
+        </tr>
+        <tr>
+          <td>A <code>cr/v2</code>/<code>cr/v3</code> tip</td>
+          <td>Compared against the whole-diff hash, as its schema says</td>
+          <td>a note is immutable evidence; re-reading it under a binding it never made would redden history the walk
+          is supposed to re-verify</td>
+        </tr>
+        <tr>
+          <td>The subset is empty but a note is present</td>
+          <td>The note is ignored: no verdict, no refusal</td>
+          <td>a claim about no code is not a claim this gate can check, and refusing it would demand a review the
+          workflow does not ask for</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="follows">What follows</h2>
+    <table data-c="follows-table">
+      <thead><tr><th>Follows from this</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>One definition of "the code paths", shared by the gate, the writer and the review</td>
+          <td><code>notes::is_code</code>; <code>Gate::code_sha256</code>; <code>git::diff_sha256_paths</code>;
+          <code>cargo xtask notes write</code> prints its <code>code_sha256</code> line</td>
+        </tr>
+        <tr>
+          <td>The review skill's evidence section computes the subset hash, not the whole diff</td>
+          <td><code>.claude/skills/code-review/SKILL.md</code> §6, contract <code>cr/v4</code></td>
+        </tr>
+        <tr>
+          <td>The preflight stops on the tree and <code>test/v2</code>, and nothing else</td>
+          <td><code>xtask/src/preflight.rs</code>; <a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>,
+          whose criterion is unchanged — only its inputs are</td>
+        </tr>
+        <tr>
+          <td>The design dimension's verdict cannot live on this note</td>
+          <td><a href="dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Drop the binding and trust the tip's verdict</td>
+          <td>A fix landing after the verdict would keep a PASS for code nobody reviewed. The binding is what makes
+          the note evidence rather than a souvenir</td>
+        </tr>
+        <tr>
+          <td>Keep the whole-diff hash and only stop demanding the note on code-free diffs</td>
+          <td>The cost the epic exists to remove would stay: one doc commit after the review still buys the fleet
+          again</td>
+        </tr>
+        <tr>
+          <td>Redefine <code>diff_sha256</code> inside <code>cr/v3</code> without a schema bump</td>
+          <td>Two different meanings under one name, decided by nothing a reader can see. A tip declares which bytes
+          its hash is; a schema is how it declares them</td>
+        </tr>
+        <tr>
+          <td>Invent a new path list for "code"</td>
+          <td><code>is_code</code> already drew that line for the gate's exemption; a second list would be a second
+          answer to one question</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
