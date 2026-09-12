@@ -1,0 +1,17 @@
+schema: cr/v4
+scope: "WU code-only-review -> epic/simpwf — one round; one important finding fixed (11e6c21), two nits waived below; the owner reads the result at the merge, per E-SIMPWF's WU-review ruling"
+epic: E-SIMPWF
+wu: E-SIMPWF.W4
+branch: wu/simpwf/code-only
+base: 92d2509966dd7ffb487e38ea6f03b103832c0126
+head: 51628182721b8faf07028889241656a43518e565
+diff_sha256: c719555b9937fbaa56e9bfd2ad8c36dc7546bef86d86bf986143980d5b364d2d
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 3, waived: 2 }
+waivers:
+  - finding: "a new tip may still declare cr/v3 and keep its design verdict on the review note"
+    reason: "accepted on purpose: cr/v2 and cr/v3 are read where a tip shipped one, so every merged seam and every seam the epic walk re-verifies keeps the verdict it shipped (DEC-45, DEC-46). The standard, the writer and the skill now name cr/v4 and design/v1; retiring the older schemas is a deliberate later cut, not a hole in this rule."
+  - finding: "design_sha256 covers the design paths the endpoint diff shows, so a design authored and retired inside one Working Unit contributes no bytes to it"
+    reason: "the case the retired-design machinery already owns (DEC-29): those bytes are read at their last state and pinned by the citation's blob, and the whole-diff binding this replaces could not show them either. Unchanged behaviour, recorded rather than hidden."
+verdict: PASS
+date: 2026-09-13
