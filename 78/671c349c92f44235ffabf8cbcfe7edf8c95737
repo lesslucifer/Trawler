@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W2
+branch: wu/simpwf/preflight
+tests:
+  unit: { count: 3, covers: "xtask/src/preflight.rs - a refusal renders one block per blocker and counts them, a green run names the next step and the notes a review would need, and a diff that asks for no review is not a refusal" }
+  integration: { count: 10, covers: "xtask/tests/preflight.rs over a real temp git repo - a green tip passes; malformed, absent and zero-layer notes refuse under the gate own 1-notes and 2-manifest ids and fix lines; a checkout that is not the reviewed tip, and a tree with uncommitted work, each refuse under 0-tree; an exempt diff is not refused and demands no note; the review own cr/v3 is never demanded; a run writes no note, no receipt and no tally" }
+  e2e: { waived: "the epic e2e already drives the full gated path and carries this WU case - a failing test and a malformed note refused in front of the review - and W2 adds a refusal at the first step over the same tree and the same notes rather than a flow of its own (WU plan, test plan)" }
