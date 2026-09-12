@@ -167,12 +167,52 @@
           </tr>
           <tr>
             <td>Commits</td>
-            <td>plan <code>f4e5bd8</code> · implementation and distillation as below · the rule-bearing
-            <code>workflow.html</code> and <code>design-flow.html</code> staged for the owner's
-            <code>mr commit</code></td>
+            <td>plan <code>f4e5bd8</code> · implementation <code>985fac4</code> · distillation
+            <code>303ead9</code> · the standard <code>134a3f0</code> (the owner's <code>mr commit</code>) ·
+            the round's fix <code>11e6c21</code> · then this report, and the owner's
+            <code>mr confirm</code></td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <h2 id="review">The review round</h2>
+    <div data-c="review-round">
+      <p>One round, on the owner's ruling for this epic: E-SIMPWF changes the review flow itself, so its
+      WUs are not put through the fleet, and the tip carries a <code>cr/v4</code> note recording what the
+      round found and waiving it with a reason. The round read the code diff — the binding, the carrier
+      switch, the demand rules and the preflight — and found one thing that mattered.</p>
+      <table>
+        <thead><tr><th>Finding</th><th>Disposition</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Important — one reader had not moved.</strong> <code>components·unbuilt</code> still
+            read <code>design.dropped</code> off the review note, so an epic that recorded a drop on the note
+            the verdict now travels on would have been refused <em>for having recorded it</em></td>
+            <td>Fixed in <code>11e6c21</code>: the drop record goes through the same <code>design_source</code>
+            as the verdict, and a drop-only <code>design/v1</code> note parses — the fields a citation-only
+            note omits are optional, exactly as the <code>cr/v3</code> section's verdict already was. Test:
+            <code>an_epic_drop_record_is_read_from_the_design_note</code>, which reds without the fix</td>
+          </tr>
+          <tr>
+            <td><strong>Nit — the older schemas stay accepted.</strong> A new tip may still declare
+            <code>cr/v3</code> and carry its design section on the review note</td>
+            <td>Recorded and waived in the note: <code>cr/v2</code> and <code>cr/v3</code> are read where a
+            tip shipped one so every merged seam keeps its verdict, and the standard, the writer and the skill
+            now name <code>cr/v4</code>. Retiring them is a deliberate later cut, not a hole in this rule</td>
+          </tr>
+          <tr>
+            <td><strong>Nit — <code>design_sha256</code> covers the endpoint diff's design paths.</strong> A
+            design authored and retired inside one WU contributes no bytes to that hash</td>
+            <td>Recorded and waived: that is the case the retired-design machinery already owns
+            (<a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>) — the bytes are
+            read at their last state, pinned by the citation's blob — and the old whole-diff binding could not
+            show them either</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Verdict: <strong>PASS</strong>, with both nits dispositioned — recorded, and waived with the reason
+      above, in the <code>cr/v4</code> note on the tip.</p>
     </div>
 
     <h2 id="distillation">Distillation</h2>
