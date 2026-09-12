@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W2
+branch: wu/simpwf/preflight
+changes:
+  - path: docs/decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html
+    tier: T2
+    action: added
+    distills: "what the review preflight refuses on, what it leaves to the merge and why, and the criterion a later WU re-draws the line with"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "registers DEC-43"
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "doc verification happens where a doc is authored - no commit- or merge-level check reads a document form"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "the preflight is the review first step, and DoD-W evidence includes a preflight clear on the tree and the notes, or exempt"
+  - path: docs/work/2026-09-12-simpwf-w2-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan - archived with the epic"
+  - path: docs/work/2026-09-12-simpwf-w2-result.html
+    tier: T3
+    action: added
+    distills: "the WU result, including the review round and each finding disposition - archived with the epic"
