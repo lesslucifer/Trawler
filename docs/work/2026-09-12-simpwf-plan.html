@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa4f49d9f34851f0dface2e" data-artifact="epic-plan">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF — the workflow costs less to obey</h1>
+      <p>Cut the two costs that dominate a unit of work — hand-authoring facts the tooling already knows, and re-running the whole
+      review when nothing it judged changed — without lowering a bar the gate holds today.</p>
+      <div class="meta">Draft v1 · 2026-09-12 · Trawler · T3 · epic/simpwf → main · E-SIMPWF</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">Make the workflow cheaper to obey at its two dominant costs — an agent hand-writing facts the tooling
+    already knows, and a passing review becoming worthless because something later changed the tree — so that the same bar is
+    held with fewer agent passes, and so that the next round of cuts is chosen from counts instead of judgment.</p>
+
+    <h2 id="cost">Where the cost actually is</h2>
+    <p>Every check in the project is either a program an agent runs or a generation an agent performs. The program half is
+    cheap and measured: <code>verify-dod</code> is under 0.5% of an epic's wall-clock (<a href="../decisions/workflow-gates.html#dec-11">DEC-11</a>).
+    The generation half is where the time goes, and it is spent in two shapes.</p>
+    <table data-c="cost-table">
+      <thead><tr><th>Shape</th><th>What it looks like</th><th>Why it repeats</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Authoring</strong></td>
+          <td>YAML notes carrying hashes, bases, branch names, tiers, changed-doc paths and per-layer counts — all of them
+          already known to a tool that just ran.</td>
+          <td>A hand-typed derived field is a red check, and a red check is a repair.</td>
+        </tr>
+        <tr>
+          <td><strong>Re-running</strong></td>
+          <td>The review fleet — five finders plus a design finder, and one adversarial verifier per candidate finding.</td>
+          <td>Its PASS is stamped with a fingerprint of the whole diff, so <em>any</em> later change — a doc fix, a design run
+          that still needed closing, a nit — voids it and buys the fleet again.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="diagram" data-c="waste-diagram">
+      <pre class="mermaid">
+flowchart TD
+  A["WU finishes, review PASSes<br/>six finders + verifiers"] --> B["a later check reds:<br/>a doc predicate, an open design run, a nit"]
+  B --> C["the fix edits a file<br/>a new commit changes the fingerprint"]
+  C --> D["the PASS is void<br/>the fleet runs again"]
+  D --> E["the human's signature is void too<br/>Touch ID again"]
+      </pre>
+      <div class="caption">The expensive path is not the review. It is the review bought a second time because something else moved late.</div>
+    </div>
+    <p>The evidence is a real epic, not a model: <a href="../backlog/roadmap.html">E-RFINISH</a> ran eight Working Units through
+    <strong>144 candidate findings and 47 verified</strong>, needed a second round on one WU, and its close took three review
+    rounds. DEC-11 separately measured that landing a gate-heavy epic cost 45–106 minutes of active agent time, with the review
+    fleet at a stable ~25% and main-loop generation at 32–56%.</p>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <p data-item="use-cases">This is a process epic: it changes how work is planned, evidenced and merged. It touches no
+    product use-case, and no <code>UC-*</code> contract changes. The behavior it governs is the workflow itself, whose standard
+    is <a href="../workflow.html">workflow.html</a>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>A reader who was not here can check each row below against the tree, the receipts, or the measurement the epic
+      itself produces.</p>
+      <table data-c="expected-table">
+        <thead><tr><th>Promised</th><th>What is observably true afterwards</th></tr></thead>
+        <tbody>
+          <tr><td>A single unit of work lands small</td><td>A one-commit code change merges to <code>main</code> as one
+          collapsed unit — one branch, one merge, one review, one signature, one <code>dod/v1</code> receipt — and a change
+          spanning several units is refused that shape.</td></tr>
+          <tr><td>Nothing can void a review after it runs</td><td>The review refuses to start while any tree-changing check is
+          red, so a PASS cannot be orphaned by paperwork fixed afterwards.</td></tr>
+          <tr><td>Derived facts stop being hand-typed</td><td>The test and doc notes are written by a command that computes
+          hashes, identity, tiers, paths and counts; the gate accepts them on the first attempt.</td></tr>
+          <tr><td>A doc fix stops costing a code review</td><td>A commit that touches only docs leaves an existing PASS valid at
+          the merge gate; a commit that touches code still voids it.</td></tr>
+          <tr><td>A nit stops costing a fleet round</td><td>A tip passes with nits recorded and dispositioned in its note; an
+          undispositioned nit is still refused.</td></tr>
+          <tr><td>The next cuts are chosen from counts</td><td>Which check ids refused, how often, and how many review rounds
+          each tip needed are queryable without reading a transcript.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <table data-c="non-goals-table">
+        <thead><tr><th>Deliberately out of scope</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>The design flow and its receipt</td><td>The 17-row receipt per design run and the staged design flow are a
+          cost of their own; the owner ruled them a separate epic. This epic adds a roadmap row for it and touches no design
+          predicate.</td></tr>
+          <tr><td>The mounted-mockup blind spot</td><td>Tier-1 cannot read a <code>type="text/babel"</code> block, so the
+          mockup predicates are green over markup they never read. Already a deferred roadmap row; it belongs to the design
+          epic.</td></tr>
+          <tr><td>One document per unit</td><td>Rejected on the record: a plan legitimately changes mid-flight, and folding the
+          plan into the result would hide that. The two-file shape stays.</td></tr>
+          <tr><td>The human signature</td><td>Never waivable, never moved, never made cheaper by lowering the bar. The number of
+          signatures falls only where the number of units falls.</td></tr>
+          <tr><td>The seam walk for multi-unit epics</td><td>It is the only re-inspection of seams and the backstop against a
+          bypassed sub-gate; only the light path has nothing to walk.</td></tr>
+          <tr><td>Review recall</td><td>No finder is removed and no model changed. Where a change could cost recall, the epic
+          measures against known-real findings before adopting.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="working-units">The working units</h2>
+    <table data-item="wu-summaries" data-c="wu-summaries-table">
+      <thead><tr><th>WU</th><th>What it builds</th><th>Maps to</th><th>Expected outcome</th><th>Depends on</th></tr></thead>
+      <tbody>
+        <tr data-wu="E-SIMPWF.W1">
+          <td>Measure the gate</td>
+          <td data-item="wu-summary">A local tally — never a git note — of every check id that refused, per gate level, and of
+          how many review rounds each tip needed; one command prints it.</td>
+          <td data-item="wu-maps-to">The epic intent: every later cut is chosen from counts, per DEC-11's measure-then-adopt
+          discipline.</td>
+          <td data-item="wu-expected">After an epic closes, the owner can name which checks refused and how many review rounds
+          its tips paid, without reading transcripts.</td>
+          <td data-item="wu-deps">none</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W2">
+          <td>The paperwork finishes before the exam</td>
+          <td data-item="wu-summary">A preflight command the review runs first refuses while anything tree-changing is still
+          red — the doc predicates over every doc, every design run closed, the note schemas parsing, the citation and render
+          gates — so no finder spawns against a tree that is still going to move.</td>
+          <td data-item="wu-maps-to">The re-run cost: a PASS that a later paperwork fix orphans.</td>
+          <td data-item="wu-expected">A red doc, an open design run or malformed notes stops the review before any finder
+          spawns, in one block that names the blocker.</td>
+          <td data-item="wu-deps">none</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W3">
+          <td>The tool writes the notes, the agent writes the judgment</td>
+          <td data-item="wu-summary">A note-writing command in the shape of <code>xtask mr confirm</code> takes the judgment
+          text and writes <code>test/v2</code> and <code>doc/v1</code>, deriving the base, head, hashes, identity, tiers,
+          changed-doc paths and per-layer counts.</td>
+          <td data-item="wu-maps-to">The authoring cost: facts the tooling already knows, retyped by an agent.</td>
+          <td data-item="wu-expected">Both notes are written in one command and pass the gate first time; a derived-field
+          mismatch is impossible rather than repaired.</td>
+          <td data-item="wu-deps">W2 — the preflight is where the shape is refused before the review runs.</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W4">
+          <td>Small work lands small</td>
+          <td data-item="wu-summary">A change that is one unit lands as one collapsed unit straight to <code>main</code> — one
+          plan doc, one result doc, one review, one signature, no epic branch and no walk — while anything spanning several
+          units keeps today's epic shape.</td>
+          <td data-item="wu-maps-to">The ceremony floor that every code change, however small, pays today.</td>
+          <td data-item="wu-expected">A one-commit code change lands through one merge with one <code>dod/v1</code> receipt and
+          one <code>mr/v1</code> signature; a multi-unit epic is refused the light shape.</td>
+          <td data-item="wu-deps">W2, W3 — a light path is only safe when the preflight exists and the notes are tool-written.</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W5">
+          <td>A nit does not restart the exam</td>
+          <td data-item="wu-summary">Only blockers and importants fail a review; a verified nit is recorded and must be
+          dispositioned — fixed, or waived with a reason — in the note the gate reads.</td>
+          <td data-item="wu-maps-to">The re-run cost: a whole fleet round spent on one small finding.</td>
+          <td data-item="wu-expected">A tip passes with recorded, dispositioned nits; an undispositioned nit is refused; the
+          epic's A/B against known-real findings shows recall held.</td>
+          <td data-item="wu-deps">W1 — the effect on recall is measured, not asserted.</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W6">
+          <td>A doc fix does not void a code exam</td>
+          <td data-item="wu-summary">The review's fingerprint covers the code paths it judged and the doc note covers the docs,
+          so a doc-only commit after a PASS leaves that PASS standing.</td>
+          <td data-item="wu-maps-to">The re-run cost: a whole-diff binding that orphans a review nothing had invalidated.</td>
+          <td data-item="wu-expected">A doc-only commit after a PASS leaves the review valid at the gate; a code commit still
+          voids it.</td>
+          <td data-item="wu-deps">W1 — the decision record cites measured rounds, not an assumption.</td>
+        </tr>
+        <tr data-wu="E-SIMPWF.W7">
+          <td>Re-check only what changed <em>(experiment — droppable)</em></td>
+          <td data-item="wu-summary">After a corrective fix the review re-runs only the dimensions the delta can reach, reusing
+          the verdicts of dimensions it cannot, under a safe-delta definition stated in the skill.</td>
+          <td data-item="wu-maps-to">The re-run cost: the full fleet re-bought by every fix.</td>
+          <td data-item="wu-expected">A fix confined to one file re-runs at most the dimensions whose findings touched it, with
+          the A/B showing no known-real finding escapes — and if one does, this WU is dropped and the epic closes without
+          it.</td>
+          <td data-item="wu-deps">W1, W6 — the measurement decides it and the split fingerprint is its precondition.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>The epic's proof is the whole flow over a real git tree, hermetic and driven by the real hooks and the real gate —
+      the shape the existing signed-review e2e already uses, with a software signing key so no hardware is touched.</p>
+      <table data-c="e2e-table">
+        <thead><tr><th>Drives</th><th>Refuses unless</th></tr></thead>
+        <tbody>
+          <tr><td>The light path: one collapsed unit branched, noted, reviewed at a PASS, signed, merged to <code>main</code></td>
+            <td>One <code>dod/v1</code> receipt exists at the merge, the review was not re-run, and the signature was taken
+            once</td></tr>
+          <tr><td>The full path beside it: an epic carrying two WU seams, merged to <code>main</code></td>
+            <td>The walk still re-verifies both seams, and the light shape is refused where the change spans several units</td></tr>
+          <tr><td>A red doc, an open design run and a malformed note, each in front of the review</td>
+            <td>The preflight refuses before a finder spawns, naming the blocker</td></tr>
+          <tr><td>A doc-only commit after a PASS, then a code commit</td>
+            <td>The first leaves the PASS valid and the second voids it</td></tr>
+          <tr><td>The note-writing command against a real tip's diff</td>
+            <td>The written notes pass the gate with no hand-edited derived field</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table data-c="distillation-table">
+        <thead><tr><th>Truth this epic creates</th><th>Where it lands</th></tr></thead>
+        <tbody>
+          <tr><td>The light path, the preflight, the verdict rule and the split fingerprint</td>
+            <td><a href="../workflow.html">workflow.html</a> — the process standard, edited once the code enforces it</td></tr>
+          <tr><td>Doc verification happens at authoring time; the merge gate holds existence and identity</td>
+            <td><a href="../work-planning.html">work-planning.html</a> — the trigger section, made explicit rather than implied</td></tr>
+          <tr><td>Note schemas and the measurement's shape</td>
+            <td><a href="../testing-strategy.html">testing-strategy.html</a> — only if a note schema actually changes</td></tr>
+          <tr><td>Why the light path, the split fingerprint and the severity rule are shaped as they are</td>
+            <td><a href="../decisions/decisions-index.html">decisions/</a> — a record each, minted in the WU that decides it</td></tr>
+          <tr><td>The design flow as its own epic, and the mounted-mockup blind spot</td>
+            <td><a href="../backlog/roadmap.html">roadmap.html</a> — the follow-up this epic deliberately does not take</td></tr>
+          <tr><td>This plan and its result</td><td>Archived out of git at the epic gate, per DEC-3</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table data-c="open-questions-table">
+        <thead><tr><th>Undecided</th><th>Proposed default</th></tr></thead>
+        <tbody>
+          <tr><td>Is the Working Unit level sacred, or is the light path of W4 in scope?</td>
+            <td>In scope, for genuinely single-unit work only; a multi-unit change keeps the epic shape and the walk.</td></tr>
+          <tr><td>Does the split fingerprint of W6 also apply to design artifacts?</td>
+            <td>No — a design artifact is judged by the design dimension, which belongs to the design epic. The split here
+            covers code paths against documentation.</td></tr>
+          <tr><td>Does the measurement of W1 live in a note or only locally?</td>
+            <td>Locally, in the shape of Gate 0's cache — a number to choose with, never evidence a gate trusts.</td></tr>
+          <tr><td>Do the authoring-time doc checks need a harness-independent backstop?</td>
+            <td>No new commit-time check. The review preflight of W2 reads every doc on any harness, which is where a
+            malformed doc can still be caught before the fleet runs.</td></tr>
+          <tr><td>Does the design epic open before or after this one closes?</td>
+            <td>After — this epic's distillation writes its roadmap row, and the two never judge each other's seams.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="order">Order and stopping rules</h2>
+    <div class="diagram" data-c="order-diagram">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 measure"] --> W2["W2 preflight"] --> W3["W3 note tool"]
+  W3 --> W4["W4 light path"]
+  W1 --> W5["W5 nits"]
+  W1 --> W6["W6 split fingerprint"] --> W7["W7 scoped re-verify<br/>droppable"]
+      </pre>
+      <div class="caption">W1 first because it decides the rest. W2 and W3 only remove wasted passes. W4 is the structural win. W5–W7 each trade something away and are adopted only on measurement.</div>
+    </div>
+    <div class="callout warn" data-c="stopping-rule">
+      <p><strong>Stopping rule.</strong> A WU that lowers a bar — W5, W6, W7 — is dropped rather than argued for if its
+      measurement does not hold. The epic still closes: W1–W4 stand on their own, and each of W5–W7 is named in the epic
+      result either as landed or as measured-and-rejected, with the number that decided it.</p>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
