@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-CODEX
 wu: E-CODEX.W1
-branch: 9a2adef
 base: f6fd4a97e8860da331da216cfa5fa3210cf78ffd
 tip: 9a2adef578e104fd60fae09b3c715a69ce2f7d4c
 diff_sha256: 729ea0b9226c381a72e8ed8867f79e558accf443ba26ecc2229de48d8889c5a2
