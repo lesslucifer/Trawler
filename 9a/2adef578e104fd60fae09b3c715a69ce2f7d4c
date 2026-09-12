@@ -7,6 +7,9 @@ base: f6fd4a97e8860da331da216cfa5fa3210cf78ffd
 head: 9a2adef578e104fd60fae09b3c715a69ce2f7d4c
 diff_sha256: 729ea0b9226c381a72e8ed8867f79e558accf443ba26ecc2229de48d8889c5a2
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
-findings: { found: 1, verified: 1, waived: 0 }
-verdict: FAIL
+findings: { found: 1, verified: 1, waived: 1 }
+waivers:
+  - finding: ".codex/hooks is not consumed by the hook configuration; .codex/hooks.json invokes the shared scripts directly"
+    reason: "User explicitly accepts the four-door alias arrangement documented by DEC-42 despite the redundant runtime path."
+verdict: PASS
 date: 2026-09-12
