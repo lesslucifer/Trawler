@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa50f4d9f34851f0dface9b">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-43: the preflight covers only what can void a PASS</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-43 — the review's preflight covers only what can void a PASS</h1>
+      <p>E-SIMPWF.W2 puts one refusal in front of the review fleet: the tree Gate 0 proves, and the
+        notes the finders are about to read. This records where that boundary is, why the doc
+        predicates are not on the near side of it, and what that costs.</p>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W2 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>The review's first step is <code>cargo xtask preflight wu|epic &lt;tip&gt;
+      [--target &lt;ref&gt;]</code>, and it refuses on exactly three things: the tree, through Gate 0
+      (<code>fmt</code>, <code>clippy</code>, the suite — <code>0·tree</code>), and the two notes the
+      review reads on the reviewed tip (<code>1·notes</code>, <code>2·manifest</code>). It asks for
+      nothing else: not the <code>cr/v3</code> note it precedes, not that note's design section, not the
+      human signature that follows it, not the doc-note facts the merge checks, and no doc-format
+      predicate anywhere — <code>verify-doc</code>'s checklist and link checks stay where a document is
+      authored.</strong> A diff that asks for no review is not refused, demands no note, and is not
+      measured at all: the preflight protects a review, and <code>cargo xtask gate0</code> is how to ask
+      about the tree on its own.</p>
+      <p data-c="criterion">Those three are the review's inputs, and that is the whole test: a check
+      belongs here when its subject is what the review is about to read, because a red one is either
+      repaired by a commit — which moves the tree the PASS pins — or is an input the finders would read
+      unreadable. This is deliberately not a completeness claim about the gate: the preflight is not a
+      backstop, and every other check is refused where it is decided.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>A review's PASS is stamped with the diff it judged, so everything after the verdict is
+    expensive: a fix is a new commit, a new diff, another fleet round, and another human signature
+    (<a href="workflow-gates.html#dec-27">DEC-27</a> already orders the signature last for the same
+    reason). The preflight is where the same fact is applied one step earlier — the fleet is not
+    asked to judge a tree that is still going to move.</p>
+    <p>Two of the plan's questions had no answer in the tree: what may the preflight refuse on, and
+    whether the authoring-time doc checks need a harness-independent backstop at commit or merge
+    time. The owner answered the second: no. This record states the consequence of that answer
+    rather than leaving it implied by an absence.</p>
+
+    <h2 id="boundary">The boundary</h2>
+    <table data-c="boundary-table">
+      <thead><tr><th>In the preflight</th><th>Why a red one cannot survive to the merge</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>0·tree</code> — the working tree, through Gate 0's three commands, with its
+          unchanged-tree skip</td>
+          <td>the repair is a commit, and a commit after the verdict is a different diff: the note is
+          orphaned and the fleet is bought a second time for a finding it never saw. The check carries three
+          refusals, all of them that one fact — the suite is red, the checkout is not the reviewed tip, or
+          the tree has work the commit does not. A green Gate 0 read off any tree but the tip's proves
+          nothing about the diff the PASS will pin, and a review bought for the wrong tree is the same
+          second fleet.</td>
+        </tr>
+        <tr>
+          <td><code>1·notes</code> — <code>test/v2</code> and <code>doc/v1</code> on the reviewed tip:
+          present, parseable, one identity block</td>
+          <td>these are what the finders read: a waiver is a review subject, not a free pass. A note
+          that is missing or unreadable is an input the review is about to read and the caller is about
+          to rewrite.</td>
+        </tr>
+        <tr>
+          <td><code>2·manifest</code> — the test note's level, and the layer that level requires
+          (working unit ⇒ <code>integration</code> ≥ 1 or a waiver)</td>
+          <td>a layer that is absent or zero is a test nobody has written yet. The tree moves the
+          moment it exists, which is the clearest case of the criterion there is.</td>
+        </tr>
+      </tbody>
+    </table>
+    <table data-c="left-table">
+      <thead><tr><th>Left to the gate, and why</th><th>Check ids</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the exam's own evidence — verdict, review base, diff binding, the design verdict — which
+          the preflight precedes. Refusing on it would be a deadlock: the review may not be required to
+          pass itself</td>
+          <td><code>3·review</code>, <code>4·review-base</code>, <code>5·diff-binding</code>,
+          <code>9·design</code>, <code>components·unbuilt</code></td>
+        </tr>
+        <tr>
+          <td>the doc-note facts: the note is read, and its shape is checked under
+          <code>1·notes</code>, but whether it lists every changed doc is a completeness fact about the
+          merge, repaired in the note and deciding nothing the review is about to read. The sibling fact
+          on this id — whether an epic tip's tracked docs sit where the standard expects them — is a shape
+          about the delivered tree, raised where the epic is delivered: the preflight is scoped to the
+          review's inputs, and this WU's plan names three of them</td>
+          <td><code>6·doc-note</code></td>
+        </tr>
+        <tr>
+          <td>the document's shape: a design run left open, or a design file removed with its forks
+          distilled nowhere. Both are repaired by a doc commit, which is exactly the condition above, and
+          they are refused here rather than in the preflight because the owner's ruling that carries this
+          decision is that no <em>doc check</em> runs in front of the review: a run's open state and a
+          removal's lineage are read out of a document's bytes, so they are doc predicates, and a
+          design-shape preflight is the design epic's to add — with the design flow it would be watching</td>
+          <td><code>6·run-closed</code>, <code>6·retirement-order</code></td>
+        </tr>
+        <tr>
+          <td>the human signature, which by rule comes after the review, once the tree has settled</td>
+          <td><code>8·manual-review</code></td>
+        </tr>
+        <tr>
+          <td>the document's form — a checklist, a link, a receipt shape. No commit- or merge-level
+          check runs those predicates; the merge reads doc <em>facts</em> (below)</td>
+          <td><code>verify-doc</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequence">The consequence, stated rather than hidden</h2>
+    <div class="callout warn" data-c="consequence-callout">
+      <p>Doc predicates run only where the authoring hooks fire
+      (<a href="../workflow.html#hooks">workflow</a> §Hooks, <code>.claude/settings.json</code>). On a
+      harness that does not run them, <strong>nothing checks a document's form at all</strong>: the merge
+      reads document <em>facts</em> — that the docs a diff touched are listed in <code>doc/v1</code>,
+      that the level's result report exists at the tip with the bytes a human signed, that a design run
+      is closed, that a file is a design artifact — but no check reads a document against a checklist or
+      a link. That is accepted here, on the owner's ruling that the commit- and merge-level doc checks
+      are useless, and this epic adds none.</p>
+    </div>
+    <p>The preflight is not a second gate. It runs the merge gate's own code for <code>1·notes</code> and
+    <code>2·manifest</code> over the notes it reads — <code>test/v2</code> and <code>doc/v1</code> — so a
+    refusal it prints is the gate's own block, with the gate's own fix line rather than a paraphrase of
+    it. The <code>cr/v3</code> note is deliberately not loaded: it is the exam's own output, and the round
+    that follows writes it after this runs, so the identity check covers the two notes the review reads
+    and not the three the merge sees. Nothing else is written — no note, no receipt, and no entry in the
+    local gate tally, which counts gate runs
+    (<a href="dec-42-the-gate-tally-is-local-measurement.html">DEC-42</a>). Every verdict at the merge is
+    still re-derived from the tree, unchanged
+    (<a href="workflow-gates.html#dec-2">DEC-2</a>).</p>
+
+    <h2 id="follows">What follows</h2>
+    <table data-c="follows-table">
+      <thead><tr><th>Follows from this</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The review skill's first step is a command, not a remembered order: an agent hits the
+          refusal instead of reasoning about whether the suite was green</td>
+          <td><code>.claude/skills/code-review/SKILL.md</code> §2, and <code>cargo xtask preflight</code></td>
+        </tr>
+        <tr>
+          <td>A note schema can change without touching the preflight, as long as the gate's check
+          changes with it — one function answers both</td>
+          <td><code>xtask/src/gate.rs</code> (<code>preflight</code> and <code>verify</code>)</td>
+        </tr>
+        <tr>
+          <td>The boundary is re-openable: E-SIMPWF's W6 shrinks what the review reads, and any check
+          this decision leaves out can be moved in by the same criterion, not by argument</td>
+          <td>the criterion in §The decision</td>
+        </tr>
+        <tr>
+          <td>The three checks live where their machinery does: the tree check spawns cargo, so it is the
+          command's; the note checks are the gate's own code, so they cannot drift from the merge</td>
+          <td><code>xtask/src/preflight.rs</code> (the command, its ordering and its one-block refusal)
+          and <code>xtask/src/gate.rs</code> (<code>Gate::preflight</code>, sharing the loaded scope and
+          the note checks with <code>verify</code>)</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

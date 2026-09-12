@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v20 · 2026-09-12 · Trawler</div>
+      <div class="meta">v21 · 2026-09-12 · Trawler</div>
     </div>
   </header>
   <main>
@@ -425,6 +425,28 @@
             rewrites on one commit (a fix is a new commit, so it reports 1 where a tip paid 4), counting gate
             refusals as rounds, and counting what a session says it did. No gate check ever reads the file:
             delete it and every verdict is what it was</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html"><code>dec-43-the-preflight-covers-only-what-can-void-a-pass.html</code></a></td>
+          <td><span class="badge id">DEC-43</span></td>
+          <td><strong>The review's first step is a preflight that refuses on the tree and the notes the
+            review reads, and on nothing else</strong> — <code>cargo xtask preflight wu|epic &lt;tip&gt;</code>
+            runs Gate 0 (<code>fmt</code>, <code>clippy</code>, the suite) and the merge gate's own
+            <code>1·notes</code> and <code>2·manifest</code> over <code>test/v2</code> and
+            <code>doc/v1</code> on the reviewed tip, before a finder spawns. Those three are the review's
+            own inputs, and that is the test: a check belongs here when its subject is what the review is
+            about to read, since a red one there is repaired by a commit — which orphans the PASS it would
+            have stamped — or is an input the finders would read unreadable. So it asks for neither the
+            <code>cr/v3</code> note it precedes nor the design section, the doc-note facts, or the human
+            signature, and it is scoped to a WU or epic review — the two verdicts the merge gate binds.
+            No doc-format predicate runs at commit or merge level either: a document's form is checked
+            where it is authored, so on a harness that does not run those hooks nothing checks a
+            document's form, though the merge still reads doc facts (the attested result report, a design
+            run's state). Accepted on the owner's ruling, and stated rather than implied. Rejected: making
+            the preflight a second gate or a completeness claim over the gate's other checks (it shares
+            the gate's own note checks, so the two cannot disagree), and a harness-independent doc
+            backstop</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

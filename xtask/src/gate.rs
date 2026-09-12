@@ -112,12 +112,33 @@ struct ParsedNotes {
     doc: Option<DocNote>,
 }
 
+// Which notes a run reads off the tip. The preflight stops at the review's
+// inputs - the notes its finders read as claims to judge - and loads none of the
+// evidence the review writes, so it can never demand what the exam produces.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Notes {
+    Paperwork,
+    All,
+}
+
+// Everything both entry points judge, resolved once: the range the caller's
+// target makes with the tip, the paths it changes, and whether anything in it
+// asks for a review at all.
+struct Scope {
+    gated: bool,
+    report: Report,
+    names: Vec<String>,
+    docs: Vec<(String, String)>,
+    judged: Vec<(String, String)>,
+    retired_paths: Vec<String>,
+}
+
 pub struct Gate<'a> {
     pub repo: &'a Path,
 }
 
 impl Gate<'_> {
-    pub fn verify(&self, level: Level, tip_ref: &str, target_ref: &str) -> Result<Report, String> {
+    fn open(&self, level: Level, tip_ref: &str, target_ref: &str) -> Result<Scope, String> {
         let tip = git(self.repo, &["rev-parse", tip_ref])?;
         let base = git(self.repo, &["merge-base", target_ref, &tip])?;
         let names = diff_names(self.repo, &base, &tip)?;
@@ -144,7 +165,7 @@ impl Gate<'_> {
         // code moved, for the same reason `6·run-closed` already is.
         let designs = !design_artifacts_of(&judged).is_empty();
         let gated = code_changed || designs;
-        let mut report = Report {
+        let report = Report {
             level,
             tip_ref: tip_ref.to_string(),
             tip,
@@ -156,6 +177,34 @@ impl Gate<'_> {
             failures: Vec::new(),
             waived: Vec::new(),
         };
+        Ok(Scope { gated, report, names, docs, judged, retired_paths })
+    }
+
+    // The review's preflight: run before any finder spawns, it decides whether the
+    // review may start at all, so a red input is repaired by a commit while the
+    // repair is still free. Its subject is what the review reads - the notes its
+    // finders judge, judged by the same code the merge gate judges them with
+    // (checks 1·notes and 2·manifest). The evidence the review itself writes, the
+    // note the human signs, and every doc predicate are deliberately not asked
+    // for here; a diff that asks for no review is not refused and demands no note.
+    pub fn preflight(
+        &self,
+        level: Level,
+        tip_ref: &str,
+        target_ref: &str,
+    ) -> Result<Report, String> {
+        let Scope { gated, mut report, names, .. } = self.open(level, tip_ref, target_ref)?;
+        if !gated {
+            return Ok(report);
+        }
+        let parsed = self.load_notes(&mut report, &names, Notes::Paperwork);
+        check_manifest(&mut report, parsed.test.as_ref());
+        Ok(report)
+    }
+
+    pub fn verify(&self, level: Level, tip_ref: &str, target_ref: &str) -> Result<Report, String> {
+        let Scope { gated, mut report, names, docs, judged, retired_paths } =
+            self.open(level, tip_ref, target_ref)?;
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
             self.check_unbuilt_designs(&mut report);
@@ -168,7 +217,7 @@ impl Gate<'_> {
         if !gated {
             return Ok(report);
         }
-        let parsed = self.load_notes(&mut report, &names);
+        let parsed = self.load_notes(&mut report, &names, Notes::All);
         check_manifest(&mut report, parsed.test.as_ref());
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
@@ -190,12 +239,12 @@ impl Gate<'_> {
         Ok(report)
     }
 
-    fn load_notes(&self, report: &mut Report, names: &[String]) -> ParsedNotes {
+    fn load_notes(&self, report: &mut Report, names: &[String], notes: Notes) -> ParsedNotes {
         let tip = report.tip.clone();
         let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
             .parse_note::<TestNote>(report, &tip, "test", &["test/v2"], true, |n| n.schema.clone());
-        let cr = if report.level == Level::Commit {
+        let cr = if report.level == Level::Commit || notes == Notes::Paperwork {
             None
         } else {
             self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, true, |n| n.schema.clone())
@@ -1240,6 +1289,19 @@ pub fn short(sha: &str) -> &str {
     sha.get(..10).unwrap_or(sha)
 }
 
+/// One block per refusal: the check id, what was found, and the fix. Shared so a
+/// refusal reads the same wherever it is printed - the merge gate in front of a
+/// merge, and the review's preflight in front of the fleet.
+pub fn format_failures(failures: &[Failure]) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::new();
+    for f in failures {
+        let _ = writeln!(out, "FAIL  {:<24} {}", f.check, f.what);
+        let _ = writeln!(out, "      fix -> {}", f.fix);
+    }
+    out
+}
+
 pub fn format_report(report: &Report) -> String {
     use std::fmt::Write as _;
     if report.exempt {
@@ -1262,10 +1324,7 @@ pub fn format_report(report: &Report) -> String {
         );
         return out;
     }
-    for f in &report.failures {
-        let _ = writeln!(out, "FAIL  {:<24} {}", f.check, f.what);
-        let _ = writeln!(out, "      fix -> {}", f.fix);
-    }
+    out.push_str(&format_failures(&report.failures));
     let _ = write!(
         out,
         "{} failed -> no receipt written; the merge gate will refuse this tip",

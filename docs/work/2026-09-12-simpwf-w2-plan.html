@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa50f4b9f34851f0dface97" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF.W2 plan (preflight)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF.W2 — the paperwork finishes before the exam</h1>
+      <p>One command the review runs first: Gate 0's fmt, clippy and suite, and the notes that
+      review is about to read — refused in one block that names the blocker, before a single
+      finder spawns against a tree that is still going to move.</p>
+      <div class="meta">v1 · 2026-09-12 · Trawler · T3 WU plan · <span class="badge id">E-SIMPWF.W2</span> ·
+      <code>wu/simpwf/preflight</code> off <code>epic/simpwf</code> ·
+      <a href="2026-09-12-simpwf-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      <strong><code>cargo xtask preflight wu|epic &lt;tip&gt; [--target &lt;ref&gt;]</code> refuses, before any
+      finder spawns, while the tree the review would bind is not green — <code>fmt</code>, <code>clippy</code>,
+      the suite — or while the notes that review reads (<code>test/v2</code> and <code>doc/v1</code> on the
+      reviewed tip) are absent, unparseable, or short of the level's required test layer. It prints one block
+      per blocker that names it, and spawns nothing. A diff that asks for no review passes it untouched, and
+      it runs no doc predicate.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <thead><tr><th>Serves</th><th>How</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><a href="2026-09-12-simpwf-plan.html#working-units">E-SIMPWF · W2</a> — "The paperwork finishes
+            before the exam"</td>
+            <td>the summary block's promise: a preflight the review runs first, refusing while a check that
+            could void the PASS is still red, so no finder spawns against a tree that is still going to
+            move</td>
+          </tr>
+          <tr>
+            <td>E-SIMPWF's intent — "a passing review becoming worthless because something later changed the
+            tree"</td>
+            <td>the fix for a red preflight is a commit; the fix for a finding after the verdict is also a
+            commit, and that one buys the fleet again. The preflight moves the cheap repair in front of the
+            expensive judgment</td>
+          </tr>
+          <tr>
+            <td>E-SIMPWF's expected result — "nothing can void a review after it runs"</td>
+            <td>the review refuses to start while the suite, clippy or the notes it reads are red, stated as a
+            boundary an agent hits rather than an order it is asked to remember</td>
+          </tr>
+          <tr>
+            <td><a href="../decisions/workflow-gates.html#dec-27">DEC-27</a> — the tree settles before a human
+            is asked</td>
+            <td>the same ordering rule, one step earlier: the tree settles before the <em>fleet</em> is asked,
+            on the same test — a red input is repaired by a commit, and a commit orphans a binding</td>
+          </tr>
+          <tr>
+            <td><a href="../decisions/workflow-gates.html#dec-2">DEC-2</a> — recompute, never trust a stored
+            verdict</td>
+            <td>the preflight is a reading taken now, over this tip and this target: it stores nothing, writes
+            no note and no receipt, and a checkout that never runs it gates exactly as it did before</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>A process epic: no <code>UC-*</code> is delivered or changed. This WU adds one <code>xtask</code>
+      subcommand, shares the gate's own note checks with it, and edits the review skill to call it first. It
+      adds no check the merge gate runs, no note schema, and no rule about what the review judges.</p>
+    </div>
+
+    <h2 id="shape">Where it sits in the review</h2>
+
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  W["the work + its notes<br/>on the tip"] --> P{"cargo xtask preflight<br/>wu|epic tip"}
+  P -- "red: the tree is not green,<br/>or a note is missing or malformed" --> F["one block per blocker<br/>→ the caller fixes,<br/>a commit lands"]
+  F --> P
+  P -- green --> S["spawn the finders<br/>(the five dimensions)"]
+  S --> V["verdict + cr/v3 note"]
+  P -. "no other check is run here" .-> G["verify-dod<br/>at the merge"]
+      </pre>
+      <div class="caption">The preflight is the only place a red tree can still be fixed for free. Everything after the verdict is a repair that orphans it, and the merge gate cannot tell the two apart.</div>
+    </div>
+
+    <h3 id="runs">What it runs</h3>
+    <table data-c="runs-table">
+      <thead><tr><th>Check id</th><th>Reads</th><th>Why a red one must stop the review</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>0·tree</code></td>
+          <td>the working tree, through Gate 0's three commands: <code>fmt --all --check</code>,
+          <code>clippy --workspace</code> with <code>-D warnings</code>, and the suite — skipped when the tree
+          is byte-identical to the last green run (the cache it already keeps). The checkout must also be the
+          reviewed tip, with nothing uncommitted: Gate 0 proves a working tree, while the review binds
+          <code>base..tip</code>, and a green read off another commit vouches for bytes the verdict is not
+          about</td>
+          <td>the repair is a commit. A suite fixed after the verdict is a diff that is no longer the diff the
+          note pins, so the review is bought twice for a finding the fleet never saw</td>
+        </tr>
+        <tr>
+          <td><code>1·notes</code></td>
+          <td><code>test/v2</code> and <code>doc/v1</code> on the reviewed tip: present, parseable at the
+          schema the gate reads, and carrying the same identity block</td>
+          <td>a missing or unparseable note is an input the review is about to read and the caller is about to
+          rewrite. The gate's own message for it is the fix — this is the same code path</td>
+        </tr>
+        <tr>
+          <td><code>2·manifest</code></td>
+          <td>the test note's level against the scope being reviewed, and the layer that level requires
+          (working unit ⇒ <code>integration</code> ≥ 1, or a non-empty waiver)</td>
+          <td>a layer that is absent or zero is a test nobody has written yet, which is the clearest case
+          there is: the tree moves the moment it exists</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="never-runs">What it never runs</h3>
+    <p data-c="boundary">The boundary is what the review <em>reads</em>. Every check below is either the
+    exam's own output, a fact about the merge, or a document predicate — and none of them is repaired by a
+    commit that lands under a verdict.</p>
+    <table data-c="never-table">
+      <thead><tr><th>Not run</th><th>Check ids</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the review's own evidence</td>
+          <td><code>3·review</code>, <code>4·review-base</code>, <code>5·diff-binding</code></td>
+          <td>they judge the <code>cr/v3</code> note this preflight precedes. Refusing on them would be a
+          deadlock: the exam may not be required to pass itself</td>
+        </tr>
+        <tr>
+          <td>the design verdict</td>
+          <td><code>9·design</code>, <code>components·unbuilt</code></td>
+          <td>also the exam's output — written by the review the preflight gates</td>
+        </tr>
+        <tr>
+          <td>doc-note coverage</td>
+          <td><code>6·doc-note</code></td>
+          <td>the note is read — its shape is checked under <code>1·notes</code> — but whether it lists every
+          changed doc is a completeness fact about the merge, repaired in the note, moving nothing the review
+          bound</td>
+        </tr>
+        <tr>
+          <td>the human signature</td>
+          <td><code>8·manual-review</code></td>
+          <td>the signature goes last by rule (<a href="../decisions/workflow-gates.html#dec-27">DEC-27</a>):
+          the human is asked once the tree has settled, which is after the review, not before it</td>
+        </tr>
+        <tr>
+          <td>the doc predicate</td>
+          <td><code>verify-doc</code></td>
+          <td>the owner ruled the commit- and merge-level doc checks useless: a document is verified where it
+          is authored, by the harness hooks. The consequence is recorded in
+          <code>docs/decisions/dec-43-…</code>, minted by this WU</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>Observable after</th><th>Where a reader checks it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>A failing test or a malformed note stops the review before any finder spawns, in one block that
+            names the blocker</td>
+            <td><code>cargo xtask preflight wu &lt;tip&gt;</code> — exit 1, one <code>FAIL</code> block per
+            blocker with its check id and its fix, and the session's own report that it spawned nothing</td>
+          </tr>
+          <tr>
+            <td>A tip whose tree is green and whose notes parse passes, and says so in one line</td>
+            <td>the same command — exit 0</td>
+          </tr>
+          <tr>
+            <td>A diff that asks for no review — docs or infra only — is not refused, and no note is demanded
+            of it</td>
+            <td>the same command on such a diff: it reports that no review is asked for, and demands no
+            <code>test/v2</code> or <code>doc/v1</code></td>
+          </tr>
+          <tr>
+            <td>Nothing the preflight prints is an estimate or a stored verdict: the notes are re-read and the
+            tree is re-measured on every run</td>
+            <td><code>xtask/src/preflight.rs</code>, and <code>xtask/src/gate.rs</code>'s shared note checks</td>
+          </tr>
+          <tr>
+            <td>The preflight makes no check of its own beyond the tree: its note refusals are the gate's own
+            blocks, carrying the gate's check ids and the gate's fix lines</td>
+            <td>the malformed, absent and zero-layer cases in the integration suite, each asserting the gate's
+            own wording rather than a paraphrase</td>
+          </tr>
+          <tr>
+            <td>Running it changes nothing: no note, no receipt, no <code>refs/notes/*</code> ref, no entry in
+            the local gate tally</td>
+            <td><code>git for-each-ref refs/notes</code> before and after, and <code>target/.gate-tally</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="decisions">Decisions this WU mints</h2>
+    <table data-c="decisions-table">
+      <thead><tr><th>Decision</th><th>Record</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>What the review's preflight refuses on and what it deliberately leaves to the gate — including
+          that no doc predicate runs anywhere in the commit or merge path, and what that costs on a harness
+          that does not run the authoring hooks</td>
+          <td><code>docs/decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html</code>,
+          registered in the <a href="../decisions/decisions-index.html">decisions index</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge id">unit</span> every commit</td>
+            <td><code>xtask/src/preflight.rs</code> and <code>xtask/src/gate.rs</code> — the preflight never
+            demands a <code>cr/v3</code> note (the exam's own output), never demands <code>doc/v1</code>
+            coverage, and refuses nothing on a diff that asks for no review; a refusal renders one block per
+            blocker, each naming its check id and its fix; a red tree refuses with <code>0·tree</code> and no
+            agent is spawned; the gate and the preflight produce identical <code>1·notes</code> and
+            <code>2·manifest</code> refusals for the same tip.</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">integration</span> this WU</td>
+            <td><code>xtask/tests/preflight.rs</code>, driving the real command over a real temp git repo: a
+            tip with a green tree and valid notes exits 0; a malformed <code>test/v2</code> note refuses under
+            <code>1·notes</code> with the gate's own fix line; a missing note and a zeroed required layer
+            refuse under <code>1·notes</code> and <code>2·manifest</code>; a docs-only diff is not refused and
+            demands no note; a run leaves every <code>refs/notes/*</code> ref and the local tally file
+            untouched.</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">e2e</span> the epic</td>
+            <td><strong>waived</strong> at this WU, and stated: the epic's e2e already drives the full gated
+            path, and its "a failing test and a malformed note, each in front of the review — the preflight
+            refuses before a finder spawns, naming the blocker" row is this WU's case. W2 adds no branch to
+            that flow: it is a refusal at its first step, over the same tree and the same notes.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

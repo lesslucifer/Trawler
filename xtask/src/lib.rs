@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod preflight;
 pub mod tally;
 pub mod ui;
 pub mod wizard;
@@ -25,6 +26,7 @@ usage:
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
+  cargo xtask preflight <wu|epic> <tip> [--target <ref>]      (the review's first step: gate0 + the notes it reads, before any finder spawns)
   cargo xtask tally                                          (local gate tally: refused check ids per level, review rounds per tip)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
@@ -48,6 +50,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
         ["design-scope", base, head] => design_scope(repo, base, head),
+        ["preflight", rest @ ..] => preflight_cmd(rest, repo),
         ["tally"] => tally::run(repo),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
@@ -60,12 +63,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
 
 fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
-        ["wu", tip, rest @ ..] => {
-            let target = target_flag(rest)
-                .or_else(|| infer_wu_target(tip))
-                .ok_or("cannot infer the epic from the branch name; pass --target <epic-branch>")?;
-            gate_run(repo, Level::Wu, tip, &target)
-        }
+        ["wu", tip, rest @ ..] => gate_run(repo, Level::Wu, tip, &wu_scope(tip, rest)?),
         ["epic", tip, rest @ ..] => {
             let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
             gate_run(repo, Level::Epic, tip, &target)
@@ -84,6 +82,30 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         ["range", old, new] => range(repo, old, new),
         _ => Err(USAGE.to_string()),
     }
+}
+
+// The review's two scopes, resolved by the same rule and the same error line as
+// `verify-dod wu|epic`: the preflight must pin the base the merge gate will pin,
+// or it would judge a different range than the note it protects. A standalone
+// commit carries no review, so it has no preflight either (SKILL.md §2).
+fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+    match args {
+        ["wu", tip, rest @ ..] => preflight::run(repo, Level::Wu, tip, &wu_scope(tip, rest)?),
+        ["epic", tip, rest @ ..] => {
+            let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
+            preflight::run(repo, Level::Epic, tip, &target)
+        }
+        _ => Err(USAGE.to_string()),
+    }
+}
+
+// The epic a WU branch belongs to: named by the caller, or inferred from the
+// branch. One helper because two commands now resolve it, and a disagreement
+// here would gate one range and preflight another.
+fn wu_scope(tip: &str, rest: &[&str]) -> Result<String, String> {
+    target_flag(rest).or_else(|| infer_wu_target(tip)).ok_or_else(|| {
+        "cannot infer the epic from the branch name; pass --target <epic-branch>".to_string()
+    })
 }
 
 // The review and the merge gate must not each decide for themselves what a
