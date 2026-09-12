@@ -217,7 +217,7 @@ pub struct DocChange {
     pub distilled_to: Option<DistilledTo>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum DistilledTo {
     Paths(Vec<String>),

@@ -65,7 +65,7 @@ impl Level {
         }
     }
 
-    fn required_layer(self) -> &'static str {
+    pub(crate) fn required_layer(self) -> &'static str {
         match self {
             Self::Commit => "unit",
             Self::Wu => "integration",
@@ -82,7 +82,7 @@ pub struct Failure {
 }
 
 impl Failure {
-    fn new(check: &str, what: String, fix: String) -> Self {
+    pub(crate) fn new(check: &str, what: String, fix: String) -> Self {
         Self { check: check.to_string(), what, fix }
     }
 }
@@ -329,7 +329,10 @@ impl Gate<'_> {
     // `retired` is what the endpoint diff cannot show: a design authored and retired
     // between base and tip nets out of `names`, and DEC-16's order is owed for it
     // exactly as for one the base held.
-    fn check_docs(
+    // Shared with the note-writing command: the same blocks, the same wording and
+    // the same code path, so a note refused at authoring time is refused at the
+    // merge for the same reason rather than a paraphrase of it.
+    pub(crate) fn check_docs(
         &self,
         report: &mut Report,
         doc: Option<&DocNote>,
@@ -1207,7 +1210,7 @@ fn check_runs_closed(report: &mut Report, docs: &[(String, String)]) {
     }
 }
 
-fn check_manifest(report: &mut Report, test: Option<&TestNote>) {
+pub(crate) fn check_manifest(report: &mut Report, test: Option<&TestNote>) {
     let Some(test) = test else { return };
     let expected = report.level.as_note_level();
     if test.level != expected {

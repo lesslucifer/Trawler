@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod notes_write;
 pub mod preflight;
 pub mod tally;
 pub mod ui;
@@ -27,6 +28,7 @@ usage:
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
   cargo xtask preflight <wu|epic> <tip> [--target <ref>]      (the review's first step: gate0 + the notes it reads, before any finder spawns)
+  cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
   cargo xtask tally                                          (local gate tally: refused check ids per level, review rounds per tip)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
@@ -51,6 +53,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
         ["design-scope", base, head] => design_scope(repo, base, head),
         ["preflight", rest @ ..] => preflight_cmd(rest, repo),
+        ["notes", "write", rest @ ..] => notes_write::run(rest, repo),
         ["tally"] => tally::run(repo),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
@@ -102,7 +105,7 @@ fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 // The epic a WU branch belongs to: named by the caller, or inferred from the
 // branch. One helper because two commands now resolve it, and a disagreement
 // here would gate one range and preflight another.
-fn wu_scope(tip: &str, rest: &[&str]) -> Result<String, String> {
+pub(crate) fn wu_scope(tip: &str, rest: &[&str]) -> Result<String, String> {
     target_flag(rest).or_else(|| infer_wu_target(tip)).ok_or_else(|| {
         "cannot infer the epic from the branch name; pass --target <epic-branch>".to_string()
     })
