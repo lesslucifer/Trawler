@@ -130,10 +130,12 @@ returning to the caller (§7) so finder quality stays visible.
 - **PASS** = Gate 0 green and zero verified **blockers or importants** left
   unwaived. Anything else is **FAIL** — evidence is written either way.
 - **A verified nit does not fail the review, and is never silently dropped.**
-  Every one goes in the note's `nits:` list with a disposition — `fixed:
-  "<what changed>"` when the fix is already inside the range this note binds, or
-  `waived: "<reason>"`. An empty sentence is no disposition, and the merge gate
-  refuses an undecided nit under `3·review-nits` — so the cheap pass buys a
+  Every one goes in the note's `nits:` list as a named finding with **exactly
+  one** disposition — `fixed: "<what changed>"` when the fix is already inside the
+  range this note binds, or `waived: "<reason>"`. An empty sentence is no
+  disposition, an empty `finding` names nothing, and carrying both dispositions
+  records a contradiction; the merge gate refuses each of those under
+  `3·review-nits` — so the cheap pass buys a
   recorded decision, not an unread list. Nothing here licenses a post-verdict
   fix: a later commit still moves `CODE_SHA` and still orphans this note.
 

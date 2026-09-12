@@ -1452,10 +1452,10 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
             "fix the verified findings and re-run the review until PASS".to_string(),
         ));
     }
-    for nit in cr.nits.iter().filter(|n| !n.decided()) {
+    for (nit, fault) in cr.nits.iter().filter_map(|n| n.fault().map(|f| (n, f))) {
         report.failures.push(Failure::new(
             "3·review-nits",
-            format!("nit \"{}\" carries {}", nit.finding, nit.missing()),
+            format!("nit \"{}\" carries {fault}", nit.finding),
             "disposition every recorded nit: fixed: \"<what changed>\" or waived: \"<reason>\""
                 .to_string(),
         ));
@@ -1653,8 +1653,12 @@ mod tests {
         );
         assert!(ids(&decided, "code").is_empty(), "a dispositioned nit fails nothing");
 
-        let undecided = note("nits:\n  - finding: f1\n  - finding: f2\n    waived: \" \"\n");
-        assert_eq!(ids(&undecided, "code"), ["3·review-nits", "3·review-nits"]);
+        let undecided = note(
+            "nits:\n  - finding: f1\n  - finding: f2\n    waived: \" \"\n  \
+             - finding: f3\n    fixed: \"renamed\"\n    waived: \"left alone\"\n  \
+             - finding: \"\"\n    fixed: \"renamed\"\n",
+        );
+        assert_eq!(ids(&undecided, "code"), ["3·review-nits"; 4]);
 
         assert!(ids(&undecided, "").is_empty(), "a note nobody demanded refuses nothing");
     }

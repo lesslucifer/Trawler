@@ -253,42 +253,39 @@ impl<'a> DesignCarrier<'a> {
 
 /// A verified nit and what was decided about it. Recording one costs the verdict
 /// nothing; leaving it undecided is what the gate refuses, so the severity rule
-/// buys a cheaper pass without buying an unread list.
+/// buys a cheaper pass without buying an unread list. `fixed` names a change
+/// already inside the range the note binds - a fix landing after the verdict
+/// moves the code hash and orphans the note, which is the binding's job.
 #[derive(Deserialize)]
 pub struct Nit {
     pub finding: String,
-    #[serde(flatten)]
-    pub disposition: Option<Disposition>,
-}
-
-/// The two ways a nit is answered. `Fixed` names a change already inside the
-/// range this note binds - a fix landing after the verdict moves the code hash
-/// and orphans the note, which is the binding's job, not this field's.
-#[derive(Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Disposition {
-    Fixed(String),
-    Waived(String),
-}
-
-impl Disposition {
-    fn sentence(&self) -> &str {
-        match self {
-            Self::Fixed(what) | Self::Waived(what) => what,
-        }
-    }
+    #[serde(default)]
+    pub fixed: Option<String>,
+    #[serde(default)]
+    pub waived: Option<String>,
 }
 
 impl Nit {
     pub fn decided(&self) -> bool {
-        self.disposition.as_ref().is_some_and(|d| !d.sentence().trim().is_empty())
+        self.fault().is_none()
     }
 
-    pub fn missing(&self) -> &'static str {
-        match self.disposition {
-            None => "no disposition",
-            Some(Disposition::Fixed(_)) => "an empty fixed",
-            Some(Disposition::Waived(_)) => "an empty waiver",
+    /// What stops this entry being a decision - an empty sentence records that
+    /// something happened rather than what was decided, and two dispositions
+    /// record a contradiction, so neither is one.
+    pub fn fault(&self) -> Option<&'static str> {
+        let said =
+            |sentence: &Option<String>| sentence.as_ref().is_some_and(|s| !s.trim().is_empty());
+        if self.finding.trim().is_empty() {
+            return Some("no finding");
+        }
+        match (said(&self.fixed), said(&self.waived)) {
+            (true, false) | (false, true) => None,
+            (true, true) => Some("both fixed and waived"),
+            (false, false) if self.fixed.is_some() || self.waived.is_some() => {
+                Some("an empty disposition")
+            }
+            (false, false) => Some("no disposition"),
         }
     }
 }
@@ -531,8 +528,34 @@ nits:
         .expect("parses");
         let decided: Vec<bool> = note.nits.iter().map(Nit::decided).collect();
         assert_eq!(decided, vec![true, true, false, false]);
-        assert_eq!(note.nits[2].missing(), "an empty waiver");
-        assert_eq!(note.nits[3].missing(), "no disposition");
+        assert_eq!(note.nits[2].fault(), Some("an empty disposition"));
+        assert_eq!(note.nits[3].fault(), Some("no disposition"));
+    }
+
+    // Both faults this review found in its own first shape: a nit naming nothing
+    // was a decision about nothing, and one carrying two dispositions recorded a
+    // contradiction as though it were an answer.
+    #[test]
+    fn a_nit_naming_nothing_or_deciding_twice_is_no_decision() {
+        let nit = |entry: &str| -> CrNote {
+            serde_yaml::from_str(&format!(
+                "schema: cr/v4\nbase: a\ndiff_sha256: c\nverdict: PASS\nnits:\n  - {entry}"
+            ))
+            .expect("parses")
+        };
+        assert_eq!(
+            nit("finding: \"\"\n    waived: \"a reason for nothing\"\n").nits[0].fault(),
+            Some("no finding")
+        );
+        assert_eq!(
+            nit("finding: \"  \"\n    fixed: \"renamed\"\n").nits[0].fault(),
+            Some("no finding")
+        );
+        assert_eq!(
+            nit("finding: f\n    fixed: \"renamed\"\n    waived: \"left alone\"\n").nits[0].fault(),
+            Some("both fixed and waived")
+        );
+        assert!(nit("finding: f\n    fixed: \"renamed\"\n").nits[0].decided());
     }
 
     #[test]

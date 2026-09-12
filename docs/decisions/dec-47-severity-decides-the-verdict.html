@@ -25,7 +25,9 @@
       in the <code>cr/v4</code> note's <code>nits:</code> list as a <code>finding</code> plus one disposition —
       <code>fixed: "&lt;what changed&gt;"</code>, meaning the fix is already inside the range the note binds, or
       <code>waived: "&lt;reason&gt;"</code>. An empty sentence is no disposition, exactly as an empty test-layer waiver
-      is no waiver, and the merge gate refuses it under <code>3·review-nits</code>.</p>
+      is no waiver, and the merge gate refuses it under <code>3·review-nits</code> — along with an entry whose
+      <code>finding</code> names nothing, and one carrying both dispositions, which records a contradiction rather
+      than a decision.</p>
       <p data-c="boundary-rule"><strong>The boundary is written where both agents read it.</strong>
       <code>rubric.md</code> carries the three severity rows; the finder proposes a severity and the
       <strong>verifier's</strong> is the one the verdict reads, because only the verifier read the surrounding code.
