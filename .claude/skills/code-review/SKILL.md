@@ -25,16 +25,31 @@ sequences the run.
 - Optional, repeatable: `--waive "<finding summary>: <reason>"` — the
   trigger's waiver declarations, applied at the verdict (§5).
 
-## 2 · Gate 0 — abort if red
+## 2 · Preflight — abort if red
 
-Run `cargo xtask gate0`. It runs `fmt --check` + `clippy -D warnings` +
-`nextest run --all` (fallback `cargo test --all`) and **skips them when the
-working tree is byte-identical to the last green run** (cached under
-`target/.gate0-green`, a local per-checkout file — never a git note, never
-synced). Any tree change — code, test, or whitespace — invalidates the cache
-and re-runs the full trio, so a skip can never vouch for a tree it did not
-verify. A non-zero exit ⇒ stop, report it to the caller, spawn no agents, write
-no evidence.
+Run `cargo xtask preflight wu <tip> --target <the epic branch>` (or
+`cargo xtask preflight epic <tip>`, against `main`) — the same two levels, and
+the same target inference, the merge gate uses. This is the last point at which
+a red input is repaired for free: the `cr/v3` note pins the diff it judged, so
+anything fixed after the verdict buys the fleet again.
+
+It refuses on exactly three things:
+
+- **The tree** — Gate 0: `fmt --check` + `clippy -D warnings` + `nextest run
+  --all` (fallback `cargo test --all`), **skipped when the working tree is
+  byte-identical to the last green run** (cached under `target/.gate0-green`, a
+  local per-checkout file — never a git note, never synced). Any tree change —
+  code, test, or whitespace — invalidates the cache and re-runs the full trio,
+  so a skip can never vouch for a tree it did not verify.
+- **The notes this review reads** — `test/v2` and `doc/v1` on the reviewed tip:
+  present, parseable, carrying one identity block, and with the manifest holding
+  the test layer this level needs. The same code the merge gate judges them with.
+- **Nothing else.** No `cr/v3` note (this review writes it), no design section,
+  no `mr/v1` (the human signs last), no doc-note coverage, and no doc predicate.
+
+A non-zero exit ⇒ stop, report its blocks to the caller, spawn no agents, write
+no evidence. An exempt diff — one that asks for no review at all — needs none:
+report that and stop.
 
 ## 3 · Find — five isolated finders, in parallel (six with §3b)
 
