@@ -170,18 +170,11 @@ pub struct DesignNote {
     pub base: String,
     #[serde(default)]
     pub design_sha256: String,
-    #[serde(default)]
-    pub verdict: String,
-    #[serde(default)]
-    pub artifacts: Vec<String>,
-    #[serde(default)]
-    pub rulebook: String,
-    #[serde(default)]
-    pub implements: Option<Vec<Cited>>,
-    #[serde(default)]
-    pub dropped: Vec<Excused>,
-    #[serde(default)]
-    pub undesigned: Vec<Excused>,
+    /// The verdict itself, in the shape a `cr/v3` section already carried it —
+    /// flattened, so the note's YAML stays flat and the two carriers cannot
+    /// drift into two shapes.
+    #[serde(flatten)]
+    pub design: Design,
 }
 
 /// The verdict, whichever note carries it: the `design:` section of a note merged
@@ -197,46 +190,37 @@ pub enum DesignCarrier<'a> {
 // borrow of the carrier: a check that holds a `DesignCarrier` by value still reads
 // the verdict it points at.
 impl<'a> DesignCarrier<'a> {
-    pub fn artifacts(&self) -> &'a [String] {
+    // Both carriers hold the same shape, so the match happens once and every
+    // field reads through it.
+    fn design(&self) -> &'a Design {
         match self {
-            Self::Section(d) => d.artifacts.as_slice(),
-            Self::Note(n) => n.artifacts.as_slice(),
+            Self::Section(d) => d,
+            Self::Note(n) => &n.design,
         }
+    }
+
+    pub fn artifacts(&self) -> &'a [String] {
+        self.design().artifacts.as_slice()
     }
 
     pub fn rulebook(&self) -> &'a str {
-        match self {
-            Self::Section(d) => &d.rulebook,
-            Self::Note(n) => &n.rulebook,
-        }
+        &self.design().rulebook
     }
 
     pub fn verdict(&self) -> &'a str {
-        match self {
-            Self::Section(d) => &d.verdict,
-            Self::Note(n) => &n.verdict,
-        }
+        &self.design().verdict
     }
 
     pub fn dropped(&self) -> &'a [Excused] {
-        match self {
-            Self::Section(d) => &d.dropped,
-            Self::Note(n) => &n.dropped,
-        }
+        &self.design().dropped
     }
 
     pub fn implements(&self) -> Option<&'a Vec<Cited>> {
-        match self {
-            Self::Section(d) => d.implements.as_ref(),
-            Self::Note(n) => n.implements.as_ref(),
-        }
+        self.design().implements.as_ref()
     }
 
     pub fn undesigned(&self) -> &'a [Excused] {
-        match self {
-            Self::Section(d) => &d.undesigned,
-            Self::Note(n) => &n.undesigned,
-        }
+        &self.design().undesigned
     }
 
     pub fn judged(&self, path: &str) -> bool {

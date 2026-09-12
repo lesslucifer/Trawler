@@ -186,30 +186,21 @@ fn unready_reasons(
     missing
 }
 
-/// What a review note of `schema` must carry to be bound to this range, read the
-/// way the merge gate reads it: `cr/v4` binds the bytes of the code paths the
-/// diff changes, the schemas before it bound the whole diff, and a `cr/v4` note
-/// over a diff that changes no code binds nothing.
-fn reviewed_binding(schema: &str, whole: &str, code: &str) -> Option<String> {
-    if schema != "cr/v4" {
-        return Some(whole.to_string());
-    }
-    (!code.is_empty()).then(|| code.to_string())
-}
-
 /// [`unready_reasons`] against a real tip's notes, over the `(whole, code)`
-/// hashes of the range being attested.
+/// hashes of the range being attested. What the tip's note binds is
+/// [`crate::gate::reviewed_binding`]'s to say — the one rule `5·diff-binding`
+/// reads, so this never refuses a tip the merge gate would green.
 fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>) -> Vec<String> {
     let cr = crate::git::parsed_note::<crate::notes::CrNote>(repo, "cr", tip);
     let bound = cr
         .as_ref()
         .zip(range)
-        .and_then(|(c, (whole, code))| reviewed_binding(&c.schema, whole, code));
+        .and_then(|(c, (whole, code))| crate::gate::reviewed_binding(&c.schema, whole, code));
     unready_reasons(
         note(repo, "test", tip).is_some(),
         note(repo, "doc", tip).is_some(),
         cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
-        bound.as_deref(),
+        bound,
     )
 }
 
@@ -1349,22 +1340,6 @@ mod tests {
         let stale = super::unready_reasons(true, true, Some(("PASS", "old")), Some("new"));
         assert_eq!(stale.len(), 1);
         assert!(stale[0].contains("different diff"), "{stale:?}");
-    }
-
-    // The same rule the merge gate's 5·diff-binding reads, so a tip it would
-    // green is a tip this refuses to call unready.
-    #[test]
-    fn each_review_schema_is_bound_to_what_it_declared() {
-        assert_eq!(super::reviewed_binding("cr/v4", "whole", "code"), Some("code".to_string()));
-        assert_eq!(super::reviewed_binding("cr/v3", "whole", "code"), Some("whole".to_string()));
-        assert_eq!(super::reviewed_binding("cr/v2", "whole", "code"), Some("whole".to_string()));
-    }
-
-    // A `cr/v4` note over a diff that changes no code judges no code path, so
-    // there is no hash to compare and the signature is not held on one.
-    #[test]
-    fn a_code_free_diff_binds_no_review() {
-        assert_eq!(super::reviewed_binding("cr/v4", "whole", ""), None);
     }
 
     // The binding check needs a diff to compare against; with no resolvable
