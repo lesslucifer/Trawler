@@ -4,13 +4,19 @@
 # Backstop for docs edited around the file tools (shell, scripts).
 set -u
 
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+root="${TRAWLER_HOOK_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-.}")}"
+cd "$root" || exit 0
 
-files=$(git ls-files --cached --others --exclude-standard -- 'docs/*.html' 'docs/**/*.html' 2>/dev/null | sort -u)
-[ -n "$files" ] || exit 0
+listing=$(git ls-files --cached --others --exclude-standard -- 'docs/*.html' 'docs/**/*.html' 2>/dev/null | sort -u)
+[ -n "$listing" ] || exit 0
 
-# shellcheck disable=SC2086 # word-splitting the newline-separated list is intended
-out=$(${XTASK_BIN:-cargo xtask} verify-doc $files 2>&1)
+files=()
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  files+=("$path")
+done <<<"$listing"
+
+out=$(${XTASK_BIN:-cargo xtask} verify-doc "${files[@]}" 2>&1)
 rc=$?
 if [ "$rc" -eq 1 ]; then
   printf 'A doc is red - fix it before ending the turn (see docs/work-planning.html):\n%s\n' "$out" >&2

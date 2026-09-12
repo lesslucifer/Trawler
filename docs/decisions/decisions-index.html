@@ -411,6 +411,26 @@
             living only in a design file the same WU retired. Rejected: editing the rulebook, deleting the
             runs' original wording</td>          <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-42-one-source-two-harnesses.html"><code>dec-42-one-source-two-harnesses.html</code></a></td>
+          <td><span class="badge id">DEC-42</span></td>
+          <td><strong>The agent config is one source per artifact — <code>CLAUDE.md</code> and
+            <code>.claude/</code> — and Codex reads it through four symlinks</strong>
+            (<code>AGENTS.md</code>, <code>.agents/skills</code>, <code>.codex/hooks.json</code>,
+            <code>.codex/hooks</code>). The workflow's authoring-time checks are harness checks, and a
+            Codex session was outside all of them: T0 unread, the <code>cr/v3</code> skill undiscovered,
+            the <code>PostToolUse</code> hook firing but parsing <code>tool_input.file_path</code> where
+            Codex sends <code>tool_input.command</code>, so it exited 0 on every edit. The shared hooks
+            file stays hooks-only with commands resolving the active git root
+            (<code>git rev-parse --show-toplevel</code>, Claude's variable as fallback), and one script
+            reads both payload shapes. Codex's <code>/hooks</code> trust is a per-machine operator step,
+            like <code>.mr-allowed</code>. The tree had already paid for the second source: the
+            hand-made <code>AGENTS.md</code> copy had drifted at line 80 before it was committed.
+            Rejected: renaming canonical to <code>AGENTS.md</code>/<code>.codex</code>, a
+            <code>config.toml</code> fallback filename for T0, keeping the copies with a drift test,
+            one symlink per skill</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
