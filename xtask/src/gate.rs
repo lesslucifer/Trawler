@@ -138,12 +138,24 @@ pub struct Gate<'a> {
 }
 
 impl Gate<'_> {
-    fn open(&self, level: Level, tip_ref: &str, target_ref: &str) -> Result<Scope, String> {
+    // The range a gate run resolves, for a caller that has to pin the same one:
+    // the note writer derives its facts from this, so the range a note is written
+    // about is the range the verdict binds - one implementation, not two that
+    // happen to agree today.
+    pub(crate) fn range(
+        &self,
+        tip_ref: &str,
+        target_ref: &str,
+    ) -> Result<(String, String, Vec<String>, String), String> {
         let tip = git(self.repo, &["rev-parse", tip_ref])?;
         let base = git(self.repo, &["merge-base", target_ref, &tip])?;
         let names = diff_names(self.repo, &base, &tip)?;
-        let sha = diff_sha256(self.repo, &base, &tip)?;
-        let code_changed = names.iter().any(|p| is_code(p));
+        let diff_sha256 = diff_sha256(self.repo, &base, &tip)?;
+        Ok((tip, base, names, diff_sha256))
+    }
+
+    fn open(&self, level: Level, tip_ref: &str, target_ref: &str) -> Result<Scope, String> {
+        let (tip, base, names, sha) = self.range(tip_ref, target_ref)?;
         // Three checks below read every doc the diff touches, at the same tip, for
         // the same immutable blobs. Fetched once per verify and threaded through:
         // the walk calls verify once per seam, so a per-site fetch multiplies whole
@@ -156,15 +168,13 @@ impl Gate<'_> {
         let retired =
             if level == Level::Wu { self.retired_designs(&base, &tip, &names) } else { Vec::new() };
         let retired_paths: Vec<String> = retired.iter().map(|d| d.path.clone()).collect();
-        let mut judged = docs.clone();
-        judged.extend(retired.into_iter().map(|d| (d.path, d.html)));
+        let judged = judged_docs(&docs, &retired);
         // A design is a docs-only deliverable, so the docs/infra exemption would
         // hand the design dimension exactly the diffs it exists to judge - the
         // most common design Working Unit writes a run and no code at all. The
         // merge that closes a design is answerable for it whether or not any
         // code moved, for the same reason `6·run-closed` already is.
-        let designs = !design_artifacts_of(&judged).is_empty();
-        let gated = code_changed || designs;
+        let gated = is_gated(&names, &judged);
         let report = Report {
             level,
             tip_ref: tip_ref.to_string(),
@@ -339,11 +349,7 @@ impl Gate<'_> {
         names: &[String],
         retired: &[String],
     ) {
-        let doc_paths: Vec<&String> = names
-            .iter()
-            .filter(|p| is_doc(p))
-            .chain(retired.iter().filter(|p| !names.contains(p)))
-            .collect();
+        let doc_paths = doc_paths(names, retired);
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
                 doc.changes.iter().map(|c| (c.path.as_str(), c)).collect();
@@ -383,7 +389,7 @@ impl Gate<'_> {
                 }
             }
             for entry in &doc.changes {
-                if !doc_paths.iter().any(|p| p.as_str() == entry.path) {
+                if !doc_paths.contains(&entry.path) {
                     report.failures.push(Failure::new(
                         "6·doc-note",
                         format!("doc/v1 lists {} but the diff does not touch it", entry.path),
@@ -442,7 +448,7 @@ impl Gate<'_> {
         }
     }
 
-    fn doc_blobs(&self, tip: &str, names: &[String]) -> Vec<(String, String)> {
+    pub(crate) fn doc_blobs(&self, tip: &str, names: &[String]) -> Vec<(String, String)> {
         names
             .iter()
             .filter(|p| is_doc(p))
@@ -1188,6 +1194,35 @@ fn design_artifacts_of(docs: &[(String, String)]) -> Vec<String> {
     docs.iter()
         .filter(|(path, html)| crate::doc::design_artifact(path, html).is_some())
         .map(|(path, _)| path.clone())
+        .collect()
+}
+
+/// What the design dimension and the exemption read: the range's docs at the tip,
+/// plus the component designs a seam retired at bytes the base never held.
+pub(crate) fn judged_docs(
+    docs: &[(String, String)],
+    retired: &[RetiredDesign],
+) -> Vec<(String, String)> {
+    let mut judged = docs.to_vec();
+    judged.extend(retired.iter().map(|d| (d.path.clone(), d.html.clone())));
+    judged
+}
+
+/// What the gate is asked for at all - the test `open` exempts on, for a writer
+/// that must not demand a note of a diff the merge exempts.
+pub(crate) fn is_gated(names: &[String], judged: &[(String, String)]) -> bool {
+    names.iter().any(|p| is_code(p)) || !design_artifacts_of(judged).is_empty()
+}
+
+/// The doc paths a note has to account for: every doc the range changes, plus a
+/// component design it retired at bytes the base never held (DEC-29). One rule,
+/// because the writer's skeleton and the gate's `6·doc-note` must name one set.
+pub(crate) fn doc_paths(names: &[String], retired: &[String]) -> Vec<String> {
+    names
+        .iter()
+        .filter(|p| is_doc(p))
+        .chain(retired.iter().filter(|p| !names.contains(p)))
+        .cloned()
         .collect()
 }
 

@@ -66,13 +66,15 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
 
 fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
-        ["wu", tip, rest @ ..] => gate_run(repo, Level::Wu, tip, &wu_scope(tip, rest)?),
+        ["wu", tip, rest @ ..] => {
+            gate_run(repo, Level::Wu, tip, &scope_target(Level::Wu, tip, rest)?)
+        }
         ["epic", tip, rest @ ..] => {
-            let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
+            let target = scope_target(Level::Epic, tip, rest)?;
             gate_run(repo, Level::Epic, tip, &target)
         }
         ["commit", sha] => {
-            let parent = format!("{sha}^");
+            let parent = scope_target(Level::Commit, sha, &[])?;
             let gate = Gate { repo };
             let mut report = gate.verify(Level::Commit, sha, &parent)?;
             let (tip, base) = (report.tip.clone(), report.base.clone());
@@ -93,12 +95,26 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 // commit carries no review, so it has no preflight either (SKILL.md §2).
 fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
-        ["wu", tip, rest @ ..] => preflight::run(repo, Level::Wu, tip, &wu_scope(tip, rest)?),
+        ["wu", tip, rest @ ..] => {
+            preflight::run(repo, Level::Wu, tip, &scope_target(Level::Wu, tip, rest)?)
+        }
         ["epic", tip, rest @ ..] => {
-            let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
+            let target = scope_target(Level::Epic, tip, rest)?;
             preflight::run(repo, Level::Epic, tip, &target)
         }
         _ => Err(USAGE.to_string()),
+    }
+}
+
+// The ref each scope's range is measured against: a WU's epic (named, or inferred
+// from the branch), an epic's main, a standalone commit's parent. One resolver for
+// the commands that judge a range - the gate, the preflight (DEC-43) and the note
+// writer (DEC-44) - so none of them can judge one range and write about another.
+pub(crate) fn scope_target(level: Level, tip_ref: &str, rest: &[&str]) -> Result<String, String> {
+    match level {
+        Level::Commit => Ok(format!("{tip_ref}^")),
+        Level::Wu => wu_scope(tip_ref, rest),
+        Level::Epic => Ok(target_flag(rest).unwrap_or_else(|| "main".to_string())),
     }
 }
 

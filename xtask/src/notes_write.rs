@@ -3,9 +3,11 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use crate::gate::{format_failures, short, Failure, Gate, Level, Report};
-use crate::git::{diff_names, diff_sha256, git, read_utf8_at, write_note};
-use crate::notes::{is_doc, tier_of, DistilledTo, DocChange, DocNote, TestNote};
+use crate::gate::{
+    doc_paths, format_failures, is_gated, judged_docs, short, Failure, Gate, Level, Report,
+};
+use crate::git::{blob_of, read_utf8_at, write_note};
+use crate::notes::{tier_of, DistilledTo, DocChange, DocNote, TestNote};
 
 // The authoring half of the evidence the gate reads. It exists because a note
 // typed by hand can disagree with the tree in ways git already answers - a tier
@@ -94,6 +96,11 @@ struct Layer {
 struct DocEntry {
     path: String,
     action: String,
+    /// Printed by `--template` so the derived tier is never typed. Checked against
+    /// the path when it is present: the field is a courtesy to the reader, and a
+    /// judgment that contradicts the path is refused rather than trusted.
+    #[serde(default)]
+    tier: Option<String>,
     #[serde(default)]
     distills: Option<String>,
     #[serde(default)]
@@ -106,7 +113,9 @@ struct DocEntry {
 struct TouchedDoc {
     path: String,
     tier: String,
-    retired: bool,
+    /// The range retired it: the path does not resolve at the tip, so its entry is
+    /// owed despite the endpoint diff, and `archived` owes its lineage.
+    absent: bool,
 }
 
 struct Range {
@@ -122,20 +131,8 @@ impl Range {
     // The range is resolved exactly as the gate resolves it - merge-base, not the
     // target's tip - so the notes and the verdict are written about one diff.
     fn resolve(repo: &Path, level: Level, tip_ref: &str, rest: &[&str]) -> Result<Self, String> {
-        let target = match level {
-            Level::Commit => {
-                let tip = git(repo, &["rev-parse", tip_ref])?;
-                format!("{tip}^")
-            }
-            Level::Wu => crate::wu_scope(tip_ref, rest)?,
-            Level::Epic => {
-                crate::flag_value(rest, "--target").unwrap_or_else(|| "main".to_string())
-            }
-        };
-        let tip = git(repo, &["rev-parse", tip_ref])?;
-        let base = git(repo, &["merge-base", &target, &tip])?;
-        let names = diff_names(repo, &base, &tip)?;
-        let diff_sha256 = diff_sha256(repo, &base, &tip)?;
+        let target = crate::scope_target(level, tip_ref, rest)?;
+        let (tip, base, names, diff_sha256) = Gate { repo }.range(tip_ref, &target)?;
         // The branch label rides on a named ref, exactly as the receipt's does: a
         // tip named by sha carries none, because there is no branch it names.
         let branch = (tip_ref != tip).then(|| tip_ref.to_string());
@@ -192,14 +189,15 @@ impl Range {
         for doc in docs {
             let _ = writeln!(out, "  - path: {}", scalar(&doc.path));
             let _ = writeln!(out, "    tier: {}", doc.tier);
-            if doc.retired {
+            if doc.absent {
                 let _ = writeln!(
                     out,
-                    "    action: archived            # the range retired this at bytes the base never held (DEC-29)"
+                    "    action: <archived|deleted>  # the range retired this; `archived` needs its lineage"
                 );
+                let _ = writeln!(out, "    distills: \"<what it carried>\"");
                 let _ = writeln!(
                     out,
-                    "    distilled_to: [<the docs/decisions record that carries its forks>]"
+                    "    distilled_to: []            # archived: the records that carry its forks, or \"none: <why nothing survives>\""
                 );
             } else {
                 let _ = writeln!(out, "    action: <{}>", ACTIONS.join("|"));
@@ -223,17 +221,27 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     };
     let range = Range::resolve(repo, level, tip_ref, rest)?;
     let gate = Gate { repo };
-    let retired: Vec<String> = if level == Level::Wu {
+    // A component design authored and retired inside the range nets out of the
+    // endpoint diff, and the seam's note still owes it its entry (DEC-29).
+    let retired_designs = if level == Level::Wu {
         gate.retired_designs(&range.base, &range.tip, &range.names)
-            .into_iter()
-            .map(|d| d.path)
-            .collect()
     } else {
         Vec::new()
     };
-    let touched = touched_docs(&range, &retired);
+    let retired: Vec<String> = retired_designs.iter().map(|d| d.path.clone()).collect();
+    let touched = touched_docs(repo, &range, &retired);
     if rest.contains(&"--template") {
         return Ok((0, range.template(level, &touched)));
+    }
+
+    // A diff the merge exempts owes no note at all: the gate returns before it
+    // reads one, and the review is not asked for. Refusing it here would invent
+    // work the gate does not owe, so the writer reports the same exemption the
+    // gate and the preflight report - and writes nothing.
+    let docs =
+        if level == Level::Commit { Vec::new() } else { gate.doc_blobs(&range.tip, &range.names) };
+    if !is_gated(&range.names, &judged_docs(&docs, &retired_designs)) {
+        return Ok((0, exempt(level, &range)));
     }
 
     let text = read_judgment(crate::flag_value(rest, "--judgment"))?;
@@ -300,7 +308,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     // A standalone commit is owed the doc note only when it touches docs; every
     // other level carries one whether or not the range changed a doc, because the
     // T2 answer (`t2_waived`) lives on it.
-    if level != Level::Commit || touched.iter().any(|d| !d.retired) || !retired.is_empty() {
+    if level != Level::Commit || !touched.is_empty() {
         write_note(repo, "doc", &range.tip, &doc_body)?;
         wrote.push("doc/v1");
     }
@@ -328,27 +336,14 @@ fn read_judgment(path: Option<String>) -> Result<String, String> {
     }
 }
 
-fn touched_docs(range: &Range, retired: &[String]) -> Vec<TouchedDoc> {
-    let mut docs: Vec<TouchedDoc> = range
-        .names
-        .iter()
-        .filter(|p| is_doc(p))
-        .map(|path| TouchedDoc {
-            path: path.clone(),
-            tier: tier_of(path).unwrap_or("?").to_string(),
-            retired: false,
+fn touched_docs(repo: &Path, range: &Range, retired: &[String]) -> Vec<TouchedDoc> {
+    doc_paths(&range.names, retired)
+        .into_iter()
+        .map(|path| {
+            let absent = blob_of(repo, &range.tip, &path).is_none();
+            TouchedDoc { tier: tier_of(&path).unwrap_or("?").to_string(), path, absent }
         })
-        .collect();
-    for path in retired {
-        if !docs.iter().any(|d| d.path == *path) {
-            docs.push(TouchedDoc {
-                path: path.clone(),
-                tier: tier_of(path).unwrap_or("?").to_string(),
-                retired: true,
-            });
-        }
-    }
-    docs
+        .collect()
 }
 
 // The identity is declared once and split here: a WU id carries its epic, so the
@@ -479,6 +474,17 @@ fn doc_changes(judgment: &Judgment, failures: &mut Vec<Failure>) -> Vec<DocChang
             ));
             continue;
         }
+        if entry.tier.as_deref().map(str::trim).is_some_and(|said| said != tier) {
+            failures.push(Failure::new(
+                JUDGMENT,
+                format!(
+                    "{path} is tier {tier} by path, and the judgment says {}",
+                    entry.tier.as_deref().unwrap_or_default().trim()
+                ),
+                format!("drop the tier line - {tier} is what the path is, and the derived note writes it"),
+            ));
+            continue;
+        }
         let distills = entry.distills.as_deref().map_or("", str::trim);
         if entry.action != "archived" && distills.is_empty() {
             failures.push(Failure::new(
@@ -583,8 +589,10 @@ fn test_layers(
 /// The tests a file declares, by the declaration its language writes: the
 /// `#[test]`/`#[tokio::test]` attributes of Rust - which is what a `proptest!`
 /// block's properties carry in this tree - and the `it(`/`test(` cases of
-/// TypeScript. `None` for a kind with no rule - refused rather than counted as
-/// zero.
+/// TypeScript, `.each(` tables included. It is a line rule over the file's text,
+/// and that is stated rather than implied: a declaration written in another form
+/// is not counted, and text that spells one is. `None` for a kind with no rule -
+/// refused rather than counted as zero.
 fn declared_tests(path: &str, body: &str) -> Option<u32> {
     match path.rsplit('.').next()? {
         "rs" => Some(rust_tests(body)),
@@ -597,7 +605,7 @@ fn rust_tests(body: &str) -> u32 {
     let mut count: u32 = 0;
     for line in body.lines() {
         let line = line.trim_start();
-        if line.starts_with("#[test]") || line.starts_with("#[tokio::test]") {
+        if line.starts_with("#[test]") || line.starts_with("#[tokio::test") {
             count = count.saturating_add(1);
         }
     }
@@ -608,8 +616,11 @@ fn ts_tests(body: &str) -> u32 {
     let mut count: u32 = 0;
     for line in body.lines() {
         let line = line.trim_start();
-        if line.starts_with("it(") || line.starts_with("test(") {
-            count = count.saturating_add(1);
+        for form in ["it(", "test(", "it.each(", "test.each("] {
+            if line.starts_with(form) {
+                count = count.saturating_add(1);
+                break;
+            }
         }
     }
     count
@@ -735,6 +746,14 @@ fn refused(level: Level, tip: &str, failures: &[Failure]) -> String {
     )
 }
 
+fn exempt(level: Level, range: &Range) -> String {
+    format!(
+        "notes write {} on {}: no review is asked for on this diff - the gate is exempt (no code and no design artifact in the range), so no test/v2 or doc/v1 is demanded and nothing was written",
+        level.as_note_level(),
+        short(&range.tip)
+    )
+}
+
 fn written(level: Level, range: &Range, wrote: &[&str]) -> String {
     format!(
         "notes write {} on {}: {} written\nbase: {}\nhead: {}\ndiff_sha256: {}\nthe review pins this same range in its cr/v3 note",
@@ -764,20 +783,24 @@ mod tests {
 fn one() {}
 #[tokio::test]
 async fn two() {}
+#[tokio::test(flavor = \"multi_thread\", worker_threads = 2)]
+async fn three() {}
 proptest! {
     #[test]
-    fn three(x in 0u8..2) {}
+    fn four(x in 0u8..2) {}
 }
 ";
-        // Three declarations: a property keeps its own `#[test]`, which is what
-        // the tree writes - so nothing is counted twice and nothing is missed.
-        assert_eq!(declared_tests("xtask/src/notes.rs", rust), Some(3));
+        // Four declarations: a property keeps its own `#[test]`, which is what the
+        // tree writes, and an attribute written with arguments is still the same
+        // declaration.
+        assert_eq!(declared_tests("xtask/src/notes.rs", rust), Some(4));
         let ts = "\
 it('lands cold', () => {});
   test('keeps the order', () => {});
+test.each([[1], [2]])('a row', () => {});
 describe('a group', () => {});
 ";
-        assert_eq!(declared_tests("ui/src/flow.test.ts", ts), Some(2));
+        assert_eq!(declared_tests("ui/src/flow.test.ts", ts), Some(3));
     }
 
     // An unrecognised file counted as zero would write a number the tree never
@@ -873,6 +896,34 @@ describe('a group', () => {});
         assert_eq!(note.changes[0].tier, "T2");
         assert_eq!(note.changes[0].action, "added");
         assert_eq!(note.t2_waived.as_deref(), Some("no T2 doc was touched"));
+    }
+
+    // The judgment `--template` prints carries the derived tier, so it has to be
+    // one this command accepts back: the field is read, and a judgment that
+    // contradicts the path is refused rather than quietly overwritten.
+    #[test]
+    fn a_tier_that_contradicts_the_path_is_refused_and_the_derived_one_is_accepted() {
+        let judgment = |tier: Option<&str>| super::Judgment {
+            docs: vec![super::DocEntry {
+                path: "docs/use-cases/api.html".to_string(),
+                action: "updated".to_string(),
+                tier: tier.map(str::to_string),
+                distills: Some("the contract".to_string()),
+                distilled_to: None,
+            }],
+            ..super::Judgment::default()
+        };
+
+        let mut failures = Vec::new();
+        let changes = super::doc_changes(&judgment(Some("T2")), &mut failures);
+        assert!(failures.is_empty(), "the derived tier is accepted: {failures:?}");
+        assert_eq!(changes[0].tier, "T2");
+
+        let mut failures = Vec::new();
+        super::doc_changes(&judgment(Some("T3")), &mut failures);
+        assert_eq!(failures.len(), 1, "a tier the path denies is refused: {failures:?}");
+        assert_eq!(failures[0].check, super::JUDGMENT);
+        assert!(failures[0].what.contains("is tier T2 by path"), "got: {}", failures[0].what);
     }
 
     #[test]

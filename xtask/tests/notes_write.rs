@@ -346,3 +346,19 @@ docs:
     assert!(doc.contains("tier: T2"), "{doc}");
     assert!(!doc.contains("epic:"), "still no identity block: {doc}");
 }
+
+// A docs-only diff is exempt: the gate returns before it reads a note, and the
+// review is not asked for. Demanding one would be the writer inventing work.
+#[test]
+fn a_diff_the_gate_exempts_is_reported_and_writes_nothing() {
+    let repo = Repo::new();
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    let tip = repo.commit("a docs-only change");
+    let before = repo.note_refs();
+
+    let (code, said) = repo.write_notes("commit", &tip, "docs: []\n");
+    assert_eq!(code, 0, "an exempt diff is not refused: {said}");
+    assert!(said.contains("no review is asked for"), "got: {said}");
+    assert!(said.contains("nothing was written"), "got: {said}");
+    assert_eq!(repo.note_refs(), before);
+}
