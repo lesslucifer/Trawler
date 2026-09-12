@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W4
+branch: HEAD
+tests:
+  unit: { count: 71, covers: "the rule's own pieces: which note a design verdict is read from on a cr/v2, cr/v3 and cr/v4 tip, the design note's fields through the one carrier shape, and which hash a review note of each schema is bound to - the code subset for cr/v4, the whole diff before it, nothing over a diff that changes no code" }
+  integration: { count: 174, covers: "the real gate over a temp repo: a doc commit after a PASS keeps the binding and a code commit reds it, a whole-diff cr/v4 is refused, a design-only diff owes design/v1 and no review, an artifact rewritten after its verdict is voided, the hand-off lands on the design note, a malformed doc/v1 no longer stops the preflight, the printed range carries the code subset, and mr confirm reads a review note the same way the merge gate does" }
