@@ -508,6 +508,24 @@
             that anyone read it)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-47-severity-decides-the-verdict.html"><code>dec-47-severity-decides-the-verdict.html</code></a></td>
+          <td><span class="badge id">DEC-47</span></td>
+          <td><strong>Severity decides a review's verdict, and a verified nit is dispositioned evidence rather than a
+            waiver</strong> — <code>PASS</code> = Gate 0 green and zero verified <strong>blockers or importants</strong>
+            left unwaived, so one small finding stops buying a second fleet round. Every verified nit is recorded in the
+            <code>cr/v4</code> note's <code>nits:</code> list with one disposition — <code>fixed</code> (the fix is
+            inside the range the note binds) or <code>waived</code> with a reason — and an empty sentence is no
+            disposition, refused by the merge gate under <code>3·review-nits</code>, the same rule empty test-layer and
+            walk waivers already meet. The boundary itself lives in <code>rubric.md</code> where finders and verifiers
+            both read it: <code>nit</code> is the narrow exit (<em>nothing observable changes and nothing drifts</em>),
+            uncertainty resolves upward to <code>important</code>, and the <em>verifier's</em> severity is the one the
+            verdict reads. The binding is untouched: a fix after the verdict still moves <code>CODE_SHA</code> and still
+            reds <code>5·diff-binding</code>. Rejected: letting nits pass unrecorded (the evidence goes with the cost),
+            keeping them in <code>--waive</code> (a nit recorded as an accepted failure), telling finders not to report
+            them, and allowing post-verdict fixes without re-review (that is the binding, not the severity)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

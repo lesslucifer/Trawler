@@ -14,6 +14,25 @@ because no line here predicted it.
 | **Efficiency** | Does the hot path pay avoidable costs? | Buffering a streamed body, per-request allocations and copies, unbounded channels or maps. | Micro-optimization outside hot paths. |
 | **Altitude** | Is the logic at the right layer? | Protocol logic leaking into the control API; capture policy inside transport code — boundaries per `docs/architecture.html`. | Re-architecting the system. |
 
+## Severity — what the verdict reads
+
+Severity decides the verdict, so it is judged, not labelled. A finder proposes
+one; the **verifier's** severity is the one the verdict reads, because only the
+verifier read the surrounding code.
+
+| Severity | The test it must pass | Effect |
+|---|---|---|
+| **blocker** | The code is wrong, unsafe, or breaks a stated contract — a caller or a user gets a wrong answer, a crash, a hang, or a silent loss. | Fails the review. |
+| **important** | The code is correct but carries a cost the project has ruled against: a duplicated rule that will drift, a reimplementation of something the tree already owns, an altitude break, a cost that grows with the data. | Fails the review. |
+| **nit** | Neither. Nothing observable changes and nothing drifts if it is never fixed — naming, ordering, a clearer local shape. | Does not fail. Recorded and dispositioned in the note. |
+
+**Uncertainty resolves upward, to `important`.** `nit` is the narrow exit, not
+the default: a finding is one only after it survives *nothing observable
+changes and nothing drifts*. The asymmetry is deliberate and matches the
+verifier's resolve-to-false-positive rule — in both, the cheap error is
+preferred to the silent one. A nit that fails this test and was called one
+anyway is a finding the review let through.
+
 ## Principles
 
 | # | Principle | Instances it covers today |

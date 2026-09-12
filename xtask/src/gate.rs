@@ -1330,8 +1330,8 @@ impl Gate<'_> {
         line(format!("tip: {}", report.tip));
         line(format!("diff_sha256: {}", report.diff_sha256));
         let checks = match report.level {
-            Level::Epic => "[notes, manifest, review, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]",
-            _ => "[notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]",
+            Level::Epic => "[notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]",
+            _ => "[notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]",
         };
         line(format!("checks: {checks}"));
         line(format!("date: {}", today()));
@@ -1450,6 +1450,14 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
             "3·review",
             format!("review verdict is {}", cr.verdict),
             "fix the verified findings and re-run the review until PASS".to_string(),
+        ));
+    }
+    for (nit, fault) in cr.nits.iter().filter_map(|n| n.fault().map(|f| (n, f))) {
+        report.failures.push(Failure::new(
+            "3·review-nits",
+            format!("nit \"{}\" carries {fault}", nit.finding),
+            "disposition every recorded nit: fixed: \"<what changed>\" or waived: \"<reason>\""
+                .to_string(),
         ));
     }
     if cr.base != report.base {
@@ -1621,6 +1629,38 @@ mod tests {
         assert_eq!(reviewed_binding("cr/v2", "whole", "code"), Some("whole"));
         assert_eq!(reviewed_binding("cr/v4", "whole", ""), None);
         assert_eq!(reviewed_binding("cr/v3", "whole", ""), Some("whole"));
+    }
+
+    // W5: severity decides the verdict, so the only thing left for the gate to
+    // refuse is a nit nobody decided about - and only on a note whose binding it
+    // reads at all.
+    #[test]
+    fn an_undecided_nit_is_the_only_nit_the_gate_refuses() {
+        let note = |nits: &str| -> CrNote {
+            serde_yaml::from_str(&format!(
+                "schema: cr/v4\nbase: 0123456789ab\ndiff_sha256: code\nverdict: PASS\n{nits}"
+            ))
+            .unwrap()
+        };
+        let ids = |cr: &CrNote, code: &str| {
+            let mut report = report(Vec::new());
+            super::check_review(&mut report, Some(cr), code);
+            report.failures.into_iter().map(|f| f.check).collect::<Vec<_>>()
+        };
+
+        let decided = note(
+            "nits:\n  - finding: f1\n    fixed: \"renamed\"\n  - finding: f2\n    waived: \"reads better split\"\n",
+        );
+        assert!(ids(&decided, "code").is_empty(), "a dispositioned nit fails nothing");
+
+        let undecided = note(
+            "nits:\n  - finding: f1\n  - finding: f2\n    waived: \" \"\n  \
+             - finding: f3\n    fixed: \"renamed\"\n    waived: \"left alone\"\n  \
+             - finding: \"\"\n    fixed: \"renamed\"\n",
+        );
+        assert_eq!(ids(&undecided, "code"), ["3·review-nits"; 4]);
+
+        assert!(ids(&undecided, "").is_empty(), "a note nobody demanded refuses nothing");
     }
 
     fn report(failures: Vec<Failure>) -> Report {
