@@ -1072,12 +1072,13 @@ impl Gate<'_> {
         }
         let roster = crate::doc::roster_at(self.repo, &report.tip);
         let cr = self.tip_cr_note(&report.tip);
-        let drop_record = |path: &str| {
-            cr.as_ref()
-                .and_then(|c| c.design.as_ref())
-                .map(DesignCarrier::Section)
-                .and_then(|d| d.dropped_why(path))
-        };
+        // The drop travels with the verdict: a `cr/v3` epic carries it in its
+        // design section, a `cr/v4` one on `design/v1` (DEC-46). Reading only the
+        // review's note here would refuse an epic for a drop it recorded.
+        let design = note(self.repo, "design", &report.tip)
+            .and_then(|raw| serde_yaml::from_str::<DesignNote>(&raw).ok());
+        let source = design_source(cr.as_ref(), design.as_ref());
+        let drop_record = |path: &str| source.carrier.and_then(|d| d.dropped_why(path));
         for path in designed {
             let Some(name) = crate::doc::component_designed(&path) else { continue };
             if roster.contains(&name) {
@@ -1087,10 +1088,11 @@ impl Gate<'_> {
                 report.waived.push(format!("{UNBUILT} {path} dropped: {why}"));
                 continue;
             }
+            let note_name = if source.legacy { source.note } else { "design/v1" };
             report.failures.push(Failure::new(
                 UNBUILT,
                 format!("{path} designs {name}, which no component in the roster carries at the epic tip"),
-                format!("a design outlives its epic nowhere: build {name} in this epic, or record the drop on the epic's cr note - design.dropped: [{{ path: {path}, why: \"<why it went>\" }}]"),
+                format!("a design outlives its epic nowhere: build {name} in this epic, or record the drop on the epic's {note_name} note - dropped: [{{ path: {path}, why: \"<why it went>\" }}]"),
             ));
         }
     }

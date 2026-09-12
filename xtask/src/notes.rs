@@ -163,8 +163,14 @@ pub struct DesignNote {
     pub epic: Option<String>,
     #[serde(default)]
     pub wu: Option<String>,
+    // Absent on a note that carries only a citation or a drop record - the same
+    // reason a `cr/v3` section's verdict is optional: a build's hand-over and an
+    // epic's drop are sections over nothing judged.
+    #[serde(default)]
     pub base: String,
+    #[serde(default)]
     pub design_sha256: String,
+    #[serde(default)]
     pub verdict: String,
     #[serde(default)]
     pub artifacts: Vec<String>,

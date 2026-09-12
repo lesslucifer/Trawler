@@ -2417,3 +2417,38 @@ fn the_handoff_accounting_travels_on_the_design_note() {
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert!(report.green(), "the citation lands on its own note: {}", format_report(&report));
 }
+
+// The other half of the same move: an epic's drop record travels with the verdict
+// too. Reading it off the review note alone would refuse an epic for a drop it did
+// record - so here a `cr/v4` epic with no design section greens on `design/v1`.
+#[test]
+fn an_epic_drop_record_is_read_from_the_design_note() {
+    let repo = epic_over_an_unbuilt_component_design();
+    let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    // An epic tip's notes carry no unit, so both notes are written at that shape.
+    let cr = format!(
+        "schema: cr/v4\n{}base: {base}\nhead: x\ndiff_sha256: {}\nverdict: PASS\ndate: 2026-09-13\n",
+        identity("E9", None),
+        code_sha(&repo, &base, &tip)
+    );
+    repo.note("cr", &tip, &cr);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["components·unbuilt"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("design/v1"), "the fix names the note that carries it");
+
+    repo.note(
+        "design",
+        &tip,
+        &format!(
+            "schema: design/v1\n{}dropped:\n  - path: {COMPONENT_DESIGN}\n    why: \"the epic shipped no pill\"\ndate: 2026-09-13\n",
+            identity("E9", None)
+        ),
+    );
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "the drop is recorded where the verdict lives: {}",
+        format_report(&report)
+    );
+}
