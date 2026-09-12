@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W4
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html"
+    tier: T2
+    action: updated
+    distills: "the preflight's boundary, annotated as narrowed by DEC-45 - the criterion unchanged, the inputs one shorter"
+  - path: "docs/decisions/dec-45-the-review-binds-the-code-it-judged.html"
+    tier: T2
+    action: added
+    distills: "why the review binds the code subset, why an old schema keeps its whole-diff meaning, and why the preflight dropped the doc note"
+  - path: "docs/decisions/dec-46-the-design-verdict-has-its-own-note.html"
+    tier: T2
+    action: added
+    distills: "why the design verdict travels on its own note, and how the older design records are read now"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-45 and DEC-46 in the record"
+  - path: "docs/design-flow.html"
+    tier: T1
+    action: updated
+    distills: "Tier-3's verdict lives on design/v1, and the hand-over cites it there"
+  - path: "docs/work/2026-09-12-simpwf-plan.html"
+    tier: T3
+    action: updated
+    distills: "W4's amended fingerprint row: the design note pins its own paths"
+  - path: "docs/work/2026-09-12-simpwf-w4-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan - archived with the epic"
+  - path: "docs/work/2026-09-12-simpwf-w4-result.html"
+    tier: T3
+    action: added
+    distills: "what the WU delivered, its deviations and its follow-ups"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "the code-only review, the cr/v4 binding, the design/v1 note, and the preflight that stops on test/v2"
