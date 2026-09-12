@@ -224,6 +224,65 @@
         on. Tests: <code>each_review_schema_is_bound_to_what_it_declared</code>,
         <code>a_code_free_diff_binds_no_review</code>, and over a real repo
         <code>a_doc_commit_after_a_cr_v4_pass_still_signs</code> with its two siblings.</div>
+      <p>Reviewing that fix ran two further rounds, which found four more things worth keeping and refuted
+      six. The rounds stopped where the owner's rule puts them: a round whose survivors are all nits ends
+      the loop.</p>
+      <table>
+        <thead><tr><th>Round</th><th>Finding</th><th>Disposition</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2</td>
+            <td><strong>Important — the binding rule was written twice.</strong> The gate's
+            <code>5·diff-binding</code> and the confirm's readiness check each encoded "which hash does this
+            schema bind", with nothing forcing them to move together — a later <code>cr/v5</code> could have
+            left the confirm predicting a verdict the gate no longer gives</td>
+            <td>Fixed in <code>eb96526</code>: <code>gate::reviewed_binding</code> is the one rule both read,
+            and the code-free <code>cr/v4</code> case is the <code>None</code> it returns rather than a second
+            early return</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>Important — the precedence was unpinned.</strong> A tip carrying both a legacy
+            <code>cr/v3</code> section and a <code>design/v1</code> note is reachable (the refs are written
+            independently), and no test said which one wins</td>
+            <td>Fixed in <code>eb96526</code>:
+            <code>a_legacy_section_outranks_a_design_note_on_the_same_tip</code>, which reds if the arm flips</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>Blocker — the design pin was unreachable in the common case.</strong>
+            <code>check_design</code> returned on an empty artifact list before reaching the
+            <code>design_sha256</code> comparison, so the pin was read only when the diff changed a design
+            document. A build against a design it did not touch — rendered files, no artifact — never reached
+            it, and a stale or fabricated pin passed. <code>check_handoff</code> and <code>check_citation</code>
+            bind each citation's own blob, not the note's aggregate hash</td>
+            <td>Fixed in <code>afbe330</code>: the pin is read before the artifact rules rather than under them,
+            which is what DEC-46 already said it covers. A drop-only note over no paths still hashes to nothing
+            and still greens. Test:
+            <code>a_citation_only_design_note_is_still_pinned_to_the_bytes_it_judged</code>, which greens a
+            fabricated pin without the fix</td>
+          </tr>
+          <tr>
+            <td>2–3</td>
+            <td><strong>Nits — three shapes worth collapsing.</strong> The <code>surfaces</code> pair read once
+            per asker, <code>DesignNote</code> carrying a second copy of <code>Design</code>'s six fields, and an
+            intermediate <code>Vec</code> in the undesigned walk</td>
+            <td>All three fixed rather than waived, each behaviour-preserving with the suite green: one read per
+            run, a flattened <code>Design</code> so the two carriers cannot drift into two shapes, and one
+            iterator chain</td>
+          </tr>
+          <tr>
+            <td>2–3</td>
+            <td><strong>Six candidates refuted.</strong> The design-note parse path, the test helpers'
+            re-derivation of <code>code_sha256</code>, the confirm's subprocess count, a comment said to have
+            drifted, and <code>DesignSource</code>'s <code>legacy</code> flag</td>
+            <td>Dropped with evidence: the parse path is fail-closed by design and reported elsewhere in the
+            same run; the test helpers deliberately re-derive rather than assert a function against itself; the
+            confirm's three calls compute three different things on a human-gated path; the comment documents
+            the field it sits above; and a named flag beats a magic-string compare</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <h2 id="distillation">Distillation</h2>
