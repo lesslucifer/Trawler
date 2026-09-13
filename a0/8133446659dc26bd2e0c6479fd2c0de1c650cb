@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: a08133446659dc26bd2e0c6479fd2c0de1c650cb
+base: b4b1cdec2ed485c3e9ef1b6d4927877c0452dc33
+tier: key
+signer: vuluu
+report: docs/work/2026-09-13-simpwf-w6-result.html
+report_sha256: 165d761f038d7200d946c479cb98a247aba7423edf19b4824f60140f71bbd5f4
+date: 2026-09-13
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECrpCWYZgFdNareGvBkVqX8YNjc0kyJD6Kr+2oc1GkXQY9xu2NRQWf4ZP
+  vpOcaBKwYSesi3g5ak94CT76Yhu/8L
+  -----END SSH SIGNATURE-----
