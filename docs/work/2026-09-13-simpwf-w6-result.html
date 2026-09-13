@@ -594,6 +594,20 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
       <p class="caption">Means over 6 and 18 agents on this corpus. Not a forecast for any particular round —
       a reading of the ones that ran.</p>
 
+      <table>
+        <thead><tr><th>Where an agent's wall-clock goes</th><th>Five finders, one dimension each</th>
+        <th>Two merged finders</th></tr></thead>
+        <tbody>
+          <tr><td>Fixed cost, before any file is read</td><td>~107s</td><td><strong>~461s</strong></td></tr>
+          <tr><td>Per tool call</td><td>7.5s</td><td>9.3s</td></tr>
+          <tr><td>Tool calls made (mean)</td><td>14.8</td><td>27.7</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Least squares over each group's agents. The merged finder's penalty is overwhelmingly the
+      <em>fixed</em> term — a finder carrying three rubric rows spends about 354s more than one carrying a single
+      row before it opens a file. Merging costs reasoning time, not reading time, which is why no amount of
+      context packing would have recovered it.</p>
+
       <div class="callout warn" data-c="agents-are-not-tokens">
         <p><strong>Agents are not tokens, and neither is time.</strong> Cutting three of five finders removes 60%
         of the agents and 38% of the tokens, because the work does not vanish with the agent — it moves into the
@@ -633,19 +647,75 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
       </figure>
 
       <div class="callout" data-c="where-the-money-is">
-        <p><strong>Where the money actually is.</strong> One verifier judging a whole round's pool was measured at
-        <strong>103k tokens</strong> (cases H and B, 4 and 6 candidates). The incumbent spawns one agent per
-        candidate — <strong>10.8 per round</strong> at the recorded baseline — and what those cost was not
-        measured here, because nothing in the harness writes it onto the note. No number is invented for that bar.
-        What can be said without one: unless a per-candidate verifier costs under roughly a tenth of the cheapest
-        agent observed anywhere in this session, <strong>the verifier fold saves several times what the finder
-        fold does</strong>.</p>
-        <p>And the verifier fold is not what failed. Zero known-real candidates were refuted; every escape was a
-        finder's. The configuration this run's numbers point at is the one the plan listed as an alternative and
-        expected to reject — <strong>fold the verifiers, keep the five finders</strong> — which is recorded in
-        <a href="#follow-ups">Follow-ups</a> rather than adopted here, because this WU measured a different cut
-        and a shape nobody measured is not a shape to land.</p>
+        <p><strong>The verifier fold buys tokens with time.</strong> Both shapes were measured on the same case
+        and reached the same two verdicts, so this is a cost comparison at equal output:</p>
+        <table>
+          <thead><tr><th>Verifier stage, case H (4 candidates)</th><th>Tokens</th><th>Wall-clock</th></tr></thead>
+          <tbody>
+            <tr><td>One verifier per candidate, in parallel</td><td>4 × ~52k = <strong>209k</strong></td>
+            <td><strong>110s</strong> — the slowest of the four</td></tr>
+            <tr><td>One verifier over the whole pool</td><td><strong>103k</strong></td>
+            <td><strong>508s</strong></td></tr>
+            <tr><td>Folding the verifiers</td><td>−51%</td><td><strong>+362%</strong></td></tr>
+          </tbody>
+        </table>
+        <p>So the alternative the plan expected to reject — <em>fold the verifiers, keep the five finders</em> —
+        is the cheaper shape in tokens and the slower one on the clock, by a factor of 4.6. Which half of that
+        matters is an owner's call about what a round is scarce in, and it is recorded in
+        <a href="#follow-ups">Follow-ups</a> rather than settled here.</p>
       </div>
+
+      <figure class="diagram" data-c="chart-time">
+<svg viewBox="0 0 720 250" style="width:100%;height:auto" role="img" aria-label="Wall-clock of one review round by stage, against the 300 second target">
+<title>Where a review round's five minutes go</title>
+<line x1="214.0" y1="30" x2="214.0" y2="188" stroke="var(--line)" stroke-width="1"/>
+<text x="214.0" y="204" text-anchor="middle" font-size="10" fill="var(--muted)">0s</text>
+<line x1="335.5" y1="30" x2="335.5" y2="188" stroke="var(--line)" stroke-width="1"/>
+<text x="335.5" y="204" text-anchor="middle" font-size="10" fill="var(--muted)">400s</text>
+<line x1="457.0" y1="30" x2="457.0" y2="188" stroke="var(--line)" stroke-width="1"/>
+<text x="457.0" y="204" text-anchor="middle" font-size="10" fill="var(--muted)">800s</text>
+<line x1="578.5" y1="30" x2="578.5" y2="188" stroke="var(--line)" stroke-width="1"/>
+<text x="578.5" y="204" text-anchor="middle" font-size="10" fill="var(--muted)">1200s</text>
+<line x1="700.0" y1="30" x2="700.0" y2="188" stroke="var(--line)" stroke-width="1"/>
+<text x="700.0" y="204" text-anchor="middle" font-size="10" fill="var(--muted)">1600s</text>
+<text x="0" y="16" font-size="11.5" font-weight="700" fill="var(--ink)">one review round, end to end <tspan fill="var(--muted)" font-weight="400">— gate 0, then finders, then verifiers</tspan></text>
+<text x="202" y="44" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--ink)">today — five finders</text>
+<text x="202" y="58" text-anchor="end" font-size="10" fill="var(--muted)">per-candidate verifiers</text>
+<rect x="214.0" y="30" width="18.2" height="34" fill="var(--muted)" fill-opacity="0.55"/>
+<rect x="232.2" y="30" width="66.5" height="34" fill="var(--accent)" fill-opacity="0.9"/>
+<text x="265.5" y="45" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--paper)">219s</text>
+<text x="265.5" y="57" text-anchor="middle" font-size="9" fill="var(--paper)" fill-opacity="0.85">finders</text>
+<rect x="298.7" y="30" width="31.9" height="34" fill="var(--ok)" fill-opacity="0.85"/>
+<line x1="330.6" y1="47.0" x2="385.0" y2="47.0" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+<line x1="385.0" y1="36" x2="385.0" y2="58" stroke="var(--muted)" stroke-width="1.5"/>
+<text x="393.0" y="52" font-size="11" font-weight="700" fill="var(--ink)">384s · 563s worst</text>
+<text x="202" y="108" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--ink)">W6's cut — two merged</text>
+<text x="202" y="122" text-anchor="end" font-size="10" fill="var(--muted)">one batched verifier</text>
+<rect x="214.0" y="94" width="18.2" height="34" fill="var(--muted)" fill-opacity="0.55"/>
+<rect x="232.2" y="94" width="218.7" height="34" fill="var(--warn)" fill-opacity="0.85"/>
+<text x="341.6" y="109" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--paper)">720s</text>
+<text x="341.6" y="121" text-anchor="middle" font-size="9" fill="var(--paper)" fill-opacity="0.85">finders</text>
+<rect x="450.9" y="94" width="154.3" height="34" fill="var(--warn)" fill-opacity="0.5"/>
+<text x="528.1" y="109" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--paper)">508s</text>
+<text x="528.1" y="121" text-anchor="middle" font-size="9" fill="var(--paper)" fill-opacity="0.85">verify</text>
+<line x1="605.2" y1="111.0" x2="690.9" y2="111.0" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+<line x1="690.9" y1="100" x2="690.9" y2="122" stroke="var(--muted)" stroke-width="1.5"/>
+<text x="698.9" y="116" font-size="11" font-weight="700" fill="var(--ink)">1288s · 1570s worst</text>
+<text x="202" y="162" text-anchor="end" font-size="11.5" font-weight="600" fill="var(--ink)">the shape the numbers point at</text>
+<text x="202" y="176" text-anchor="end" font-size="10" fill="var(--muted)">packed context · gate 0 concurrent</text>
+<rect x="214.0" y="148" width="44.0" height="34" fill="var(--accent)" fill-opacity="0.9"/>
+<text x="236.0" y="163" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--paper)">145s</text>
+<text x="236.0" y="175" text-anchor="middle" font-size="9" fill="var(--paper)" fill-opacity="0.85">finders</text>
+<rect x="258.0" y="148" width="33.4" height="34" fill="var(--ok)" fill-opacity="0.85"/>
+<text x="299.5" y="170" font-size="11" font-weight="700" fill="var(--ink)">255s</text>
+<line x1="305.1" y1="24" x2="305.1" y2="192" stroke="var(--ok)" stroke-width="2" stroke-dasharray="6 3"/>
+<text x="311.1" y="220" font-size="11" font-weight="700" fill="var(--ok)">300s target</text>
+<text x="0" y="238" font-size="10.5" fill="var(--muted)">Segments are measured means over this session's agents; the marker is the slowest agent observed in that stage. Stages run in sequence, agents within a stage in parallel.</text>
+</svg>
+        <figcaption class="caption">Hình 7 — the round's three stages in sequence, against a five-minute
+        target. Every measured segment of W6's cut moves the wrong way; the third bar is where the same numbers
+        say the time can be found, and is a hypothesis this WU did not test.</figcaption>
+      </figure>
     </div>
 
     <h2 id="deviations">Deviations</h2>
@@ -759,11 +829,20 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
           the incumbent fails it too, so it discriminates nothing. A rate over a corpus, compared between arms
           with both arms actually run, is the shape that would. This needs an owner's call, not a
           WU's</td></tr>
-          <tr><td><strong>Fold the verifiers, keep the five finders</strong></td><td>The measurement points at
-          it: the verifier stage is the larger half of the bill, one batched verifier was measured at 103k tokens
-          against ~10.8 agents, and no known-real candidate was refuted in either case whose verifier completed.
-          It is not landed here because this WU measured a different cut, and a shape nobody measured is not a
-          shape to land. It needs its own A/B over the verifier stage alone</td></tr>
+          <tr><td><strong>Fold the verifiers, keep the five finders</strong> — if tokens are the scarce
+          thing</td><td>Measured at equal output on case H: half the tokens, 4.6× the wall-clock. No known-real
+          candidate was refuted in either case whose verifier completed, so the fold costs no recall that this run
+          can see. It needs its own A/B over the verifier stage alone</td></tr>
+          <tr><td><strong>A round inside five minutes</strong> — if the clock is the scarce thing</td><td>The
+          opposite programme, and the one <a href="#cost">§ what it would have saved</a> points at: never merge
+          finders (+354s fixed each), never batch verifiers (+398s), pack the diff and the changed files into the
+          finder prompt so the 7.5s-per-tool-call term collapses, run gate 0 concurrently with the finder stage,
+          and shard a large diff so the slowest agent's read set is bounded. Measured means put that at ~255s;
+          the tail is what would decide it, and nothing here has tested it</td></tr>
+          <tr><td>Carry <strong>elapsed seconds per stage</strong> on the note, beside the agent counts</td><td>The
+          orchestrator knows when it spawned each stage and when the last result came back, so unlike tokens this
+          is a reading the harness can actually write. A wall-clock target needs it; <code>fleet:</code> as landed
+          counts agents only</td></tr>
           <tr><td>Have the harness write per-agent tokens onto the note</td><td>The plan ruled a token ledger a
           larger build than the cut, and it was right — but <a href="#cost">§ what it would have saved</a> only
           exists because this session happened to see 26 agents' usage. The next cut should not depend on
