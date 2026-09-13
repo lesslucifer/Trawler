@@ -833,13 +833,15 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
           thing</td><td>Measured at equal output on case H: half the tokens, 4.6× the wall-clock. No known-real
           candidate was refuted in either case whose verifier completed, so the fold costs no recall that this run
           can see. It needs its own A/B over the verifier stage alone</td></tr>
-          <tr><td><strong>A round inside five minutes</strong> — if the clock is the scarce thing</td><td>The
+          <tr><td><strong>A round inside five minutes</strong> — <a href="2026-09-12-simpwf-plan.html#working-units">registered
+          as E-SIMPWF.W8</a> on the owner's direction, 2026-09-13</td><td>The
           opposite programme, and the one <a href="#cost">§ what it would have saved</a> points at: never merge
           finders (+354s fixed each), never batch verifiers (+398s), pack the diff and the changed files into the
           finder prompt so the 7.5s-per-tool-call term collapses, run gate 0 concurrently with the finder stage,
           and shard a large diff so the slowest agent's read set is bounded. Measured means put that at ~255s;
           the tail is what would decide it, and nothing here has tested it</td></tr>
-          <tr><td>Carry <strong>elapsed seconds per stage</strong> on the note, beside the agent counts</td><td>The
+          <tr><td>Carry <strong>elapsed seconds per stage</strong> on the note, beside the agent counts — folded into
+          W8, which cannot be judged without it</td><td>The
           orchestrator knows when it spawned each stage and when the last result came back, so unlike tokens this
           is a reading the harness can actually write. A wall-clock target needs it; <code>fleet:</code> as landed
           counts agents only</td></tr>

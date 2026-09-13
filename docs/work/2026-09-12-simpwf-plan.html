@@ -239,6 +239,22 @@ flowchart TD
           it.</td>
           <td data-item="wu-deps">W1, W4 — the measurement decides it and the code-only scope is its precondition.</td>
         </tr>
+        <tr data-wu="E-SIMPWF.W8">
+          <td>A round inside five minutes <em>(owner requirement — 2026-09-13)</em></td>
+          <td data-item="wu-summary">The review flow completes end to end inside <strong>300s</strong>: finders are never
+          merged, verifiers are never batched, the diff and the full text of the files it changes are packed into the finder
+          prompt so the per-tool-call term collapses, Gate 0 runs concurrently with the finder stage, and a large diff is
+          sharded so the slowest agent's read set is bounded. The note carries elapsed seconds per stage, so the target has a
+          reading to hold it against.</td>
+          <td data-item="wu-maps-to">The fourth cost, and the first the epic measures on the clock rather than in agents: a
+          round's wall-clock, which W6 measured at 384s typical and 563s at its worst against a 300s target.</td>
+          <td data-item="wu-expected">A round over the W6 corpus finishes inside 300s <em>at its tail, not only at its
+          mean</em>, with no known-real finding lost against the same A/B, and <code>cr/v5</code>'s <code>fleet:</code> block
+          carries per-stage elapsed beside the agent counts. If the tail cannot be brought inside the target without losing a
+          finding, this WU is measured and rejected as W6 was.</td>
+          <td data-item="wu-deps">W1, W6 — the tally is the reading this extends, and W6's per-agent numbers are what make the
+          levers choosable rather than guessable.</td>
+        </tr>
       </tbody>
     </table>
     <p data-c="wu-gap"><strong>W4 was a gap, and the owner filled it — plan amendment, 2026-09-12.</strong> The single-unit
@@ -247,6 +263,19 @@ flowchart TD
     was recorded — the non-goals table above — and nothing here revives it. Two landed records, W2's and W3's result reports,
     name the code-only unit as W6 in their follow-up tables; they are signed at the tip they closed, so they are read through
     this amendment rather than rewritten.</p>
+
+    <div class="callout warn" data-c="wu-w8-amendment">
+      <p><strong>W8 added — plan amendment, 2026-09-13, on the owner's direction.</strong> W6 was measured and
+      rejected, and its measurement opened a cost this epic had not named. The epic's arithmetic has been in
+      <em>agents</em> throughout; W6's own agents reported tokens and wall-clock, and the two disagree sharply.
+      Folding five finders into two removed 60% of the agents but only 38% of the tokens, and made the round
+      <em>2.5× slower</em> — a merged finder spends ~461s before it opens a file against a single-dimension
+      finder's ~107s. Folding the verifiers halves tokens and multiplies wall-clock by 4.6. The owner's ruling is
+      that the clock, not the token, is the scarce thing: a round must finish inside five minutes. That is a
+      different requirement from every WU above it, so it takes its own unit, its own plan doc and its own A/B —
+      and it runs in the opposite direction to W6's cut, which is the clearest thing W6 bought.
+      Numbers: <a href="2026-09-13-simpwf-w6-result.html#cost">W6 result, § what it would have saved</a>.</p>
+    </div>
 
     <div class="callout warn" data-c="wu-review-evidence">
       <p><strong>How this epic's Working Units are reviewed — owner's ruling, 2026-09-12.</strong> E-SIMPWF
