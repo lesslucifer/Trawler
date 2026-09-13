@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa65f149f34851f0dfacf67" data-artifact="wu-result">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF.W6 result (the fleet cut, measured and rejected)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF.W6 result — the cut was measured, and the measurement refused it</h1>
+      <p>Two finders and one batched verifier were built, run over a nine-case corpus, and dropped: eight of
+      twenty-one known-real findings were never raised. The instrument the WU built to judge the cut —
+      <code>cr/v5</code>'s <code>fleet:</code> block and <code>cargo xtask tally --fleet</code> — landed anyway,
+      because it is what the next cut will be chosen from.</p>
+      <div class="meta">WU result · 2026-09-13 · Trawler · T3 (<code>docs/work/</code>) ·
+      <code>wu/simpwf/fleet-weight</code> → <code>epic/simpwf</code> ·
+      plan: <a href="2026-09-13-simpwf-w6-plan.html">W6 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Measured and rejected, exactly as the plan's stopping rule specifies.</strong> The plan made
+      adoption conditional on a single bar — <em>every known-real finding in the corpus is raised and verified by
+      the new fleet</em> — and named the consequence of missing it: the shape reverts, the instrument stays, and
+      the finding that killed it is named. Eight findings escaped. The cut is dropped.</p>
+
+      <div class="callout warn" data-c="the-killer">
+        <p><strong>The finding that killed it.</strong>
+        <span class="badge id">L2</span> <code>ui/src/setup.ts</code> ·
+        <code>trustStatus</code>/<code>proxyStatus</code> — <em>"the stale action error is returned ahead of the
+        authoritative positive, so an already-trusted CA shows <q>Install failed</q> after one failed click."</em>
+        It is named as the killer rather than the other seven because it is the one escape the control arm proves
+        is <strong>caused by the cut</strong>: re-run on the same diff, the incumbent's dedicated
+        <code>correctness</code> finder raises it as a <strong>blocker</strong>; the merged
+        <code>behaviour</code> finder raised eight other candidates on that diff and not this one.</p>
+      </div>
+
+      <table>
+        <thead><tr><th>What landed</th><th>What reverted</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>notes.rs</code> — <code>cr/v5</code> joins <code>CR_SCHEMAS</code>; a
+            <code>Fleet</code>/<code>FinderCount</code> pair, every field defaulting, the block itself
+            <code>Option</code></td>
+            <td><code>rubric.md</code> — back to five dimension rows, one finder each. Byte-identical to the
+            merge base</td>
+          </tr>
+          <tr>
+            <td><code>gate.rs</code> — the three <code>"cr/v4"</code> equality points become one
+            <code>binds_code</code> predicate over the closed whole-diff pair, so the next bump needs no gate
+            edit</td>
+            <td><code>SKILL.md</code> §3 — five isolated finders, one per dimension, spawned in a single
+            message</td>
+          </tr>
+          <tr>
+            <td><code>tally.rs</code> — <code>cargo xtask tally --fleet</code> reads each round's bill off its
+            note over the ranges the tally already knows</td>
+            <td><code>SKILL.md</code> §4 — one fresh verifier per candidate; no pool, no dedup, no batch cap</td>
+          </tr>
+          <tr>
+            <td><code>SKILL.md</code> §6 — the note is <code>cr/v5</code> and carries a <code>fleet:</code>
+            block naming the five finders</td>
+            <td><code>DEC-48</code> — not minted. The plan made it conditional on adoption; this report carries
+            the number instead</td>
+          </tr>
+          <tr>
+            <td><code>workflow.html</code> — <code>cr/v4</code> → <code>cr/v5</code> throughout, and the
+            §&nbsp;Evidence row gains the bill</td>
+            <td><code>workflow.html</code> line 409's fleet sentence — still five finders and one verifier per
+            finding, because that is still what the skill does</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="caption">The instrument is generic over finder names — <code>by_finder</code> is a map, not five
+      fields — so it measures the incumbent fleet today and would have measured the rejected one unchanged.</p>
+    </div>
+
+    <h2 id="ab">The A/B — the bar, and where it broke</h2>
+    <div data-c="ab-method">
+      <div class="diagram" data-c="ab-flow">
+        <pre class="mermaid">
+flowchart LR
+  C["9 cases · 21 known-realfindings · each replayedat its own base"] --> N["new fleet:behaviour + shape"]
+  N --> R{"every known-realfinding raised?"}
+  R -- "13 of 21" --> D["bar missed"]
+  D --> X["control arm:the incumbent's ownsingle-dimension finder,re-run on 5 escapes"]
+  X --> V["1 recovered→ attributable to the cut4 missed by both arms→ the bar itself does not hold"]
+        </pre>
+        <div class="caption">Hình 1 — the run, and the control arm the escape pattern made necessary.</div>
+      </div>
+
+      <table>
+        <thead><tr><th>Reading</th><th>Value</th><th>What it says</th></tr></thead>
+        <tbody>
+          <tr><td>Cases</td><td>9</td><td>8 FAIL rounds with their corrective commit as ground truth, plus one
+          PASS note carrying four fleet-verified findings waived with reasons</td></tr>
+          <tr><td>Known-real findings</td><td>21</td><td>Pre-registered before the run, with dimension, severity,
+          location and claim — all five original dimensions represented</td></tr>
+          <tr><td>Raised by the new fleet</td><td><strong>13</strong></td><td>61.9%</td></tr>
+          <tr><td>Escaped</td><td><strong>8</strong></td><td>The bar is <em>every</em>. One escape drops the
+          cut</td></tr>
+          <tr><td>Candidates pooled</td><td>61 across 9 cases</td><td>Zero exact duplicates between the two
+          finders — the overlap the cut was meant to harvest was not there to harvest</td></tr>
+          <tr><td>Verifier stage</td><td>2 of 9 cases completed</td><td>Stopped after the finder stage had already
+          failed the bar; see <a href="#deviations">Deviations</a></td></tr>
+          <tr><td>Known-real findings refuted by the verifier</td><td>0</td><td>In both completed cases every
+          known-real candidate raised was confirmed <code>real</code>. No escape is the verifier's</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">The whole loss sits at the finder stage. That is what makes the diagnosis unambiguous and
+      the second permitted lever — lowering the batch cap — inapplicable.</p>
+    </div>
+
+    <h2 id="escapes">The eight escapes</h2>
+    <div data-c="escapes">
+      <table>
+        <thead><tr><th>Id</th><th>Case</th><th>Dimension → finder</th><th>What escaped</th><th>Incumbent
+        re-run</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge id">L2</span></td><td>L · ui setup</td><td>correctness →
+          <code>behaviour</code></td><td>Stale action error returned ahead of the authoritative positive, so a
+          trusted CA reads <q>Install failed</q></td><td><span class="badge auto">raised · blocker</span></td></tr>
+          <tr><td><span class="badge id">A1</span></td><td>A · CA load</td><td>correctness →
+          <code>behaviour</code></td><td><code>load_or_create</code> regenerates over a partial CA state,
+          invalidating every client that trusted the old certificate</td><td><span class="badge approval">also missed</span></td></tr>
+          <tr><td><span class="badge id">F1</span></td><td>F · design flow</td><td>correctness →
+          <code>behaviour</code></td><td><code>is_chromatic</code> strips an <em>optional</em> <code>#</code>, so
+          <code>font-[900]</code> parses as a colour</td><td><span class="badge approval">also missed</span></td></tr>
+          <tr><td><span class="badge id">O1</span></td><td>O · r-finish</td><td>altitude →
+          <code>shape</code></td><td><code>onDown</code> overwrites an application-stated failure with a transport
+          retry that cannot help</td><td><span class="badge approval">also missed</span></td></tr>
+          <tr><td><span class="badge id">D3</span></td><td>D · doc checks</td><td>simplification →
+          <code>shape</code></td><td><code>unanswered</code> collects a <code>Vec&lt;&amp;str&gt;</code> where a
+          count is all that is read</td><td><span class="badge approval">also missed</span></td></tr>
+          <tr><td><span class="badge id">D4</span></td><td>D · doc checks</td><td>simplification →
+          <code>shape</code></td><td><code>Verdict::Draft</code> is returned for an archived run, which then
+          prints <q>draft … checks silent until ready</q></td><td><span class="badge approval">also
+          missed</span></td></tr>
+          <tr><td><span class="badge id">D1</span></td><td>D · doc checks</td><td>correctness →
+          <code>behaviour</code></td><td><em>Partial.</em> Candidate D3 names the same location and the same fact
+          — <code>CAPABILITY_STATES</code> admits a fourth state — but concludes the failure message should list
+          it, where the real finding is that the state set was widened to admit the run's own row. A fixer acting
+          on the candidate edits the message and leaves the defect</td><td>not probed</td></tr>
+          <tr><td><span class="badge id">O3</span></td><td>O · r-finish</td><td>simplification →
+          <code>shape</code></td><td>A test title still claims the opposite of what the code now
+          does</td><td>not probed</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Both halves of the cut leaked: four escapes in <code>behaviour</code>'s territory, four
+      in <code>shape</code>'s.</p>
+    </div>
+
+    <h2 id="control">The control arm — is the escape the cut's fault?</h2>
+    <div data-c="control">
+      <p>An escape only indicts the cut if the shape it replaced would have caught it. Five single-dimension
+      finders from the <em>incumbent</em> rubric were re-run, each on the case and dimension of one escape, under
+      the identical prompt the five-finder skill writes.</p>
+      <table>
+        <thead><tr><th>Probe</th><th>Target</th><th>Result</th><th>Reading</th></tr></thead>
+        <tbody>
+          <tr><td><code>correctness</code> on L</td><td>L2</td><td><strong>raised, severity
+          blocker</strong></td><td>A real finding the incumbent gets and the cut loses. Attributable</td></tr>
+          <tr><td><code>correctness</code> on A</td><td>A1</td><td>missed — raised two other
+          <code>load_or_create</code> claims (a corrupt-file panic, a world-readable key), neither the
+          partial-state overwrite</td><td>The incumbent misses it too</td></tr>
+          <tr><td><code>correctness</code> on F</td><td>F1</td><td>missed — raised two other
+          <code>is_chromatic</code> claims, neither the optional-<code>#</code> one</td><td>The incumbent misses
+          it too</td></tr>
+          <tr><td><code>simplification</code> on D</td><td>D3, D4</td><td>missed both — raised D2, which the cut
+          also raised</td><td>The incumbent misses them too</td></tr>
+          <tr><td><code>altitude</code> on O</td><td>O1</td><td>missed — raised two other layering
+          claims</td><td>The incumbent misses it too</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout" data-c="two-findings">
+        <p><strong>Two findings, not one.</strong></p>
+        <p><strong>1 · The cut loses real findings.</strong> L2 is raised by a dedicated finder and missed by the
+        merged one, on the same diff, from the same rubric text. One attributable loss is all the stopping rule
+        needs, and a blocker is the worst kind to lose.</p>
+        <p><strong>2 · The bar the plan wrote cannot be met by the incumbent either.</strong> Four of the five probes
+        show the incumbent fleet failing the same bar on a fresh run. A round's findings are a <em>sample</em>, not
+        a fixed set the rubric determines — so <q>every known-real finding is raised</q> is a bar no configuration
+        of this review passes, including the one in production. The A/B was built to choose between two shapes and
+        can only reject; it cannot endorse. That is a defect in the plan's method, found by running it.</p>
+      </div>
+    </div>
+
+    <h2 id="recall">What the cut actually changed</h2>
+    <div data-c="recall">
+      <p>The comparable number is not <em>which</em> findings came back but <em>how many</em>. Each case's
+      historical round ran five finders over the same diff; its note records what it found.</p>
+      <table>
+        <thead><tr><th>Case</th><th>5 finders (recorded)</th><th>2 finders (this run)</th><th>behaviour /
+        shape</th></tr></thead>
+        <tbody>
+          <tr><td>A · e0 ca</td><td>14</td><td>9</td><td>4 / 5</td></tr>
+          <tr><td>H · export</td><td>3</td><td>4</td><td>2 / 2</td></tr>
+          <tr><td>B · gate fast</td><td>7</td><td>6</td><td>3 / 3</td></tr>
+          <tr><td>D · doc checks</td><td>21</td><td>9</td><td>4 / 5</td></tr>
+          <tr><td>F · design flow</td><td>10</td><td>11</td><td>4 / 7</td></tr>
+          <tr><td>G · gate truth</td><td>19</td><td>3</td><td>1 / 2</td></tr>
+          <tr><td>L · ui setup</td><td>10</td><td>8</td><td>3 / 5</td></tr>
+          <tr><td>P · doc flow</td><td>12</td><td>7</td><td>2 / 5</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>96</strong></td><td><strong>57</strong></td><td>59% of
+          the incumbent's yield</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">O is omitted — no per-round <code>cr</code> note survives it, so there is nothing to
+      compare against. The shortfall concentrates on the largest diffs (D 21→9, G 19→3, A 14→9) and vanishes on
+      the smallest (H 3→4, F 10→11), which is the signature of a per-context attention budget rather than of a
+      rubric that stopped asking a question.</p>
+
+      <div class="callout warn" data-c="the-mechanism">
+        <p><strong>The mechanism the plan did not price.</strong> The plan's risk table named <q>overlap as
+        recall</q> — two sweeps overlap less than five — and it was right about the direction. But the pooled
+        candidates show <strong>zero exact duplicates between the two finders across all nine cases</strong>: the
+        overlap the cut expected to harvest as a saving did not exist to harvest. What the five finders were
+        buying was not redundant coverage of the same claims; it was <em>five separate attention budgets</em>. A
+        finder returns its best <em>n</em> candidates, and <em>n</em> is a property of the context, not of how
+        many rubric rows it was handed. Folding five rows into two contexts halved the round's output and left the
+        rubric text untouched — which is exactly why nothing in the rubric diff predicted it.</p>
+      </div>
+    </div>
+
+    <h2 id="diagnosis">The diagnosis, and the re-measurement not taken</h2>
+    <div data-c="diagnosis">
+      <p>The plan permits one re-measurement against a diagnosis, and names the two causes an escape can have with
+      the answer each gets:</p>
+      <table>
+        <thead><tr><th>Cause the plan named</th><th>Its prescribed answer</th><th>Does it fit?</th></tr></thead>
+        <tbody>
+          <tr><td>A verifier refuted a real claim — the batch is too large</td><td>Lower the cap below 12</td>
+          <td><strong>No.</strong> Zero known-real candidates were refuted. Every loss is at the finder
+          stage</td></tr>
+          <tr><td>A finder never raised the claim — the grouping is wrong</td><td>Three finders, splitting
+          <code>shape</code></td>
+          <td><strong>Fits the symptom, cannot reach the cause.</strong> Splitting <code>shape</code> leaves
+          <code>behaviour</code> untouched, and <code>behaviour</code> is where L2 — the one escape the control
+          arm attributes to the cut — was lost. The prescribed lever cannot recover the killing finding</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>The re-measurement was not taken, and the reason is recorded here rather than left
+      implicit.</strong> Its only reachable outcome was the one already in hand: <code>shape</code> splits, L2
+      stays lost, the cut drops. Against that, the control arm answered the question the re-measurement was for —
+      <em>is the escape the cut's fault?</em> — at five agents instead of a second full corpus run. The owner can
+      order the three-finder run on this evidence; nothing here forecloses it, and
+      <code>--fleet</code> is now in the tree to measure it.</p>
+      <p>The deeper reading is that <strong>three finders would be the same bet at a smaller stake</strong>. If
+      the budget is per context, recall tracks the finder count, and the epic's question stops being <q>how few
+      finders</q> and becomes <q>what does the fifth finder cost, and what does it return</q> — which is the
+      question <code>tally --fleet</code> was built to answer and now can.</p>
+    </div>
+
+    <h2 id="instrument">The instrument that stayed</h2>
+    <div data-c="instrument">
+      <p>The <code>fleet:</code> block costs the gate nothing — no check reads it, a missing block is a reading not
+      taken rather than a fault — so the plan kept it on the rejection path. It is the epic's promise that the next
+      cuts are chosen from counts, and after this WU there is nothing else in the tree that can count a round.</p>
+      <pre><code>schema: cr/v5
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+fleet:                          # what this round spent
+  finders: 5
+  verifiers: &lt;n&gt;                # verifier agents spawned - one per candidate
+  by_finder:
+    correctness:    { found: &lt;n&gt;, verified: &lt;n&gt; }
+    reuse:          { found: &lt;n&gt;, verified: &lt;n&gt; }
+    simplification: { found: &lt;n&gt;, verified: &lt;n&gt; }
+    efficiency:     { found: &lt;n&gt;, verified: &lt;n&gt; }
+    altitude:       { found: &lt;n&gt;, verified: &lt;n&gt; }
+findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></pre>
+      <table>
+        <thead><tr><th>Piece</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>binds_code(schema)</code></td><td>Replaces three <code>== "cr/v4"</code> equalities with
+          one predicate over the closed whole-diff pair (<code>cr/v2</code>, <code>cr/v3</code>). Every future
+          bump is code-bound without the gate learning its name — the reason this WU touched
+          <code>gate.rs</code> at all</td></tr>
+          <tr><td><code>Option&lt;Fleet&gt;</code></td><td>Absent block ≠ zero agents. The distinction is
+          load-bearing in the reading and is asserted for every schema in
+          <code>CR_SCHEMAS</code></td></tr>
+          <tr><td><code>tally --fleet</code></td><td>Walks the ranges the tally already knows, reads each round's
+          bill, prints measured/unmeasured, agents per measured round, and a per-finder rounds / found / verified /
+          yield table</td></tr>
+          <tr><td>No new gate check</td><td>The tally is local measurement, never evidence a gate trusts
+          (<a href="2026-09-12-simpwf-w1-result.html">W1's ruling</a>)</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">The reading is generic over finder names, so it measures the five-finder fleet that stayed
+      and would have measured the two-finder fleet unchanged.</p>
+    </div>
+
+    <h2 id="baseline">What a round costs, for the record</h2>
+    <div data-c="baseline">
+      <p>Read off every <code>cr</code> note in this repository on 2026-09-13 — the number the next cut is chosen
+      against, and the number <code>--fleet</code> exists to keep current without this hand count.</p>
+      <table>
+        <thead><tr><th>Reading</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Rounds recorded</td><td>195 notes, <code>cr/v1</code>–<code>cr/v4</code></td></tr>
+          <tr><td>Candidates raised</td><td>2098 — 10.8 per round</td></tr>
+          <tr><td>Candidates verified</td><td>621 — 3.2 per round; 70% of every candidate raised is
+          refuted</td></tr>
+          <tr><td>Agents per round</td><td>5 finders + ~10.8 verifiers ≈ 15.8 — verifiers are two-thirds of the
+          fleet</td></tr>
+          <tr><td>Rounds that verified nothing</td><td>62 of 195 — 32%</td></tr>
+          <tr><td>Heaviest round</td><td>35 verified</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Unchanged by this WU: the fleet is still 5 + one verifier per candidate. The cut that
+      would have made it 3 is rejected; the reading that would let a later cut be chosen honestly is in the
+      tree.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <thead><tr><th>Deviation</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>The corpus is <strong>9 cases</strong>, not the plan's 8</td><td>A ninth (P, a PASS note
+          carrying four findings waived with reasons) was available and covers reuse and efficiency, which the
+          eight FAIL cases under-represented. More evidence against the bar, not less</td></tr>
+          <tr><td>The verifier stage ran on <strong>2 of 9 cases</strong></td><td>The remaining seven verifier
+          agents were stopped. The verdict does not turn on them: verification can only remove candidates, never
+          add one, so the eight findings that escaped the finder stage escape regardless. The two that completed
+          confirmed every known-real candidate they received as <code>real</code>, which is what rules the
+          verifier out as a cause</td></tr>
+          <tr><td>The five-finder comparison arm became a <strong>5-probe control</strong></td><td>A full second
+          corpus run was the expensive way to answer one question. Five single-dimension probes, aimed at the
+          escapes, answered it — and answered it more sharply, by isolating dimension from diff</td></tr>
+          <tr><td>The note carries no <code>batches:</code> field</td><td>It appeared in the plan's sample YAML but
+          not in its requirement sentence, and it is meaningless once the verifier is per-candidate again. The
+          count it would carry is <code>verifiers</code></td></tr>
+          <tr><td><code>workflow.html</code> line 409 was not edited</td><td>The plan's edit list assumed
+          adoption. The sentence describes five finders and one verifier per finding, which is what the skill
+          still does. Only the contract name moved</td></tr>
+          <tr><td>No <code>DEC-48</code></td><td>The plan minted it <q>only if the cut is adopted</q>. The
+          alternatives it would have recorded as rejected are recorded here instead</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn" data-c="pre-existing-red">
+        <p><strong>Pre-existing red, stated rather than claimed green.</strong>
+        <code>xtask/tests/e2e_design_flow.rs</code> — behind the <code>design-e2e</code> feature, not in the
+        default suite — fails 2 of 4 with <em>"Your local changes would be overwritten by merge:
+        target/.gate-tally"</em>. The repository's post-checkout hook symlinks every worktree's
+        <code>target/</code> to one shared directory, which leaks into the temporary repos those tests build. The
+        same two tests fail identically at <code>e8e7ae8</code>, this branch's untouched merge base, verified in a
+        separate worktree with its own <code>CARGO_TARGET_DIR</code>. Not introduced here, and not fixed
+        here.</p>
+      </div>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>Layer</th><th>Subject</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>notes.rs</code> — <code>cr/v5</code> parses with a bill, without one, and
+          with a malformed one; the whole-diff pair is closed so every later contract binds code</td>
+          <td><span class="badge auto">green</span></td></tr>
+          <tr><td>unit</td><td><code>gate.rs</code> — <code>design_source</code>, <code>reviewed_binding</code>
+          and <code>5·diff-binding</code>'s message all read <code>binds_code</code>; <code>cr/v5</code> added to
+          the schema-binding table</td><td><span class="badge auto">green</span></td></tr>
+          <tr><td>unit</td><td><code>tally.rs</code> — per-finder aggregation, agents per measured round, a
+          block-less round counted unmeasured not zero, a finder that found nothing has no yield to state</td>
+          <td><span class="badge auto">green</span></td></tr>
+          <tr><td>integration</td><td><code>dod_gate.rs</code> — a <code>cr/v5</code> PASS greens a WU merge; a
+          stale hash reds <code>5·diff-binding</code> with the code-path message; an undecided nit still reds
+          <code>3·review-nits</code>; an epic walk over seams carrying <code>cr/v2</code>, <code>v3</code>,
+          <code>v4</code> and <code>v5</code> greens, each at the binding it declared</td>
+          <td><span class="badge auto">green</span></td></tr>
+          <tr><td>integration</td><td><code>tally.rs</code> — <code>--fleet</code> over real gate runs bills the
+          round that counted itself and names the rest</td><td><span class="badge auto">green</span></td></tr>
+          <tr><td>suite</td><td><code>cargo test</code> (workspace) and <code>cargo clippy -p xtask --all-targets
+          -- -D warnings</code></td><td><span class="badge auto">green</span></td></tr>
+          <tr><td>e2e</td><td>Owned by the epic's table; no new e2e. <code>design-e2e</code>'s 2 failures are
+          pre-existing (<a href="#deviations">above</a>)</td><td><span class="badge approval">pre-existing
+          red</span></td></tr>
+          <tr><td>A/B</td><td>Not a test — live agents, neither deterministic nor hermetic, so it never enters the
+          suite. 18 finder agents over 9 cases, 08:04:23Z → 08:23:55Z; 2 verifier agents completed; 5 control
+          probes</td><td><span class="badge approval">by hand, once</span></td></tr>
+        </tbody>
+      </table>
+      <p class="caption">The wall-clock the plan asked to be stated: the finder wave took 19m32s for 18 agents
+      running against a 20-agent concurrency ceiling. No saving is claimed from it — the run was a corpus replay,
+      not a review round.</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <thead><tr><th>Tier</th><th>Doc</th><th>Edit</th></tr></thead>
+        <tbody>
+          <tr><td>infra</td><td><code>.claude/skills/code-review/SKILL.md</code></td><td>§2, §6 and §7 carry
+          <code>cr/v5</code> and the bill. §3 and §4 unchanged from the merge base</td></tr>
+          <tr><td>infra</td><td><code>.claude/skills/code-review/rubric.md</code></td><td>None — reverted to the
+          merge base</td></tr>
+          <tr><td>T1</td><td><a href="../workflow.html">workflow.html</a></td><td><code>cr/v4</code> →
+          <code>cr/v5</code> in 12 places; the §&nbsp;Evidence row states the bill, that no gate check reads it,
+          and that <code>cr/v4</code> notes stay valid at the same binding</td></tr>
+          <tr><td>T2</td><td><code>docs/decisions/</code></td><td>None. DEC-48 was conditional on
+          adoption</td></tr>
+          <tr><td>T2</td><td><code>docs/use-cases/</code></td><td>None — process work, no
+          <code>UC-*</code> contract moved</td></tr>
+          <tr><td>T1</td><td><code>testing-strategy.html</code></td><td>None — the test-note contract was not
+          touched, as the plan expected</td></tr>
+          <tr><td>T0</td><td><code>CLAUDE.md</code></td><td>None, and none as a side effect</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <thead><tr><th>Follow-up</th><th>Why it is not in this WU</th></tr></thead>
+        <tbody>
+          <tr><td>Let <code>--fleet</code> accumulate real rounds, then choose the next cut from what the fifth
+          finder actually returns</td><td>The epic's own method. There is no bill in the tree yet — the first
+          <code>cr/v5</code> note is written by the next review round</td></tr>
+          <tr><td>Replace <q>every known-real finding</q> with a bar a fleet can pass</td><td>The control arm shows
+          the incumbent fails it too, so it discriminates nothing. A rate over a corpus, compared between arms
+          with both arms actually run, is the shape that would. This needs an owner's call, not a
+          WU's</td></tr>
+          <tr><td>The three-finder run, if the owner wants it</td><td>Available on this evidence and unforeclosed;
+          declined here because its prescribed lever cannot reach the escape that killed the cut</td></tr>
+          <tr><td>Stop the shared <code>target/</code> leaking into <code>design-e2e</code>'s temporary
+          repos</td><td>Pre-existing at the merge base, and orthogonal to the fleet</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
