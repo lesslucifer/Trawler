@@ -476,6 +476,178 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
       tree.</p>
     </div>
 
+    <h2 id="cost">What it would have saved — tokens and wall-clock, measured</h2>
+    <div data-c="cost">
+      <p>The plan's arithmetic was in <em>agents</em>: 15.7 → 3, an 81% reduction. Agents are what the
+      <code>fleet:</code> block can honestly carry, and the plan said so — <q>inventing a token ledger is a larger
+      build than this cut</q>. But this run spawned 26 agents whose token and wall-clock cost the harness did
+      report, so for once both halves can be put beside each other. <strong>They do not agree.</strong></p>
+
+      <figure class="diagram" data-c="chart-cost">
+<svg viewBox="0 0 720 268" style="width:100%;height:auto" role="img" aria-label="Token and wall-clock cost of one finder agent, merged against single-dimension">
+<title>What one finder agent costs, by how many rubric rows it carries</title>
+<text x="0" y="14" font-size="12.5" font-weight="700" fill="var(--ink)">tokens one finder agent spends</text>
+<text x="694" y="14" text-anchor="end" font-size="10.5" fill="var(--muted)">one dot = one agent · bar = mean</text>
+<line x1="176.0" y1="24" x2="176.0" y2="92" stroke="var(--line)" stroke-width="1"/>
+<text x="176.0" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">0k</text>
+<line x1="293.7" y1="24" x2="293.7" y2="92" stroke="var(--line)" stroke-width="1"/>
+<text x="293.7" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">50k</text>
+<line x1="411.5" y1="24" x2="411.5" y2="92" stroke="var(--line)" stroke-width="1"/>
+<text x="411.5" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">100k</text>
+<line x1="529.2" y1="24" x2="529.2" y2="92" stroke="var(--line)" stroke-width="1"/>
+<text x="529.2" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">150k</text>
+<line x1="646.9" y1="24" x2="646.9" y2="92" stroke="var(--line)" stroke-width="1"/>
+<text x="646.9" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">200k</text>
+<text x="164" y="48" text-anchor="end" font-size="11.5" fill="var(--ink)">5 finders, one dimension each</text>
+<line x1="176" y1="44" x2="694" y2="44" stroke="var(--line)" stroke-width="1"/>
+<circle cx="382.3" cy="44" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="371.6" cy="44" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="377.3" cy="44" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="452.9" cy="44" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="399.0" cy="44" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="465.7" cy="44" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<line x1="408.1" y1="31" x2="408.1" y2="57" stroke="var(--accent)" stroke-width="2.5"/>
+<text x="408.1" y="27" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--accent)">99k</text>
+<text x="164" y="80" text-anchor="end" font-size="11.5" fill="var(--ink)">2 merged finders</text>
+<line x1="176" y1="76" x2="694" y2="76" stroke="var(--line)" stroke-width="1"/>
+<circle cx="487.5" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="430.3" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="454.3" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="493.1" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="504.9" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="462.5" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="497.7" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="511.3" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="471.1" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="626.4" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="556.6" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="568.0" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="536.1" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="568.5" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="554.0" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="670.7" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="619.8" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="617.6" cy="76" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<line x1="535.0" y1="63" x2="535.0" y2="89" stroke="var(--warn)" stroke-width="2.5"/>
+<text x="535.0" y="59" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--warn)">152k</text>
+<text x="0" y="146" font-size="12.5" font-weight="700" fill="var(--ink)">wall-clock one finder agent takes</text>
+<text x="694" y="146" text-anchor="end" font-size="10.5" fill="var(--muted)">finders run in parallel, so the stage costs the slowest</text>
+<line x1="176.0" y1="156" x2="176.0" y2="224" stroke="var(--line)" stroke-width="1"/>
+<text x="176.0" y="238" text-anchor="middle" font-size="10" fill="var(--muted)">0s</text>
+<line x1="317.3" y1="156" x2="317.3" y2="224" stroke="var(--line)" stroke-width="1"/>
+<text x="317.3" y="238" text-anchor="middle" font-size="10" fill="var(--muted)">300s</text>
+<line x1="458.5" y1="156" x2="458.5" y2="224" stroke="var(--line)" stroke-width="1"/>
+<text x="458.5" y="238" text-anchor="middle" font-size="10" fill="var(--muted)">600s</text>
+<line x1="599.8" y1="156" x2="599.8" y2="224" stroke="var(--line)" stroke-width="1"/>
+<text x="599.8" y="238" text-anchor="middle" font-size="10" fill="var(--muted)">900s</text>
+<text x="164" y="180" text-anchor="end" font-size="11.5" fill="var(--ink)">5 finders, one dimension each</text>
+<line x1="176" y1="176" x2="694" y2="176" stroke="var(--line)" stroke-width="1"/>
+<circle cx="261.7" cy="176" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="240.6" cy="176" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="251.7" cy="176" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="269.7" cy="176" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="286.3" cy="176" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<circle cx="363.7" cy="176" r="5" fill="var(--accent)" fill-opacity="0.45" stroke="var(--accent)" stroke-width="1"/>
+<line x1="278.9" y1="163" x2="278.9" y2="189" stroke="var(--accent)" stroke-width="2.5"/>
+<text x="278.9" y="159" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--accent)">219s</text>
+<text x="164" y="212" text-anchor="end" font-size="11.5" fill="var(--ink)">2 merged finders</text>
+<line x1="176" y1="208" x2="694" y2="208" stroke="var(--line)" stroke-width="1"/>
+<circle cx="393.5" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="412.3" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="432.4" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="443.9" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="440.8" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="468.2" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="480.3" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="476.7" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="532.0" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="520.7" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="507.9" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="528.9" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="557.7" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="606.6" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="555.7" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="648.0" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="633.6" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<circle cx="629.3" cy="208" r="5" fill="var(--warn)" fill-opacity="0.45" stroke="var(--warn)" stroke-width="1"/>
+<line x1="514.9" y1="195" x2="514.9" y2="221" stroke="var(--warn)" stroke-width="2.5"/>
+<text x="514.9" y="191" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--warn)">720s</text>
+</svg>
+        <figcaption class="caption">Hình 5 — 18 merged finders against 6 single-dimension finders, every agent
+        plotted. A finder carrying two or three rubric rows is not a finder carrying one: it costs
+        <strong>1.55×</strong> the tokens and takes <strong>3.3×</strong> the wall-clock.</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Reading</th><th>Five finders, one dimension each</th><th>Two merged finders</th>
+        <th>Change</th></tr></thead>
+        <tbody>
+          <tr><td>Agents spawned</td><td>5</td><td>2</td><td><strong>−60%</strong></td></tr>
+          <tr><td>Tokens per agent (mean)</td><td>98,594</td><td>152,478</td><td>+55%</td></tr>
+          <tr><td><strong>Tokens per round, finder stage</strong></td><td>493k</td><td>305k</td>
+          <td><strong>−38%</strong></td></tr>
+          <tr><td>Wall-clock per agent (mean)</td><td>219s</td><td>720s</td><td>+229%</td></tr>
+          <tr><td><strong>Wall-clock of the stage</strong> (finders run in parallel, so it is the slowest
+          agent)</td><td>~398s</td><td>~1002s</td><td><strong>+152%</strong></td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Means over 6 and 18 agents on this corpus. Not a forecast for any particular round —
+      a reading of the ones that ran.</p>
+
+      <div class="callout warn" data-c="agents-are-not-tokens">
+        <p><strong>Agents are not tokens, and neither is time.</strong> Cutting three of five finders removes 60%
+        of the agents and 38% of the tokens, because the work does not vanish with the agent — it moves into the
+        two that remain, which then read more and think longer. And the stage gets <em>slower</em>: parallel
+        agents cost the slowest one, and the merged finder is the slowest one. The plan named this trade under
+        <q>wall-clock, not agent count</q> and declined to claim a saving it had not measured. Measured, the sign
+        is negative.</p>
+      </div>
+
+      <figure class="diagram" data-c="chart-bill">
+<svg viewBox="0 0 720 244" style="width:100%;height:auto" role="img" aria-label="Token cost of one review round, finder stage and verifier stage">
+<title>One round, by stage: what is measured and what is not</title>
+<defs><pattern id="unmeasured" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="var(--muted)" stroke-width="3" stroke-opacity="0.45"/></pattern></defs>
+<text x="0" y="14" font-size="12.5" font-weight="700" fill="var(--ink)">finder stage</text>
+<text x="220" y="37" text-anchor="end" font-size="11.5" fill="var(--ink)">five single-dimension finders</text>
+<text x="220" y="50" text-anchor="end" font-size="10" fill="var(--muted)">5 agents · measured</text>
+<rect x="232" y="24" width="438.0" height="30" rx="3" fill="var(--accent)" fill-opacity="0.85"/>
+<text x="678.0" y="44" font-size="12" font-weight="700" fill="var(--accent)">493k</text>
+<text x="220" y="87" text-anchor="end" font-size="11.5" fill="var(--ink)">two merged finders</text>
+<text x="220" y="100" text-anchor="end" font-size="10" fill="var(--muted)">2 agents · measured</text>
+<rect x="232" y="74" width="270.9" height="30" rx="3" fill="var(--warn)" fill-opacity="0.85"/>
+<text x="510.9" y="94" font-size="12" font-weight="700" fill="var(--warn)">305k</text>
+<text x="0" y="150" font-size="12.5" font-weight="700" fill="var(--ink)">verifier stage</text>
+<text x="220" y="173" text-anchor="end" font-size="11.5" fill="var(--ink)">one verifier per candidate</text>
+<text x="220" y="186" text-anchor="end" font-size="10" fill="var(--muted)">~10.8 agents</text>
+<rect x="232" y="160" width="462" height="30" rx="3" fill="url(#unmeasured)" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="463" y="180" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--muted)">not measured - no harness writes it</text>
+<text x="220" y="213" text-anchor="end" font-size="11.5" fill="var(--ink)">one verifier over the whole pool</text>
+<text x="220" y="226" text-anchor="end" font-size="10" fill="var(--muted)">1 agent · measured</text>
+<rect x="232" y="200" width="91.4" height="30" rx="3" fill="var(--warn)" fill-opacity="0.85"/>
+<text x="331.4" y="220" font-size="12" font-weight="700" fill="var(--warn)">103k</text>
+<line x1="232" y1="20" x2="232" y2="236" stroke="var(--line)" stroke-width="1"/>
+</svg>
+        <figcaption class="caption">Hình 6 — the round's two stages. The finder fold is the small half and the
+        one that failed the A/B; the verifier fold is the large half, and nothing in the measurement counted
+        against it.</figcaption>
+      </figure>
+
+      <div class="callout" data-c="where-the-money-is">
+        <p><strong>Where the money actually is.</strong> One verifier judging a whole round's pool was measured at
+        <strong>103k tokens</strong> (cases H and B, 4 and 6 candidates). The incumbent spawns one agent per
+        candidate — <strong>10.8 per round</strong> at the recorded baseline — and what those cost was not
+        measured here, because nothing in the harness writes it onto the note. No number is invented for that bar.
+        What can be said without one: unless a per-candidate verifier costs under roughly a tenth of the cheapest
+        agent observed anywhere in this session, <strong>the verifier fold saves several times what the finder
+        fold does</strong>.</p>
+        <p>And the verifier fold is not what failed. Zero known-real candidates were refuted; every escape was a
+        finder's. The configuration this run's numbers point at is the one the plan listed as an alternative and
+        expected to reject — <strong>fold the verifiers, keep the five finders</strong> — which is recorded in
+        <a href="#follow-ups">Follow-ups</a> rather than adopted here, because this WU measured a different cut
+        and a shape nobody measured is not a shape to land.</p>
+      </div>
+    </div>
+
     <h2 id="deviations">Deviations</h2>
     <div data-item="deviations">
       <table>
@@ -541,8 +713,10 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
           pre-existing (<a href="#deviations">above</a>)</td><td><span class="badge approval">pre-existing
           red</span></td></tr>
           <tr><td>A/B</td><td>Not a test — live agents, neither deterministic nor hermetic, so it never enters the
-          suite. 18 finder agents over 9 cases, 08:04:23Z → 08:23:55Z; 2 verifier agents completed; 5 control
-          probes</td><td><span class="badge approval">by hand, once</span></td></tr>
+          suite. 26 agents in all: 18 merged finders over 9 cases (08:04:23Z → 08:23:55Z), 2 batched verifiers,
+          6 single-dimension control probes. Per-agent tokens and wall-clock in
+          <a href="#cost">§ what it would have saved</a></td><td><span class="badge approval">by hand,
+          once</span></td></tr>
         </tbody>
       </table>
       <p class="caption">The wall-clock the plan asked to be stated: the finder wave took 19m32s for 18 agents
@@ -585,6 +759,15 @@ findings: { found: &lt;n&gt;, verified: &lt;n&gt;, waived: &lt;n&gt; }</code></p
           the incumbent fails it too, so it discriminates nothing. A rate over a corpus, compared between arms
           with both arms actually run, is the shape that would. This needs an owner's call, not a
           WU's</td></tr>
+          <tr><td><strong>Fold the verifiers, keep the five finders</strong></td><td>The measurement points at
+          it: the verifier stage is the larger half of the bill, one batched verifier was measured at 103k tokens
+          against ~10.8 agents, and no known-real candidate was refuted in either case whose verifier completed.
+          It is not landed here because this WU measured a different cut, and a shape nobody measured is not a
+          shape to land. It needs its own A/B over the verifier stage alone</td></tr>
+          <tr><td>Have the harness write per-agent tokens onto the note</td><td>The plan ruled a token ledger a
+          larger build than the cut, and it was right — but <a href="#cost">§ what it would have saved</a> only
+          exists because this session happened to see 26 agents' usage. The next cut should not depend on
+          that luck</td></tr>
           <tr><td>The three-finder run, if the owner wants it</td><td>Available on this evidence and unforeclosed;
           declined here because its prescribed lever cannot reach the escape that killed the cut</td></tr>
           <tr><td>Stop the shared <code>target/</code> leaking into <code>design-e2e</code>'s temporary
