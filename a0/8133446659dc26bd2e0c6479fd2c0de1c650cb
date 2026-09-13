@@ -1,0 +1,18 @@
+schema: cr/v5
+scope: "WU fleet-weight -> epic/simpwf — one round, the author's own reading of the diff. Two important findings verified and fixed in the range this note binds, both raised by the rejection path itself. No code-review fleet ran: E-SIMPWF changes the review flow itself, so the owner reads the result at the merge (epic plan, WU-review ruling)"
+epic: E-SIMPWF
+wu: E-SIMPWF.W6
+branch: wu/simpwf/fleet-weight
+base: b4b1cdec2ed485c3e9ef1b6d4927877c0452dc33
+head: a08133446659dc26bd2e0c6479fd2c0de1c650cb
+diff_sha256: 50258c87dce791344e40b15d5225d4ca3eef3cbd2d8235ac95bd5b2609d9d64a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 2, waived: 1 }
+waivers:
+  - finding: "no isolated code-review fleet judged this diff - five finders and their verifiers did not run"
+    reason: "E-SIMPWF's own ruling for its Working Units: the epic changes the review flow, so its WUs are not put through the code-review skill. The findings of the review that did run - the author's reading of the diff, recorded above and in the result report - are on this note, and the gate is the human sign-off (mr/v1), which is never waivable."
+nits:
+  - finding: "the WU that builds the fleet: block writes a note that carries none"
+    waived: "no fleet ran on this diff, so there is no bill to write. Recording finders: 0 would be a measured zero, and the instrument's whole discipline is that an absent block is a reading not taken while a zero is a reading. A waived round is not a round of the fleet, and counting it as one would drag every average tally --fleet reports."
+verdict: PASS
+date: 2026-09-13
