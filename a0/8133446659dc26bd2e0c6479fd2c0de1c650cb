@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W6
+branch: HEAD
+tests:
+  unit: { count: 54, covers: "cr/v5 parses with a fleet: block, without one, and with a malformed one - an absent block is no reading on every contract in CR_SCHEMAS, never a zero; the whole-diff pair is closed, so every contract after it binds the code paths without the gate learning its name; design_source, reviewed_binding and 5·diff-binding's message all read that predicate; and the --fleet reading adds up each finder's bill over the rounds that carried one, averages agents over those alone, and states no yield for a finder that found nothing" }
+  integration: { count: 102, covers: "verify-dod at a real WU seam through the real binary and merge hook: a cr/v5 PASS greens the merge, a stale diff_sha256 reds 5·diff-binding with the code-path wording, an undispositioned nit still reds 3·review-nits so DEC-47 holds across the bump, and an epic walk over four seams carrying cr/v2, v3, v4 and v5 greens with each read at the binding it declared; and cargo xtask tally --fleet over real gate runs bills the round that counted itself and names the rest as unmeasured" }
+  e2e: { waived: "the epic's e2e row carries the full flow; this WU adds no flow to drive - the schema bump and the reading it feeds are proven at the integration level through the same binary and merge hook e2e drives" }
