@@ -147,7 +147,7 @@ A signature binds the tree. Every later tree change - a fix, a missed test, a do
              tree settles BEFORE a human is asked to sign:
                1. test/v2 + doc/v1 notes on the tip   (writing the receipt is what
                   carries adding the test and settling the docs)
-               2. the code-review skill -> cr/v4 PASS bound to this exact diff
+               2. the code-review skill -> cr/v5 PASS bound to this exact diff
                3. THEN cargo xtask mr confirm";
 
 /// Why a tip is not ready to be signed, given what its notes say. Pure so the
@@ -171,7 +171,7 @@ fn unready_reasons(
             .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
     }
     match review {
-        None => missing.push("no cr/v4 note - nobody has reviewed this tip".to_string()),
+        None => missing.push("no cr/v5 note - nobody has reviewed this tip".to_string()),
         Some((verdict, _)) if verdict != "PASS" => {
             missing.push(format!("the review verdict is {verdict} - fix and re-review"));
         }
@@ -1328,7 +1328,7 @@ mod tests {
         assert_eq!(r.len(), 3, "{r:?}");
         assert!(r[0].contains("test/v2"), "{r:?}");
         assert!(r[1].contains("doc/v1"), "{r:?}");
-        assert!(r[2].contains("cr/v4"), "{r:?}");
+        assert!(r[2].contains("cr/v5"), "{r:?}");
     }
 
     #[test]

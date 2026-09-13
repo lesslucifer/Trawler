@@ -271,3 +271,86 @@ fn an_empty_tally_prints_that_nothing_was_recorded() {
     assert_eq!(code, 0);
     assert!(out.contains("no gate runs recorded yet"), "{out}");
 }
+
+/// What the review binds under `cr/v4` and later: the range's code paths only.
+fn code_sha(repo: &Repo, base: &str, tip: &str) -> String {
+    let paths: Vec<String> = xtask::git::diff_names(&repo.path, base, tip)
+        .unwrap()
+        .into_iter()
+        .filter(|p| xtask::notes::is_code(p))
+        .collect();
+    xtask::git::diff_sha256_paths(&repo.path, base, tip, &paths).unwrap()
+}
+
+fn cr_note_v5(base: &str, code_sha: &str, bill: &str) -> String {
+    format!(
+        "schema: cr/v5\n{}base: {base}\nhead: x\ndiff_sha256: {code_sha}\ndimensions: [correctness, reuse, simplification, efficiency, altitude]\n{bill}verdict: PASS\ndate: 2026-09-13\n",
+        identity()
+    )
+}
+
+const BILL: &str = "fleet:\n  finders: 5\n  verifiers: 15\n  by_finder:\n    correctness: { found: 9, verified: 5 }\n    reuse: { found: 6, verified: 2 }\n";
+
+// W6: the fleet reading walks the same ranges the tally already knows and reads
+// each round's own bill off its note. The FAIL round predates the bill and is
+// counted as unmeasured; the PASS round that counted itself is what the per-finder
+// rows add up.
+#[test]
+fn the_fleet_reading_bills_each_round_that_counted_itself_and_names_the_rest() {
+    let (repo, first) = wu_branch();
+    bless_second_round(&repo, &first);
+    let tip = repo.sha("HEAD");
+    let base = repo.sha("epic/x");
+    repo.note("cr", &tip, &cr_note_v5(&base, &code_sha(&repo, &base, &tip), BILL));
+
+    let (code, message) = repo.xtask(&["verify-dod", "wu", "wu/x/one", "--target", "epic/x"]);
+    assert_eq!(code, 0, "{message}");
+
+    let (code, out) = repo.xtask(&["tally", "--fleet"]);
+    assert_eq!(code, 0, "{out}");
+    assert!(
+        out.contains("2 review rounds on the ranges this tally knows - 1 measured, 1 unmeasured"),
+        "{out}"
+    );
+    assert!(
+        out.contains("agents per measured round: 20.0 (5.0 finders + 15.0 verifiers)"),
+        "{out}"
+    );
+    let correctness =
+        out.lines().find(|l| l.trim_start().starts_with("correctness")).unwrap_or_default();
+    assert_eq!(
+        correctness.split_whitespace().collect::<Vec<_>>(),
+        ["correctness", "1", "9", "5", "55%"],
+        "{out}"
+    );
+    let reuse = out.lines().find(|l| l.trim_start().starts_with("reuse")).unwrap_or_default();
+    assert_eq!(
+        reuse.split_whitespace().collect::<Vec<_>>(),
+        ["reuse", "1", "6", "2", "33%"],
+        "{out}"
+    );
+}
+
+#[test]
+fn a_fleet_reading_over_no_gate_runs_says_so() {
+    let repo = Repo::new();
+    let (code, out) = repo.xtask(&["tally", "--fleet"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("no review round on the ranges this tally knows"), "{out}");
+}
+
+#[test]
+fn rounds_without_a_bill_are_unmeasured_not_zero_agents() {
+    let (repo, first) = wu_branch();
+    bless_second_round(&repo, &first);
+    repo.xtask(&["verify-dod", "wu", "wu/x/one", "--target", "epic/x"]);
+
+    let (code, out) = repo.xtask(&["tally", "--fleet"]);
+    assert_eq!(code, 0);
+    assert!(
+        out.contains("2 review rounds on the ranges this tally knows - 0 measured, 2 unmeasured"),
+        "{out}"
+    );
+    assert!(out.contains("no round has counted itself yet"), "{out}");
+    assert!(!out.contains("agents per measured round"), "{out}");
+}

@@ -256,11 +256,11 @@ fn the_preflight_never_asks_for_the_note_the_review_writes() {
 
     let (preflight_code, preflight) = repo.preflight("wu", &tip);
     assert_eq!(preflight_code, 0, "the exam's own evidence is not a precondition: {preflight}");
-    assert!(!preflight.contains("cr/v4"), "got: {preflight}");
+    assert!(!preflight.contains("cr/v5"), "got: {preflight}");
 
     let (gate_code, gate) = repo.xtask(&["verify-dod", "wu", &tip, "--target", "epic/x"]);
     assert_eq!(gate_code, 1, "the merge gate still demands it: {gate}");
-    assert!(gate.contains("no cr/v4 note on tip"), "got: {gate}");
+    assert!(gate.contains("no cr/v5 note on tip"), "got: {gate}");
 }
 
 #[test]
