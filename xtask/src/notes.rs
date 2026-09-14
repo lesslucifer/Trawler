@@ -109,8 +109,9 @@ pub struct CrNote {
     pub fleet: Option<Fleet>,
 }
 
-/// What a round spent, as its note recorded it: agents spawned per role, and
-/// what each finder returned against what the verifier confirmed. Read back by
+/// What a round spent, as its note recorded it: agents spawned per role, the
+/// clock each stage took, the pool it spawned them for, and what each finder
+/// returned against what the verifier confirmed. Read back by
 /// `cargo xtask tally --fleet` and by no gate check.
 #[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
 pub struct Fleet {
@@ -118,8 +119,51 @@ pub struct Fleet {
     pub finders: u32,
     #[serde(default)]
     pub verifiers: u32,
+    /// What judged the round's candidates. A verdict is only comparable across
+    /// rounds when the note says what bought it.
+    #[serde(default)]
+    pub verifier_model: Option<String>,
+    #[serde(default)]
+    pub shards: Option<u32>,
+    #[serde(default)]
+    pub candidates: Option<Candidates>,
+    #[serde(default)]
+    pub stage_seconds: Option<StageSeconds>,
     #[serde(default)]
     pub by_finder: BTreeMap<String, FinderCount>,
+}
+
+/// The pool the finders returned, by the severity they proposed - the reading a
+/// round needs to say what the candidates that never bought a verifier cost it.
+/// The severity vocabulary is the rubric's closed set, so an unknown row is
+/// refused rather than read as a silent zero on the row it was meant to be.
+#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Candidates {
+    #[serde(default)]
+    pub blocker: u32,
+    #[serde(default)]
+    pub important: u32,
+    #[serde(default)]
+    pub nit: u32,
+}
+
+/// The clock the orchestrator kept: when it spawned each stage, and when the
+/// last result came back. Every field is a reading in its own right, so an
+/// absent one is a stage that was not timed rather than a stage that took no
+/// time - the distinction the whole block exists to preserve.
+#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StageSeconds {
+    #[serde(default)]
+    pub gate0: Option<u32>,
+    #[serde(default)]
+    pub finders: Option<u32>,
+    #[serde(default)]
+    pub verifiers: Option<u32>,
+    /// End to end, and the only field the five-minute target reads.
+    #[serde(default)]
+    pub total: Option<u32>,
 }
 
 #[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
@@ -128,6 +172,18 @@ pub struct FinderCount {
     pub found: u32,
     #[serde(default)]
     pub verified: u32,
+}
+
+impl Candidates {
+    pub fn total(&self) -> u32 {
+        self.blocker + self.important + self.nit
+    }
+
+    /// The candidates that buy a verifier: a nit is recorded and dispositioned
+    /// without one, because it cannot move the verdict.
+    pub fn verdict_bearing(&self) -> u32 {
+        self.blocker + self.important
+    }
 }
 
 /// Tier-3's verdict: what the design dimension judged, the rulebook blob it
@@ -652,6 +708,73 @@ verdict: PASS
         assert!(note("fleet:\n  finders: two\n").is_err(), "a word is not a count");
         assert!(note("fleet:\n  by_finder: [correctness]\n").is_err(), "a list names no counts");
         assert!(note("fleet:\n  finders: 5\n").is_ok(), "a partial bill still adds up");
+    }
+
+    // W8: the bill grew a clock and a pool. Each is a reading in its own right,
+    // so the ones a round did not take stay absent rather than arriving as zeros.
+    #[test]
+    fn a_bill_carries_the_clock_the_pool_and_what_judged_the_round() {
+        let yaml = "\
+schema: cr/v5
+base: aaaa
+diff_sha256: cccc
+fleet:
+  finders: 5
+  verifiers: 4
+  verifier_model: haiku-4.5
+  shards: 2
+  candidates: { blocker: 1, important: 3, nit: 6 }
+  stage_seconds: { gate0: 58, finders: 145, verifiers: 110, total: 255 }
+verdict: PASS
+";
+        let fleet = serde_yaml::from_str::<CrNote>(yaml).expect("parses").fleet.expect("the bill");
+        assert_eq!(fleet.verifier_model.as_deref(), Some("haiku-4.5"));
+        assert_eq!(fleet.shards, Some(2));
+        let pool = fleet.candidates.expect("the pool");
+        assert_eq!((pool.total(), pool.verdict_bearing()), (10, 4));
+        assert_eq!(pool.verdict_bearing(), fleet.verifiers, "a nit buys no verifier");
+        let clock = fleet.stage_seconds.expect("the clock");
+        assert_eq!((clock.gate0, clock.finders, clock.total), (Some(58), Some(145), Some(255)));
+    }
+
+    #[test]
+    fn a_stage_the_round_did_not_time_is_absent_rather_than_zero() {
+        let bill = |bill: &str| {
+            serde_yaml::from_str::<CrNote>(&format!(
+                "schema: cr/v5\nbase: a\ndiff_sha256: c\nverdict: PASS\n{bill}"
+            ))
+            .expect("parses")
+            .fleet
+            .expect("the bill")
+        };
+        let clock = bill("fleet:\n  finders: 5\n  stage_seconds: { total: 255 }\n")
+            .stage_seconds
+            .expect("the clock");
+        assert_eq!(clock.total, Some(255));
+        assert_eq!(clock.finders, None, "a stage nobody timed is not a stage that took no time");
+
+        let uncounted = bill("fleet:\n  finders: 5\n");
+        assert!(uncounted.stage_seconds.is_none(), "no clock is no reading");
+        assert!(uncounted.candidates.is_none(), "no pool is no reading");
+        assert!(uncounted.verifier_model.is_none(), "an unnamed model is not a named one");
+    }
+
+    // The severity rows are the rubric's closed set: a row it does not name would
+    // otherwise read as a silent zero on the row it was meant to be.
+    #[test]
+    fn a_severity_the_rubric_does_not_name_is_a_malformed_note() {
+        let note = |bill: &str| {
+            serde_yaml::from_str::<CrNote>(&format!(
+                "schema: cr/v5\nbase: a\ndiff_sha256: c\nverdict: PASS\n{bill}"
+            ))
+        };
+        assert!(note("fleet:\n  candidates: { nits: 6 }\n").is_err(), "the row is nit");
+        assert!(note("fleet:\n  candidates: { nit: many }\n").is_err(), "a word is not a count");
+        assert!(
+            note("fleet:\n  stage_seconds: { setup: 12 }\n").is_err(),
+            "not a stage a round runs"
+        );
+        assert!(note("fleet:\n  candidates: { nit: 6 }\n").is_ok(), "a partial pool still adds up");
     }
 
     // The two whole-diff contracts are the closed set; everything after them is

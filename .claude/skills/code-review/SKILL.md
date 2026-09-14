@@ -165,7 +165,18 @@ diff_sha256: <CODE_SHA>         # the code paths, and only them
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
 fleet:                          # what this round spent; `cargo xtask tally --fleet` reads it back
   finders: 5
-  verifiers: <n>                # verifier agents spawned - one per candidate
+  verifiers: <n>                # verifier agents spawned - one per verified candidate
+  verifier_model: <model>       # what judged them
+  shards: <n>                   # finder shards over the diff; 1 unless it was split
+  candidates:                   # the pool the finders returned, by proposed severity
+    blocker: <n>
+    important: <n>
+    nit: <n>                    # recorded and dispositioned; buys no verifier
+  stage_seconds:                # the clock the orchestrator kept
+    gate0: <n>
+    finders: <n>
+    verifiers: <n>
+    total: <n>                  # end to end - the only field the 300s target reads
   by_finder:
     correctness:    { found: <n>, verified: <n> }
     reuse:          { found: <n>, verified: <n> }
@@ -191,6 +202,15 @@ the verifiers confirmed, so its sums can exceed `findings` where two finders
 raised the same claim — the overlap is a reading, not an error. A note without
 the block still parses at the gate; the tally reads it as a round that did not
 count itself, never as a round that cost nothing.
+
+`stage_seconds` and `candidates` follow the same discipline one row down: the
+orchestrator knows when it spawned each stage and when the last result came
+back, and it knows what severity each finder proposed, so it writes what it
+observed and omits what it did not. **An absent row is a stage nobody timed or a
+pool nobody counted — never a stage that took no time.** The severity rows are
+the rubric's closed set, so a row it does not name is a malformed note rather
+than a silent zero on the row it was meant to be. No gate check reads any of
+this (W1's ruling); it is what the next cut is chosen from.
 
 There is no `design:` block on this note, and there is nothing to write in its
 place: `verify-dod`'s `9·design` check reads the design step's own `design/v1`
