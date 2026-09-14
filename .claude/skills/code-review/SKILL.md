@@ -67,6 +67,21 @@ no evidence. An exempt diff — one that asks for no review at all — needs non
 report that and stop; the preflight measures no tree for a diff that asks for
 nothing, so `cargo xtask gate0` is how to ask about the tree on its own.
 
+**Gate 0 runs beside the finders, not in front of them.** Pass
+`--defer-gate0`: the preflight then settles everything cheap — the checkout is
+the reviewed tip, nothing is uncommitted, the notes the finders read are on it —
+and returns without measuring the tree. Spawn `cargo xtask gate0` in the **same
+message** as the five finders (§3). Gate 0 is ~60s of the round's ~384s and the
+finder stage does not depend on it, so nothing is gained by waiting.
+
+What this trades, stated rather than hidden: a red Gate 0 discards a round whose
+finders already ran, so a doomed round costs its finder tokens. That is accepted
+because the clock is the scarce thing and Gate 0 is cached and green on the
+common path. **A red Gate 0 voids the round outright** — no verdict, no `cr/v5`
+note, nothing the fleet returned may be written down. Fix the tree and run the
+review again; the deferred green says so in as many words, and never claims the
+suite passed.
+
 **WU and epic scopes only.** The preflight protects a verdict the merge gate
 binds, and those are the two levels it binds — a WU branch against its epic, or
 an epic against `main`. A caller reviewing any other scope (§1 permits recent
@@ -77,7 +92,8 @@ the preflight at a tip without naming the scope whose notes you actually read.
 ## 3 · Find — five isolated finders, in parallel
 
 Spawn five subagents **in a single message** (fresh context each), one per
-dimension in `rubric.md`. Each finder prompt contains exactly:
+dimension in `rubric.md` — and, when §2 deferred it, `cargo xtask gate0` in that
+same message. Each finder prompt contains exactly:
 
 - its dimension name, and the instruction to read
   `.claude/skills/code-review/rubric.md` first — its dimension row, the
@@ -91,6 +107,13 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
   `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`
   — the severity rows in `rubric.md` say which is which, and a finder's severity
   is a proposal the verifier re-judges.
+
+**Never merge the finders.** Five dimensions, five agents, one message — not
+one agent carrying several dimensions, however cheap that looks. E-SIMPWF.W6
+measured the merge: **+354s of fixed reasoning per merged agent**, making the
+stage **152% slower** for a 38% token saving. The work does not vanish with the
+agent; it moves into the agents that remain, which then read more and think
+longer. A later reading of "fewer agents" must not re-buy this shape.
 
 ## 3b · The design dimension is not part of this run
 
@@ -118,6 +141,13 @@ reasoning. Its prompt:
   inheriting the finder's: this verdict reads yours, and uncertainty between two
   rows resolves *upward*;
 - return `{verdict: real|false-positive, severity, evidence: <why>}`.
+
+**Never batch the verifiers.** One candidate, one fresh agent — never one
+agent judging several claims. E-SIMPWF.W6 measured the batch: tokens halved and
+the stage took **4.6×** as long (**+398s**), because a batched judge reads every
+claim's surrounding code in one context instead of several in parallel. The
+isolation is also the point: a verifier that has already confirmed one claim is
+no longer a fresh adversary for the next.
 
 Refuted findings are dropped from the verdict; mention them briefly when
 returning to the caller (§7) so finder quality stays visible.
