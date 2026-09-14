@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W6
+base: b4b1cdec2ed485c3e9ef1b6d4927877c0452dc33
+tip: a08133446659dc26bd2e0c6479fd2c0de1c650cb
+diff_sha256: 10e29d44d907345e00ae4836357b674560abfb40e61bacea600b44504a53b9c7
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-14
