@@ -275,7 +275,7 @@ fn confirm_is_refused_while_the_tip_carries_no_notes_at_all() {
     assert_eq!(code, 1);
     assert!(out.contains("no test/v2 note"), "{out}");
     assert!(out.contains("no doc/v1 note"), "{out}");
-    assert!(out.contains("no cr/v4 note"), "{out}");
+    assert!(out.contains("no cr/v5 note"), "{out}");
     assert!(out.contains("tree settles BEFORE"), "{out}");
     assert!(!mr::tip_authorised(repo.p(), "HEAD"), "nothing may be written");
 }
@@ -289,7 +289,7 @@ fn confirm_is_refused_when_the_review_has_not_run_yet() {
     let (code, out) =
         mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
     assert_eq!(code, 1);
-    assert!(out.contains("no cr/v4 note"), "{out}");
+    assert!(out.contains("no cr/v5 note"), "{out}");
     assert!(!out.contains("no test/v2"), "the settled notes must not be reported: {out}");
     assert!(!mr::tip_authorised(repo.p(), "HEAD"));
 }

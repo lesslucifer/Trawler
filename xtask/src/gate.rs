@@ -5,8 +5,9 @@ use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, diff_sha256_paths, git, note, write_note};
 use crate::notes::{
-    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DesignCarrier,
-    DesignNote, DistilledTo, DocChange, DocNote, TestNote, CR_SCHEMAS, DESIGN_SCHEMAS,
+    binds_code, is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote,
+    DesignCarrier, DesignNote, DistilledTo, DocChange, DocNote, TestNote, CR_SCHEMAS,
+    DESIGN_SCHEMAS,
 };
 
 // What a fork card may be carried by when no decision record carries it: the TSDoc
@@ -117,7 +118,8 @@ struct ParsedNotes {
 /// Which note carries this tip's design verdict, the check id a refusal lands
 /// under, and the note a refusal names. A `cr/v2`/`cr/v3` tip keeps the section it
 /// shipped - the epic walk re-reads tips that were merged under that contract - and
-/// a `cr/v4` tip, or one with no review at all, carries it on `design/v1` (DEC-46).
+/// a code-bound tip (`cr/v4` onward), or one with no review at all, carries it on
+/// `design/v1` (DEC-46).
 // The surfaces a run may be asked for, resolved on first ask and kept for the
 // second.
 type Surfaces = OnceCell<(Vec<String>, Vec<String>)>;
@@ -132,7 +134,7 @@ struct DesignSource<'a> {
 
 fn design_source<'a>(cr: Option<&'a CrNote>, design: Option<&'a DesignNote>) -> DesignSource<'a> {
     match cr {
-        Some(cr) if cr.schema != "cr/v4" => {
+        Some(cr) if !binds_code(&cr.schema) => {
             let v3 = cr.schema == "cr/v3";
             DesignSource {
                 carrier: cr.design.as_ref().map(DesignCarrier::Section),
@@ -1425,12 +1427,13 @@ pub(crate) fn check_manifest(report: &mut Report, test: Option<&TestNote>) {
 
 /// What a review note of `schema` binds over a range, read in one place by the
 /// merge gate's `5·diff-binding` and by the confirm's readiness check, so a tip
-/// the gate would green is never a tip the confirm calls unready: `cr/v4` binds
-/// the bytes of the code paths the diff changes, the schemas before it bound the
-/// whole diff and a tip that declared one is still judged against what it
-/// declared, and a `cr/v4` note over a diff that changes no code binds nothing.
+/// the gate would green is never a tip the confirm calls unready: `cr/v4` and
+/// every contract after it bind the bytes of the code paths the diff changes, the
+/// schemas before it bound the whole diff and a tip that declared one is still
+/// judged against what it declared, and a code-bound note over a diff that
+/// changes no code binds nothing.
 pub fn reviewed_binding<'a>(schema: &str, whole: &'a str, code: &'a str) -> Option<&'a str> {
-    if schema != "cr/v4" {
+    if !binds_code(schema) {
         return Some(whole);
     }
     (!code.is_empty()).then_some(code)
@@ -1438,9 +1441,9 @@ pub fn reviewed_binding<'a>(schema: &str, whole: &'a str, code: &'a str) -> Opti
 
 fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     let Some(cr) = cr else { return };
-    // A note nobody demanded proves nothing: a `cr/v4` note on a diff that changes
-    // no code judges no code path, so it binds nothing, refuses nothing and greens
-    // nothing.
+    // A note nobody demanded proves nothing: a code-bound note on a diff that
+    // changes no code judges no code path, so it binds nothing, refuses nothing and
+    // greens nothing.
     let Some(bound) = reviewed_binding(&cr.schema, &report.diff_sha256, code_sha256) else {
         return;
     };
@@ -1475,7 +1478,7 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     if cr.diff_sha256 != bound {
         report.failures.push(Failure::new(
             "5·diff-binding",
-            if cr.schema == "cr/v4" {
+            if binds_code(&cr.schema) {
                 "reviewed code is not byte-identical to the code this tip changes".to_string()
             } else {
                 "reviewed diff is not byte-identical to the diff being gated".to_string()
@@ -1562,7 +1565,8 @@ mod tests {
 
     // W4: which note the checks read the design verdict from. A tip merged under an
     // older contract keeps its own section - the epic walk re-reads those - and a
-    // `cr/v4` tip, or one with no review at all, is read from `design/v1`.
+    // code-bound tip (`cr/v4`, `cr/v5`), or one with no review at all, is read from
+    // `design/v1`.
     #[test]
     fn the_design_verdict_is_read_from_the_note_the_tip_shipped() {
         let legacy: CrNote = serde_yaml::from_str(
@@ -1593,6 +1597,14 @@ mod tests {
         assert_eq!(source.note, "design/v1");
         assert!(matches!(source.carrier, Some(DesignCarrier::Note(_))));
 
+        let v5: CrNote =
+            serde_yaml::from_str("schema: cr/v5\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
+                .unwrap();
+        let source = design_source(Some(&v5), Some(&note));
+        assert!(!source.legacy, "the bump keeps the verdict on the design step's own note");
+        assert_eq!(source.note, "design/v1");
+        assert!(matches!(source.carrier, Some(DesignCarrier::Note(_))));
+
         let code_free = design_source(None, Some(&note));
         assert!(matches!(code_free.carrier, Some(DesignCarrier::Note(_))));
         assert!(design_source(None, None).carrier.is_none(), "nothing shipped, nothing read");
@@ -1620,13 +1632,15 @@ mod tests {
 
     // One rule, read by the merge gate's 5·diff-binding and by the confirm's
     // readiness check - a tip this greens is never a tip the confirm calls
-    // unready, and a `cr/v4` note over a code-free diff binds nothing.
+    // unready, and a code-bound note over a code-free diff binds nothing.
     #[test]
     fn each_review_schema_is_bound_to_what_it_declared() {
         use super::reviewed_binding;
+        assert_eq!(reviewed_binding("cr/v5", "whole", "code"), Some("code"));
         assert_eq!(reviewed_binding("cr/v4", "whole", "code"), Some("code"));
         assert_eq!(reviewed_binding("cr/v3", "whole", "code"), Some("whole"));
         assert_eq!(reviewed_binding("cr/v2", "whole", "code"), Some("whole"));
+        assert_eq!(reviewed_binding("cr/v5", "whole", ""), None);
         assert_eq!(reviewed_binding("cr/v4", "whole", ""), None);
         assert_eq!(reviewed_binding("cr/v3", "whole", ""), Some("whole"));
     }

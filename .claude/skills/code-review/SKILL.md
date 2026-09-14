@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical preflight, five isolated finders over the diff's code paths, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip. The review judges code and nothing else: no document is its subject, and a diff that changes no code asks for no review at all. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
+description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical preflight, five isolated finders over the diff's code paths, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip that also records what the round cost. The review judges code and nothing else: no document is its subject, and a diff that changes no code asks for no review at all. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
 ---
 
 # Code review — orchestration
@@ -38,7 +38,7 @@ no review, no note and no finders at all.
 Run `cargo xtask preflight wu <tip> --target <the epic branch>` (or
 `cargo xtask preflight epic <tip>`, against `main`) — the same two levels, and
 the same target inference, the merge gate uses. This is the last point at which
-a red input is repaired for free: the `cr/v3` note pins the diff it judged, so
+a red input is repaired for free: the `cr/v5` note pins the code it judged, so
 anything fixed after the verdict buys the fleet again.
 
 It refuses on exactly three things:
@@ -59,7 +59,7 @@ It refuses on exactly three things:
   layer this level needs. The same code the merge gate judges it with. `doc/v1`
   is not read here and cannot void this PASS, so the preflight no longer stops on
   it (DEC-43, restated by DEC-45).
-- **Nothing else.** No `cr/v3` note (this review writes it), no design section,
+- **Nothing else.** No `cr/v5` note (this review writes it), no design section,
   no `mr/v1` (the human signs last), no doc-note coverage, and no doc predicate.
 
 A non-zero exit ⇒ stop, report its blocks to the caller, spawn no agents, write
@@ -146,7 +146,7 @@ returning to the caller (§7) so finder quality stays visible.
   the five prefixes from the top of this file; the flags match `cargo xtask
   verify-dod`'s recomputation — the binding must be byte-identical. A diff with
   no code path has no hash to write, and asks for no note at all.
-- The note body is one YAML document, contract `cr/v4`.
+- The note body is one YAML document, contract `cr/v5`.
   `cargo xtask verify-dod` parses it at every merge gate (see
   `docs/workflow.html`): a Working Unit is not merge-ready and an epic is
   not complete without a `PASS` note whose `diff_sha256` matches the code the
@@ -154,7 +154,7 @@ returning to the caller (§7) so finder quality stays visible.
   document landing after it does not.
 
 ```yaml
-schema: cr/v4
+schema: cr/v5
 scope: "WU capture-pagination -> epic/capture"   # the caller's label
 epic: E-CAP                     # identity block — matches the tip's other notes
 wu: E-CAP.W2                    # working-unit scope only
@@ -163,7 +163,16 @@ base: <full sha — the merge-base pinned in §1>
 head: <full sha — the reviewed tip; the note is attached to it>
 diff_sha256: <CODE_SHA>         # the code paths, and only them
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
-findings: { found: <n>, verified: <n>, waived: <n> }
+fleet:                          # what this round spent; `cargo xtask tally --fleet` reads it back
+  finders: 5
+  verifiers: <n>                # verifier agents spawned - one per candidate
+  by_finder:
+    correctness:    { found: <n>, verified: <n> }
+    reuse:          { found: <n>, verified: <n> }
+    simplification: { found: <n>, verified: <n> }
+    efficiency:     { found: <n>, verified: <n> }
+    altitude:       { found: <n>, verified: <n> }
+findings: { found: <n>, verified: <n>, waived: <n> }   # distinct claims, after dedup
 waivers:
   - finding: "<summary>"
     reason: "<reason>"
@@ -175,6 +184,13 @@ nits:                           # every verified nit, each one decided
 verdict: PASS   # PASS | FAIL — nits never decide it
 date: <YYYY-MM-DD>
 ```
+
+The `fleet:` block is the round's own bill, and every note this run writes
+carries one. `by_finder` counts what each finder returned and how much of it
+the verifiers confirmed, so its sums can exceed `findings` where two finders
+raised the same claim — the overlap is a reading, not an error. A note without
+the block still parses at the gate; the tally reads it as a round that did not
+count itself, never as a round that cost nothing.
 
 There is no `design:` block on this note, and there is nothing to write in its
 place: `verify-dod`'s `9·design` check reads the design step's own `design/v1`
@@ -191,7 +207,8 @@ cover.
 
 Report: the verdict; the table of verified findings with severities and
 verifier evidence; waivers applied; the nits and how each was dispositioned;
-refuted candidates in one line; the note ref. On `FAIL`,
+refuted candidates in one line; the fleet's bill as the note records it; the
+note ref. On `FAIL`,
 state the loop explicitly: the trigger session fixes — a correctness bug gets
 its failing, named regression test **first** (per `docs/testing-strategy.html`),
 cleanups stay behavior-preserving with the suite green — then re-runs this

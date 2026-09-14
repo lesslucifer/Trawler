@@ -29,7 +29,7 @@ usage:
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
   cargo xtask preflight <wu|epic> <tip> [--target <ref>]      (the review's first step: gate0 + the notes it reads, before any finder spawns)
   cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
-  cargo xtask tally                                          (local gate tally: refused check ids per level, review rounds per tip)
+  cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
@@ -54,7 +54,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["design-scope", base, head] => design_scope(repo, base, head),
         ["preflight", rest @ ..] => preflight_cmd(rest, repo),
         ["notes", "write", rest @ ..] => notes_write::run(rest, repo),
-        ["tally"] => tally::run(repo),
+        ["tally", rest @ ..] => tally::run(rest, repo),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),

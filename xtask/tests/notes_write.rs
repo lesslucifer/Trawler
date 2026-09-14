@@ -157,7 +157,7 @@ fn one_command_writes_both_notes_and_the_gate_reads_them_green() {
         );
     }
     assert!(
-        failures.iter().any(|(_, what)| what.contains("no cr/v4 note")),
+        failures.iter().any(|(_, what)| what.contains("no cr/v5 note")),
         "the review's own note is the one thing left to write: {failures:?}"
     );
 }
