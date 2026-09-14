@@ -240,18 +240,23 @@ flowchart TD
           <td data-item="wu-deps">W1, W4 — the measurement decides it and the code-only scope is its precondition.</td>
         </tr>
         <tr data-wu="E-SIMPWF.W8">
-          <td>A round inside five minutes <em>(owner requirement — 2026-09-13)</em></td>
-          <td data-item="wu-summary">The review flow completes end to end inside <strong>300s</strong>: finders are never
-          merged, verifiers are never batched, the diff and the full text of the files it changes are packed into the finder
-          prompt so the per-tool-call term collapses, Gate 0 runs concurrently with the finder stage, and a large diff is
-          sharded so the slowest agent's read set is bounded. The note carries elapsed seconds per stage, so the target has a
-          reading to hold it against.</td>
-          <td data-item="wu-maps-to">The fourth cost, and the first the epic measures on the clock rather than in agents: a
-          round's wall-clock, which W6 measured at 384s typical and 563s at its worst against a 300s target.</td>
+          <td>A round costs less on both axes <em>(owner requirement — 2026-09-13, widened 2026-09-14)</em></td>
+          <td data-item="wu-summary">A round finishes inside <strong>300s</strong> and stops buying an adversarial agent for
+          candidates that cannot change its verdict. On the clock: finders are never merged, verifiers are never batched, the
+          diff and the <code>BASE</code>/<code>HEAD</code> text of the files it changes are packed into the finder prompt so the
+          per-tool-call term collapses, Gate 0 runs concurrently with the finder stage, and a large diff is sharded so the
+          slowest agent's read set is bounded. On the bill: a candidate is returned only with a falsifiable failure scenario, a
+          candidate proposed <code>nit</code> is recorded and dispositioned without buying a verifier, and the skill names the
+          model a verifier runs on. The note carries elapsed seconds per stage and the candidate severity mix, so both targets
+          have a reading.</td>
+          <td data-item="wu-maps-to">The fourth cost, and the first the epic measures on the clock as well as in agents: a
+          round's wall-clock, which W6 measured at 384s typical and 563s at its worst against a 300s target, and the 53% of a
+          round's tokens the verifier stage spends — 70% of it on candidates it refutes.</td>
           <td data-item="wu-expected">A round over the W6 corpus finishes inside 300s <em>at its tail, not only at its
-          mean</em>, with no known-real finding lost against the same A/B, and <code>cr/v5</code>'s <code>fleet:</code> block
-          carries per-stage elapsed beside the agent counts. If the tail cannot be brought inside the target without losing a
-          finding, this WU is measured and rejected as W6 was.</td>
+          mean</em>, spawns strictly fewer verifier agents than candidates raised, and loses no known-real finding against an
+          A/B whose two arms are both actually run. <code>cr/v5</code>'s <code>fleet:</code> block carries per-stage elapsed and
+          the candidate severity mix beside the agent counts. <strong>Each lever is adopted or dropped on its own
+          number</strong>; the WU is measured and rejected as W6 was only if none survives.</td>
           <td data-item="wu-deps">W1, W6 — the tally is the reading this extends, and W6's per-agent numbers are what make the
           levers choosable rather than guessable.</td>
         </tr>
@@ -275,6 +280,19 @@ flowchart TD
       different requirement from every WU above it, so it takes its own unit, its own plan doc and its own A/B —
       and it runs in the opposite direction to W6's cut, which is the clearest thing W6 bought.
       Numbers: <a href="2026-09-13-simpwf-w6-result.html#cost">W6 result, § what it would have saved</a>.</p>
+    </div>
+
+    <div class="callout warn" data-c="wu-w8-widened">
+      <p><strong>W8 widened to both axes — plan amendment, 2026-09-14, on the owner's direction.</strong> The 2026-09-13
+      registration read W6's two folds as a straight clock-versus-token trade, and took the clock. A second reading of the
+      same numbers says the trade was an artifact of <em>which</em> cuts were measured: merging finders and batching
+      verifiers both <em>move</em> work between stages, so on either shape one axis can only be bought with the other. A cut
+      that <em>removes</em> work takes both at once — and the tree says where the removable work is: 70% of every candidate
+      raised is refuted, and the verifier stage those candidates buy is 53% of a round's tokens. W8 keeps its 300s bar and
+      adds a second, that a round spawn strictly fewer verifier agents than its finders raise candidates. Its plan is
+      <a href="2026-09-14-simpwf-w8-plan.html">W8 plan</a>, which also carries the method correction W6's control arm forced:
+      both arms of an A/B are actually run, the bar is a paired rate rather than <em>every known-real finding</em>, and each
+      lever is adopted on its own number instead of bundled into one stopping rule.</p>
     </div>
 
     <div class="callout warn" data-c="wu-review-evidence">
