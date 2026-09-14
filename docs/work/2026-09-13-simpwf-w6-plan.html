@@ -106,11 +106,11 @@ flowchart LR
     F2["reuse"] --> V2["verifier ×1"]
     F3["simplification"] --> V3["verifier ×1"]
     F4["efficiency"] --> V4["verifier ×1"]
-    F5["altitude"] --> V5["...one per candidate,10.7 on average"]
+    F5["altitude"] --> V5["...one per candidate,<br/>10.7 on average"]
   end
   subgraph A["after · 3 agents"]
-    B["behaviourcorrectness · efficiencyP1 P2 P3 P4"] --> V["one verifierevery candidate of the round"]
-    S["shapereuse · simplification · altitudeP5"] --> V
+    B["behaviour<br/>correctness · efficiency<br/>P1 P2 P3 P4"] --> V["one verifier<br/>every candidate of the round"]
+    S["shape<br/>reuse · simplification · altitude<br/>P5"] --> V
   end
 </pre>
         <div class="caption">The same rubric, the same severity rows, the same exclusions — carried by three agents
@@ -275,10 +275,10 @@ date: 2026-09-13</code></pre>
       <div class="diagram" data-c="ab-flow">
 <pre class="mermaid">
 flowchart TD
-  C["8 cases: a diff + itsknown-real findings"] --> N["new fleet:2 finders + 1 verifier"]
-  N --> R{"every known-realfinding raised andverified?"}
-  R -- yes --> A["adopt: skill, rubric,workflow.html, DEC"]
-  R -- no --> D["drop the cut, revert the shapethe WU is measured-and-rejected;the escaped finding is named"]
+  C["8 cases: a diff + its<br/>known-real findings"] --> N["new fleet:<br/>2 finders + 1 verifier"]
+  N --> R{"every known-real<br/>finding raised and<br/>verified?"}
+  R -- yes --> A["adopt: skill, rubric,<br/>workflow.html, DEC"]
+  R -- no --> D["drop the cut, revert the shape<br/>the WU is measured-and-rejected;<br/>the escaped finding is named"]
 </pre>
         <div class="caption">The measurement is a gate on adoption, not a report written after it.</div>
       </div>
