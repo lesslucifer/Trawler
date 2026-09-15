@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W7
+branch: HEAD
+tests:
+  unit: { count: 31, covers: "the readiness rule, stated as a pure function so it is testable without a repo: an ungated range owes none of test/v2, doc/v1 or cr/v5, and the exemption never relaxes a gated tip, which still names all three at once. The two arms are the whole rule - a tip the merge greens is signable, a tip it would red is not" }
+  integration: { count: 63, covers: "the seam the unit test cannot reach: through the real xtask binary and real git over a temp repo, a Working Unit whose diff touches no code path is signed, its mr/v1 note is written, and cargo xtask verify-dod greens the same tip - the loop that was closed before, since 8·manual-review wanted a note only mr confirm writes and mr confirm refused to write it. The second arm proves the exemption opened no hole: a tip that touches code is still refused and still names test/v2 and cr/v5. xtask/tests/mr.rs carries the binding case, whose tip now carries code because an exempt tip has no binding to check" }
+  e2e: { waived: "the epic's e2e row carries the full flow, and this WU drives no new one. The repair is a predicate inside a command the manual-review integration test already drives end to end through the real binary and real git, which is where a merge actually meets it" }
