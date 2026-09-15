@@ -12,21 +12,32 @@ use crate::git::git;
 // saw. Nothing here judges the work and nothing here is evidence - it writes no
 // note and no receipt, and the merge gate re-derives every verdict from the tree
 // exactly as it did before (DEC-2).
+// Gate 0 is the only part of the preflight that costs a minute; everything else
+// is a read. Deferring it lets the finder stage start beside it instead of behind
+// it, which is the whole saving - the round still refuses on a red tree, it just
+// refuses concurrently, at the cost of the finder tokens a doomed round spent.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Tree {
+    Measure,
+    Defer,
+}
+
 pub fn run(
     repo: &Path,
     level: Level,
     tip_ref: &str,
     target_ref: &str,
+    tree: Tree,
 ) -> Result<(i32, String), String> {
     let mut report = Gate { repo }.preflight(level, tip_ref, target_ref)?;
     if report.exempt {
         return Ok((0, exempt(&report)));
     }
-    if let Some(tree) = tree_failure(repo, &report.tip)? {
-        report.failures.insert(0, tree);
+    if let Some(failure) = tree_failure(repo, &report.tip, tree)? {
+        report.failures.insert(0, failure);
     }
     if report.green() {
-        Ok((0, green(&report)))
+        Ok((0, green(&report, tree)))
     } else {
         Ok((1, refused(&report)))
     }
@@ -39,7 +50,7 @@ const TREE: &str = "0·tree";
 // `base..tip`, so a green read off another commit - or off uncommitted work -
 // would vouch for bytes the verdict is not about. Both print under the one check,
 // because both mean the same thing: the green proves nothing about this diff.
-fn tree_failure(repo: &Path, tip: &str) -> Result<Option<Failure>, String> {
+fn tree_failure(repo: &Path, tip: &str, tree: Tree) -> Result<Option<Failure>, String> {
     let head = git(repo, &["rev-parse", "HEAD"])?;
     if head != tip {
         return Ok(Some(tree_blocker(
@@ -56,6 +67,9 @@ fn tree_failure(repo: &Path, tip: &str) -> Result<Option<Failure>, String> {
             "the working tree has uncommitted changes - the review binds a diff, and the commit that lands them is a different one".to_string(),
             "commit or stash them, then run the preflight again".to_string(),
         )));
+    }
+    if tree == Tree::Defer {
+        return Ok(None);
     }
     let (code, said) = gate0::gate0(repo)?;
     Ok((code != 0).then(|| {
@@ -78,11 +92,26 @@ fn exempt(report: &Report) -> String {
     )
 }
 
-fn green(report: &Report) -> String {
+fn green(report: &Report, tree: Tree) -> String {
+    let (proved, next) = match tree {
+        Tree::Measure => (
+            "the tree is green and the notes the review reads are on the tip",
+            "spawn the finders".to_string(),
+        ),
+        Tree::Defer => (
+            "the checkout is the reviewed tip and the notes the review reads are on it - the tree is NOT measured here",
+            format!(
+                "spawn the finders and `cargo xtask gate0` together; a red Gate 0 discards the round, so nothing this fleet returns may be written to a note until it comes back green (tip {})",
+                short(&report.tip)
+            ),
+        ),
+    };
     format!(
-        "preflight {} green on {} - the tree is green and the notes the review reads are on the tip; spawn the finders",
+        "preflight {} green on {} - {}; {}",
         report.level.as_note_level(),
-        short(&report.tip)
+        short(&report.tip),
+        proved,
+        next
     )
 }
 
@@ -98,7 +127,7 @@ fn refused(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{exempt, green, refused};
+    use super::{exempt, green, refused, Tree};
     use crate::gate::{Failure, Level, Report};
 
     fn report(level: Level, tip: &str, failures: Vec<Failure>) -> Report {
@@ -148,9 +177,26 @@ mod tests {
 
     #[test]
     fn a_green_preflight_says_what_it_proved_and_what_to_do_next() {
-        let text = green(&report(Level::Wu, "abcdef0123456789", Vec::new()));
+        let text = green(&report(Level::Wu, "abcdef0123456789", Vec::new()), Tree::Measure);
         assert!(text.contains("preflight working-unit green on abcdef0123"), "got: {text}");
         assert!(text.contains("spawn the finders"), "the next step is named: {text}");
+        assert!(text.contains("the tree is green"), "a measured tree says so: {text}");
+    }
+
+    // The saving is only safe if the green says plainly that it did not measure
+    // the tree: a caller who reads this as the old green would write a note for a
+    // round whose suite never ran.
+    #[test]
+    fn a_deferred_green_refuses_to_vouch_for_a_tree_it_did_not_measure() {
+        let text = green(&report(Level::Wu, "abcdef0123456789", Vec::new()), Tree::Defer);
+        assert!(text.contains("the tree is NOT measured here"), "the gap is stated: {text}");
+        assert!(!text.contains("the tree is green"), "it never claims the suite passed: {text}");
+        assert!(text.contains("cargo xtask gate0"), "the caller is told to run it: {text}");
+        assert!(text.contains("discards the round"), "a red Gate 0 costs the round: {text}");
+        assert!(
+            text.contains("may be written to a note"),
+            "the note is what a red Gate 0 must stop: {text}"
+        );
     }
 
     // A diff that asks for no review is not a refusal, and demanding a note of it

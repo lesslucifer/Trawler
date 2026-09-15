@@ -4,7 +4,7 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use crate::gate::{short, Report};
-use crate::notes::{CrNote, Fleet};
+use crate::notes::{Candidates, CrNote, Fleet, StageSeconds};
 
 // The gate's own measurement, in the shape of Gate 0's cache: a local file under
 // target/, appended on every gate run that computes a report, read only by
@@ -400,6 +400,61 @@ fn mean(sum: u32, rounds: usize) -> f64 {
     f64::from(sum) / f64::from(u32::try_from(rounds).unwrap_or(u32::MAX))
 }
 
+/// The clock, averaged over the rounds that kept one. A round that timed no
+/// stage is left out of that stage's mean rather than averaged in as one that
+/// took no time - the same distinction the block itself draws.
+fn clock_reading(measured: &[&Fleet]) -> String {
+    let timed: Vec<&StageSeconds> =
+        measured.iter().filter_map(|f| f.stage_seconds.as_ref()).collect();
+    if timed.is_empty() {
+        return "wall-clock: untimed - no measured round carries stage_seconds".to_string();
+    }
+    let stage = |pick: fn(&StageSeconds) -> Option<u32>| {
+        let seen: Vec<u32> = timed.iter().filter_map(|s| pick(s)).collect();
+        (!seen.is_empty()).then(|| mean(seen.iter().sum(), seen.len()))
+    };
+    let say = |s: Option<f64>| s.map_or_else(|| "untimed".to_string(), |v| format!("{v:.0}s"));
+    format!(
+        "wall-clock per timed round: {} total ({} gate 0 + {} finders + {} verifiers) - {} of {} timed",
+        say(stage(|s| s.total)),
+        say(stage(|s| s.gate0)),
+        say(stage(|s| s.finders)),
+        say(stage(|s| s.verifiers)),
+        timed.len(),
+        measured.len()
+    )
+}
+
+/// What the finders returned, by proposed severity - and how much of it never
+/// bought a verifier, which is the saving the nit rule is judged on.
+fn pool_reading(measured: &[&Fleet]) -> Option<String> {
+    let pools: Vec<&Candidates> = measured.iter().filter_map(|f| f.candidates.as_ref()).collect();
+    if pools.is_empty() {
+        return None;
+    }
+    let sum = |pick: fn(&Candidates) -> u32| pools.iter().map(|c| pick(c)).sum::<u32>();
+    let (blocker, important, nit) = (sum(|c| c.blocker), sum(|c| c.important), sum(|c| c.nit));
+    let raised = sum(Candidates::total);
+    Some(format!(
+        "candidates over {}: {raised} raised - {blocker} blocker, {important} important, {nit} nit ({} of the pool bought no verifier)",
+        count(pools.len(), "pool"),
+        percent(nit, raised)
+    ))
+}
+
+fn model_reading(measured: &[&Fleet]) -> Option<String> {
+    let mut rounds: BTreeMap<&str, usize> = BTreeMap::new();
+    for model in measured.iter().filter_map(|f| f.verifier_model.as_deref()) {
+        *rounds.entry(model).or_default() += 1;
+    }
+    if rounds.is_empty() {
+        return None;
+    }
+    let named: Vec<String> =
+        rounds.iter().map(|(model, seen)| format!("{model} \u{d7}{seen}")).collect();
+    Some(format!("verified by: {}", named.join(", ")))
+}
+
 /// What the rounds cost, added up from the bills their notes carry. A round with
 /// no bill is counted as unmeasured, never as a round of zero agents: the two
 /// readings answer different questions and the summary keeps them apart.
@@ -439,6 +494,10 @@ pub fn fleet_summary(bills: &[Option<Fleet>], file: &Path) -> String {
         "agents per measured round: {:.1} ({finders:.1} finders + {verifiers:.1} verifiers)",
         finders + verifiers
     );
+    let _ = writeln!(out, "{}", clock_reading(&measured));
+    for line in [pool_reading(&measured), model_reading(&measured)].into_iter().flatten() {
+        let _ = writeln!(out, "{line}");
+    }
     let _ = writeln!(out);
     let _ = writeln!(
         out,
@@ -512,7 +571,7 @@ fn records(bytes: &[u8], file: &Path) -> Result<Vec<Entry>, String> {
 #[cfg(test)]
 mod tests {
     use super::{collapse, entries, fleet_summary, summarise, truncated, Entry, FILE_NAME};
-    use crate::notes::{FinderCount, Fleet};
+    use crate::notes::{Candidates, FinderCount, Fleet, StageSeconds};
     use std::fmt::Write as _;
     use std::path::Path;
 
@@ -648,7 +707,53 @@ mod tests {
                     ((*name).to_string(), FinderCount { found: *found, verified: *verified })
                 })
                 .collect(),
+            ..Fleet::default()
         }
+    }
+
+    // W8: the clock is a reading per stage, and a round that kept none is left
+    // out of the mean rather than averaged in as a round that took no time.
+    #[test]
+    fn the_fleet_reading_averages_the_clock_over_the_rounds_that_kept_one() {
+        let timed = |total, finders| Fleet {
+            stage_seconds: Some(StageSeconds {
+                gate0: Some(60),
+                finders: Some(finders),
+                verifiers: Some(110),
+                total: Some(total),
+            }),
+            ..bill(5, 4, &[("correctness", 3, 2)])
+        };
+        let bills = [Some(timed(255, 145)), Some(timed(305, 195)), Some(bill(5, 4, &[]))];
+        let text = fleet_summary(&bills, Path::new("/t/.gate-tally"));
+        assert!(
+            text.contains("wall-clock per timed round: 280s total (60s gate 0 + 170s finders + 110s verifiers) - 2 of 3 timed"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_round_that_kept_no_clock_leaves_the_wall_clock_unread() {
+        let text = fleet_summary(&[Some(bill(5, 4, &[]))], Path::new("/t/.gate-tally"));
+        assert!(
+            text.contains("wall-clock: untimed - no measured round carries stage_seconds"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn the_fleet_reading_names_the_pool_and_what_judged_it() {
+        let round = Fleet {
+            candidates: Some(Candidates { blocker: 1, important: 3, nit: 6 }),
+            verifier_model: Some("haiku-4.5".to_string()),
+            ..bill(5, 4, &[])
+        };
+        let text = fleet_summary(&[Some(round)], Path::new("/t/.gate-tally"));
+        assert!(
+            text.contains("candidates over 1 pool: 10 raised - 1 blocker, 3 important, 6 nit (60% of the pool bought no verifier)"),
+            "{text}"
+        );
+        assert!(text.contains("verified by: haiku-4.5 \u{d7}1"), "{text}");
     }
 
     // W6: the reading the cut is chosen from. Each finder's bill is summed across

@@ -67,6 +67,10 @@ impl Repo {
         self.xtask(&["preflight", level, tip, "--target", "epic/x"])
     }
 
+    fn preflight_deferred(&self, level: &str, tip: &str) -> (i32, String) {
+        self.xtask(&["preflight", level, tip, "--target", "epic/x", "--defer-gate0"])
+    }
+
     fn xtask(&self, args: &[&str]) -> (i32, String) {
         let args: Vec<String> = args.iter().map(|s| (*s).to_string()).collect();
         xtask::run(&args, &self.path).unwrap()
@@ -282,4 +286,65 @@ fn running_the_preflight_writes_nothing() {
         !xtask::git::git(&repo.path, &["notes", "--ref=dod", "list"]).unwrap().contains(&tip),
         "no receipt is written by a preflight"
     );
+}
+
+// E-SIMPWF.W8 · L2. Gate 0 is the minute the preflight costs; deferring it lets
+// the finder stage start beside it. What must NOT move is the checkout identity:
+// Gate 0 measures a working tree, so a deferred run still has to prove that tree
+// is the reviewed tip's before it lets a finder read it.
+
+// The fixture repo is not a cargo project, so an undeferred preflight reds under
+// 0·tree (see an_unproven_tree_refuses_under_the_tree_check). Deferring greens the
+// same tip without ever spawning the suite - that difference is the whole lever.
+#[test]
+fn a_deferred_preflight_greens_a_tree_it_never_measured() {
+    let (repo, tip) = wu_branch();
+    repo.note("test", &tip, &test_note());
+    repo.note("doc", &tip, &doc_note());
+
+    let (undeferred, _) = repo.preflight("wu", &tip);
+    assert_eq!(undeferred, 1, "the unmeasured tree reds when the preflight measures it");
+
+    let (code, said) = repo.preflight_deferred("wu", &tip);
+    assert_eq!(code, 0, "deferring the suite must not refuse on it: {said}");
+    assert!(said.contains("the tree is NOT measured here"), "the gap is stated: {said}");
+    assert!(said.contains("cargo xtask gate0"), "the caller is told to run it: {said}");
+    assert!(said.contains("discards the round"), "a red Gate 0 costs the round: {said}");
+}
+
+#[test]
+fn a_deferred_preflight_still_refuses_a_checkout_that_is_not_the_reviewed_tip() {
+    let (repo, tip) = wu_branch();
+    repo.note("test", &tip, &test_note());
+    repo.note("doc", &tip, &doc_note());
+    repo.write("src/other.rs", "pub fn elsewhere() {}\n");
+    repo.commit("a later commit on the branch");
+
+    let (code, said) = repo.preflight_deferred("wu", &tip);
+    assert_eq!(code, 1, "a concurrent Gate 0 would measure the wrong tree: {said}");
+    assert!(said.contains("FAIL  0·tree"), "got: {said}");
+    assert!(said.contains("not the reviewed tip"), "got: {said}");
+}
+
+#[test]
+fn a_deferred_preflight_still_refuses_uncommitted_work() {
+    let (repo, tip) = wu_branch();
+    repo.note("test", &tip, &test_note());
+    repo.note("doc", &tip, &doc_note());
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\npub fn mid_edit() {}\n");
+
+    let (code, said) = repo.preflight_deferred("wu", &tip);
+    assert_eq!(code, 1, "got: {said}");
+    assert!(said.contains("uncommitted changes"), "got: {said}");
+}
+
+// Deferring the tree must not silently drop the paperwork the finders read.
+#[test]
+fn a_deferred_preflight_still_refuses_a_note_the_review_needs() {
+    let (repo, tip) = wu_branch();
+    repo.note("doc", &tip, &doc_note());
+
+    let (code, said) = repo.preflight_deferred("wu", &tip);
+    assert_eq!(code, 1, "an absent test/v2 still stops the round: {said}");
+    assert!(!said.contains("0·tree"), "the tree is not what refused it: {said}");
 }

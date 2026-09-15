@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa807939f34851f0dfacfb3">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-48: a round is bought on the clock and the bill</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-48 — a round is bought on the clock and the bill</h1>
+      <p>E-SIMPWF.W8 gives a review round an instrument and takes the cuts that cost nothing to take: Gate 0 leaves the
+      critical path, and the fleet's shape is fixed by rule so a later reading of "fewer agents" cannot re-buy a shape
+      W6 already measured and refused.</p>
+      <div class="meta">Decided 2026-09-14 · E-SIMPWF.W8 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p data-c="instrument-rule"><strong>A round records what it cost.</strong> The <code>cr/v5</code> note's
+      <code>fleet:</code> block carries <code>stage_seconds</code> (gate 0, finders, verifiers, total),
+      <code>candidates</code> by severity, <code>verifier_model</code> and <code>shards</code>. An absent row is a
+      reading nobody took, never a measured zero — the same discipline W6 landed for the block as a whole. No gate
+      check reads any of it: the tally is local measurement, never evidence (W1's ruling, unchanged).</p>
+      <p data-c="gate0-rule"><strong>Gate 0 runs beside the finder stage, not in front of it.</strong>
+      <code>cargo xtask preflight … --defer-gate0</code> settles the cheap half — the checkout is the reviewed tip,
+      nothing is uncommitted, the notes the finders read are on it — and returns without measuring the tree;
+      <code>cargo xtask gate0</code> is spawned in the same message as the five finders. <strong>A red Gate 0 voids the
+      round outright</strong>: no verdict, no note, nothing the fleet returned is written down.</p>
+      <p data-c="shape-rule"><strong>Finders are never merged and verifiers are never batched.</strong> Five
+      dimensions, five agents; one candidate, one fresh agent. This is a rule rather than a default, because both folds
+      look like savings and neither is one.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>W6 measured two ways to shrink the fleet and its own measurement refused both. The reading that followed — that
+    the round trades clock against tokens — was an artifact of <em>which</em> cuts had been measured: both folds moved
+    work between stages rather than removing it. The rule below is what separates the two kinds of cut.</p>
+    <div class="callout warn" data-c="the-rule">
+      <p><strong>A cut that moves work between stages buys one axis with the other. Only removing work takes both.</strong>
+      The work does not vanish with the agent: it moves into the agents that remain, which then read more and think
+      longer.</p>
+    </div>
+
+    <h2 id="numbers">The numbers behind each rule</h2>
+    <table>
+      <thead>
+        <tr><th>Rule</th><th>Measured</th><th>Where</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Gate 0 concurrent</td>
+          <td><strong>−60s</strong> off the critical path, on a round measured at 384s typical and 563s worst. The
+          finder stage does not depend on Gate 0, so nothing was bought by waiting</td>
+          <td>W6 per-stage means</td>
+        </tr>
+        <tr>
+          <td>Never merge the finders</td>
+          <td><strong>+354s of fixed reasoning per merged agent</strong> — the stage ran <strong>152% slower</strong>
+          for a 38% token saving</td>
+          <td>W6 arm B</td>
+        </tr>
+        <tr>
+          <td>Never batch the verifiers</td>
+          <td>Tokens halved, stage <strong>4.6×</strong> longer (<strong>+398s</strong>). A batched judge reads every
+          claim's surrounding code in one context instead of several in parallel — and is no longer a fresh adversary
+          after its first confirmation</td>
+          <td>W6 arm B</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected, with the number that rejected it</h2>
+    <table>
+      <thead>
+        <tr><th>Alternative</th><th>Why not</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Dedup candidates before the verifier stage</strong></td>
+          <td><strong>Measured dead.</strong> Zero exact duplicates within a round across 191 recorded refutations, and
+          none between W6's two finders. Two finders raising one claim is not where the fleet's money goes</td>
+        </tr>
+        <tr>
+          <td><strong>Merge the finders</strong> / <strong>batch the verifiers</strong></td>
+          <td>Both measured above. Now rules in <code>SKILL.md</code> with their seconds beside them, so the shape is
+          not re-bought by a later reading of "fewer agents"</td>
+        </tr>
+        <tr>
+          <td><strong>A diff-size floor that skips the fleet entirely</strong></td>
+          <td>33% of rounds verify nothing, which is suggestive and not evidence — the correlation with diff size is
+          unmeasured. Rejected here rather than guessed at</td>
+        </tr>
+        <tr>
+          <td><strong>Name a cheap model for the verifier</strong> (W8's L7)</td>
+          <td><strong>Measured, and not adopted.</strong> On 60 labelled candidates judged twice, Haiku 4.5 and
+          Sonnet 5 were indistinguishable — 70% vs 68% accuracy, 21/24 vs 22/24 on the blocker/important stratum,
+          McNemar 7 vs 6. But the WU's own pre-registered bar was <em>total</em> agreement with the incumbent, and
+          <em>both</em> tiers failed it, so the bar does not separate a cheap judge from an expensive one. Adopting on
+          a failed bar is the error W6 was criticised for; the measurement is carried to the follow-up, which owes a
+          bar a fleet can pass</td>
+        </tr>
+        <tr>
+          <td><strong>Drop a finder dimension</strong>, or spawn one only where its dimension has surface in the diff</td>
+          <td>The cleanest remaining cut — it removes a ~98.6k/219s agent with no work transfer. But it is chosen from
+          <code>by_finder</code> yields per diff shape, and the tree holds no such bills yet: the first ones are written
+          by rounds that run under this record. Taking it now would be W6's mistake with the sign flipped</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="follows">What follows</h2>
+    <table>
+      <thead>
+        <tr><th>Consequence</th><th>Where it is stated</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A doomed round costs its finder tokens — Gate 0 can red after the finders have run</td>
+          <td><code>SKILL.md</code> §2, and the deferred green says so itself rather than claiming a tree it never
+          measured</td>
+        </tr>
+        <tr>
+          <td>A round with no <code>stage_seconds</code> is untimed, not instant. <code>tally --fleet</code> excludes
+          it from the mean rather than dragging it to zero</td>
+          <td><code>xtask/src/tally.rs</code>, <code>notes.rs</code></td>
+        </tr>
+        <tr>
+          <td>Nothing about the bar moved: the five dimensions, five principles, severity rows, exclusions, the verdict
+          rule and every gate check say exactly what they said. DEC-47's dispositions are untouched</td>
+          <td><code>rubric.md</code> unchanged; <code>3·review-nits</code> unchanged</td>
+        </tr>
+        <tr>
+          <td>The context pack, the shard floor, the candidate bar and unverified nits (W8's L1, L4, L5, L6) are
+          <strong>not</strong> decided here — each can lose a finding and each owes the finder-stage A/B</td>
+          <td>The W8 result's deferral table</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

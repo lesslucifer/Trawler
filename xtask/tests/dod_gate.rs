@@ -2552,6 +2552,53 @@ fn a_cr_v5_note_is_bound_to_the_code_paths_and_keeps_the_nit_rule() {
     assert!(report.green(), "a dispositioned nit costs nothing: {}", format_report(&report));
 }
 
+/// The same contract, with the clock and the pool W8 added to the bill.
+fn cr_note_v5_timed(base: &str, sha: &str, extra: &str) -> String {
+    format!(
+        "schema: cr/v5\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\ndimensions: [correctness, reuse, simplification, efficiency, altitude]\nfleet:\n  finders: 5\n  verifiers: 1\n  verifier_model: haiku-4.5\n  shards: 2\n  candidates: {{ blocker: 0, important: 1, nit: 6 }}\n  stage_seconds: {{ gate0: 58, finders: 145, verifiers: 110, total: 255 }}\n  by_finder:\n    correctness: {{ found: 3, verified: 1 }}\n    reuse: {{ found: 2, verified: 0 }}\n{extra}verdict: PASS\ndate: 2026-09-14\n",
+        identity("E9", Some("E9.W1"))
+    )
+}
+
+// W8: the bill grew a clock, a pool by severity and the model that judged it. No
+// gate check reads any of them, so a round that counted itself and one that did
+// not must green identically - and a nit that never bought a verifier is still
+// refused while it is undecided.
+#[test]
+fn the_gate_reads_neither_the_clock_nor_the_pool_a_round_records() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let code = code_sha(&repo, &base, &tip);
+
+    repo.note("cr", &tip, &cr_note_v5_timed(&base, &code, ""));
+    let timed = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(timed.green(), "a timed round greens: {}", format_report(&timed));
+
+    repo.note("cr", &tip, &cr_note_v5(&base, &code, ""));
+    let untimed = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(
+        checks_of(&timed),
+        checks_of(&untimed),
+        "the gate is indifferent to the reading: {}",
+        format_report(&untimed)
+    );
+
+    repo.note(
+        "cr",
+        &tip,
+        &cr_note_v5_timed(&base, &code, "nits:\n  - finding: \"a loop variable named x\"\n"),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["3·review-nits"],
+        "an unverified nit is still evidence that must be decided: {}",
+        format_report(&report)
+    );
+}
+
 /// An epic whose merged Working Units each shipped a different review contract -
 /// one seam per schema, each bound the way its contract binds.
 fn epic_over_every_review_contract() -> Repo {

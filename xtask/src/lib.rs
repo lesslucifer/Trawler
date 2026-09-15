@@ -27,7 +27,7 @@ usage:
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
-  cargo xtask preflight <wu|epic> <tip> [--target <ref>]      (the review's first step: gate0 + the notes it reads, before any finder spawns)
+  cargo xtask preflight <wu|epic> <tip> [--target <ref>] [--defer-gate0]  (the review's first step: gate0 + the notes it reads, before any finder spawns; --defer-gate0 skips the suite so it can run beside the finders)
   cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
   cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
@@ -94,16 +94,23 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 // or it would judge a different range than the note it protects. A standalone
 // commit carries no review, so it has no preflight either (SKILL.md §2).
 fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
-    match args {
+    let (args, tree) = split_tree_flag(args);
+    match args.as_slice() {
         ["wu", tip, rest @ ..] => {
-            preflight::run(repo, Level::Wu, tip, &scope_target(Level::Wu, tip, rest)?)
+            preflight::run(repo, Level::Wu, tip, &scope_target(Level::Wu, tip, rest)?, tree)
         }
         ["epic", tip, rest @ ..] => {
             let target = scope_target(Level::Epic, tip, rest)?;
-            preflight::run(repo, Level::Epic, tip, &target)
+            preflight::run(repo, Level::Epic, tip, &target, tree)
         }
         _ => Err(USAGE.to_string()),
     }
+}
+
+fn split_tree_flag<'a>(args: &[&'a str]) -> (Vec<&'a str>, preflight::Tree) {
+    let deferred = args.contains(&"--defer-gate0");
+    let kept = args.iter().copied().filter(|a| *a != "--defer-gate0").collect();
+    (kept, if deferred { preflight::Tree::Defer } else { preflight::Tree::Measure })
 }
 
 // The ref each scope's range is measured against: a WU's epic (named, or inferred

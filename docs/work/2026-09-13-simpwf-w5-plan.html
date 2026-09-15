@@ -97,11 +97,11 @@
 flowchart LR
   A["verifier: real, severity=nit"] --> B{"today: any unwaived finding fails"}
   B -->|"fail"| C["fix it = a commit"]
-  C --> D["CODE_SHA moves 5·diff-binding reds"]
+  C --> D["CODE_SHA moves<br/>5·diff-binding reds"]
   D --> E["the fleet runs again"]
   B -->|"or waive it"| F["a nit recorded as if it were a blocker"]
   A --> G{"after W5: severity decides"}
-  G --> H["verdict unchanged note carries the nit + its disposition"]
+  G --> H["verdict unchanged<br/>note carries the nit + its disposition"]
   H --> I["3·review-nits refuses a nit with no disposition"]
       </pre>
       <div class="caption">The purchase this WU cancels — and the one refusal that keeps the record honest.</div>

@@ -526,6 +526,29 @@
             them, and allowing post-verdict fixes without re-review (that is the binding, not the severity)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-48-the-round-is-bought-on-the-clock-and-the-bill.html"><code>dec-48-the-round-is-bought-on-the-clock-and-the-bill.html</code></a></td>
+          <td><span class="badge id">DEC-48</span></td>
+          <td><strong>A review round records what it cost, Gate 0 leaves the critical path, and the fleet's shape is
+            fixed by rule</strong> — the <code>cr/v5</code> note's <code>fleet:</code> block carries
+            <code>stage_seconds</code>, <code>candidates</code> by severity, <code>verifier_model</code> and
+            <code>shards</code>, with an absent row meaning a reading nobody took rather than a measured zero, and no
+            gate check reading any of it (W1's ruling that the tally is measurement, never evidence). Gate 0 runs
+            <em>beside</em> the finder stage — <code>preflight … --defer-gate0</code> settles the checkout and the notes
+            and returns without measuring the tree, <code>cargo xtask gate0</code> spawns with the five finders, and a
+            red Gate 0 <strong>voids the round outright</strong>, the accepted cost being a doomed round's finder
+            tokens. <strong>Finders are never merged and verifiers never batched</strong>, as rules with W6's seconds
+            beside them: merging cost <strong>+354s fixed per agent</strong> for a 152%-slower stage, batching made the
+            verifier stage <strong>4.6×</strong> longer. The governing rule is that a cut which <em>moves</em> work
+            between stages buys one axis with the other, and only removing work takes both. Nothing about the bar
+            moved — dimensions, principles, severity rows, exclusions, the verdict rule and every gate check are
+            unchanged, and DEC-47's dispositions are untouched. Rejected with their numbers: dedup before the verifier
+            stage (zero duplicates measured), merging and batching, a diff-size floor that skips the fleet (correlation
+            unmeasured), naming a cheap verifier model (Haiku and Sonnet measured indistinguishable, but the WU's own
+            bar failed at <em>both</em> tiers, so it decided nothing and the swap is carried to the follow-up), and
+            dropping a finder dimension (no <code>by_finder</code> bills exist yet to choose from)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

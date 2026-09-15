@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa807f49f34851f0dfacfb8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF.W8 result (a round costs less on both axes)</title>
+</head>
+<body data-artifact="wu-result">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF.W8 — a round costs less on both axes</h1>
+      <p>The round can now time itself and count the pool it spawned for, Gate 0 has left the critical path, and the
+      two folds W6 refused are rules with their seconds beside them. The four levers that can lose a finding are
+      deferred with their arm still owed — and the arm that did run refused its own bar at every tier, which is the
+      most useful thing it says.</p>
+      <div class="meta">v1 · 2026-09-14 · Trawler · T3 WU result · E-SIMPWF.W8 ·
+        <a href="2026-09-14-simpwf-w8-plan.html">the plan</a> ·
+        <a href="2026-09-12-simpwf-plan.html">epic plan</a> ·
+        <a href="../decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html">DEC-48</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome" data-item="outcome">Outcome</h2>
+    <table>
+      <thead><tr><th>Promised</th><th>Delivered</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A round has a clock, and it is under five minutes</td>
+          <td><span class="badge auto">half</span> The instrument landed: <code>cr/v5</code> carries
+          <code>stage_seconds</code>, <code>candidates</code>, <code>verifier_model</code> and <code>shards</code>, and
+          <code>tally --fleet</code> reads them back. <strong>The 300s bar is not demonstrated</strong> — it needed the
+          finder-stage levers, and those are deferred. Gate 0 concurrency takes 389s to 329s by arithmetic over W6's
+          stage means; no round has yet run end to end under the new shape</td>
+        </tr>
+        <tr>
+          <td>A round stops buying agents for what cannot change its verdict</td>
+          <td><span class="badge approval">deferred</span> This was L6 — nits recorded unverified. It can misfile a real
+          blocker, so it owed the finder-stage arm, which did not run</td>
+        </tr>
+        <tr>
+          <td>Every lever names the number that justifies it</td>
+          <td><span class="badge auto">held</span> Three adopted with W6's measured seconds, one measured and refused,
+          four deferred with the arm they owe named. See <a href="#ledger">the ledger</a></td>
+        </tr>
+        <tr>
+          <td>Nothing about the bar moved</td>
+          <td><span class="badge auto">held</span> The five dimensions, five principles, severity rows, exclusions and
+          the verdict rule are unchanged in what they say. <code>rubric.md</code> is untouched by this WU.
+          DEC-47's dispositions and <code>3·review-nits</code> are untouched. No gate check was added or edited</td>
+        </tr>
+        <tr>
+          <td>Old seams still green</td>
+          <td><span class="badge auto">held</span> <code>cr/v2</code>–<code>cr/v5</code> notes read as before; a v5 note
+          written before this WU parses with no seconds and prints <code>untimed</code>. Full workspace suite green</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="ledger">The lever ledger</h2>
+    <table>
+      <thead><tr><th>Lever</th><th>Disposition</th><th>The number</th></tr></thead>
+      <tbody>
+        <tr><td><strong>L2</strong> Gate 0 concurrent</td><td><span class="badge auto">adopted</span></td>
+          <td>−60s off the critical path. Cannot lose a finding; costs a doomed round's finder tokens, stated in
+          <code>SKILL.md</code> §2 and DEC-48</td></tr>
+        <tr><td><strong>L3</strong> never merge, never batch</td><td><span class="badge auto">adopted</span></td>
+          <td>Merging: +354s fixed per agent, stage 152% slower. Batching: stage 4.6× longer (+398s). Now rules, so the
+          shape is not re-bought</td></tr>
+        <tr><td><strong>L8</strong> the round times itself</td><td><span class="badge auto">adopted</span></td>
+          <td>Landed in <code>1f8504f</code>. Without it the 300s bar has nothing to read and L6 has no size</td></tr>
+        <tr><td><strong>L7</strong> name the verifier's model</td><td><span class="badge approval">measured, not adopted</span></td>
+          <td>Haiku and Sonnet indistinguishable over 60 labelled candidates — but the WU's own bar failed at
+          <em>both</em> tiers. <a href="#arm1">Arm 1</a></td></tr>
+        <tr><td><strong>L1</strong> pack the context</td><td><span class="badge approval">deferred</span></td>
+          <td>Withholds nothing, so it risks no finding — but its claimed −74s is unmeasured without the finder arm</td></tr>
+        <tr><td><strong>L4</strong> shard a large diff</td><td><span class="badge approval">deferred</span></td>
+          <td>Can lose a finding that spans two shards. Owes the finder arm</td></tr>
+        <tr><td><strong>L5</strong> the candidate bar</td><td><span class="badge approval">deferred</span></td>
+          <td>Can lose a real finding that resists a one-sentence scenario. Owes the finder arm</td></tr>
+        <tr><td><strong>L6</strong> nits are not verified</td><td><span class="badge approval">deferred</span></td>
+          <td>The largest recall risk in the plan; its misfile rate is unmeasured. Owes the finder arm</td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="clock-chart">
+      <svg viewBox="0 0 720 200" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+<text x="40" y="36" fill="var(--muted)" font-size="11">today — Gate 0 in front</text>
+<rect x="40.0" y="44" width="60.0" height="26" fill="var(--warn)" rx="3"/>
+<text x="71.0" y="61" fill="var(--ink)" font-size="11" text-anchor="middle">gate 0 60s</text>
+<rect x="102.0" y="44" width="224.3" height="26" fill="var(--accent)" rx="3"/>
+<text x="215.2" y="61" fill="var(--ink)" font-size="11" text-anchor="middle">finders 219s</text>
+<rect x="328.3" y="44" width="111.7" height="26" fill="var(--ok)" rx="3"/>
+<text x="385.1" y="61" fill="var(--ink)" font-size="11" text-anchor="middle">verifiers 110s</text>
+<text x="450.0" y="61" fill="var(--ink)" font-size="12" font-weight="600">389s</text>
+<text x="40" y="98" fill="var(--muted)" font-size="11">DEC-48 — Gate 0 beside</text>
+<rect x="40.0" y="106" width="224.3" height="26" fill="var(--accent)" rx="3"/>
+<text x="153.2" y="123" fill="var(--ink)" font-size="11" text-anchor="middle">finders 219s</text>
+<rect x="266.3" y="106" width="111.7" height="26" fill="var(--ok)" rx="3"/>
+<text x="323.1" y="123" fill="var(--ink)" font-size="11" text-anchor="middle">verifiers 110s</text>
+<text x="388.0" y="123" fill="var(--ink)" font-size="12" font-weight="600">329s</text>
+<line x1="350.0" y1="30" x2="350.0" y2="168" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="356.0" y="26" fill="var(--warn)" font-size="11">300s target</text>
+<text x="40" y="190" fill="var(--muted)" font-size="11">W6 per-stage means. Gate 0 leaves the critical path; the 300s bar still needs the finder-stage levers W8 defers.</text>
+</svg>
+      <div class="caption">Hình 1 — what L2 actually buys. The finder stage does not depend on Gate 0, so waiting for
+      it bought nothing. The 300s bar is still not met: that needed the deferred levers.</div>
+    </div>
+
+    <h2 id="arm1">Arm 1 — the verifier stage, and why it refused its own bar</h2>
+    <p>Every labelled candidate in the repository was parsed out of 196 <code>cr</code> notes: 39 verified findings and
+    191 refuted claims. A pre-registered sample of 60 (seed 20260914 — every blocker and important in the corpus, six
+    sampled nits, thirty refuted claims) was replayed through a fresh verifier, <strong>twice</strong>: once on
+    Haiku 4.5 and once on Sonnet 5, same protocol, same commits, reading history through <code>git show</code> only.</p>
+
+    <div class="diagram" data-c="arm1-chart">
+      <svg viewBox="0 0 720 250" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+<line x1="70" y1="180.0" x2="670" y2="180.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="184.0" fill="var(--muted)" font-size="11" text-anchor="end">0%</text>
+<line x1="70" y1="142.5" x2="670" y2="142.5" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="146.5" fill="var(--muted)" font-size="11" text-anchor="end">25%</text>
+<line x1="70" y1="105.0" x2="670" y2="105.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="109.0" fill="var(--muted)" font-size="11" text-anchor="end">50%</text>
+<line x1="70" y1="67.5" x2="670" y2="67.5" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="71.5" fill="var(--muted)" font-size="11" text-anchor="end">75%</text>
+<line x1="70" y1="30.0" x2="670" y2="30.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="34.0" fill="var(--muted)" font-size="11" text-anchor="end">100%</text>
+<rect x="108.0" y="49.5" width="34" height="130.5" fill="var(--accent)" rx="4"/>
+<text x="125.0" y="43.5" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">87%</text>
+<rect x="148.0" y="45.0" width="34" height="135.0" fill="var(--ok)" rx="4"/>
+<text x="165.0" y="39.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">90%</text>
+<text x="145.0" y="198" fill="var(--muted)" font-size="11" text-anchor="middle">kept real</text>
+<text x="145.0" y="211" fill="var(--muted)" font-size="11" text-anchor="middle">(sensitivity)</text>
+<rect x="258.0" y="100.5" width="34" height="79.5" fill="var(--accent)" rx="4"/>
+<text x="275.0" y="94.5" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">53%</text>
+<rect x="298.0" y="109.5" width="34" height="70.5" fill="var(--ok)" rx="4"/>
+<text x="315.0" y="103.5" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">47%</text>
+<text x="295.0" y="198" fill="var(--muted)" font-size="11" text-anchor="middle">refuted fake</text>
+<text x="295.0" y="211" fill="var(--muted)" font-size="11" text-anchor="middle">(specificity)</text>
+<rect x="408.0" y="75.0" width="34" height="105.0" fill="var(--accent)" rx="4"/>
+<text x="425.0" y="69.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">70%</text>
+<rect x="448.0" y="78.0" width="34" height="102.0" fill="var(--ok)" rx="4"/>
+<text x="465.0" y="72.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">68%</text>
+<text x="445.0" y="198" fill="var(--muted)" font-size="11" text-anchor="middle">accuracy</text>
+<rect x="558.0" y="48.0" width="34" height="132.0" fill="var(--accent)" rx="4"/>
+<text x="575.0" y="42.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">88%</text>
+<rect x="598.0" y="42.0" width="34" height="138.0" fill="var(--ok)" rx="4"/>
+<text x="615.0" y="36.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">92%</text>
+<text x="595.0" y="198" fill="var(--muted)" font-size="11" text-anchor="middle">blocker/important</text>
+<text x="595.0" y="211" fill="var(--muted)" font-size="11" text-anchor="middle">kept</text>
+<rect x="70" y="224" width="11" height="11" fill="var(--accent)" rx="2"/>
+<text x="87" y="234" fill="var(--muted)" font-size="11">Haiku 4.5 — $0.085/candidate</text>
+<rect x="300" y="224" width="11" height="11" fill="var(--ok)" rx="2"/>
+<text x="317" y="234" fill="var(--muted)" font-size="11">Sonnet 5 — $0.199/candidate</text>
+</svg>
+      <div class="caption">Hình 2 — 120 agents, 60 paired cases. McNemar: 7 haiku-only-right against 6
+      sonnet-only-right. There is no difference to find.</div>
+    </div>
+
+    <div class="callout warn" data-c="bar-failed">
+      <p><strong>The bar the plan pre-registered was not met — and was not met by the incumbent tier either.</strong>
+      The plan required <em>total</em> agreement on candidates the incumbent verified as blocker or important, with one
+      flip dropping L7 to the next model up. Haiku kept 21/24. Sonnet, the tier the rule escalates to, kept 22/24. Both
+      refuse the same candidate.</p>
+      <p>A bar that the expensive model fails as surely as the cheap one is not measuring model risk; it is measuring
+      replay noise. This is the exact failure the plan named in W6 — <em>"no configuration of this review passes it,
+      including the one in production, so it discriminates nothing"</em> — reproduced here with a clean harness. So L7
+      is <strong>not adopted</strong>: a one-finding gap on n=24 cannot license the swap, and adopting against a failed
+      pre-registered bar is the error W6 was criticised for. The measurement is carried forward; the follow-up owes a
+      bar a fleet can pass.</p>
+    </div>
+
+    <h2 id="deviations" data-item="deviations">Deviations</h2>
+    <table>
+      <thead><tr><th>Planned</th><th>What happened</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Three arms — verifier, finder, clock and bill</td>
+          <td><strong>Only arm 1 ran.</strong> Arms 2 and 3 are not done</td>
+          <td>Owner's call, taken explicitly when the scope was put to them: the finder arm is 150+ live agents, and
+          the four levers it decides are exactly the four that can lose a finding. Per-lever adoption is what the plan
+          licenses, so the levers that need no arm landed and the rest wait for theirs</td>
+        </tr>
+        <tr>
+          <td>Arm 1 decides L7</td>
+          <td>Arm 1 <strong>ran twice</strong>. The first run is superseded</td>
+          <td>Two defects in my own harness, found while closing the WU. The claim normalization split on
+          <code>". "</code> and beheaded any finding containing a quoted sentence — one went from 387 characters to 56,
+          a bare quote with no assertion left in it. Separately a verifier agent ran <code>git checkout</code> on the
+          shared worktree, leaving HEAD detached for the rest of the run. Nothing was lost and the branch was restored;
+          the re-run used whole claims and confined every agent to a throwaway worktree with <code>checkout</code>
+          forbidden by name</td>
+        </tr>
+        <tr>
+          <td>L7 adopted or dropped to the next tier</td>
+          <td>Neither — recorded as measured with its bar refused</td>
+          <td>Following the rule mechanically would drop L7 outright, since both tiers failed. That reading treats a
+          non-discriminating bar as evidence. The honest record is the measurement plus the bar's failure</td>
+        </tr>
+        <tr>
+          <td><code>rubric.md</code> gains the finder's nit justification</td>
+          <td>Not edited</td>
+          <td>That obligation exists to hold L6, which is deferred. Writing it now would state a rule nothing enforces</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="harness-chart">
+      <svg viewBox="0 0 720 200" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+<line x1="70" y1="146.0" x2="630" y2="146.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="150.0" fill="var(--muted)" font-size="11" text-anchor="end">0</text>
+<line x1="70" y1="106.0" x2="630" y2="106.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="110.0" fill="var(--muted)" font-size="11" text-anchor="end">8</text>
+<line x1="70" y1="66.0" x2="630" y2="66.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="70.0" fill="var(--muted)" font-size="11" text-anchor="end">16</text>
+<line x1="70" y1="26.0" x2="630" y2="26.0" stroke="var(--line)" stroke-width="1"/>
+<text x="62" y="30.0" fill="var(--muted)" font-size="11" text-anchor="end">24</text>
+<rect x="152.0" y="56.0" width="52" height="90.0" fill="var(--accent)" rx="4" opacity="0.45"/>
+<text x="178.0" y="50.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">18/24</text>
+<text x="178.0" y="161" fill="var(--muted)" font-size="10" text-anchor="middle">v1 truncated</text>
+<rect x="216.0" y="41.0" width="52" height="105.0" fill="var(--accent)" rx="4" opacity="1"/>
+<text x="242.0" y="35.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">21/24</text>
+<text x="242.0" y="161" fill="var(--muted)" font-size="10" text-anchor="middle">v2 whole</text>
+<text x="210.0" y="178" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">Haiku 4.5</text>
+<rect x="432.0" y="61.0" width="52" height="85.0" fill="var(--ok)" rx="4" opacity="0.45"/>
+<text x="458.0" y="55.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">17/24</text>
+<text x="458.0" y="161" fill="var(--muted)" font-size="10" text-anchor="middle">v1 truncated</text>
+<rect x="496.0" y="36.0" width="52" height="110.0" fill="var(--ok)" rx="4" opacity="1"/>
+<text x="522.0" y="30.0" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">22/24</text>
+<text x="522.0" y="161" fill="var(--muted)" font-size="10" text-anchor="middle">v2 whole</text>
+<text x="490.0" y="178" fill="var(--ink)" font-size="11" text-anchor="middle" font-weight="600">Sonnet 5</text>
+<text x="70" y="192" fill="var(--muted)" font-size="11">Blocker/important findings kept. Truncating a finding to one sentence cost 3 in one arm and 5 in the other — the harness, not the model.</text>
+</svg>
+      <div class="caption">Hình 3 — the first harness cost real findings in both arms. A verifier judges the sentence
+      it is handed, which is why §4's "the finding and the scope" has to mean the finding whole.</div>
+    </div>
+
+    <h2 id="evidence" data-item="evidence">Evidence</h2>
+    <table>
+      <thead><tr><th>Claim</th><th>Where to check it</th></tr></thead>
+      <tbody>
+        <tr><td>The note carries seconds, the pool and what judged it; an absent row is untimed, never zero</td>
+          <td><code>xtask/src/notes.rs</code> — <code>StageSeconds</code>, <code>Candidates</code>, and the three tests
+          naming the distinction</td></tr>
+        <tr><td><code>tally --fleet</code> prints seconds and the severity mix, and excludes an untimed round</td>
+          <td><code>xtask/src/tally.rs</code> — <code>clock_reading</code>, <code>pool_reading</code>,
+          <code>model_reading</code></td></tr>
+        <tr><td>The gate reads neither the clock nor the pool</td>
+          <td><code>xtask/tests/dod_gate.rs</code> —
+          <code>the_gate_reads_neither_the_clock_nor_the_pool_a_round_records</code></td></tr>
+        <tr><td>A deferred preflight greens a tree it never measured, and says so</td>
+          <td><code>xtask/tests/preflight.rs</code> — <code>a_deferred_preflight_greens_a_tree_it_never_measured</code>,
+          plus the three tests proving it still refuses a wrong checkout, uncommitted work and a missing note</td></tr>
+        <tr><td>Haiku and Sonnet are indistinguishable as verifiers</td>
+          <td>120 verdict files and the answer key with its seed, in the run's scratch directory; the numbers are in
+          <a href="#arm1">arm 1</a> and DEC-48's rejection row. <strong>Not reproducible from the repository</strong> —
+          live agents, not a test</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="ab-not-a-test">
+      <p>The A/B is not part of the suite and never will be: live agents are neither deterministic nor hermetic. What
+      the suite owns is the schema, the reading and the gate's indifference to both.</p>
+    </div>
+
+    <h2 id="distillation" data-item="distillation">Distillation</h2>
+    <table>
+      <thead><tr><th>Tier</th><th>Doc</th><th>What moved</th></tr></thead>
+      <tbody>
+        <tr><td>infra</td><td><code>.claude/skills/code-review/SKILL.md</code></td>
+          <td>§2 gains the deferred Gate 0 and what a red one discards; §3 the never-merge rule with its seconds; §4 the
+          never-batch rule with its seconds. §6's <code>fleet:</code> block landed earlier in the WU</td></tr>
+        <tr><td>T1</td><td><a href="../workflow.html">workflow.html</a></td>
+          <td>The <code>cr/v5</code> Evidence row names the new bill rows, states that an absent row is a reading nobody
+          took, and that a deferred Gate 0 can void a round before any note is written</td></tr>
+        <tr><td>T2</td><td><a href="../decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html">DEC-48</a>
+          + <a href="../decisions/decisions-index.html">index</a></td>
+          <td>Minted: the three adopted rules with their numbers, the governing rule about moved versus removed work,
+          and five alternatives rejected with the measurement that rejected each</td></tr>
+        <tr><td>T1</td><td><code>testing-strategy.html</code></td><td>Untouched, as the plan expected — the test-note
+          contract did not move</td></tr>
+        <tr><td>T0</td><td><code>CLAUDE.md</code></td><td>Not edited</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups" data-item="follow-ups">Follow-ups</h2>
+    <table>
+      <thead><tr><th>Owed</th><th>Why it is owed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The finder-stage A/B</strong> — both arms over W6's 9-case corpus, per the plan's arm 2</td>
+          <td>It is the only thing that can decide L1, L4, L5 and L6, and it is what the 300s bar needs. Its per-case
+          readings are specified in the W8 plan and unchanged</td></tr>
+        <tr><td><strong>A bar an A/B can actually pass</strong></td>
+          <td>Arm 1 refused its own bar at every tier, and W6's arm refused its bar too. Two WUs have now lost a
+          decision to a bar that discriminates nothing. The plan called making this the epic's standing method an
+          owner's call; it is now the blocking one</td></tr>
+        <tr><td><strong>L7 re-decided against that bar</strong></td>
+          <td>The measurement exists — 240 agents, 15.6M tokens — and points at a 2.3× saving with no detectable
+          quality cost. Only the bar is missing</td></tr>
+        <tr><td><strong>Drop or gate a finder dimension</strong></td>
+          <td>The cleanest remaining cut, and now choosable: rounds running under DEC-48 write the
+          <code>by_finder</code> bills it needs</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
