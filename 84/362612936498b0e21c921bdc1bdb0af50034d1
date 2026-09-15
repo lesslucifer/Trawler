@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W8
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html"
+    tier: T2
+    action: added
+    distills: "the three levers the round's own numbers bought - Gate 0 concurrent with the finder stage, finders never merged, verifiers never batched - the governing rule that a cut which moves work between stages buys one axis with the other while only removing work takes both, and five alternatives rejected with the measurement that rejected each, L7's two model tiers among them"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-48's row, so the index still lists every decision this epic has minted"
+  - path: "docs/work/2026-09-12-simpwf-plan.html"
+    tier: T3
+    action: updated
+    distills: "W8's requirement widened from the clock to both axes, the amendment recording why - W6's clock-versus-token trade was an artifact of which cuts were measured - and the method correction it carries: both arms of an A/B actually run, a paired bar rather than every known-real finding, and each lever adopted on its own number"
+  - path: "docs/work/2026-09-13-simpwf-w5-plan.html"
+    tier: T3
+    action: updated
+    distills: "the W5 contract unchanged, with the Mermaid line breaks its diagram lost restored so it renders again"
+  - path: "docs/work/2026-09-13-simpwf-w6-plan.html"
+    tier: T3
+    action: updated
+    distills: "the W6 contract unchanged, with the Mermaid line breaks its diagrams lost restored so they render again"
+  - path: "docs/work/2026-09-13-simpwf-w6-result.html"
+    tier: T3
+    action: updated
+    distills: "the W6 measurement unchanged, with the Mermaid line breaks its diagrams lost restored so they render again"
+  - path: "docs/work/2026-09-14-simpwf-w8-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU's contract: eight levers each with the number that would adopt it, the two arms that would measure them, the bars pre-registered before either ran, and the rule that a lever is adopted or dropped on its own reading rather than bundled into one stopping rule"
+  - path: "docs/work/2026-09-14-simpwf-w8-result.html"
+    tier: T3
+    action: added
+    distills: "what the WU bought and what it refused: three levers adopted on W6's measured seconds, L7 measured over 120 replayed candidates on two model tiers and NOT adopted because the pre-registered bar failed at both tiers, L1/L4/L5/L6 deferred with their arm still owed so the 300s bar is not demonstrated, and the two defects found in the WU's own replay harness while closing it"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "cr/v5's evidence row names the per-stage clock, the candidate severity mix, the verifier model and the shard count, states that an absent row is a reading nobody took rather than a measured zero, and states that a red Gate 0 voids a round whose preflight deferred it before any note is written"
