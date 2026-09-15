@@ -42,6 +42,10 @@ required-features = ["hook-tests"]
 name = "gate_nits"
 required-features = ["hook-tests"]
 
+[[test]]
+name = "e2e_simpwf"
+required-features = ["hook-tests"]
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client", "http2"] }
