@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W8
+branch: HEAD
+tests:
+  unit: { count: 46, covers: "the instrument and the one lever that is code: cr/v5's fleet: block carries stage_seconds, the candidate severity mix and the model that judged the round, a stage the round did not time is absent rather than a measured zero, and a severity the rubric does not name is a malformed note; the --fleet reading averages the clock over the rounds that kept one alone, leaves the wall-clock unread when no round kept one, and names the pool and the verifier model beside it; and a deferred preflight's green refuses to vouch for a tree it did not measure - it says so in the line it prints and tells the round nothing it returns may reach a note until Gate 0 comes back green" }
+  integration: { count: 107, covers: "at a real seam through the real binary and the real merge hook: no gate check reads the clock or the pool a round records, so the instrument can be wrong without a merge turning on it; and preflight --defer-gate0 greens a tree it never measured while still refusing a checkout that is not the reviewed tip, a dirty tree, and a note the review reads that is not on the tip - the three refusals that are what make running Gate 0 beside the finders safe rather than merely faster" }
+  e2e: { waived: "the epic's e2e row carries the full flow; this WU drives no new flow - the deferred preflight and the widened fleet: block are proven at the integration level through the same binary and merge hook e2e drives, and the levers that are not code are skill text the fleet executes, which no harness can drive" }
