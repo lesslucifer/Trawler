@@ -549,6 +549,31 @@
             dropping a finder dimension (no <code>by_finder</code> bills exist yet to choose from)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-49-a-parallel-stage-costs-its-slowest-member.html"><code>dec-49-a-parallel-stage-costs-its-slowest-member.html</code></a></td>
+          <td><span class="badge id">DEC-49</span></td>
+          <td><strong>A parallel stage costs its slowest member, so removing members buys tokens and never the
+            clock</strong> — the companion to DEC-48's rule about work <em>moved</em> between stages. A proposal to
+            shrink the fleet must name the member it removes and say whether that member is the slowest, before it is
+            worth measuring. <strong>Scoped re-verify is rejected</strong>: a corrective re-run spawns the same five
+            finders over the same scope as any other round, and <code>SKILL.md</code> §7's re-run loop is unchanged.
+            <strong>A <code>cr</code> note never reuses a verdict across tips</strong> — it binds
+            <code>diff_sha256</code> over the whole code diff (DEC-45), so reusing four dimensions would bind bytes
+            four of five dimensions never read. The numbers: corrective re-runs are <strong>31 of 197 rounds
+            (16%)</strong>, not every fix, and a third of the measurable ones had doc-only fixes DEC-45 had already
+            removed; the finder stage is <strong>219s</strong> of a 329s round against a 300s bar, and a re-run must
+            keep the dimension that raised the blocker; <strong>0 of 5</strong> dimensions are bounded to a region of
+            the diff, so "the dimensions the delta can reach" has no sound definition; and <strong>0 of 197</strong>
+            notes record which dimension raised a finding, so the pre-registered A/B could not be put to the corpus
+            at all — the rejection rests on the first three readings, not on that one. The 29s still owed to the 300s
+            bar is an input-shrinking problem (W8's L1 and L4), not a membership one. Rejected with their reasons:
+            re-running the dimensions whose prior findings touched the delta (a dimension that found nothing is
+            unbounded), reusing a verdict when the delta is small (size is not safety), reusing a verifier's verdict
+            for an identical claim (refutations rest on callers the delta may have moved, and the verifier stage is
+            parallel too), adopting it for tokens alone (~11% of rounds, bought with a note that overclaims), and
+            building it before measuring it</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

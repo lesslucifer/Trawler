@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="PENDING-MINT" data-artifact="wu-result">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPWF.W7 result (scoped re-verify, measured and rejected)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPWF.W7 result — the cut that could not reach the clock, and could not be put to its own test</h1>
+      <p>Scoped re-verify is dropped. It fires on 16% of rounds, not every fix; it removes members from a stage
+      that costs its slowest one, so it cannot move the bar the epic set; its central predicate cannot be written
+      soundly; and the A/B the plan pre-registered has no corpus, because no review note has ever recorded which
+      dimension raised which finding. Nothing landed in the tree.</p>
+      <div class="meta">WU result · 2026-09-15 · Trawler · T3 (<code>docs/work/</code>) ·
+      <code>wu/simpwf/scoped-reverify</code> → <code>epic/simpwf</code> ·
+      epic plan: <a href="2026-09-12-simpwf-plan.html">E-SIMPWF</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Measured and rejected, as the epic's stopping rule specifies.</strong> W7 was registered droppable:
+      <em>"after a corrective fix the review re-runs only the dimensions the delta can reach, reusing the verdicts of
+      dimensions it cannot."</em> Four independent readings decide it, and they decide it the same way.</p>
+
+      <table>
+        <thead><tr><th>#</th><th>The reading</th><th>What it says about W7</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge id">R1</span></td>
+            <td><strong>31 of 197 rounds</strong> are corrective re-runs after a FAIL — 16%. Another 48 are re-runs
+            on <em>new work</em> in the same WU, which owe a full fleet</td>
+            <td>The premise — "the full fleet re-bought by every fix" — is a sixth of what it claimed</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">R2</span></td>
+            <td>The finder stage costs <strong>219s</strong>, and W6's own caption states why:
+            <em>"finders run in parallel, so the stage costs the slowest"</em></td>
+            <td>Removing members from a parallel stage buys tokens and leaves the clock alone. W7 cannot move the
+            300s bar — and it keeps the dimension that raised the blocker, typically the heaviest</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">R3</span></td>
+            <td><strong>Zero</strong> of the five dimensions is bounded to a region of the diff. All five read the
+            same bytes</td>
+            <td>"The dimensions the delta can reach" has no sound definition. A fix hunk can introduce a reuse,
+            simplification, efficiency or altitude defect — and a hasty corrective fix is where they appear</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">R4</span></td>
+            <td><strong>0 of 197</strong> notes record which dimension raised a finding. No schema has the field</td>
+            <td>The pre-registered A/B — "no known-real finding escapes" — cannot be put to this corpus at all</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn" data-c="the-killer">
+        <p><strong>The reading that kills it is R2, and it kills it on the epic's own terms.</strong> W8 left the
+        round at <strong>329s</strong> against a <strong>300s</strong> target, with the remaining gap explicitly in
+        the finder stage. W7 attacks the finder stage's <em>membership</em>. A stage that costs its slowest member
+        does not get shorter when you remove other members — and on a corrective re-run the member you must keep is
+        the one that raised the blocker. The cut is pointed at the right stage and the wrong axis of it.</p>
+      </div>
+
+      <div class="callout" data-c="what-landed">
+        <p><strong>What landed: nothing in the tree.</strong> Unlike W6 — which was also rejected but left its
+        instrument behind — W7 builds no instrument, because the instrument it would need is a change to the note
+        schema, and the owner scoped this WU to the write-up. The gap R4 names is carried to
+        <a href="#follow-ups">follow-ups</a> rather than closed here.</p>
+      </div>
+    </div>
+
+    <h2 id="clock">R2 — the stage costs its slowest member</h2>
+    <div class="diagram" data-c="clock-chart">
+      <svg viewBox="0 0 720 250" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+        <line x1="70" y1="40" x2="70" y2="205" stroke="var(--line)" stroke-width="1"/>
+        <line x1="210" y1="40" x2="210" y2="205" stroke="var(--line)" stroke-width="1"/>
+        <line x1="350" y1="40" x2="350" y2="205" stroke="var(--line)" stroke-width="1"/>
+        <line x1="630" y1="40" x2="630" y2="205" stroke="var(--line)" stroke-width="1"/>
+        <text x="70" y="222" fill="var(--muted)" font-size="11" text-anchor="middle">0s</text>
+        <text x="210" y="222" fill="var(--muted)" font-size="11" text-anchor="middle">100s</text>
+        <text x="350" y="222" fill="var(--muted)" font-size="11" text-anchor="middle">200s</text>
+        <text x="630" y="222" fill="var(--muted)" font-size="11" text-anchor="middle">400s</text>
+
+        <line x1="490" y1="30" x2="490" y2="212" stroke="var(--warn)" stroke-width="2" stroke-dasharray="5,4"/>
+        <text x="496" y="28" fill="var(--warn)" font-size="12" font-weight="600">300s target</text>
+
+        <text x="62" y="80" fill="var(--ink)" font-size="12" text-anchor="end" font-weight="600">today</text>
+        <text x="62" y="95" fill="var(--muted)" font-size="10" text-anchor="end">DEC-48</text>
+        <rect x="70" y="60" width="306.6" height="36" fill="var(--accent)" rx="3"/>
+        <text x="223" y="83" fill="var(--ink)" font-size="12" text-anchor="middle" font-weight="600">finders 219s</text>
+        <rect x="376.6" y="60" width="154" height="36" fill="var(--ok)" rx="3" opacity="0.75"/>
+        <text x="453" y="83" fill="var(--ink)" font-size="12" text-anchor="middle" font-weight="600">verify 110s</text>
+        <text x="540" y="83" fill="var(--ink)" font-size="12" font-weight="600">329s</text>
+
+        <text x="62" y="150" fill="var(--ink)" font-size="12" text-anchor="end" font-weight="600">W7 —</text>
+        <text x="62" y="165" fill="var(--muted)" font-size="10" text-anchor="end">corrective re-run</text>
+        <rect x="70" y="130" width="306.6" height="36" fill="var(--accent)" rx="3"/>
+        <text x="223" y="153" fill="var(--ink)" font-size="12" text-anchor="middle" font-weight="600">finders 219s — unmoved</text>
+        <rect x="376.6" y="130" width="110" height="36" fill="none" stroke="var(--ok)" stroke-width="2" stroke-dasharray="4,3" rx="3"/>
+        <text x="431" y="153" fill="var(--muted)" font-size="11" text-anchor="middle">smaller · unmeasured</text>
+
+        <text x="70" y="243" fill="var(--muted)" font-size="11">W6 per-stage means, post-DEC-48. W7 removes finder members; the stage is a maximum, not a sum.</text>
+      </svg>
+      <div class="caption">Hình 1 — the finder stage is where the remaining 29s has to come from, and it is the one
+      stage W7's mechanism cannot shorten. Dropping four of five finders leaves the slowest one running.</div>
+    </div>
+
+    <div class="callout" data-c="max-not-sum">
+      <p><strong>The governing rule this uncovers.</strong> DEC-48 recorded that <em>a cut which moves work between
+      stages buys one axis with the other</em>. W7 is the adjacent case and wants its own sentence:
+      <strong>a cut which removes members from a parallel stage buys tokens, never wall-clock</strong> — the stage
+      costs its slowest member, so the saving is real on the bill and zero on the clock unless the member removed is
+      the slowest one. Every future "shrink the fleet" proposal owes this test before it owes an A/B.</p>
+    </div>
+
+    <h2 id="share">R1 — how often the cut would fire</h2>
+    <div class="diagram" data-c="share-chart">
+      <svg viewBox="0 0 720 165" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+        <rect x="70" y="40" width="335.5" height="46" fill="var(--line)" rx="3"/>
+        <text x="237" y="69" fill="var(--ink)" font-size="12" text-anchor="middle" font-weight="600">118 first rounds</text>
+        <rect x="405.5" y="40" width="136.5" height="46" fill="var(--ok)" rx="3" opacity="0.7"/>
+        <text x="473" y="63" fill="var(--ink)" font-size="12" text-anchor="middle" font-weight="600">48</text>
+        <text x="473" y="77" fill="var(--muted)" font-size="10" text-anchor="middle">new work</text>
+        <rect x="542" y="40" width="88" height="46" fill="var(--warn)" rx="3"/>
+        <text x="586" y="63" fill="var(--ink)" font-size="12" text-anchor="middle" font-weight="600">31</text>
+        <text x="586" y="77" fill="var(--ink)" font-size="10" text-anchor="middle">post-FAIL</text>
+
+        <line x1="542" y1="92" x2="542" y2="106" stroke="var(--warn)" stroke-width="1"/>
+        <line x1="630" y1="92" x2="630" y2="106" stroke="var(--warn)" stroke-width="1"/>
+        <line x1="542" y1="106" x2="630" y2="106" stroke="var(--warn)" stroke-width="1"/>
+        <text x="586" y="122" fill="var(--warn)" font-size="12" text-anchor="middle" font-weight="600">W7's target — 16%</text>
+        <text x="586" y="138" fill="var(--muted)" font-size="10" text-anchor="middle">a third of it doc-only fixes</text>
+        <text x="586" y="151" fill="var(--muted)" font-size="10" text-anchor="middle">W4 already removed</text>
+
+        <text x="70" y="30" fill="var(--muted)" font-size="11">197 review rounds across 118 WU/epic identities — every cr note in the repository</text>
+      </svg>
+      <div class="caption">Hình 2 — the addressable share. Re-runs are 40% of all rounds, but three-fifths of them
+      are new work in the same WU, which owes a full fleet. Only the post-FAIL slice is W7's.</div>
+    </div>
+
+    <table>
+      <thead><tr><th>Reading</th><th>Value</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Rounds · identities</td><td>197 · 118</td><td>mean 1.67 rounds per identity</td></tr>
+        <tr><td>Verdicts</td><td>161 PASS · 32 FAIL · 4 unparseable</td><td>one FAIL was never re-run (E-DFLOW.W11)</td></tr>
+        <tr><td>Rounds-per-identity spread</td><td>79×1 · 22×2 · 6×3 · 5×4 · 2×5 · 3×6 · 1×8</td><td>the 8 is E-UISETUP.W6</td></tr>
+        <tr><td>Fix touches, of the diff's code files</td><td><strong>median 14%</strong> · aggregate 25%</td>
+          <td>19 of the 31 pairs were measurable; 12 had a <code>base:</code> sha absent or unresolvable here</td></tr>
+        <tr><td>Fixes touching <em>no</em> code file</td><td>6 of 19 = 32%</td>
+          <td>doc-only fixes. Under W4's code-only rule those rounds do not happen at all</td></tr>
+        <tr><td>Addressable today <em>(derived, not measured)</em></td><td>≈11%</td>
+          <td>16% × (1 − 32%); inherits the 19-of-31 caveat above</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="w4-ate-it">
+      <p><strong>W4 had already eaten a third of W7's target.</strong> Six of the nineteen measurable corrective
+      re-runs were driven by fixes that touched no code — the review was judging documents then. E-GATETRUTH.W2, the
+      corpus's worst offender at five rounds, has four such fixes. The epic's headline decision removed those rounds
+      before W7 was reached.</p>
+    </div>
+
+    <h2 id="predicate">R3 — the predicate that cannot be written</h2>
+    <div data-c="predicate">
+      <p>W7 needs a sound answer to <em>"which dimensions can this delta reach?"</em> There is none.</p>
+      <table>
+        <thead><tr><th>Candidate definition</th><th>Why it fails</th></tr></thead>
+        <tbody>
+          <tr><td>Re-run the dimensions whose <em>prior findings</em> touched the delta's files</td>
+            <td>A dimension that found nothing in round 1 is unbounded — it has no files to compare against, and the
+            new hunk is exactly where it might now find something</td></tr>
+          <tr><td>Re-run the dimensions that "own" the changed code</td>
+            <td>No dimension owns a region. All five read the same bytes; the rubric splits them by <em>question
+            asked</em>, not by file</td></tr>
+          <tr><td>Reuse a dimension's verdict when the delta is small</td>
+            <td>Size is not safety. A one-line fix is the most likely place for a reuse or altitude defect, because
+            it was written under pressure to satisfy one blocker</td></tr>
+          <tr><td>Reuse a <em>verifier's</em> verdict for an identical claim</td>
+            <td>Soundest of the four, and still unsafe — a refutation rests on callers and surrounding code the delta
+            may have moved. It also saves nothing on the clock, for R2's reason: the verifier stage is parallel too</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn" data-c="binding-conflict">
+        <p><strong>And it contradicts the epic's own headline.</strong> DEC-45 binds a <code>cr</code> note to
+        <code>diff_sha256</code> over the whole code diff. A re-run that reuses four dimensions writes a note binding
+        bytes that four of five dimensions never read. The note would claim more than the round did — which is the
+        precise failure W4 was landed to end.</p>
+      </div>
+    </div>
+
+    <h2 id="arm">R4 — the A/B has no corpus</h2>
+    <div class="diagram" data-c="evidence-chart">
+      <svg viewBox="0 0 720 190" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+        <rect x="150" y="40" width="480" height="26" fill="var(--line)" rx="3" opacity="0.35"/>
+        <rect x="150" y="40" width="34.1" height="26" fill="var(--ok)" rx="3"/>
+        <text x="142" y="58" fill="var(--ink)" font-size="12" text-anchor="end">a <tspan font-family="monospace">verified:</tspan> block</text>
+        <text x="196" y="58" fill="var(--ink)" font-size="12" font-weight="600">14</text>
+
+        <rect x="150" y="80" width="480" height="26" fill="var(--line)" rx="3" opacity="0.35"/>
+        <rect x="150" y="80" width="48.7" height="26" fill="var(--ok)" rx="3"/>
+        <text x="142" y="98" fill="var(--ink)" font-size="12" text-anchor="end">a finding's <tspan font-family="monospace">location:</tspan></text>
+        <text x="210" y="98" fill="var(--ink)" font-size="12" font-weight="600">20</text>
+
+        <rect x="150" y="120" width="480" height="26" fill="var(--line)" rx="3" opacity="0.35"/>
+        <text x="142" y="138" fill="var(--ink)" font-size="12" text-anchor="end">a finding's <tspan font-family="monospace">dimension</tspan></text>
+        <text x="162" y="138" fill="var(--warn)" font-size="12" font-weight="600">0 — no schema has the field</text>
+
+        <text x="150" y="30" fill="var(--muted)" font-size="11">of 197 cr notes, how many carry what a scoped re-run would have to be judged on</text>
+        <text x="150" y="172" fill="var(--muted)" font-size="11">Corrective re-run pairs with locations at both ends: 5 of 31 — and four of the five are one WU.</text>
+      </svg>
+      <div class="caption">Hình 3 — the review has never written down what W7's own test needs. The dimension tag is
+      not scarce in the corpus; it does not exist.</div>
+    </div>
+
+    <table>
+      <thead><tr><th>What the A/B needed</th><th>What the corpus has</th></tr></thead>
+      <tbody>
+        <tr><td>Which dimension raised each finding</td><td><strong>Nothing.</strong> No <code>cr</code> schema,
+          v1 through v5, carries the field</td></tr>
+        <tr><td>Where each verified finding sat</td><td>20 notes of 197; on both ends of a re-run pair, 5 of 31 —
+          four of them E-GATETRUTH.W2</td></tr>
+        <tr><td>A corpus judged by the <em>current</em> review</td><td>None. All 31 corrective re-runs are
+          <code>cr/v1</code>–<code>v3</code> — 18 · 12 · 1 — every one of them pre-W4, when documents were judged
+          too</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="not-claimed">
+      <p><strong>Stated rather than implied: the A/B did not run, and this result does not claim its answer.</strong>
+      W7 is rejected on R1, R2 and R3, which are readings taken. R4 is not evidence that findings would escape — it
+      is the reason nobody can say whether they would. Rejecting a cut because its test is unrunnable is honest;
+      reporting an unrun test as a negative result would be the error W6 and W8 were both criticised for.</p>
+    </div>
+
+    <h2 id="deviations" data-item="deviations">Deviations</h2>
+    <table>
+      <thead><tr><th>Planned</th><th>What happened</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Build the scoped re-verify, then decide it on an A/B over known-real findings</td>
+          <td><strong>Nothing was built.</strong> The measurement was taken first, and it decided the WU before any
+          mechanism existed</td>
+          <td>The plan made W7 droppable on measurement. Three of the four readings are available from the notes and
+          the git history alone, at no agent cost — building first would have spent the fleet to reach the same
+          verdict</td>
+        </tr>
+        <tr>
+          <td>An A/B showing no known-real finding escapes</td>
+          <td><strong>Not run — not runnable.</strong> Recorded as R4</td>
+          <td>The corpus does not record which dimension raised which finding, so the question cannot be put to it.
+          This is a gap in the evidence, not a sampling problem</td>
+        </tr>
+        <tr>
+          <td>An instrument left behind, as W6 left its <code>fleet:</code> block</td>
+          <td>None. The note schema is untouched</td>
+          <td>Owner's call, taken explicitly when the scope was put to them: this WU is the write-up. The instrument
+          R4 implies is carried to follow-ups</td>
+        </tr>
+        <tr>
+          <td>A W7 plan document, as W1–W6 and W8 each had</td>
+          <td>Not written</td>
+          <td>The epic plan already carries W7's requirement sentence and its expected-result bar, and the WU closed
+          against that bar without a mechanism to plan</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence" data-item="evidence">Evidence</h2>
+    <div class="callout" data-c="reproducible">
+      <p><strong>Unlike W6's and W8's arms, every reading here is reproducible from the repository</strong> — it is
+      git notes and git history, not live agents. There is nothing seeded, sampled or judged.</p>
+    </div>
+    <table>
+      <thead><tr><th>Claim</th><th>Where to check it</th></tr></thead>
+      <tbody>
+        <tr><td>197 notes · 118 identities · 161 PASS / 32 FAIL</td>
+          <td><code>git notes --ref=cr list</code>, then <code>wu:</code>/<code>epic:</code>/<code>verdict:</code> off
+          each note body</td></tr>
+        <tr><td>31 post-FAIL re-runs · 48 post-PASS · 118 first rounds</td>
+          <td>Group the notes by identity, order each group against
+          <code>git log --all --reverse --format=%H</code>, count rounds whose predecessor was a FAIL. The three
+          figures sum to 197</td></tr>
+        <tr><td>All 31 are pre-W4 schemas (18 · 12 · 1)</td>
+          <td>The <code>schema:</code> line of each of the 31 re-run notes</td></tr>
+        <tr><td>Median fix touches 14% of the diff's code files</td>
+          <td>Per pair: <code>git diff --name-only &lt;base&gt;..&lt;tip&gt;</code> against
+          <code>git diff --name-only &lt;prev-tip&gt;..&lt;tip&gt;</code>, both filtered to the five
+          <code>notes::is_code</code> prefixes</td></tr>
+        <tr><td>0 of 197 notes tag a finding's dimension</td>
+          <td>The <code>cr</code> schemas themselves — <code>xtask/src/notes.rs</code> — and
+          <code>.claude/skills/code-review/SKILL.md</code> §6's template, which has no such field</td></tr>
+        <tr><td>Finder stage 219s; verifiers 110s; 329s against 300s</td>
+          <td><strong>Not measured here</strong> — W6's per-stage means, as restated in
+          <a href="2026-09-14-simpwf-w8-result.html">the W8 result</a>. W7 takes them as given</td></tr>
+        <tr><td>"Finders run in parallel, so the stage costs the slowest"</td>
+          <td><a href="2026-09-13-simpwf-w6-result.html">W6 result</a> — the wall-clock chart inside Hình 5
+          (<code>data-c="chart-cost"</code>) states it as the reason the stage is plotted as a maximum. The
+          load-bearing sentence for R2</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation" data-item="distillation">Distillation</h2>
+    <table>
+      <thead><tr><th>Tier</th><th>Doc</th><th>What moved</th></tr></thead>
+      <tbody>
+        <tr><td>T2</td><td><a href="../decisions/dec-49-a-parallel-stage-costs-its-slowest-member.html">DEC-49</a>
+          + <a href="../decisions/decisions-index.html">index</a></td>
+          <td>Minted: scoped re-verify rejected with the four readings, and the governing rule — removing members
+          from a parallel stage buys tokens, never wall-clock — as the test a fleet-shrinking proposal owes before it
+          owes an A/B</td></tr>
+        <tr><td>T4</td><td><code>src/</code>, <code>xtask/</code></td><td>Untouched. No mechanism was built</td></tr>
+        <tr><td>infra</td><td><code>.claude/skills/code-review/SKILL.md</code></td>
+          <td>Untouched. W7 proposed a §7 re-run rule and none is adopted, so the re-run loop stands as W8 left
+          it</td></tr>
+        <tr><td>T1</td><td><code>workflow.html</code>, <code>testing-strategy.html</code></td>
+          <td>Untouched — no gate, note contract or test layer moved</td></tr>
+        <tr><td>T0</td><td><code>CLAUDE.md</code></td><td>Not edited</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups" data-item="follow-ups">Follow-ups</h2>
+    <table>
+      <thead><tr><th>Owed</th><th>Why it is owed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A finding carries its dimension and location in the note</strong></td>
+          <td>R4 is a gap that cost this WU its test. It also blocks W8's deferred L1, L4, L5 and L6, whose arm is
+          still owed, and the "drop or gate a finder dimension" cut W8 named — all of them need per-dimension yield
+          the notes do not record. The cheapest unblocking change in the epic's backlog</td></tr>
+        <tr><td><strong>The finder-stage levers, not its membership</strong></td>
+          <td>R2 says the 29s gap to 300s is in the finder stage and cannot come from removing finders. It can come
+          from shrinking what each finder <em>reads</em> — W8's L1 and L4, already registered and still owed their
+          arm. The median corrective fix touches 14% of the diff's code files, so the headroom is real</td></tr>
+        <tr><td><strong>The epic's result</strong></td>
+          <td>W7 was the last Working Unit. Every WU is now landed or measured-and-rejected with the number that
+          decided it, which is what the epic's stopping rule requires to close</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
