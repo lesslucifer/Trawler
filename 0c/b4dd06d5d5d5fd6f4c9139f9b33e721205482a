@@ -1,0 +1,56 @@
+schema: doc/v1
+epic: E-SIMPWF
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-42-the-gate-tally-is-local-measurement.html"
+    tier: T2
+    action: added
+    distills: "W1: why the gate's measurement is a local file in the shape of Gate 0's cache and never a git note or gate evidence; what a review round is (a cr note on the tip's own first-parent line) and the three definitions rejected"
+  - path: "docs/decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html"
+    tier: T2
+    action: added
+    distills: "W2: the review's first step refuses on the tree and the notes it reads and on nothing else; the checks left to the merge with a reason each; no doc predicate at commit or merge level, and the consequence stated; narrowed by DEC-45 to test/v2 alone"
+  - path: "docs/decisions/dec-44-the-note-tool-derives-what-the-tooling-knows.html"
+    tier: T2
+    action: added
+    distills: "W3: which fields of test/v2 and doc/v1 git answers and the tool derives, what stays the agent's judgment, the count rule as a line rule with its limits, the exempt rule, and the boundary against the merge's tree-shaped checks"
+  - path: "docs/decisions/dec-45-the-review-binds-the-code-it-judged.html"
+    tier: T2
+    action: added
+    distills: "W4, the headline: the code review's subject, binding and inputs are the code paths; a docs-only commit cannot void a PASS; a diff that changes no code owes no review; older schemas stay valid at the binding they declared"
+  - path: "docs/decisions/dec-46-the-design-verdict-has-its-own-note.html"
+    tier: T2
+    action: added
+    distills: "W4: the design dimension leaves the code review for a step of its own on design/v1, pinned to the design paths it read, read by 9·design alone; how the design records that name the old carrier are read until the design epic rewrites them"
+  - path: "docs/decisions/dec-47-severity-decides-the-verdict.html"
+    tier: T2
+    action: added
+    distills: "W5: only verified blockers and importants fail a review; a verified nit is dispositioned evidence - fixed inside the range or waived with a reason - refused undecided under 3·review-nits; uncertainty resolves upward; the A/B over E-RFINISH's 21 code findings with zero escapes and a saving that is prospective"
+  - path: "docs/decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html"
+    tier: T2
+    action: added
+    distills: "W8: three levers adopted on W6's measured seconds - Gate 0 beside the finders, never merge the finders, never batch the verifiers - the governing rule that a cut moving work between stages buys one axis with the other, and five alternatives rejected with the measurement that rejected each, the verifier-model swap among them"
+  - path: "docs/decisions/dec-49-a-parallel-stage-costs-its-slowest-member.html"
+    tier: T2
+    action: added
+    distills: "W7: scoped re-verify rejected on four readings taken from the notes and history - 16% of rounds addressable, a parallel stage that does not shorten when members are removed, no sound reach predicate, no corpus for its A/B - and the rule every fleet-shrinking proposal owes first"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "rows DEC-42 through DEC-49 at their settled numbers, each minted by the WU that decided it"
+  - path: "docs/design-flow.html"
+    tier: T1
+    action: updated
+    distills: "W4: the Tier-3 rows that named the cr/v3 carrier now name design/v1 and the design-review step; the flow itself is unchanged and handed to the design epic"
+  - path: "docs/work-planning.html"
+    tier: T1
+    action: updated
+    distills: "W2: doc verification happens at authoring time only - the harness hooks are the sole place a document's form is checked; no commit- or merge-level doc predicate exists (DEC-43), and the merge reads document facts instead"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "the process standard as the epic left it: the levels table and DoD rows demand cr/v5 only where a diff changes code and design/v1 where it carries a design artifact; the sign-last order names notes write and the preflight as steps 2 and 3; the evidence table carries cr/v5's code-path binding, the nits rule, the fleet bill with its clock and pool, and design/v1 as a note of its own; gate checks 3 and 9 read severity and the design carrier; the command list names preflight and notes write; who judges opens with a mechanical refusal"
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "v9: the design flow opens as a process epic of its own with what this epic hands it, and five rows record what the epic measured and left open - the finder-stage A/B and a bar a fleet can pass, a finding's dimension on the note, waived nits with nothing summing them, six temp-repo harnesses, and the target/ leak into design-e2e's temporary repos"
