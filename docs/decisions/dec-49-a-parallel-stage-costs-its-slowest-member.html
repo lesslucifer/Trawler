@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa8d4f59f34851f0dfad029">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-49: a parallel stage costs its slowest member</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-49 — a parallel stage costs its slowest member</h1>
+      <p>E-SIMPWF.W7 proposed re-running only the dimensions a corrective fix can reach. It is rejected, and the
+      reason generalises: removing members from a parallel stage buys tokens and leaves the clock alone. Every
+      later "fewer agents" proposal owes this test before it owes an A/B.</p>
+      <div class="meta">Decided 2026-09-15 · E-SIMPWF.W7 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="the-rule">
+      <p><strong>The rule.</strong> A cut that removes members from a stage whose agents run in parallel buys
+      <strong>tokens, never wall-clock</strong> — the stage costs its slowest member, so the clock moves only if the
+      member removed is the slowest one. A proposal to shrink the fleet must say which member it removes and whether
+      that member is the slowest, before it is worth measuring at all.</p>
+      <p>This is the companion to <a href="dec-48-the-round-is-bought-on-the-clock-and-the-bill.html">DEC-48</a>'s
+      rule that <em>a cut which moves work between stages buys one axis with the other</em>. Together they cover
+      both ways a round can be made smaller: moving work, and removing agents.</p>
+    </div>
+
+    <table>
+      <thead><tr><th>Decided</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scoped re-verify is rejected.</strong> A corrective re-run spawns the same five finders over
+          the same scope as any other round</td>
+          <td><code>SKILL.md</code> §7's re-run loop is unchanged: a FAIL is fixed and the skill is run again,
+          whole</td></tr>
+        <tr><td><strong>A <code>cr</code> note never reuses a verdict across tips</strong></td>
+          <td>A note binds <code>diff_sha256</code> over the whole code diff (DEC-45). Reusing four dimensions would
+          bind bytes four of five dimensions never read</td></tr>
+        <tr><td><strong>The clock target is a finder-stage problem, and not a membership one</strong></td>
+          <td>The 29s between DEC-48's 329s and the 300s bar has to come from shrinking what each finder
+          <em>reads</em> — W8's L1 and L4 — not from how many finders there are</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>"Don't re-run what the fix cannot have broken" is an obvious-sounding economy, and it will be proposed again.
+    It was registered in the E-SIMPWF plan as a droppable experiment, and the four readings that decided it are not
+    reachable by intuition.</p>
+
+    <h2 id="numbers">The numbers that rejected it</h2>
+    <table>
+      <thead><tr><th>Reading</th><th>Value</th><th>What it settles</th></tr></thead>
+      <tbody>
+        <tr><td>Corrective re-runs, of all review rounds</td><td><strong>31 of 197 — 16%</strong></td>
+          <td>The premise was "the full fleet re-bought by every fix". 48 further re-runs are new work in the same
+          WU and owe a full fleet</td></tr>
+        <tr><td>Corrective re-runs whose fix touched no code</td><td>6 of 19 measurable pairs — 32%</td>
+          <td>Doc-only fixes. DEC-45's code-only review had already removed those rounds, taking about a third of
+          W7's target before W7 was reached</td></tr>
+        <tr><td>Finder stage, post-DEC-48</td><td><strong>219s</strong> of a 329s round, against a 300s bar</td>
+          <td>W6's caption states the mechanism: <em>finders run in parallel, so the stage costs the slowest</em>.
+          A corrective re-run must keep the dimension that raised the blocker, typically the heaviest</td></tr>
+        <tr><td>Dimensions bounded to a region of the diff</td><td><strong>0 of 5</strong></td>
+          <td>All five read the same bytes; the rubric splits them by question asked, not by file. "The dimensions
+          the delta can reach" has no sound definition</td></tr>
+        <tr><td>Notes recording which dimension raised a finding</td><td><strong>0 of 197</strong></td>
+          <td>The pre-registered A/B cannot be put to the corpus at all. W7 is rejected on the three readings above;
+          this one is why nobody can say whether findings would escape</td></tr>
+        <tr><td>Median share of the diff's code files a fix touches</td><td>14%</td>
+          <td>The waste is real and is on the bill. It is reachable by shrinking each finder's input, which is a
+          different cut</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected, with the reason that rejected it</h2>
+    <table>
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Re-run the dimensions whose prior findings touched the delta's files</td>
+          <td>A dimension that found nothing in round 1 has no files to compare against, and the new hunk is exactly
+          where it might now find something</td></tr>
+        <tr><td>Reuse a dimension's verdict when the delta is small</td>
+          <td>Size is not safety. A one-line corrective fix is where a reuse or altitude defect appears, because it
+          was written under pressure to satisfy one blocker</td></tr>
+        <tr><td>Reuse a <em>verifier's</em> verdict for a byte-identical claim</td>
+          <td>The soundest variant and still unsafe — a refutation rests on callers the delta may have moved. It
+          also buys no clock: the verifier stage is parallel too, so this rule applies to it unchanged</td></tr>
+        <tr><td>Adopt it for tokens alone, accepting no clock saving</td>
+          <td>It would fire on ~11% of rounds and would make a note claim more than its round judged, against
+          DEC-45. The bill is not worth the binding</td></tr>
+        <tr><td>Build it first and measure after</td>
+          <td>Three of the four readings come from the notes and git history at no agent cost. Building would have
+          spent the fleet to reach the same verdict</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follows">What follows</h2>
+    <table>
+      <thead><tr><th>Consequence</th><th>Where it lands</th></tr></thead>
+      <tbody>
+        <tr><td>No mechanism was built, no note schema moved, the review skill is untouched</td>
+          <td><a href="../work/2026-09-15-simpwf-w7-result.html">the W7 result</a>'s distillation table</td></tr>
+        <tr><td><strong>A tip the merge exempts is signable.</strong> <code>mr confirm</code> demanded
+          <code>test/v2</code>, <code>doc/v1</code> and <code>cr/v5</code> of every tip, including one the merge
+          gate greens without them — so a Working Unit that changes no code could not be merged at all, since
+          <code>8·manual-review</code> still wants an <code>mr/v1</code> that <code>notes write</code> and the
+          review both decline to supply. The readiness check now reads the merge's own exemption</td>
+          <td>Found by W7, which is that Working Unit. <code>xtask/src/mr.rs</code>, sharing
+          <code>Gate::judged_of</code> with <code>gate.rs</code>; the deadlock is set out in
+          <a href="../work/2026-09-15-simpwf-w7-result.html#deadlock">the W7 result</a></td></tr>
+        <tr><td>A finding should carry its dimension and location in the note</td>
+          <td>Owed, not decided here. It is what W7's A/B needed, and what W8's deferred L1, L4, L5 and L6 need to
+          be decidable at all</td></tr>
+        <tr><td>The 300s bar is still open, and its remaining levers are input-shrinking ones</td>
+          <td>W8's L1 and L4, still owing the finder-stage arm</td></tr>
+        <tr><td>Nothing about the bar moved: five dimensions, the severity rows, the verdict rule, DEC-47's
+          dispositions and every gate check say exactly what they said</td>
+          <td><code>rubric.md</code> and <code>verify-dod</code> unchanged</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

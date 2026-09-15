@@ -131,3 +131,76 @@ fn full_manual_review_flow() {
         String::from_utf8_lossy(&green.stdout)
     );
 }
+
+/// E-SIMPWF.W7 — a Working Unit that changes no code is signable and merges.
+///
+/// `8·manual-review` demands an `mr/v1` on every WU merge, exempt or not, and
+/// `mr confirm` is its only writer. While the readiness check demanded
+/// `test/v2`, `doc/v1` and `cr/v5` unconditionally, a docs-only WU could not be
+/// merged at all: `notes write` declines to write the first two for an exempt
+/// range and the review declines the third, so the one note the gate wanted was
+/// unreachable.
+#[test]
+fn a_docs_only_working_unit_is_signable_and_a_code_bearing_one_is_not() {
+    let repo = seeded_repo();
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/docs-only", "epic/x"]);
+    repo.write("docs/work/x-result.html", "<html>result</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "docs: a working unit that changes no code"]);
+
+    let confirm = repo.xtask(&[
+        "mr",
+        "confirm",
+        "wu",
+        "HEAD",
+        "--as",
+        "a@b.co",
+        "--target",
+        "epic/x",
+        "--report",
+        "docs/work/x-result.html",
+    ]);
+    let said = format!(
+        "{}{}",
+        String::from_utf8_lossy(&confirm.stdout),
+        String::from_utf8_lossy(&confirm.stderr)
+    );
+    assert!(confirm.status.success(), "an exempt tip is signable: {said}");
+    assert!(!said.contains("not ready to sign"), "no note is owed by an exempt range: {said}");
+    assert!(
+        repo.git_raw(&["notes", "--ref=mr", "show", "HEAD"]).status.success(),
+        "the mr/v1 note 8·manual-review reads is written"
+    );
+
+    let gate = repo.xtask(&["verify-dod", "wu", "HEAD", "--target", "epic/x"]);
+    assert!(
+        gate.status.success(),
+        "the merge gate greens the tip it just let a human sign: {}{}",
+        String::from_utf8_lossy(&gate.stdout),
+        String::from_utf8_lossy(&gate.stderr)
+    );
+
+    // The exemption is the range's, not the signer's: a tip that touches code
+    // still owes its receipts before anyone is asked to sign.
+    repo.git(&["checkout", "-q", "-b", "wu/x/with-code", "epic/x"]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/work/y-result.html", "<html>result</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "feat: a working unit that changes code"]);
+    let refused = repo.xtask(&[
+        "mr",
+        "confirm",
+        "wu",
+        "HEAD",
+        "--as",
+        "a@b.co",
+        "--target",
+        "epic/x",
+        "--report",
+        "docs/work/y-result.html",
+    ]);
+    let why = String::from_utf8_lossy(&refused.stdout).to_string();
+    assert!(why.contains("not ready to sign"), "a code-bearing tip still owes its notes: {why}");
+    assert!(why.contains("test/v2") && why.contains("cr/v5"), "{why}");
+}

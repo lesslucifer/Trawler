@@ -312,6 +312,10 @@ fn confirm_is_refused_when_the_review_judged_a_different_diff() {
     let repo = Repo::new(ALLOWED);
     repo.git(&["checkout", "-q", "-b", "wu/e/w"]);
     let report = result_report(&repo);
+    // The binding is only read on a gated range: an exempt tip carries no code
+    // for a review to have judged, and `verify()` greens it before `5·diff-binding`
+    // runs at all.
+    repo.write("src/lib.rs", "pub fn added() {}\n");
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "-m", "the work"]);
     settle(&repo, "HEAD");

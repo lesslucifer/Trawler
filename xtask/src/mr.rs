@@ -156,12 +156,21 @@ A signature binds the tree. Every later tree change - a fix, a missed test, a do
 /// count as bound to this tip (`None` when no merge target is resolvable or the
 /// note binds nothing, which drops only the binding check — the gate re-checks
 /// it at merge time either way).
+///
+/// An ungated range owes none of the three: the merge exempts a diff with no
+/// code path and no design artifact, so demanding notes of it would refuse a tip
+/// the gate greens and leave a docs-only Working Unit unmergeable — `8·manual-review`
+/// wants an `mr/v1` that `notes write` and the review both decline to supply.
 fn unready_reasons(
+    gated: bool,
     has_test: bool,
     has_doc: bool,
     review: Option<(&str, &str)>,
     bound: Option<&str>,
 ) -> Vec<String> {
+    if !gated {
+        return Vec::new();
+    }
     let mut missing = Vec::new();
     if !has_test {
         missing.push("no test/v2 note - the tests it attests may still be unwritten".to_string());
@@ -190,13 +199,14 @@ fn unready_reasons(
 /// hashes of the range being attested. What the tip's note binds is
 /// [`crate::gate::reviewed_binding`]'s to say — the one rule `5·diff-binding`
 /// reads, so this never refuses a tip the merge gate would green.
-fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>) -> Vec<String> {
+fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>, gated: bool) -> Vec<String> {
     let cr = crate::git::parsed_note::<crate::notes::CrNote>(repo, "cr", tip);
     let bound = cr
         .as_ref()
         .zip(range)
         .and_then(|(c, (whole, code))| crate::gate::reviewed_binding(&c.schema, whole, code));
     unready_reasons(
+        gated,
         note(repo, "test", tip).is_some(),
         note(repo, "doc", tip).is_some(),
         cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
@@ -445,9 +455,9 @@ fn mr_confirm(
             None => wizard::ask(input, "level (wu or epic)")?,
         },
     };
-    let level = match level_word.as_str() {
-        "wu" => "working-unit",
-        "epic" => "epic",
+    let (level, gate_level) = match level_word.as_str() {
+        "wu" => ("working-unit", crate::gate::Level::Wu),
+        "epic" => ("epic", crate::gate::Level::Epic),
         _ => return Err(crate::USAGE.to_string()),
     };
     let tip_ref = tip_ref.unwrap_or("HEAD");
@@ -465,18 +475,30 @@ fn mr_confirm(
     // Resolved once and carried to the signature below: the readiness check and
     // the signed payload must speak about the same range, and each half is a
     // full `git diff` over it.
-    let reviewed = match target.as_deref() {
+    let range = match target.as_deref() {
         Some(t) => {
             let base = git(repo, &["merge-base", t, &tip])?;
-            let hash = diff_sha256(repo, &base, &tip)?;
             let names = crate::git::diff_names(repo, &base, &tip)?;
-            let code = crate::gate::Gate { repo }.code_sha256(&base, &tip, &names)?;
-            Some((base, hash, code))
+            Some((base, names))
         }
         None => None,
     };
+    let reviewed = match range.as_ref() {
+        Some((base, names)) => {
+            let hash = diff_sha256(repo, base, &tip)?;
+            let code = crate::gate::Gate { repo }.code_sha256(base, &tip, names)?;
+            Some((base.clone(), hash, code))
+        }
+        None => None,
+    };
+    // A range nobody can resolve is treated as gated: the notes are demanded, as
+    // they were before the exemption was read here at all.
+    let gated = range.as_ref().is_none_or(|(base, names)| {
+        let (docs, retired) = crate::gate::Gate { repo }.judged_of(gate_level, base, &tip, names);
+        crate::gate::is_gated(names, &crate::gate::judged_docs(&docs, &retired))
+    });
     let unready =
-        tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h, c)| (h.as_str(), c.as_str())));
+        tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h, c)| (h.as_str(), c.as_str())), gated);
     if !unready.is_empty() {
         let why = unready.iter().map(|r| format!("  - {r}")).collect::<Vec<_>>().join("\n");
         return Ok((1, format!("{} is not ready to sign:\n{why}\n{SIGN_LAST}", short(&tip))));
@@ -1318,13 +1340,13 @@ mod tests {
 
     #[test]
     fn a_settled_reviewed_tip_is_ready_to_sign() {
-        let r = super::unready_reasons(true, true, Some(("PASS", "abc")), Some("abc"));
+        let r = super::unready_reasons(true, true, true, Some(("PASS", "abc")), Some("abc"));
         assert!(r.is_empty(), "{r:?}");
     }
 
     #[test]
     fn every_unwritten_receipt_is_named_at_once() {
-        let r = super::unready_reasons(false, false, None, Some("abc"));
+        let r = super::unready_reasons(true, false, false, None, Some("abc"));
         assert_eq!(r.len(), 3, "{r:?}");
         assert!(r[0].contains("test/v2"), "{r:?}");
         assert!(r[1].contains("doc/v1"), "{r:?}");
@@ -1332,12 +1354,29 @@ mod tests {
     }
 
     #[test]
+    fn an_exempt_tip_is_ready_to_sign_with_no_notes_at_all() {
+        let r = super::unready_reasons(false, false, false, None, None);
+        assert!(
+            r.is_empty(),
+            "a diff the merge exempts owes no test/v2, doc/v1 or cr/v5 - demanding them \
+             leaves a docs-only Working Unit unmergeable: 8·manual-review wants an mr/v1 \
+             that notes write and the review both decline to supply. {r:?}"
+        );
+    }
+
+    #[test]
+    fn the_exemption_never_relaxes_a_gated_tip() {
+        let r = super::unready_reasons(true, false, false, None, None);
+        assert_eq!(r.len(), 3, "{r:?}");
+    }
+
+    #[test]
     fn a_failing_or_unbound_review_blocks_the_signature() {
-        let failed = super::unready_reasons(true, true, Some(("FAIL", "abc")), Some("abc"));
+        let failed = super::unready_reasons(true, true, true, Some(("FAIL", "abc")), Some("abc"));
         assert_eq!(failed.len(), 1);
         assert!(failed[0].contains("verdict is FAIL"), "{failed:?}");
 
-        let stale = super::unready_reasons(true, true, Some(("PASS", "old")), Some("new"));
+        let stale = super::unready_reasons(true, true, true, Some(("PASS", "old")), Some("new"));
         assert_eq!(stale.len(), 1);
         assert!(stale[0].contains("different diff"), "{stale:?}");
     }
@@ -1347,9 +1386,9 @@ mod tests {
     // 5·diff-binding still refuses a stale review later.
     #[test]
     fn an_unresolvable_target_drops_only_the_binding_check() {
-        let r = super::unready_reasons(true, true, Some(("PASS", "abc")), None);
+        let r = super::unready_reasons(true, true, true, Some(("PASS", "abc")), None);
         assert!(r.is_empty(), "{r:?}");
-        let still_fails = super::unready_reasons(true, true, Some(("FAIL", "abc")), None);
+        let still_fails = super::unready_reasons(true, true, true, Some(("FAIL", "abc")), None);
         assert_eq!(still_fails.len(), 1, "{still_fails:?}");
     }
 
