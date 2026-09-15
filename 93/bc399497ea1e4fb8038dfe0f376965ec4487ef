@@ -1,0 +1,18 @@
+schema: cr/v5
+scope: "WU scoped-reverify -> epic/simpwf - one round, the author's own reading of the diff. No code-review fleet ran: E-SIMPWF changes the review flow itself, so the owner reads the result at the merge (epic plan, WU-review ruling). The reading covered the whole code range - unready_reasons' gated arm and tip_unready's threading in mr.rs, the range/reviewed/gated restructure in mr_confirm, the Gate::judged_of extraction in gate.rs and open()'s use of it, and the four tests across xtask/src/mr.rs, xtask/tests/mr.rs and tests/e2e_manual_review.rs."
+epic: E-SIMPWF
+wu: E-SIMPWF.W7
+branch: wu/simpwf/scoped-reverify
+base: cf70cec448dba4576010ea6ddc744e7c005f281b
+head: 93bc399497ea1e4fb8038dfe0f376965ec4487ef
+diff_sha256: dff7539aa60f97d49e1246806202b39da1cbe2559492f2edaf15c2556b5e15be
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 1, waived: 1 }
+waivers:
+  - finding: "no isolated code-review fleet judged this diff - five finders and their verifiers did not run"
+    reason: "E-SIMPWF's own ruling for its Working Units: the epic changes the review flow, so its WUs are not put through the code-review skill. The author's reading of the diff is recorded above and in the result report, and the gate is the human sign-off (mr/v1), which is never waivable."
+nits:
+  - finding: "mr confirm calls Gate::judged_of and discards both halves, so doc_blobs' per-doc git show runs for an answer that only needs a boolean"
+    waived: "correctness before cost, and the cost is a handful of git show calls on a command a human runs once per Working Unit - never on the finder path the epic is measuring. A boolean-only predicate would be a second definition of the exemption, which is the exact defect this WU repairs: mr.rs disagreeing with gate.rs about what the merge exempts. One shared definition is what makes tip_unready's stated invariant true, so the duplication is the thing worth refusing, not the git calls."
+verdict: PASS
+date: 2026-09-15
