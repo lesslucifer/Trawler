@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { waived: "the commit adds the epic e2e and two harness helpers it needs (paths_sha, code_sha); no unit-level code path is added - the helpers are exercised by every assertion the e2e makes over them" }
+  e2e: { count: 3, covers: "the epic plan's e2e table over one hermetic repo through the real xtask binary, hook and git: three seams (code beside docs, a design run beside code, a docs-only diff) landing on main with tool-written notes and code-bound reviews; a document after a PASS leaves it standing and a code fix voids it; a design run amended after both verdicts voids only design/v1; the walk refuses a seam that lost its review; a failing test in a real crate and a malformed note each refused by the preflight under the gate's own id" }
