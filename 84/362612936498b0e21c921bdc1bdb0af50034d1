@@ -1,0 +1,20 @@
+schema: cr/v5
+scope: "WU round-cost -> epic/simpwf — one round, the author's own reading of the diff. No code-review fleet ran: E-SIMPWF changes the review flow itself, so the owner reads the result at the merge (epic plan, WU-review ruling). The reading covered the three code paths the range touches — the fleet: block's new rows in notes.rs, the --fleet reading in tally.rs, and the deferred tree mode in preflight.rs — plus the three skill edits that are the levers no code can carry."
+epic: E-SIMPWF
+wu: E-SIMPWF.W8
+branch: wu/simpwf/round-cost
+base: a2101742364838206c9b6d59213c10bf98d6ee7e
+head: 84362612936498b0e21c921bdc1bdb0af50034d1
+diff_sha256: 1dffb5d64deaf79ff8aefaa348e5869b0caaa9f29ca2f35ebf94d160d9657d7f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 0, verified: 0, waived: 1 }
+waivers:
+  - finding: "no isolated code-review fleet judged this diff - five finders and their verifiers did not run"
+    reason: "E-SIMPWF's own ruling for its Working Units: the epic changes the review flow, so its WUs are not put through the code-review skill. The author's reading of the diff is recorded above and in the result report, and the gate is the human sign-off (mr/v1), which is never waivable."
+nits:
+  - finding: "the WU that widens the fleet: block writes a note that carries none"
+    waived: "no fleet ran on this diff, so there is no bill to write - the same reading W6 recorded, and for the same reason. Writing finders: 0 would be a measured zero, and the block's whole discipline is that an absent block is a reading nobody took while a zero is a reading somebody took. Counting a waived round as a round would drag every average cargo xtask tally --fleet reports, which is precisely the reading this WU widened."
+  - finding: "the 300s bar this WU registered is not demonstrated by anything on this tip"
+    waived: "the levers that would demonstrate it - L1, L4, L5, L6 - are deferred to a follow-up WU on the owner's scope decision, with their arm still owed. The three levers this tip does adopt carry W6's measured seconds rather than a fresh round's, and the result report states the bar as undemonstrated rather than claiming it by arithmetic over those seconds. A bar is not met by adding up the cuts that were supposed to meet it."
+verdict: PASS
+date: 2026-09-15
