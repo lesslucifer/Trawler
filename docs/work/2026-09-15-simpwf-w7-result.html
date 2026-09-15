@@ -12,7 +12,9 @@
       <p>Scoped re-verify is dropped. It fires on 16% of rounds, not every fix; it removes members from a stage
       that costs its slowest one, so it cannot move the bar the epic set; its central predicate cannot be written
       soundly; and the A/B the plan pre-registered has no corpus, because no review note has ever recorded which
-      dimension raised which finding. Nothing landed in the tree.</p>
+      dimension raised which finding. The mechanism was never built — the only code here is the fix for a defect
+      the WU hit while closing itself: <code>mr confirm</code> refused to let a human sign a diff the merge
+      exempts, which made a docs-only Working Unit unmergeable.</p>
       <div class="meta">WU result · 2026-09-15 · Trawler · T3 (<code>docs/work/</code>) ·
       <code>wu/simpwf/scoped-reverify</code> → <code>epic/simpwf</code> ·
       epic plan: <a href="2026-09-12-simpwf-plan.html">E-SIMPWF</a></div>
@@ -66,10 +68,13 @@
       </div>
 
       <div class="callout" data-c="what-landed">
-        <p><strong>What landed: nothing in the tree.</strong> Unlike W6 — which was also rejected but left its
-        instrument behind — W7 builds no instrument, because the instrument it would need is a change to the note
+        <p><strong>What landed: no mechanism, and one repair.</strong> Unlike W6 — which was also rejected but left
+        its instrument behind — W7 builds no instrument, because the instrument it would need is a change to the note
         schema, and the owner scoped this WU to the write-up. The gap R4 names is carried to
         <a href="#follow-ups">follow-ups</a> rather than closed here.</p>
+        <p>The exception is <a href="#deadlock">the deadlock below</a>, found when this WU tried to merge itself:
+        a Working Unit that changes no code could not be merged at all. That is repaired here, because W7 is the
+        diff that cannot land without it.</p>
       </div>
     </div>
 
@@ -236,6 +241,40 @@
       reporting an unrun test as a negative result would be the error W6 and W8 were both criticised for.</p>
     </div>
 
+    <h2 id="deadlock">The defect this WU hit while closing itself</h2>
+    <div data-c="deadlock">
+      <p>W7 is this repository's first docs-only Working Unit. It could not be merged.</p>
+      <table>
+        <thead><tr><th>Step</th><th>What it said</th></tr></thead>
+        <tbody>
+          <tr><td>Gate <code>8·manual-review</code></td>
+            <td>requires an <code>mr/v1</code> note on <strong>every</strong> WU merge — the docs/infra exemption
+            does not reach it, and it runs before <code>verify()</code>'s ungated early return</td></tr>
+          <tr><td><code>mr/v1</code></td><td>is only ever written by <code>cargo xtask mr confirm</code></td></tr>
+          <tr><td><code>mr confirm</code> → <code>unready_reasons</code></td>
+            <td>demanded <code>test/v2</code> + <code>doc/v1</code> + a PASS <code>cr/v5</code>
+            <strong>unconditionally</strong></td></tr>
+          <tr><td><code>cargo xtask notes write</code></td>
+            <td><em>refuses</em> to write the first two: <q>no review is asked for on this diff — the gate is exempt
+            … nothing was written</q></td></tr>
+          <tr><td>The code-review skill</td>
+            <td>a diff that changes no code path <q>asks for no review, no note and no finders at all</q> — so the
+            third does not exist either</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn" data-c="invariant-broken">
+        <p><strong>It broke an invariant the function itself states.</strong> <code>tip_unready</code>'s doc comment
+        reads <q>so this never refuses a tip the merge gate would green</q> — and <code>mr.rs</code> did not mention
+        the exemption once, while <code>gate.rs</code> owns the predicate and documents it as existing <q>for a
+        writer that must not demand a note of a diff the merge exempts</q>. <code>notes write</code> honoured it;
+        <code>mr confirm</code> did not. There was no override flag, and bypassing the hook is forbidden outright.</p>
+      </div>
+      <p>The repair is the one definition, shared: <code>Gate::judged_of</code> is lifted out of
+      <code>verify()</code>'s own path so <code>mr confirm</code> decides the exemption with the same code the merge
+      decides it with, and an ungated range owes none of the three notes. A range nobody can resolve is still treated
+      as gated, so the refusal is unchanged wherever the answer is unknown.</p>
+    </div>
+
     <h2 id="deviations" data-item="deviations">Deviations</h2>
     <table>
       <thead><tr><th>Planned</th><th>What happened</th><th>Why</th></tr></thead>
@@ -259,6 +298,14 @@
           <td>None. The note schema is untouched</td>
           <td>Owner's call, taken explicitly when the scope was put to them: this WU is the write-up. The instrument
           R4 implies is carried to follow-ups</td>
+        </tr>
+        <tr>
+          <td>A write-up with no code, as the owner scoped it</td>
+          <td><strong>One code change landed</strong> — <code>mr.rs</code>'s readiness check and the
+          <code>Gate::judged_of</code> extraction it shares with the merge, plus four tests</td>
+          <td>Owner's call, taken when the deadlock was put to them: W7 is the diff that cannot merge without it, so
+          the fix rides with the WU that found it. The WU's diff is therefore gated after all, and owes the
+          <code>test/v2</code>, <code>doc/v1</code> and <code>cr</code> notes an exempt one would not</td>
         </tr>
         <tr>
           <td>A W7 plan document, as W1–W6 and W8 each had</td>
@@ -293,6 +340,15 @@
         <tr><td>0 of 197 notes tag a finding's dimension</td>
           <td>The <code>cr</code> schemas themselves — <code>xtask/src/notes.rs</code> — and
           <code>.claude/skills/code-review/SKILL.md</code> §6's template, which has no such field</td></tr>
+        <tr><td>An exempt tip is signable and the merge gate greens it; a code-bearing one still owes its notes</td>
+          <td><code>tests/e2e_manual_review.rs</code> —
+          <code>a_docs_only_working_unit_is_signable_and_a_code_bearing_one_is_not</code>, driving the real binary
+          and real git over a temp repo</td></tr>
+        <tr><td>The exemption is read from the same predicate the merge reads</td>
+          <td><code>xtask/src/mr.rs</code> — <code>unready_reasons</code>'s <code>gated</code> arm and
+          <code>confirm</code>'s use of <code>Gate::judged_of</code>; the unit tests
+          <code>an_exempt_tip_is_ready_to_sign_with_no_notes_at_all</code> and
+          <code>the_exemption_never_relaxes_a_gated_tip</code></td></tr>
         <tr><td>Finder stage 219s; verifiers 110s; 329s against 300s</td>
           <td><strong>Not measured here</strong> — W6's per-stage means, as restated in
           <a href="2026-09-14-simpwf-w8-result.html">the W8 result</a>. W7 takes them as given</td></tr>
@@ -312,7 +368,10 @@
           <td>Minted: scoped re-verify rejected with the four readings, and the governing rule — removing members
           from a parallel stage buys tokens, never wall-clock — as the test a fleet-shrinking proposal owes before it
           owes an A/B</td></tr>
-        <tr><td>T4</td><td><code>src/</code>, <code>xtask/</code></td><td>Untouched. No mechanism was built</td></tr>
+        <tr><td>T4</td><td><code>xtask/src/mr.rs</code>, <code>xtask/src/gate.rs</code></td>
+          <td>The readiness check consults the merge's own exemption, via a <code>Gate::judged_of</code> both now
+          share. <strong>No scoped-re-verify mechanism was built</strong> — this is the deadlock repair, not W7's
+          subject</td></tr>
         <tr><td>infra</td><td><code>.claude/skills/code-review/SKILL.md</code></td>
           <td>Untouched. W7 proposed a §7 re-run rule and none is adopted, so the re-run loop stands as W8 left
           it</td></tr>

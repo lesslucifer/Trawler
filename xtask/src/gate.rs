@@ -194,19 +194,31 @@ impl Gate<'_> {
         Ok((tip, base, names, diff_sha256))
     }
 
+    // What Tier-3 must have judged: the docs at the tip, and - at the seam that
+    // built and retired it - a component design whose last state the base never
+    // held (DEC-25 D1a). The tip is where the walk re-reads a seam, so the same
+    // set comes back at every re-verification. Shared with `mr confirm`, which
+    // must decide the exemption the same way the merge does.
+    pub(crate) fn judged_of(
+        &self,
+        level: Level,
+        base: &str,
+        tip: &str,
+        names: &[String],
+    ) -> (Vec<(String, String)>, Vec<RetiredDesign>) {
+        let docs = if level == Level::Commit { Vec::new() } else { self.doc_blobs(tip, names) };
+        let retired =
+            if level == Level::Wu { self.retired_designs(base, tip, names) } else { Vec::new() };
+        (docs, retired)
+    }
+
     fn open(&self, level: Level, tip_ref: &str, target_ref: &str) -> Result<Scope, String> {
         let (tip, base, names, sha) = self.range(tip_ref, target_ref)?;
         // Three checks below read every doc the diff touches, at the same tip, for
         // the same immutable blobs. Fetched once per verify and threaded through:
         // the walk calls verify once per seam, so a per-site fetch multiplies whole
         // sweeps of `git show` by the number of seams.
-        let docs = if level == Level::Commit { Vec::new() } else { self.doc_blobs(&tip, &names) };
-        // What Tier-3 must have judged: the docs at the tip, and - at the seam that
-        // built and retired it - a component design whose last state the base never
-        // held (DEC-25 D1a). The tip is where the walk re-reads a seam, so the same
-        // set comes back at every re-verification.
-        let retired =
-            if level == Level::Wu { self.retired_designs(&base, &tip, &names) } else { Vec::new() };
+        let (docs, retired) = self.judged_of(level, &base, &tip, &names);
         let retired_paths: Vec<String> = retired.iter().map(|d| d.path.clone()).collect();
         let judged = judged_docs(&docs, &retired);
         // A design is a docs-only deliverable, so the docs/infra exemption would
