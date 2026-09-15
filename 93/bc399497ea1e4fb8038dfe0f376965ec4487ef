@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W7
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-49-a-parallel-stage-costs-its-slowest-member.html"
+    tier: T2
+    action: added
+    distills: "the governing rule that a cut removing members from a parallel stage buys tokens and never wall-clock, as the companion to DEC-48's rule about work moved between stages; the rejection of scoped re-verify with the four readings that decided it; the rule that a cr note never reuses a verdict across tips; five alternatives rejected with the reason that rejected each; and the consequence this WU repaired - a tip the merge exempts can now be signed"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-49 routing row - the parallel-stage rule, the rejection and its numbers, so an agent proposing to shrink the fleet finds the test it owes before it proposes an A/B"
+  - path: "docs/work/2026-09-15-simpwf-w7-result.html"
+    tier: T3
+    action: added
+    distills: "the WU's result: the four readings that rejected scoped re-verify, the clock argument that kills it on the epic's own 300s bar, what was measured and what was not, the deadlock that made a docs-only Working Unit unmergeable together with its repair, the deviations including an A/B that could not run for want of a corpus, and the follow-ups that carry the evidence gap to the next WU"
