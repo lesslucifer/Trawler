@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: db8105fc633c68553eef617aac6971655be6588c
+base: 013d6c4d236948149e6ae2bc21ec43456e89e18f
+tier: key
+signer: vuluu
+report: docs/.archive/2026-09-16-simpwf-result.html
+report_sha256: ca23cf47020d35f59f440fff3b0e912ae116a61770c75ae4b7701299f8994052
+date: 2026-09-16
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAj3NVUJaJwjMf+89eXn6ZVi8si9BfyQIaM3/vD9qvTMPQX/e+FRa0VXw
+  +6xE4Yx5bk0E/ZCOkf+2nw93XSQLID
+  -----END SSH SIGNATURE-----
