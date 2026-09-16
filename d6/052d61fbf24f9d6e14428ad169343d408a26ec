@@ -1,0 +1,24 @@
+schema: doc/v1
+epic: E-CODEX
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-52-one-source-two-harnesses.html"
+    tier: T2
+    action: added
+    distills: "the epic's ruling: CLAUDE.md and .claude/ stay canonical and Codex reaches them through four symlinks, the hook payload contract of one script and two shapes, the per-machine /hooks trust step, and the rejected alternatives - forked .codex copies, per-skill links, a project config.toml fallback"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the index row for DEC-52, so the ruling is reachable index-first"
+  - path: "docs/documentation-system.html"
+    tier: T1
+    action: updated
+    distills: "the T0 row and the layout row: one file, two names - Codex reaches CLAUDE.md as AGENTS.md"
+  - path: "docs/work-planning.html"
+    tier: T1
+    action: updated
+    distills: "the authoring-time trigger now says one definition file serves both harnesses, and the PostToolUse row names the Codex apply_patch payload beside Claude's Write/Edit"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "a harness-hooks line under the git-hooks table: PostToolUse and Stop are defined once in a config both harnesses load, with the detail left to work-planning"
