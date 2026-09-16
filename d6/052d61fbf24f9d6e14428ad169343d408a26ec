@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "epic E-CODEX -> main"
+epic: E-CODEX
+branch: epic/codex
+base: 211154408db31078eda5b05af3b3c97b2033d3c8
+head: d6052d61fbf24f9d6e14428ad169343d408a26ec
+diff_sha256: 7123ab18e059b32a723e3f4c8504b73d63a4cbe66a17ddbdd34136761b1ea30f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 335
+    finders: 304
+    verifiers: 161
+    total: 850
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+nits:
+  - finding: "every apply_patch payload builder in the diff (doc_hooks.rs::apply_patch_json, and codex_payload in harness_parity.rs and e2e_codex_harness.rs) hardcodes a *** Update File: header, so the *** Add File:, *** Delete File: and *** Move to: forms DEC-52 contracts for are constructed by no test in the repository"
+    waived: "verify-doc-post.sh extracts the path with one jq alternation shared by all four verbs and has no per-verb branch, so a regression reaching Add/Delete/Move-to without also breaking the tested Update case is not a reachable failure mode - editing that one line breaks the covered verb first. Confirmed end to end by the verifier: a real Add File payload over a red doc exits 2 with byte-identical blocks to the tested Update File case. Delete needs no run by design - PostToolUse fires after the file is gone, so the [ -f ] guard skips it. The proposed important was re-judged to nit against the rubric: nothing observable changes and nothing drifts if it is never fixed"
+verdict: PASS
+date: 2026-09-16
