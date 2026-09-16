@@ -612,7 +612,12 @@
             paths. The first draft said only "the seams were reviewed"; W9's own second review round reproduced the
             blocker that made — a standalone code commit reaching <code>main</code> through the real hook, signed,
             with zero <code>cr</code> notes in its history, because the epic-level review had been its only
-            backstop. <code>3·review</code>,
+            backstop. Its third round then found the same shape one commit over: <a href="workflow-gates.html#dec-2">DEC-2</a>
+            has the walk skip the epic tip, justified by the epic covering its own diff — the very coverage this
+            record removed — so a standalone code commit landed <em>as</em> the tip was judged by nobody either. The
+            epic now asks for that commit's own review, bound to <code>tip^..tip</code>. Twice in one Working Unit:
+            removing a blunt backstop means finding every case it was quietly covering, and "the seams" was a guess
+            at that set rather than a reading of it. <code>3·review</code>,
             <code>3·review-nits</code>, <code>4·review-base</code> and <code>5·diff-binding</code> leave the epic
             check list; <code>7·walk</code> stays and is the epic's real guarantee — every seam's review re-read at
             its declared binding, the epic refused when one has been lost. The numbers: an epic round's diff is the

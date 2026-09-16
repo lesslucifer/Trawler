@@ -46,6 +46,23 @@
       than "the seams", not as a footnote to a rule that was already right.</p>
     </div>
 
+    <div class="callout warn" data-c="the-tip-position">
+      <p><strong>And one position the walk cannot reach: the epic tip itself.</strong> The third review round found
+      the same hole again, one commit over. <a href="workflow-gates.html#dec-2">DEC-2</a> has the walk skip the epic
+      tip when it is a non-merge commit — one commit cannot carry both an epic-level and a commit-level
+      <code>test</code> note — and justified that skip by saying <em>"the tip's own diff is covered by the epic gate
+      itself"</em>. <strong>That justification was this record's to keep, and this record removed it.</strong> So a
+      standalone code commit landed <em>as</em> the epic tip was judged by nobody: the walk skips it by name, no
+      epic check asks, <code>mr confirm epic</code> deliberately does not, and the pre-push range mirror is blind to
+      it once it has landed behind a merge.</p>
+      <p>The epic therefore asks for that one commit's review itself, over <strong>the commit's own span</strong> —
+      not the epic's — which is the only binding that says anything true about it. A tip that changes no code owes
+      nothing extra, which is the common shape: an epic closing on a docs-only commit.</p>
+      <p>Twice in one Working Unit the same shape was missed, and the reason is worth keeping: <strong>removing a
+      blunt backstop means finding every case it was quietly covering</strong>, and "the seams" was a guess at that
+      set rather than a reading of it. DEC-2's row is amended below.</p>
+    </div>
+
     <h2 id="checks">What moved</h2>
     <table>
       <thead><tr><th>Check</th><th>At WU <em>and standalone commit</em></th><th>At epic</th><th>Why</th></tr></thead>
@@ -109,6 +126,11 @@ flowchart LR
           <td>They now owe a <code>cr/v5</code> PASS bound to their own code paths, read at
           <code>Level::Commit</code> and re-read by <code>7·walk</code>. A standalone commit that changes no code
           owes none, exactly as a docs-only Working Unit does — the demand follows the code, never the level</td></tr>
+        <tr><td><a href="workflow-gates.html#dec-2">DEC-2</a>'s walk tip-skip</td>
+          <td>The skip stands; its <em>reason</em> does not. "The tip's own diff is covered by the epic gate itself"
+          was true only while the epic reviewed its own whole diff. The epic now asks for the tip commit's own
+          review directly, bound to <code>tip^..tip</code>, whenever that commit changes code — so the skip is
+          about which <em>notes</em> the tip can carry, never about whether its code was judged</td></tr>
         <tr><td><code>xtask/src/mr.rs</code></td>
           <td><code>mr confirm epic</code> stops holding a tip for a review note. Its readiness rule is "never
           refuse a tip the merge gate would green"; leaving the demand there would have made a signed epic
