@@ -378,14 +378,16 @@ impl Gate<'_> {
         let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
             .parse_note::<TestNote>(report, &tip, "test", &["test/v2"], true, |n| n.schema.clone());
-        let cr = if notes == Notes::Paperwork {
+        // A level that runs no review reads no review note at all - not even to
+        // parse it. A standalone commit may legitimately carry one from an ad-hoc
+        // review run, and reading it there would let a note nothing demands refuse
+        // a merge. Where a review IS owed, the note is still read whenever the tip
+        // carries one - an epic's also holds the walk's waivers - and only its
+        // absence over a code-changing diff is a refusal.
+        let cr = if notes == Notes::Paperwork || !runs_at(REVIEW, report.level) {
             None
         } else {
-            // A diff that changes no code is asked for no review, and a level that
-            // runs none is asked for no note: the note is read whenever the tip
-            // carries one - an epic's also holds the walk's waivers - and its
-            // absence is a refusal only where a review is owed.
-            let demanded = runs_at(REVIEW, report.level) && names.iter().any(|p| is_code(p));
+            let demanded = names.iter().any(|p| is_code(p));
             self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, demanded, |n| {
                 n.schema.clone()
             })

@@ -702,6 +702,43 @@ fn green_epic_walk_verifies_the_merged_wu() {
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
+// W9 · a level that runs no review reads no review note at all. A standalone
+// commit may carry one from an ad-hoc review run (SKILL.md permits reviewing
+// recent commits and attaching the note), and parsing it at a level that demands
+// nothing would let a note nobody asked for refuse a merge - including during an
+// epic's own walk, which verifies every standalone commit at this level.
+#[test]
+fn a_commit_level_tip_never_reads_a_review_note_not_even_to_parse_it() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("src/extra.rs", "pub fn covered() {}\n");
+    let sha = repo.commit("standalone fix");
+    repo.note(
+        "test",
+        &sha,
+        "schema: test/v2\nlevel: commit\ntests:\n  unit: { count: 1, covers: \"covered fn\" }\n",
+    );
+
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert!(report.green(), "the baseline is green: {}", format_report(&report));
+
+    repo.note("cr", &sha, "not: [valid, yaml: broken\n");
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert!(
+        report.green(),
+        "a note this level never demanded must not refuse it: {}",
+        format_report(&report)
+    );
+
+    // The same malformed note where a review IS owed is still refused, so the
+    // short-circuit is scoped to the level and is not a hole in note validation.
+    let wu = wu_with_change();
+    let tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &tip);
+    wu.note("cr", &tip, "not: [valid, yaml: broken\n");
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["1·notes"], "{}", format_report(&report));
+}
+
 // W9 · the receipt advertises the checks its level actually ran. The line used
 // to be two hardcoded strings, and the non-epic one was wrong: it named the four
 // review checks at commit level, where `check_review` has never run. Asserted
