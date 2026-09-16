@@ -1,0 +1,26 @@
+schema: doc/v1
+epic: E-CODEX
+wu: E-CODEX.W2
+branch: HEAD
+changes:
+  - path: "docs/documentation-system.html"
+    tier: T1
+    action: updated
+    distills: "the T0 row and the layout row: one file, two names - Codex reaches CLAUDE.md as AGENTS.md"
+  - path: "docs/work-planning.html"
+    tier: T1
+    action: updated
+    distills: "the authoring-time trigger paragraph now says one definition file serves both harnesses, and the PostToolUse row names the Codex apply_patch payload beside Claude's Write/Edit"
+  - path: "docs/work/2026-09-16-codex-w2-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan: the requirement, the five e2e steps, what is deliberately not asserted, and the distillation targets"
+  - path: "docs/work/2026-09-16-codex-w2-result.html"
+    tier: T3
+    action: added
+    distills: "the WU result: what the e2e proves, the two mutations that showed it bites, the step-1 plan correction, and the pre-existing e2e_design_flow red"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "a harness-hooks line under the git-hooks table: PostToolUse and Stop are defined once in a config both harnesses load, with the detail left to work-planning"
+t2_waived: "DEC-52 and its decisions-index row landed in W1 (that WU's deviation 1), and they already state this WU's ruling; the T1 wording edits here are that record's closing row being discharged, so there is no new T2 truth to write"
