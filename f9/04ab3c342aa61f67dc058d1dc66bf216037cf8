@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W9
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the per-dimension-attribution row records that W9 took the cut on hand-reconstructed attribution and what would confirm it; the finder-stage-A/B row records that this cut claims no clock win; and a new row records that fleet cuts priced off W6's per-agent means were 2.3x optimistic on the first round measured"
+  - path: "docs/decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html"
+    tier: T2
+    action: added
+    distills: "the dimension rulings with their corpus numbers, what a cut is worth once the verifier tail is priced, relevance batching and its blocker guardrail, the bar change, the priced loss, and the first measured round replacing its own projection"
+  - path: "docs/decisions/dec-51-the-epic-gate-reads-its-seams.html"
+    tier: T2
+    action: added
+    distills: "which checks left the epic list and which stayed, the 29-round yield that decided it, and the walk waiver's lost self-expiry"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-50 and DEC-51 rows, each carrying the numbers that decided it"
+  - path: "docs/work/2026-09-15-simpwf-w9-plan.html"
+    tier: T3
+    action: added
+    distills: "the T3 plan written before the code - the corpus analysis, the dimension rulings, the priced loss and the bar change"
+  - path: "docs/work/2026-09-16-simpwf-w9-result.html"
+    tier: T3
+    action: added
+    distills: "what landed, four deviations, the three test levels, the bar's assessment, what round 1 of its own review found, and the first measured bill under the new shape"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "the epic's evidence row, the DoD-E review row, gate checks 3/4/5 scoped to their level, the cr/v5 row's fleet shape, who-judges, and the walk waiver's corrected rationale"
