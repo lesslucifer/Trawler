@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: 6d056a5
+tests:
+  unit: { count: 22, covers: "the rule this commit generalises, stated once and checked over every module: nothing in xtask/src outside notes.rs spells the current review contract, scanned across the shipped half of all thirteen modules with a floor that refuses a silently empty walk. The mutation check is recorded in the commit message - reintroducing the literal at notes_write.rs, tally.rs or mr.rs fails it by file and line. cr_schema() itself is still asserted to be the newest entry CR_SCHEMAS names" }
