@@ -702,6 +702,85 @@ fn green_epic_walk_verifies_the_merged_wu() {
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
+// W9 · a level that runs no review reads no review note at all. A standalone
+// commit may carry one from an ad-hoc review run (SKILL.md permits reviewing
+// recent commits and attaching the note), and parsing it at a level that demands
+// nothing would let a note nobody asked for refuse a merge - including during an
+// epic's own walk, which verifies every standalone commit at this level.
+#[test]
+fn a_commit_level_tip_never_reads_a_review_note_not_even_to_parse_it() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("src/extra.rs", "pub fn covered() {}\n");
+    let sha = repo.commit("standalone fix");
+    repo.note(
+        "test",
+        &sha,
+        "schema: test/v2\nlevel: commit\ntests:\n  unit: { count: 1, covers: \"covered fn\" }\n",
+    );
+
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert!(report.green(), "the baseline is green: {}", format_report(&report));
+
+    repo.note("cr", &sha, "not: [valid, yaml: broken\n");
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert!(
+        report.green(),
+        "a note this level never demanded must not refuse it: {}",
+        format_report(&report)
+    );
+
+    // The same malformed note where a review IS owed is still refused, so the
+    // short-circuit is scoped to the level and is not a hole in note validation.
+    let wu = wu_with_change();
+    let tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &tip);
+    wu.note("cr", &tip, "not: [valid, yaml: broken\n");
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["1·notes"], "{}", format_report(&report));
+}
+
+// W9 · the receipt advertises the checks its level actually ran. The line used
+// to be two hardcoded strings, and the non-epic one was wrong: it named the four
+// review checks at commit level, where `check_review` has never run. Asserted
+// here through the real gate over a real repo, at both levels, because the
+// receipt is the only place a reader learns what was verified.
+#[test]
+fn the_receipt_names_the_checks_its_level_ran() {
+    let (repo, _) = epic_with_merged_wu();
+    bless_epic(&repo, T2_ENTRY);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains(
+            "checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, \
+             design, components-unbuilt, manual-review, walk]"
+        ),
+        "the epic's list: {receipt}"
+    );
+
+    let wu = wu_with_change();
+    let tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &tip);
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    let receipt = wu.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains(
+            "checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, \
+             design, manual-review]"
+        ),
+        "a seam's list drops the epic's two rows: {receipt}"
+    );
+
+    let commit = repo.sha("epic/x");
+    let report = repo.gate().verify(Level::Commit, &commit, &format!("{commit}^")).unwrap();
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains("checks: [notes, manifest, doc-note, design, manual-review]"),
+        "a standalone commit runs no review, and the receipt no longer claims it does: {receipt}"
+    );
+}
+
 // The design lives on the seam, not on the epic tip: work docs are archived out
 // of git before the epic gate (DEC-3), so the run's add and delete net out of the
 // epic diff. The seam is the only place a landed design review can be judged,

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aaa106b9f34851f0dfad04c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-51: the epic's own review is load-bearing (withdrawn)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-51 — the epic's own review is load-bearing</h1>
+      <p>E-SIMPWF.W9 set out to stop the epic gate re-reviewing code its seams had already cleared. Four rounds of
+      its own review found four ways code reaches <code>main</code> that the seams do not cover. The cut is
+      <strong>withdrawn</strong>; this record is the enumeration it cost, so the next attempt starts from a reading
+      rather than a premise.</p>
+      <div class="meta">Withdrawn 2026-09-16 · E-SIMPWF.W9 · <strong>never shipped</strong> — the gate behaves as it
+      did before</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="status">Status</h2>
+    <div class="callout warn" data-c="withdrawn">
+      <p><strong>Withdrawn before landing. No rule changed.</strong> The epic gate still runs
+      <code>3·review</code>, <code>3·review-nits</code>, <code>4·review-base</code> and
+      <code>5·diff-binding</code> over its own <code>base..tip</code> diff, exactly as before. Nothing in
+      <a href="../workflow.html">workflow.html</a>, <a href="workflow-gates.html#dec-2">DEC-2</a> or the gate's
+      check list was left changed by the attempt.</p>
+      <p>What did land from the same Working Unit is
+      <a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a> — the dimension cut and
+      relevance-batched verifiers — which is independent of this and produced no holes.</p>
+    </div>
+
+    <h2 id="premise">The premise, and why it was wrong</h2>
+    <p>The proposal rested on one sentence: <em>an epic's diff is the union of seams every Working Unit review
+    already cleared, so the union adds no subject.</em> The corpus supported the <strong>value</strong> claim —
+    29 epic rounds returned 1.79 verified findings each against the WU level's 3.37, with 41% returning nothing.
+    It said nothing about the <strong>role</strong> claim, and the role claim is the one that mattered.</p>
+    <table>
+      <thead><tr><th>Reading</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Epic rounds on record</td><td>29</td></tr>
+        <tr><td>Mean verified findings, epic level</td><td>1.79 (WU level: 3.37)</td></tr>
+        <tr><td>Epic rounds returning nothing</td><td>41%</td></tr>
+      </tbody>
+    </table>
+    <p>A round that returns little is not the same as a check that guards nothing. The epic's review was a
+    <strong>backstop</strong>: its binding is the plain two-dot <code>base..tip</code> code hash, which covers every
+    byte reachable from the tip <em>however it arrived</em>. The seams' bindings are parent-to-parent diffs, and
+    their union is strictly smaller.</p>
+
+    <h2 id="holes">The four holes, in the order the rounds found them</h2>
+    <p>Each was reproduced against a real binary, and each is a case where code reached <code>main</code> with no
+    review anywhere in its history. Rounds 2 and 3 were fixed and the fixes kept finding more; round 4 ended it.</p>
+    <table>
+      <thead><tr><th>#</th><th>How code arrives</th><th>Why the seams miss it</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>A <strong>standalone commit</strong> inside the epic's range</td>
+          <td>The walk checks it at <code>Level::Commit</code>, which has never demanded a review.
+          <code>CLAUDE.md</code> and the gate have always permitted such commits with only a
+          <code>test/v2</code></td></tr>
+        <tr><td>2</td><td>A standalone commit that <strong>is the epic tip</strong></td>
+          <td><a href="workflow-gates.html#dec-2">DEC-2</a> has the walk skip the tip — one commit cannot carry both
+          an epic-level and a commit-level <code>test</code> note — and justified the skip by saying the tip's diff
+          is covered by the epic gate itself. That justification <em>was</em> this review</td></tr>
+        <tr><td>3</td><td>Bytes a <strong>merge commit carries of its own</strong>, present in neither parent — a
+          hand-resolved conflict, or any edit between <code>git merge --no-commit</code> and the commit</td>
+          <td>The walk verifies <code>wu_tip</code> against <code>mainline</code>. Bytes that exist only in the
+          merge commit's tree are in neither endpoint, so no seam diff can contain them. This is the case
+          <strong>no per-commit check can reach</strong>, and it is why the endpoint diff is irreplaceable</td></tr>
+        <tr><td>4</td><td>A <strong>rendered UI file</strong> in a standalone commit at the epic tip</td>
+          <td><code>check_ui_outside_a_wu</code> runs only at <code>Level::Commit</code> and the walk skips the tip,
+          so <code>9·design</code> never asks. <strong>Pre-existing</strong>, not opened by the attempt — recorded
+          here because the same enumeration surfaced it</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="hole-3">
+      <p><strong>Hole 3 is the one that decides the question.</strong> Holes 1, 2 and 4 are positions, and a
+      position can be patched — each has a commit you could hang a review on. Hole 3 has no such commit: the bytes
+      belong to a merge, and a merge's content is exactly what parent-to-parent diffing cannot see. Any replacement
+      for the epic's endpoint review must cover it, which means <strong>a binding over the endpoint diff</strong> —
+      which is the thing being removed.</p>
+      <p>This is also the guarantee <a href="workflow-gates.html#dec-2">DEC-2</a> states in as many words:
+      <em>"smuggled content turns the next gate red."</em> The attempt gave that up without noticing.</p>
+    </div>
+
+    <h2 id="cost">What the attempt cost, and what it bought</h2>
+    <table>
+      <thead><tr><th>Reading</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Review rounds run against the attempt</td><td>4</td></tr>
+        <tr><td>Verified blockers, all of this class</td><td>3 (plus one pre-existing)</td></tr>
+        <tr><td>Sibling sites that restated the rule it moved</td><td>4 — <code>mr</code>'s <code>SIGN_LAST</code>
+          and <code>unready_reasons</code>, <code>notes_write</code>'s <code>written()</code>,
+          <code>lib.rs</code>'s <code>preflight_cmd</code> comment</td></tr>
+        <tr><td>Tokens spent reviewing it</td><td>~2.7M across four rounds</td></tr>
+        <tr><td>Bought</td><td>The enumeration in this record, and the reading that a low-yield check can still be
+          load-bearing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="next">What a future attempt owes</h2>
+    <table>
+      <thead><tr><th>Owed</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>A <strong>proof</strong> that the replacement covers every byte reachable from the epic tip — not a
+          list of positions</td>
+          <td>Three patches to the same premise each looked complete. The fourth hole was found by enumerating
+          arrivals systematically rather than reading the diff, which is how it should have started</td></tr>
+        <tr><td>An answer for a merge commit's own content (hole 3)</td>
+          <td>Either a binding over the endpoint diff — in which case there is little left to cut — or a refusal of
+          merges that carry content of their own, which is a workflow rule and a separate decision</td></tr>
+        <tr><td>A measurement of what the epic round <em>guards</em>, not what it yields</td>
+          <td>1.79 findings per round justified the cut. It was the wrong number: the check's value is the class of
+          escape it prevents, which no yield figure shows</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

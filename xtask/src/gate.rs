@@ -34,6 +34,73 @@ fn names_a_carrier(repo: &Path, rev: &str, reason: &str) -> bool {
 const DESIGN_SCHEMA: &str = "9·design-schema";
 const DESIGN: &str = "9·design";
 const UNBUILT: &str = "components·unbuilt";
+pub const REVIEW: &str = "3·review";
+const REVIEW_NITS: &str = "3·review-nits";
+const REVIEW_BASE: &str = "4·review-base";
+const DIFF_BINDING: &str = "5·diff-binding";
+
+const ALL: &[Level] = &[Level::Commit, Level::Wu, Level::Epic];
+
+// A check either names the levels that run it, or is emitted by another check's
+// code and runs exactly where that one does. `3·review-nits` cannot run at a
+// level `3·review` did not read the note the nits live on, so it holds no level
+// of its own to disagree with.
+enum Runs {
+    At(&'static [Level]),
+    With(&'static str),
+}
+
+struct Check {
+    id: &'static str,
+    receipt: &'static str,
+    runs: Runs,
+}
+
+// The one table saying which checks a level runs. The receipt's `checks:` line
+// and [`runs_at`], which guards the code emitting the failures, both resolve
+// through it, so a check the gate stopped running cannot keep being advertised
+// on the receipt.
+const CHECKS: &[Check] = &[
+    Check { id: "1·notes", receipt: "notes", runs: Runs::At(ALL) },
+    Check { id: "2·manifest", receipt: "manifest", runs: Runs::At(ALL) },
+    // An epic reviews its own `base..tip` diff as well as reading its seams, and
+    // that is load-bearing rather than redundant: the endpoint diff is the only
+    // one that covers a byte no commit in the range can be diffed for - one a
+    // merge commit carries of its own. E-SIMPWF.W9 tried to cut it and withdrew
+    // (`docs/decisions/dec-51-the-epic-gate-reads-its-seams.html`).
+    Check { id: REVIEW, receipt: "review", runs: Runs::At(&[Level::Wu, Level::Epic]) },
+    Check { id: REVIEW_NITS, receipt: "review-nits", runs: Runs::With(REVIEW) },
+    Check { id: REVIEW_BASE, receipt: "review-base", runs: Runs::With(REVIEW) },
+    Check { id: DIFF_BINDING, receipt: "diff-binding", runs: Runs::With(REVIEW) },
+    Check { id: "6·doc-note", receipt: "doc-note", runs: Runs::At(ALL) },
+    // Commit level too: `check_ui_outside_a_wu` refuses a UI-rendering file in a
+    // standalone commit under this id, where the accounting has no note to live on.
+    Check { id: DESIGN, receipt: "design", runs: Runs::At(ALL) },
+    Check { id: UNBUILT, receipt: "components-unbuilt", runs: Runs::At(&[Level::Epic]) },
+    Check { id: "8·manual-review", receipt: "manual-review", runs: Runs::At(ALL) },
+    Check { id: "7·walk", receipt: "walk", runs: Runs::At(&[Level::Epic]) },
+];
+
+/// Whether `level` runs `check`, by [`CHECKS`] id. The receipt renders through
+/// this and so does the guard around the review checks, so what a level
+/// advertises and what it runs are one answer.
+pub fn runs_at(check: &str, level: Level) -> bool {
+    CHECKS.iter().any(|c| c.id == check) && levels_of(check).contains(&level)
+}
+
+// A `With` row resolves to the check that emits it. One hop is enough and one hop
+// is all there is: a row may only defer to a row that names its own levels, which
+// the tests pin, so this cannot loop.
+fn levels_of(check: &str) -> &'static [Level] {
+    match CHECKS.iter().find(|c| c.id == check).map(|c| &c.runs) {
+        Some(Runs::At(levels)) => levels,
+        Some(Runs::With(other)) => match CHECKS.iter().find(|c| c.id == *other).map(|c| &c.runs) {
+            Some(Runs::At(levels)) => levels,
+            _ => &[],
+        },
+        None => &[],
+    }
+}
 
 /// A component design the Working Unit retired at bytes its base never held,
 /// read at the last commit that shipped them.
@@ -281,9 +348,11 @@ impl Gate<'_> {
         }
         let parsed = self.load_notes(&mut report, &names, Notes::All);
         check_manifest(&mut report, parsed.test.as_ref());
-        if level != Level::Commit {
+        if runs_at(REVIEW, level) {
             let code_sha256 = self.code_sha256(&report.base, &report.tip, &names)?;
             check_review(&mut report, parsed.cr.as_ref(), &code_sha256);
+        }
+        if level != Level::Commit {
             let source = design_source(parsed.cr.as_ref(), parsed.design.as_ref());
             let surfaces = OnceCell::new();
             self.check_design(&mut report, source, &judged, &surfaces)?;
@@ -309,14 +378,19 @@ impl Gate<'_> {
         let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
             .parse_note::<TestNote>(report, &tip, "test", &["test/v2"], true, |n| n.schema.clone());
-        let cr = if report.level == Level::Commit || notes == Notes::Paperwork {
+        // A level that runs no review reads no review note at all - not even to
+        // parse it. A standalone commit may legitimately carry one from an ad-hoc
+        // review run, and reading it there would let a note nothing demands refuse
+        // a merge. Where a review IS owed, the note is still read whenever the tip
+        // carries one - an epic's also holds the walk's waivers - and only its
+        // absence over a code-changing diff is a refusal.
+        let cr = if notes == Notes::Paperwork || !runs_at(REVIEW, report.level) {
             None
-        } else if names.iter().any(|p| is_code(p)) {
-            self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, true, |n| n.schema.clone())
         } else {
-            // A diff that changes no code is asked for no review: the note is read
-            // when the tip carries one, but its absence is not a refusal.
-            self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, false, |n| n.schema.clone())
+            let demanded = names.iter().any(|p| is_code(p));
+            self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, demanded, |n| {
+                n.schema.clone()
+            })
         };
         let design = if report.level == Level::Commit || notes == Notes::Paperwork {
             None
@@ -1325,33 +1399,39 @@ impl Gate<'_> {
     }
 
     pub fn write_receipt(&self, report: &Report) -> Result<String, String> {
-        let mut body = String::from("schema: dod/v1\n");
-        let mut line = |text: String| {
-            body.push_str(&text);
-            body.push('\n');
-        };
-        line(format!("level: {}", report.level.as_note_level()));
-        if let Some(epic) = &report.epic {
-            line(format!("epic: {epic}"));
-        }
-        if let Some(wu) = &report.wu {
-            line(format!("wu: {wu}"));
-        }
-        if report.tip_ref != report.tip {
-            line(format!("branch: {}", report.tip_ref));
-        }
-        line(format!("base: {}", report.base));
-        line(format!("tip: {}", report.tip));
-        line(format!("diff_sha256: {}", report.diff_sha256));
-        let checks = match report.level {
-            Level::Epic => "[notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]",
-            _ => "[notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]",
-        };
-        line(format!("checks: {checks}"));
-        line(format!("date: {}", today()));
+        let body = receipt_body(report);
         write_note(self.repo, "dod", &report.tip, &body)?;
         Ok(body)
     }
+}
+
+/// The receipt a green gate writes. Its `checks:` line renders from [`CHECKS`],
+/// the same rows [`runs_at`] guards the checks with, so the receipt advertises
+/// what the level actually ran.
+fn receipt_body(report: &Report) -> String {
+    let mut body = String::from("schema: dod/v1\n");
+    let mut line = |text: String| {
+        body.push_str(&text);
+        body.push('\n');
+    };
+    line(format!("level: {}", report.level.as_note_level()));
+    if let Some(epic) = &report.epic {
+        line(format!("epic: {epic}"));
+    }
+    if let Some(wu) = &report.wu {
+        line(format!("wu: {wu}"));
+    }
+    if report.tip_ref != report.tip {
+        line(format!("branch: {}", report.tip_ref));
+    }
+    line(format!("base: {}", report.base));
+    line(format!("tip: {}", report.tip));
+    line(format!("diff_sha256: {}", report.diff_sha256));
+    let checks: Vec<&str> =
+        CHECKS.iter().filter(|c| runs_at(c.id, report.level)).map(|c| c.receipt).collect();
+    line(format!("checks: [{}]", checks.join(", ")));
+    line(format!("date: {}", today()));
+    body
 }
 
 fn design_artifacts_of(docs: &[(String, String)]) -> Vec<String> {
@@ -1462,14 +1542,14 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     let bound = bound.to_string();
     if cr.verdict != "PASS" {
         report.failures.push(Failure::new(
-            "3·review",
+            REVIEW,
             format!("review verdict is {}", cr.verdict),
             "fix the verified findings and re-run the review until PASS".to_string(),
         ));
     }
     for (nit, fault) in cr.nits.iter().filter_map(|n| n.fault().map(|f| (n, f))) {
         report.failures.push(Failure::new(
-            "3·review-nits",
+            REVIEW_NITS,
             format!("nit \"{}\" carries {fault}", nit.finding),
             "disposition every recorded nit: fixed: \"<what changed>\" or waived: \"<reason>\""
                 .to_string(),
@@ -1477,7 +1557,7 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     }
     if cr.base != report.base {
         report.failures.push(Failure::new(
-            "4·review-base",
+            REVIEW_BASE,
             format!(
                 "review base {} != current merge-base {}",
                 short(&cr.base),
@@ -1489,7 +1569,7 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     }
     if cr.diff_sha256 != bound {
         report.failures.push(Failure::new(
-            "5·diff-binding",
+            DIFF_BINDING,
             if binds_code(&cr.schema) {
                 "reviewed code is not byte-identical to the code this tip changes".to_string()
             } else {
@@ -1571,9 +1651,117 @@ pub fn format_report(report: &Report) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        design_source, format_report, short, CrNote, DesignCarrier, DesignNote, Failure, Gate,
-        Level, Report, Surfaces,
+        design_source, format_report, levels_of, receipt_body, runs_at, short, CrNote,
+        DesignCarrier, DesignNote, Failure, Gate, Level, Report, Runs, Surfaces, CHECKS,
+        DIFF_BINDING, REVIEW, REVIEW_BASE, REVIEW_NITS, UNBUILT,
     };
+
+    // A `With` row holds no levels of its own, so the three checks `check_review`
+    // emits beside `3·review` cannot drift from the guard that decides whether any
+    // of them runs at all. Resolution is one hop by construction: every target names
+    // its own levels, which is what makes `levels_of` terminate.
+    #[test]
+    fn a_check_emitted_by_another_borrows_its_levels_and_never_chains() {
+        for check in [REVIEW_NITS, REVIEW_BASE, DIFF_BINDING] {
+            assert_eq!(
+                levels_of(check),
+                levels_of(REVIEW),
+                "{check} must run exactly where {REVIEW} does"
+            );
+        }
+        for c in CHECKS {
+            if let Runs::With(target) = c.runs {
+                assert!(
+                    matches!(
+                        CHECKS.iter().find(|t| t.id == target).map(|t| &t.runs),
+                        Some(Runs::At(_))
+                    ),
+                    "{} defers to {target}, which must name its own levels",
+                    c.id
+                );
+            }
+        }
+        assert_eq!(levels_of("no such check"), &[] as &[Level]);
+    }
+
+    fn checks_at(level: Level) -> Vec<&'static str> {
+        CHECKS.iter().filter(|c| runs_at(c.id, level)).map(|c| c.receipt).collect()
+    }
+
+    // A review is owed wherever a note can bind a range: a Working Unit seam and
+    // the epic. Not at commit level, where `check_review` has never run -
+    // E-SIMPWF.W9 tried moving that boundary and withdrew (DEC-51), so the table
+    // states the boundary rather than leaving it to a `level != Commit` test
+    // three call sites deep.
+    #[test]
+    fn the_review_runs_where_a_note_binds_a_range() {
+        for check in [REVIEW, REVIEW_NITS, REVIEW_BASE, DIFF_BINDING] {
+            assert!(runs_at(check, Level::Wu), "{check} must run at a seam");
+            assert!(runs_at(check, Level::Epic), "{check} must run at the epic");
+            assert!(!runs_at(check, Level::Commit), "{check} has never run at commit level");
+        }
+        assert!(runs_at("7·walk", Level::Epic));
+        assert!(!runs_at("7·walk", Level::Wu));
+    }
+
+    #[test]
+    fn the_working_unit_list_is_unchanged() {
+        assert_eq!(
+            checks_at(Level::Wu),
+            [
+                "notes",
+                "manifest",
+                "review",
+                "review-nits",
+                "review-base",
+                "diff-binding",
+                "doc-note",
+                "design",
+                "manual-review"
+            ]
+        );
+    }
+
+    // The commit list is the one the hardcoded string got wrong before this
+    // table existed: it advertised four review checks `check_review` has never
+    // run at that level. `9·design` belongs on it because
+    // `check_ui_outside_a_wu` refuses a rendered file in a standalone commit.
+    #[test]
+    fn the_commit_list_carries_design_and_no_review() {
+        assert_eq!(
+            checks_at(Level::Commit),
+            ["notes", "manifest", "doc-note", "design", "manual-review"]
+        );
+        assert!(!runs_at("7·walk", Level::Commit) && !runs_at(UNBUILT, Level::Commit));
+    }
+
+    // The receipt advertises what the level ran. Asserted against the literal
+    // line each level must print, not against the table that produced it - a
+    // check the table drops has to change this test to stay green.
+    #[test]
+    fn the_printed_list_is_the_list_the_level_runs() {
+        for (level, expected) in [
+            (Level::Commit, "checks: [notes, manifest, doc-note, design, manual-review]"),
+            (
+                Level::Wu,
+                "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
+                 doc-note, design, manual-review]",
+            ),
+            (
+                Level::Epic,
+                "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
+                 doc-note, design, components-unbuilt, manual-review, walk]",
+            ),
+        ] {
+            let mut r = report(vec![]);
+            r.level = level;
+            assert!(
+                receipt_body(&r).contains(expected),
+                "{level:?} receipt must print {expected}, got {}",
+                receipt_body(&r)
+            );
+        }
+    }
 
     // W4: which note the checks read the design verdict from. A tip merged under an
     // older contract keeps its own section - the epic walk re-reads those - and a
@@ -1991,6 +2179,12 @@ mod tests {
         assert_eq!(r.failures.len(), 1);
         assert_eq!(r.failures[0].check, super::DESIGN);
         assert!(r.failures[0].fix.contains("inside a Working Unit"));
+        // The table is only the truth if it admits this: a commit-level tip does
+        // produce a `9·design` failure, through the one check that runs here.
+        assert!(
+            runs_at(&r.failures[0].check, Level::Commit),
+            "a check a level can emit must be a check the table says that level runs"
+        );
     }
 
     // The topology an epic walk actually sees, and the one this check exists for:
