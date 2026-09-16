@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU round-cut -> epic/simpwf (round 6)"
+epic: E-SIMPWF
+wu: E-SIMPWF.W9
+branch: wu/simpwf/round-cut
+base: f6948c1b8f79a63bc8b436049d73729d515aec67
+head: f0f1c1756d5096dbeb264657d0c1799d748d5a51
+diff_sha256: 7fd7ed98ec853cd76ba723cb26baf8b84fe1a536c22c3e98d85b5035b4d609cf
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 68
+    finders: 374
+    verifiers: 0
+    total: 442
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+  tokens:
+    finders: 158888
+    verifiers: 0
+    total: 158888
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-09-16
