@@ -63,7 +63,11 @@ struct Check {
 const CHECKS: &[Check] = &[
     Check { id: "1·notes", receipt: "notes", runs: Runs::At(ALL) },
     Check { id: "2·manifest", receipt: "manifest", runs: Runs::At(ALL) },
-    Check { id: REVIEW, receipt: "review", runs: Runs::At(&[Level::Wu]) },
+    // Where code lands, and only there: a Working Unit seam, or a standalone
+    // commit that landed code outside one. An epic re-reads those at `7·walk`
+    // and re-reviews nothing (DEC-51), which holds only because every byte in it
+    // arrived through a level that owed a review of its own.
+    Check { id: REVIEW, receipt: "review", runs: Runs::At(&[Level::Commit, Level::Wu]) },
     Check { id: REVIEW_NITS, receipt: "review-nits", runs: Runs::With(REVIEW) },
     Check { id: REVIEW_BASE, receipt: "review-base", runs: Runs::With(REVIEW) },
     Check { id: DIFF_BINDING, receipt: "diff-binding", runs: Runs::With(REVIEW) },
@@ -343,11 +347,11 @@ impl Gate<'_> {
         }
         let parsed = self.load_notes(&mut report, &names, Notes::All);
         check_manifest(&mut report, parsed.test.as_ref());
+        if runs_at(REVIEW, level) {
+            let code_sha256 = self.code_sha256(&report.base, &report.tip, &names)?;
+            check_review(&mut report, parsed.cr.as_ref(), &code_sha256);
+        }
         if level != Level::Commit {
-            if runs_at(REVIEW, level) {
-                let code_sha256 = self.code_sha256(&report.base, &report.tip, &names)?;
-                check_review(&mut report, parsed.cr.as_ref(), &code_sha256);
-            }
             let source = design_source(parsed.cr.as_ref(), parsed.design.as_ref());
             let surfaces = OnceCell::new();
             self.check_design(&mut report, source, &judged, &surfaces)?;
@@ -373,7 +377,7 @@ impl Gate<'_> {
         let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
             .parse_note::<TestNote>(report, &tip, "test", &["test/v2"], true, |n| n.schema.clone());
-        let cr = if report.level == Level::Commit || notes == Notes::Paperwork {
+        let cr = if notes == Notes::Paperwork {
             None
         } else {
             // Two tips are asked for no review and refused for no missing note: one
@@ -1646,7 +1650,7 @@ mod tests {
     use super::{
         design_source, format_report, levels_of, receipt_body, runs_at, short, CrNote,
         DesignCarrier, DesignNote, Failure, Gate, Level, Report, Runs, Surfaces, CHECKS,
-        DIFF_BINDING, REVIEW, REVIEW_BASE, REVIEW_NITS,
+        DIFF_BINDING, REVIEW, REVIEW_BASE, REVIEW_NITS, UNBUILT,
     };
 
     // A `With` row holds no levels of its own, so the three checks `check_review`
@@ -1725,15 +1729,15 @@ mod tests {
         );
     }
 
-    // A standalone commit runs no review, and `9·design` is on its list because
-    // `check_ui_outside_a_wu` refuses a rendered file there - the case the table
-    // has to admit rather than model away.
+    // A standalone commit runs the same list as a seam: it lands code, so it owes
+    // a review of it, and `9·design` is on the list because
+    // `check_ui_outside_a_wu` refuses a rendered file there. What separates the
+    // levels is the epic's two rows, not the review.
     #[test]
-    fn the_commit_list_carries_design_and_no_review() {
-        assert_eq!(
-            checks_at(Level::Commit),
-            ["notes", "manifest", "doc-note", "design", "manual-review"]
-        );
+    fn a_standalone_commit_runs_the_same_list_as_a_seam() {
+        assert_eq!(checks_at(Level::Commit), checks_at(Level::Wu));
+        assert!(runs_at(REVIEW, Level::Commit), "code that lands outside a WU still owes a review");
+        assert!(!runs_at("7·walk", Level::Commit) && !runs_at(UNBUILT, Level::Commit));
     }
 
     // The receipt advertises what the level ran. Asserted against the literal
@@ -1742,7 +1746,11 @@ mod tests {
     #[test]
     fn the_printed_list_is_the_list_the_level_runs() {
         for (level, expected) in [
-            (Level::Commit, "checks: [notes, manifest, doc-note, design, manual-review]"),
+            (
+                Level::Commit,
+                "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
+                 doc-note, design, manual-review]",
+            ),
             (
                 Level::Wu,
                 "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \

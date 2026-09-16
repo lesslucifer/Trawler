@@ -1704,8 +1704,9 @@ fn epic_walk_flags_a_noteless_standalone_code_commit() {
     );
 }
 
-#[test]
-fn standalone_commit_gets_green_with_its_manifest() {
+/// An epic carrying a standalone code commit - code that landed outside any
+/// Working Unit, so no seam review ever covered it. Returns that commit's sha.
+fn epic_with_a_standalone_code_commit() -> (Repo, String) {
     let (repo, _) = epic_with_merged_wu();
     repo.write("src/extra.rs", "pub fn covered() {}\n");
     let sha = repo.commit("standalone fix");
@@ -1716,8 +1717,81 @@ fn standalone_commit_gets_green_with_its_manifest() {
     );
     close_epic(&repo);
     bless_epic(&repo, T2_ENTRY);
+    (repo, sha)
+}
+
+/// The review note a standalone commit owes, bound to its own code diff. It
+/// carries no identity block, because the `test/v2` note beside it carries none
+/// and `1·notes` refuses a tip whose notes disagree about who owns it.
+fn commit_cr(repo: &Repo, sha: &str) -> String {
+    let base = repo.sha(&format!("{sha}^"));
+    format!(
+        "schema: cr/v5\nbase: {base}\nhead: x\ndiff_sha256: {}\nverdict: PASS\ndate: 2026-09-16\n",
+        code_sha(repo, &base, sha)
+    )
+}
+
+// W9 · the review is owed where code LANDS, and an epic re-reads rather than
+// re-reviews (DEC-51). That holds only because every byte in an epic arrived
+// through a level that owed a review of its own - a Working Unit seam, or a
+// commit outside one. Round 2 of this WU's own review reproduced the hole: the
+// epic-level review had been the blunt backstop covering code that never went
+// through a seam, and removing it let such a commit reach main unreviewed.
+#[test]
+fn a_standalone_code_commit_owes_its_own_review_and_the_walk_refuses_it_without_one() {
+    let (repo, sha) = epic_with_a_standalone_code_commit();
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["7·walk·1·notes"],
+        "code that no seam reviewed must not reach main: {}",
+        format_report(&report)
+    );
+    assert!(
+        format_report(&report).contains("code-review"),
+        "and the fix must name the review: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &sha, &commit_cr(&repo, &sha));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+// The binding is the commit's own code, judged at its own level: a note bound to
+// other bytes is refused there exactly as it is at a seam.
+#[test]
+fn a_standalone_commits_review_binds_that_commits_code() {
+    let (repo, sha) = epic_with_a_standalone_code_commit();
+    let stale = commit_cr(&repo, &sha).replace("diff_sha256: ", "diff_sha256: 0");
+    repo.note("cr", &sha, &stale);
+
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
+
+    repo.note("cr", &sha, &commit_cr(&repo, &sha).replace("verdict: PASS", "verdict: FAIL"));
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert_eq!(checks_of(&report), vec!["3·review"], "{}", format_report(&report));
+}
+
+// A standalone commit that changes no code owes no review, exactly as a Working
+// Unit's docs-only diff does - the demand follows the code, never the level.
+#[test]
+fn a_standalone_docs_only_commit_still_owes_no_review() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("docs/use-cases/api.html", "<html>a contract edit</html>\n");
+    let sha = repo.commit("a standalone doc edit");
+    repo.note("test", &sha, "schema: test/v2\nlevel: commit\n");
+    repo.note(
+        "doc",
+        &sha,
+        &doc_note("E9", None, "  - path: docs/use-cases/api.html\n    tier: T2\n    action: updated\n    distills: \"a contract edit\"\n", None),
+    );
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
