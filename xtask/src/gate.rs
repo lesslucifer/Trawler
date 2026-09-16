@@ -219,6 +219,15 @@ fn design_source<'a>(cr: Option<&'a CrNote>, design: Option<&'a DesignNote>) -> 
     }
 }
 
+/// Which note carries the design verdict at `tip`, named by the same rule the
+/// gate reads it with. A command that tells a reader where to write the verdict
+/// asks here rather than quoting a schema, so the instruction cannot name a note
+/// the gate does not read (DEC-46).
+pub fn design_carrier_note(repo: &Path, tip: &str) -> &'static str {
+    let cr = note(repo, "cr", tip).and_then(|raw| serde_yaml::from_str::<CrNote>(&raw).ok());
+    design_source(cr.as_ref(), None).note
+}
+
 // Which notes a run reads off the tip. The preflight stops at the review's
 // inputs - the notes its finders read as claims to judge - and loads none of the
 // evidence the review writes, so it can never demand what the exam produces.
@@ -2192,6 +2201,45 @@ mod tests {
     // merge is TREESAME for the path, so git's default pathspec simplification
     // follows the first parent straight past it and never visits the add - the
     // range walk goes quiet on exactly the case an endpoint diff was rejected for.
+    // What `design-scope` tells a reader to write, against what the gate reads it
+    // from. The two were stated separately once and drifted a whole epic apart.
+    #[test]
+    fn the_note_a_reader_is_sent_to_is_the_note_the_gate_reads_the_verdict_from() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        std::fs::create_dir_all(repo.join("src")).unwrap();
+        std::fs::write(repo.join("src/lib.rs"), "pub fn base() {}\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "base"]);
+        let tip = g(&["rev-parse", "HEAD"]);
+
+        assert_eq!(
+            super::design_carrier_note(repo, &tip),
+            "design/v1",
+            "a tip with no review at all owes the verdict on the note of its own"
+        );
+
+        for (schema, expected) in
+            [("cr/v2", "cr/v2"), ("cr/v3", "cr/v3"), ("cr/v4", "design/v1"), ("cr/v5", "design/v1")]
+        {
+            let body = format!("schema: {schema}\nbase: {tip}\ndiff_sha256: abc\nverdict: PASS\n");
+            super::write_note(repo, "cr", &tip, &body).unwrap();
+            let named = super::design_carrier_note(repo, &tip);
+            assert_eq!(named, expected, "{schema} sends a reader to {named}");
+            let cr: CrNote = serde_yaml::from_str(&body).unwrap();
+            assert_eq!(
+                named,
+                super::design_source(Some(&cr), None).note,
+                "{schema}: the instruction and the gate must name one note"
+            );
+        }
+    }
+
     #[test]
     fn a_design_added_and_removed_inside_one_branch_still_reds_the_epic() {
         let dir = tempfile::TempDir::new().unwrap();

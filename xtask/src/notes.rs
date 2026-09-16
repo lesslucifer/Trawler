@@ -71,6 +71,13 @@ impl Layer {
 /// declared one is still judged against what it declared.
 pub const CR_SCHEMAS: &[&str] = &["cr/v2", "cr/v3", "cr/v4", "cr/v5"];
 
+/// The contract a review written today declares — the newest `CR_SCHEMAS` entry.
+/// Anything telling a reader which note to go and write names it from here, so a
+/// schema bump moves one constant instead of every sentence quoting it.
+pub fn cr_schema() -> &'static str {
+    CR_SCHEMAS.last().copied().unwrap_or_default()
+}
+
 /// Whether a review contract binds the code paths the diff changes, or the whole
 /// diff. The whole-diff contracts are a closed pair: every bump since `cr/v4`
 /// keeps the code-path binding, so a newer schema is read as code-bound without
@@ -786,6 +793,33 @@ verdict: PASS
         assert!(binds_code("cr/v4"));
         assert!(binds_code("cr/v5"));
         assert_eq!(CR_SCHEMAS.iter().filter(|s| !binds_code(s)).count(), 2);
+    }
+
+    // The value test above cannot bite: a hand-written literal that happens to
+    // equal today's schema passes it, and only stops passing at the next bump -
+    // which is exactly when nobody is looking. So the rule is enforced as a rule:
+    // the modules that tell a reader which note to write may not spell one.
+    #[test]
+    fn nothing_that_instructs_a_reader_spells_a_review_schema_of_its_own() {
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        for module in ["mr.rs", "lib.rs"] {
+            let text = std::fs::read_to_string(src.join(module)).unwrap();
+            let shipped = text.split("#[cfg(test)]").next().unwrap();
+            for (n, line) in shipped.lines().enumerate() {
+                assert!(
+                    !line.contains("cr/v"),
+                    "{module}:{} spells a review schema instead of asking cr_schema(): {}",
+                    n + 1,
+                    line.trim()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_current_review_contract_is_the_newest_one_the_list_names() {
+        assert_eq!(super::cr_schema(), *CR_SCHEMAS.last().unwrap());
+        assert!(binds_code(super::cr_schema()));
     }
 
     // The bump is for enforcement: a v2 note has no design section and cannot be

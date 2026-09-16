@@ -141,14 +141,19 @@ fn signed_note_body(
     )
 }
 
-pub const SIGN_LAST: &str = "\
+pub fn sign_last() -> String {
+    format!(
+        "\
 A signature binds the tree. Every later tree change - a fix, a missed test, a doc
              edit - orphans it and costs another review and another signature, so the
              tree settles BEFORE a human is asked to sign:
                1. test/v2 + doc/v1 notes on the tip   (writing the receipt is what
                   carries adding the test and settling the docs)
-               2. the code-review skill -> cr/v5 PASS bound to this exact diff
-               3. THEN cargo xtask mr confirm";
+               2. the code-review skill -> {} PASS bound to this exact diff
+               3. THEN cargo xtask mr confirm",
+        crate::notes::cr_schema()
+    )
+}
 
 /// Why a tip is not ready to be signed, given what its notes say. Pure so the
 /// rule is testable without a repo: `review` is the tip's code-review note as
@@ -180,7 +185,8 @@ fn unready_reasons(
             .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
     }
     match review {
-        None => missing.push("no cr/v5 note - nobody has reviewed this tip".to_string()),
+        None => missing
+            .push(format!("no {} note - nobody has reviewed this tip", crate::notes::cr_schema())),
         Some((verdict, _)) if verdict != "PASS" => {
             missing.push(format!("the review verdict is {verdict} - fix and re-review"));
         }
@@ -501,7 +507,7 @@ fn mr_confirm(
         tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h, c)| (h.as_str(), c.as_str())), gated);
     if !unready.is_empty() {
         let why = unready.iter().map(|r| format!("  - {r}")).collect::<Vec<_>>().join("\n");
-        return Ok((1, format!("{} is not ready to sign:\n{why}\n{SIGN_LAST}", short(&tip))));
+        return Ok((1, format!("{} is not ready to sign:\n{why}\n{}", short(&tip), sign_last())));
     }
     let report = resolve_report(repo, &level_word, &tip, report_flag, input)?;
     let rsha = report_sha(repo, &tip, &report)?;
@@ -1350,7 +1356,23 @@ mod tests {
         assert_eq!(r.len(), 3, "{r:?}");
         assert!(r[0].contains("test/v2"), "{r:?}");
         assert!(r[1].contains("doc/v1"), "{r:?}");
-        assert!(r[2].contains("cr/v5"), "{r:?}");
+        assert!(r[2].contains(crate::notes::cr_schema()), "{r:?}");
+    }
+
+    #[test]
+    fn the_review_a_tip_is_told_to_run_is_the_one_the_gate_demands() {
+        let current = crate::notes::cr_schema();
+        let unreviewed = super::unready_reasons(true, true, true, None, Some("abc"));
+        assert_eq!(unreviewed.len(), 1, "{unreviewed:?}");
+        for stale in crate::notes::CR_SCHEMAS.iter().filter(|s| **s != current) {
+            assert!(
+                !unreviewed[0].contains(*stale),
+                "names {stale}, not {current}: {unreviewed:?}"
+            );
+            assert!(!super::sign_last().contains(*stale), "{}", super::sign_last());
+        }
+        assert!(unreviewed[0].contains(current), "{unreviewed:?}");
+        assert!(super::sign_last().contains(current), "{}", super::sign_last());
     }
 
     #[test]

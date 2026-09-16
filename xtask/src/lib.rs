@@ -150,9 +150,10 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
         return Ok((
             0,
             format!(
-                "no design artifact in {}..{} - the design dimension does not run, and the cr/v3 note carries no design section",
+                "no design artifact in {}..{} - the design dimension does not run, and the {} note carries no design section",
                 gate::short(&merge_base),
-                gate::short(&tip)
+                gate::short(&tip),
+                gate::design_carrier_note(repo, &tip)
             ),
         ));
     }
@@ -188,8 +189,9 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
     if !added.is_empty() {
         let _ = writeln!(
             out,
-            "{} new surface(s) - the cr/v3 note must cite the design each was built from (design.implements: [{{path, blob, built}}]):\n{}",
+            "{} new surface(s) - the {} note must cite the design each was built from (design.implements: [{{path, blob, built}}]):\n{}",
             added.len(),
+            gate::design_carrier_note(repo, &tip),
             added.join("\n")
         );
     }
@@ -365,6 +367,44 @@ pub(crate) fn infer_wu_target(tip: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::{flag_value, infer_wu_target};
+
+    // `design-scope` tells a reader which note to write the verdict to. It said
+    // `cr/v3` for a whole epic after DEC-46 moved the verdict to `design/v1`,
+    // because the sentence restated the rule instead of asking for it.
+    #[test]
+    fn design_scope_sends_a_reader_to_the_note_the_gate_reads() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| crate::git::git(repo, args).unwrap();
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        std::fs::write(repo.join("base.txt"), "base\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "base"]);
+        g(&["branch", "epic/x"]);
+
+        let empty = super::design_scope(repo, "epic/x", "HEAD").unwrap().1;
+        let surfaced = {
+            std::fs::create_dir_all(repo.join("ui/src")).unwrap();
+            std::fs::write(repo.join("ui/src/Thing.tsx"), "export const Thing = () => null;\n")
+                .unwrap();
+            g(&["add", "-A"]);
+            g(&["commit", "-q", "-m", "a new surface"]);
+            super::design_scope(repo, "epic/x", "HEAD").unwrap().1
+        };
+        assert!(surfaced.contains("new surface(s)"), "{surfaced}");
+
+        let tip = g(&["rev-parse", "HEAD"]);
+        let carrier = crate::gate::design_carrier_note(repo, &tip);
+        for text in [&empty, &surfaced] {
+            assert!(text.contains(carrier), "sends a reader nowhere: {text}");
+            for stale in crate::notes::CR_SCHEMAS.iter().filter(|s| **s != carrier) {
+                assert!(!text.contains(*stale), "names {stale}, not {carrier}: {text}");
+            }
+        }
+    }
 
     #[test]
     fn wu_branch_names_infer_their_epic() {
