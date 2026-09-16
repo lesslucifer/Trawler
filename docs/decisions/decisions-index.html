@@ -605,8 +605,14 @@
         <tr>
           <td><a href="dec-51-the-epic-gate-reads-its-seams.html"><code>dec-51-the-epic-gate-reads-its-seams.html</code></a></td>
           <td><span class="badge id">DEC-51</span></td>
-          <td><strong>The epic gate reads its seams, it does not re-review them</strong> — an epic tip owes no review
-            of its own diff, and never stops owing that every seam in it carries one. <code>3·review</code>,
+          <td><strong>Code owes a review where it lands, so the epic gate reads rather than re-reviews</strong> — an
+            epic tip owes no review of its own diff, and never stops owing that everything in it carries one. Code
+            lands in <em>two</em> places: a Working Unit seam and a <strong>standalone commit directly on an epic
+            branch</strong>, so <code>3·review</code> runs at commit level too, bound to that commit's own code
+            paths. The first draft said only "the seams were reviewed"; W9's own second review round reproduced the
+            blocker that made — a standalone code commit reaching <code>main</code> through the real hook, signed,
+            with zero <code>cr</code> notes in its history, because the epic-level review had been its only
+            backstop. <code>3·review</code>,
             <code>3·review-nits</code>, <code>4·review-base</code> and <code>5·diff-binding</code> leave the epic
             check list; <code>7·walk</code> stays and is the epic's real guarantee — every seam's review re-read at
             its declared binding, the epic refused when one has been lost. The numbers: an epic round's diff is the

@@ -83,8 +83,11 @@ review again; the deferred green says so in as many words, and never claims the
 suite passed.
 
 **WU and epic scopes only.** The preflight protects a verdict the merge gate
-binds, and those are the two levels it binds — a WU branch against its epic, or
-an epic against `main`. A caller reviewing any other scope (§1 permits recent
+binds at those two levels — a WU branch against its epic, or an epic against
+`main`. A **standalone code commit** on an epic branch also owes a `cr/v5` bound
+to its own code (DEC-51: code owes a review where it lands), and the preflight
+has no level for it: review `<sha>^..<sha>`, run `cargo xtask gate0` yourself,
+and attach the note to that commit. A caller reviewing any other scope (§1 permits recent
 commits, a single ref, the working tree) has no note to orphan: run
 `cargo xtask gate0` yourself, read the notes you need, and go on. Never point
 the preflight at a tip without naming the scope whose notes you actually read.

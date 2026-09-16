@@ -20,18 +20,38 @@
 
     <h2 id="decision">The decision</h2>
     <div class="callout" data-c="the-rule">
-      <p><strong>The rule.</strong> An epic tip <strong>owes no review of its own diff</strong>. It never stops
-      owing that <strong>every seam in it carries one</strong>.</p>
+      <p><strong>The rule.</strong> <strong>Code owes a review where it lands.</strong> An epic tip therefore
+      <strong>owes no review of its own diff</strong> — and never stops owing that <strong>everything in it carries
+      one</strong>.</p>
       <p>The distinction is narrow and worth stating plainly, because the two halves are easy to confuse: what left
-      is the re-judging of already-cleared bytes; what stayed is the guarantee that no seam lost its evidence.</p>
+      is the re-judging of already-cleared bytes; what stayed is the guarantee that no byte reached the epic
+      unjudged.</p>
+    </div>
+
+    <div class="callout warn" data-c="where-code-lands">
+      <p><strong>Code lands in two places, not one.</strong> The first draft of this record said "the seams were
+      reviewed", and that is only true of code that arrived through a Working Unit merge. Code also lands as a
+      <strong>standalone commit directly on an epic branch</strong> — a category
+      <code>CLAUDE.md</code> and the gate have always permitted, carrying a <code>test/v2</code> note at
+      <code>level: commit</code>. Nothing reviewed those. The epic-level review had been their blunt backstop,
+      covering every byte in <code>base..tip</code> regardless of how it arrived, and removing it let such a commit
+      reach <code>main</code> with no review anywhere in its history.</p>
+      <p>So <code>3·review</code> (with <code>3·review-nits</code>, <code>4·review-base</code> and
+      <code>5·diff-binding</code>) runs at <strong>commit level too</strong>, bound to that commit's own code paths.
+      The epic's re-read is then sound rather than merely cheap: every level where code can land owes a review of
+      it, and <code>7·walk</code> re-reads all of them.</p>
+      <p><strong>Found by this Working Unit's own second review round</strong>, as a reproduced blocker — a
+      standalone code commit merging to <code>main</code> through the real hook and signing, with zero
+      <code>cr</code> notes in its history. It is recorded here as the reason the rule reads "where it lands" rather
+      than "the seams", not as a footnote to a rule that was already right.</p>
     </div>
 
     <h2 id="checks">What moved</h2>
     <table>
-      <thead><tr><th>Check</th><th>At WU</th><th>At epic</th><th>Why</th></tr></thead>
+      <thead><tr><th>Check</th><th>At WU <em>and standalone commit</em></th><th>At epic</th><th>Why</th></tr></thead>
       <tbody>
         <tr><td><code>3·review</code></td><td>stays</td><td><strong>leaves</strong></td>
-          <td>the seams were reviewed; the union adds no subject</td></tr>
+          <td>every byte was reviewed where it landed; the union adds no subject</td></tr>
         <tr><td><code>3·review-nits</code></td><td>stays</td><td><strong>leaves</strong></td>
           <td>nothing to disposition without a review</td></tr>
         <tr><td><code>4·review-base</code></td><td>stays</td><td><strong>leaves</strong></td><td>same</td></tr>
@@ -51,17 +71,17 @@
 flowchart LR
   W1["WU 1&#10;reviewed · cr/v5"] --> S1(("seam"))
   W2["WU 2&#10;reviewed · cr/v5"] --> S2(("seam"))
-  W3["WU 3&#10;reviewed · cr/v5"] --> S3(("seam"))
+  C1["standalone code commit&#10;reviewed · cr/v5"] --> S3(("commit"))
   S1 --> E["epic tip&#10;no review of its own"]
   S2 --> E
   S3 --> E
-  E -- "7·walk re-reads each seam's review" --> S1
+  E -- "7·walk re-reads every review it finds" --> S1
   E -- " " --> S2
   E -- " " --> S3
   E --> M["main"]
       </pre>
-      <div class="caption">Hình 1 — the epic tip asks nothing new of the code; it asks every seam whether its
-      evidence is still there.</div>
+      <div class="caption">Hình 1 — the epic tip asks nothing new of the code; it asks every place code landed
+      whether its evidence is still there. A standalone commit is one of those places.</div>
     </div>
 
     <h2 id="numbers">The numbers that decided it</h2>
@@ -85,6 +105,10 @@ flowchart LR
           and the guard around the review checks reads it, so a check that stopped running cannot keep being
           advertised. An epic tip's <code>cr</code> note is read when present — the walk's waivers live on it — and
           never demanded</td></tr>
+        <tr><td>Standalone code commits</td>
+          <td>They now owe a <code>cr/v5</code> PASS bound to their own code paths, read at
+          <code>Level::Commit</code> and re-read by <code>7·walk</code>. A standalone commit that changes no code
+          owes none, exactly as a docs-only Working Unit does — the demand follows the code, never the level</td></tr>
         <tr><td><code>xtask/src/mr.rs</code></td>
           <td><code>mr confirm epic</code> stops holding a tip for a review note. Its readiness rule is "never
           refuse a tip the merge gate would green"; leaving the demand there would have made a signed epic
@@ -105,7 +129,7 @@ flowchart LR
     <div class="callout warn" data-c="what-did-not-change">
       <p><strong>What an epic still owes:</strong> <code>test/v2</code>, <code>doc/v1</code>, <code>mr/v1</code>,
       its design checks, and a clean walk. Removing the review from the tip removed nothing else, and an epic whose
-      seam has lost its review is refused exactly as before.</p>
+      seam — or whose standalone code commit — has lost its review is refused exactly as before.</p>
     </div>
 
   </main>

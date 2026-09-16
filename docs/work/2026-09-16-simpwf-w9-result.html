@@ -186,6 +186,53 @@
     <code>gate.rs</code> and three sibling call sites kept stating the old one. That is the failure mode DEC-50 and
     DEC-51 both exist to prevent, found by the first fleet run under the shape they created.</p>
 
+    <h3 id="round-2">What round 2 found — a blocker, and the WU's premise was wrong</h3>
+    <div class="callout warn" data-c="the-blocker">
+      <p><strong>Round 2 failed the WU on a reproduced blocker.</strong> DEC-51's premise — <em>an epic's diff is
+      the union of seams every Working Unit review already cleared</em> — is <strong>false</strong>. Code also lands
+      as a <strong>standalone commit directly on an epic branch</strong>, a category <code>CLAUDE.md</code> and the
+      gate have always permitted and which the walk checks at <code>Level::Commit</code>, where no review was ever
+      demanded. The epic-level review had been their blunt backstop, covering every byte in <code>base..tip</code>
+      however it arrived.</p>
+      <p>The verifier reproduced it end to end and <em>both ways</em>: at this WU's tip, a standalone code commit on
+      an epic branch signed via <code>mr confirm epic</code> and greened <code>verify-dod epic</code> — the exact
+      call the real <code>pre-merge-commit</code> hook makes — with <strong>zero <code>cr</code> notes anywhere in
+      its history</strong>; at the merge base, the byte-identical scenario was refused. A silent loss of this
+      system's central guarantee, opened by this WU.</p>
+      <p><strong>The fix restates the rule at the altitude it should have had:</strong> <em>code owes a review where
+      it lands.</em> <code>3·review</code> and its three subordinate checks now run at commit level too, bound to
+      that commit's own code paths. The epic's re-read is then sound rather than merely cheap — every level where
+      code can land owes a review of it, and <code>7·walk</code> re-reads all of them. A standalone commit that
+      changes no code owes none, exactly as a docs-only Working Unit does: the demand follows the code, never the
+      level.</p>
+    </div>
+    <table>
+      <thead><tr><th>Round 2 candidate</th><th>Raised by</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>A standalone code commit on an epic reaches <code>main</code> with no review anywhere</td>
+          <td>correctness, as <strong>blocker</strong></td>
+          <td><span class="badge approval">real · blocker</span> reproduced against both tip and base. Fixed, with
+          three regression cases</td></tr>
+        <tr><td><code>CHECKS</code> omits <code>6·run-closed</code>, <code>6·retirement-order</code> and
+          <code>9·design-schema</code>, so it is not the exhaustive registry it reads as</td>
+          <td>altitude, as important</td>
+          <td><span class="badge auto">refuted</span> the table's scope is the receipt's <em>documented
+          vocabulary</em> (<code>workflow.html</code>'s <code>checks:</code> line), which it matches exactly; adding
+          those rows would print names that contradict a higher-precedence spec. The verifier did its job here</td></tr>
+        <tr><td><code>Runs::With</code> models three failure kinds of one gated check as independently level-gated
+          rows</td><td>altitude, as nit</td>
+          <td><span class="badge id">nit · waived</span> the four ids are what <code>Failure</code> carries and what
+          <code>workflow.html</code> names one by one, so each stays answerable to <code>runs_at</code></td></tr>
+        <tr><td>—</td><td>efficiency</td>
+          <td><span class="badge auto">nothing found</span> the <code>CHECKS</code> scan is a fixed 11-row table off
+          any hot path — the rubric's own exclusion</td></tr>
+      </tbody>
+    </table>
+    <p>Round 2's bill, on the tip's own note: <strong>716k tokens</strong> — 3 finders (407k) and 2 verifier agents
+    (309k), <code>stage_seconds</code> gate0 65 · finders 979 · verifiers 958 · total 1,943. The blocker was
+    <strong>not batched</strong>, which is the first exercise of DEC-50's guardrail and the reason it exists:
+    the round's whole verdict turned on that one claim.</p>
+
     <h2 id="distillation" data-item="distillation">Distillation</h2>
     <table>
       <thead><tr><th>Tier</th><th>Doc</th><th>What it now says</th></tr></thead>
@@ -218,6 +265,13 @@
     <table>
       <thead><tr><th>Owed</th><th>Why it is not here</th></tr></thead>
       <tbody>
+        <tr><td>The <code>CHECKS</code> table's scope is the receipt's vocabulary, not every check id the gate can
+          emit</td>
+          <td>Round 2 raised it and the verifier refuted it: the table matches <code>workflow.html</code>'s
+          documented <code>checks:</code> line exactly, and <code>6·run-closed</code>,
+          <code>6·retirement-order</code> and <code>9·design-schema</code> are deliberately folded into the numbered
+          families they belong to. Recorded because the table <em>reads</em> as exhaustive and a future reader may
+          make the same inference; the honest fix is a clearer doc comment, not more rows</td></tr>
         <tr><td>An epic walk waiver that expires with its diff</td>
           <td>Discovered in this WU and recorded in DEC-51. The fix moves the waiver to a note something still
             binds — a change to what a note carries, not to what the gate checks, and a separate decision</td></tr>
