@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: epic/codex
+tests:
+  unit: { count: 4, covers: "the four e2e_design_flow cases themselves: with /target ignored in the harness repo, the two that merge through a gate refusal now reach the gate verdict they assert instead of dying on a dirty tree, and the two that already passed still pass" }
