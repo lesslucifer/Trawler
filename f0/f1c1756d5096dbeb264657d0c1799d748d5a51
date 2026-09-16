@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-SIMPWF
+wu: E-SIMPWF.W9
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "four rows: per-dimension attribution still owed and now checkable, the finder-stage A/B where W8 left it, fleet cuts priced off W6's per-agent means measured 2.3x optimistic, the epic-review cut with its four holes and what a next attempt owes, and the pre-existing 9-design gap at a tip standalone commit"
+  - path: "docs/decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html"
+    tier: T2
+    action: updated
+    distills: "the four-round evidence: a two-or-three-finder fleet raised 14 candidates and found four verified blockers in the diff it was reviewing, with the blocker guardrail exercised on all four"
+  - path: "docs/decisions/dec-51-the-epic-gate-reads-its-seams.html"
+    tier: T2
+    action: updated
+    distills: "withdrawn: why the premise was wrong, the four ways code reaches main that an epic's seams do not cover, why the merge-commit case decides it, what the attempt cost, and what a future attempt owes"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-50 active with its numbers, DEC-51 withdrawn with its enumeration"
+  - path: "docs/work/2026-09-15-simpwf-w9-plan.html"
+    tier: T3
+    action: added
+    distills: "the T3 plan written before the code - the corpus analysis, the dimension rulings, the priced loss and the bar change. Its gate half is withdrawn; the result records that against this plan"
+  - path: "docs/work/2026-09-16-simpwf-w9-result.html"
+    tier: T3
+    action: added
+    distills: "the split outcome, five deviations, the three test levels with the e2e waiver, the bar met and where it is deliberately paid, all four review rounds with their bills, and the four-round tally"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "DEC-50 only: the cr/v5 row's fleet shape and the who-judges paragraph"
