@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "epic E-SIMPWF -> main (round 3 - the tip being merged)"
+epic: E-SIMPWF
+branch: epic/simpwf
+base: 013d6c4d236948149e6ae2bc21ec43456e89e18f
+head: 6d056a5646dff7cb78183bd3a784036215bcad36
+diff_sha256: b17ff39fb096f6ab5b31bff867208584d304c9cae8b0b7c4c349fd6a7e7b6131
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 1
+  stage_seconds:
+    gate0: 51
+    finders: 317
+    verifiers: 149
+    total: 541
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "gate.rs: code_sha256 is computed whenever runs_at(REVIEW, level), then discarded by reviewed_binding on a legacy cr/v2 or cr/v3 seam that binds the whole diff - so an epic walk recomputes and throws it away on its own early seams"
+    waived: "verified real and judged nit against DEC-11's measurement of the whole gate at under 0.5% of an epic's wall-clock; one scoped git diff plus sha256 per legacy seam is not observable against that budget, and nothing drifts if it is left"
+  - finding: "gate.rs: walk re-verifies every WU seam through verify(), which runs check_manual_review - a full unscoped diff hash and, on a signed note, an ssh-keygen -Y verify subprocess - and then filters every 8-manual-review failure out before folding the seam in, so the work is discarded by construction on every seam, every run"
+    waived: "the discard is deliberate and cited in place (DEC-9/DEC-10: re-judging immutable tips against the mutable local .mr-allowed would redden authorised history after key rotation). Only the compute-then-discard cost is the finding, and it is nit-scale under DEC-11"
+  - finding: "tally.rs: LEVELS re-lists the three note-level strings gate::Level::as_note_level already owns, so a future Level variant would be written on one side and silently rejected as unknown by Entry::parse on the other"
+    waived: "real duplication, no live instance - Level has had three variants throughout. Carried as a backlog row rather than fixed at an epic close, since it lands in the walk's own code"
+  - finding: "notes.rs: the crate-wide guard walks xtask/src with read_dir and does not descend, so a module moved into a future subdirectory would leave the scan silently rather than loudly"
+    waived: "prospective only - xtask/src has zero subdirectories today, verified, and every module is a flat top-level .rs file. The scanned > 5 floor catches a wholly empty walk, which is the failure mode that would matter now"
+verdict: PASS
+date: 2026-09-16
