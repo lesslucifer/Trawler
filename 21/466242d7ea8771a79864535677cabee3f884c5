@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-CODEX
+wu: E-CODEX.W2
+base: d0e55606deb28d5b94e215ee4951b65e5ea3cdf8
+tip: 21466242d7ea8771a79864535677cabee3f884c5
+diff_sha256: f9cbc9e5b8e980c7cf1f448538517442bebd99d98db77aea8b52306fb539bf36
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-16
