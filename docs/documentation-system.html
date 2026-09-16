@@ -48,7 +48,7 @@ flowchart TB
       <tbody>
         <tr>
           <td><span class="badge id">T0</span></td>
-          <td><code>CLAUDE.md</code></td>
+          <td><code>CLAUDE.md</code> — reached by Codex as <code>AGENTS.md</code>, a symlink over the same bytes (<a href="decisions/dec-52-one-source-two-harnesses.html">DEC-52</a>)</td>
           <td>“What are the fixed rules?”</td>
           <td>Conventions + the tier map, one line per tier</td>
           <td>Anything that changes with the code</td>
@@ -243,7 +243,7 @@ date: 2026-07-05</pre>
     <table data-c="target-tree">
       <thead><tr><th>Location</th><th>Tier</th><th>Content</th></tr></thead>
       <tbody>
-        <tr><td><code>CLAUDE.md</code></td><td>T0</td><td>Rules + tier map</td></tr>
+        <tr><td><code>CLAUDE.md</code> · <code>AGENTS.md</code> (symlink to it)</td><td>T0</td><td>Rules + tier map</td></tr>
         <tr><td><code>docs/*.html</code></td><td>T1</td><td>Architecture + process standards, flat</td></tr>
         <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code> · <code>docs/design-rules/</code></td><td>T2</td><td>One index + topic files each (design-rules: a single file — the index is the KB)</td></tr>
         <tr><td><code>docs/work/</code></td><td>T3</td><td>Working docs — in-flight only; empty in git at every epic gate</td></tr>
