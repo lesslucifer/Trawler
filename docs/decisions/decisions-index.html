@@ -574,6 +574,52 @@
             building it before measuring it</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html"><code>dec-50-the-fleet-carries-only-the-dimensions-that-pay.html</code></a></td>
+          <td><span class="badge id">DEC-50</span></td>
+          <td><strong>The fleet carries only the dimensions that produce severe code findings</strong> —
+            <strong>correctness</strong> and <strong>efficiency</strong> always, <strong>altitude</strong> only where
+            the diff's code paths resolve to more than one module, <strong>simplification</strong> and
+            <strong>reuse</strong> retired. Each retirement sits in <code>rubric.md</code> beside the number that
+            retired it, so "more coverage" cannot re-buy one without new evidence. From 198 rounds, 2,098 candidates
+            and 19 severe code findings: correctness <strong>~13 of 19</strong> and every code blocker ever found;
+            efficiency <strong>2</strong>, rare and uniquely catching; altitude <strong>0–1</strong>, its real yield
+            document structure that DEC-45 put out of scope; reuse <strong>3</strong> severe on ~30% of all candidate
+            volume; simplification <strong>1 in 198 rounds</strong>, its three ground-truth findings all nits under
+            DEC-47. A dropped finder is worth <strong>~213k tokens, about 20% of a round</strong> — its own agent
+            plus the ~2.2 verifiers it generates. <strong>The verifier stage batches by relevance</strong>, at most
+            four claims per batch, <strong>except that a proposed blocker is never batched</strong>: grouping is
+            exactly where a confirmation carries over, and blockers decide verdicts (3 in 198 rounds). Supersedes
+            DEC-48's "never batch the verifiers" for this shape only — W6 measured the undifferentiated whole-pool
+            batch, whose serial re-reading is the cost relevance-grouping removes. <strong>"Never merge the finders"
+            stands</strong> (+354s per merged agent). <strong>The bar moved</strong> to <em>no verified blocker or
+            important is lost</em>: W6's <em>every known-real finding is raised</em> is unpassable by construction
+            for any cut that removes scope, which is why three Working Units of measurement had produced 60 seconds.
+            The priced loss, named before the cut: simplification's D3/D4/O3 (all nits), reuse's hand-rolled CA
+            duplication of <code>trawler::test_support::tls_origin</code> — the sharpest cost, taken knowingly — and
+            altitude's O1 on single-module diffs, which the conditional keeps. Left alone: the
+            <em>uncertainty resolves upward</em> rule, a diff-size floor, returning documents to any review, and the
+            verifier model</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-51-the-epic-gate-reads-its-seams.html"><code>dec-51-the-epic-gate-reads-its-seams.html</code></a></td>
+          <td><span class="badge id">DEC-51</span></td>
+          <td><strong>The epic gate reads its seams, it does not re-review them</strong> — an epic tip owes no review
+            of its own diff, and never stops owing that every seam in it carries one. <code>3·review</code>,
+            <code>3·review-nits</code>, <code>4·review-base</code> and <code>5·diff-binding</code> leave the epic
+            check list; <code>7·walk</code> stays and is the epic's real guarantee — every seam's review re-read at
+            its declared binding, the epic refused when one has been lost. The numbers: an epic round's diff is the
+            union of seams every WU review already cleared, the only place in the workflow where the same bytes are
+            judged twice, and <strong>29 epic rounds returned 52 findings</strong> — mean 1.79 against the WU
+            level's 3.37, with <strong>41% returning nothing at all</strong>. One table in <code>gate.rs</code> now
+            says which checks each level runs, read by both the receipt's <code>checks:</code> line and the guard
+            around the review checks, so an advertised check is always a check that ran.
+            <code>mr confirm epic</code> follows, because its readiness rule is never to refuse a tip the merge gate
+            would green. An epic still owes <code>test/v2</code>, <code>doc/v1</code>, <code>mr/v1</code>, its
+            design checks and a clean walk</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

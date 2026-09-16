@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aaa106b9f34851f0dfad04c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-51: the epic gate reads its seams, it does not re-review them</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-51 — the epic gate reads its seams, it does not re-review them</h1>
+      <p>An epic's diff is the union of seams every Working Unit review already cleared. It is the only place in the
+      workflow where the same bytes are judged twice, and 29 recorded epic rounds returned 52 findings for it. The
+      epic tip stops owing a review of its own; <code>7·walk</code> — every seam's review re-read at its declared
+      binding — does not move.</p>
+      <div class="meta">Decided 2026-09-16 · E-SIMPWF.W9 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="the-rule">
+      <p><strong>The rule.</strong> An epic tip <strong>owes no review of its own diff</strong>. It never stops
+      owing that <strong>every seam in it carries one</strong>.</p>
+      <p>The distinction is narrow and worth stating plainly, because the two halves are easy to confuse: what left
+      is the re-judging of already-cleared bytes; what stayed is the guarantee that no seam lost its evidence.</p>
+    </div>
+
+    <h2 id="checks">What moved</h2>
+    <table>
+      <thead><tr><th>Check</th><th>At WU</th><th>At epic</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>3·review</code></td><td>stays</td><td><strong>leaves</strong></td>
+          <td>the seams were reviewed; the union adds no subject</td></tr>
+        <tr><td><code>3·review-nits</code></td><td>stays</td><td><strong>leaves</strong></td>
+          <td>nothing to disposition without a review</td></tr>
+        <tr><td><code>4·review-base</code></td><td>stays</td><td><strong>leaves</strong></td><td>same</td></tr>
+        <tr><td><code>5·diff-binding</code></td><td>stays</td><td><strong>leaves</strong></td><td>same</td></tr>
+        <tr><td><code>7·walk</code></td><td>—</td><td><strong>stays</strong></td>
+          <td>the epic's real guarantee: every seam's review re-read at its declared binding, an epic refused when
+          one has been lost</td></tr>
+        <tr><td><code>8·manual-review</code></td><td>stays</td><td><strong>stays</strong></td>
+          <td>the owner still signs the epic</td></tr>
+        <tr><td><code>9·design</code>, <code>6·doc-note</code>, <code>1·notes</code>, <code>2·manifest</code>,
+          <code>components·unbuilt</code></td><td>—</td><td>stay</td><td>untouched</td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="seams-vs-union">
+      <pre class="mermaid">
+flowchart LR
+  W1["WU 1&#10;reviewed · cr/v5"] --> S1(("seam"))
+  W2["WU 2&#10;reviewed · cr/v5"] --> S2(("seam"))
+  W3["WU 3&#10;reviewed · cr/v5"] --> S3(("seam"))
+  S1 --> E["epic tip&#10;no review of its own"]
+  S2 --> E
+  S3 --> E
+  E -- "7·walk re-reads each seam's review" --> S1
+  E -- " " --> S2
+  E -- " " --> S3
+  E --> M["main"]
+      </pre>
+      <div class="caption">Hình 1 — the epic tip asks nothing new of the code; it asks every seam whether its
+      evidence is still there.</div>
+    </div>
+
+    <h2 id="numbers">The numbers that decided it</h2>
+    <table>
+      <thead><tr><th>Level</th><th>Rounds</th><th>Mean verified</th><th>Zero-yield</th></tr></thead>
+      <tbody>
+        <tr><td>Working Unit</td><td>169</td><td>3.37</td><td>33%</td></tr>
+        <tr><td><strong>Epic</strong></td><td><strong>29</strong></td><td><strong>1.79</strong></td>
+          <td><strong>41%</strong></td></tr>
+      </tbody>
+    </table>
+    <p>~29 rounds bought to return 52 findings, over bytes already cleared once. Two in five returned nothing at
+    all.</p>
+
+    <h2 id="consequences">Consequences</h2>
+    <table>
+      <thead><tr><th>Where</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/gate.rs</code></td>
+          <td>One table says which checks each level runs. The receipt's <code>checks:</code> line renders from it
+          and the guard around the review checks reads it, so a check that stopped running cannot keep being
+          advertised. An epic tip's <code>cr</code> note is read when present — the walk's waivers live on it — and
+          never demanded</td></tr>
+        <tr><td><code>xtask/src/mr.rs</code></td>
+          <td><code>mr confirm epic</code> stops holding a tip for a review note. Its readiness rule is "never
+          refuse a tip the merge gate would green"; leaving the demand there would have made a signed epic
+          impossible</td></tr>
+        <tr><td>The epic's <strong>walk waiver</strong></td>
+          <td>It still rides the epic tip's <code>cr</code> note and the walk still reads it. What it loses is
+          self-expiry: the note is bound by no check any more, so a moved <code>main</code> that moves the code
+          re-validates neither the note nor the waiver. A waiver on an epic tip outlives its diff until someone
+          removes it — which is why its <code>why</code> is read by the owner at <code>8·manual-review</code>. A
+          waiver that should expire with its diff belongs on a note something still binds, and that is a later
+          record, not this one</td></tr>
+        <tr><td>The review skill</td>
+          <td>Unchanged for epic scope — a caller may still review an epic deliberately. What changed is that
+          nothing <em>demands</em> it</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="what-did-not-change">
+      <p><strong>What an epic still owes:</strong> <code>test/v2</code>, <code>doc/v1</code>, <code>mr/v1</code>,
+      its design checks, and a clean walk. Removing the review from the tip removed nothing else, and an epic whose
+      seam has lost its review is refused exactly as before.</p>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical preflight, five isolated finders over the diff's code paths, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip that also records what the round cost. The review judges code and nothing else: no document is its subject, and a diff that changes no code asks for no review at all. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
+description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical preflight, two or three isolated finders over the diff's code paths, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip that also records what the round cost. The review judges code and nothing else: no document is its subject, and a diff that changes no code asks for no review at all. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
 ---
 
 # Code review — orchestration
@@ -71,7 +71,7 @@ nothing, so `cargo xtask gate0` is how to ask about the tree on its own.
 `--defer-gate0`: the preflight then settles everything cheap — the checkout is
 the reviewed tip, nothing is uncommitted, the notes the finders read are on it —
 and returns without measuring the tree. Spawn `cargo xtask gate0` in the **same
-message** as the five finders (§3). Gate 0 is ~60s of the round's ~384s and the
+message** as the finders (§3). Gate 0 is ~60s of the round's ~384s and the
 finder stage does not depend on it, so nothing is gained by waiting.
 
 What this trades, stated rather than hidden: a red Gate 0 discards a round whose
@@ -89,11 +89,25 @@ commits, a single ref, the working tree) has no note to orphan: run
 `cargo xtask gate0` yourself, read the notes you need, and go on. Never point
 the preflight at a tip without naming the scope whose notes you actually read.
 
-## 3 · Find — five isolated finders, in parallel
+## 3 · Find — two or three isolated finders, in parallel
 
-Spawn five subagents **in a single message** (fresh context each), one per
-dimension in `rubric.md` — and, when §2 deferred it, `cargo xtask gate0` in that
-same message. Each finder prompt contains exactly:
+The fleet carries only the dimensions that produce severe code findings.
+`rubric.md` holds the rows and the corpus number behind each:
+
+| Spawn | When |
+|---|---|
+| **correctness**, **efficiency** | always |
+| **altitude** | the diff's code paths resolve to **more than one module** |
+| *(nothing else)* | reuse and simplification are retired — DEC-50 |
+
+A **module** is the unit that owns the logic: `src/<name>.rs` or `src/<name>/`,
+`xtask/src/<name>.rs`, `ui/src/<area>/`. A test file counts as the module it
+tests, never as one of its own, so a change confined to one module and its tests
+is single-module and spawns two finders.
+
+Spawn those subagents **in a single message** (fresh context each), one per
+dimension — and, when §2 deferred it, `cargo xtask gate0` in that same message.
+Each finder prompt contains exactly:
 
 - its dimension name, and the instruction to read
   `.claude/skills/code-review/rubric.md` first — its dimension row, the
@@ -108,12 +122,13 @@ same message. Each finder prompt contains exactly:
   — the severity rows in `rubric.md` say which is which, and a finder's severity
   is a proposal the verifier re-judges.
 
-**Never merge the finders.** Five dimensions, five agents, one message — not
-one agent carrying several dimensions, however cheap that looks. E-SIMPWF.W6
+**Never merge the finders.** One dimension, one agent, one message — not one
+agent carrying several dimensions, however cheap that looks. E-SIMPWF.W6
 measured the merge: **+354s of fixed reasoning per merged agent**, making the
 stage **152% slower** for a 38% token saving. The work does not vanish with the
 agent; it moves into the agents that remain, which then read more and think
-longer. A later reading of "fewer agents" must not re-buy this shape.
+longer. DEC-50 removed dimensions; it did not fold the ones that remain, and a
+later reading of "fewer agents" must not re-buy that shape.
 
 ## 3b · The design dimension is not part of this run
 
@@ -124,10 +139,21 @@ reads no design artifact, and its note carries no `design:` section, so a
 document can neither be judged here nor void anything judged here. Run
 `.claude/skills/design-review/SKILL.md` for it, over the same scope.
 
-## 4 · Verify — one fresh verifier per candidate, in parallel
+## 4 · Verify — relevance-batched verifiers, in parallel
 
-A verifier receives **only** the finding and the scope — never the finder's
-reasoning. Its prompt:
+Group the candidate pool by **the code a verifier must read**: claims about the
+same function, or tracing the same call path across files, go to one agent, which
+then reads that region once instead of once per claim. Everything else stays
+apart. Spawn every batch in a single message.
+
+| Rule | Why |
+|---|---|
+| A candidate proposed **blocker** never joins a batch — one fresh agent each | Blockers decide the verdict and the corpus is thinnest on them (3 in 198 rounds). The severity that costs most to get wrong keeps its own adversary. |
+| A batch holds **at most 4** claims; split beyond that | The saving is one shared read, not a smaller fleet. W6 measured the undifferentiated whole-pool batch at **4.6× the stage time (+398s)** because one agent serially read every region the pool touched. |
+| Each claim in a batch is judged on **its own** evidence | This is the cost DEC-50 accepted: grouping puts the most correlated claims in one context, which is exactly where a confirmation carries over. Say so in the prompt — a confirmed claim lends its neighbour nothing. |
+
+A verifier receives **only** the finding (or the batch's findings) and the scope
+— never the finder's reasoning. Its prompt:
 
 - try to **refute** the claim against actual code behavior: read the full
   surrounding code, trace callers and data flow, run a targeted test when
@@ -135,19 +161,13 @@ reasoning. Its prompt:
 - check `docs/decisions/` (when it exists) before confirming a finding that
   "fixes" something deliberate — the oddity may be load-bearing;
 - resolve uncertainty to false-positive — with no human filter downstream, a
-  false positive costs more than a missed nit; recall comes from five
-  overlapping finders;
+  false positive costs more than a missed nit, and the corpus refutes 70% of
+  everything raised;
 - **judge the severity** against `rubric.md`'s severity rows rather than
   inheriting the finder's: this verdict reads yours, and uncertainty between two
   rows resolves *upward*;
-- return `{verdict: real|false-positive, severity, evidence: <why>}`.
-
-**Never batch the verifiers.** One candidate, one fresh agent — never one
-agent judging several claims. E-SIMPWF.W6 measured the batch: tokens halved and
-the stage took **4.6×** as long (**+398s**), because a batched judge reads every
-claim's surrounding code in one context instead of several in parallel. The
-isolation is also the point: a verifier that has already confirmed one claim is
-no longer a fresh adversary for the next.
+- return one `{verdict: real|false-positive, severity, evidence: <why>}` **per
+  claim**, keyed to the claim it answers.
 
 Refuted findings are dropped from the verdict; mention them briefly when
 returning to the caller (§7) so finder quality stays visible.
@@ -192,10 +212,10 @@ branch: wu/capture/pagination   # informative; the ids are the truth
 base: <full sha — the merge-base pinned in §1>
 head: <full sha — the reviewed tip; the note is attached to it>
 diff_sha256: <CODE_SHA>         # the code paths, and only them
-dimensions: [correctness, reuse, simplification, efficiency, altitude]
+dimensions: [correctness, efficiency]   # + altitude on a multi-module diff
 fleet:                          # what this round spent; `cargo xtask tally --fleet` reads it back
-  finders: 5
-  verifiers: <n>                # verifier agents spawned - one per verified candidate
+  finders: 2                    # 2, or 3 where altitude was spawned
+  verifiers: <n>                # verifier agents spawned - batches plus unbatched blockers
   verifier_model: <model>       # what judged them
   shards: <n>                   # finder shards over the diff; 1 unless it was split
   candidates:                   # the pool the finders returned, by proposed severity
@@ -207,12 +227,10 @@ fleet:                          # what this round spent; `cargo xtask tally --fl
     finders: <n>
     verifiers: <n>
     total: <n>                  # end to end - the only field the 300s target reads
-  by_finder:
-    correctness:    { found: <n>, verified: <n> }
-    reuse:          { found: <n>, verified: <n> }
-    simplification: { found: <n>, verified: <n> }
-    efficiency:     { found: <n>, verified: <n> }
-    altitude:       { found: <n>, verified: <n> }
+  by_finder:                    # one row per finder this round actually spawned
+    correctness: { found: <n>, verified: <n> }
+    efficiency:  { found: <n>, verified: <n> }
+    altitude:    { found: <n>, verified: <n> }
 findings: { found: <n>, verified: <n>, waived: <n> }   # distinct claims, after dedup
 waivers:
   - finding: "<summary>"
@@ -229,7 +247,10 @@ date: <YYYY-MM-DD>
 The `fleet:` block is the round's own bill, and every note this run writes
 carries one. `by_finder` counts what each finder returned and how much of it
 the verifiers confirmed, so its sums can exceed `findings` where two finders
-raised the same claim — the overlap is a reading, not an error. A note without
+raised the same claim — the overlap is a reading, not an error. A dimension the
+round did not spawn has no row: an absent `altitude` is a single-module diff,
+never a finder that found nothing. These are the first bills taken under
+DEC-50's shape, and what the next cut is chosen from. A note without
 the block still parses at the gate; the tally reads it as a round that did not
 count itself, never as a round that cost nothing.
 

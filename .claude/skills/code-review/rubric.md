@@ -6,13 +6,27 @@ because no line here predicted it.
 
 ## Dimensions — one finder each
 
-| Dimension | Question it asks | Typical catch in Trawler | Not its job |
-|---|---|---|---|
-| **Correctness** | What does this change do that its tests don't cover? | Edge cases, races, protocol violations, error paths that panic on hostile input. | Style, taste, formatting. |
-| **Reuse** | Does this reimplement something the codebase already has? | Hand-rolled logic where a helper exists — `tests/common/` builders, existing utilities. | Inventing new abstractions to force sharing. |
-| **Simplification** | Is there a materially simpler equivalent? | Needless indirection, dead branches, generality with exactly one caller. | Code golf; cleverness that hurts readability. |
-| **Efficiency** | Does the hot path pay avoidable costs? | Buffering a streamed body, per-request allocations and copies, unbounded channels or maps. | Micro-optimization outside hot paths. |
-| **Altitude** | Is the logic at the right layer? | Protocol logic leaking into the control API; capture policy inside transport code — boundaries per `docs/architecture.html`. | Re-architecting the system. |
+| Dimension | When | Question it asks | Typical catch in Trawler | Not its job |
+|---|---|---|---|---|
+| **Correctness** | always | What does this change do that its tests don't cover? | Edge cases, races, protocol violations, error paths that panic on hostile input. | Style, taste, formatting. |
+| **Efficiency** | always | Does the hot path pay avoidable costs? | Buffering a streamed body, per-request allocations and copies, unbounded channels or maps. | Micro-optimization outside hot paths. |
+| **Altitude** | the diff touches **more than one module** | Is the logic at the right layer? | Protocol logic leaking into the control API; capture policy inside transport code — boundaries per `docs/architecture.html`. | Re-architecting the system. |
+
+### Retired — and the number that retired each (DEC-50)
+
+Read from 198 recorded rounds: 2,098 candidates, 624 verified, 19 severe
+findings located in a code path. The numbers are here so a later reading of
+"more coverage" cannot re-buy these dimensions without new evidence.
+
+| Retired | What the corpus says | Knowingly given up |
+|---|---|---|
+| **Reuse** | 3 of 19 severe code findings, 0 of W6's 21 known-real, ~30% of all candidate volume | duplication a finder alone catches — hand-rolled CA setup where `trawler::test_support::tls_origin` exists. The sharpest cost of the cut, taken with it named. |
+| **Simplification** | 1 severe code finding in 198 rounds | its three W6 ground-truth findings all read as **nit** under the severity rows below, and a nit never fails a verdict (DEC-47). |
+
+**Altitude is conditional, not retired**: 0–1 severe code findings, and its real
+yield was document structure, which is no longer this run's subject (DEC-45).
+Its one ground-truth finding crossed a module boundary, so that is the diff it
+is spawned on.
 
 ## Severity — what the verdict reads
 

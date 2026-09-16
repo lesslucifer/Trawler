@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aaa106a9f34851f0dfad04a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-50: the fleet carries only the dimensions that pay</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-50 — the fleet carries only the dimensions that pay</h1>
+      <p>198 recorded rounds say two of the five finder dimensions never produced a severe code finding and a third
+      produced at most one. They are retired and made conditional, each beside the number that retired it, and the
+      verifier stage is grouped by the code a verifier must read — with the one severity that decides a verdict kept
+      out of every group.</p>
+      <div class="meta">Decided 2026-09-16 · E-SIMPWF.W9 · active · supersedes part of DEC-48</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="the-rule">
+      <p><strong>The rule.</strong> The fleet carries only the dimensions that produce severe code findings.
+      <strong>correctness</strong> and <strong>efficiency</strong> always; <strong>altitude</strong> only where the
+      diff's code paths resolve to more than one module; <strong>simplification</strong> and <strong>reuse</strong>
+      are retired. The verifier stage <strong>batches by relevance</strong> — candidates sharing the code a verifier
+      must read go to one agent — except that a candidate proposed <strong>blocker</strong> never joins a batch.</p>
+      <p>Each retirement is recorded in <code>rubric.md</code> beside the corpus number that retired it, so a later
+      reading of "more coverage" cannot re-buy a dimension without new evidence.</p>
+    </div>
+
+    <table>
+      <thead><tr><th>Decided</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Two finders, or three</strong> — correctness and efficiency always, altitude on a
+          multi-module diff</td>
+          <td><code>SKILL.md</code> §3 spawns 2–3 agents in one message; <code>rubric.md</code> carries three
+          dimension rows and a retirement table</td></tr>
+        <tr><td><strong>The verifier stage batches by relevance</strong>, at most 4 claims per batch</td>
+          <td><code>SKILL.md</code> §4. Supersedes DEC-48's "never batch the verifiers" <em>for this shape only</em>
+          — W6 measured the undifferentiated whole-pool batch, which this is not</td></tr>
+        <tr><td><strong>A proposed blocker is never batched</strong></td>
+          <td>The guardrail is part of the rule, not advice: relevance-grouping is where a confirmation carries
+          over, and blockers are the severity that decides a verdict</td></tr>
+        <tr><td><strong>"Never merge the finders" stands</strong></td>
+          <td>W6 measured it at <strong>+354s per merged agent</strong>. This record removes finders; it does not
+          fold the ones that remain</td></tr>
+        <tr><td><strong>The bar moved</strong>: <em>no verified blocker or important is lost</em></td>
+          <td>Replaces W6's <em>every known-real finding is raised</em>, which no scope cut can pass by
+          construction. Nits are out of it — <a href="dec-47-severity-decides-the-verdict.html">DEC-47</a> already
+          ruled they do not fail a verdict</td></tr>
+        <tr><td><strong>Every round writes <code>stage_seconds</code> and <code>by_finder</code></strong></td>
+          <td>A dimension the round did not spawn has no row — an absent <code>altitude</code> is a single-module
+          diff, never a finder that found nothing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="numbers">The numbers that decided it</h2>
+    <p>Read from <code>refs/notes/cr</code> in this repository and from W6's pre-registered corpus. 198 rounds,
+    2,098 candidates, 624 verified, 19 severe findings located in a code path.</p>
+    <table>
+      <thead><tr><th>Dimension</th><th>Severe code findings</th><th>W6 ground truth</th><th>Ruling</th></tr></thead>
+      <tbody>
+        <tr><td><strong>correctness</strong></td><td>~13 of 19</td><td>4 of 8 escapes</td>
+          <td><span class="badge auto">kept</span> all three code blockers ever found are its</td></tr>
+        <tr><td><strong>efficiency</strong></td><td>2</td><td>0</td>
+          <td><span class="badge auto">kept</span> rare, and nothing else catches what it catches</td></tr>
+        <tr><td><strong>altitude</strong></td><td>0–1</td><td>1 of 8</td>
+          <td><span class="badge approval">conditional</span> its real yield was document structure, out of scope
+          since DEC-45; its one ground-truth finding crossed a module boundary</td></tr>
+        <tr><td><strong>reuse</strong></td><td>3</td><td>0</td>
+          <td><span class="badge id">retired</span> ~30% of all candidate volume</td></tr>
+        <tr><td><strong>simplification</strong></td><td>1 in 198 rounds</td><td>3 of 8</td>
+          <td><span class="badge id">retired</span> all three ground-truth findings read as <em>nit</em> under
+          DEC-47's severity rows</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="price">What a cut is worth, and what it costs</h2>
+    <p>A finder costs its own agent <em>plus the verifier tail it generates</em> — the pricing W8 did not apply,
+    which roughly doubles what a dimension cut is worth.</p>
+    <table>
+      <thead><tr><th>Component</th><th>Measured</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>One finder agent</td><td>98.6k tokens · 219s mean</td><td>W6 per-agent means</td></tr>
+        <tr><td>One verifier</td><td>~52k tokens</td><td>W6 case H</td></tr>
+        <tr><td>Candidates per finder</td><td>~2.2</td><td>10.8 ÷ 5, corpus</td></tr>
+        <tr><td><strong>One finder dropped</strong></td><td><strong>~213k — about 20% of a round</strong></td>
+          <td>98.6k + 2.2 × 52k</td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="before-after">
+      <pre class="mermaid">
+flowchart LR
+  subgraph T["today — ~1.05M tokens"]
+    T1["5 finders&#10;493k"] --> T2["~10.8 verifiers&#10;one per candidate&#10;~562k"]
+  end
+  subgraph N["after — ~410k tokens, to be measured"]
+    N1["2 finders&#10;correctness · efficiency&#10;197k"] --> N2["~3 relevance batches&#10;blockers unbatched&#10;~210k"]
+  end
+  T --> N
+      </pre>
+      <div class="caption">Hình 1 — the round before and after. The right-hand figures are projections the first
+      rounds under this shape replace with readings. <a href="dec-49-a-parallel-stage-costs-its-slowest-member.html">DEC-49</a>
+      says the clock will barely move: a parallel stage costs its slowest member.</div>
+    </div>
+
+    <h2 id="loss">The priced loss</h2>
+    <p>Stated before the cut rather than discovered after it.</p>
+    <table>
+      <thead><tr><th>Retired</th><th>What is knowingly given up</th></tr></thead>
+      <tbody>
+        <tr><td><strong>simplification</strong></td>
+          <td>W6's D3 (<code>unanswered</code> collecting a <code>Vec&lt;&amp;str&gt;</code> where a count is read),
+          D4 (<code>Verdict::Draft</code> for an archived run) and O3 (a test title claiming the opposite of the
+          code). Under DEC-47's severity rows all three read as nits</td></tr>
+        <tr><td><strong>reuse</strong></td>
+          <td>The <code>tests/e2e_export.rs</code> class — hand-rolled CA generation duplicating
+          <code>trawler::test_support::tls_origin</code> that three other e2e tests already consume. Nothing else in
+          the fleet catches it. <strong>This is the sharpest cost of the cut</strong>, and the owner took it
+          knowingly</td></tr>
+        <tr><td><strong>altitude, on single-module diffs</strong></td>
+          <td>W6's O1 (<code>onDown</code> overwriting an application-stated failure with a transport retry). O1
+          crosses a module boundary, so the conditional keeps it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="batching">Why batching is not the batching DEC-48 refused</h2>
+    <table>
+      <thead><tr><th>W6's reason</th><th>Does relevance-grouping answer it?</th></tr></thead>
+      <tbody>
+        <tr><td>"A batched judge reads every claim's surrounding code in one context instead of several in
+          parallel"</td>
+          <td><strong>Yes</strong> — this is the whole point. W6 batched the <em>whole pool, undifferentiated</em>,
+          so one agent serially read every region the pool touched. A batch grouped by shared code reads that region
+          once for all its claims. The cost W6 measured (4.6× the stage, +398s) is the cost this shape removes</td></tr>
+        <tr><td>"A verifier that has already confirmed one claim is no longer a fresh adversary for the next"</td>
+          <td><strong>No</strong> — and grouping makes it worse. Relevance-grouping puts the most correlated claims
+          in one context, which is exactly where a confirmation carries over. This is the risk the record accepts,
+          and why the blocker guardrail is part of the rule rather than advice</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="bar">Why the bar moved</h2>
+    <div class="callout warn" data-c="the-bar">
+      <p>W6 pre-registered its bar as <em>every known-real finding in the corpus is raised by the new fleet</em>.
+      <strong>No cut that removes scope can pass that bar</strong> — by construction, removing a dimension loses
+      that dimension's findings. So the epic could adopt only cuts that lose literally nothing, and exactly one such
+      cut exists: Gate 0's ordering. That is the mechanism by which three Working Units of measurement produced
+      60 seconds.</p>
+      <p>This record is judged on <strong>no verified blocker or important is lost</strong>.</p>
+    </div>
+
+    <h2 id="not-decided">What this does not decide</h2>
+    <table>
+      <thead><tr><th>Left alone</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>The rubric's <em>uncertainty resolves upward</em> rule</td>
+          <td>It is what escalated duplication nits into round-failing importants, but reuse was its main source and
+          reuse is retired here. Changing both at once would leave neither attributable. Revisit from the first
+          bills under this shape</td></tr>
+        <tr><td>A diff-size floor that skips the fleet</td>
+          <td>Now measurable — the corpus dead zone is 101–300 lines of churn at 63% zero-yield — but a separate
+          lever with a separate failure mode</td></tr>
+        <tr><td>Returning documents to any review</td>
+          <td>All three blockers ever found were document findings and no run judges result docs today. The largest
+          open gap in the workflow, and a backlog row</td></tr>
+        <tr><td>The verifier model</td>
+          <td>W8 measured Haiku 4.5 against Sonnet 5 and did not adopt. Untouched</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
