@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 21466242d7ea8771a79864535677cabee3f884c5
+base: d0e55606deb28d5b94e215ee4951b65e5ea3cdf8
+tier: key
+signer: vuluu
+report: docs/work/2026-09-16-codex-w2-result.html
+report_sha256: c36e23fe1c41673fd99e6ee322dc0c92b2d75eff680c307c41f4d26ed0060422
+date: 2026-09-16
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB+HdsMvwr1e9GdeKe01Z1zg2wpZwJiRCCCSTMQpE0yu09XLP3Xuey51o
+  S/+cgHxjMrVKeNRjwQ9PgLRrghCI0J
+  -----END SSH SIGNATURE-----
