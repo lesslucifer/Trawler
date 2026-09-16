@@ -337,7 +337,35 @@
     attempt. Round 4's bill: <strong>653k tokens</strong>, 3 finders (280k) and 3 verifiers (373k),
     <code>stage_seconds</code> total 1,063.</p>
 
-    <h3 id="four-rounds">What four rounds of its own review cost, and bought</h3>
+    <h3 id="round-5">Round 5 — the withdrawal left residue, and the fleet found it</h3>
+    <p>The first round over the reverted diff raised <strong>one</strong> candidate, verified
+    <strong>important</strong>. It is residue from the withdrawal rather than from the change that remains.</p>
+    <p>Before this Working Unit, <code>load_notes</code> short-circuited to <code>None</code> at commit level
+    <em>before</em> <code>parse_note</code> was ever called, so a <code>cr</code> note there was invisible. The
+    experiment folded that into <code>demanded = runs_at(REVIEW, level) &amp;&amp; any(is_code)</code> because the
+    review then ran at commit level too. The withdrawal reverted <code>runs_at</code> and every call site but kept
+    the folded form — and <code>demanded</code> gates only the <em>missing</em>-note branch. A note that is present
+    is parsed and validated regardless, so a malformed or stray <code>cr</code> note on a standalone commit had
+    begun to fail <code>1·notes</code> at a level that demands no review at all.</p>
+    <div class="callout" data-c="round-5-signal">
+      <p><strong>The verifier found the signal that makes this unambiguous:</strong> the sibling <code>design</code>
+      binding two lines below kept its explicit <code>Level::Commit</code> guard through the same revert, so
+      <code>cr</code> and <code>design</code> had been left inconsistent with each other. That is what an accidental
+      leftover looks like rather than a deliberate policy — and it is the <strong>fifth</strong> time in this
+      Working Unit that a rule moved and something nearby did not move with it.</p>
+      <p>Reachability is not contrived: <code>SKILL.md</code> documents reviewing recent commits ad hoc and
+      attaching the note to that commit, and an epic's <code>7·walk</code> verifies every standalone commit at
+      <code>Level::Commit</code> — so the spurious refusal would surface at a real merge gate over an
+      already-reviewed epic.</p>
+    </div>
+    <p>Fixed by asking the table rather than naming the level:
+    <code>notes == Notes::Paperwork || !runs_at(REVIEW, report.level)</code> — byte-equivalent to the pre-WU gate,
+    with one statement of the rule instead of two. Two cases: the malformed note greens at commit level, and still
+    reds <code>1·notes</code> at a seam where a review is owed. Round 5's bill: <strong>249k tokens</strong> — and
+    it is the <strong>first round the conditional actually narrowed the fleet</strong>, spawning two finders rather
+    than three, because the diff had shrunk to one module and its tests.</p>
+
+    <h3 id="four-rounds">What five rounds of its own review cost, and bought</h3>
     <table>
       <thead><tr><th>Round</th><th>Tokens</th><th>Raised</th><th>Verified</th><th>Verdict</th></tr></thead>
       <tbody>
@@ -345,14 +373,17 @@
         <tr><td>2</td><td>716k</td><td>3</td><td>1 blocker · 1 nit waived · 1 refuted</td><td>FAIL</td></tr>
         <tr><td>3</td><td>522k</td><td>2</td><td>1 blocker · 1 important</td><td>FAIL</td></tr>
         <tr><td>4</td><td>653k</td><td>4</td><td>3 blockers · 1 important</td><td>FAIL → withdrawn</td></tr>
-        <tr><td><strong>total</strong></td><td><strong>2.83M</strong></td><td><strong>14</strong></td>
-          <td><strong>4 blockers, 8 importants, 1 nit, 1 refuted</strong></td><td>—</td></tr>
+        <tr><td>5</td><td>249k</td><td>1</td><td>1 important</td><td>FAIL</td></tr>
+        <tr><td><strong>total</strong></td><td><strong>3.07M</strong></td><td><strong>15</strong></td>
+          <td><strong>4 blockers, 9 importants, 1 nit, 1 refuted</strong></td><td>—</td></tr>
       </tbody>
     </table>
     <p><strong>This is the clearest evidence DEC-50 has.</strong> A two- or three-finder fleet, judged against
     <em>no verified blocker or important is lost</em>, found four blockers in the diff it was reviewing — every one
-    of them in the half of the Working Unit that was subsequently withdrawn. The blocker guardrail (a proposed
-    blocker never joins a batch) was exercised on all four. The retired dimensions raised nothing that was missed.</p>
+    of them in the half of the Working Unit that was subsequently withdrawn — and then caught the residue the
+    withdrawal itself left behind. The blocker guardrail (a proposed blocker never joins a batch) was exercised on
+    all four. The retired dimensions raised nothing that was missed, and the round costs fall as the diff shrinks:
+    934k, 716k, 522k, 653k, 249k.</p>
 
     <h2 id="distillation" data-item="distillation">Distillation</h2>
     <table>
