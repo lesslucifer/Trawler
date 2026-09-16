@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU round-cut -> epic/simpwf (round 2)"
+epic: E-SIMPWF
+wu: E-SIMPWF.W9
+branch: wu/simpwf/round-cut
+base: f6948c1b8f79a63bc8b436049d73729d515aec67
+head: f904ab3c342aa61f67dc058d1dc66bf216037cf8
+diff_sha256: 425328bde32be7d2e2dac1755c77b30be5ff4ea176355bd018349220bcaf47cf
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 1
+    nit: 1
+  stage_seconds:
+    gate0: 65
+    finders: 979
+    verifiers: 958
+    total: 1943
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+  tokens:
+    finders: 406643
+    verifiers: 309135
+    total: 715778
+findings: { found: 3, verified: 1, waived: 0 }
+nits:
+  - finding: "Runs::With models three failure kinds of one gated check as independently level-gated rows; one row with several receipt names would state the same fact without the indirection"
+    waived: "the four ids are what Failure carries and what workflow.html's check table names one by one, so each must stay answerable to runs_at on its own id; collapsing them would put a failure's identity and the receipt's vocabulary in different shapes"
+verdict: FAIL
+date: 2026-09-16
