@@ -27,8 +27,8 @@ fleet:
     altitude:    { found: 2, verified: 2 }
   tokens:
     finders: 280481
-    verifiers: 224792
-    total: 505273
+    verifiers: 372736
+    total: 653217
 findings: { found: 4, verified: 4, waived: 0 }
 verdict: FAIL
 date: 2026-09-16
