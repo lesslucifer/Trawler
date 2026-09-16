@@ -702,6 +702,85 @@ fn green_epic_walk_verifies_the_merged_wu() {
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
+// W9 · a level that runs no review reads no review note at all. A standalone
+// commit may carry one from an ad-hoc review run (SKILL.md permits reviewing
+// recent commits and attaching the note), and parsing it at a level that demands
+// nothing would let a note nobody asked for refuse a merge - including during an
+// epic's own walk, which verifies every standalone commit at this level.
+#[test]
+fn a_commit_level_tip_never_reads_a_review_note_not_even_to_parse_it() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("src/extra.rs", "pub fn covered() {}\n");
+    let sha = repo.commit("standalone fix");
+    repo.note(
+        "test",
+        &sha,
+        "schema: test/v2\nlevel: commit\ntests:\n  unit: { count: 1, covers: \"covered fn\" }\n",
+    );
+
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert!(report.green(), "the baseline is green: {}", format_report(&report));
+
+    repo.note("cr", &sha, "not: [valid, yaml: broken\n");
+    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
+    assert!(
+        report.green(),
+        "a note this level never demanded must not refuse it: {}",
+        format_report(&report)
+    );
+
+    // The same malformed note where a review IS owed is still refused, so the
+    // short-circuit is scoped to the level and is not a hole in note validation.
+    let wu = wu_with_change();
+    let tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &tip);
+    wu.note("cr", &tip, "not: [valid, yaml: broken\n");
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["1·notes"], "{}", format_report(&report));
+}
+
+// W9 · the receipt advertises the checks its level actually ran. The line used
+// to be two hardcoded strings, and the non-epic one was wrong: it named the four
+// review checks at commit level, where `check_review` has never run. Asserted
+// here through the real gate over a real repo, at both levels, because the
+// receipt is the only place a reader learns what was verified.
+#[test]
+fn the_receipt_names_the_checks_its_level_ran() {
+    let (repo, _) = epic_with_merged_wu();
+    bless_epic(&repo, T2_ENTRY);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains(
+            "checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, \
+             design, components-unbuilt, manual-review, walk]"
+        ),
+        "the epic's list: {receipt}"
+    );
+
+    let wu = wu_with_change();
+    let tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &tip);
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    let receipt = wu.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains(
+            "checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, \
+             design, manual-review]"
+        ),
+        "a seam's list drops the epic's two rows: {receipt}"
+    );
+
+    let commit = repo.sha("epic/x");
+    let report = repo.gate().verify(Level::Commit, &commit, &format!("{commit}^")).unwrap();
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains("checks: [notes, manifest, doc-note, design, manual-review]"),
+        "a standalone commit runs no review, and the receipt no longer claims it does: {receipt}"
+    );
+}
+
 // The design lives on the seam, not on the epic tip: work docs are archived out
 // of git before the epic gate (DEC-3), so the run's add and delete net out of the
 // epic diff. The seam is the only place a landed design review can be judged,
@@ -2209,4 +2288,492 @@ fn every_check_8_cause_keeps_the_check_id_and_the_receipts_shape() {
     assert!(body.contains("manual-review"), "the receipt still lists the check: {body}");
     let receipt: DodReceipt = serde_yaml::from_str(&body).unwrap();
     assert_eq!(receipt.tip, tip);
+}
+
+// ─── W4: the review binds the code it judged ────────────────────────────────
+//
+// The review's subject, its fingerprint and its inputs are the code paths. The
+// tests below are that promise: a document cannot void a PASS, a diff that
+// changes no code owes no review, the code the review did judge still binds it,
+// and the design verdict travels on the note W4 gave it.
+
+/// What the review binds: the range's code paths, and only those.
+fn code_sha(repo: &Repo, base: &str, tip: &str) -> String {
+    let paths: Vec<String> = xtask::git::diff_names(&repo.path, base, tip)
+        .unwrap()
+        .into_iter()
+        .filter(|p| xtask::notes::is_code(p))
+        .collect();
+    xtask::git::diff_sha256_paths(&repo.path, base, tip, &paths).unwrap()
+}
+
+fn cr_note_v4(base: &str, sha: &str) -> String {
+    format!(
+        "schema: cr/v4\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\nverdict: PASS\ndate: 2026-09-12\n",
+        identity("E9", Some("E9.W1"))
+    )
+}
+
+/// The design step's note: the section a `cr/v3` note carried, on the note W4
+/// gave it, pinned to the design paths it read - the artifacts it judged and the
+/// rendered files it accounts for.
+fn design_note(repo: &Repo, artifacts: &[&str], verdict: &str, extra: &str) -> String {
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let (_, owed) = repo.gate().surfaces(&tip, &base);
+    let mut paths: Vec<String> = artifacts.iter().map(|a| (*a).to_string()).collect();
+    paths.extend(owed);
+    paths.sort();
+    paths.dedup();
+    let sha = xtask::git::diff_sha256_paths(&repo.path, &base, &tip, &paths).unwrap();
+    format!(
+        "schema: design/v1\n{}base: {base}\ndesign_sha256: {sha}\nverdict: {verdict}\nartifacts: [{}]\nrulebook: {}\n{extra}date: 2026-09-12\n",
+        identity("E9", Some("E9.W1")),
+        artifacts.join(", "),
+        pin_of(repo, &tip)
+    )
+}
+
+const WU_TEST_NOTE: &str = "  integration: { count: 1, covers: \"the review's binding\" }\n";
+const DOCS_ONLY_TEST_NOTE: &str =
+    "  integration: { waived: \"the diff changes no code to test\" }\n";
+
+#[test]
+fn a_docs_only_commit_leaves_the_review_binding_where_it_was() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let sha = code_sha(&repo, &base, &tip);
+    allow_file(&repo);
+    let notes = |tip: &str, changes: &str| {
+        repo.note("test", tip, &test_note("working-unit", "E9", Some("E9.W1"), WU_TEST_NOTE));
+        repo.note("doc", tip, &doc_note("E9", Some("E9.W1"), changes, None));
+        repo.note("mr", tip, &wu_mr_note(&repo, tip));
+    };
+    repo.note("cr", &tip, &cr_note_v4(&base, &sha));
+    notes(&tip, WU_CHANGES);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+
+    // A document lands after the verdict. The note copy that rides it is the same
+    // one - its hash covers the code paths, which did not move - so no fleet runs.
+    let plan = "docs/work/one-plan.html";
+    repo.write(plan, "<html>the plan the review never reads</html>\n");
+    let moved = repo.commit("the plan lands after the review");
+    let changes = format!(
+        "{WU_CHANGES}  - path: {plan}\n    tier: T3\n    action: added\n    distills: \"the plan\"\n"
+    );
+    repo.note("cr", &moved, &cr_note_v4(&base, &sha));
+    notes(&moved, &changes);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "a document cannot void a PASS: {}", format_report(&report));
+
+    // The same note, on a tip whose code moved: the binding is what refuses it.
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\npub fn also() {}\n");
+    let code_moved = repo.commit("the code moves after the review");
+    repo.note("cr", &code_moved, &cr_note_v4(&base, &sha));
+    notes(&code_moved, &changes);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
+}
+
+// A `cr/v4` note that binds the whole diff is binding bytes the review no longer
+// judges: the schema says which subset its hash is, and the gate reads it that way.
+#[test]
+fn a_review_bound_to_the_whole_diff_is_refused() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let whole = diff_sha256(&repo.path, &base, &tip).unwrap();
+    bless_wu(&repo, &tip);
+    repo.note("cr", &tip, &cr_note_v4(&base, &whole));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
+
+    repo.note("cr", &tip, &cr_note_v4(&base, &code_sha(&repo, &base, &tip)));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
+/// A WU whose diff carries a closed design run and its result report, and no code.
+fn design_only_wu() -> Repo {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write(
+        DESIGN_RUN,
+        "<html><body><main data-artifact=\"design-run\" data-status=\"archived\"><p>the run</p></main></body></html>\n",
+    );
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.commit("the fourth design run and its result");
+    repo
+}
+
+fn design_only_notes(repo: &Repo, tip: &str) {
+    let changes = format!(
+        "  - path: {DESIGN_RUN}\n    tier: T3\n    action: added\n    distills: \"the fourth run\"\n  - path: {WU_RESULT}\n    tier: T3\n    action: added\n    distills: \"the result\"\n"
+    );
+    allow_file(repo);
+    repo.note("test", tip, &test_note("working-unit", "E9", Some("E9.W1"), DOCS_ONLY_TEST_NOTE));
+    repo.note(
+        "doc",
+        tip,
+        &doc_note(
+            "E9",
+            Some("E9.W1"),
+            &changes,
+            Some("a design run and its result; no T2 contract moved"),
+        ),
+    );
+    repo.note("mr", tip, &wu_mr_note(repo, tip));
+}
+
+#[test]
+fn a_design_only_diff_owes_a_design_note_and_no_review() {
+    let repo = design_only_wu();
+    let tip = repo.sha("wu/x/one");
+    design_only_notes(&repo, &tip);
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        !format_report(&report).contains("1·notes"),
+        "a diff that changes no code owes no review: {}",
+        format_report(&report)
+    );
+
+    repo.note("design", &tip, &design_note(&repo, &[DESIGN_RUN], "PASS", ""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the design verdict carries it: {}", format_report(&report));
+}
+
+#[test]
+fn a_design_verdict_is_void_when_the_artifact_moves() {
+    let repo = design_only_wu();
+    let tip = repo.sha("wu/x/one");
+    design_only_notes(&repo, &tip);
+    let verdict = design_note(&repo, &[DESIGN_RUN], "PASS", "");
+    repo.note("design", &tip, &verdict);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+
+    repo.write(
+        DESIGN_RUN,
+        "<html><body><main data-artifact=\"design-run\" data-status=\"archived\"><p>the run, revised after the verdict</p></main></body></html>\n",
+    );
+    let moved = repo.commit("revise the run after the verdict");
+    design_only_notes(&repo, &moved);
+    repo.note("design", &moved, &verdict);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"9·design"),
+        "a verdict pinned to other bytes is not a verdict about these: {}",
+        format_report(&report)
+    );
+}
+
+// The hand-off accounting moved with the verdict: a build that renders a file
+// answers for it on the design note, and the review's own note says nothing.
+#[test]
+fn the_handoff_accounting_travels_on_the_design_note() {
+    let repo = wu_building_a_component();
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    repo.note("cr", &tip, &cr_note_v4(&base, &code_sha(&repo, &base, &tip)));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("StatusPill.tsx"), "the red names the surface");
+
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
+    let cites = format!(
+        "implements:\n  - path: {COMPONENT_DESIGN}\n    blob: {}\n    built: [ui/src/components/StatusPill.tsx]\n",
+        &blob[..7]
+    );
+    repo.note("design", &tip, &design_note(&repo, &[], "PASS", &cites));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the citation lands on its own note: {}", format_report(&report));
+}
+
+// W4 round 2 - the pin covers every design path the range ships, and a build
+// against a design it did not touch ships only rendered files. A pin read only
+// where an artifact moved would leave exactly that case - the common one - bound
+// to nothing, so a stale pin on a citation-only note reds here.
+#[test]
+fn a_citation_only_design_note_is_still_pinned_to_the_bytes_it_judged() {
+    let repo = wu_building_a_component();
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    repo.note("cr", &tip, &cr_note_v4(&base, &code_sha(&repo, &base, &tip)));
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
+    let cites = format!(
+        "implements:\n  - path: {COMPONENT_DESIGN}\n    blob: {}\n    built: [ui/src/components/StatusPill.tsx]\n",
+        &blob[..7]
+    );
+    let honest = design_note(&repo, &[], "PASS", &cites);
+    assert!(!honest.contains("design_sha256: \n"), "the diff ships a rendered file to pin");
+
+    let stale = honest
+        .lines()
+        .map(|line| {
+            if line.starts_with("design_sha256:") {
+                format!("design_sha256: {}", "0".repeat(64))
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    repo.note("design", &tip, &format!("{stale}\n"));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("pinned to different bytes"),
+        "the red names the pin: {}",
+        format_report(&report)
+    );
+
+    repo.note("design", &tip, &honest);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the honest pin greens: {}", format_report(&report));
+}
+
+// The other half of the same move: an epic's drop record travels with the verdict
+// too. Reading it off the review note alone would refuse an epic for a drop it did
+// record - so here a `cr/v4` epic with no design section greens on `design/v1`.
+#[test]
+fn an_epic_drop_record_is_read_from_the_design_note() {
+    let repo = epic_over_an_unbuilt_component_design();
+    let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    // An epic tip's notes carry no unit, so both notes are written at that shape.
+    let cr = format!(
+        "schema: cr/v4\n{}base: {base}\nhead: x\ndiff_sha256: {}\nverdict: PASS\ndate: 2026-09-13\n",
+        identity("E9", None),
+        code_sha(&repo, &base, &tip)
+    );
+    repo.note("cr", &tip, &cr);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["components·unbuilt"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("design/v1"), "the fix names the note that carries it");
+
+    repo.note(
+        "design",
+        &tip,
+        &format!(
+            "schema: design/v1\n{}dropped:\n  - path: {COMPONENT_DESIGN}\n    why: \"the epic shipped no pill\"\ndate: 2026-09-13\n",
+            identity("E9", None)
+        ),
+    );
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "the drop is recorded where the verdict lives: {}",
+        format_report(&report)
+    );
+}
+
+/// The note the review writes now: bound to the code paths, and carrying the
+/// round's own bill under `fleet:`.
+fn cr_note_v5(base: &str, sha: &str, extra: &str) -> String {
+    format!(
+        "schema: cr/v5\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\ndimensions: [correctness, reuse, simplification, efficiency, altitude]\nfleet:\n  finders: 5\n  verifiers: 5\n  by_finder:\n    correctness: {{ found: 3, verified: 1 }}\n    reuse: {{ found: 2, verified: 0 }}\n{extra}verdict: PASS\ndate: 2026-09-13\n",
+        identity("E9", Some("E9.W1"))
+    )
+}
+
+// W6: the bump changes what `dimensions:` means and adds the round's bill. What it
+// must not change is the binding or the nit rule, so both are pinned at a real
+// seam under the new contract.
+#[test]
+fn a_cr_v5_note_is_bound_to_the_code_paths_and_keeps_the_nit_rule() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let code = code_sha(&repo, &base, &tip);
+
+    repo.note("cr", &tip, &cr_note_v5(&base, &code, ""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "a v5 PASS bound to the code paths greens: {}", format_report(&report));
+
+    let whole = diff_sha256(&repo.path, &base, &tip).unwrap();
+    repo.note("cr", &tip, &cr_note_v5(&base, &whole, ""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("reviewed code is not byte-identical"),
+        "the red names the code-path binding: {}",
+        format_report(&report)
+    );
+
+    repo.note(
+        "cr",
+        &tip,
+        &cr_note_v5(&base, &code, "nits:\n  - finding: \"a loop variable named x\"\n"),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["3·review-nits"], "{}", format_report(&report));
+
+    repo.note(
+        "cr",
+        &tip,
+        &cr_note_v5(
+            &base,
+            &code,
+            "nits:\n  - finding: \"a loop variable named x\"\n    fixed: \"renamed to frame\"\n",
+        ),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "a dispositioned nit costs nothing: {}", format_report(&report));
+}
+
+/// The same contract, with the clock and the pool W8 added to the bill.
+fn cr_note_v5_timed(base: &str, sha: &str, extra: &str) -> String {
+    format!(
+        "schema: cr/v5\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\ndimensions: [correctness, reuse, simplification, efficiency, altitude]\nfleet:\n  finders: 5\n  verifiers: 1\n  verifier_model: haiku-4.5\n  shards: 2\n  candidates: {{ blocker: 0, important: 1, nit: 6 }}\n  stage_seconds: {{ gate0: 58, finders: 145, verifiers: 110, total: 255 }}\n  by_finder:\n    correctness: {{ found: 3, verified: 1 }}\n    reuse: {{ found: 2, verified: 0 }}\n{extra}verdict: PASS\ndate: 2026-09-14\n",
+        identity("E9", Some("E9.W1"))
+    )
+}
+
+// W8: the bill grew a clock, a pool by severity and the model that judged it. No
+// gate check reads any of them, so a round that counted itself and one that did
+// not must green identically - and a nit that never bought a verifier is still
+// refused while it is undecided.
+#[test]
+fn the_gate_reads_neither_the_clock_nor_the_pool_a_round_records() {
+    let repo = wu_with_change();
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let code = code_sha(&repo, &base, &tip);
+
+    repo.note("cr", &tip, &cr_note_v5_timed(&base, &code, ""));
+    let timed = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(timed.green(), "a timed round greens: {}", format_report(&timed));
+
+    repo.note("cr", &tip, &cr_note_v5(&base, &code, ""));
+    let untimed = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(
+        checks_of(&timed),
+        checks_of(&untimed),
+        "the gate is indifferent to the reading: {}",
+        format_report(&untimed)
+    );
+
+    repo.note(
+        "cr",
+        &tip,
+        &cr_note_v5_timed(&base, &code, "nits:\n  - finding: \"a loop variable named x\"\n"),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["3·review-nits"],
+        "an unverified nit is still evidence that must be decided: {}",
+        format_report(&report)
+    );
+}
+
+/// An epic whose merged Working Units each shipped a different review contract -
+/// one seam per schema, each bound the way its contract binds.
+fn epic_over_every_review_contract() -> Repo {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    allow_file(&repo);
+    for (n, (name, schema)) in
+        [("one", "cr/v2"), ("two", "cr/v3"), ("three", "cr/v4"), ("four", "cr/v5")]
+            .iter()
+            .enumerate()
+    {
+        let wu = format!("E9.W{}", n + 1);
+        let branch = format!("wu/x/{name}");
+        repo.git(&["checkout", "-q", "-b", &branch, "epic/x"]);
+        let base = repo.sha("epic/x");
+        repo.write(&format!("src/{name}.rs"), "pub fn f() {}\n");
+        let result = format!("docs/work/{name}-result.html");
+        repo.write(&result, "<html>result</html>\n");
+        let tip = repo.commit(&format!("{wu}: the code"));
+
+        let identity = format!("epic: E9\nwu: {wu}\n");
+        repo.note(
+            "test",
+            &tip,
+            &format!(
+                "schema: test/v2\nlevel: working-unit\n{identity}tests:\n  integration: {{ count: 1, covers: \"f\" }}\n"
+            ),
+        );
+        repo.note(
+            "doc",
+            &tip,
+            &format!(
+                "schema: doc/v1\n{identity}changes:\n  - path: {result}\n    tier: T3\n    action: added\n    distills: \"the result\"\nt2_waived: \"a code-only unit; no contract moved\"\n"
+            ),
+        );
+        let bound = if xtask::notes::binds_code(schema) {
+            code_sha(&repo, &base, &tip)
+        } else {
+            diff_sha256(&repo.path, &base, &tip).unwrap()
+        };
+        let bill = if *schema == "cr/v5" {
+            "fleet:\n  finders: 5\n  verifiers: 1\n  by_finder:\n    correctness: { found: 1, verified: 0 }\n    reuse: { found: 0, verified: 0 }\n"
+        } else {
+            ""
+        };
+        repo.note(
+            "cr",
+            &tip,
+            &format!(
+                "schema: {schema}\n{identity}base: {base}\nhead: {tip}\ndiff_sha256: {bound}\n{bill}verdict: PASS\ndate: 2026-09-13\n"
+            ),
+        );
+        let bytes = xtask::git::show_bytes(&repo.path, &tip, &result).unwrap();
+        repo.note(
+            "mr",
+            &tip,
+            &format!(
+                "schema: mr/v1\nlevel: working-unit\ntip: {tip}\ntier: email\nsigner: a@b.co\nreport: {result}\nreport_sha256: {}\ndate: 2026-09-13\n",
+                xtask::git::sha256_hex(&bytes).unwrap()
+            ),
+        );
+        repo.git(&["checkout", "-q", "epic/x"]);
+        repo.git(&["merge", "--no-ff", "-q", "-m", &format!("merge {branch}"), &branch]);
+    }
+    for name in ["one", "two", "three", "four"] {
+        std::fs::remove_file(repo.path.join(format!("docs/work/{name}-result.html"))).unwrap();
+    }
+    repo.commit("archive the results out of git");
+    let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    repo.note(
+        "test",
+        &tip,
+        &test_note("epic", "E9", None, "  e2e: { count: 1, covers: \"full flow\" }\n"),
+    );
+    repo.note(
+        "doc",
+        &tip,
+        &format!("schema: doc/v1\n{}changes: []\nt2_waived: \"four code-only units; no contract moved\"\n", identity("E9", None)),
+    );
+    repo.note(
+        "cr",
+        &tip,
+        &cr_note_v5(&base, &code_sha(&repo, &base, &tip), "").replace("wu: E9.W1\n", ""),
+    );
+    repo.note("mr", &tip, &mr_note("epic", &tip));
+    repo
+}
+
+// Every contract the gate accepts is re-read by the epic walk at the binding it
+// declared: a v2/v3 seam against its whole diff, a v4/v5 seam against its code
+// paths. One epic over all four is what proves the bump orphans no merged seam.
+#[test]
+fn the_walk_reads_every_review_contract_at_the_binding_it_declared() {
+    let repo = epic_over_every_review_contract();
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "unexpected failures: {}", format_report(&report));
+    assert_eq!(report.waived, Vec::<String>::new(), "no seam needed a waiver");
 }

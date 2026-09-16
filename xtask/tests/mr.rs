@@ -126,6 +126,110 @@ fn cr_note(repo: &Repo, tip: &str, verdict: &str, diff: &str) {
     repo.git(&["notes", "--ref=cr", "add", "-f", "-m", &body, tip]);
 }
 
+/// The `cr/v4` note the review writes now: bound to the code paths the diff
+/// changes, not to the whole diff.
+fn cr_v4_note(repo: &Repo, tip: &str, verdict: &str, target: &str) {
+    let sha = repo.git(&["rev-parse", tip]);
+    let base = repo.git(&["merge-base", target, &sha]);
+    let body = format!(
+        "schema: cr/v4\nbase: {base}\ndiff_sha256: {}\nverdict: {verdict}\ndimensions: []\n",
+        code_hash(repo, tip, target)
+    );
+    repo.git(&["notes", "--ref=cr", "add", "-f", "-m", &body, tip]);
+}
+
+/// The hash of the code half of `base..tip` — what a `cr/v4` note binds.
+fn code_hash(repo: &Repo, tip: &str, target: &str) -> String {
+    let sha = repo.git(&["rev-parse", tip]);
+    let base = repo.git(&["merge-base", target, &sha]);
+    let paths: Vec<String> = xtask::git::diff_names(repo.p(), &base, &sha)
+        .unwrap()
+        .into_iter()
+        .filter(|p| xtask::notes::is_code(p))
+        .collect();
+    xtask::git::diff_sha256_paths(repo.p(), &base, &sha, &paths).unwrap()
+}
+
+/// A tip on a branch off `main` carrying one code file, settled but for its
+/// review note.
+fn code_tip(repo: &Repo) -> &'static str {
+    repo.git(&["checkout", "-q", "-b", "wu/x/one"]);
+    repo.write("src/lib.rs", "pub fn one() -> u8 { 1 }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "code"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    "wu/x/one"
+}
+
+// E-SIMPWF.W4 — the confirm reads a review note the way the merge gate reads it,
+// or it refuses a tip the gate would green. A `cr/v4` note binds the code paths,
+// so a doc commit landing after the PASS leaves the binding intact.
+#[test]
+fn a_doc_commit_after_a_cr_v4_pass_still_signs() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    code_tip(&repo);
+    cr_v4_note(&repo, "HEAD", "PASS", "main");
+    repo.write("docs/work/w-notes.html", "<html>notes</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "docs"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    repo.git(&["notes", "--ref=cr", "copy", "-f", "HEAD^", "HEAD"]);
+
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--target", "main", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn a_code_commit_after_a_cr_v4_pass_is_refused() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    code_tip(&repo);
+    cr_v4_note(&repo, "HEAD", "PASS", "main");
+    repo.write("src/other.rs", "pub fn two() -> u8 { 2 }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "more code"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    repo.git(&["notes", "--ref=cr", "copy", "-f", "HEAD^", "HEAD"]);
+
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--target", "main", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("judged a different diff"), "{out}");
+}
+
+// A `cr/v4` note over a diff that changes no code judges no code path, so the
+// confirm holds the signature on nothing it could compare.
+#[test]
+fn a_code_free_tip_carrying_a_cr_v4_note_still_signs() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    repo.git(&["checkout", "-q", "-b", "wu/x/docs"]);
+    repo.write("docs/work/w-notes.html", "<html>notes</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "docs only"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    cr_v4_note(&repo, "HEAD", "PASS", "main");
+
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--target", "main", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(code, 0, "{out}");
+}
+
 #[test]
 fn confirm_writes_a_well_formed_note_attesting_the_report() {
     let repo = Repo::new(ALLOWED);
@@ -171,7 +275,7 @@ fn confirm_is_refused_while_the_tip_carries_no_notes_at_all() {
     assert_eq!(code, 1);
     assert!(out.contains("no test/v2 note"), "{out}");
     assert!(out.contains("no doc/v1 note"), "{out}");
-    assert!(out.contains("no cr/v3 note"), "{out}");
+    assert!(out.contains("no cr/v5 note"), "{out}");
     assert!(out.contains("tree settles BEFORE"), "{out}");
     assert!(!mr::tip_authorised(repo.p(), "HEAD"), "nothing may be written");
 }
@@ -185,7 +289,7 @@ fn confirm_is_refused_when_the_review_has_not_run_yet() {
     let (code, out) =
         mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
     assert_eq!(code, 1);
-    assert!(out.contains("no cr/v3 note"), "{out}");
+    assert!(out.contains("no cr/v5 note"), "{out}");
     assert!(!out.contains("no test/v2"), "the settled notes must not be reported: {out}");
     assert!(!mr::tip_authorised(repo.p(), "HEAD"));
 }
@@ -208,6 +312,10 @@ fn confirm_is_refused_when_the_review_judged_a_different_diff() {
     let repo = Repo::new(ALLOWED);
     repo.git(&["checkout", "-q", "-b", "wu/e/w"]);
     let report = result_report(&repo);
+    // The binding is only read on a gated range: an exempt tip carries no code
+    // for a review to have judged, and `verify()` greens it before `5·diff-binding`
+    // runs at all.
+    repo.write("src/lib.rs", "pub fn added() {}\n");
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "-m", "the work"]);
     settle(&repo, "HEAD");
@@ -218,7 +326,7 @@ fn confirm_is_refused_when_the_review_judged_a_different_diff() {
     )
     .unwrap();
     assert_eq!(code, 1, "{out}");
-    assert!(out.contains("reviewed a different diff"), "{out}");
+    assert!(out.contains("judged a different diff"), "{out}");
     assert!(!mr::tip_authorised(repo.p(), "HEAD"));
 }
 

@@ -52,10 +52,10 @@
           <td>step ④ before step ⑤: a red run is not closeable</td></tr>
         <tr><td><strong>At the review</strong><br><span class="kd">Tier-3</span></td>
           <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code></td>
-          <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim about. The <strong>code-review skill</strong> on the tip writes a <code>cr/v3</code> note</td></tr>
+          <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim about. The <strong>design-review skill</strong> on the tip writes a <code>design/v1</code> note — its own step, beside the code review (<a href="decisions/dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a>)</td></tr>
         <tr><td><strong>At <a href="#handover">the hand-over</a></strong><br><span class="kd">the build WU</span></td>
           <td><code>git rev-parse &lt;tip&gt;:&lt;the design&gt;</code></td>
-          <td>the blob to cite. <code>design.implements: [{path, blob}]</code> in <code>cr/v3</code> note</td></tr>
+          <td>the blob to cite. <code>design.implements: [{path, blob}]</code> in the <code>design/v1</code> note</td></tr>
         <tr><td><strong>At the merge</strong></td>
           <td><code>cargo xtask verify-dod wu &lt;tip&gt; --target &lt;epic&gt;</code></td>
           <td>every red the merge will refuse, before attempting it</td></tr>
@@ -108,7 +108,7 @@ flowchart TB
   C["commit"]
   V3["gate0: fmt · clippy -D warnings · all tests&lt;br/&gt;commit-msg: docs carry an mr trailer"]
   M["WU merge --no-ff"]
-  V4["verify-dod wu&lt;br/&gt;test/v2 · cr/v2 diff-bound PASS · doc/v1&lt;br/&gt;6·run-closed: no run left open&lt;br/&gt;green writes dod/v1"]
+  V4["verify-dod wu&lt;br/&gt;test/v2 · cr/v4 code-bound PASS · doc/v1 · design/v1&lt;br/&gt;6·run-closed: no run left open&lt;br/&gt;green writes dod/v1"]
   EP["epic merge"]
   V5["verify-dod epic&lt;br/&gt;re-walks every seam + e2e"]
   R["review only — no gate proves these&lt;br/&gt;is a verdict true · does the fit hold against @use / @avoid&lt;br/&gt;is a violation honest or quietly fixed&lt;br/&gt;is a driver case-specific or a restated rule"]
@@ -118,7 +118,7 @@ flowchart TB
   E --&gt;|Stop hook| V2
   V2 --&gt;|red · turn refused| W
   V2 --&gt; C --&gt; V3 --&gt; M --&gt; V4 --&gt; EP --&gt; V5
-  R -.-&gt;|lives in cr/v2| V4
+  R -.-&gt;|the verdict lives in design/v1| V4
       </pre>
       <div class="caption">When what is verified. The harness proves a receipt is <em>complete and well-formed</em>, never that it is <em>true</em>.</div>
     </div>
@@ -342,7 +342,7 @@ soft:
         <tr><td><strong>What it catches that ⑦ cannot</strong></td>
           <td>a receipt that is complete, fluent and <strong>false</strong> — a <code>satisfied</code> the design does not earn</td></tr>
         <tr><td><strong>Where the verdict lives</strong></td>
-          <td>the tip's <code>cr/v3</code> note, in a <code>design:</code> section</td></tr>
+          <td>the tip's <code>design/v1</code> note — the review judges no design, and carries none (<a href="decisions/dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a>)</td></tr>
         <tr><td><strong>What refuses it</strong></td>
           <td><code>9·design</code> at the merge</td></tr>
       </tbody>
@@ -354,7 +354,7 @@ soft:
       <thead><tr><th>Half</th><th>What it says</th><th>What refuses it</th></tr></thead>
       <tbody>
         <tr><td><strong>The build names its design</strong></td>
-          <td>a Working Unit that <em>adds</em> a registry component or a screen cites <code>design.implements: [{path, blob, built}]</code> in its <code>cr/v3</code> note</td><td><code>9·design</code> at the WU merge</td></tr>
+          <td>a Working Unit that <em>adds</em> a registry component or a screen cites <code>design.implements: [{path, blob, built}]</code> in its <code>design/v1</code> note</td><td><code>9·design</code> at the WU merge</td></tr>
         <tr><td><strong>An edit answers for itself</strong></td>
           <td>every other UI-rendering file the diff touches is cited or <code>design.undesigned: [{path, why}]</code></td><td><code>9·design</code> at the WU merge</td></tr>
         <tr><td><strong>No unbuilt design survives its epic</strong></td>

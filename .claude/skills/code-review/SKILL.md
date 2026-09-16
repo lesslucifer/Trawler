@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical gate, five isolated finders plus a design finder when the diff carries a design artifact, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
+description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical preflight, two or three isolated finders over the diff's code paths, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip that also records what the round cost. The review judges code and nothing else: no document is its subject, and a diff that changes no code asks for no review at all. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
 ---
 
 # Code review — orchestration
@@ -9,6 +9,12 @@ A review run is **read-only**: no agent in it edits the tree or commits.
 Fixing belongs to the session that triggered the run (§7). What to review
 lives in `rubric.md` next to this file — finders read it; this file only
 sequences the run.
+
+**The subject is code.** `src/`, `xtask/`, `tests/`, `ui/src/`, `ui/e2e/` —
+the paths `notes::is_code` names, one definition shared with the gate. A
+document is never judged, cited or bound here: the design dimension left this
+run for a step of its own (§3b), and a diff that changes no code path asks for
+no review, no note and no finders at all.
 
 ## 1 · Resolve scope
 
@@ -20,80 +26,137 @@ sequences the run.
 - Pin full SHAs now: `BASE=$(git merge-base <base> <head>)` and
   `HEAD_R=$(git rev-parse <head>)`. Merge-base, not the base tip — commits
   that landed on the base branch after the fork must not pollute the diff.
-- The reviewed diff is `git diff BASE..HEAD_R`, plus `git diff HEAD_R` when
-  the working tree is in scope.
+- The reviewed diff is `git diff BASE..HEAD_R -- <the code paths>`, plus the
+  working-tree half when it is in scope. The paths are the five prefixes above;
+  read them off `cargo xtask notes write`'s `code_sha256` line when it printed
+  one, so the bytes you judge and the bytes you bind are the same ones.
 - Optional, repeatable: `--waive "<finding summary>: <reason>"` — the
   trigger's waiver declarations, applied at the verdict (§5).
 
-## 2 · Gate 0 — abort if red
+## 2 · Preflight — abort if red
 
-Run `cargo xtask gate0`. It runs `fmt --check` + `clippy -D warnings` +
-`nextest run --all` (fallback `cargo test --all`) and **skips them when the
-working tree is byte-identical to the last green run** (cached under
-`target/.gate0-green`, a local per-checkout file — never a git note, never
-synced). Any tree change — code, test, or whitespace — invalidates the cache
-and re-runs the full trio, so a skip can never vouch for a tree it did not
-verify. A non-zero exit ⇒ stop, report it to the caller, spawn no agents, write
-no evidence.
+Run `cargo xtask preflight wu <tip> --target <the epic branch>` (or
+`cargo xtask preflight epic <tip>`, against `main`) — the same two levels, and
+the same target inference, the merge gate uses. This is the last point at which
+a red input is repaired for free: the `cr/v5` note pins the code it judged, so
+anything fixed after the verdict buys the fleet again.
 
-## 3 · Find — five isolated finders, in parallel (six with §3b)
+It refuses on exactly three things:
 
-Spawn five subagents **in a single message** (fresh context each), one per
-dimension in `rubric.md`. Each finder prompt contains exactly:
+- **The tree** — Gate 0: `fmt --check` + `clippy -D warnings` + `nextest run
+  --all` (fallback `cargo test --all`), **skipped when the working tree is
+  byte-identical to the last green run** (cached under `target/.gate0-green`, a
+  local per-checkout file — never a git note, never synced). Any tree change —
+  code, test, or whitespace — invalidates the cache and re-runs the full trio,
+  so a skip can never vouch for a tree it did not verify.
+- **The checkout** — the tree Gate 0 measures has to be the tree being reviewed:
+  `HEAD` must be the tip you named, with nothing uncommitted. A green read off
+  another commit (or off a working tree that is about to be committed) vouches
+  for bytes the verdict is not about, and the refusal says which of the two it
+  found.
+- **The note this review reads** — `test/v2` on the reviewed tip: present,
+  parseable, carrying the identity block, and with the manifest holding the test
+  layer this level needs. The same code the merge gate judges it with. `doc/v1`
+  is not read here and cannot void this PASS, so the preflight no longer stops on
+  it (DEC-43, restated by DEC-45).
+- **Nothing else.** No `cr/v5` note (this review writes it), no design section,
+  no `mr/v1` (the human signs last), no doc-note coverage, and no doc predicate.
+
+A non-zero exit ⇒ stop, report its blocks to the caller, spawn no agents, write
+no evidence. An exempt diff — one that asks for no review at all — needs none:
+report that and stop; the preflight measures no tree for a diff that asks for
+nothing, so `cargo xtask gate0` is how to ask about the tree on its own.
+
+**Gate 0 runs beside the finders, not in front of them.** Pass
+`--defer-gate0`: the preflight then settles everything cheap — the checkout is
+the reviewed tip, nothing is uncommitted, the notes the finders read are on it —
+and returns without measuring the tree. Spawn `cargo xtask gate0` in the **same
+message** as the finders (§3). Gate 0 is ~60s of the round's ~384s and the
+finder stage does not depend on it, so nothing is gained by waiting.
+
+What this trades, stated rather than hidden: a red Gate 0 discards a round whose
+finders already ran, so a doomed round costs its finder tokens. That is accepted
+because the clock is the scarce thing and Gate 0 is cached and green on the
+common path. **A red Gate 0 voids the round outright** — no verdict, no `cr/v5`
+note, nothing the fleet returned may be written down. Fix the tree and run the
+review again; the deferred green says so in as many words, and never claims the
+suite passed.
+
+**WU and epic scopes only.** The preflight protects a verdict the merge gate
+binds at those two levels — a WU branch against its epic, or an epic against
+`main`. A **standalone code commit** on an epic branch also owes a `cr/v5` bound
+to its own code (DEC-51: code owes a review where it lands), and the preflight
+has no level for it: review `<sha>^..<sha>`, run `cargo xtask gate0` yourself,
+and attach the note to that commit. A caller reviewing any other scope (§1 permits recent
+commits, a single ref, the working tree) has no note to orphan: run
+`cargo xtask gate0` yourself, read the notes you need, and go on. Never point
+the preflight at a tip without naming the scope whose notes you actually read.
+
+## 3 · Find — two or three isolated finders, in parallel
+
+The fleet carries only the dimensions that produce severe code findings.
+`rubric.md` holds the rows and the corpus number behind each:
+
+| Spawn | When |
+|---|---|
+| **correctness**, **efficiency** | always |
+| **altitude** | the diff's code paths resolve to **more than one module** |
+| *(nothing else)* | reuse and simplification are retired — DEC-50 |
+
+A **module** is the unit that owns the logic: `src/<name>.rs` or `src/<name>/`,
+`xtask/src/<name>.rs`, `ui/src/<area>/`. A test file counts as the module it
+tests, never as one of its own, so a change confined to one module and its tests
+is single-module and spawns two finders.
+
+Spawn those subagents **in a single message** (fresh context each), one per
+dimension — and, when §2 deferred it, `cargo xtask gate0` in that same message.
+Each finder prompt contains exactly:
 
 - its dimension name, and the instruction to read
   `.claude/skills/code-review/rubric.md` first — its dimension row, the
   principles, and the exclusions;
 - the scope (`BASE..HEAD_R`, plus working tree if in scope) — the finder runs
   `git diff` itself and may read any file in the repo, including the tip's
-  `test/v2` and `doc/v1` notes (`git notes --ref=test|doc show HEAD_R`):
-  declared waivers and distillation claims are review subjects, not free
-  passes;
+  `test/v2` note (`git notes --ref=test show HEAD_R`): a declared waiver is a
+  review subject, not a free pass. `doc/v1` is not read: what a document says
+  about the code is the plan's and the human's business, not this run's;
 - the return format: a list of candidate findings, each
-  `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`.
+  `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`
+  — the severity rows in `rubric.md` say which is which, and a finder's severity
+  is a proposal the verifier re-judges.
 
-## 3b · The design dimension — a sixth finder, when the diff earns it
+**Never merge the finders.** One dimension, one agent, one message — not one
+agent carrying several dimensions, however cheap that looks. E-SIMPWF.W6
+measured the merge: **+354s of fixed reasoning per merged agent**, making the
+stage **152% slower** for a 38% token saving. The work does not vanish with the
+agent; it moves into the agents that remain, which then read more and think
+longer. DEC-50 removed dimensions; it did not fold the ones that remain, and a
+later reading of "fewer agents" must not re-buy that shape.
 
-Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints three things — the
-design **artifacts** in scope with the rulebook blob to pin, the **new surfaces**
-the diff adds (a `@tier` component, a screen), and every other **rendered file**
-it touches (any non-test `.tsx` under `ui/src/`) — the same function the merge
-gate uses, so the two can never disagree about any of them.
+## 3b · The design dimension is not part of this run
 
-- **No artifact** ⇒ no design finder, and the note carries no `design:` section
-  unless a surface or a rendered file is listed.
-- **One or more artifacts** ⇒ spawn the design finder alongside the other five,
-  in the same message. Its prompt: the instruction to read
-  `.claude/skills/code-review/design-rubric.md` first, the artifact paths the
-  command printed, the scope, and the same return format as §3. It is Tier-3 of
-  the design flow — soft rules and the new-component warrant, never the hard
-  rules Tier-1 already owns.
-- **One or more new surfaces** ⇒ no finder runs, but the note owes
-  `design.implements`: one `{path, blob, built}` per design the build was built
-  from, the blob being `git rev-parse <HEAD_R>:<the design>` — or, when the WU
-  retired the design it read (DEC-16 forces this inside the build WU), the blob
-  at its last state, `git rev-parse <the last commit that held it>:<the design>`,
-  which `design-scope` prints (DEC-28) — and `built` naming
-  the files that design produced. This is a citation, not a judgment — nothing
-  here judges the code against the design. A new surface takes **only** a
-  citation; no reason excuses one.
-- **One or more rendered files touched** ⇒ each is covered by a citation's
-  `built` list, or named in `design.undesigned: [{path, why}]`. Write the `why`
-  yourself, as a statement of fact about this diff — *what did the edit do, and
-  what made a design unnecessary*. "No design" is not a reason; "a copy fix
-  inside the existing layout" is. You are the independent party here, so this is
-  the one place the record can be trusted: a builder excusing its own work is
-  what the field exists to prevent. If the edit did re-shape a surface and no
-  design covers it, say so and **FAIL** — the gate cannot see that, only you can.
+A diff that carries a design artifact, or renders a file under `ui/src/`, owes
+the design dimension's verdict — on the design step's own `design/v1` note, which
+`9·design` reads. That step is not this one: this run spawns no design finder,
+reads no design artifact, and its note carries no `design:` section, so a
+document can neither be judged here nor void anything judged here. Run
+`.claude/skills/design-review/SKILL.md` for it, over the same scope.
 
-Its candidates go through §4 verification like any other. The design verdict is
-`PASS` when no design finding survives verification unwaived, and it is recorded
-whether or not the overall review passes.
+## 4 · Verify — relevance-batched verifiers, in parallel
 
-## 4 · Verify — one fresh verifier per candidate, in parallel
+Group the candidate pool by **the code a verifier must read**: claims about the
+same function, or tracing the same call path across files, go to one agent, which
+then reads that region once instead of once per claim. Everything else stays
+apart. Spawn every batch in a single message.
 
-A verifier receives **only** the finding and the scope — never the finder's
-reasoning. Its prompt:
+| Rule | Why |
+|---|---|
+| A candidate proposed **blocker** never joins a batch — one fresh agent each | Blockers decide the verdict and the corpus is thinnest on them (3 in 198 rounds). The severity that costs most to get wrong keeps its own adversary. |
+| A batch holds **at most 4** claims; split beyond that | The saving is one shared read, not a smaller fleet. W6 measured the undifferentiated whole-pool batch at **4.6× the stage time (+398s)** because one agent serially read every region the pool touched. |
+| Each claim in a batch is judged on **its own** evidence | This is the cost DEC-50 accepted: grouping puts the most correlated claims in one context, which is exactly where a confirmation carries over. Say so in the prompt — a confirmed claim lends its neighbour nothing. |
+
+A verifier receives **only** the finding (or the batch's findings) and the scope
+— never the finder's reasoning. Its prompt:
 
 - try to **refute** the claim against actual code behavior: read the full
   surrounding code, trace callers and data flow, run a targeted test when
@@ -101,9 +164,13 @@ reasoning. Its prompt:
 - check `docs/decisions/` (when it exists) before confirming a finding that
   "fixes" something deliberate — the oddity may be load-bearing;
 - resolve uncertainty to false-positive — with no human filter downstream, a
-  false positive costs more than a missed nit; recall comes from five
-  overlapping finders;
-- return `{verdict: real|false-positive, severity, evidence: <why>}`.
+  false positive costs more than a missed nit, and the corpus refutes 70% of
+  everything raised;
+- **judge the severity** against `rubric.md`'s severity rows rather than
+  inheriting the finder's: this verdict reads yours, and uncertainty between two
+  rows resolves *upward*;
+- return one `{verdict: real|false-positive, severity, evidence: <why>}` **per
+  claim**, keyed to the claim it answers.
 
 Refuted findings are dropped from the verdict; mention them briefly when
 returning to the caller (§7) so finder quality stays visible.
@@ -113,62 +180,98 @@ returning to the caller (§7) so finder quality stays visible.
 - Match the trigger's `--waive` declarations against verified findings;
   record each waiver with its reason (citing a `docs/decisions/` record where
   one applies).
-- **PASS** = Gate 0 green and zero verified findings left unwaived.
-  Anything else is **FAIL** — evidence is written either way.
+- **PASS** = Gate 0 green and zero verified **blockers or importants** left
+  unwaived. Anything else is **FAIL** — evidence is written either way.
+- **A verified nit does not fail the review, and is never silently dropped.**
+  Every one goes in the note's `nits:` list as a named finding with **exactly
+  one** disposition — `fixed: "<what changed>"` when the fix is already inside the
+  range this note binds, or `waived: "<reason>"`. An empty sentence is no
+  disposition, an empty `finding` names nothing, and carrying both dispositions
+  records a contradiction; the merge gate refuses each of those under
+  `3·review-nits` — so the cheap pass buys a
+  recorded decision, not an unread list. Nothing here licenses a post-verdict
+  fix: a later commit still moves `CODE_SHA` and still orphans this note.
 
 ## 6 · Evidence — YAML note on the reviewed tip
 
-- `DIFF_SHA=$(git diff --no-color --no-ext-diff BASE..HEAD_R | shasum -a 256 | cut -d' ' -f1)`
-  (pipe the working-tree diff in as well when it was in scope). The flags
-  match `cargo xtask verify-dod`'s recomputation — the binding must be
-  byte-identical.
-- The note body is one YAML document, contract `cr/v3`.
+- `CODE_SHA=$(git diff --no-color --no-ext-diff BASE..HEAD_R -- <the code paths> | shasum -a 256 | cut -d' ' -f1)`
+  (add the working-tree half the same way when it was in scope). The paths are
+  the five prefixes from the top of this file; the flags match `cargo xtask
+  verify-dod`'s recomputation — the binding must be byte-identical. A diff with
+  no code path has no hash to write, and asks for no note at all.
+- The note body is one YAML document, contract `cr/v5`.
   `cargo xtask verify-dod` parses it at every merge gate (see
   `docs/workflow.html`): a Working Unit is not merge-ready and an epic is
-  not complete without a `PASS` note whose `diff_sha256` matches the tip
-  being merged — so a later rewrite of the branch visibly orphans its
-  evidence.
+  not complete without a `PASS` note whose `diff_sha256` matches the code the
+  tip changes — so a later code edit visibly orphans its evidence, and a
+  document landing after it does not.
 
 ```yaml
-schema: cr/v3
+schema: cr/v5
 scope: "WU capture-pagination -> epic/capture"   # the caller's label
 epic: E-CAP                     # identity block — matches the tip's other notes
 wu: E-CAP.W2                    # working-unit scope only
 branch: wu/capture/pagination   # informative; the ids are the truth
 base: <full sha — the merge-base pinned in §1>
 head: <full sha — the reviewed tip; the note is attached to it>
-diff_sha256: <DIFF_SHA>
-dimensions: [correctness, reuse, simplification, efficiency, altitude]
-findings: { found: <n>, verified: <n>, waived: <n> }
+diff_sha256: <CODE_SHA>         # the code paths, and only them
+dimensions: [correctness, efficiency]   # + altitude on a multi-module diff
+fleet:                          # what this round spent; `cargo xtask tally --fleet` reads it back
+  finders: 2                    # 2, or 3 where altitude was spawned
+  verifiers: <n>                # verifier agents spawned - batches plus unbatched blockers
+  verifier_model: <model>       # what judged them
+  shards: <n>                   # finder shards over the diff; 1 unless it was split
+  candidates:                   # the pool the finders returned, by proposed severity
+    blocker: <n>
+    important: <n>
+    nit: <n>                    # recorded and dispositioned; buys no verifier
+  stage_seconds:                # the clock the orchestrator kept
+    gate0: <n>
+    finders: <n>
+    verifiers: <n>
+    total: <n>                  # end to end - the only field the 300s target reads
+  by_finder:                    # one row per finder this round actually spawned
+    correctness: { found: <n>, verified: <n> }
+    efficiency:  { found: <n>, verified: <n> }
+    altitude:    { found: <n>, verified: <n> }
+findings: { found: <n>, verified: <n>, waived: <n> }   # distinct claims, after dedup
 waivers:
   - finding: "<summary>"
     reason: "<reason>"
-design:                         # §3b — present iff design-scope listed anything
-  artifacts: [docs/work/<the run>.html]   # every artifact it listed, none omitted
-  rulebook: <blob it printed>   # what the design dimension judged against
-  findings: { found: <n>, verified: <n>, waived: <n> }
-  verdict: PASS                 # PASS | FAIL — artifacts only; omit when nothing was judged
-  implements:                   # one per design the build read; omit when none was listed
-    - path: docs/work/components/<the design>.html
-      blob: <git rev-parse HEAD_R:<that path>, or <the last commit that held it>:<that path> once this WU retired it (DEC-28)>
-      built: [ui/src/components/<what it produced>.tsx]   # the rendered files it covers
-  undesigned:                   # every other rendered file the diff touched
-    - path: ui/src/<the file>.tsx
-      why: "<what the edit did, and what made a design unnecessary>"
-verdict: PASS   # PASS | FAIL
+nits:                           # every verified nit, each one decided
+  - finding: "<summary>"
+    fixed: "<what changed>"     # the fix is inside the range this note binds
+  - finding: "<summary>"
+    waived: "<reason>"          # accepted as it stands
+verdict: PASS   # PASS | FAIL — nits never decide it
 date: <YYYY-MM-DD>
 ```
 
-The `design:` block is what `verify-dod`'s `9·design` check reads: a
-design-bearing tip whose note omits it, judges fewer artifacts than the diff
-carries, or pins a rulebook the tip does not ship, is refused at the merge — as
-is a tip that adds a new surface and cites no design, or cites one whose path or
-blob the tip does not ship, or leaves a rendered file neither cited nor
-declared. The accounting is checked both ways: a `built` or `undesigned` entry
-naming a file the diff does not render is refused as readily as one left out,
-and a file given both answers is refused for contradicting itself. On a diff
-that renders nothing and carries no artifact the block is absent, and no check
-asks for it.
+The `fleet:` block is the round's own bill, and every note this run writes
+carries one. `by_finder` counts what each finder returned and how much of it
+the verifiers confirmed, so its sums can exceed `findings` where two finders
+raised the same claim — the overlap is a reading, not an error. A dimension the
+round did not spawn has no row: an absent `altitude` is a single-module diff,
+never a finder that found nothing. These are the first bills taken under
+DEC-50's shape, and what the next cut is chosen from. A note without
+the block still parses at the gate; the tally reads it as a round that did not
+count itself, never as a round that cost nothing.
+
+`stage_seconds` and `candidates` follow the same discipline one row down: the
+orchestrator knows when it spawned each stage and when the last result came
+back, and it knows what severity each finder proposed, so it writes what it
+observed and omits what it did not. **An absent row is a stage nobody timed or a
+pool nobody counted — never a stage that took no time.** The severity rows are
+the rubric's closed set, so a row it does not name is a malformed note rather
+than a silent zero on the row it was meant to be. No gate check reads any of
+this (W1's ruling); it is what the next cut is chosen from.
+
+There is no `design:` block on this note, and there is nothing to write in its
+place: `verify-dod`'s `9·design` check reads the design step's own `design/v1`
+note (`.claude/skills/design-review/SKILL.md`), which is what a design-bearing
+or surface-rendering diff owes. A note carrying one anyway is a claim this run
+cannot make — the verdict would be about documents the binding above does not
+cover.
 
 - Attach it: `git notes --ref=cr add -f -m "<yaml>" HEAD_R`.
 - The pre-push hook syncs `refs/notes/*` to origin automatically. Audit any
@@ -177,8 +280,9 @@ asks for it.
 ## 7 · Return to the caller
 
 Report: the verdict; the table of verified findings with severities and
-verifier evidence; waivers applied; refuted candidates in one line; the note
-ref. On `FAIL`,
+verifier evidence; waivers applied; the nits and how each was dispositioned;
+refuted candidates in one line; the fleet's bill as the note records it; the
+note ref. On `FAIL`,
 state the loop explicitly: the trigger session fixes — a correctness bug gets
 its failing, named regression test **first** (per `docs/testing-strategy.html`),
 cleanups stay behavior-preserving with the suite green — then re-runs this
