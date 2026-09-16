@@ -365,7 +365,33 @@
     it is the <strong>first round the conditional actually narrowed the fleet</strong>, spawning two finders rather
     than three, because the diff had shrunk to one module and its tests.</p>
 
-    <h3 id="four-rounds">What five rounds of its own review cost, and bought</h3>
+    <h3 id="round-6">Round 6 — PASS</h3>
+    <p>Both finders returned empty, so no verifier was spawned and the round cost <strong>159k tokens</strong>: two
+    finders, 442 seconds end to end. Correctness built binaries at both the merge base and the tip and traced every
+    <code>CHECKS</code> row to its emission site, establishing what five rounds had been circling — that
+    <code>runs_at(REVIEW, level)</code> is algebraically equivalent to the old <code>level != Level::Commit</code>
+    (three variants, and <code>REVIEW</code>'s row names the two that are not <code>Commit</code>), so both
+    converted guards are behaviour-identical; that every other row matches its call site's real gating; and that
+    the rendered <code>checks:</code> line is byte-identical to the old hardcoded string for <code>Wu</code> and
+    <code>Epic</code>, differing only for <code>Commit</code>, which is the fix.</p>
+    <div class="callout warn" data-c="unreachable-today">
+      <p><strong>One caveat the finder raised, recorded rather than smoothed over.</strong> No current CLI path
+      invokes <code>write_receipt</code> at <code>Level::Commit</code> — <code>verify-dod commit</code> does not
+      write a receipt, and <code>verify-dod hook</code> accepts only <code>wu|epic</code>. So the commit-level line
+      this change corrects is <strong>right but not reachable today</strong>. The defect was real in the code and
+      the fix is real; what it is not is a bug anyone could currently observe. That weakens the justification for
+      keeping the table, and the honest version of the claim is: it removes a latent wrong statement and a
+      duplicated one, which the four rounds above showed this codebase cannot be trusted to keep in sync by
+      hand.</p>
+    </div>
+
+    <p><strong>Where the last round is recorded.</strong> This report is part of the diff it describes, so writing
+    round 6 into it moves the tip and the round after it reviews a tip this table cannot name. That recursion stops
+    here by rule: <strong>the round that reviewed the tip being merged is on that tip's own <code>cr/v5</code>
+    note</strong>, which is where a round's bill belongs and what the merge gate reads. The table above is every
+    round up to this one.</p>
+
+    <h3 id="six-rounds">What six rounds of its own review cost, and bought</h3>
     <table>
       <thead><tr><th>Round</th><th>Tokens</th><th>Raised</th><th>Verified</th><th>Verdict</th></tr></thead>
       <tbody>
@@ -374,7 +400,8 @@
         <tr><td>3</td><td>522k</td><td>2</td><td>1 blocker · 1 important</td><td>FAIL</td></tr>
         <tr><td>4</td><td>653k</td><td>4</td><td>3 blockers · 1 important</td><td>FAIL → withdrawn</td></tr>
         <tr><td>5</td><td>249k</td><td>1</td><td>1 important</td><td>FAIL</td></tr>
-        <tr><td><strong>total</strong></td><td><strong>3.07M</strong></td><td><strong>15</strong></td>
+        <tr><td>6</td><td>159k</td><td>0</td><td>—</td><td><strong>PASS</strong></td></tr>
+        <tr><td><strong>total</strong></td><td><strong>3.23M</strong></td><td><strong>15</strong></td>
           <td><strong>4 blockers, 9 importants, 1 nit, 1 refuted</strong></td><td>—</td></tr>
       </tbody>
     </table>
@@ -383,7 +410,9 @@
     of them in the half of the Working Unit that was subsequently withdrawn — and then caught the residue the
     withdrawal itself left behind. The blocker guardrail (a proposed blocker never joins a batch) was exercised on
     all four. The retired dimensions raised nothing that was missed, and the round costs fall as the diff shrinks:
-    934k, 716k, 522k, 653k, 249k.</p>
+    934k, 716k, 522k, 653k, 249k, 159k — the last of them a two-finder round with no verifier stage at all,
+    against a <strong>~1.05M baseline</strong>. That is the shape DEC-50 projected, arrived at from the other
+    direction: not by the cut alone, but by the cut plus a diff small enough for it to matter.</p>
 
     <h2 id="distillation" data-item="distillation">Distillation</h2>
     <table>
