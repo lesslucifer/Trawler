@@ -68,6 +68,9 @@ impl Flow {
         flow.git(&["config", "commit.gpgsign", "false"]);
         flow.write("src/lib.rs", "pub fn base() {}\n");
         flow.write(".mr-allowed", "email: a@b.co\n");
+        // Tracked, the tally the gate appends mid-merge becomes an unstaged
+        // change that `git merge --abort` then refuses to undo.
+        flow.write(".gitignore", "/target\n");
         flow.write(RULEBOOK, &rulebook_html(SOFT_RULES));
         flow.write_vocabulary();
         flow.write_collection();
