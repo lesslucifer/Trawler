@@ -19,8 +19,8 @@ fleet:
   stage_seconds:
     gate0: 55
     finders: 476
-    verifiers: 543
-    total: 1019
+    verifiers: 597
+    total: 1140
   by_finder:
     correctness: { found: 1, verified: 1 }
     efficiency:  { found: 0, verified: 0 }
