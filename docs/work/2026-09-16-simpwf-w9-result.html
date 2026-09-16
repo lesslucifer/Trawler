@@ -123,10 +123,68 @@
     </div>
 
     <h3 id="bill">The round's own bill</h3>
-    <p data-c="bill-pending">The first readings taken under DEC-50's shape are recorded here, from the
-    <code>cr/v5</code> notes this Working Unit's own review rounds wrote. The plan projected ~410k tokens against a
-    ~1.05M baseline and claimed no wall-clock win; what the rounds actually cost is below, including where the
-    projection is wrong.</p>
+    <p data-c="bill-intro">Round 1 of this Working Unit's own review is the first reading ever taken under
+    DEC-50's shape. Its bill is on the tip's <code>cr/v5</code> note and repeated here because it is the WU's
+    subject; every later round's bill lives on its own note, which is where a round's bill belongs.</p>
+    <table>
+      <thead><tr><th>Reading</th><th>Round 1</th><th>The plan projected</th><th>What it says</th></tr></thead>
+      <tbody>
+        <tr><td>Finders spawned</td><td><strong>3</strong> — correctness, efficiency, altitude</td><td>2, or 3 on a
+          multi-module diff</td><td>As designed: the diff crosses <code>gate</code> and <code>mr</code></td></tr>
+        <tr><td>Verifier agents</td><td><strong>3</strong> batches for 5 distinct claims</td><td>~3 batches</td>
+          <td>As designed. No proposed blocker, so nothing was held out of a batch — the guardrail was not
+          exercised this round</td></tr>
+        <tr><td>Finder tokens</td><td>500k</td><td>197k</td><td><strong>2.5× the projection</strong></td></tr>
+        <tr><td>Verifier tokens</td><td>434k</td><td>~210k</td><td><strong>2.1× the projection</strong></td></tr>
+        <tr><td><strong>Round total</strong></td><td><strong>934k</strong></td><td><strong>~410k</strong></td>
+          <td><strong>2.3× — the projection is wrong</strong></td></tr>
+        <tr><td>Against the ~1.05M baseline</td><td>934k</td><td>—</td><td>An 11% saving, not the 61% projected</td></tr>
+        <tr><td><code>stage_seconds</code></td><td>gate0 68 · finders 1,138 · verifiers 909 · total 2,051</td>
+          <td>no clock claim</td><td>No clock win was claimed and none appeared</td></tr>
+        <tr><td><code>by_finder</code></td><td>correctness 2/2 · efficiency 1/1 · altitude 3/3</td><td>—</td>
+          <td>The first per-dimension bill the tree has ever held</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="projection-wrong">
+      <p><strong>The projection is wrong, and the reason is the arithmetic behind it.</strong> DEC-50 priced a
+      finder at W6's per-agent mean of 98.6k tokens and a verifier at W6's 52k. This round's finders cost 102k, 196k
+      and 202k; its verifiers 126k, 150k and 157k. The two that ran long did so because they <em>reproduced</em>
+      their findings — building the real binary, driving scratch repos, shimming <code>git</code> to observe what
+      was spawned — rather than reading the diff and reasoning. W6's means were taken over rounds that mostly did
+      not do that.</p>
+      <p>So <strong>the cut is real and the saving is smaller than claimed</strong>: removing two of five dimensions
+      removed two agents and the verifiers they would have generated, but a round's cost is set at least as much by
+      how hard its agents work as by how many there are. That is a reading DEC-49's rule did not anticipate — it
+      governs the clock, and this is the token axis. One round is one reading; the rows above are what later rounds
+      are compared against, not a conclusion.</p>
+    </div>
+    <h3 id="round-1">What round 1 found</h3>
+    <p>Five verified importants, <strong>zero refuted</strong> — a 0% refutation rate against the corpus's 70%,
+    which is itself a reading worth recording and not a result to be pleased about: a fleet that refutes nothing is
+    either unusually well-aimed or insufficiently adversarial, and one round cannot say which. Two finders
+    independently raised the same <code>notes_write.rs</code> claim, which is the overlap <code>by_finder</code>
+    exists to show.</p>
+    <table>
+      <thead><tr><th>Finding</th><th>Raised by</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td><code>notes_write.rs</code> tells every code-touching range a <code>cr/v5</code> binds it, including
+          an epic the gate asks nothing of</td><td>correctness + altitude</td>
+          <td><code>written()</code> asks <code>gate::runs_at</code></td></tr>
+        <tr><td><code>mr</code>'s <code>SIGN_LAST</code> instructs every refused tip to run the review, at any
+          level</td><td>correctness</td><td><code>sign_last(level)</code> omits the step the level does not owe</td></tr>
+        <tr><td><code>mr</code> still hashes the epic's code paths, then discards the result</td><td>efficiency</td>
+          <td>taken only where a review reads it</td></tr>
+        <tr><td><code>CHECKS</code>'s <code>DESIGN</code> row excludes <code>Commit</code>, where
+          <code>check_ui_outside_a_wu</code> fires it</td><td>altitude</td>
+          <td>the row names all three levels; the standalone-commit test now asserts the table admits the check it
+          saw fire</td></tr>
+        <tr><td>Three review rows declare levels nothing reads — four values for one fact</td><td>altitude</td>
+          <td><code>Runs::With</code>: a check either names its levels or defers to the check that emits it</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Three of the five were this WU's own change landing unevenly</strong> — the rule moved in
+    <code>gate.rs</code> and three sibling call sites kept stating the old one. That is the failure mode DEC-50 and
+    DEC-51 both exist to prevent, found by the first fleet run under the shape they created.</p>
 
     <h2 id="distillation" data-item="distillation">Distillation</h2>
     <table>

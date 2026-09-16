@@ -106,6 +106,19 @@ flowchart LR
       says the clock will barely move: a parallel stage costs its slowest member.</div>
     </div>
 
+    <div class="callout warn" data-c="first-reading">
+      <p><strong>The first reading, taken by E-SIMPWF.W9's own review: 934k tokens, not ~410k.</strong> 3 finders
+      (500k) and 3 relevance batches over 5 claims (434k), against a ~1.05M baseline — an <strong>11% saving, not
+      the 61% projected</strong>. The projection is wrong because of the arithmetic above it: it priced a finder at
+      W6's 98.6k mean and a verifier at 52k, and this round's agents cost 102k–202k and 126k–157k because they
+      <em>reproduced</em> their findings — building the binary, driving scratch repos, shimming <code>git</code> —
+      rather than reading and reasoning.</p>
+      <p>The cut is real; its size was overstated. A round's cost is set at least as much by how hard its agents
+      work as by how many there are, which is the token-axis companion to DEC-49's rule about the clock, and which
+      no cut priced per-agent can predict. One round is one reading — but every future proposal priced off W6's
+      means owes this correction first.</p>
+    </div>
+
     <h2 id="loss">The priced loss</h2>
     <p>Stated before the cut rather than discovered after it.</p>
     <table>
