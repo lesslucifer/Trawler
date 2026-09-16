@@ -775,8 +775,9 @@ fn written(level: Level, range: &Range, wrote: &[&str]) -> String {
             .to_string()
     } else {
         format!(
-            "code_sha256: {}\nthe review binds the code paths in its cr/v5 note, and the design step pins what it judged in design/v1",
-            range.code_sha256
+            "code_sha256: {}\nthe review binds the code paths in its {} note, and the design step pins what it judged in design/v1",
+            range.code_sha256,
+            crate::notes::cr_schema()
         )
     };
     format!(

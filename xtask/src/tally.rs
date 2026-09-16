@@ -483,7 +483,8 @@ pub fn fleet_summary(bills: &[Option<Fleet>], file: &Path) -> String {
     if measured.is_empty() {
         let _ = write!(
             out,
-            "no round has counted itself yet - a cr/v5 note's fleet: block is the reading"
+            "no round has counted itself yet - a {} note's fleet: block is the reading",
+            crate::notes::cr_schema()
         );
         return out;
     }

@@ -795,25 +795,45 @@ verdict: PASS
         assert_eq!(CR_SCHEMAS.iter().filter(|s| !binds_code(s)).count(), 2);
     }
 
-    // The value test above cannot bite: a hand-written literal that happens to
+    // The value test below cannot bite: a hand-written literal that happens to
     // equal today's schema passes it, and only stops passing at the next bump -
-    // which is exactly when nobody is looking. So the rule is enforced as a rule:
-    // the modules that tell a reader which note to write may not spell one.
+    // which is when nobody is looking. So the rule is enforced as a rule, over
+    // every module rather than the two that were caught: nothing outside this
+    // one spells the current review contract, because everything that names it
+    // to a reader must ask `cr_schema()`.
+    //
+    // Scoped to the *current* name on purpose. A retired contract is a frozen
+    // identity, not a rule that can drift - `design_source` spells `cr/v2` and
+    // `cr/v3` to name the legacy carriers, and must keep spelling them after the
+    // next bump. `design/v1` is left out for the same reason: `DESIGN_SCHEMAS`
+    // is a singleton that has never bumped, while this list has bumped four
+    // times and was hand-edited at two of them.
     #[test]
-    fn nothing_that_instructs_a_reader_spells_a_review_schema_of_its_own() {
+    fn nothing_outside_this_module_spells_the_current_review_contract() {
         let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-        for module in ["mr.rs", "lib.rs"] {
-            let text = std::fs::read_to_string(src.join(module)).unwrap();
+        let current = super::cr_schema();
+        let mut scanned = 0;
+        for entry in std::fs::read_dir(&src).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|ext| ext != "rs")
+                || path.file_name().is_some_and(|name| name == "notes.rs")
+            {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).unwrap();
             let shipped = text.split("#[cfg(test)]").next().unwrap();
             for (n, line) in shipped.lines().enumerate() {
                 assert!(
-                    !line.contains("cr/v"),
-                    "{module}:{} spells a review schema instead of asking cr_schema(): {}",
+                    !line.contains(current),
+                    "{}:{} spells {current} instead of asking cr_schema(): {}",
+                    path.file_name().unwrap().to_string_lossy(),
                     n + 1,
                     line.trim()
                 );
             }
+            scanned += 1;
         }
+        assert!(scanned > 5, "scanned only {scanned} modules - the walk found nothing to read");
     }
 
     #[test]
