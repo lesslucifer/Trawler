@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: 68a3ea9
+tests:
+  unit: { count: 83, covers: "the two restatements this commit removes, each bound where it can drift: cr_schema() is the newest entry CR_SCHEMAS names; unready_reasons and sign_last() name that schema and none of the retired ones; design_carrier_note returns what design_source decides for cr/v2, cr/v3, cr/v4, cr/v5 and a tip with no review at all; and design-scope's printed text names that carrier over a real repo, for both its no-artifact and its new-surface branch" }
