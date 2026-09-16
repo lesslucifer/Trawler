@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-CODEX
+wu: E-CODEX.W2
+branch: HEAD
+tests:
+  unit: { waived: "the diff adds no production code path - one test file, one Cargo.toml feature + [[test]] entry, and doc edits" }
+  integration: { waived: "the WU's contract is the composed flow; each door's bounded contract is already pinned by W1's harness_parity.rs and doc_hooks.rs, and a per-door test here would restate them" }
+  e2e: { count: 1, covers: "the epic's flow as Codex consumes it: the T0 door resolves to the tracked CLAUDE.md blob at mode 120000, every skill resolves through .agents/skills with name+description and code-review by name, then the PostToolUse and Stop command strings deserialized out of the committed .codex/hooks.json run in a temp repo over both harnesses' payload shapes - a red doc, a green doc and a non-doc edit each asserting equal exit code and equal stderr between them, and the turn-end backstop refusing with the doc named" }
