@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-CODEX
+branch: HEAD
+tests:
+  unit: { count: 16, covers: "one script, both harnesses' edit payloads: a tool_input.file_path edit and an apply_patch command writing the same bytes produce the same exit code and the same stderr, over a red doc, a green doc and a non-doc edit - plus notes.rs pinning AGENTS.md as rule-bearing, so a commit that swaps the symlink for divergent rules needs manual review" }
+  integration: { count: 5, covers: "each door's bounded contract on the real repository: AGENTS.md is a symlink at mode 120000 and not a copy, every skill under .claude/skills is reachable through .agents/skills with the frontmatter Codex requires, and the shared hook definition is locked byte-for-byte so the two harnesses cannot drift to different command sets" }
+  e2e: { count: 1, covers: "the epic's flow as a Codex session walks it end to end: resolve T0 through AGENTS.md, resolve the code-review skill through .agents/skills, then run the PostToolUse and Stop command strings read out of the committed shared config - not hand-typed - over both payload shapes, asserting one verdict, and the turn-end backstop refusing with the doc named" }
