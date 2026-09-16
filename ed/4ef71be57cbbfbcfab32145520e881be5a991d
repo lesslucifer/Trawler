@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU round-cut -> epic/simpwf (round 7 - the tip being merged)"
+epic: E-SIMPWF
+wu: E-SIMPWF.W9
+branch: wu/simpwf/round-cut
+base: f6948c1b8f79a63bc8b436049d73729d515aec67
+head: ed4ef71be57cbbfbcfab32145520e881be5a991d
+diff_sha256: 7fd7ed98ec853cd76ba723cb26baf8b84fe1a536c22c3e98d85b5035b4d609cf
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 23
+    finders: 440
+    verifiers: 0
+    total: 463
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+  tokens:
+    finders: 151378
+    verifiers: 0
+    total: 151378
+  observed: "the correctness finder saw one isolated failure of the_receipt_names_the_checks_its_level_ran on a first-compile run and could not reproduce it in 20+ further runs, including a stress loop; the orchestrator then ran the case 15 more times and the whole dod_gate suite 6 more times, all green - 41 clean runs between them. The assertion is a pure function of the static CHECKS table and report.level, with no timing or randomness in the path, so no mechanism is identified. Recorded as an unexplained single observation rather than dismissed; the backlog already carries the shared-target contention that reaches xtask temp repos, which is the nearest known cause."
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-09-16
