@@ -373,6 +373,13 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
       </tbody>
     </table>
 
+    <p data-c="harness-hooks">Those are the git hooks. The <strong>harness hooks</strong> the DoD rows
+    above cite — <code>PostToolUse</code> and <code>Stop</code>, running <code>verify-doc</code> at
+    authoring time — are defined once in <code>.claude/settings.json</code>, which Codex loads as
+    <code>.codex/hooks.json</code> over the same bytes, and one script reads both harnesses' edit
+    payloads (<a href="decisions/dec-52-one-source-two-harnesses.html">DEC-52</a>). What they check
+    lives in <a href="work-planning.html#trigger">the work-planning standard</a>.</p>
+
     <p data-c="bypass"><strong>Bypass honesty</strong>: <code>--no-verify</code> skips hooks and a
     fast-forward skips <code>pre-merge-commit</code> — but the next gate's walk re-verifies every seam,
     so smuggled content turns the epic gate red before it reaches <code>main</code>, and receipts can't

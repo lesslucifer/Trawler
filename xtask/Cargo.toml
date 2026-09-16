@@ -9,6 +9,7 @@ publish = false
 hook-tests = []
 debug-tests = []
 design-e2e = []
+codex-e2e = []
 
 [[test]]
 name = "dod_gate"
@@ -17,6 +18,10 @@ required-features = ["hook-tests"]
 [[test]]
 name = "e2e_design_flow"
 required-features = ["design-e2e"]
+
+[[test]]
+name = "e2e_codex_harness"
+required-features = ["codex-e2e"]
 
 [[test]]
 name = "debug_serve"
