@@ -1,7 +1,6 @@
 schema: dod/v1
 level: epic
 epic: E-CODEX
-branch: HEAD
 base: 211154408db31078eda5b05af3b3c97b2033d3c8
 tip: d6052d61fbf24f9d6e14428ad169343d408a26ec
 diff_sha256: 1d9c73bb56384f1b97c1a504a1564c2234d8feded0a4d30c6ec1b4eae9dbfe9a
