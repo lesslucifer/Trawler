@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU E-CODEX.W2 -> epic/codex"
+epic: E-CODEX
+wu: E-CODEX.W2
+branch: wu/codex/e2e-and-truth
+base: d0e55606deb28d5b94e215ee4951b65e5ea3cdf8
+head: 21466242d7ea8771a79864535677cabee3f884c5
+diff_sha256: 12fee8c6803a10e962fd5473bc872537bcc96d221300a2bd42a5ec5f32668494
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    gate0: 81
+    finders: 483
+    verifiers: 0
+    total: 523
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+nits:
+  - finding: "committed_commands()'s `only` helper flattens hooks across all matcher entries, so it pins the total command count for PostToolUse/Stop but not the number or shape of matcher entries"
+    waived: "harness_parity.rs::both_harnesses_load_one_hook_definition_file locks the whole shared config byte-for-byte against expected_config(), so splitting one matcher into two reds that test in the same commit. This e2e asserts the contract it owns - one command per event, run as shipped - and duplicating the byte lock here would restate a check that already exists"
+  - finding: "repo_root() is called three times in one test run (directly, in committed_commands(), in Session::new()) instead of being computed once and threaded through"
+    waived: "three git rev-parse spawns, once per test run, in test setup. Threading a root parameter through both helpers would couple them to a caller-supplied root to save ~10ms in a suite whose hook subprocesses dominate it"
+  - finding: "each SKILL.md is read twice per skill in the skills-door loop - once as bytes for the equality assertion, once as a string for the frontmatter check"
+    waived: "the two reads assert different things and reading the byte form is what makes the equality assertion a byte equality. Collapsing them trades the strength of that assertion for one avoided read of a small file"
+verdict: PASS
+date: 2026-09-16
