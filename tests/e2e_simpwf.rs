@@ -11,8 +11,9 @@
 //! after the verdict leaves it standing while a code fix voids it (W4, DEC-45);
 //! a design run rides beside the code without entering that binding and is
 //! answered on its own `design/v1` (W4, DEC-46); a diff that changes no code
-//! owes no review and is still signable (W7); and the epic walk re-verifies
-//! every seam that carried code. The second test puts a real failing test and
+//! owes no review and is still signable (W7); the epic owes no review of its own
+//! diff either (W9, DEC-51); and the epic walk re-verifies every seam that
+//! carried code. The second test puts a real failing test and
 //! a malformed note in front of the review, where the preflight refuses them
 //! before any finder would spawn (W2, DEC-43).
 #![cfg(all(unix, feature = "hook-tests"))]
@@ -370,17 +371,22 @@ fn an_epic_lands_on_main_with_every_review_bound_to_its_code_and_every_note_tool
     let base = repo.sha("main");
     let (ok, said) = write_notes(&repo, "epic", "main", EPIC_JUDGMENT);
     assert!(ok, "the epic's notes are written from one judgment: {said}");
-    let code = printed_code_sha(&said);
-    assert_eq!(code, repo.code_sha(&base, &tip));
-    repo.note("cr", &tip, &cr_v5(None, &base, &code));
+    assert_eq!(printed_code_sha(&said), repo.code_sha(&base, &tip));
+
+    // W9 · the epic owes no review of its own diff (DEC-51): its seams were each
+    // reviewed at their own merge, so nothing re-judges their union. The tip
+    // carries no cr note at all, and is signable and mergeable without one.
+    assert!(!has_note(&repo, "cr", &tip), "no review is written for the epic's own diff");
     let (_, ids, said) = gate(&repo, "epic", "main");
     assert_eq!(ids, vec!["8·manual-review"], "the epic waits on its human alone: {said}");
 
     repo.write(EPIC_REPORT, "<html>the epic result</html>\n");
     confirm(&repo, "epic", "main", EPIC_REPORT);
 
-    // The walk re-verifies the seams that carried code: a review a seam has
-    // lost turns the epic red at the merge, and back green once restored.
+    // What the epic never stopped owing: the walk re-verifies the seams that
+    // carried code, so a review a seam has lost turns the epic red at the merge
+    // and back green once restored. The review left the tip; it never left the
+    // seams.
     let w1_review = repo.git(&["notes", "--ref=cr", "show", &w1]);
     repo.git(&["notes", "--ref=cr", "remove", &w1]);
     let (merged, said) = merge(&repo, "main", "epic/x");

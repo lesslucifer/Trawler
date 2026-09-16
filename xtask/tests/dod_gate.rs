@@ -678,19 +678,28 @@ fn allow_file(repo: &Repo) {
     repo.write(".mr-allowed", "email: a@b.co\n");
 }
 
+// Every note an epic tip owes, and no review: W9 stopped the epic gate asking
+// for one of its own diff (DEC-51), so every epic case below runs without it.
 fn bless_epic(repo: &Repo, changes: &str) {
     let tip = repo.sha("epic/x");
-    let base = repo.sha("main");
-    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
     repo.note(
         "test",
         &tip,
         &test_note("epic", "E9", None, "  e2e: { count: 1, covers: \"full flow\" }\n"),
     );
     repo.note("doc", &tip, &doc_note("E9", None, changes, None));
-    repo.note("cr", &tip, &cr_note("E9", None, &base, &sha, "PASS"));
     allow_file(repo);
     repo.note("mr", &tip, &mr_note("epic", &tip));
+}
+
+/// The review note an epic tip no longer owes, bound to `verdict` over the
+/// epic's own diff - what a tip carried before W9, and what a tip carrying one
+/// anyway still carries.
+fn epic_cr(repo: &Repo, verdict: &str) -> String {
+    let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    cr_note("E9", None, &base, &sha, verdict)
 }
 
 #[test]
@@ -700,6 +709,105 @@ fn green_epic_walk_verifies_the_merged_wu() {
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+// ─── W9: the epic gate reads its seams, it does not re-review them ──────────
+//
+// An epic's diff is the union of seams every Working Unit review already
+// cleared, so `3·review`, `3·review-nits`, `4·review-base` and `5·diff-binding`
+// left the epic list (DEC-51). What did not move is `7·walk`: every seam's
+// review is still re-read at the binding it declared. The cases below are that
+// pair - the demand is gone at the tip, the guarantee is intact at the seams -
+// and that the cut reaches the review alone.
+
+#[test]
+fn an_epic_tip_carrying_no_review_greens_and_says_so_on_its_receipt() {
+    let (repo, _) = epic_with_merged_wu();
+    bless_epic(&repo, T2_ENTRY);
+    assert!(
+        !repo.git(&["notes", "--ref=cr", "list"]).contains(&repo.sha("epic/x")),
+        "the fixture must leave the epic tip unreviewed"
+    );
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "unexpected failures: {}", format_report(&report));
+
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    let checks = receipt.lines().find(|l| l.starts_with("checks:")).unwrap();
+    assert_eq!(
+        checks,
+        "checks: [notes, manifest, doc-note, design, components-unbuilt, manual-review, walk]",
+        "the receipt advertises only what the epic ran"
+    );
+}
+
+// The case that proves the removal is real rather than merely unexercised: a
+// note that would have failed `5·diff-binding` outright is now read by nobody at
+// the epic, while the same staleness still refuses the seam it came from.
+#[test]
+fn a_stale_review_on_the_epic_tip_greens_while_the_same_staleness_reds_a_wu() {
+    let (repo, _) = epic_with_merged_wu();
+    bless_epic(&repo, T2_ENTRY);
+    let tip = repo.sha("epic/x");
+    repo.note("cr", &tip, &epic_cr(&repo, "PASS").replace("diff_sha256: ", "diff_sha256: 0"));
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "the check that read it is gone: {}", format_report(&report));
+
+    repo.note("cr", &tip, &epic_cr(&repo, "FAIL"));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "nor is its verdict read: {}", format_report(&report));
+
+    let wu = wu_with_change();
+    let wu_tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &wu_tip);
+    let stale = wu.git(&["notes", "--ref=cr", "show", &wu_tip]);
+    wu.note("cr", &wu_tip, &stale.replace("diff_sha256: ", "diff_sha256: 0"));
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["5·diff-binding"],
+        "the binding rule is untouched where a review is owed: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn an_epic_whose_seam_lost_its_review_is_still_refused_and_greens_once_restored() {
+    let (repo, wu_tip) = epic_with_merged_wu();
+    bless_epic(&repo, T2_ENTRY);
+    let seam_review = repo.git(&["notes", "--ref=cr", "show", &wu_tip]);
+    repo.git(&["notes", "--ref=cr", "remove", &wu_tip]);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["7·walk·1·notes"],
+        "the walk is the epic's guarantee, and it is what refuses this: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &wu_tip, &seam_review);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
+// The cut is scoped to the review: every other note an epic owes is still owed.
+#[test]
+fn an_epic_missing_any_other_note_is_still_refused() {
+    for (note_ref, check) in [("test", "1·notes"), ("doc", "1·notes"), ("mr", "8·manual-review")]
+    {
+        let (repo, _) = epic_with_merged_wu();
+        bless_epic(&repo, T2_ENTRY);
+        repo.git(&["notes", &format!("--ref={note_ref}"), "remove", &repo.sha("epic/x")]);
+
+        let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+        assert!(
+            checks_of(&report).contains(&check),
+            "a missing {note_ref} note must still refuse the epic under {check}: {}",
+            format_report(&report)
+        );
+    }
 }
 
 // The design lives on the seam, not on the epic tip: work docs are archived out
@@ -1292,8 +1400,9 @@ fn ungated_forward_wu_seam_still_walks_red() {
     );
 }
 
-// Rewrites the epic tip's cr/v2 note (already written by bless_epic) with a
-// walk_waivers block appended, preserving the diff-bound base/hash/verdict.
+// The epic tip's cr/v2 note with a walk_waivers block appended, preserving the
+// diff-bound base/hash/verdict. An epic owes no review, but the walk still reads
+// its waivers off one, so a tip that waives a seam writes the note for that.
 fn cr_note_with_waivers(epic: &str, base: &str, sha: &str, waivers: &str) -> String {
     format!("{}walk_waivers:\n{waivers}", cr_note(epic, None, base, sha, "PASS"))
 }
