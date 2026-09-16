@@ -112,6 +112,21 @@ impl GitRepo {
         sha256(&diff)
     }
 
+    /// The sha256 of `base..tip` restricted to `paths` — the subset a
+    /// `design/v1` note pins, and the shape `code_sha` narrows to the code paths.
+    pub fn paths_sha(&self, base: &str, tip: &str, paths: &[&str]) -> String {
+        let range = format!("{base}..{tip}");
+        let mut args = vec!["diff", "--no-color", "--no-ext-diff", range.as_str(), "--"];
+        args.extend_from_slice(paths);
+        sha256(&self.git_raw(&args).stdout)
+    }
+
+    /// The sha256 a `cr/v5` note binds: the code paths' half of `base..tip`
+    /// (DEC-45), matching `cargo xtask verify-dod`'s recomputation.
+    pub fn code_sha(&self, base: &str, tip: &str) -> String {
+        self.paths_sha(base, tip, &["src", "xtask", "tests", "ui/src", "ui/e2e"])
+    }
+
     /// The sha256 of a path's bytes at a revision — what an `mr/v1` note
     /// attests its result report at.
     pub fn report_sha(&self, rev: &str, path: &str) -> String {

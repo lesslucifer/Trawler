@@ -12,7 +12,8 @@ use crate::git::worktree_key;
 // this build. It stores the worktree key it vouches for, never a bare verdict,
 // so it can never report green for a tree it did not verify (DEC-2's
 // recompute-don't-trust, applied to a cache instead of a receipt).
-fn cache_path(repo: &Path) -> PathBuf {
+/// Where the green proof lives, so a caller can see what a skip is standing on.
+pub fn cache_path(repo: &Path) -> PathBuf {
     repo.join("target").join(".gate0-green")
 }
 

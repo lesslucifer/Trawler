@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Work Planning &amp; Result Reports</h1>
       <p>What the planning phase of an epic or WU must output, what the result report after the work must contain — minimum-content checklists verified by a script the agent harness triggers at authoring time. Never fixed templates, never git hooks.</p>
-      <div class="meta">v2 · 2026-07-11 · Trawler · T1 process doc</div>
+      <div class="meta">v3 · 2026-09-12 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -190,6 +190,15 @@ flowchart LR
 
     <p data-c="trigger-manual">Manual runs work anytime for feedback; no workflow step depends on
     anyone remembering one.</p>
+
+    <p data-c="trigger-only"><strong>This is the only place a document's <em>form</em> is checked</strong>
+    (<a href="decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>): no commit
+    or merge check reads a doc against its checklist or its links, and the review's preflight runs no doc
+    predicate either. The merge reads document <em>facts</em> instead — that every doc the diff touched is
+    listed in <code>doc/v1</code>, that the level's result report exists at the tip with the bytes a human
+    signed (<a href="workflow.html#gate">gate check 8</a>), and whether a design run is closed. On a
+    harness that does not run the hooks above, nothing checks a document's form at all; that is the
+    accepted cost of the owner's ruling that a doc check at commit or merge time is useless.</p>
 
     <h2 id="gates">Relation to the DoD gates</h2>
 

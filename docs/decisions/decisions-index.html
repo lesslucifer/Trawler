@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v19 · 2026-09-09 · Trawler</div>
+      <div class="meta">v21 · 2026-09-12 · Trawler</div>
     </div>
   </header>
   <main>
@@ -412,8 +412,225 @@
             runs' original wording</td>          <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-42-one-source-two-harnesses.html"><code>dec-42-one-source-two-harnesses.html</code></a></td>
+          <td><a href="dec-42-the-gate-tally-is-local-measurement.html"><code>dec-42-the-gate-tally-is-local-measurement.html</code></a></td>
           <td><span class="badge id">DEC-42</span></td>
+          <td><strong>The gate's own measurement is local, and a review round is a <code>cr</code> note in
+            the gate's range</strong> — one record per gate run, appended to <code>target/.gate-tally</code>
+            (the shape of Gate 0's cache: gitignored, never synced, wiped by <code>cargo clean</code>),
+            holding the refused check ids and the rounds the work paid; <code>cargo xtask tally</code>
+            aggregates it. E-SIMPWF's stopping rule adopts or drops W5 and W7 on a number, so the number has
+            to exist before either is argued about, and the code review's note-per-round (PASS or FAIL, on
+            the tip it judged) is what makes rounds recoverable without a transcript. Rejected: keeping the
+            tally in <code>refs/notes</code> (a per-machine reading in the permanent chain), counting note
+            rewrites on one commit (a fix is a new commit, so it reports 1 where a tip paid 4), counting gate
+            refusals as rounds, and counting what a session says it did. No gate check ever reads the file:
+            delete it and every verdict is what it was</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html"><code>dec-43-the-preflight-covers-only-what-can-void-a-pass.html</code></a></td>
+          <td><span class="badge id">DEC-43</span></td>
+          <td><strong>The review's first step is a preflight that refuses on the tree and the notes the
+            review reads, and on nothing else</strong> — <code>cargo xtask preflight wu|epic &lt;tip&gt;</code>
+            runs Gate 0 (<code>fmt</code>, <code>clippy</code>, the suite) and the merge gate's own
+            <code>1·notes</code> and <code>2·manifest</code> over <code>test/v2</code> and
+            <code>doc/v1</code> on the reviewed tip, before a finder spawns. Those three are the review's
+            own inputs, and that is the test: a check belongs here when its subject is what the review is
+            about to read, since a red one there is repaired by a commit — which orphans the PASS it would
+            have stamped — or is an input the finders would read unreadable. So it asks for neither the
+            <code>cr/v3</code> note it precedes nor the design section, the doc-note facts, or the human
+            signature, and it is scoped to a WU or epic review — the two verdicts the merge gate binds.
+            No doc-format predicate runs at commit or merge level either: a document's form is checked
+            where it is authored, so on a harness that does not run those hooks nothing checks a
+            document's form, though the merge still reads doc facts (the attested result report, a design
+            run's state). Accepted on the owner's ruling, and stated rather than implied. Rejected: making
+            the preflight a second gate or a completeness claim over the gate's other checks (it shares
+            the gate's own note checks, so the two cannot disagree), and a harness-independent doc
+            backstop</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-44-the-note-tool-derives-what-the-tooling-knows.html"><code>dec-44-the-note-tool-derives-what-the-tooling-knows.html</code></a></td>
+          <td><span class="badge id">DEC-44</span></td>
+          <td><strong>The notes a review reads are written by one command that derives every field git can
+            answer</strong> — <code>cargo xtask notes write &lt;wu|epic|commit&gt; &lt;tip&gt;</code> takes one
+            judgment document (the two notes minus their derived fields: no <code>count</code>, no
+            <code>tier</code>, no identity, no range) and writes the tip's <code>test/v2</code> and
+            <code>doc/v1</code>, computing the range (<code>base</code>, <code>head</code>,
+            <code>diff_sha256</code> — which it prints for the review's <code>cr/v3</code> note to pin), the
+            identity block from the declared WU id, the branch label, every changed doc path and its tier
+            (plus a design retired at bytes the base never held, DEC-29), and each layer's count read from the
+            test files the judgment names at the tip. The judgment keeps what no command can read: the
+            <code>covers</code> sentences, the waivers, and each doc's action, distillation and lineage. It
+            writes nothing unless the notes it derived would pass the gate's own <code>2·manifest</code> and
+            <code>6·doc-note</code> (the same functions the merge calls), and refuses a judgment that
+            disagrees with the range or with itself under <code>0·judgment</code>; a file kind it cannot count
+            is refused rather than counted as zero, and the action vocabulary
+            (<code>added|updated|archived|deleted</code>) is enforced because the gate reads only
+            <code>archived</code>. <code>--template</code> prints the derived skeleton and writes nothing.
+            Rejected: one document per note (two chances to disagree about the shared identity), typing the
+            counts and validating them afterwards (the repair this removes), counting by running the suite
+            (that is the preflight's build, DEC-43), and accepting an uncountable file as zero</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-45-the-review-binds-the-code-it-judged.html"><code>dec-45-the-review-binds-the-code-it-judged.html</code></a></td>
+          <td><span class="badge id">DEC-45</span></td>
+          <td><strong>The code review binds the code paths it judged, and nothing else</strong> — the note is
+            <code>cr/v4</code> and its <code>diff_sha256</code> is the hash of
+            <code>git diff BASE..HEAD -- &lt;the paths <code>is_code</code> names&gt;</code>, so a docs-only commit
+            landing after a PASS neither voids the verdict nor buys the fleet again while a code edit still reds
+            <code>5·diff-binding</code>. A <code>cr</code> note is demanded iff the diff touches a code path; a review
+            present on a code-free tip is ignored rather than judged, and a <code>cr/v2</code>/<code>cr/v3</code> note
+            keeps the whole-diff comparison its schema was written about, so every merged tip and every seam the epic
+            walk re-verifies is untouched. The review's inputs shrink with it: the preflight stops on the tree and
+            <code>test/v2</code> only, since a doc note can no longer orphan the PASS (DEC-43's criterion, restated).
+            Rejected: dropping the binding (a post-verdict fix would keep a PASS for unreviewed code), keeping the
+            whole-diff hash and merely not demanding the note (the cost stays), and redefining
+            <code>diff_sha256</code> inside <code>cr/v3</code> without a schema bump</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-46-the-design-verdict-has-its-own-note.html"><code>dec-46-the-design-verdict-has-its-own-note.html</code></a></td>
+          <td><span class="badge id">DEC-46</span></td>
+          <td><strong>The design dimension's verdict travels as <code>design/v1</code> on
+            <code>refs/notes/design</code></strong> — the section a <code>cr/v3</code> note carried (artifacts judged,
+            rulebook blob, its own verdict, the hand-off citations and drops), written by a design step of its own
+            (<code>.claude/skills/design-review/SKILL.md</code>, told what to judge by
+            <code>cargo xtask design-scope</code>) and read by <code>9·design</code> and only it. The note pins
+            <code>design_sha256</code> over the range's design paths, so an artifact rewritten after the verdict or a
+            rulebook that moved is refused rather than silently covered; a <code>cr/v2</code>/<code>cr/v3</code> tip
+            still has its <code>design:</code> section read from its own note, and a <code>cr/v4</code> tip or one with
+            no review is read from the design note. The code review spawns no design finder and carries no
+            <code>design:</code> section. Rejected: keeping the section on the <code>cr</code> note (a code-free
+            design diff would owe a review), reading the verdict off the design run's receipt (the hand-off is a fact
+            about the build, not the run), and keeping no note at all (the gate can see what a diff carries, never
+            that anyone read it)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-47-severity-decides-the-verdict.html"><code>dec-47-severity-decides-the-verdict.html</code></a></td>
+          <td><span class="badge id">DEC-47</span></td>
+          <td><strong>Severity decides a review's verdict, and a verified nit is dispositioned evidence rather than a
+            waiver</strong> — <code>PASS</code> = Gate 0 green and zero verified <strong>blockers or importants</strong>
+            left unwaived, so one small finding stops buying a second fleet round. Every verified nit is recorded in the
+            <code>cr/v4</code> note's <code>nits:</code> list with one disposition — <code>fixed</code> (the fix is
+            inside the range the note binds) or <code>waived</code> with a reason — and an empty sentence is no
+            disposition, refused by the merge gate under <code>3·review-nits</code>, the same rule empty test-layer and
+            walk waivers already meet. The boundary itself lives in <code>rubric.md</code> where finders and verifiers
+            both read it: <code>nit</code> is the narrow exit (<em>nothing observable changes and nothing drifts</em>),
+            uncertainty resolves upward to <code>important</code>, and the <em>verifier's</em> severity is the one the
+            verdict reads. The binding is untouched: a fix after the verdict still moves <code>CODE_SHA</code> and still
+            reds <code>5·diff-binding</code>. Rejected: letting nits pass unrecorded (the evidence goes with the cost),
+            keeping them in <code>--waive</code> (a nit recorded as an accepted failure), telling finders not to report
+            them, and allowing post-verdict fixes without re-review (that is the binding, not the severity)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-48-the-round-is-bought-on-the-clock-and-the-bill.html"><code>dec-48-the-round-is-bought-on-the-clock-and-the-bill.html</code></a></td>
+          <td><span class="badge id">DEC-48</span></td>
+          <td><strong>A review round records what it cost, Gate 0 leaves the critical path, and the fleet's shape is
+            fixed by rule</strong> — the <code>cr/v5</code> note's <code>fleet:</code> block carries
+            <code>stage_seconds</code>, <code>candidates</code> by severity, <code>verifier_model</code> and
+            <code>shards</code>, with an absent row meaning a reading nobody took rather than a measured zero, and no
+            gate check reading any of it (W1's ruling that the tally is measurement, never evidence). Gate 0 runs
+            <em>beside</em> the finder stage — <code>preflight … --defer-gate0</code> settles the checkout and the notes
+            and returns without measuring the tree, <code>cargo xtask gate0</code> spawns with the five finders, and a
+            red Gate 0 <strong>voids the round outright</strong>, the accepted cost being a doomed round's finder
+            tokens. <strong>Finders are never merged and verifiers never batched</strong>, as rules with W6's seconds
+            beside them: merging cost <strong>+354s fixed per agent</strong> for a 152%-slower stage, batching made the
+            verifier stage <strong>4.6×</strong> longer. The governing rule is that a cut which <em>moves</em> work
+            between stages buys one axis with the other, and only removing work takes both. Nothing about the bar
+            moved — dimensions, principles, severity rows, exclusions, the verdict rule and every gate check are
+            unchanged, and DEC-47's dispositions are untouched. Rejected with their numbers: dedup before the verifier
+            stage (zero duplicates measured), merging and batching, a diff-size floor that skips the fleet (correlation
+            unmeasured), naming a cheap verifier model (Haiku and Sonnet measured indistinguishable, but the WU's own
+            bar failed at <em>both</em> tiers, so it decided nothing and the swap is carried to the follow-up), and
+            dropping a finder dimension (no <code>by_finder</code> bills exist yet to choose from)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-49-a-parallel-stage-costs-its-slowest-member.html"><code>dec-49-a-parallel-stage-costs-its-slowest-member.html</code></a></td>
+          <td><span class="badge id">DEC-49</span></td>
+          <td><strong>A parallel stage costs its slowest member, so removing members buys tokens and never the
+            clock</strong> — the companion to DEC-48's rule about work <em>moved</em> between stages. A proposal to
+            shrink the fleet must name the member it removes and say whether that member is the slowest, before it is
+            worth measuring. <strong>Scoped re-verify is rejected</strong>: a corrective re-run spawns the same five
+            finders over the same scope as any other round, and <code>SKILL.md</code> §7's re-run loop is unchanged.
+            <strong>A <code>cr</code> note never reuses a verdict across tips</strong> — it binds
+            <code>diff_sha256</code> over the whole code diff (DEC-45), so reusing four dimensions would bind bytes
+            four of five dimensions never read. The numbers: corrective re-runs are <strong>31 of 197 rounds
+            (16%)</strong>, not every fix, and a third of the measurable ones had doc-only fixes DEC-45 had already
+            removed; the finder stage is <strong>219s</strong> of a 329s round against a 300s bar, and a re-run must
+            keep the dimension that raised the blocker; <strong>0 of 5</strong> dimensions are bounded to a region of
+            the diff, so "the dimensions the delta can reach" has no sound definition; and <strong>0 of 197</strong>
+            notes record which dimension raised a finding, so the pre-registered A/B could not be put to the corpus
+            at all — the rejection rests on the first three readings, not on that one. The 29s still owed to the 300s
+            bar is an input-shrinking problem (W8's L1 and L4), not a membership one. Rejected with their reasons:
+            re-running the dimensions whose prior findings touched the delta (a dimension that found nothing is
+            unbounded), reusing a verdict when the delta is small (size is not safety), reusing a verifier's verdict
+            for an identical claim (refutations rest on callers the delta may have moved, and the verifier stage is
+            parallel too), adopting it for tokens alone (~11% of rounds, bought with a note that overclaims), and
+            building it before measuring it</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html"><code>dec-50-the-fleet-carries-only-the-dimensions-that-pay.html</code></a></td>
+          <td><span class="badge id">DEC-50</span></td>
+          <td><strong>The fleet carries only the dimensions that produce severe code findings</strong> —
+            <strong>correctness</strong> and <strong>efficiency</strong> always, <strong>altitude</strong> only where
+            the diff's code paths resolve to more than one module, <strong>simplification</strong> and
+            <strong>reuse</strong> retired. Each retirement sits in <code>rubric.md</code> beside the number that
+            retired it, so "more coverage" cannot re-buy one without new evidence. From 198 rounds, 2,098 candidates
+            and 19 severe code findings: correctness <strong>~13 of 19</strong> and every code blocker ever found;
+            efficiency <strong>2</strong>, rare and uniquely catching; altitude <strong>0–1</strong>, its real yield
+            document structure that DEC-45 put out of scope; reuse <strong>3</strong> severe on ~30% of all candidate
+            volume; simplification <strong>1 in 198 rounds</strong>, its three ground-truth findings all nits under
+            DEC-47. A dropped finder is worth <strong>~213k tokens, about 20% of a round</strong> — its own agent
+            plus the ~2.2 verifiers it generates. <strong>The verifier stage batches by relevance</strong>, at most
+            four claims per batch, <strong>except that a proposed blocker is never batched</strong>: grouping is
+            exactly where a confirmation carries over, and blockers decide verdicts (3 in 198 rounds). Supersedes
+            DEC-48's "never batch the verifiers" for this shape only — W6 measured the undifferentiated whole-pool
+            batch, whose serial re-reading is the cost relevance-grouping removes. <strong>"Never merge the finders"
+            stands</strong> (+354s per merged agent). <strong>The bar moved</strong> to <em>no verified blocker or
+            important is lost</em>: W6's <em>every known-real finding is raised</em> is unpassable by construction
+            for any cut that removes scope, which is why three Working Units of measurement had produced 60 seconds.
+            The priced loss, named before the cut: simplification's D3/D4/O3 (all nits), reuse's hand-rolled CA
+            duplication of <code>trawler::test_support::tls_origin</code> — the sharpest cost, taken knowingly — and
+            altitude's O1 on single-module diffs, which the conditional keeps. Left alone: the
+            <em>uncertainty resolves upward</em> rule, a diff-size floor, returning documents to any review, and the
+            verifier model</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-51-the-epic-gate-reads-its-seams.html"><code>dec-51-the-epic-gate-reads-its-seams.html</code></a></td>
+          <td><span class="badge id">DEC-51</span></td>
+          <td><strong>The epic's own review is load-bearing — the cut is withdrawn and never shipped</strong>.
+            E-SIMPWF.W9 proposed that an epic tip owes no review of its own diff, because that diff is the union of
+            seams every Working Unit review already cleared. The corpus backed the <em>value</em> claim (29 epic
+            rounds, mean 1.79 verified, 41% returning nothing) and said nothing about the <em>role</em> claim, which
+            was the one that mattered: the epic's binding is the plain two-dot <code>base..tip</code> code hash,
+            covering every byte reachable from the tip however it arrived, while the seams' bindings are
+            parent-to-parent diffs whose union is strictly smaller. <strong>Four rounds of the WU's own review found
+            four ways code reaches <code>main</code> that the seams miss</strong>: a standalone commit in the range;
+            a standalone commit that <em>is</em> the tip, which <a href="workflow-gates.html#dec-2">DEC-2</a>'s walk
+            skips on the stated grounds that the epic gate covers it; <strong>bytes a merge commit carries of its
+            own</strong> — a hand-resolved conflict, present in neither parent, which no per-commit check can reach
+            and which is the case that decides the question; and a rendered UI file at a tip standalone commit
+            (pre-existing, surfaced by the same sweep). Every one reproduced against a real binary, refused at the
+            merge base and green after the cut. <a href="workflow-gates.html#dec-2">DEC-2</a>'s guarantee that
+            <em>"smuggled content turns the next gate red"</em> was given up without notice. The record keeps the
+            enumeration, what the attempt cost (4 rounds, 3 new blockers, 4 sibling sites restating the moved rule,
+            ~2.7M tokens) and what a future attempt owes: a proof of coverage rather than a list of positions, an
+            answer for a merge commit's own content, and a measurement of what the check <em>guards</em> rather than
+            what it yields. <strong>Nothing changed</strong>: the gate, <code>workflow.html</code> and DEC-2 stand
+            as they did. <a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a>, from the
+            same Working Unit, is independent and did land</td>
+          <td><span class="badge approval">withdrawn</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-52-one-source-two-harnesses.html"><code>dec-52-one-source-two-harnesses.html</code></a></td>
+          <td><span class="badge id">DEC-52</span></td>
           <td><strong>The agent config is one source per artifact — <code>CLAUDE.md</code> and
             <code>.claude/</code> — and Codex reads it through four symlinks</strong>
             (<code>AGENTS.md</code>, <code>.agents/skills</code>, <code>.codex/hooks.json</code>,

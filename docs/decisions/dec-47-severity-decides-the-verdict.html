@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa58ae59f34851f0dfacf31">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-47: severity decides the verdict</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-47 — severity decides the verdict, and a nit is dispositioned evidence</h1>
+      <p>E-SIMPWF.W5 stops the review collecting a severity on every finding and then discarding it. A verified
+      blocker or important fails the verdict; a verified nit does not, and instead travels in the note with what was
+      decided about it — so one small finding stops buying a second fleet round.</p>
+      <div class="meta">Decided 2026-09-13 · E-SIMPWF.W5 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>A review's verdict is decided by severity.</strong> <code>PASS</code> = Gate 0 green and zero verified
+      <strong>blockers or importants</strong> left unwaived. A verified <strong>nit</strong> never fails a verdict.</p>
+      <p data-c="disposition-rule"><strong>A nit is recorded and decided, not dropped.</strong> Every verified nit goes
+      in the <code>cr/v4</code> note's <code>nits:</code> list as a <code>finding</code> plus one disposition —
+      <code>fixed: "&lt;what changed&gt;"</code>, meaning the fix is already inside the range the note binds, or
+      <code>waived: "&lt;reason&gt;"</code>. An empty sentence is no disposition, exactly as an empty test-layer waiver
+      is no waiver, and the merge gate refuses it under <code>3·review-nits</code> — along with an entry whose
+      <code>finding</code> names nothing, and one carrying both dispositions, which records a contradiction rather
+      than a decision.</p>
+      <p data-c="boundary-rule"><strong>The boundary is written where both agents read it.</strong>
+      <code>rubric.md</code> carries the three severity rows; the finder proposes a severity and the
+      <strong>verifier's</strong> is the one the verdict reads, because only the verifier read the surrounding code.
+      Uncertainty resolves <em>upward</em>, to <code>important</code>.</p>
+      <p data-c="binding-rule"><strong>Nothing about the binding changes.</strong> A fix landing after the verdict
+      still moves <code>CODE_SHA</code> and still reds <code>5·diff-binding</code>. This record makes a small finding
+      cheap to <em>answer</em>; it does not make a post-verdict commit cheap.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>Severity was already collected twice — once by the finder, once by the verifier — and then read by nobody: the
+    verdict failed on any verified finding left unwaived. A nit therefore had exactly two exits, and both were wrong.
+    Failing the tip meant a commit, and a commit moves the code hash, which orphans the PASS and buys five finders and
+    their verifiers again for a renamed variable. Waiving it through <code>--waive</code> recorded a nit in the same
+    shape as a waived blocker, so the note could no longer tell a reader which had happened.</p>
+    <p>The epic measured where its time actually goes: the review fleet is a stable ~25% of a gate-heavy epic's active
+    agent time (<a href="workflow-gates.html#dec-11">DEC-11</a>), and E-RFINISH needed a second round on one Working
+    Unit and three rounds to close. A round bought by a finding nobody thinks is worth a commit is the cheapest of
+    those rounds to stop buying.</p>
+
+    <h2 id="risk">The risk, and what holds it</h2>
+    <table data-c="risk-table">
+      <thead><tr><th>The risk</th><th>What holds it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Severity becomes the escape hatch: a real finding relabelled <code>nit</code> to get a tip through</td>
+          <td>The boundary is stated, not assumed — <code>nit</code> is the narrow exit, reached only by surviving
+          <em>nothing observable changes and nothing drifts</em>; uncertainty resolves upward to
+          <code>important</code></td>
+        </tr>
+        <tr>
+          <td>The finder's optimism decides the verdict</td>
+          <td>The verifier's severity is what the verdict reads. The finder's is a proposal, re-judged by the agent
+          that read the code</td>
+        </tr>
+        <tr>
+          <td>The <code>nits:</code> list becomes an unread dumping ground</td>
+          <td>Every entry must be decided. An undecided one is a red gate that names the finding — the pass is cheap,
+          the decision is not optional</td>
+        </tr>
+        <tr>
+          <td>Recall falls</td>
+          <td>Measured before adoption against known-real findings, per the epic's stopping rule: a finding that fails
+          today landing as a nit drops the rule rather than arguing for it</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">Why this shape</h2>
+    <table data-c="shape-table">
+      <thead><tr><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A <code>nits:</code> section, not a waiver</td>
+          <td>A waiver says a real failure was accepted; a nit was never a failure. Keeping them apart is what lets a
+          reader of the note tell the two apart, and what keeps the waiver bill meaningful</td>
+        </tr>
+        <tr>
+          <td><code>cr/v4</code> absorbs it — no schema bump</td>
+          <td>An absent section already means what every existing note means: no nits recorded. A bump would re-review
+          in-flight tips to say something no reader would learn</td>
+        </tr>
+        <tr>
+          <td>Empty sentence = no disposition</td>
+          <td>One rule, already in the tree for test-layer waivers, walk waivers and design drops: recording that
+          something happened is not recording why</td>
+        </tr>
+        <tr>
+          <td><code>fixed</code> means inside the bound range</td>
+          <td>Any other meaning would quietly license a commit after the verdict, which the binding still refuses. The
+          cost of a post-verdict fix is a separate question</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="follows">What follows</h2>
+    <table data-c="follows-table">
+      <thead><tr><th>Follows from this</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr><td>The severity boundary the finders and verifiers apply</td><td><code>.claude/skills/code-review/rubric.md</code></td></tr>
+        <tr><td>The verdict rule and the note's <code>nits:</code> section</td><td><code>.claude/skills/code-review/SKILL.md</code> §4, §5, §6</td></tr>
+        <tr><td>The contract and the refusal</td><td><code>xtask/src/notes.rs</code> (<code>Nit</code>), <code>xtask/src/gate.rs</code> (<code>3·review-nits</code>)</td></tr>
+        <tr><td>The gate check and the note table</td><td><a href="../workflow.html">workflow.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Let a nit pass with no record at all</td>
+          <td>The saving is the same and the evidence is gone: nobody can later ask what the round found, and a real
+          finding mislabelled a nit leaves no trace to audit</td>
+        </tr>
+        <tr>
+          <td>Keep waiving nits through <code>--waive</code></td>
+          <td>It is what happens today. It costs a declaration per nit at the trigger, and it records a nit as though a
+          failure had been accepted</td>
+        </tr>
+        <tr>
+          <td>Stop finders reporting nits at all</td>
+          <td>The cheapest findings are often the ones a reader wants; and a finder told not to report small things
+          will also under-report the ones that turn out not to be small</td>
+        </tr>
+        <tr>
+          <td>Let the trigger session fix nits after the verdict without re-review</td>
+          <td>That breaks the binding, which is the one thing making a PASS mean anything. Making a post-verdict fix
+          cheap is a scoped re-verification question, not a severity one</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

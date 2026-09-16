@@ -5,6 +5,9 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod notes_write;
+pub mod preflight;
+pub mod tally;
 pub mod ui;
 pub mod wizard;
 
@@ -24,6 +27,9 @@ usage:
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
+  cargo xtask preflight <wu|epic> <tip> [--target <ref>] [--defer-gate0]  (the review's first step: gate0 + the notes it reads, before any finder spawns; --defer-gate0 skips the suite so it can run beside the finders)
+  cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
+  cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
@@ -46,6 +52,9 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
         ["design-scope", base, head] => design_scope(repo, base, head),
+        ["preflight", rest @ ..] => preflight_cmd(rest, repo),
+        ["notes", "write", rest @ ..] => notes_write::run(rest, repo),
+        ["tally", rest @ ..] => tally::run(rest, repo),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
@@ -58,21 +67,19 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
 fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
         ["wu", tip, rest @ ..] => {
-            let target = target_flag(rest)
-                .or_else(|| infer_wu_target(tip))
-                .ok_or("cannot infer the epic from the branch name; pass --target <epic-branch>")?;
-            gate_run(repo, Level::Wu, tip, &target)
+            gate_run(repo, Level::Wu, tip, &scope_target(Level::Wu, tip, rest)?)
         }
         ["epic", tip, rest @ ..] => {
-            let target = target_flag(rest).unwrap_or_else(|| "main".to_string());
+            let target = scope_target(Level::Epic, tip, rest)?;
             gate_run(repo, Level::Epic, tip, &target)
         }
         ["commit", sha] => {
-            let parent = format!("{sha}^");
+            let parent = scope_target(Level::Commit, sha, &[])?;
             let gate = Gate { repo };
             let mut report = gate.verify(Level::Commit, sha, &parent)?;
             let (tip, base) = (report.tip.clone(), report.base.clone());
             gate.check_commit_trailer(&mut report, &tip, &base)?;
+            record(repo, &report);
             Ok((i32::from(!report.green()), format_report(&report)))
         }
         ["hook", level] => hook(repo, level),
@@ -80,6 +87,51 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         ["range", old, new] => range(repo, old, new),
         _ => Err(USAGE.to_string()),
     }
+}
+
+// The review's two scopes, resolved by the same rule and the same error line as
+// `verify-dod wu|epic`: the preflight must pin the base the merge gate will pin,
+// or it would judge a different range than the note it protects. A standalone
+// commit carries no review, so it has no preflight either (SKILL.md §2).
+fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+    let (args, tree) = split_tree_flag(args);
+    match args.as_slice() {
+        ["wu", tip, rest @ ..] => {
+            preflight::run(repo, Level::Wu, tip, &scope_target(Level::Wu, tip, rest)?, tree)
+        }
+        ["epic", tip, rest @ ..] => {
+            let target = scope_target(Level::Epic, tip, rest)?;
+            preflight::run(repo, Level::Epic, tip, &target, tree)
+        }
+        _ => Err(USAGE.to_string()),
+    }
+}
+
+fn split_tree_flag<'a>(args: &[&'a str]) -> (Vec<&'a str>, preflight::Tree) {
+    let deferred = args.contains(&"--defer-gate0");
+    let kept = args.iter().copied().filter(|a| *a != "--defer-gate0").collect();
+    (kept, if deferred { preflight::Tree::Defer } else { preflight::Tree::Measure })
+}
+
+// The ref each scope's range is measured against: a WU's epic (named, or inferred
+// from the branch), an epic's main, a standalone commit's parent. One resolver for
+// the commands that judge a range - the gate, the preflight (DEC-43) and the note
+// writer (DEC-44) - so none of them can judge one range and write about another.
+pub(crate) fn scope_target(level: Level, tip_ref: &str, rest: &[&str]) -> Result<String, String> {
+    match level {
+        Level::Commit => Ok(format!("{tip_ref}^")),
+        Level::Wu => wu_scope(tip_ref, rest),
+        Level::Epic => Ok(target_flag(rest).unwrap_or_else(|| "main".to_string())),
+    }
+}
+
+// The epic a WU branch belongs to: named by the caller, or inferred from the
+// branch. One helper because two commands now resolve it, and a disagreement
+// here would gate one range and preflight another.
+pub(crate) fn wu_scope(tip: &str, rest: &[&str]) -> Result<String, String> {
+    target_flag(rest).or_else(|| infer_wu_target(tip)).ok_or_else(|| {
+        "cannot infer the epic from the branch name; pass --target <epic-branch>".to_string()
+    })
 }
 
 // The review and the merge gate must not each decide for themselves what a
@@ -98,9 +150,10 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
         return Ok((
             0,
             format!(
-                "no design artifact in {}..{} - the design dimension does not run, and the cr/v3 note carries no design section",
+                "no design artifact in {}..{} - the design dimension does not run, and the {} note carries no design section",
                 gate::short(&merge_base),
-                gate::short(&tip)
+                gate::short(&tip),
+                gate::design_carrier_note(repo, &tip)
             ),
         ));
     }
@@ -136,8 +189,9 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
     if !added.is_empty() {
         let _ = writeln!(
             out,
-            "{} new surface(s) - the cr/v3 note must cite the design each was built from (design.implements: [{{path, blob, built}}]):\n{}",
+            "{} new surface(s) - the {} note must cite the design each was built from (design.implements: [{{path, blob, built}}]):\n{}",
             added.len(),
+            gate::design_carrier_note(repo, &tip),
             added.join("\n")
         );
     }
@@ -157,14 +211,25 @@ fn gate_run(repo: &Path, level: Level, tip: &str, target: &str) -> Result<(i32, 
     let gate = Gate { repo };
     let report = gate.verify(level, tip, target)?;
     if report.exempt {
+        record(repo, &report);
         return Ok((0, format_report(&report)));
     }
     if report.green() {
         gate.write_receipt(&report)?;
+        record(repo, &report);
         Ok((0, format!("{} - dod/v1 receipt written", format_report(&report))))
     } else {
+        record(repo, &report);
         Ok((1, format_report(&report)))
     }
+}
+
+// The tally is a measurement taken on the way past, never evidence: the verdict
+// is already decided (and, on green, already receipted), and a checkout where
+// the file cannot be written - a read-only tree - gates exactly as it did
+// before. No check reads it back.
+fn record(repo: &Path, report: &gate::Report) {
+    let _ = tally::write(repo, report);
 }
 
 fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
@@ -302,6 +367,44 @@ pub(crate) fn infer_wu_target(tip: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::{flag_value, infer_wu_target};
+
+    // `design-scope` tells a reader which note to write the verdict to. It said
+    // `cr/v3` for a whole epic after DEC-46 moved the verdict to `design/v1`,
+    // because the sentence restated the rule instead of asking for it.
+    #[test]
+    fn design_scope_sends_a_reader_to_the_note_the_gate_reads() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| crate::git::git(repo, args).unwrap();
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        std::fs::write(repo.join("base.txt"), "base\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "base"]);
+        g(&["branch", "epic/x"]);
+
+        let empty = super::design_scope(repo, "epic/x", "HEAD").unwrap().1;
+        let surfaced = {
+            std::fs::create_dir_all(repo.join("ui/src")).unwrap();
+            std::fs::write(repo.join("ui/src/Thing.tsx"), "export const Thing = () => null;\n")
+                .unwrap();
+            g(&["add", "-A"]);
+            g(&["commit", "-q", "-m", "a new surface"]);
+            super::design_scope(repo, "epic/x", "HEAD").unwrap().1
+        };
+        assert!(surfaced.contains("new surface(s)"), "{surfaced}");
+
+        let tip = g(&["rev-parse", "HEAD"]);
+        let carrier = crate::gate::design_carrier_note(repo, &tip);
+        for text in [&empty, &surfaced] {
+            assert!(text.contains(carrier), "sends a reader nowhere: {text}");
+            for stale in crate::notes::CR_SCHEMAS.iter().filter(|s| **s != carrier) {
+                assert!(!text.contains(*stale), "names {stale}, not {carrier}: {text}");
+            }
+        }
+    }
 
     #[test]
     fn wu_branch_names_infer_their_epic() {

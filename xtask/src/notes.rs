@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -62,10 +64,32 @@ impl Layer {
     }
 }
 
-/// The review contracts the gate reads. `cr/v3` adds the design dimension's
-/// section; a `cr/v2` note is, by its own schema declaration, evidence written
-/// before that dimension existed.
-pub const CR_SCHEMAS: &[&str] = &["cr/v2", "cr/v3"];
+/// The review contracts the gate reads. `cr/v3` added the design dimension's
+/// section, `cr/v4` binds the code paths the review judged rather than the whole
+/// diff - so a document cannot void a PASS - and `cr/v5` records what the round
+/// spent under `fleet:`; an older note is immutable evidence, and the tip that
+/// declared one is still judged against what it declared.
+pub const CR_SCHEMAS: &[&str] = &["cr/v2", "cr/v3", "cr/v4", "cr/v5"];
+
+/// The contract a review written today declares — the newest `CR_SCHEMAS` entry.
+/// Anything telling a reader which note to go and write names it from here, so a
+/// schema bump moves one constant instead of every sentence quoting it.
+pub fn cr_schema() -> &'static str {
+    CR_SCHEMAS.last().copied().unwrap_or_default()
+}
+
+/// Whether a review contract binds the code paths the diff changes, or the whole
+/// diff. The whole-diff contracts are a closed pair: every bump since `cr/v4`
+/// keeps the code-path binding, so a newer schema is read as code-bound without
+/// this function learning its name.
+pub fn binds_code(schema: &str) -> bool {
+    !matches!(schema, "cr/v2" | "cr/v3")
+}
+
+/// The design dimension's own contract, now that its verdict travels on a note of
+/// its own: a diff can carry a design artifact and change no code, and such a diff
+/// owes the verdict without owing a review.
+pub const DESIGN_SCHEMAS: &[&str] = &["design/v1"];
 
 #[derive(Deserialize)]
 pub struct CrNote {
@@ -77,10 +101,96 @@ pub struct CrNote {
     pub base: String,
     pub diff_sha256: String,
     pub verdict: String,
+    /// The verified findings the verdict no longer fails on, each with what was
+    /// decided about it. Absent on every note written before the severity rule,
+    /// which is exactly what an empty list means.
+    #[serde(default)]
+    pub nits: Vec<Nit>,
     #[serde(default)]
     pub walk_waivers: Vec<WalkWaiver>,
     #[serde(default)]
     pub design: Option<Design>,
+    /// The round's own bill. Absent on every note written before `cr/v5`, and
+    /// read as a round that did not count itself - never as one that cost nothing.
+    #[serde(default)]
+    pub fleet: Option<Fleet>,
+}
+
+/// What a round spent, as its note recorded it: agents spawned per role, the
+/// clock each stage took, the pool it spawned them for, and what each finder
+/// returned against what the verifier confirmed. Read back by
+/// `cargo xtask tally --fleet` and by no gate check.
+#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+pub struct Fleet {
+    #[serde(default)]
+    pub finders: u32,
+    #[serde(default)]
+    pub verifiers: u32,
+    /// What judged the round's candidates. A verdict is only comparable across
+    /// rounds when the note says what bought it.
+    #[serde(default)]
+    pub verifier_model: Option<String>,
+    #[serde(default)]
+    pub shards: Option<u32>,
+    #[serde(default)]
+    pub candidates: Option<Candidates>,
+    #[serde(default)]
+    pub stage_seconds: Option<StageSeconds>,
+    #[serde(default)]
+    pub by_finder: BTreeMap<String, FinderCount>,
+}
+
+/// The pool the finders returned, by the severity they proposed - the reading a
+/// round needs to say what the candidates that never bought a verifier cost it.
+/// The severity vocabulary is the rubric's closed set, so an unknown row is
+/// refused rather than read as a silent zero on the row it was meant to be.
+#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Candidates {
+    #[serde(default)]
+    pub blocker: u32,
+    #[serde(default)]
+    pub important: u32,
+    #[serde(default)]
+    pub nit: u32,
+}
+
+/// The clock the orchestrator kept: when it spawned each stage, and when the
+/// last result came back. Every field is a reading in its own right, so an
+/// absent one is a stage that was not timed rather than a stage that took no
+/// time - the distinction the whole block exists to preserve.
+#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StageSeconds {
+    #[serde(default)]
+    pub gate0: Option<u32>,
+    #[serde(default)]
+    pub finders: Option<u32>,
+    #[serde(default)]
+    pub verifiers: Option<u32>,
+    /// End to end, and the only field the five-minute target reads.
+    #[serde(default)]
+    pub total: Option<u32>,
+}
+
+#[derive(Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+pub struct FinderCount {
+    #[serde(default)]
+    pub found: u32,
+    #[serde(default)]
+    pub verified: u32,
+}
+
+impl Candidates {
+    pub fn total(&self) -> u32 {
+        self.blocker + self.important + self.nit
+    }
+
+    /// The candidates that buy a verifier: a nit is recorded and dispositioned
+    /// without one, because it cannot move the verdict.
+    pub fn verdict_bearing(&self) -> u32 {
+        self.blocker + self.important
+    }
 }
 
 /// Tier-3's verdict: what the design dimension judged, the rulebook blob it
@@ -147,27 +257,135 @@ fn why_for<'a>(records: &'a [Excused], path: &str) -> Option<&'a str> {
     })
 }
 
-impl Design {
+/// The design dimension's verdict on a note of its own: the section a `cr/v3`
+/// note used to carry, moved off the review's note because the review no longer
+/// binds - and so can no longer certify - the documents it judged.
+#[derive(Deserialize)]
+pub struct DesignNote {
+    pub schema: String,
+    #[serde(default)]
+    pub epic: Option<String>,
+    #[serde(default)]
+    pub wu: Option<String>,
+    // Absent on a note that carries only a citation or a drop record - the same
+    // reason a `cr/v3` section's verdict is optional: a build's hand-over and an
+    // epic's drop are sections over nothing judged.
+    #[serde(default)]
+    pub base: String,
+    #[serde(default)]
+    pub design_sha256: String,
+    /// The verdict itself, in the shape a `cr/v3` section already carried it —
+    /// flattened, so the note's YAML stays flat and the two carriers cannot
+    /// drift into two shapes.
+    #[serde(flatten)]
+    pub design: Design,
+}
+
+/// The verdict, whichever note carries it: the `design:` section of a note merged
+/// before W4 (re-read at every seam the walk re-verifies), or a `design/v1` note.
+/// One shape, so the checks that read it cannot drift between the two.
+#[derive(Clone, Copy)]
+pub enum DesignCarrier<'a> {
+    Section(&'a Design),
+    Note(&'a DesignNote),
+}
+
+// The accessors hand back references with the carrier's own lifetime, not the
+// borrow of the carrier: a check that holds a `DesignCarrier` by value still reads
+// the verdict it points at.
+impl<'a> DesignCarrier<'a> {
+    // Both carriers hold the same shape, so the match happens once and every
+    // field reads through it.
+    fn design(&self) -> &'a Design {
+        match self {
+            Self::Section(d) => d,
+            Self::Note(n) => &n.design,
+        }
+    }
+
+    pub fn artifacts(&self) -> &'a [String] {
+        self.design().artifacts.as_slice()
+    }
+
+    pub fn rulebook(&self) -> &'a str {
+        &self.design().rulebook
+    }
+
+    pub fn verdict(&self) -> &'a str {
+        &self.design().verdict
+    }
+
+    pub fn dropped(&self) -> &'a [Excused] {
+        &self.design().dropped
+    }
+
+    pub fn implements(&self) -> Option<&'a Vec<Cited>> {
+        self.design().implements.as_ref()
+    }
+
+    pub fn undesigned(&self) -> &'a [Excused] {
+        &self.design().undesigned
+    }
+
     pub fn judged(&self, path: &str) -> bool {
-        self.artifacts.iter().any(|a| a == path)
+        self.artifacts().iter().any(|a| a == path)
     }
 
     // An empty reason is not a drop, for the same reason an empty waiver is not
     // a waiver: it records that something went, not why.
-    pub fn dropped_why(&self, path: &str) -> Option<&str> {
-        why_for(&self.dropped, path)
+    pub fn dropped_why(&self, path: &str) -> Option<&'a str> {
+        why_for(self.dropped(), path)
     }
 
-    pub fn undesigned_why(&self, path: &str) -> Option<&str> {
-        why_for(&self.undesigned, path)
+    pub fn undesigned_why(&self, path: &str) -> Option<&'a str> {
+        why_for(self.undesigned(), path)
     }
 
     pub fn claims(&self, path: &str) -> bool {
-        self.undesigned.iter().any(|r| r.path == path)
+        self.undesigned().iter().any(|r| r.path == path)
     }
 
-    pub fn built(&self) -> impl Iterator<Item = &str> {
-        self.implements.iter().flatten().flat_map(|c| c.built.iter()).map(String::as_str)
+    pub fn built(&self) -> impl Iterator<Item = &'a str> {
+        self.implements().into_iter().flatten().flat_map(|c| c.built.iter()).map(String::as_str)
+    }
+}
+
+/// A verified nit and what was decided about it. Recording one costs the verdict
+/// nothing; leaving it undecided is what the gate refuses, so the severity rule
+/// buys a cheaper pass without buying an unread list. `fixed` names a change
+/// already inside the range the note binds - a fix landing after the verdict
+/// moves the code hash and orphans the note, which is the binding's job.
+#[derive(Deserialize)]
+pub struct Nit {
+    pub finding: String,
+    #[serde(default)]
+    pub fixed: Option<String>,
+    #[serde(default)]
+    pub waived: Option<String>,
+}
+
+impl Nit {
+    pub fn decided(&self) -> bool {
+        self.fault().is_none()
+    }
+
+    /// What stops this entry being a decision - an empty sentence records that
+    /// something happened rather than what was decided, and two dispositions
+    /// record a contradiction, so neither is one.
+    pub fn fault(&self) -> Option<&'static str> {
+        let said =
+            |sentence: &Option<String>| sentence.as_ref().is_some_and(|s| !s.trim().is_empty());
+        if self.finding.trim().is_empty() {
+            return Some("no finding");
+        }
+        match (said(&self.fixed), said(&self.waived)) {
+            (true, false) | (false, true) => None,
+            (true, true) => Some("both fixed and waived"),
+            (false, false) if self.fixed.is_some() || self.waived.is_some() => {
+                Some("an empty disposition")
+            }
+            (false, false) => Some("no disposition"),
+        }
     }
 }
 
@@ -217,7 +435,7 @@ pub struct DocChange {
     pub distilled_to: Option<DistilledTo>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum DistilledTo {
     Paths(Vec<String>),
@@ -327,8 +545,8 @@ pub fn is_expected_tracked_doc(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DocNote,
-        TestNote,
+        binds_code, is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote,
+        DesignCarrier, DesignNote, DocNote, FinderCount, Nit, TestNote, CR_SCHEMAS,
     };
 
     #[test]
@@ -387,6 +605,244 @@ date: 2026-07-05
         assert!(note.walk_waivers.is_empty(), "absent walk_waivers defaults empty");
     }
 
+    // The severity rule's whole surface: a nit costs the verdict nothing, so the
+    // only thing left to get wrong is recording one nobody decided about.
+    #[test]
+    fn a_nit_is_decided_by_a_non_empty_fixed_or_waiver() {
+        let note: CrNote = serde_yaml::from_str(
+            "\
+schema: cr/v4
+base: aaaa
+diff_sha256: cccc
+verdict: PASS
+nits:
+  - finding: \"loop variable named x\"
+    fixed: \"renamed to frame\"
+  - finding: \"two branches could share a helper\"
+    waived: \"the helper would take three flags\"
+  - finding: \"stale doc comment\"
+    waived: \"   \"
+  - finding: \"nobody decided\"
+",
+        )
+        .expect("parses");
+        let decided: Vec<bool> = note.nits.iter().map(Nit::decided).collect();
+        assert_eq!(decided, vec![true, true, false, false]);
+        assert_eq!(note.nits[2].fault(), Some("an empty disposition"));
+        assert_eq!(note.nits[3].fault(), Some("no disposition"));
+    }
+
+    // Both faults this review found in its own first shape: a nit naming nothing
+    // was a decision about nothing, and one carrying two dispositions recorded a
+    // contradiction as though it were an answer.
+    #[test]
+    fn a_nit_naming_nothing_or_deciding_twice_is_no_decision() {
+        let nit = |entry: &str| -> CrNote {
+            serde_yaml::from_str(&format!(
+                "schema: cr/v4\nbase: a\ndiff_sha256: c\nverdict: PASS\nnits:\n  - {entry}"
+            ))
+            .expect("parses")
+        };
+        assert_eq!(
+            nit("finding: \"\"\n    waived: \"a reason for nothing\"\n").nits[0].fault(),
+            Some("no finding")
+        );
+        assert_eq!(
+            nit("finding: \"  \"\n    fixed: \"renamed\"\n").nits[0].fault(),
+            Some("no finding")
+        );
+        assert_eq!(
+            nit("finding: f\n    fixed: \"renamed\"\n    waived: \"left alone\"\n").nits[0].fault(),
+            Some("both fixed and waived")
+        );
+        assert!(nit("finding: f\n    fixed: \"renamed\"\n").nits[0].decided());
+    }
+
+    #[test]
+    fn absent_nits_is_an_empty_list_on_every_review_contract() {
+        for schema in CR_SCHEMAS {
+            let note: CrNote = serde_yaml::from_str(&format!(
+                "schema: {schema}\nbase: a\ndiff_sha256: c\nverdict: PASS\n"
+            ))
+            .expect("parses");
+            assert!(note.nits.is_empty(), "{schema} defaults to no nits");
+        }
+    }
+
+    // W6: the round's bill travels on the note, and a note without one is a round
+    // that did not count itself - the two readings must stay distinguishable, so
+    // the block is optional and never defaulted to zeros.
+    #[test]
+    fn a_cr_v5_note_carries_its_fleet_bill_and_a_note_without_one_carries_no_reading() {
+        let yaml = "\
+schema: cr/v5
+base: aaaa
+diff_sha256: cccc
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+fleet:
+  finders: 5
+  verifiers: 15
+  by_finder:
+    correctness:    { found: 9, verified: 5 }
+    simplification: { found: 6, verified: 2 }
+findings: { found: 15, verified: 7, waived: 1 }
+verdict: PASS
+";
+        let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
+        let fleet = note.fleet.expect("the bill");
+        assert_eq!((fleet.finders, fleet.verifiers), (5, 15));
+        assert_eq!(fleet.by_finder["correctness"], FinderCount { found: 9, verified: 5 });
+        assert_eq!(fleet.by_finder["simplification"], FinderCount { found: 6, verified: 2 });
+
+        for schema in CR_SCHEMAS {
+            let uncounted: CrNote = serde_yaml::from_str(&format!(
+                "schema: {schema}\nbase: a\ndiff_sha256: c\nverdict: PASS\n"
+            ))
+            .expect("parses");
+            assert!(uncounted.fleet.is_none(), "{schema}: no block is no reading, not a zero");
+        }
+    }
+
+    // A bill the tally cannot add up is a malformed note, refused where every
+    // other malformed field is - not silently read as zero agents.
+    #[test]
+    fn a_malformed_fleet_block_is_a_malformed_note() {
+        let note = |fleet: &str| {
+            serde_yaml::from_str::<CrNote>(&format!(
+                "schema: cr/v5\nbase: a\ndiff_sha256: c\nverdict: PASS\n{fleet}"
+            ))
+        };
+        assert!(note("fleet: 3\n").is_err(), "a scalar is not a bill");
+        assert!(note("fleet:\n  finders: two\n").is_err(), "a word is not a count");
+        assert!(note("fleet:\n  by_finder: [correctness]\n").is_err(), "a list names no counts");
+        assert!(note("fleet:\n  finders: 5\n").is_ok(), "a partial bill still adds up");
+    }
+
+    // W8: the bill grew a clock and a pool. Each is a reading in its own right,
+    // so the ones a round did not take stay absent rather than arriving as zeros.
+    #[test]
+    fn a_bill_carries_the_clock_the_pool_and_what_judged_the_round() {
+        let yaml = "\
+schema: cr/v5
+base: aaaa
+diff_sha256: cccc
+fleet:
+  finders: 5
+  verifiers: 4
+  verifier_model: haiku-4.5
+  shards: 2
+  candidates: { blocker: 1, important: 3, nit: 6 }
+  stage_seconds: { gate0: 58, finders: 145, verifiers: 110, total: 255 }
+verdict: PASS
+";
+        let fleet = serde_yaml::from_str::<CrNote>(yaml).expect("parses").fleet.expect("the bill");
+        assert_eq!(fleet.verifier_model.as_deref(), Some("haiku-4.5"));
+        assert_eq!(fleet.shards, Some(2));
+        let pool = fleet.candidates.expect("the pool");
+        assert_eq!((pool.total(), pool.verdict_bearing()), (10, 4));
+        assert_eq!(pool.verdict_bearing(), fleet.verifiers, "a nit buys no verifier");
+        let clock = fleet.stage_seconds.expect("the clock");
+        assert_eq!((clock.gate0, clock.finders, clock.total), (Some(58), Some(145), Some(255)));
+    }
+
+    #[test]
+    fn a_stage_the_round_did_not_time_is_absent_rather_than_zero() {
+        let bill = |bill: &str| {
+            serde_yaml::from_str::<CrNote>(&format!(
+                "schema: cr/v5\nbase: a\ndiff_sha256: c\nverdict: PASS\n{bill}"
+            ))
+            .expect("parses")
+            .fleet
+            .expect("the bill")
+        };
+        let clock = bill("fleet:\n  finders: 5\n  stage_seconds: { total: 255 }\n")
+            .stage_seconds
+            .expect("the clock");
+        assert_eq!(clock.total, Some(255));
+        assert_eq!(clock.finders, None, "a stage nobody timed is not a stage that took no time");
+
+        let uncounted = bill("fleet:\n  finders: 5\n");
+        assert!(uncounted.stage_seconds.is_none(), "no clock is no reading");
+        assert!(uncounted.candidates.is_none(), "no pool is no reading");
+        assert!(uncounted.verifier_model.is_none(), "an unnamed model is not a named one");
+    }
+
+    // The severity rows are the rubric's closed set: a row it does not name would
+    // otherwise read as a silent zero on the row it was meant to be.
+    #[test]
+    fn a_severity_the_rubric_does_not_name_is_a_malformed_note() {
+        let note = |bill: &str| {
+            serde_yaml::from_str::<CrNote>(&format!(
+                "schema: cr/v5\nbase: a\ndiff_sha256: c\nverdict: PASS\n{bill}"
+            ))
+        };
+        assert!(note("fleet:\n  candidates: { nits: 6 }\n").is_err(), "the row is nit");
+        assert!(note("fleet:\n  candidates: { nit: many }\n").is_err(), "a word is not a count");
+        assert!(
+            note("fleet:\n  stage_seconds: { setup: 12 }\n").is_err(),
+            "not a stage a round runs"
+        );
+        assert!(note("fleet:\n  candidates: { nit: 6 }\n").is_ok(), "a partial pool still adds up");
+    }
+
+    // The two whole-diff contracts are the closed set; everything after them is
+    // code-bound, so the gate never has to learn a new schema string to bind it.
+    #[test]
+    fn every_contract_after_the_whole_diff_pair_binds_the_code_paths() {
+        assert!(!binds_code("cr/v2"));
+        assert!(!binds_code("cr/v3"));
+        assert!(binds_code("cr/v4"));
+        assert!(binds_code("cr/v5"));
+        assert_eq!(CR_SCHEMAS.iter().filter(|s| !binds_code(s)).count(), 2);
+    }
+
+    // The value test below cannot bite: a hand-written literal that happens to
+    // equal today's schema passes it, and only stops passing at the next bump -
+    // which is when nobody is looking. So the rule is enforced as a rule, over
+    // every module rather than the two that were caught: nothing outside this
+    // one spells the current review contract, because everything that names it
+    // to a reader must ask `cr_schema()`.
+    //
+    // Scoped to the *current* name on purpose. A retired contract is a frozen
+    // identity, not a rule that can drift - `design_source` spells `cr/v2` and
+    // `cr/v3` to name the legacy carriers, and must keep spelling them after the
+    // next bump. `design/v1` is left out for the same reason: `DESIGN_SCHEMAS`
+    // is a singleton that has never bumped, while this list has bumped four
+    // times and was hand-edited at two of them.
+    #[test]
+    fn nothing_outside_this_module_spells_the_current_review_contract() {
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let current = super::cr_schema();
+        let mut scanned = 0;
+        for entry in std::fs::read_dir(&src).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|ext| ext != "rs")
+                || path.file_name().is_some_and(|name| name == "notes.rs")
+            {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).unwrap();
+            let shipped = text.split("#[cfg(test)]").next().unwrap();
+            for (n, line) in shipped.lines().enumerate() {
+                assert!(
+                    !line.contains(current),
+                    "{}:{} spells {current} instead of asking cr_schema(): {}",
+                    path.file_name().unwrap().to_string_lossy(),
+                    n + 1,
+                    line.trim()
+                );
+            }
+            scanned += 1;
+        }
+        assert!(scanned > 5, "scanned only {scanned} modules - the walk found nothing to read");
+    }
+
+    #[test]
+    fn the_current_review_contract_is_the_newest_one_the_list_names() {
+        assert_eq!(super::cr_schema(), *CR_SCHEMAS.last().unwrap());
+        assert!(binds_code(super::cr_schema()));
+    }
+
     // The bump is for enforcement: a v2 note has no design section and cannot be
     // given one after the fact, so the schema string is itself the record of
     // which contract the review ran under.
@@ -405,8 +861,9 @@ verdict: PASS
 ";
         let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
         let design = note.design.expect("the design section");
-        assert_eq!(design.verdict, "PASS");
-        assert_eq!(design.rulebook, "796c547");
+        let design = DesignCarrier::Section(&design);
+        assert_eq!(design.verdict(), "PASS");
+        assert_eq!(design.rulebook(), "796c547");
         assert!(design.judged("docs/work/2026-08-13-dflow-run-4.html"));
         assert!(!design.judged("docs/work/components/button.html"), "unlisted is unjudged");
 
@@ -470,6 +927,7 @@ design:
 ";
         let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
         let design = note.design.expect("the design section");
+        let design = DesignCarrier::Section(&design);
         assert_eq!(
             design.dropped_why("docs/work/components/body-renderer.html"),
             Some("never built; the panel renders bodies inline")
@@ -481,6 +939,41 @@ design:
             serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
                 .expect("parses");
         assert!(v2.design.is_none(), "a v2 note can drop nothing");
+    }
+
+    // W4's contract, at the unit level: the verdict a design-bearing tip ships now
+    // travels on its own note, and the checks read it through one shape.
+    #[test]
+    fn a_design_note_carries_the_verdict_and_the_handoff_it_answers_for() {
+        let yaml = "\
+schema: design/v1
+epic: E9
+wu: E9.W1
+base: aaaa
+design_sha256: cccc
+verdict: PASS
+artifacts: [docs/work/2026-08-13-dflow-run-4.html]
+rulebook: 796c547
+implements:
+  - path: docs/work/components/status-pill.html
+    blob: 28f5437
+    built: [ui/src/components/StatusPill.tsx]
+undesigned:
+  - path: ui/src/FlowDetail.tsx
+    why: \"a copy fix; the layout is untouched\"
+";
+        let note: DesignNote = serde_yaml::from_str(yaml).expect("parses");
+        let carrier = DesignCarrier::Note(&note);
+        assert_eq!(note.design_sha256, "cccc");
+        assert_eq!(carrier.verdict(), "PASS");
+        assert_eq!(carrier.rulebook(), "796c547");
+        assert!(carrier.judged("docs/work/2026-08-13-dflow-run-4.html"));
+        assert_eq!(carrier.built().collect::<Vec<_>>(), vec!["ui/src/components/StatusPill.tsx"]);
+        assert!(carrier.claims("ui/src/FlowDetail.tsx"));
+        assert_eq!(
+            carrier.undesigned_why("ui/src/FlowDetail.tsx"),
+            Some("a copy fix; the layout is untouched")
+        );
     }
 
     #[test]

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa55f419f34851f0dfacecb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-44: the note tool derives what the tooling knows</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-44 — the note tool derives what the tooling knows</h1>
+      <p>E-SIMPWF.W3 puts one command in front of the two notes a review reads: it computes every field
+        git can answer, writes both notes from one judgment, and refuses — writing nothing — when the
+        judgment and the range disagree.</p>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W3 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>The tip's <code>test/v2</code> and <code>doc/v1</code> notes are written by
+      <code>cargo xtask notes write &lt;wu|epic|commit&gt; &lt;tip&gt; [--target &lt;ref&gt;]
+      [--judgment &lt;path&gt;|--template]</code>, from one YAML judgment document — stdin, or
+      <code>--judgment</code> — that is the two notes with every derived field removed:
+      <code>tests</code> without <code>count</code>, <code>changes</code> without <code>tier</code>,
+      and no <code>schema</code>, <code>level</code>, <code>epic</code>, <code>wu</code> or
+      <code>branch</code>. The command puts those back from the range, so a derived fact has one
+      author and cannot be typed wrongly.</strong> <code>--template</code> prints the derived skeleton —
+      the touched doc paths with their tiers, and the layer the level requires — and writes nothing.</p>
+      <p data-c="refusal-rule">It writes nothing unless the notes it derived would pass the gate's own
+      note checks: it renders both notes, parses them back, and runs
+      <code>2·manifest</code> and <code>6·doc-note</code> with the same functions the merge calls. A
+      judgment the range denies comes back as those blocks, or as its own
+      <code>0·judgment</code> when the disagreement is inside the document itself, and the tip is left
+      untouched. On success it prints the range it pinned —
+      <code>base</code>, <code>head</code>, <code>diff_sha256</code> — which is what the review writes
+      into its <code>cr/v3</code> note, so the notes and the verdict are about one diff.</p>
+      <p data-c="exempt-rule">A diff the merge exempts — no code and no design artifact in the range — is
+      reported as exempt and written nothing for. The gate returns before it reads a note and no review is
+      asked for, so demanding one here would be this command inventing work the workflow does not owe.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>The evidence the merge reads is written by an agent between two other steps, and every field in it
+    that <em>git</em> already knows was retyped from the diff: a doc's tier, the list of changed docs, the
+    identity block, the per-layer counts. The gate catches a wrong one — <code>6·doc-note</code> compares
+    the note against the diff, <code>2·manifest</code> against the level, <code>1·notes</code> across the
+    three notes — but it catches it at the merge, after the fleet has judged the tip and the human has
+    been asked to sign it. The repair is then a commit, and a commit after a verdict orphans it
+    (<a href="workflow-gates.html#dec-27">DEC-27</a>).</p>
+    <p>The authoring step is therefore the cheapest place for these facts to be right, and the only place
+    where "right" can mean <em>computed</em> rather than <em>checked</em>. What the agent alone can
+    answer — what the tests establish, why a layer owes none, what a document now carries — stays the
+    agent's, and is what makes the note evidence rather than a restatement of the diff.</p>
+
+    <h2 id="boundary">The boundary: derived or judged</h2>
+    <table data-c="boundary-table">
+      <thead><tr><th>In the notes</th><th>Who answers it</th><th>From where, or why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>base</code>, <code>head</code>, <code>diff_sha256</code></td>
+          <td><span class="badge auto">derived</span></td>
+          <td>the gate's own range: <code>merge-base &lt;target&gt; &lt;tip&gt;</code>, the tip's full sha, and
+          the sha256 of <code>git diff --no-color --no-ext-diff base..head</code>. Printed, so the review
+          pins the same three</td>
+        </tr>
+        <tr>
+          <td><code>level</code>, and the identity block <code>epic</code>/<code>wu</code></td>
+          <td><span class="badge auto">derived</span></td>
+          <td>the level is the scope the caller named; the epic half is computed from the declared WU id
+          (<code>E-SIMPWF.W3</code> ⇒ <code>E-SIMPWF</code>), and one block is written into both notes, so
+          <code>1·notes</code> has nothing to compare that could differ. The unit's own number stays the
+          caller's declaration — nothing in the tree carries it</td>
+        </tr>
+        <tr>
+          <td>the <code>branch</code> label</td>
+          <td><span class="badge auto">derived</span></td>
+          <td>the named ref when the tip was named by one, omitted for a raw sha — the receipt's own rule,
+          because a sha names no branch</td>
+        </tr>
+        <tr>
+          <td>every changed <code>docs/</code> path, and its <code>tier</code></td>
+          <td><span class="badge auto">derived</span></td>
+          <td><code>git diff --name-only base..head</code> through the gate's own <code>tier_of</code>, plus a
+          component design the range retired at bytes the base never held
+          (<a href="dec-29-retired-design-judged-where-it-left.html">DEC-29</a>), which an endpoint diff
+          cannot show</td>
+        </tr>
+        <tr>
+          <td>each layer's <code>count</code></td>
+          <td><span class="badge auto">derived</span></td>
+          <td>the files the judgment names, read at the tip, counted by the declaration the language writes:
+          <code>#[test]</code> and <code>#[tokio::test]</code> (arguments and all) for Rust — which is what a
+          <code>proptest!</code> property carries in this tree — and <code>it(</code>, <code>test(</code> and
+          their <code>.each(</code> tables for TypeScript. It is a line rule over the file's text, and that is
+          stated rather than implied: an attribute written in another form is not counted, and text that spells
+          one is. A file the counter does not know, or one the tip does not hold, is refused rather than
+          counted as zero — so the rule's misses are loud, never a silent zero</td>
+        </tr>
+        <tr>
+          <td><code>covers</code>, <code>waived</code>, <code>t2_waived</code></td>
+          <td><span class="badge approval">judged</span></td>
+          <td>the agent: what those tests establish, why a layer owes none, why a code change distilled into
+          no T2 doc. No command can read these out of the tree, and the review judges them</td>
+        </tr>
+        <tr>
+          <td>each entry's <code>action</code>, <code>distills</code>, <code>distilled_to</code></td>
+          <td><span class="badge approval">judged</span></td>
+          <td>the agent: what happened to the document and what it now carries. The action is validated
+          against the documented vocabulary (<code>added | updated | archived | deleted</code>) because the
+          gate reads only <code>archived</code> and would otherwise pass a typo; an <code>archived</code>
+          entry's lineage is the gate's own <code>distilled_to</code> rule. <code>--template</code> prints the
+          derived <code>tier</code> inside each entry so the skeleton round-trips: the field is read, and a
+          judgment whose tier contradicts its path is refused rather than quietly overwritten</td>
+        </tr>
+        <tr>
+          <td>the verdict, the design verdict, the human signature</td>
+          <td><span class="badge auto">not here</span></td>
+          <td>the <code>cr/v3</code> note is the review's output
+          (<a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>), and the
+          <code>mr/v1</code> note is a human's. This command writes the two notes the review reads</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">What it reads, and what it leaves alone</h2>
+    <div class="diagram" data-c="flow-diagram">
+      <pre class="mermaid">
+flowchart LR
+  D["the diff: base..tip"] --> W{"notes write"}
+  J["the judgment:<br/>covers · waivers · actions"] --> W
+  F["the named test files, at the tip"] --> W
+  W -- "disagrees" --> R["0·judgment · 2·manifest · 6·doc-note<br/>nothing written"]
+  W -- "agrees" --> N["test/v2 + doc/v1<br/>+ the pinned range"]
+  N -.-> P["cargo xtask preflight (DEC-43)<br/>the tree and these two notes"]
+      </pre>
+      <div class="caption">One derivation, one writer: the range answers the note's facts, the agent answers
+      its sentences, and the gate's own checks decide whether they may be written at all.</div>
+    </div>
+    <p><strong>It reads committed bytes only.</strong> The paths come from the range and the counts from the
+    files at the tip, never from the working tree, so the notes are about the tip whoever runs it and
+    whatever is on disk. The preflight is what proves the checkout <em>is</em> that tip and the tree is
+    green (<a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>) — this command
+    is a writer, not a second gate, and it leaves the review's own evidence, the design verdict, the
+    signature, and the checks that judge the merge to the steps that own them. That line is drawn by subject,
+    as DEC-43 drew the preflight's: this command runs the checks that judge <em>the notes it writes</em>
+    (<code>2·manifest</code>, <code>6·doc-note</code> and the retirement order), and not the ones that read
+    the delivered tree instead — an epic tip's tracked-doc set, an unbuilt design, a design run left open.
+    Their repair is a commit, not a judgment about what a note says.</p>
+    <pre data-c="usage">cargo xtask notes write wu &lt;tip&gt;                     # target inferred: epic/&lt;slug&gt;
+cargo xtask notes write epic epic/simpwf --target main
+cargo xtask notes write wu &lt;tip&gt; --template           # the derived skeleton; writes nothing</pre>
+
+    <h2 id="follows">What follows</h2>
+    <table data-c="follows-table">
+      <thead><tr><th>Follows from this</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The authoring step of the workflow is a command, on the same footing as the preflight and the
+          merge gate</td>
+          <td><a href="../workflow.html">workflow.html</a>, and <code>cargo xtask notes write</code></td>
+        </tr>
+        <tr>
+          <td>A tip that moves — a fix, a review round, a doc commit — gets its notes rewritten rather than
+          repaired: the same judgment is replayed against the new range, and the counts follow the files</td>
+          <td><code>xtask/src/notes_write.rs</code>; the range is resolved on every run, and nothing is
+          cached</td>
+        </tr>
+        <tr>
+          <td>No note schema changed: the command writes the same <code>test/v2</code> and
+          <code>doc/v1</code> the standard already documents, with the derived fields filled in rather than
+          promised</td>
+          <td><a href="../testing-strategy.html">testing-strategy.html</a> §Testing DoD, unchanged</td>
+        </tr>
+        <tr>
+          <td>The gate and the writer share one implementation of the range and of a note's facts — the same
+          <code>Gate::range</code>, the same doc-path set, the same <code>check_manifest</code> and
+          <code>check_docs</code>, and one scope-to-target resolver across the gate, the preflight and this
+          command — so neither the range a note is written about nor the sentence refusing it can drift</td>
+          <td><code>xtask/src/gate.rs</code> (<code>range</code>, <code>doc_paths</code>,
+          <code>is_gated</code>, <code>check_manifest</code>, <code>Gate::check_docs</code>) and
+          <code>xtask/src/lib.rs</code> (<code>scope_target</code>)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>One judgment document per note</td>
+          <td>the identity block and the range are shared, and two documents are two chances to disagree
+          about them — which is the <code>1·notes</code> refusal the epic exists to make impossible</td>
+        </tr>
+        <tr>
+          <td>Let the agent type the counts and have the tool validate them</td>
+          <td>a number the agent writes is a number that can be wrong, and validating it afterwards is the
+          repair the command replaces. The count is read from the bytes the note attests</td>
+        </tr>
+        <tr>
+          <td>Count the tests by running the suite</td>
+          <td>the count is a fact about the tip's source, and a build in front of every note write is the
+          preflight's job (<a href="dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>).
+          A named-file rule is deterministic, hermetic, and says which files a claim rests on</td>
+        </tr>
+        <tr>
+          <td>Accept a test file whose kind has no counting rule</td>
+          <td>it would be counted as zero — a number the tree never said — turning the honest refusal of a
+          zero layer into a false one</td>
+        </tr>
+        <tr>
+          <td>Refuse to overwrite a note that already exists</td>
+          <td>rewriting the notes is how a moving tip is served: the evidence is the note on the tip, and a
+          stale judgment replayed against a new range is exactly what should replace it</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

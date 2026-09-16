@@ -244,7 +244,7 @@ flowchart LR
         </tr>
         <tr>
           <td><span class="badge id">W2</span></td>
-          <td>The epic e2e, and the truth lands: the flow test, DEC-42, the three T1 edits, the
+          <td>The epic e2e, and the truth lands: the flow test, DEC-52, the three T1 edits, the
             index row.</td>
           <td>G6 — and every gate below it</td>
           <td><code>xtask/tests/e2e_codex_harness.rs</code> · <code>xtask/Cargo.toml</code> ·
@@ -318,7 +318,7 @@ flowchart LR
         <p data-item="wu-expected">
           <code>cargo test -p xtask --all-features</code> green; the e2e asserts the four doors
           resolve and that both payload shapes produce identical verdicts on a red and a green
-          doc; DEC-42, the index row and the three T1 docs state the new rule; the epic result
+          doc; DEC-52, the index row and the three T1 docs state the new rule; the epic result
           report records the manual <code>/hooks</code> smoke as the one step no test covers.
         </p>
         <p data-item="wu-deps">E-CODEX.W1 — the flow needs all four doors.</p>
@@ -382,7 +382,7 @@ flowchart LR
         <thead><tr><th>Doc</th><th>Tier</th><th>Absorbs</th></tr></thead>
         <tbody>
           <tr>
-            <td><code>docs/decisions/dec-42-&lt;slug&gt;.html</code> (new)</td>
+            <td><code>docs/decisions/dec-52-&lt;slug&gt;.html</code> (new)</td>
             <td>T2</td>
             <td>The decision: <code>CLAUDE.md</code> + <code>.claude/</code> canonical, Codex
               reads them through four symlinks; the hook payload contract (one script, two
@@ -393,7 +393,7 @@ flowchart LR
           <tr>
             <td><code>docs/decisions/decisions-index.html</code></td>
             <td>T2</td>
-            <td>Index row for DEC-42.</td>
+            <td>Index row for DEC-52.</td>
           </tr>
           <tr>
             <td><code>docs/workflow.html</code></td>
@@ -430,7 +430,7 @@ flowchart LR
     <div data-item="open-questions">
       <p>
         All four were settled by the owner in the 2026-09-11 review round; the direction below
-        is what W1 and W2 build, and what DEC-42 records. Nothing is left open.
+        is what W1 and W2 build, and what DEC-52 records. Nothing is left open.
       </p>
       <table>
         <thead><tr><th>#</th><th>Question</th><th>Decision — owner, 2026-09-11</th></tr></thead>
@@ -443,7 +443,7 @@ flowchart LR
               added to <code>.claude/skills/</code> never needs a second step. W1 keeps the
               per-skill fallback (<code>.agents/skills/&lt;name&gt;</code> →
               <code>../../.claude/skills/&lt;name&gt;</code>) as a recorded contingency in
-              DEC-42, and the parity test enumerates <code>.claude/skills/*</code> either
+              DEC-52, and the parity test enumerates <code>.claude/skills/*</code> either
               way.</td>
           </tr>
           <tr>
@@ -453,7 +453,7 @@ flowchart LR
             <td><strong>Confirmed: yes.</strong> The link stands, and W1's parity test asserts
               the contract rather than the mechanism — both harnesses resolve to one command set
               — so a small real <code>.codex/hooks.json</code> stays legal if a future change
-              forces the split. DEC-42 records that editing the shared config re-prompts trust:
+              forces the split. DEC-52 records that editing the shared config re-prompts trust:
               the intended review point, not a defect.</td>
           </tr>
           <tr>
@@ -470,7 +470,7 @@ flowchart LR
             <td>Is the <code>/hooks</code> trust step a gap in the epic's evidence?</td>
             <td><strong>Confirmed, as proposed: accepted and named.</strong> Trust is a
               per-machine store Codex manages; the epic proves the configuration contract and
-              records the operator step in DEC-42, exactly as <code>.mr-allowed</code> is
+              records the operator step in DEC-52, exactly as <code>.mr-allowed</code> is
               provisioned per machine and never asserted by a test.</td>
           </tr>
         </tbody>

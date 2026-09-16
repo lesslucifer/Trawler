@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aa4fcf89f34851f0dface76">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-42: the gate tally is local measurement</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-42 — the gate tally is local measurement, and a review round is a <code>cr</code> note in the range</h1>
+      <p>E-SIMPWF decides which cuts to adopt by counting what the workflow actually costs, so the counts
+        have to exist before W5 and W7 can be argued either way. This records what is counted, where it
+        is kept, and why it is never evidence.</p>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W1 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>Every gate run appends one record to <code>target/.gate-tally</code>: the level it ran at,
+      the tip and base it judged, the check ids that refused, and how many review rounds the tip's own line
+      paid.</strong> A gate run is an invocation that computes a report — <code>verify-dod wu|epic</code>
+      (including the merge hook) or <code>verify-dod commit</code>; the pre-push <code>range</code> sweep
+      re-checks commits that already paid their own gate. <code>cargo xtask tally</code> aggregates the file
+      — refusals counted per check id per level, rounds listed per tip. The file is local measurement: under
+      the gitignored <code>target/</code>, in the shape of Gate 0's cache, never a git note, never synced, and
+      never read back by any gate check.</p>
+    </div>
+
+    <h2 id="why">Why it needed deciding</h2>
+    <p>The epic's own rule is <a href="workflow-gates.html#dec-11">DEC-11</a>'s: a cut is adopted on a
+    measurement, not on an impression. W5 (a nit stops restarting the review) and W7 (a delta re-runs only
+    the dimensions it can reach) both lower a bar if they are wrong, so both need a before/after number —
+    and an epic that argues about which numbers matter after the work has landed has already lost the
+    argument. Three questions had no answer in the tree: what a "refusal" is, what a "review round" is,
+    and whether the answer belongs in the evidence chain at all.</p>
+
+    <h2 id="shape">What is counted, and where it lives</h2>
+    <table data-c="shape-table">
+      <thead><tr><th>Recorded</th><th>Why that, and not something else</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Every gate run</strong>, green, red or exempt — <code>verify-dod wu|epic|commit</code>
+          and the merge hook. The pre-push <code>range</code> sweep records nothing: it re-checks commits that
+          already paid their own gate</td>
+          <td>A tally of refusals alone would never show the denominator: <em>3 of 6 tips refused</em> is a
+          different fact from <em>3 refusals</em>, and a green tip still paid for its rounds.</td>
+        </tr>
+        <tr>
+          <td><strong>The refused check ids</strong>, as the gate printed them (<code>1·notes</code>,
+          <code>6·doc-note</code>, <code>7·walk·2·manifest</code>)</td>
+          <td>The id is the unit a later cut targets: "manifest refusals cost the most repair time" is
+          actionable, "something went red" is not. Waivers are not refusals and are not counted.</td>
+        </tr>
+        <tr>
+          <td><strong>The rounds a tip paid</strong> — one <code>cr</code> note per review run, attached to the
+          commit that run judged, so the notes on the tip's own first-parent line from the gate's base are the
+          rounds that line paid for</td>
+          <td>The rounds are the cost W5 and W7 exist to cut, and they are already on the record: the code
+          review writes its note whether the verdict is PASS or FAIL.</td>
+        </tr>
+        <tr>
+          <td><strong>Nothing else</strong> — no durations, no token counts, no estimates</td>
+          <td>The two facts a later cut is argued from are the two the tooling already knows. A number
+          nobody can recompute is an impression with a decimal point.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="chain-diagram">
+      <pre class="mermaid">
+flowchart LR
+  T["the tree + its notes<br/>(the evidence chain)"] --> G["verify-dod<br/>recomputes a verdict"]
+  G --> R["target/.gate-tally<br/>a local reading"]
+  R --> C["cargo xtask tally"]
+  R -. "never read by" .-> G
+      </pre>
+      <div class="caption">One direction only. A doctored or deleted tally cannot move a verdict, and a fresh clone simply has no reading until it runs a gate.</div>
+    </div>
+
+    <h2 id="rounds">A review round is a <code>cr</code> note in the range</h2>
+    <p>The code-review skill writes one note per run on the tip it judged
+    (<a href="../workflow.html">workflow</a> §Evidence), PASS or FAIL. Attaching each round to the commit it
+    judged is what makes the count recoverable later without a transcript: the notes are immutable, they
+    survive on the branch, and a fix that produces a new commit adds a round rather than replacing one. The
+    count is taken over the tip's <strong>first-parent line</strong> from the gate's merge-base: the commits
+    arranged as the tip's own line, because a branch that merged another's reviewed work in would otherwise
+    bill this tip for rounds it never paid. On an epic tip that line is the epic's own commits — each WU's
+    rounds are counted on the WU tip's row, where the merge put them.</p>
+    <table data-c="rounds-table">
+      <thead><tr><th>Rejected definition</th><th>Why it does not measure the same thing</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Every <code>cr</code> note reachable in the gate's <code>base..tip</code> range</td>
+          <td>A back-merge brings another branch's reviewed commits into the range, so this tip is billed for
+          rounds paid elsewhere — and summed across an epic, the same rounds are counted twice.</td>
+        </tr>
+        <tr>
+          <td>The number of times a note was rewritten on one commit (the notes ref's history)</td>
+          <td>A fix is a new commit, so re-runs land on new tips and the per-commit rewrite count stays at 1 —
+          it would have reported the W7 tip at 1 round where it actually paid 4.</td>
+        </tr>
+        <tr>
+          <td>The number of gate invocations that refused on a tip</td>
+          <td>That counts repairs triggered late, not review runs. A review re-run after a red test is a round;
+          a gate run three times by hand while debugging is not.</td>
+        </tr>
+        <tr>
+          <td>What the triggering session reports in its transcript</td>
+          <td>Unrecoverable and unfalsifiable. The epic's expected result is that the owner can answer the
+          question <em>without</em> reading a transcript.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>A range the gate cannot read records no round count at all, and the summary says so rather than
+    contributing a zero: an unreadable reading and a reading of nothing are different facts.</p>
+
+    <h2 id="not-evidence">Why it is never evidence</h2>
+    <div class="cards" data-c="not-evidence-cards">
+      <div class="card">
+        <h3>It is a reading, not a receipt</h3>
+        <p>A receipt says <em>this tip was verified</em> and is recomputed by the gate that reads it
+        (<a href="workflow-gates.html#dec-2">DEC-2</a>). A tally says <em>this checkout saw these refusals</em>
+        and is true of one machine. Keeping it in <code>refs/notes</code> would put a per-machine reading into
+        the permanent chain, where a fresh clone would have to treat it as history it can trust.</p>
+      </div>
+      <div class="card">
+        <h3>It expires honestly</h3>
+        <p><code>target/</code> is gitignored and <code>cargo clean</code> takes it. The measurement starts
+        again from zero on a clean checkout, which is the truth about it — a count that survived a clone
+        would be a claim about a machine nobody can inspect. It is a reading rather than a history, so it is
+        also bounded: past 2048 records the oldest half goes.</p>
+      </div>
+      <div class="card">
+        <h3>It is written on the way past</h3>
+        <p>The gate appends its record after it has computed the verdict. A tree where the file cannot be
+        written — a read-only checkout — still gates exactly as it did before, and no check reads the file
+        back.</p>
+      </div>
+    </div>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences-table">
+      <thead><tr><th>Follows from this</th><th>Where it shows</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>W5 and W7 argue from a number that exists before they land, and a dropped WU is dropped with its
+          count beside it (the epic's stopping rule)</td>
+          <td><code>cargo xtask tally</code>, per-check and per-tip rows</td>
+        </tr>
+        <tr>
+          <td>The measurement's shape can change without a schema bump or a note rewrite, because nothing
+          persists in git</td>
+          <td><code>xtask/src/tally.rs</code> — the code is the contract</td>
+        </tr>
+        <tr>
+          <td>No gate check, note schema or merge rule changes: this decision adds a subcommand and a local
+          file</td>
+          <td>the W1 diff</td>
+        </tr>
+        <tr>
+          <td>A reader who wants the rounds of a tip that predates this decision can still count them by hand
+          — the notes are on the tip's line</td>
+          <td><code>git rev-list --first-parent base..tip</code> against the commits carrying
+          <code>refs/notes/cr</code>; a tip already merged has an empty range, so count from the fork point it
+          was reviewed against</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

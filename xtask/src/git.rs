@@ -178,9 +178,24 @@ pub fn last_state(repo: &Path, tip: &str, path: &str) -> Option<(String, String)
 }
 
 pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String> {
+    diff_sha256_paths(repo, base, tip, &[])
+}
+
+// The same hash over a subset of the range: the review binds the code paths it
+// judged and the design step binds the artifacts it read, so a document the
+// review never opened cannot move the bytes its PASS is checked against. Both
+// sides of each binding call this one function, so what is hashed is the same
+// bytes on both.
+pub fn diff_sha256_paths(
+    repo: &Path,
+    base: &str,
+    tip: &str,
+    paths: &[String],
+) -> Result<String, String> {
     let range = format!("{base}..{tip}");
     let diff = cmd(repo)
-        .args(["diff", "--no-color", "--no-ext-diff", &range])
+        .args(["diff", "--no-color", "--no-ext-diff", &range, "--"])
+        .args(paths)
         .output()
         .map_err(|e| format!("failed to spawn git diff: {e}"))?;
     if !diff.status.success() {

@@ -74,7 +74,7 @@
         <tbody>
           <tr>
             <td>1</td>
-            <td>DEC-42 and its index row land at the epic's distillation (W2)</td>
+            <td>DEC-52 and its index row land at the epic's distillation (W2)</td>
             <td><strong>They land here</strong>, in this WU's third commit</td>
             <td>This WU's only code-path files are its own tests, so the doc gate's code-change rule
               would have needed a <code>t2_waived</code> for the ruling this WU makes. The decision is
@@ -116,7 +116,7 @@
             <td>Commits</td>
             <td><code>e1655f3</code> the four doors + the shared command ·
               <code>127a87a</code> the payload-tolerant script + tests ·
-              <code>5d232b8</code> DEC-42 + index ·
+              <code>5d232b8</code> DEC-52 + index ·
               <code>b98bba8</code>, <code>f4bc80d</code>, <code>ee6a403</code> the review-round
               fixes</td>
           </tr>
@@ -176,7 +176,7 @@
           </tr>
           <tr>
             <td>Docs</td>
-            <td><a href="../decisions/dec-42-one-source-two-harnesses.html">DEC-42</a> + its index row;
+            <td><a href="../decisions/dec-52-one-source-two-harnesses.html">DEC-52</a> + its index row;
               this plan/result pair under <code>docs/work/</code></td>
           </tr>
           <tr>
@@ -189,7 +189,7 @@
 
     <h2 id="distillation">Distillation</h2>
     <p data-item="distillation">
-      <a href="../decisions/dec-42-one-source-two-harnesses.html">DEC-42</a> (new, T2) carries the
+      <a href="../decisions/dec-52-one-source-two-harnesses.html">DEC-52</a> (new, T2) carries the
       rule: canonical stays <code>CLAUDE.md</code> + <code>.claude/</code>, Codex reads it through
       four symlinks, the shared hooks file stays hooks-only with worktree-resolving commands, one
       script reads both payload shapes, and the <code>/hooks</code> trust step is per machine.
@@ -202,7 +202,7 @@
     <h2 id="follow-ups">Follow-ups</h2>
     <ul data-item="follow-ups">
       <li><strong>The manual smoke, by a human, once:</strong> a Codex session must review and trust
-        the project hooks (<code>/hooks</code>) before they run — the per-machine step DEC-42 records
+        the project hooks (<code>/hooks</code>) before they run — the per-machine step DEC-52 records
         and no test can assert. W2's epic result notes it as the one uncovered step.</li>
       <li><strong>E-CODEX.W2</strong> — the four-door e2e against the committed config, the three T1
         wording edits, and the epic result report.</li>
