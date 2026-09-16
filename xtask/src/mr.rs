@@ -141,27 +141,14 @@ fn signed_note_body(
     )
 }
 
-const SIGN_LAST_HEAD: &str = "\
+pub const SIGN_LAST: &str = "\
 A signature binds the tree. Every later tree change - a fix, a missed test, a doc
              edit - orphans it and costs another review and another signature, so the
              tree settles BEFORE a human is asked to sign:
                1. test/v2 + doc/v1 notes on the tip   (writing the receipt is what
-                  carries adding the test and settling the docs)";
-
-const SIGN_LAST_REVIEW: &str = "
-               2. the code-review skill -> cr/v5 PASS bound to this exact diff";
-
-const SIGN_LAST_TAIL: &str = "
+                  carries adding the test and settling the docs)
+               2. the code-review skill -> cr/v5 PASS bound to this exact diff
                3. THEN cargo xtask mr confirm";
-
-/// The ordering a refusal prints. It names the review only where the level runs
-/// one: an epic owes no review of its own diff (DEC-51), and an instruction to
-/// buy a fleet nothing will read is one an agent would follow.
-pub fn sign_last(level: crate::gate::Level) -> String {
-    let review =
-        if crate::gate::runs_at(crate::gate::REVIEW, level) { SIGN_LAST_REVIEW } else { "" };
-    format!("{SIGN_LAST_HEAD}{review}{SIGN_LAST_TAIL}")
-}
 
 /// Why a tip is not ready to be signed, given what its notes say. Pure so the
 /// rule is testable without a repo: `review` is the tip's code-review note as
@@ -174,12 +161,8 @@ pub fn sign_last(level: crate::gate::Level) -> String {
 /// code path and no design artifact, so demanding notes of it would refuse a tip
 /// the gate greens and leave a docs-only Working Unit unmergeable — `8·manual-review`
 /// wants an `mr/v1` that `notes write` and the review both decline to supply.
-/// `level` settles the review the same way one level up: an epic tip owes no
-/// review of its own diff, so the signer is never asked for one the merge gate
-/// will never read — [`crate::gate::runs_at`] is the single rule both ask.
 fn unready_reasons(
     gated: bool,
-    level: crate::gate::Level,
     has_test: bool,
     has_doc: bool,
     review: Option<(&str, &str)>,
@@ -195,9 +178,6 @@ fn unready_reasons(
     if !has_doc {
         missing
             .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
-    }
-    if !crate::gate::runs_at(crate::gate::REVIEW, level) {
-        return missing;
     }
     match review {
         None => missing.push("no cr/v5 note - nobody has reviewed this tip".to_string()),
@@ -219,13 +199,7 @@ fn unready_reasons(
 /// hashes of the range being attested. What the tip's note binds is
 /// [`crate::gate::reviewed_binding`]'s to say — the one rule `5·diff-binding`
 /// reads, so this never refuses a tip the merge gate would green.
-fn tip_unready(
-    repo: &Path,
-    tip: &str,
-    range: Option<(&str, &str)>,
-    gated: bool,
-    level: crate::gate::Level,
-) -> Vec<String> {
+fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>, gated: bool) -> Vec<String> {
     let cr = crate::git::parsed_note::<crate::notes::CrNote>(repo, "cr", tip);
     let bound = cr
         .as_ref()
@@ -233,7 +207,6 @@ fn tip_unready(
         .and_then(|(c, (whole, code))| crate::gate::reviewed_binding(&c.schema, whole, code));
     unready_reasons(
         gated,
-        level,
         note(repo, "test", tip).is_some(),
         note(repo, "doc", tip).is_some(),
         cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
@@ -510,17 +483,10 @@ fn mr_confirm(
         }
         None => None,
     };
-    // The code hash is the review's binding and nothing else reads it, so it is
-    // taken only where the level runs a review - hashing an epic's whole code diff
-    // to feed a check that returns before looking is the cost gate.rs stopped paying.
     let reviewed = match range.as_ref() {
         Some((base, names)) => {
             let hash = diff_sha256(repo, base, &tip)?;
-            let code = if crate::gate::runs_at(crate::gate::REVIEW, gate_level) {
-                crate::gate::Gate { repo }.code_sha256(base, &tip, names)?
-            } else {
-                String::new()
-            };
+            let code = crate::gate::Gate { repo }.code_sha256(base, &tip, names)?;
             Some((base.clone(), hash, code))
         }
         None => None,
@@ -531,19 +497,11 @@ fn mr_confirm(
         let (docs, retired) = crate::gate::Gate { repo }.judged_of(gate_level, base, &tip, names);
         crate::gate::is_gated(names, &crate::gate::judged_docs(&docs, &retired))
     });
-    let unready = tip_unready(
-        repo,
-        &tip,
-        reviewed.as_ref().map(|(_, h, c)| (h.as_str(), c.as_str())),
-        gated,
-        gate_level,
-    );
+    let unready =
+        tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h, c)| (h.as_str(), c.as_str())), gated);
     if !unready.is_empty() {
         let why = unready.iter().map(|r| format!("  - {r}")).collect::<Vec<_>>().join("\n");
-        return Ok((
-            1,
-            format!("{} is not ready to sign:\n{why}\n{}", short(&tip), sign_last(gate_level)),
-        ));
+        return Ok((1, format!("{} is not ready to sign:\n{why}\n{SIGN_LAST}", short(&tip))));
     }
     let report = resolve_report(repo, &level_word, &tip, report_flag, input)?;
     let rsha = report_sha(repo, &tip, &report)?;
@@ -1118,7 +1076,6 @@ mod tests {
         match_tier, pub_path_for, short, signature_authorised, signed_note_body, signer_program,
         touch_hint, trailer_of, Allowed, NOTE_NAMESPACE, SE_KEY_HEADER,
     };
-    use crate::gate::Level;
 
     fn allowed() -> Vec<Allowed> {
         vec![
@@ -1383,14 +1340,13 @@ mod tests {
 
     #[test]
     fn a_settled_reviewed_tip_is_ready_to_sign() {
-        let r =
-            super::unready_reasons(true, Level::Wu, true, true, Some(("PASS", "abc")), Some("abc"));
+        let r = super::unready_reasons(true, true, true, Some(("PASS", "abc")), Some("abc"));
         assert!(r.is_empty(), "{r:?}");
     }
 
     #[test]
     fn every_unwritten_receipt_is_named_at_once() {
-        let r = super::unready_reasons(true, Level::Wu, false, false, None, Some("abc"));
+        let r = super::unready_reasons(true, false, false, None, Some("abc"));
         assert_eq!(r.len(), 3, "{r:?}");
         assert!(r[0].contains("test/v2"), "{r:?}");
         assert!(r[1].contains("doc/v1"), "{r:?}");
@@ -1399,7 +1355,7 @@ mod tests {
 
     #[test]
     fn an_exempt_tip_is_ready_to_sign_with_no_notes_at_all() {
-        let r = super::unready_reasons(false, Level::Wu, false, false, None, None);
+        let r = super::unready_reasons(false, false, false, None, None);
         assert!(
             r.is_empty(),
             "a diff the merge exempts owes no test/v2, doc/v1 or cr/v5 - demanding them \
@@ -1408,49 +1364,19 @@ mod tests {
         );
     }
 
-    // The refusal must not instruct what the level does not owe: an agent reads
-    // this ordering and follows it, so naming the review at an epic buys a fleet
-    // whose verdict nothing will ever read.
-    #[test]
-    fn the_signing_order_names_the_review_only_where_the_level_runs_one() {
-        let wu = super::sign_last(Level::Wu);
-        assert!(wu.contains("code-review skill"), "{wu}");
-        assert!(wu.contains("1. test/v2") && wu.contains("3. THEN"), "{wu}");
-
-        let epic = super::sign_last(Level::Epic);
-        assert!(!epic.contains("code-review"), "an epic owes no review of its own diff: {epic}");
-        assert!(!epic.contains("cr/v5"), "{epic}");
-        assert!(epic.contains("1. test/v2") && epic.contains("3. THEN"), "{epic}");
-    }
-
-    // W9 · an epic tip owes no review of its own diff (DEC-51): the merge gate
-    // stopped reading one, so the signer is never held on a note nothing will
-    // read. Its test/v2 and doc/v1 are untouched by that.
-    #[test]
-    fn an_epic_tip_is_ready_to_sign_with_no_review_note() {
-        let r = super::unready_reasons(true, Level::Epic, true, true, None, None);
-        assert!(r.is_empty(), "{r:?}");
-
-        let unwritten = super::unready_reasons(true, Level::Epic, false, false, None, None);
-        assert_eq!(unwritten.len(), 2, "{unwritten:?}");
-        assert!(unwritten.iter().all(|m| !m.contains("cr/v5")), "{unwritten:?}");
-    }
-
     #[test]
     fn the_exemption_never_relaxes_a_gated_tip() {
-        let r = super::unready_reasons(true, Level::Wu, false, false, None, None);
+        let r = super::unready_reasons(true, false, false, None, None);
         assert_eq!(r.len(), 3, "{r:?}");
     }
 
     #[test]
     fn a_failing_or_unbound_review_blocks_the_signature() {
-        let failed =
-            super::unready_reasons(true, Level::Wu, true, true, Some(("FAIL", "abc")), Some("abc"));
+        let failed = super::unready_reasons(true, true, true, Some(("FAIL", "abc")), Some("abc"));
         assert_eq!(failed.len(), 1);
         assert!(failed[0].contains("verdict is FAIL"), "{failed:?}");
 
-        let stale =
-            super::unready_reasons(true, Level::Wu, true, true, Some(("PASS", "old")), Some("new"));
+        let stale = super::unready_reasons(true, true, true, Some(("PASS", "old")), Some("new"));
         assert_eq!(stale.len(), 1);
         assert!(stale[0].contains("different diff"), "{stale:?}");
     }
@@ -1460,10 +1386,9 @@ mod tests {
     // 5·diff-binding still refuses a stale review later.
     #[test]
     fn an_unresolvable_target_drops_only_the_binding_check() {
-        let r = super::unready_reasons(true, Level::Wu, true, true, Some(("PASS", "abc")), None);
+        let r = super::unready_reasons(true, true, true, Some(("PASS", "abc")), None);
         assert!(r.is_empty(), "{r:?}");
-        let still_fails =
-            super::unready_reasons(true, Level::Wu, true, true, Some(("FAIL", "abc")), None);
+        let still_fails = super::unready_reasons(true, true, true, Some(("FAIL", "abc")), None);
         assert_eq!(still_fails.len(), 1, "{still_fails:?}");
     }
 

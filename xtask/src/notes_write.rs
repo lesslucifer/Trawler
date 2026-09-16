@@ -773,14 +773,9 @@ fn written(level: Level, range: &Range, wrote: &[&str]) -> String {
     let binding = if range.code_sha256.is_empty() {
         "this range changes no code, so no review binds it: the cr note is not asked for"
             .to_string()
-    } else if crate::gate::runs_at(crate::gate::REVIEW, level) {
-        format!(
-            "code_sha256: {}\nthe review binds the code paths in its cr/v5 note, and the design step pins what it judged in design/v1",
-            range.code_sha256
-        )
     } else {
         format!(
-            "code_sha256: {}\nthis level asks for no review of its own diff - every seam carries its own (DEC-51); the design step pins what it judged in design/v1",
+            "code_sha256: {}\nthe review binds the code paths in its cr/v5 note, and the design step pins what it judged in design/v1",
             range.code_sha256
         )
     };
@@ -802,36 +797,6 @@ mod tests {
     };
     use crate::gate::Level;
     use crate::notes::{DocChange, DocNote, TestNote};
-
-    fn range_over_code(code_sha256: &str) -> super::Range {
-        super::Range {
-            tip_ref: "HEAD".to_string(),
-            tip: "c4b1e31e4020e6718146971b7feecfbc9dd76bf8".to_string(),
-            base: "f6948c1b8f79a63bc8b436049d73729d515aec67".to_string(),
-            diff_sha256: "cef8b5b0".to_string(),
-            code_sha256: code_sha256.to_string(),
-            names: vec!["src/lib.rs".to_string()],
-            branch: None,
-        }
-    }
-
-    // What the tool prints is what an agent does next, so it may not name a note
-    // the level does not owe: an epic's seams carry their reviews and the epic
-    // itself carries none (DEC-51). The rule is asked of the gate, never restated.
-    #[test]
-    fn the_written_message_names_a_review_only_where_the_level_runs_one() {
-        let wu = super::written(Level::Wu, &range_over_code("eed5194d"), &["test/v2"]);
-        assert!(wu.contains("the review binds the code paths in its cr/v5 note"), "{wu}");
-
-        let epic = super::written(Level::Epic, &range_over_code("eed5194d"), &["test/v2"]);
-        assert!(epic.contains("code_sha256: eed5194d"), "the hash is still printed: {epic}");
-        assert!(!epic.contains("cr/v5"), "an epic owes no review of its own diff: {epic}");
-        assert!(epic.contains("every seam carries its own"), "{epic}");
-        assert!(epic.contains("design/v1"), "the design step is unaffected: {epic}");
-
-        let no_code = super::written(Level::Wu, &range_over_code(""), &["test/v2"]);
-        assert!(no_code.contains("no review binds it"), "{no_code}");
-    }
 
     // The count is the whole reason this command exists: it is derived from the
     // bytes at the tip, so it can be neither mistyped nor guessed.

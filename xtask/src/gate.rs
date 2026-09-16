@@ -63,11 +63,12 @@ struct Check {
 const CHECKS: &[Check] = &[
     Check { id: "1·notes", receipt: "notes", runs: Runs::At(ALL) },
     Check { id: "2·manifest", receipt: "manifest", runs: Runs::At(ALL) },
-    // Where code lands, and only there: a Working Unit seam, or a standalone
-    // commit that landed code outside one. An epic re-reads those at `7·walk`
-    // and re-reviews nothing (DEC-51), which holds only because every byte in it
-    // arrived through a level that owed a review of its own.
-    Check { id: REVIEW, receipt: "review", runs: Runs::At(&[Level::Commit, Level::Wu]) },
+    // An epic reviews its own `base..tip` diff as well as reading its seams, and
+    // that is load-bearing rather than redundant: the endpoint diff is the only
+    // one that covers a byte no commit in the range can be diffed for - one a
+    // merge commit carries of its own. E-SIMPWF.W9 tried to cut it and withdrew
+    // (`docs/decisions/dec-51-the-epic-gate-reads-its-seams.html`).
+    Check { id: REVIEW, receipt: "review", runs: Runs::At(&[Level::Wu, Level::Epic]) },
     Check { id: REVIEW_NITS, receipt: "review-nits", runs: Runs::With(REVIEW) },
     Check { id: REVIEW_BASE, receipt: "review-base", runs: Runs::With(REVIEW) },
     Check { id: DIFF_BINDING, receipt: "diff-binding", runs: Runs::With(REVIEW) },
@@ -80,9 +81,9 @@ const CHECKS: &[Check] = &[
     Check { id: "7·walk", receipt: "walk", runs: Runs::At(&[Level::Epic]) },
 ];
 
-/// Whether `level` runs `check`, by [`CHECKS`] id. An epic reads its seams'
-/// reviews at `7·walk` and owes no review of its own diff (DEC-51), which is why
-/// the merge gate and `mr confirm`'s readiness check both ask here.
+/// Whether `level` runs `check`, by [`CHECKS`] id. The receipt renders through
+/// this and so does the guard around the review checks, so what a level
+/// advertises and what it runs are one answer.
 pub fn runs_at(check: &str, level: Level) -> bool {
     CHECKS.iter().any(|c| c.id == check) && levels_of(check).contains(&level)
 }
@@ -348,10 +349,8 @@ impl Gate<'_> {
         let parsed = self.load_notes(&mut report, &names, Notes::All);
         check_manifest(&mut report, parsed.test.as_ref());
         if runs_at(REVIEW, level) {
-            let code = self.code_sha256(&report.base, &report.tip, &names)?;
-            let (base, whole) = (report.base.clone(), report.diff_sha256.clone());
-            let judged = Judged { base: &base, whole: &whole, code: &code };
-            check_review(&mut report, parsed.cr.as_ref(), &judged);
+            let code_sha256 = self.code_sha256(&report.base, &report.tip, &names)?;
+            check_review(&mut report, parsed.cr.as_ref(), &code_sha256);
         }
         if level != Level::Commit {
             let source = design_source(parsed.cr.as_ref(), parsed.design.as_ref());
@@ -370,7 +369,6 @@ impl Gate<'_> {
         self.check_docs(&mut report, parsed.doc.as_ref(), &names, &retired_paths);
         if level == Level::Epic {
             self.walk(&mut report, target_ref)?;
-            self.check_tip_commit_review(&mut report, parsed.cr.as_ref())?;
         }
         Ok(report)
     }
@@ -383,10 +381,10 @@ impl Gate<'_> {
         let cr = if notes == Notes::Paperwork {
             None
         } else {
-            // Two tips are asked for no review and refused for no missing note: one
-            // whose diff changes no code, and an epic, whose seams were each
-            // reviewed at their own merge (DEC-51). Either may still carry a note -
-            // an epic's holds the walk's waivers - so it is read whenever present.
+            // A diff that changes no code is asked for no review, and a level that
+            // runs none is asked for no note: the note is read whenever the tip
+            // carries one - an epic's also holds the walk's waivers - and its
+            // absence is a refusal only where a review is owed.
             let demanded = runs_at(REVIEW, report.level) && names.iter().any(|p| is_code(p));
             self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, demanded, |n| {
                 n.schema.clone()
@@ -1269,48 +1267,6 @@ impl Gate<'_> {
         Ok(())
     }
 
-    // DEC-2 keeps the walk off the epic tip: one commit cannot carry both an
-    // epic-level and a commit-level `test` note, and the tip's own diff was
-    // covered by the epic's own review. DEC-51 removed that review, so the skip
-    // would leave a standalone code commit AT the tip judged by nobody - the walk
-    // never hands it to commit level, and no epic check asks. The review a
-    // standalone commit owes is asked for here instead, over that commit's own
-    // span, which is the only place it can be.
-    fn check_tip_commit_review(
-        &self,
-        report: &mut Report,
-        cr: Option<&CrNote>,
-    ) -> Result<(), String> {
-        let line = git(self.repo, &["rev-list", "--parents", "-1", &report.tip])?;
-        let parents: Vec<&str> = line.split_whitespace().skip(1).collect();
-        let [parent] = parents.as_slice() else {
-            return Ok(());
-        };
-        let (tip, _, names, whole) = self.range(&report.tip, parent)?;
-        if !names.iter().any(|p| is_code(p)) {
-            return Ok(());
-        }
-        if cr.is_none() {
-            report.failures.push(Failure::new(
-                "1·notes",
-                format!(
-                    "the epic tip {} is a standalone code commit and carries no cr/v5 note - the walk cannot judge the tip (DEC-2), so nobody reviewed this code",
-                    short(&report.tip)
-                ),
-                format!(
-                    "run the code-review skill over {}..{} until PASS lands on the tip, or land this code through a Working Unit",
-                    short(parent),
-                    short(&tip)
-                ),
-            ));
-            return Ok(());
-        }
-        let code = self.code_sha256(parent, &tip, &names)?;
-        let judged = Judged { base: parent, whole: &whole, code: &code };
-        check_review(report, cr, &judged);
-        Ok(())
-    }
-
     fn is_ancestor(&self, commit: &str, of: &str) -> bool {
         git(self.repo, &["merge-base", "--is-ancestor", commit, of]).is_ok()
     }
@@ -1573,21 +1529,12 @@ pub fn reviewed_binding<'a>(schema: &str, whole: &'a str, code: &'a str) -> Opti
     (!code.is_empty()).then_some(code)
 }
 
-/// The range a review note must be bound to. Usually the gated range itself; for
-/// an epic tip that is a standalone code commit it is that commit's own span,
-/// because that is the code the note judged.
-struct Judged<'a> {
-    base: &'a str,
-    whole: &'a str,
-    code: &'a str,
-}
-
-fn check_review(report: &mut Report, cr: Option<&CrNote>, judged: &Judged<'_>) {
+fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
     let Some(cr) = cr else { return };
     // A note nobody demanded proves nothing: a code-bound note on a diff that
     // changes no code judges no code path, so it binds nothing, refuses nothing and
     // greens nothing.
-    let Some(bound) = reviewed_binding(&cr.schema, judged.whole, judged.code) else {
+    let Some(bound) = reviewed_binding(&cr.schema, &report.diff_sha256, code_sha256) else {
         return;
     };
     let bound = bound.to_string();
@@ -1606,10 +1553,14 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, judged: &Judged<'_>) {
                 .to_string(),
         ));
     }
-    if cr.base != judged.base {
+    if cr.base != report.base {
         report.failures.push(Failure::new(
             REVIEW_BASE,
-            format!("review base {} != current merge-base {}", short(&cr.base), short(judged.base)),
+            format!(
+                "review base {} != current merge-base {}",
+                short(&cr.base),
+                short(&report.base)
+            ),
             "the target moved since the review - re-run the review against the current base"
                 .to_string(),
         ));
@@ -1699,7 +1650,7 @@ pub fn format_report(report: &Report) -> String {
 mod tests {
     use super::{
         design_source, format_report, levels_of, receipt_body, runs_at, short, CrNote,
-        DesignCarrier, DesignNote, Failure, Gate, Judged, Level, Report, Runs, Surfaces, CHECKS,
+        DesignCarrier, DesignNote, Failure, Gate, Level, Report, Runs, Surfaces, CHECKS,
         DIFF_BINDING, REVIEW, REVIEW_BASE, REVIEW_NITS, UNBUILT,
     };
 
@@ -1735,30 +1686,20 @@ mod tests {
         CHECKS.iter().filter(|c| runs_at(c.id, level)).map(|c| c.receipt).collect()
     }
 
-    // W9 · the epic gate reads its seams, it does not re-review them (DEC-51).
-    // The union of an epic's seams is code every Working Unit review already
-    // cleared, so the four checks that judge a tip's own review leave the epic
-    // list while `7·walk` - which re-reads every seam's review at its declared
-    // binding - stays.
+    // A review is owed wherever a note can bind a range: a Working Unit seam and
+    // the epic. Not at commit level, where `check_review` has never run -
+    // E-SIMPWF.W9 tried moving that boundary and withdrew (DEC-51), so the table
+    // states the boundary rather than leaving it to a `level != Commit` test
+    // three call sites deep.
     #[test]
-    fn the_epic_list_drops_the_review_checks_and_keeps_the_walk() {
-        assert_eq!(
-            checks_at(Level::Epic),
-            [
-                "notes",
-                "manifest",
-                "doc-note",
-                "design",
-                "components-unbuilt",
-                "manual-review",
-                "walk"
-            ]
-        );
+    fn the_review_runs_where_a_note_binds_a_range() {
         for check in [REVIEW, REVIEW_NITS, REVIEW_BASE, DIFF_BINDING] {
-            assert!(!runs_at(check, Level::Epic), "{check} still runs at the epic");
-            assert!(runs_at(check, Level::Wu), "{check} must keep running at the seam");
+            assert!(runs_at(check, Level::Wu), "{check} must run at a seam");
+            assert!(runs_at(check, Level::Epic), "{check} must run at the epic");
+            assert!(!runs_at(check, Level::Commit), "{check} has never run at commit level");
         }
         assert!(runs_at("7·walk", Level::Epic));
+        assert!(!runs_at("7·walk", Level::Wu));
     }
 
     #[test]
@@ -1779,14 +1720,16 @@ mod tests {
         );
     }
 
-    // A standalone commit runs the same list as a seam: it lands code, so it owes
-    // a review of it, and `9·design` is on the list because
-    // `check_ui_outside_a_wu` refuses a rendered file there. What separates the
-    // levels is the epic's two rows, not the review.
+    // The commit list is the one the hardcoded string got wrong before this
+    // table existed: it advertised four review checks `check_review` has never
+    // run at that level. `9·design` belongs on it because
+    // `check_ui_outside_a_wu` refuses a rendered file in a standalone commit.
     #[test]
-    fn a_standalone_commit_runs_the_same_list_as_a_seam() {
-        assert_eq!(checks_at(Level::Commit), checks_at(Level::Wu));
-        assert!(runs_at(REVIEW, Level::Commit), "code that lands outside a WU still owes a review");
+    fn the_commit_list_carries_design_and_no_review() {
+        assert_eq!(
+            checks_at(Level::Commit),
+            ["notes", "manifest", "doc-note", "design", "manual-review"]
+        );
         assert!(!runs_at("7·walk", Level::Commit) && !runs_at(UNBUILT, Level::Commit));
     }
 
@@ -1796,11 +1739,7 @@ mod tests {
     #[test]
     fn the_printed_list_is_the_list_the_level_runs() {
         for (level, expected) in [
-            (
-                Level::Commit,
-                "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
-                 doc-note, design, manual-review]",
-            ),
+            (Level::Commit, "checks: [notes, manifest, doc-note, design, manual-review]"),
             (
                 Level::Wu,
                 "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
@@ -1808,8 +1747,8 @@ mod tests {
             ),
             (
                 Level::Epic,
-                "checks: [notes, manifest, doc-note, design, components-unbuilt, manual-review, \
-                 walk]",
+                "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
+                 doc-note, design, components-unbuilt, manual-review, walk]",
             ),
         ] {
             let mut r = report(vec![]);
@@ -1917,8 +1856,7 @@ mod tests {
         };
         let ids = |cr: &CrNote, code: &str| {
             let mut report = report(Vec::new());
-            let judged = Judged { base: "0123456789ab", whole: "whole", code };
-            super::check_review(&mut report, Some(cr), &judged);
+            super::check_review(&mut report, Some(cr), code);
             report.failures.into_iter().map(|f| f.check).collect::<Vec<_>>()
         };
 

@@ -678,28 +678,19 @@ fn allow_file(repo: &Repo) {
     repo.write(".mr-allowed", "email: a@b.co\n");
 }
 
-// Every note an epic tip owes, and no review: W9 stopped the epic gate asking
-// for one of its own diff (DEC-51), so every epic case below runs without it.
 fn bless_epic(repo: &Repo, changes: &str) {
     let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
     repo.note(
         "test",
         &tip,
         &test_note("epic", "E9", None, "  e2e: { count: 1, covers: \"full flow\" }\n"),
     );
     repo.note("doc", &tip, &doc_note("E9", None, changes, None));
+    repo.note("cr", &tip, &cr_note("E9", None, &base, &sha, "PASS"));
     allow_file(repo);
     repo.note("mr", &tip, &mr_note("epic", &tip));
-}
-
-/// The review note an epic tip no longer owes, bound to `verdict` over the
-/// epic's own diff - what a tip carried before W9, and what a tip carrying one
-/// anyway still carries.
-fn epic_cr(repo: &Repo, verdict: &str) -> String {
-    let tip = repo.sha("epic/x");
-    let base = repo.sha("main");
-    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
-    cr_note("E9", None, &base, &sha, verdict)
 }
 
 #[test]
@@ -711,103 +702,46 @@ fn green_epic_walk_verifies_the_merged_wu() {
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
-// ─── W9: the epic gate reads its seams, it does not re-review them ──────────
-//
-// An epic's diff is the union of seams every Working Unit review already
-// cleared, so `3·review`, `3·review-nits`, `4·review-base` and `5·diff-binding`
-// left the epic list (DEC-51). What did not move is `7·walk`: every seam's
-// review is still re-read at the binding it declared. The cases below are that
-// pair - the demand is gone at the tip, the guarantee is intact at the seams -
-// and that the cut reaches the review alone.
-
+// W9 · the receipt advertises the checks its level actually ran. The line used
+// to be two hardcoded strings, and the non-epic one was wrong: it named the four
+// review checks at commit level, where `check_review` has never run. Asserted
+// here through the real gate over a real repo, at both levels, because the
+// receipt is the only place a reader learns what was verified.
 #[test]
-fn an_epic_tip_carrying_no_review_greens_and_says_so_on_its_receipt() {
+fn the_receipt_names_the_checks_its_level_ran() {
     let (repo, _) = epic_with_merged_wu();
     bless_epic(&repo, T2_ENTRY);
-    assert!(
-        !repo.git(&["notes", "--ref=cr", "list"]).contains(&repo.sha("epic/x")),
-        "the fixture must leave the epic tip unreviewed"
-    );
-
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.green(), "unexpected failures: {}", format_report(&report));
-
-    let receipt = repo.gate().write_receipt(&report).unwrap();
-    let checks = receipt.lines().find(|l| l.starts_with("checks:")).unwrap();
-    assert_eq!(
-        checks,
-        "checks: [notes, manifest, doc-note, design, components-unbuilt, manual-review, walk]",
-        "the receipt advertises only what the epic ran"
-    );
-}
-
-// The case that proves the removal is real rather than merely unexercised: a
-// note that would have failed `5·diff-binding` outright is now read by nobody at
-// the epic, while the same staleness still refuses the seam it came from.
-#[test]
-fn a_stale_review_on_the_epic_tip_greens_while_the_same_staleness_reds_a_wu() {
-    let (repo, _) = epic_with_merged_wu();
-    bless_epic(&repo, T2_ENTRY);
-    let tip = repo.sha("epic/x");
-    repo.note("cr", &tip, &epic_cr(&repo, "PASS").replace("diff_sha256: ", "diff_sha256: 0"));
-
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.green(), "the check that read it is gone: {}", format_report(&report));
-
-    repo.note("cr", &tip, &epic_cr(&repo, "FAIL"));
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.green(), "nor is its verdict read: {}", format_report(&report));
-
-    let wu = wu_with_change();
-    let wu_tip = wu.sha("wu/x/one");
-    bless_wu(&wu, &wu_tip);
-    let stale = wu.git(&["notes", "--ref=cr", "show", &wu_tip]);
-    wu.note("cr", &wu_tip, &stale.replace("diff_sha256: ", "diff_sha256: 0"));
-    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
-    assert_eq!(
-        checks_of(&report),
-        vec!["5·diff-binding"],
-        "the binding rule is untouched where a review is owed: {}",
-        format_report(&report)
-    );
-}
-
-#[test]
-fn an_epic_whose_seam_lost_its_review_is_still_refused_and_greens_once_restored() {
-    let (repo, wu_tip) = epic_with_merged_wu();
-    bless_epic(&repo, T2_ENTRY);
-    let seam_review = repo.git(&["notes", "--ref=cr", "show", &wu_tip]);
-    repo.git(&["notes", "--ref=cr", "remove", &wu_tip]);
-
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert_eq!(
-        checks_of(&report),
-        vec!["7·walk·1·notes"],
-        "the walk is the epic's guarantee, and it is what refuses this: {}",
-        format_report(&report)
-    );
-
-    repo.note("cr", &wu_tip, &seam_review);
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "{}", format_report(&report));
-}
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains(
+            "checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, \
+             design, components-unbuilt, manual-review, walk]"
+        ),
+        "the epic's list: {receipt}"
+    );
 
-// The cut is scoped to the review: every other note an epic owes is still owed.
-#[test]
-fn an_epic_missing_any_other_note_is_still_refused() {
-    for (note_ref, check) in [("test", "1·notes"), ("doc", "1·notes"), ("mr", "8·manual-review")]
-    {
-        let (repo, _) = epic_with_merged_wu();
-        bless_epic(&repo, T2_ENTRY);
-        repo.git(&["notes", &format!("--ref={note_ref}"), "remove", &repo.sha("epic/x")]);
+    let wu = wu_with_change();
+    let tip = wu.sha("wu/x/one");
+    bless_wu(&wu, &tip);
+    let report = wu.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    let receipt = wu.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains(
+            "checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, \
+             design, manual-review]"
+        ),
+        "a seam's list drops the epic's two rows: {receipt}"
+    );
 
-        let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-        assert!(
-            checks_of(&report).contains(&check),
-            "a missing {note_ref} note must still refuse the epic under {check}: {}",
-            format_report(&report)
-        );
-    }
+    let commit = repo.sha("epic/x");
+    let report = repo.gate().verify(Level::Commit, &commit, &format!("{commit}^")).unwrap();
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(
+        receipt.contains("checks: [notes, manifest, doc-note, design, manual-review]"),
+        "a standalone commit runs no review, and the receipt no longer claims it does: {receipt}"
+    );
 }
 
 // The design lives on the seam, not on the epic tip: work docs are archived out
@@ -927,11 +861,8 @@ fn a_component_design_whose_component_landed_needs_no_drop_record() {
         "ui/src/components/StatusPill.tsx",
         "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
     );
-    let tip = repo.commit("build the pill");
+    repo.commit("build the pill");
     bless_epic(&repo, T2_ENTRY);
-    // The tip is itself a standalone code commit, so it owes the review a
-    // standalone commit owes - the walk cannot judge the tip (DEC-2).
-    repo.note("cr", &tip, &epic_tip_cr(&repo));
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "{}", format_report(&report));
@@ -1403,9 +1334,8 @@ fn ungated_forward_wu_seam_still_walks_red() {
     );
 }
 
-// The epic tip's cr/v2 note with a walk_waivers block appended, preserving the
-// diff-bound base/hash/verdict. An epic owes no review, but the walk still reads
-// its waivers off one, so a tip that waives a seam writes the note for that.
+// Rewrites the epic tip's cr/v2 note (already written by bless_epic) with a
+// walk_waivers block appended, preserving the diff-bound base/hash/verdict.
 fn cr_note_with_waivers(epic: &str, base: &str, sha: &str, waivers: &str) -> String {
     format!("{}walk_waivers:\n{waivers}", cr_note(epic, None, base, sha, "PASS"))
 }
@@ -1707,9 +1637,8 @@ fn epic_walk_flags_a_noteless_standalone_code_commit() {
     );
 }
 
-/// An epic carrying a standalone code commit - code that landed outside any
-/// Working Unit, so no seam review ever covered it. Returns that commit's sha.
-fn epic_with_a_standalone_code_commit() -> (Repo, String) {
+#[test]
+fn standalone_commit_gets_green_with_its_manifest() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("src/extra.rs", "pub fn covered() {}\n");
     let sha = repo.commit("standalone fix");
@@ -1720,137 +1649,8 @@ fn epic_with_a_standalone_code_commit() -> (Repo, String) {
     );
     close_epic(&repo);
     bless_epic(&repo, T2_ENTRY);
-    (repo, sha)
-}
-
-/// The review an epic tip owes when the tip is itself a standalone code commit:
-/// bound to that commit's own span, and carrying the epic identity, because the
-/// `test/v2` note beside it is the epic's.
-fn epic_tip_cr(repo: &Repo) -> String {
-    let tip = repo.sha("epic/x");
-    let parent = repo.sha("epic/x^");
-    cr_note("E9", None, &parent, &code_sha(repo, &parent, &tip), "PASS")
-}
-
-/// The review note a standalone commit owes, bound to its own code diff. It
-/// carries no identity block, because the `test/v2` note beside it carries none
-/// and `1·notes` refuses a tip whose notes disagree about who owns it.
-fn commit_cr(repo: &Repo, sha: &str) -> String {
-    let base = repo.sha(&format!("{sha}^"));
-    format!(
-        "schema: cr/v5\nbase: {base}\nhead: x\ndiff_sha256: {}\nverdict: PASS\ndate: 2026-09-16\n",
-        code_sha(repo, &base, sha)
-    )
-}
-
-// W9 · the review is owed where code LANDS, and an epic re-reads rather than
-// re-reviews (DEC-51). That holds only because every byte in an epic arrived
-// through a level that owed a review of its own - a Working Unit seam, or a
-// commit outside one. Round 2 of this WU's own review reproduced the hole: the
-// epic-level review had been the blunt backstop covering code that never went
-// through a seam, and removing it let such a commit reach main unreviewed.
-#[test]
-fn a_standalone_code_commit_owes_its_own_review_and_the_walk_refuses_it_without_one() {
-    let (repo, sha) = epic_with_a_standalone_code_commit();
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert_eq!(
-        checks_of(&report),
-        vec!["7·walk·1·notes"],
-        "code that no seam reviewed must not reach main: {}",
-        format_report(&report)
-    );
-    assert!(
-        format_report(&report).contains("code-review"),
-        "and the fix must name the review: {}",
-        format_report(&report)
-    );
-
-    repo.note("cr", &sha, &commit_cr(&repo, &sha));
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.green(), "unexpected failures: {}", format_report(&report));
-}
-
-// The position round 3 found, which round 2's fix missed: the standalone code
-// commit is the epic TIP. `7·walk` skips the tip by name - one commit cannot
-// carry both an epic-level and a commit-level `test` note (DEC-2) - so the walk
-// never hands it to commit level, and DEC-51 had removed the epic's own review
-// that used to cover it. Nobody was left. The epic asks for that commit's review
-// itself, over the commit's own span.
-#[test]
-fn an_epic_tip_that_is_a_standalone_code_commit_owes_its_own_review() {
-    let (repo, _) = epic_with_merged_wu();
-    repo.write("src/extra.rs", "pub fn landed_at_the_tip() {}\n");
-    let tip = repo.commit("a code fixup, straight onto the epic");
-    bless_epic(&repo, T2_ENTRY);
-
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert_eq!(checks_of(&report), vec!["1·notes"], "{}", format_report(&report));
-    let text = format_report(&report);
-    assert!(text.contains("standalone code commit"), "the red names the position: {text}");
-    assert!(text.contains("code-review"), "and what to run: {text}");
-
-    // Bound to the epic's whole range rather than to the commit: the note judged
-    // other bytes, so it binds nothing here.
-    let base = repo.sha("main");
-    repo.note("cr", &tip, &cr_note("E9", None, &base, &code_sha(&repo, &base, &tip), "PASS"));
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert_eq!(
-        checks_of(&report),
-        vec!["4·review-base", "5·diff-binding"],
-        "a review of the wrong span is not a review of this commit: {}",
-        format_report(&report)
-    );
-
-    repo.note("cr", &tip, &epic_tip_cr(&repo));
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.green(), "{}", format_report(&report));
-}
-
-// An epic tip that changes no code owes nothing extra - the demand follows the
-// code, and an epic ending on a docs-only commit is the common shape.
-#[test]
-fn an_epic_tip_that_is_a_docs_only_commit_owes_no_review_of_its_own() {
-    let (repo, _) = epic_with_merged_wu();
-    bless_epic(&repo, T2_ENTRY);
-
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.green(), "{}", format_report(&report));
-}
-
-// The binding is the commit's own code, judged at its own level: a note bound to
-// other bytes is refused there exactly as it is at a seam.
-#[test]
-fn a_standalone_commits_review_binds_that_commits_code() {
-    let (repo, sha) = epic_with_a_standalone_code_commit();
-    let stale = commit_cr(&repo, &sha).replace("diff_sha256: ", "diff_sha256: 0");
-    repo.note("cr", &sha, &stale);
-
-    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
-    assert_eq!(checks_of(&report), vec!["5·diff-binding"], "{}", format_report(&report));
-
-    repo.note("cr", &sha, &commit_cr(&repo, &sha).replace("verdict: PASS", "verdict: FAIL"));
-    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
-    assert_eq!(checks_of(&report), vec!["3·review"], "{}", format_report(&report));
-}
-
-// A standalone commit that changes no code owes no review, exactly as a Working
-// Unit's docs-only diff does - the demand follows the code, never the level.
-#[test]
-fn a_standalone_docs_only_commit_still_owes_no_review() {
-    let (repo, _) = epic_with_merged_wu();
-    repo.write("docs/use-cases/api.html", "<html>a contract edit</html>\n");
-    let sha = repo.commit("a standalone doc edit");
-    repo.note("test", &sha, "schema: test/v2\nlevel: commit\n");
-    repo.note(
-        "doc",
-        &sha,
-        &doc_note("E9", None, "  - path: docs/use-cases/api.html\n    tier: T2\n    action: updated\n    distills: \"a contract edit\"\n", None),
-    );
-    close_epic(&repo);
-    bless_epic(&repo, T2_ENTRY);
-
-    let report = repo.gate().verify(Level::Commit, &sha, &format!("{sha}^")).unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
