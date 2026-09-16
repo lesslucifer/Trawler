@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPWF
+wu: E-SIMPWF.W9
+branch: HEAD
+tests:
+  unit: { count: 23, covers: "the check table: the review runs where a note binds a range and never at commit level, the epic and Working Unit lists, the commit list carrying design and no review, a check emitted by another borrowing its levels with every deferring row's target naming its own so resolution is one hop and cannot cycle, a check a level can emit being one the table says that level runs, and the printed line asserted literally per level rather than against the table that produced it" }
+  integration: { count: 94, covers: "the bounded contract through the real gate over a real temp git repo: the receipt names the checks its level ran, at epic, seam and standalone-commit level - the case that would have caught the hardcoded commit-level string this change removes" }
+  e2e: { waived: "no end-to-end flow changed - the gate decides exactly what it decided before, and what moved is what its receipt says. The epic e2e was extended for the withdrawn half and restored with it" }
