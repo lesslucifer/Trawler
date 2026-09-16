@@ -12,8 +12,9 @@
 //! a design run rides beside the code without entering that binding and is
 //! answered on its own `design/v1` (W4, DEC-46); a diff that changes no code
 //! owes no review and is still signable (W7); the epic owes no review of its own
-//! diff either (W9, DEC-51); and the epic walk re-verifies every seam that
-//! carried code. The second test puts a real failing test and
+//! diff while code that landed outside any Working Unit still owes one of its
+//! own (W9, DEC-51); and the epic walk re-reads every place code landed. The
+//! second test puts a real failing test and
 //! a malformed note in front of the review, where the preflight refuses them
 //! before any finder would spawn (W2, DEC-43).
 #![cfg(all(unix, feature = "hook-tests"))]
@@ -95,6 +96,20 @@ fn printed_code_sha(said: &str) -> String {
 
 fn gate(repo: &GitRepo, level: &str, target: &str) -> (bool, Vec<String>, String) {
     let out = repo.xtask(&["verify-dod", level, "HEAD", "--target", target]);
+    let said = said_of(&out);
+    let ids = said
+        .lines()
+        .filter_map(|l| l.strip_prefix("FAIL  "))
+        .filter_map(|l| l.split_whitespace().next())
+        .map(str::to_string)
+        .collect();
+    (out.status.success(), ids, said)
+}
+
+/// The commit level takes a sha and derives its own base - the commit's parent -
+/// so it has no `--target` to pass.
+fn gate_commit(repo: &GitRepo, sha: &str) -> (bool, Vec<String>, String) {
+    let out = repo.xtask(&["verify-dod", "commit", sha]);
     let said = said_of(&out);
     let ids = said
         .lines()
@@ -335,6 +350,35 @@ fn land_w2_design_beside_code(repo: &GitRepo) -> String {
     amended
 }
 
+/// W9 · code owes a review where it LANDS (DEC-51), and a Working Unit seam is
+/// not the only place it lands: a fixup committed straight onto the epic branch
+/// carries a commit-level `test/v2` and a `cr/v5` bound to its own code. Before
+/// W9 the epic's own review was the backstop for it; the epic owes none now, so
+/// this commit owes one. Returns its sha.
+fn land_a_code_fixup_outside_any_wu(repo: &GitRepo) -> String {
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.write("src/fixup.rs", "pub fn fixed_in_place() {}\n");
+    let tip = commit(repo, "a code fixup, straight onto the epic");
+    let parent = repo.sha("HEAD^");
+    repo.note(
+        "test",
+        &tip,
+        "schema: test/v2\nlevel: commit\ntests:\n  unit: { count: 1, covers: \"the fixup\" }\n",
+    );
+
+    let (_, ids, said) = gate_commit(repo, &tip);
+    assert_eq!(ids, vec!["1·notes"], "it owes a review of its own code: {said}");
+
+    // Standalone commits omit epic/wu (workflow.html), so its review omits them
+    // too - `1·notes` refuses a tip whose notes disagree about who owns it.
+    let review = cr_v5(None, &parent, &repo.code_sha(&parent, &tip))
+        .replace("epic: E-X\nbranch: epic/x\n", "");
+    repo.note("cr", &tip, &review);
+    let (green, ids, said) = gate_commit(repo, &tip);
+    assert!(green, "and greens once it carries one: {ids:?} {said}");
+    tip
+}
+
 /// W3 · a diff that changes no code owes no review and is still signable.
 fn land_w3_docs_only(repo: &GitRepo) -> String {
     repo.git(&["checkout", "-q", "-b", "wu/x/three", "epic/x"]);
@@ -362,6 +406,7 @@ fn an_epic_lands_on_main_with_every_review_bound_to_its_code_and_every_note_tool
     let w1 = land_w1_code_beside_docs(&repo);
     land_w2_design_beside_code(&repo);
     land_w3_docs_only(&repo);
+    let fixup = land_a_code_fixup_outside_any_wu(&repo);
 
     // The epic closes: the work docs leave the tree (DEC-3), the tool writes the
     // epic notes, the review binds the code half of the whole range.
@@ -383,10 +428,19 @@ fn an_epic_lands_on_main_with_every_review_bound_to_its_code_and_every_note_tool
     repo.write(EPIC_REPORT, "<html>the epic result</html>\n");
     confirm(&repo, "epic", "main", EPIC_REPORT);
 
-    // What the epic never stopped owing: the walk re-verifies the seams that
-    // carried code, so a review a seam has lost turns the epic red at the merge
-    // and back green once restored. The review left the tip; it never left the
-    // seams.
+    // What the epic never stopped owing: the walk re-reads every place code
+    // landed, so a review that place has lost turns the epic red at the merge and
+    // back green once restored. First the commit that landed code outside any
+    // Working Unit - the position W9's own review round found unguarded.
+    let fixup_review = repo.git(&["notes", "--ref=cr", "show", &fixup]);
+    repo.git(&["notes", "--ref=cr", "remove", &fixup]);
+    let (merged, said) = merge(&repo, "main", "epic/x");
+    assert!(!merged, "code that landed outside a WU must carry its own review: {said}");
+    assert!(said.contains("7·walk"), "the walk is what refuses it: {said}");
+    repo.note("cr", &fixup, &fixup_review);
+
+    // Then a seam's: the review left the epic tip; it never left the places code
+    // actually lands.
     let w1_review = repo.git(&["notes", "--ref=cr", "show", &w1]);
     repo.git(&["notes", "--ref=cr", "remove", &w1]);
     let (merged, said) = merge(&repo, "main", "epic/x");

@@ -92,7 +92,9 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 // The review's two scopes, resolved by the same rule and the same error line as
 // `verify-dod wu|epic`: the preflight must pin the base the merge gate will pin,
 // or it would judge a different range than the note it protects. A standalone
-// commit carries no review, so it has no preflight either (SKILL.md §2).
+// commit owes a review of its own code (DEC-51) but has no preflight level: its
+// base is simply its parent, so there is nothing for this command to resolve
+// (SKILL.md §2 says how such a commit is reviewed).
 fn preflight_cmd(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let (args, tree) = split_tree_flag(args);
     match args.as_slice() {

@@ -348,8 +348,10 @@ impl Gate<'_> {
         let parsed = self.load_notes(&mut report, &names, Notes::All);
         check_manifest(&mut report, parsed.test.as_ref());
         if runs_at(REVIEW, level) {
-            let code_sha256 = self.code_sha256(&report.base, &report.tip, &names)?;
-            check_review(&mut report, parsed.cr.as_ref(), &code_sha256);
+            let code = self.code_sha256(&report.base, &report.tip, &names)?;
+            let (base, whole) = (report.base.clone(), report.diff_sha256.clone());
+            let judged = Judged { base: &base, whole: &whole, code: &code };
+            check_review(&mut report, parsed.cr.as_ref(), &judged);
         }
         if level != Level::Commit {
             let source = design_source(parsed.cr.as_ref(), parsed.design.as_ref());
@@ -368,6 +370,7 @@ impl Gate<'_> {
         self.check_docs(&mut report, parsed.doc.as_ref(), &names, &retired_paths);
         if level == Level::Epic {
             self.walk(&mut report, target_ref)?;
+            self.check_tip_commit_review(&mut report, parsed.cr.as_ref())?;
         }
         Ok(report)
     }
@@ -1266,6 +1269,48 @@ impl Gate<'_> {
         Ok(())
     }
 
+    // DEC-2 keeps the walk off the epic tip: one commit cannot carry both an
+    // epic-level and a commit-level `test` note, and the tip's own diff was
+    // covered by the epic's own review. DEC-51 removed that review, so the skip
+    // would leave a standalone code commit AT the tip judged by nobody - the walk
+    // never hands it to commit level, and no epic check asks. The review a
+    // standalone commit owes is asked for here instead, over that commit's own
+    // span, which is the only place it can be.
+    fn check_tip_commit_review(
+        &self,
+        report: &mut Report,
+        cr: Option<&CrNote>,
+    ) -> Result<(), String> {
+        let line = git(self.repo, &["rev-list", "--parents", "-1", &report.tip])?;
+        let parents: Vec<&str> = line.split_whitespace().skip(1).collect();
+        let [parent] = parents.as_slice() else {
+            return Ok(());
+        };
+        let (tip, _, names, whole) = self.range(&report.tip, parent)?;
+        if !names.iter().any(|p| is_code(p)) {
+            return Ok(());
+        }
+        if cr.is_none() {
+            report.failures.push(Failure::new(
+                "1·notes",
+                format!(
+                    "the epic tip {} is a standalone code commit and carries no cr/v5 note - the walk cannot judge the tip (DEC-2), so nobody reviewed this code",
+                    short(&report.tip)
+                ),
+                format!(
+                    "run the code-review skill over {}..{} until PASS lands on the tip, or land this code through a Working Unit",
+                    short(parent),
+                    short(&tip)
+                ),
+            ));
+            return Ok(());
+        }
+        let code = self.code_sha256(parent, &tip, &names)?;
+        let judged = Judged { base: parent, whole: &whole, code: &code };
+        check_review(report, cr, &judged);
+        Ok(())
+    }
+
     fn is_ancestor(&self, commit: &str, of: &str) -> bool {
         git(self.repo, &["merge-base", "--is-ancestor", commit, of]).is_ok()
     }
@@ -1528,12 +1573,21 @@ pub fn reviewed_binding<'a>(schema: &str, whole: &'a str, code: &'a str) -> Opti
     (!code.is_empty()).then_some(code)
 }
 
-fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
+/// The range a review note must be bound to. Usually the gated range itself; for
+/// an epic tip that is a standalone code commit it is that commit's own span,
+/// because that is the code the note judged.
+struct Judged<'a> {
+    base: &'a str,
+    whole: &'a str,
+    code: &'a str,
+}
+
+fn check_review(report: &mut Report, cr: Option<&CrNote>, judged: &Judged<'_>) {
     let Some(cr) = cr else { return };
     // A note nobody demanded proves nothing: a code-bound note on a diff that
     // changes no code judges no code path, so it binds nothing, refuses nothing and
     // greens nothing.
-    let Some(bound) = reviewed_binding(&cr.schema, &report.diff_sha256, code_sha256) else {
+    let Some(bound) = reviewed_binding(&cr.schema, judged.whole, judged.code) else {
         return;
     };
     let bound = bound.to_string();
@@ -1552,14 +1606,10 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>, code_sha256: &str) {
                 .to_string(),
         ));
     }
-    if cr.base != report.base {
+    if cr.base != judged.base {
         report.failures.push(Failure::new(
             REVIEW_BASE,
-            format!(
-                "review base {} != current merge-base {}",
-                short(&cr.base),
-                short(&report.base)
-            ),
+            format!("review base {} != current merge-base {}", short(&cr.base), short(judged.base)),
             "the target moved since the review - re-run the review against the current base"
                 .to_string(),
         ));
@@ -1649,7 +1699,7 @@ pub fn format_report(report: &Report) -> String {
 mod tests {
     use super::{
         design_source, format_report, levels_of, receipt_body, runs_at, short, CrNote,
-        DesignCarrier, DesignNote, Failure, Gate, Level, Report, Runs, Surfaces, CHECKS,
+        DesignCarrier, DesignNote, Failure, Gate, Judged, Level, Report, Runs, Surfaces, CHECKS,
         DIFF_BINDING, REVIEW, REVIEW_BASE, REVIEW_NITS, UNBUILT,
     };
 
@@ -1867,7 +1917,8 @@ mod tests {
         };
         let ids = |cr: &CrNote, code: &str| {
             let mut report = report(Vec::new());
-            super::check_review(&mut report, Some(cr), code);
+            let judged = Judged { base: "0123456789ab", whole: "whole", code };
+            super::check_review(&mut report, Some(cr), &judged);
             report.failures.into_iter().map(|f| f.check).collect::<Vec<_>>()
         };
 

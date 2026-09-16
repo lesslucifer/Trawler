@@ -927,8 +927,11 @@ fn a_component_design_whose_component_landed_needs_no_drop_record() {
         "ui/src/components/StatusPill.tsx",
         "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
     );
-    repo.commit("build the pill");
+    let tip = repo.commit("build the pill");
     bless_epic(&repo, T2_ENTRY);
+    // The tip is itself a standalone code commit, so it owes the review a
+    // standalone commit owes - the walk cannot judge the tip (DEC-2).
+    repo.note("cr", &tip, &epic_tip_cr(&repo));
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "{}", format_report(&report));
@@ -1720,6 +1723,15 @@ fn epic_with_a_standalone_code_commit() -> (Repo, String) {
     (repo, sha)
 }
 
+/// The review an epic tip owes when the tip is itself a standalone code commit:
+/// bound to that commit's own span, and carrying the epic identity, because the
+/// `test/v2` note beside it is the epic's.
+fn epic_tip_cr(repo: &Repo) -> String {
+    let tip = repo.sha("epic/x");
+    let parent = repo.sha("epic/x^");
+    cr_note("E9", None, &parent, &code_sha(repo, &parent, &tip), "PASS")
+}
+
 /// The review note a standalone commit owes, bound to its own code diff. It
 /// carries no identity block, because the `test/v2` note beside it carries none
 /// and `1·notes` refuses a tip whose notes disagree about who owns it.
@@ -1757,6 +1769,53 @@ fn a_standalone_code_commit_owes_its_own_review_and_the_walk_refuses_it_without_
     repo.note("cr", &sha, &commit_cr(&repo, &sha));
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+// The position round 3 found, which round 2's fix missed: the standalone code
+// commit is the epic TIP. `7·walk` skips the tip by name - one commit cannot
+// carry both an epic-level and a commit-level `test` note (DEC-2) - so the walk
+// never hands it to commit level, and DEC-51 had removed the epic's own review
+// that used to cover it. Nobody was left. The epic asks for that commit's review
+// itself, over the commit's own span.
+#[test]
+fn an_epic_tip_that_is_a_standalone_code_commit_owes_its_own_review() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("src/extra.rs", "pub fn landed_at_the_tip() {}\n");
+    let tip = repo.commit("a code fixup, straight onto the epic");
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["1·notes"], "{}", format_report(&report));
+    let text = format_report(&report);
+    assert!(text.contains("standalone code commit"), "the red names the position: {text}");
+    assert!(text.contains("code-review"), "and what to run: {text}");
+
+    // Bound to the epic's whole range rather than to the commit: the note judged
+    // other bytes, so it binds nothing here.
+    let base = repo.sha("main");
+    repo.note("cr", &tip, &cr_note("E9", None, &base, &code_sha(&repo, &base, &tip), "PASS"));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["4·review-base", "5·diff-binding"],
+        "a review of the wrong span is not a review of this commit: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &tip, &epic_tip_cr(&repo));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
+// An epic tip that changes no code owes nothing extra - the demand follows the
+// code, and an epic ending on a docs-only commit is the common shape.
+#[test]
+fn an_epic_tip_that_is_a_docs_only_commit_owes_no_review_of_its_own() {
+    let (repo, _) = epic_with_merged_wu();
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
 }
 
 // The binding is the commit's own code, judged at its own level: a note bound to
