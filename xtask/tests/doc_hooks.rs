@@ -11,6 +11,10 @@ fn hooks_dir() -> PathBuf {
 }
 
 fn run_hook(script: &str, project_dir: &Path, stdin_json: &str) -> Output {
+    run_hook_in(script, project_dir, project_dir, stdin_json)
+}
+
+fn run_hook_in(script: &str, project_dir: &Path, cwd: &Path, stdin_json: &str) -> Output {
     let mut child = Command::new("bash")
         .arg(hooks_dir().join(script))
         .env_remove("GIT_DIR")
@@ -18,7 +22,7 @@ fn run_hook(script: &str, project_dir: &Path, stdin_json: &str) -> Output {
         .env_remove("GIT_INDEX_FILE")
         .env("XTASK_BIN", env!("CARGO_BIN_EXE_xtask"))
         .env("CLAUDE_PROJECT_DIR", project_dir)
-        .current_dir(project_dir)
+        .current_dir(cwd)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -30,6 +34,16 @@ fn run_hook(script: &str, project_dir: &Path, stdin_json: &str) -> Output {
 
 fn write_json(path: &Path) -> String {
     format!("{{\"tool_name\":\"Write\",\"tool_input\":{{\"file_path\":\"{}\"}}}}", path.display())
+}
+
+fn apply_patch_json(paths: &[&Path]) -> String {
+    let headers: Vec<String> = paths
+        .iter()
+        .map(|path| format!("*** Update File: {}\n@@\n-old\n+new\n", path.display()))
+        .collect();
+    let patch = format!("*** Begin Patch\n{}*** End Patch\n", headers.join(""));
+    let escaped = patch.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n");
+    format!("{{\"tool_name\":\"apply_patch\",\"tool_input\":{{\"command\":\"{escaped}\"}}}}")
 }
 
 fn red_ready_doc() -> &'static str {
@@ -57,10 +71,18 @@ mod post_tool_use {
     use super::*;
 
     fn run_on_doc(content: &str, name: &str) -> Output {
+        run_written_doc(content, name, &|path| write_json(path))
+    }
+
+    fn run_on_codex_patch(content: &str, name: &str) -> Output {
+        run_written_doc(content, name, &|path| apply_patch_json(&[path]))
+    }
+
+    fn run_written_doc(content: &str, name: &str, payload: &dyn Fn(&Path) -> String) -> Output {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join(name);
         std::fs::write(&path, content).unwrap();
-        run_hook("verify-doc-post.sh", dir.path(), &write_json(&path))
+        run_hook("verify-doc-post.sh", dir.path(), &payload(&path))
     }
 
     #[test]
@@ -98,6 +120,78 @@ mod post_tool_use {
         std::fs::write(&path, "fn main() {}").unwrap();
         let out = run_hook("verify-doc-post.sh", dir.path(), &write_json(&path));
         assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    }
+
+    #[test]
+    fn codex_patch_payload_reds_the_doc_it_wrote() {
+        let out = run_on_codex_patch(red_ready_doc(), "result.html");
+        assert_eq!(out.status.code(), Some(2));
+        let err = stderr(&out);
+        assert!(err.contains("item·deviations") && err.contains("fix ->"), "{err}");
+    }
+
+    #[test]
+    fn codex_patch_payload_is_silent_on_a_green_doc() {
+        let out = run_on_codex_patch(green_ready_doc(), "result.html");
+        assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+        assert!(stderr(&out).is_empty());
+    }
+
+    #[test]
+    fn codex_patch_payload_ignores_a_non_html_target() {
+        let out = run_on_codex_patch("fn main() {}", "main.rs");
+        assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    }
+
+    #[test]
+    fn codex_patch_payload_ignores_a_target_that_is_not_there() {
+        let dir = TempDir::new().unwrap();
+        let gone = dir.path().join("gone.html");
+        let out = run_hook("verify-doc-post.sh", dir.path(), &apply_patch_json(&[&gone]));
+        assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    }
+
+    #[test]
+    fn codex_patch_payload_reports_every_red_doc_it_touches() {
+        let dir = TempDir::new().unwrap();
+        let first = dir.path().join("first.html");
+        let second = dir.path().join("second.html");
+        std::fs::write(&first, red_ready_doc()).unwrap();
+        std::fs::write(&second, red_ready_doc()).unwrap();
+        let out = run_hook("verify-doc-post.sh", dir.path(), &apply_patch_json(&[&first, &second]));
+        assert_eq!(out.status.code(), Some(2));
+        let err = stderr(&out);
+        assert!(err.contains("first.html") && err.contains("second.html"), "{err}");
+    }
+
+    #[test]
+    fn codex_patch_naming_a_relative_path_is_verified_where_the_session_stands() {
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("sub");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(sub.join("result.html"), red_ready_doc()).unwrap();
+
+        let out = run_hook_in(
+            "verify-doc-post.sh",
+            dir.path(),
+            &sub,
+            &apply_patch_json(&[Path::new("result.html")]),
+        );
+        assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+        assert!(stderr(&out).contains("item·deviations"), "{}", stderr(&out));
+    }
+
+    #[test]
+    fn codex_patch_naming_a_path_with_a_space_is_verified() {
+        let dir = TempDir::new().unwrap();
+        let spaced = dir.path().join("a doc dir");
+        std::fs::create_dir_all(&spaced).unwrap();
+        std::fs::write(spaced.join("red.html"), red_ready_doc()).unwrap();
+
+        let path = spaced.join("red.html");
+        let out = run_hook("verify-doc-post.sh", dir.path(), &apply_patch_json(&[&path]));
+        assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+        assert!(stderr(&out).contains("item·deviations"), "{}", stderr(&out));
     }
 }
 
@@ -158,6 +252,16 @@ mod stop {
         repo.write("docs/work/2026-07-05-new-result.html", red_ready_doc());
         let out = run_hook("verify-doc-stop.sh", &repo.path, "{}");
         assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+    }
+
+    #[test]
+    fn a_doc_path_with_a_space_does_not_hide_the_other_docs() {
+        let repo = Repo::new();
+        repo.write("docs/a b.html", red_ready_doc());
+        repo.write("docs/green.html", green_ready_doc());
+        let out = run_hook("verify-doc-stop.sh", &repo.path, "{}");
+        assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+        assert!(stderr(&out).contains("a b.html"), "{}", stderr(&out));
     }
 
     #[test]
