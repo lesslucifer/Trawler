@@ -39,46 +39,62 @@ const REVIEW_NITS: &str = "3·review-nits";
 const REVIEW_BASE: &str = "4·review-base";
 const DIFF_BINDING: &str = "5·diff-binding";
 
+const ALL: &[Level] = &[Level::Commit, Level::Wu, Level::Epic];
+
+// A check either names the levels that run it, or is emitted by another check's
+// code and runs exactly where that one does. `3·review-nits` cannot run at a
+// level `3·review` did not read the note the nits live on, so it holds no level
+// of its own to disagree with.
+enum Runs {
+    At(&'static [Level]),
+    With(&'static str),
+}
+
 struct Check {
     id: &'static str,
     receipt: &'static str,
-    levels: &'static [Level],
+    runs: Runs,
 }
 
 // The one table saying which checks a level runs. The receipt's `checks:` line
-// renders from it and [`runs_at`] guards the code that emits the failures, so a
-// check the gate stopped running cannot keep being advertised on the receipt.
+// and [`runs_at`], which guards the code emitting the failures, both resolve
+// through it, so a check the gate stopped running cannot keep being advertised
+// on the receipt.
 const CHECKS: &[Check] = &[
-    Check { id: "1·notes", receipt: "notes", levels: &[Level::Commit, Level::Wu, Level::Epic] },
-    Check {
-        id: "2·manifest",
-        receipt: "manifest",
-        levels: &[Level::Commit, Level::Wu, Level::Epic],
-    },
-    Check { id: REVIEW, receipt: "review", levels: &[Level::Wu] },
-    Check { id: REVIEW_NITS, receipt: "review-nits", levels: &[Level::Wu] },
-    Check { id: REVIEW_BASE, receipt: "review-base", levels: &[Level::Wu] },
-    Check { id: DIFF_BINDING, receipt: "diff-binding", levels: &[Level::Wu] },
-    Check {
-        id: "6·doc-note",
-        receipt: "doc-note",
-        levels: &[Level::Commit, Level::Wu, Level::Epic],
-    },
-    Check { id: DESIGN, receipt: "design", levels: &[Level::Wu, Level::Epic] },
-    Check { id: UNBUILT, receipt: "components-unbuilt", levels: &[Level::Epic] },
-    Check {
-        id: "8·manual-review",
-        receipt: "manual-review",
-        levels: &[Level::Commit, Level::Wu, Level::Epic],
-    },
-    Check { id: "7·walk", receipt: "walk", levels: &[Level::Epic] },
+    Check { id: "1·notes", receipt: "notes", runs: Runs::At(ALL) },
+    Check { id: "2·manifest", receipt: "manifest", runs: Runs::At(ALL) },
+    Check { id: REVIEW, receipt: "review", runs: Runs::At(&[Level::Wu]) },
+    Check { id: REVIEW_NITS, receipt: "review-nits", runs: Runs::With(REVIEW) },
+    Check { id: REVIEW_BASE, receipt: "review-base", runs: Runs::With(REVIEW) },
+    Check { id: DIFF_BINDING, receipt: "diff-binding", runs: Runs::With(REVIEW) },
+    Check { id: "6·doc-note", receipt: "doc-note", runs: Runs::At(ALL) },
+    // Commit level too: `check_ui_outside_a_wu` refuses a UI-rendering file in a
+    // standalone commit under this id, where the accounting has no note to live on.
+    Check { id: DESIGN, receipt: "design", runs: Runs::At(ALL) },
+    Check { id: UNBUILT, receipt: "components-unbuilt", runs: Runs::At(&[Level::Epic]) },
+    Check { id: "8·manual-review", receipt: "manual-review", runs: Runs::At(ALL) },
+    Check { id: "7·walk", receipt: "walk", runs: Runs::At(&[Level::Epic]) },
 ];
 
 /// Whether `level` runs `check`, by [`CHECKS`] id. An epic reads its seams'
 /// reviews at `7·walk` and owes no review of its own diff (DEC-51), which is why
 /// the merge gate and `mr confirm`'s readiness check both ask here.
 pub fn runs_at(check: &str, level: Level) -> bool {
-    CHECKS.iter().any(|c| c.id == check && c.levels.contains(&level))
+    CHECKS.iter().any(|c| c.id == check) && levels_of(check).contains(&level)
+}
+
+// A `With` row resolves to the check that emits it. One hop is enough and one hop
+// is all there is: a row may only defer to a row that names its own levels, which
+// the tests pin, so this cannot loop.
+fn levels_of(check: &str) -> &'static [Level] {
+    match CHECKS.iter().find(|c| c.id == check).map(|c| &c.runs) {
+        Some(Runs::At(levels)) => levels,
+        Some(Runs::With(other)) => match CHECKS.iter().find(|c| c.id == *other).map(|c| &c.runs) {
+            Some(Runs::At(levels)) => levels,
+            _ => &[],
+        },
+        None => &[],
+    }
 }
 
 /// A component design the Working Unit retired at bytes its base never held,
@@ -1405,7 +1421,7 @@ fn receipt_body(report: &Report) -> String {
     line(format!("tip: {}", report.tip));
     line(format!("diff_sha256: {}", report.diff_sha256));
     let checks: Vec<&str> =
-        CHECKS.iter().filter(|c| c.levels.contains(&report.level)).map(|c| c.receipt).collect();
+        CHECKS.iter().filter(|c| runs_at(c.id, report.level)).map(|c| c.receipt).collect();
     line(format!("checks: [{}]", checks.join(", ")));
     line(format!("date: {}", today()));
     body
@@ -1628,13 +1644,41 @@ pub fn format_report(report: &Report) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        design_source, format_report, receipt_body, runs_at, short, CrNote, DesignCarrier,
-        DesignNote, Failure, Gate, Level, Report, Surfaces, CHECKS, DIFF_BINDING, REVIEW,
-        REVIEW_BASE, REVIEW_NITS,
+        design_source, format_report, levels_of, receipt_body, runs_at, short, CrNote,
+        DesignCarrier, DesignNote, Failure, Gate, Level, Report, Runs, Surfaces, CHECKS,
+        DIFF_BINDING, REVIEW, REVIEW_BASE, REVIEW_NITS,
     };
 
+    // A `With` row holds no levels of its own, so the three checks `check_review`
+    // emits beside `3·review` cannot drift from the guard that decides whether any
+    // of them runs at all. Resolution is one hop by construction: every target names
+    // its own levels, which is what makes `levels_of` terminate.
+    #[test]
+    fn a_check_emitted_by_another_borrows_its_levels_and_never_chains() {
+        for check in [REVIEW_NITS, REVIEW_BASE, DIFF_BINDING] {
+            assert_eq!(
+                levels_of(check),
+                levels_of(REVIEW),
+                "{check} must run exactly where {REVIEW} does"
+            );
+        }
+        for c in CHECKS {
+            if let Runs::With(target) = c.runs {
+                assert!(
+                    matches!(
+                        CHECKS.iter().find(|t| t.id == target).map(|t| &t.runs),
+                        Some(Runs::At(_))
+                    ),
+                    "{} defers to {target}, which must name its own levels",
+                    c.id
+                );
+            }
+        }
+        assert_eq!(levels_of("no such check"), &[] as &[Level]);
+    }
+
     fn checks_at(level: Level) -> Vec<&'static str> {
-        CHECKS.iter().filter(|c| c.levels.contains(&level)).map(|c| c.receipt).collect()
+        CHECKS.iter().filter(|c| runs_at(c.id, level)).map(|c| c.receipt).collect()
     }
 
     // W9 · the epic gate reads its seams, it does not re-review them (DEC-51).
@@ -1681,24 +1725,42 @@ mod tests {
         );
     }
 
-    // The receipt advertises what the level ran: the `checks:` line renders from
-    // the same rows `runs_at` guards the checks with, so a check that stops
-    // running cannot keep being listed.
+    // A standalone commit runs no review, and `9·design` is on its list because
+    // `check_ui_outside_a_wu` refuses a rendered file there - the case the table
+    // has to admit rather than model away.
+    #[test]
+    fn the_commit_list_carries_design_and_no_review() {
+        assert_eq!(
+            checks_at(Level::Commit),
+            ["notes", "manifest", "doc-note", "design", "manual-review"]
+        );
+    }
+
+    // The receipt advertises what the level ran. Asserted against the literal
+    // line each level must print, not against the table that produced it - a
+    // check the table drops has to change this test to stay green.
     #[test]
     fn the_printed_list_is_the_list_the_level_runs() {
-        for level in [Level::Commit, Level::Wu, Level::Epic] {
+        for (level, expected) in [
+            (Level::Commit, "checks: [notes, manifest, doc-note, design, manual-review]"),
+            (
+                Level::Wu,
+                "checks: [notes, manifest, review, review-nits, review-base, diff-binding, \
+                 doc-note, design, manual-review]",
+            ),
+            (
+                Level::Epic,
+                "checks: [notes, manifest, doc-note, design, components-unbuilt, manual-review, \
+                 walk]",
+            ),
+        ] {
             let mut r = report(vec![]);
             r.level = level;
-            let line = format!("checks: [{}]", checks_at(level).join(", "));
-            assert!(receipt_body(&r).contains(&line), "{level:?} receipt must print {line}");
-            for check in CHECKS {
-                assert_eq!(
-                    runs_at(check.id, level),
-                    checks_at(level).contains(&check.receipt),
-                    "{} disagrees with the printed list at {level:?}",
-                    check.id
-                );
-            }
+            assert!(
+                receipt_body(&r).contains(expected),
+                "{level:?} receipt must print {expected}, got {}",
+                receipt_body(&r)
+            );
         }
     }
 
@@ -2118,6 +2180,12 @@ mod tests {
         assert_eq!(r.failures.len(), 1);
         assert_eq!(r.failures[0].check, super::DESIGN);
         assert!(r.failures[0].fix.contains("inside a Working Unit"));
+        // The table is only the truth if it admits this: a commit-level tip does
+        // produce a `9·design` failure, through the one check that runs here.
+        assert!(
+            runs_at(&r.failures[0].check, Level::Commit),
+            "a check a level can emit must be a check the table says that level runs"
+        );
     }
 
     // The topology an epic walk actually sees, and the one this check exists for:

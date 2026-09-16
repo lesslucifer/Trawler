@@ -250,6 +250,36 @@ fn confirm_writes_a_well_formed_note_attesting_the_report() {
     assert!(mr::tip_authorised(repo.p(), "HEAD"));
 }
 
+// W9 · an epic tip owes no review of its own diff (DEC-51). Two halves, both
+// observable: what the refusal tells the caller to do next, and whether the tip
+// signs at all once the two notes it does owe are on it. The confirm reaches the
+// signature without ever hashing the range's code paths, because the only thing
+// that reads that hash is the review binding this level no longer checks.
+#[test]
+fn an_epic_tip_signs_with_no_review_and_is_never_told_to_buy_one() {
+    let repo = Repo::new(ALLOWED);
+    repo.git(&["checkout", "-q", "-b", "epic/e"]);
+    let report = result_report(&repo);
+    // A gated range with real code in it: the exemption must not be what carries
+    // this, and the code half is what the removed binding used to be taken over.
+    repo.write("src/lib.rs", "pub fn added() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the epic's work"]);
+    let confirm = ["confirm", "epic", "HEAD", "--as", "a@b.co", "--target", "main", "--report"];
+
+    let (code, out) = mr::run(&[confirm.as_slice(), &[report]].concat(), repo.p()).unwrap();
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("no test/v2 note") && out.contains("no doc/v1 note"), "{out}");
+    assert!(!out.contains("cr/v5"), "an epic is never refused for a review: {out}");
+    assert!(!out.contains("code-review"), "nor told to run one: {out}");
+
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    let (code, out) = mr::run(&[confirm.as_slice(), &[report]].concat(), repo.p()).unwrap();
+    assert_eq!(code, 0, "the two notes it owes are enough: {out}");
+    assert!(mr::tip_authorised(repo.p(), "HEAD"));
+}
+
 #[test]
 fn confirm_maps_wu_level_and_records_the_username_tier() {
     let repo = Repo::new(ALLOWED);

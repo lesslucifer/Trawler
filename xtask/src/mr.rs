@@ -141,14 +141,27 @@ fn signed_note_body(
     )
 }
 
-pub const SIGN_LAST: &str = "\
+const SIGN_LAST_HEAD: &str = "\
 A signature binds the tree. Every later tree change - a fix, a missed test, a doc
              edit - orphans it and costs another review and another signature, so the
              tree settles BEFORE a human is asked to sign:
                1. test/v2 + doc/v1 notes on the tip   (writing the receipt is what
-                  carries adding the test and settling the docs)
-               2. the code-review skill -> cr/v5 PASS bound to this exact diff
+                  carries adding the test and settling the docs)";
+
+const SIGN_LAST_REVIEW: &str = "
+               2. the code-review skill -> cr/v5 PASS bound to this exact diff";
+
+const SIGN_LAST_TAIL: &str = "
                3. THEN cargo xtask mr confirm";
+
+/// The ordering a refusal prints. It names the review only where the level runs
+/// one: an epic owes no review of its own diff (DEC-51), and an instruction to
+/// buy a fleet nothing will read is one an agent would follow.
+pub fn sign_last(level: crate::gate::Level) -> String {
+    let review =
+        if crate::gate::runs_at(crate::gate::REVIEW, level) { SIGN_LAST_REVIEW } else { "" };
+    format!("{SIGN_LAST_HEAD}{review}{SIGN_LAST_TAIL}")
+}
 
 /// Why a tip is not ready to be signed, given what its notes say. Pure so the
 /// rule is testable without a repo: `review` is the tip's code-review note as
@@ -497,10 +510,17 @@ fn mr_confirm(
         }
         None => None,
     };
+    // The code hash is the review's binding and nothing else reads it, so it is
+    // taken only where the level runs a review - hashing an epic's whole code diff
+    // to feed a check that returns before looking is the cost gate.rs stopped paying.
     let reviewed = match range.as_ref() {
         Some((base, names)) => {
             let hash = diff_sha256(repo, base, &tip)?;
-            let code = crate::gate::Gate { repo }.code_sha256(base, &tip, names)?;
+            let code = if crate::gate::runs_at(crate::gate::REVIEW, gate_level) {
+                crate::gate::Gate { repo }.code_sha256(base, &tip, names)?
+            } else {
+                String::new()
+            };
             Some((base.clone(), hash, code))
         }
         None => None,
@@ -520,7 +540,10 @@ fn mr_confirm(
     );
     if !unready.is_empty() {
         let why = unready.iter().map(|r| format!("  - {r}")).collect::<Vec<_>>().join("\n");
-        return Ok((1, format!("{} is not ready to sign:\n{why}\n{SIGN_LAST}", short(&tip))));
+        return Ok((
+            1,
+            format!("{} is not ready to sign:\n{why}\n{}", short(&tip), sign_last(gate_level)),
+        ));
     }
     let report = resolve_report(repo, &level_word, &tip, report_flag, input)?;
     let rsha = report_sha(repo, &tip, &report)?;
@@ -1383,6 +1406,21 @@ mod tests {
              leaves a docs-only Working Unit unmergeable: 8·manual-review wants an mr/v1 \
              that notes write and the review both decline to supply. {r:?}"
         );
+    }
+
+    // The refusal must not instruct what the level does not owe: an agent reads
+    // this ordering and follows it, so naming the review at an epic buys a fleet
+    // whose verdict nothing will ever read.
+    #[test]
+    fn the_signing_order_names_the_review_only_where_the_level_runs_one() {
+        let wu = super::sign_last(Level::Wu);
+        assert!(wu.contains("code-review skill"), "{wu}");
+        assert!(wu.contains("1. test/v2") && wu.contains("3. THEN"), "{wu}");
+
+        let epic = super::sign_last(Level::Epic);
+        assert!(!epic.contains("code-review"), "an epic owes no review of its own diff: {epic}");
+        assert!(!epic.contains("cr/v5"), "{epic}");
+        assert!(epic.contains("1. test/v2") && epic.contains("3. THEN"), "{epic}");
     }
 
     // W9 · an epic tip owes no review of its own diff (DEC-51): the merge gate
