@@ -3,156 +3,119 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — DEC-51: the epic gate reads its seams, it does not re-review them</title>
+  <title>Trawler — DEC-51: the epic's own review is load-bearing (withdrawn)</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>DEC-51 — the epic gate reads its seams, it does not re-review them</h1>
-      <p>An epic's diff is the union of seams every Working Unit review already cleared. It is the only place in the
-      workflow where the same bytes are judged twice, and 29 recorded epic rounds returned 52 findings for it. The
-      epic tip stops owing a review of its own; <code>7·walk</code> — every seam's review re-read at its declared
-      binding — does not move.</p>
-      <div class="meta">Decided 2026-09-16 · E-SIMPWF.W9 · active</div>
+      <h1>DEC-51 — the epic's own review is load-bearing</h1>
+      <p>E-SIMPWF.W9 set out to stop the epic gate re-reviewing code its seams had already cleared. Four rounds of
+      its own review found four ways code reaches <code>main</code> that the seams do not cover. The cut is
+      <strong>withdrawn</strong>; this record is the enumeration it cost, so the next attempt starts from a reading
+      rather than a premise.</p>
+      <div class="meta">Withdrawn 2026-09-16 · E-SIMPWF.W9 · <strong>never shipped</strong> — the gate behaves as it
+      did before</div>
     </div>
   </header>
   <main>
 
-    <h2 id="decision">The decision</h2>
-    <div class="callout" data-c="the-rule">
-      <p><strong>The rule.</strong> <strong>Code owes a review where it lands.</strong> An epic tip therefore
-      <strong>owes no review of its own diff</strong> — and never stops owing that <strong>everything in it carries
-      one</strong>.</p>
-      <p>The distinction is narrow and worth stating plainly, because the two halves are easy to confuse: what left
-      is the re-judging of already-cleared bytes; what stayed is the guarantee that no byte reached the epic
-      unjudged.</p>
+    <h2 id="status">Status</h2>
+    <div class="callout warn" data-c="withdrawn">
+      <p><strong>Withdrawn before landing. No rule changed.</strong> The epic gate still runs
+      <code>3·review</code>, <code>3·review-nits</code>, <code>4·review-base</code> and
+      <code>5·diff-binding</code> over its own <code>base..tip</code> diff, exactly as before. Nothing in
+      <a href="../workflow.html">workflow.html</a>, <a href="workflow-gates.html#dec-2">DEC-2</a> or the gate's
+      check list was left changed by the attempt.</p>
+      <p>What did land from the same Working Unit is
+      <a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a> — the dimension cut and
+      relevance-batched verifiers — which is independent of this and produced no holes.</p>
     </div>
 
-    <div class="callout warn" data-c="where-code-lands">
-      <p><strong>Code lands in two places, not one.</strong> The first draft of this record said "the seams were
-      reviewed", and that is only true of code that arrived through a Working Unit merge. Code also lands as a
-      <strong>standalone commit directly on an epic branch</strong> — a category
-      <code>CLAUDE.md</code> and the gate have always permitted, carrying a <code>test/v2</code> note at
-      <code>level: commit</code>. Nothing reviewed those. The epic-level review had been their blunt backstop,
-      covering every byte in <code>base..tip</code> regardless of how it arrived, and removing it let such a commit
-      reach <code>main</code> with no review anywhere in its history.</p>
-      <p>So <code>3·review</code> (with <code>3·review-nits</code>, <code>4·review-base</code> and
-      <code>5·diff-binding</code>) runs at <strong>commit level too</strong>, bound to that commit's own code paths.
-      The epic's re-read is then sound rather than merely cheap: every level where code can land owes a review of
-      it, and <code>7·walk</code> re-reads all of them.</p>
-      <p><strong>Found by this Working Unit's own second review round</strong>, as a reproduced blocker — a
-      standalone code commit merging to <code>main</code> through the real hook and signing, with zero
-      <code>cr</code> notes in its history. It is recorded here as the reason the rule reads "where it lands" rather
-      than "the seams", not as a footnote to a rule that was already right.</p>
-    </div>
-
-    <div class="callout warn" data-c="the-tip-position">
-      <p><strong>And one position the walk cannot reach: the epic tip itself.</strong> The third review round found
-      the same hole again, one commit over. <a href="workflow-gates.html#dec-2">DEC-2</a> has the walk skip the epic
-      tip when it is a non-merge commit — one commit cannot carry both an epic-level and a commit-level
-      <code>test</code> note — and justified that skip by saying <em>"the tip's own diff is covered by the epic gate
-      itself"</em>. <strong>That justification was this record's to keep, and this record removed it.</strong> So a
-      standalone code commit landed <em>as</em> the epic tip was judged by nobody: the walk skips it by name, no
-      epic check asks, <code>mr confirm epic</code> deliberately does not, and the pre-push range mirror is blind to
-      it once it has landed behind a merge.</p>
-      <p>The epic therefore asks for that one commit's review itself, over <strong>the commit's own span</strong> —
-      not the epic's — which is the only binding that says anything true about it. A tip that changes no code owes
-      nothing extra, which is the common shape: an epic closing on a docs-only commit.</p>
-      <p>Twice in one Working Unit the same shape was missed, and the reason is worth keeping: <strong>removing a
-      blunt backstop means finding every case it was quietly covering</strong>, and "the seams" was a guess at that
-      set rather than a reading of it. DEC-2's row is amended below.</p>
-    </div>
-
-    <h2 id="checks">What moved</h2>
+    <h2 id="premise">The premise, and why it was wrong</h2>
+    <p>The proposal rested on one sentence: <em>an epic's diff is the union of seams every Working Unit review
+    already cleared, so the union adds no subject.</em> The corpus supported the <strong>value</strong> claim —
+    29 epic rounds returned 1.79 verified findings each against the WU level's 3.37, with 41% returning nothing.
+    It said nothing about the <strong>role</strong> claim, and the role claim is the one that mattered.</p>
     <table>
-      <thead><tr><th>Check</th><th>At WU <em>and standalone commit</em></th><th>At epic</th><th>Why</th></tr></thead>
+      <thead><tr><th>Reading</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td><code>3·review</code></td><td>stays</td><td><strong>leaves</strong></td>
-          <td>every byte was reviewed where it landed; the union adds no subject</td></tr>
-        <tr><td><code>3·review-nits</code></td><td>stays</td><td><strong>leaves</strong></td>
-          <td>nothing to disposition without a review</td></tr>
-        <tr><td><code>4·review-base</code></td><td>stays</td><td><strong>leaves</strong></td><td>same</td></tr>
-        <tr><td><code>5·diff-binding</code></td><td>stays</td><td><strong>leaves</strong></td><td>same</td></tr>
-        <tr><td><code>7·walk</code></td><td>—</td><td><strong>stays</strong></td>
-          <td>the epic's real guarantee: every seam's review re-read at its declared binding, an epic refused when
-          one has been lost</td></tr>
-        <tr><td><code>8·manual-review</code></td><td>stays</td><td><strong>stays</strong></td>
-          <td>the owner still signs the epic</td></tr>
-        <tr><td><code>9·design</code>, <code>6·doc-note</code>, <code>1·notes</code>, <code>2·manifest</code>,
-          <code>components·unbuilt</code></td><td>—</td><td>stay</td><td>untouched</td></tr>
+        <tr><td>Epic rounds on record</td><td>29</td></tr>
+        <tr><td>Mean verified findings, epic level</td><td>1.79 (WU level: 3.37)</td></tr>
+        <tr><td>Epic rounds returning nothing</td><td>41%</td></tr>
+      </tbody>
+    </table>
+    <p>A round that returns little is not the same as a check that guards nothing. The epic's review was a
+    <strong>backstop</strong>: its binding is the plain two-dot <code>base..tip</code> code hash, which covers every
+    byte reachable from the tip <em>however it arrived</em>. The seams' bindings are parent-to-parent diffs, and
+    their union is strictly smaller.</p>
+
+    <h2 id="holes">The four holes, in the order the rounds found them</h2>
+    <p>Each was reproduced against a real binary, and each is a case where code reached <code>main</code> with no
+    review anywhere in its history. Rounds 2 and 3 were fixed and the fixes kept finding more; round 4 ended it.</p>
+    <table>
+      <thead><tr><th>#</th><th>How code arrives</th><th>Why the seams miss it</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>A <strong>standalone commit</strong> inside the epic's range</td>
+          <td>The walk checks it at <code>Level::Commit</code>, which has never demanded a review.
+          <code>CLAUDE.md</code> and the gate have always permitted such commits with only a
+          <code>test/v2</code></td></tr>
+        <tr><td>2</td><td>A standalone commit that <strong>is the epic tip</strong></td>
+          <td><a href="workflow-gates.html#dec-2">DEC-2</a> has the walk skip the tip — one commit cannot carry both
+          an epic-level and a commit-level <code>test</code> note — and justified the skip by saying the tip's diff
+          is covered by the epic gate itself. That justification <em>was</em> this review</td></tr>
+        <tr><td>3</td><td>Bytes a <strong>merge commit carries of its own</strong>, present in neither parent — a
+          hand-resolved conflict, or any edit between <code>git merge --no-commit</code> and the commit</td>
+          <td>The walk verifies <code>wu_tip</code> against <code>mainline</code>. Bytes that exist only in the
+          merge commit's tree are in neither endpoint, so no seam diff can contain them. This is the case
+          <strong>no per-commit check can reach</strong>, and it is why the endpoint diff is irreplaceable</td></tr>
+        <tr><td>4</td><td>A <strong>rendered UI file</strong> in a standalone commit at the epic tip</td>
+          <td><code>check_ui_outside_a_wu</code> runs only at <code>Level::Commit</code> and the walk skips the tip,
+          so <code>9·design</code> never asks. <strong>Pre-existing</strong>, not opened by the attempt — recorded
+          here because the same enumeration surfaced it</td></tr>
       </tbody>
     </table>
 
-    <div class="diagram" data-c="seams-vs-union">
-      <pre class="mermaid">
-flowchart LR
-  W1["WU 1&#10;reviewed · cr/v5"] --> S1(("seam"))
-  W2["WU 2&#10;reviewed · cr/v5"] --> S2(("seam"))
-  C1["standalone code commit&#10;reviewed · cr/v5"] --> S3(("commit"))
-  S1 --> E["epic tip&#10;no review of its own"]
-  S2 --> E
-  S3 --> E
-  E -- "7·walk re-reads every review it finds" --> S1
-  E -- " " --> S2
-  E -- " " --> S3
-  E --> M["main"]
-      </pre>
-      <div class="caption">Hình 1 — the epic tip asks nothing new of the code; it asks every place code landed
-      whether its evidence is still there. A standalone commit is one of those places.</div>
+    <div class="callout" data-c="hole-3">
+      <p><strong>Hole 3 is the one that decides the question.</strong> Holes 1, 2 and 4 are positions, and a
+      position can be patched — each has a commit you could hang a review on. Hole 3 has no such commit: the bytes
+      belong to a merge, and a merge's content is exactly what parent-to-parent diffing cannot see. Any replacement
+      for the epic's endpoint review must cover it, which means <strong>a binding over the endpoint diff</strong> —
+      which is the thing being removed.</p>
+      <p>This is also the guarantee <a href="workflow-gates.html#dec-2">DEC-2</a> states in as many words:
+      <em>"smuggled content turns the next gate red."</em> The attempt gave that up without noticing.</p>
     </div>
 
-    <h2 id="numbers">The numbers that decided it</h2>
+    <h2 id="cost">What the attempt cost, and what it bought</h2>
     <table>
-      <thead><tr><th>Level</th><th>Rounds</th><th>Mean verified</th><th>Zero-yield</th></tr></thead>
+      <thead><tr><th>Reading</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td>Working Unit</td><td>169</td><td>3.37</td><td>33%</td></tr>
-        <tr><td><strong>Epic</strong></td><td><strong>29</strong></td><td><strong>1.79</strong></td>
-          <td><strong>41%</strong></td></tr>
-      </tbody>
-    </table>
-    <p>~29 rounds bought to return 52 findings, over bytes already cleared once. Two in five returned nothing at
-    all.</p>
-
-    <h2 id="consequences">Consequences</h2>
-    <table>
-      <thead><tr><th>Where</th><th>What changed</th></tr></thead>
-      <tbody>
-        <tr><td><code>xtask/src/gate.rs</code></td>
-          <td>One table says which checks each level runs. The receipt's <code>checks:</code> line renders from it
-          and the guard around the review checks reads it, so a check that stopped running cannot keep being
-          advertised. An epic tip's <code>cr</code> note is read when present — the walk's waivers live on it — and
-          never demanded</td></tr>
-        <tr><td>Standalone code commits</td>
-          <td>They now owe a <code>cr/v5</code> PASS bound to their own code paths, read at
-          <code>Level::Commit</code> and re-read by <code>7·walk</code>. A standalone commit that changes no code
-          owes none, exactly as a docs-only Working Unit does — the demand follows the code, never the level</td></tr>
-        <tr><td><a href="workflow-gates.html#dec-2">DEC-2</a>'s walk tip-skip</td>
-          <td>The skip stands; its <em>reason</em> does not. "The tip's own diff is covered by the epic gate itself"
-          was true only while the epic reviewed its own whole diff. The epic now asks for the tip commit's own
-          review directly, bound to <code>tip^..tip</code>, whenever that commit changes code — so the skip is
-          about which <em>notes</em> the tip can carry, never about whether its code was judged</td></tr>
-        <tr><td><code>xtask/src/mr.rs</code></td>
-          <td><code>mr confirm epic</code> stops holding a tip for a review note. Its readiness rule is "never
-          refuse a tip the merge gate would green"; leaving the demand there would have made a signed epic
-          impossible</td></tr>
-        <tr><td>The epic's <strong>walk waiver</strong></td>
-          <td>It still rides the epic tip's <code>cr</code> note and the walk still reads it. What it loses is
-          self-expiry: the note is bound by no check any more, so a moved <code>main</code> that moves the code
-          re-validates neither the note nor the waiver. A waiver on an epic tip outlives its diff until someone
-          removes it — which is why its <code>why</code> is read by the owner at <code>8·manual-review</code>. A
-          waiver that should expire with its diff belongs on a note something still binds, and that is a later
-          record, not this one</td></tr>
-        <tr><td>The review skill</td>
-          <td>Unchanged for epic scope — a caller may still review an epic deliberately. What changed is that
-          nothing <em>demands</em> it</td></tr>
+        <tr><td>Review rounds run against the attempt</td><td>4</td></tr>
+        <tr><td>Verified blockers, all of this class</td><td>3 (plus one pre-existing)</td></tr>
+        <tr><td>Sibling sites that restated the rule it moved</td><td>4 — <code>mr</code>'s <code>SIGN_LAST</code>
+          and <code>unready_reasons</code>, <code>notes_write</code>'s <code>written()</code>,
+          <code>lib.rs</code>'s <code>preflight_cmd</code> comment</td></tr>
+        <tr><td>Tokens spent reviewing it</td><td>~2.7M across four rounds</td></tr>
+        <tr><td>Bought</td><td>The enumeration in this record, and the reading that a low-yield check can still be
+          load-bearing</td></tr>
       </tbody>
     </table>
 
-    <div class="callout warn" data-c="what-did-not-change">
-      <p><strong>What an epic still owes:</strong> <code>test/v2</code>, <code>doc/v1</code>, <code>mr/v1</code>,
-      its design checks, and a clean walk. Removing the review from the tip removed nothing else, and an epic whose
-      seam — or whose standalone code commit — has lost its review is refused exactly as before.</p>
-    </div>
+    <h2 id="next">What a future attempt owes</h2>
+    <table>
+      <thead><tr><th>Owed</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>A <strong>proof</strong> that the replacement covers every byte reachable from the epic tip — not a
+          list of positions</td>
+          <td>Three patches to the same premise each looked complete. The fourth hole was found by enumerating
+          arrivals systematically rather than reading the diff, which is how it should have started</td></tr>
+        <tr><td>An answer for a merge commit's own content (hole 3)</td>
+          <td>Either a binding over the endpoint diff — in which case there is little left to cut — or a refusal of
+          merges that carry content of their own, which is a workflow rule and a separate decision</td></tr>
+        <tr><td>A measurement of what the epic round <em>guards</em>, not what it yields</td>
+          <td>1.79 findings per round justified the cut. It was the wrong number: the check's value is the class of
+          escape it prevents, which no yield figure shows</td></tr>
+      </tbody>
+    </table>
 
   </main>
   <script type="module">

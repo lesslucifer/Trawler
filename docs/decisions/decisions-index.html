@@ -605,31 +605,28 @@
         <tr>
           <td><a href="dec-51-the-epic-gate-reads-its-seams.html"><code>dec-51-the-epic-gate-reads-its-seams.html</code></a></td>
           <td><span class="badge id">DEC-51</span></td>
-          <td><strong>Code owes a review where it lands, so the epic gate reads rather than re-reviews</strong> — an
-            epic tip owes no review of its own diff, and never stops owing that everything in it carries one. Code
-            lands in <em>two</em> places: a Working Unit seam and a <strong>standalone commit directly on an epic
-            branch</strong>, so <code>3·review</code> runs at commit level too, bound to that commit's own code
-            paths. The first draft said only "the seams were reviewed"; W9's own second review round reproduced the
-            blocker that made — a standalone code commit reaching <code>main</code> through the real hook, signed,
-            with zero <code>cr</code> notes in its history, because the epic-level review had been its only
-            backstop. Its third round then found the same shape one commit over: <a href="workflow-gates.html#dec-2">DEC-2</a>
-            has the walk skip the epic tip, justified by the epic covering its own diff — the very coverage this
-            record removed — so a standalone code commit landed <em>as</em> the tip was judged by nobody either. The
-            epic now asks for that commit's own review, bound to <code>tip^..tip</code>. Twice in one Working Unit:
-            removing a blunt backstop means finding every case it was quietly covering, and "the seams" was a guess
-            at that set rather than a reading of it. <code>3·review</code>,
-            <code>3·review-nits</code>, <code>4·review-base</code> and <code>5·diff-binding</code> leave the epic
-            check list; <code>7·walk</code> stays and is the epic's real guarantee — every seam's review re-read at
-            its declared binding, the epic refused when one has been lost. The numbers: an epic round's diff is the
-            union of seams every WU review already cleared, the only place in the workflow where the same bytes are
-            judged twice, and <strong>29 epic rounds returned 52 findings</strong> — mean 1.79 against the WU
-            level's 3.37, with <strong>41% returning nothing at all</strong>. One table in <code>gate.rs</code> now
-            says which checks each level runs, read by both the receipt's <code>checks:</code> line and the guard
-            around the review checks, so an advertised check is always a check that ran.
-            <code>mr confirm epic</code> follows, because its readiness rule is never to refuse a tip the merge gate
-            would green. An epic still owes <code>test/v2</code>, <code>doc/v1</code>, <code>mr/v1</code>, its
-            design checks and a clean walk</td>
-          <td><span class="badge auto">active</span></td>
+          <td><strong>The epic's own review is load-bearing — the cut is withdrawn and never shipped</strong>.
+            E-SIMPWF.W9 proposed that an epic tip owes no review of its own diff, because that diff is the union of
+            seams every Working Unit review already cleared. The corpus backed the <em>value</em> claim (29 epic
+            rounds, mean 1.79 verified, 41% returning nothing) and said nothing about the <em>role</em> claim, which
+            was the one that mattered: the epic's binding is the plain two-dot <code>base..tip</code> code hash,
+            covering every byte reachable from the tip however it arrived, while the seams' bindings are
+            parent-to-parent diffs whose union is strictly smaller. <strong>Four rounds of the WU's own review found
+            four ways code reaches <code>main</code> that the seams miss</strong>: a standalone commit in the range;
+            a standalone commit that <em>is</em> the tip, which <a href="workflow-gates.html#dec-2">DEC-2</a>'s walk
+            skips on the stated grounds that the epic gate covers it; <strong>bytes a merge commit carries of its
+            own</strong> — a hand-resolved conflict, present in neither parent, which no per-commit check can reach
+            and which is the case that decides the question; and a rendered UI file at a tip standalone commit
+            (pre-existing, surfaced by the same sweep). Every one reproduced against a real binary, refused at the
+            merge base and green after the cut. <a href="workflow-gates.html#dec-2">DEC-2</a>'s guarantee that
+            <em>"smuggled content turns the next gate red"</em> was given up without notice. The record keeps the
+            enumeration, what the attempt cost (4 rounds, 3 new blockers, 4 sibling sites restating the moved rule,
+            ~2.7M tokens) and what a future attempt owes: a proof of coverage rather than a list of positions, an
+            answer for a merge commit's own content, and a measurement of what the check <em>guards</em> rather than
+            what it yields. <strong>Nothing changed</strong>: the gate, <code>workflow.html</code> and DEC-2 stand
+            as they did. <a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a>, from the
+            same Working Unit, is independent and did land</td>
+          <td><span class="badge approval">withdrawn</span></td>
         </tr>
       </tbody>
     </table>

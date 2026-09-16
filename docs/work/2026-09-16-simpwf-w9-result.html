@@ -3,25 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — E-SIMPWF.W9 result (the round is cut to what pays)</title>
+  <title>Trawler — E-SIMPWF.W9 result (the fleet is cut; the epic's review is not)</title>
 </head>
 <body data-artifact="wu-result" data-status="ready">
   <header class="doc-hero">
     <div class="inner">
       <h1>E-SIMPWF.W9 — result</h1>
-      <p>The instrument W6 and W8 built was spent. Two finder dimensions are retired against the corpus numbers that
-      retired them, a third is conditional, the verifier stage batches by relevance with blockers kept out, and the
-      epic gate stopped re-reviewing code its seams already cleared.</p>
+      <p>The instrument W6 and W8 built was spent, and it returned a split verdict. <strong>DEC-50 shipped:</strong>
+      two finder dimensions retired against the corpus numbers that retired them, a third conditional, the verifier
+      stage batched by relevance with blockers kept out. <strong>DEC-51 was withdrawn:</strong> four rounds of this
+      WU's own review found four ways code reaches <code>main</code> that an epic's seams do not cover, so the
+      epic keeps the review of its own diff.</p>
       <div class="meta">v1 · 2026-09-16 · Trawler · T3 WU result · E-SIMPWF.W9 · <code>wu/simpwf/round-cut</code> →
       <code>epic/simpwf</code> · mints <a href="../decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a>
-      and <a href="../decisions/dec-51-the-epic-gate-reads-its-seams.html">DEC-51</a></div>
+      · withdraws <a href="../decisions/dec-51-the-epic-gate-reads-its-seams.html">DEC-51</a></div>
     </div>
   </header>
   <main>
 
     <h2 id="outcome" data-item="outcome">Outcome</h2>
-    <p>Both halves of the requirement landed. The rules half changed the fleet's shape; the code half changed what
-    the merge gate demands of an epic.</p>
+    <div class="callout warn" data-c="split-outcome">
+      <p><strong>One half of the requirement landed; the other is withdrawn.</strong> The rules half — the fleet's
+      shape — shipped and is measured. The gate half did not: the epic's own review turned out to be load-bearing
+      in four ways the plan's yield analysis could not see, and the owner took the split rather than patch a
+      premise a fourth time.</p>
+      <p>The gate behaves exactly as it did before this Working Unit.
+      <a href="../decisions/dec-51-the-epic-gate-reads-its-seams.html">DEC-51</a> is kept as a
+      <strong>withdrawn</strong> record because its enumeration is the only thing that makes a future attempt
+      cheaper than this one.</p>
+    </div>
     <table>
       <thead><tr><th>Required</th><th>Delivered</th><th>Where</th></tr></thead>
       <tbody>
@@ -36,8 +46,11 @@
           <td><code>SKILL.md</code> §4</td></tr>
         <tr><td>3·review, 3·review-nits, 4·review-base and 5·diff-binding leave the epic check list; 7·walk
           stays</td>
-          <td><span class="badge auto">done</span> one table says which checks each level runs; the receipt renders
-          from it and the review guard reads it</td>
+          <td><span class="badge approval">withdrawn</span> four verified blockers — see
+          <a href="#why-withdrawn">why</a>. What remains is the <code>CHECKS</code> table the attempt introduced,
+          kept because it fixes a <em>pre-existing</em> defect: the commit-level receipt advertised four review
+          checks <code>check_review</code> has never run there, and <code>9·design</code>'s row omitted the level
+          <code>check_ui_outside_a_wu</code> fires at</td>
           <td><code>xtask/src/gate.rs</code></td></tr>
         <tr><td>Every round writes <code>stage_seconds</code> and <code>by_finder</code></td>
           <td><span class="badge auto">done</span> the §6 template carries both, with the rule that a dimension the
@@ -52,74 +65,80 @@
     <table>
       <thead><tr><th>Deviation</th><th>Why</th></tr></thead>
       <tbody>
-        <tr><td><strong><code>xtask/src/mr.rs</code> changed too</strong> — the plan's "Where it lands" table named
-          only <code>gate.rs</code></td>
-          <td>Not optional. <code>mr confirm</code>'s readiness check demanded a <code>cr/v5</code> PASS of every
-          gated tip, and its own doc comment states the invariant it lives by: <em>"so this never refuses a tip the
-          merge gate would green"</em>. Removing the epic's review demand from the gate alone would have left every
-          epic unsignable — <code>8·manual-review</code> wants an <code>mr/v1</code> that only
-          <code>mr confirm</code> writes. This is the epic-level twin of the deadlock W7 found for the exempt WU
-          (<code>93bc399</code>), and the fix is the same shape: <code>unready_reasons</code> takes the level and
-          asks <code>gate::runs_at</code>, so the two rules cannot disagree</td></tr>
-        <tr><td><strong>The plan's integration case "a WU tip without one is still refused under
-          <code>3·review</code>"</strong> is covered as <code>1·notes</code></td>
-          <td>An <em>absent</em> note has always been refused by <code>1·notes</code>; <code>3·review</code> is what
-          refuses a note that reads FAIL. Both are covered, each under the check that actually fires — the plan's
-          sentence named the wrong one</td></tr>
-        <tr><td><strong><code>bless_epic</code> stopped writing a <code>cr</code> note at all</strong>, rather than
-          only the new cases proving the cut</td>
-          <td>A broader and more honest proof: all 92 pre-existing epic integration cases now run with no review on
-          the epic tip. The walk-waiver and drop-record cases write their own note, which is also the demonstration
-          that a note is still <em>read</em> when present</td></tr>
-        <tr><td><strong>The epic's walk waiver lost a property nobody asked about</strong></td>
-          <td>Found while editing <code>workflow.html</code>: the waiver rides the epic tip's <code>cr</code> note,
-          and the doc justified that by the note being diff-bound — "so it can't silently outlive its diff". No
-          check binds that note any more, so it can. Recorded in DEC-51 and corrected in
-          <code>workflow.html</code> rather than left standing as a false sentence. Fixing it is a later record's
-          work: it means moving the waiver to a note something still binds</td></tr>
+        <tr><td><strong>Half the requirement was withdrawn.</strong> The plan's gate change — the four review
+          checks leaving the epic list — did not ship</td>
+          <td>Four verified blockers, each reproduced against a real binary. The plan's justification was the epic
+          round's <em>yield</em> (1.79 verified findings, 41% zero-yield); what it needed was the epic round's
+          <em>role</em>, and the epic's endpoint binding turns out to be the only thing covering a byte a merge
+          commit carries of its own. <a href="#why-withdrawn">The reasoning</a>, and
+          <a href="../decisions/dec-51-the-epic-gate-reads-its-seams.html">DEC-51</a> for the enumeration. The
+          owner took the split rather than patch the premise a fourth time</td></tr>
+        <tr><td>The <code>CHECKS</code> table stayed although the change it was built for did not</td>
+          <td>It fixes a defect that <em>predates</em> this Working Unit: the receipt's check list was two
+          hardcoded strings, and the non-epic one named the four review checks at commit level, where
+          <code>check_review</code> has never run. <code>9·design</code>'s row also omitted the one level
+          <code>check_ui_outside_a_wu</code> fires at. Both now come from one table that the receipt and the review
+          guard read together, with tests at unit and integration level</td></tr>
+        <tr><td>The plan's WU-integration and epic-e2e cases do not exist, because the behaviour they were written
+          for does not</td>
+          <td>What remains changes what the receipt <em>says</em>, not what the gate <em>decides</em>. That has a
+          bounded contract — the receipt's line at each level through the real gate over a real repo — and it is
+          tested. The e2e layer is waived in the note with that reason: no end-to-end flow changed</td></tr>
+        <tr><td><code>xtask/src/mr.rs</code>, <code>notes_write.rs</code> and <code>lib.rs</code> were changed and
+          then restored</td>
+          <td>All three restated the review rule in their own words and went stale the moment the rule moved — four
+          sibling sites in total, found one per round. Their fixes were correct for the cut and became dead
+          generality without it, so they are reverted rather than kept. <strong>That they existed at all is the
+          finding</strong>, and it is recorded in DEC-51's cost table: a rule with five copies is a rule that
+          cannot be moved cheaply</td></tr>
+        <tr><td>Two backlog rows were opened that the plan did not anticipate</td>
+          <td>Fleet cuts priced off W6's per-agent means are 2.3× optimistic (measured), and a rendered UI file at
+          a tip standalone commit escapes <code>9·design</code> (pre-existing, surfaced by round 4's sweep)</td></tr>
       </tbody>
     </table>
 
     <h2 id="evidence" data-item="evidence">Evidence</h2>
-    <h3 id="tests">Tests — all three levels, none waived</h3>
+    <h3 id="tests">Tests</h3>
     <table>
       <thead><tr><th>Level</th><th>Subject</th><th>Cases</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge id">unit</span></td><td><code>xtask/src/gate.rs</code>,
-          <code>xtask/src/mr.rs</code></td>
-          <td>the epic list drops the four review checks and keeps the walk · the WU list is unchanged, asserted
-          element by element · the printed <code>checks:</code> line equals the list the level runs, and
-          <code>runs_at</code> agrees with it for every check at every level · an epic tip is ready to sign with no
-          review note while still owing <code>test/v2</code> and <code>doc/v1</code></td></tr>
+        <tr><td><span class="badge id">unit</span></td><td><code>xtask/src/gate.rs</code> — the check table</td>
+          <td>the review runs where a note binds a range (a seam and the epic, never commit level) · the epic and
+          Working Unit lists · the commit list carries <code>design</code> and no review · a check emitted by
+          another borrows its levels and every deferring row's target names its own, so resolution is one hop and
+          cannot cycle · a check a level can emit is one the table says that level runs, asserted where
+          <code>check_ui_outside_a_wu</code> actually fires · the printed line asserted <em>literally</em> per
+          level rather than against the table that produced it</td></tr>
         <tr><td><span class="badge id">integration</span></td><td><code>xtask/tests/dod_gate.rs</code> — the real
           gate over a real temp git repo</td>
-          <td>an epic tip carrying no review greens and its receipt lists only what it ran · a <code>cr/v5</code>
-          with a stale <code>diff_sha256</code> greens at the epic and the same staleness still reds a WU under
-          <code>5·diff-binding</code> — the case that proves the removal is real rather than merely unexercised · a
-          FAIL verdict on an epic tip is likewise unread · an epic whose seam lost its review is refused under
-          <code>7·walk·1·notes</code> and greens once restored · a missing <code>test/v2</code>, <code>doc/v1</code>
-          or <code>mr/v1</code> still refuses the epic</td></tr>
-        <tr><td><span class="badge id">e2e</span></td><td><code>tests/e2e_simpwf.rs</code>, extended</td>
-          <td>the epic leg now asserts the tip carries <em>no</em> <code>cr</code> note, greens, is signed and lands
-          on <code>main</code> through the real merge hook — and the walk still refuses it when a seam's review is
-          removed. No new e2e file</td></tr>
+          <td>the receipt names the checks its level ran, at epic, seam and standalone-commit level — the bounded
+          contract for the only behaviour that changed, and the case that would have caught the pre-existing
+          commit-level string</td></tr>
+        <tr><td><span class="badge id">e2e</span></td><td>—</td>
+          <td><strong>Waived in the note</strong>: no end-to-end flow changed. The gate decides exactly what it
+          decided before; what moved is what its receipt says. The epic e2e was extended during the attempt and
+          restored on withdrawal</td></tr>
       </tbody>
     </table>
     <p>Gate 0 green: <code>cargo fmt --check</code>, <code>cargo clippy -D warnings</code> (workspace, all targets,
-    <code>hook-tests</code>), and the full suite.</p>
+    <code>hook-tests</code>), and the full suite — 26 test binaries.</p>
 
     <h3 id="the-bar">The bar — no verified blocker or important is lost</h3>
     <div class="callout" data-c="bar-assessment">
-      <p><strong>Assessment against the corpus cases the retired dimensions owned.</strong> The three W6
-      simplification findings (D3, D4, O3) all read as <strong>nit</strong> under DEC-47's severity rows, and a nit
-      never fails a verdict — so none of them is a blocker or important, and none is lost by the bar's terms. The
-      reuse class (the <code>tests/e2e_export.rs</code> CA duplication) is the one place the bar is genuinely paid:
-      duplication findings escalate to <em>important</em> under the rubric's uncertainty rule, and nothing else in
-      the fleet catches them. <strong>That loss is real, it is priced in DEC-50, and the owner took it knowingly.</strong>
-      Altitude's O1 crosses a module boundary, so the conditional keeps it.</p>
-      <p>Stated plainly rather than claimed away: the bar is met for simplification and for altitude, and is
-      <em>deliberately</em> paid for reuse. A bar that hid that would be the failure W6 and W8 were both criticised
-      for.</p>
+      <p><strong>Met, and demonstrated rather than argued.</strong> The bar was set for DEC-50's dimension cut, and
+      four rounds of a two-or-three-finder fleet ran against this Working Unit's own diff. They raised 14
+      candidates and found <strong>four verified blockers</strong> — every one in the half of the WU that was
+      withdrawn as a result. A fleet that catches four blockers in the diff it is reviewing has not lost the
+      severities the bar names.</p>
+      <p><strong>Where the bar is deliberately paid:</strong> the reuse class. Duplication findings escalate to
+      <em>important</em> under the rubric's uncertainty rule and nothing else in the fleet catches them — the
+      <code>tests/e2e_export.rs</code> hand-rolled CA duplicating
+      <code>trawler::test_support::tls_origin</code> is the standing example. That loss is real, priced in DEC-50,
+      and taken knowingly. Simplification's three W6 ground-truth findings all read as <strong>nit</strong> under
+      DEC-47's severity rows, so none is a blocker or important and none is lost by the bar's terms. Altitude's O1
+      crosses a module boundary, so the conditional keeps it.</p>
+      <p>Stated plainly rather than claimed away: met for simplification and altitude, demonstrated for the fleet
+      as a whole, and <em>deliberately paid</em> for reuse.</p>
     </div>
 
     <h3 id="bill">The round's own bill</h3>
@@ -272,6 +291,69 @@
     total 1,140. Cheaper than round 1's 934k and round 2's 716k, because two of three finders returned nothing and
     had less to reproduce.</p>
 
+    <h3 id="why-withdrawn">Round 4, and why DEC-51 was withdrawn rather than patched a fourth time</h3>
+    <p>Round 4 raised four candidates and the verifiers confirmed all four — <strong>three of them blockers</strong>,
+    each reproduced against a real binary, refused at the merge base and green after the cut.</p>
+    <table>
+      <thead><tr><th>Round 4 candidate</th><th>Raised by</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Bytes a <strong>merge commit carries of its own</strong> — a hand-resolved conflict, present in
+          neither parent — are in no seam's diff, at a mid-history seam</td>
+          <td>correctness, as blocker</td>
+          <td><span class="badge approval">real · blocker</span></td></tr>
+        <tr><td>The same, when the epic <strong>tip</strong> is that merge commit — <code>check_tip_commit_review</code>
+          only handled a single-parent tip</td><td>correctness, as blocker</td>
+          <td><span class="badge approval">real · blocker</span></td></tr>
+        <tr><td>A <strong>rendered UI file</strong> at a tip standalone commit escapes <code>9·design</code>, because
+          the tip fix replayed only the review dimension</td><td>altitude, as important</td>
+          <td><span class="badge approval">real · blocker</span> — the verifier raised it, and established the
+          asymmetry is <em>pre-existing</em>: a backlog row, not this WU's</td></tr>
+        <tr><td>The tip fix emitted <code>3·review</code>/<code>4·review-base</code>/<code>5·diff-binding</code>
+          outside <code>runs_at</code>, so the epic's receipt omitted checks it had just run</td>
+          <td>altitude, as blocker</td>
+          <td><span class="badge auto">real · important</span> — downgraded: the enforcement was correct, only the
+          receipt's advertisement was wrong</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="merge-bytes">
+      <p><strong>The merge-commit case is what ended it.</strong> The other three are <em>positions</em>, and a
+      position can be patched — each has a commit to hang a review on. A merge's own content has none: it exists in
+      neither parent, so no parent-to-parent diff can contain it, and no per-commit check can reach it. The only
+      thing that ever covered it is a binding over the endpoint <code>base..tip</code> diff — which is the thing
+      being removed.</p>
+      <p>The verifier drew a distinction worth keeping, because it is stronger than "the hash covered it": at the
+      merge base, the review skill's own input scope — <code>git diff base..tip</code> for an epic — <em>contained</em>
+      those bytes, so they were read. After the cut, <strong>no review's input scope ever contains them</strong>.
+      That is strictly worse, not merely differently accounted. It is also the guarantee
+      <a href="../decisions/workflow-gates.html#dec-2">DEC-2</a> states outright — <em>"smuggled content turns the
+      next gate red"</em> — given up without notice.</p>
+      <p><strong>And reachability is ordinary.</strong> <code>merge.ff = false</code> repo-wide, so every WU merge
+      is <code>--no-ff</code>; any conflicted merge is resolved by hand-editing before the commit completes, and the
+      resulting content is by construction neither parent's. No malice and no exotic git required.</p>
+    </div>
+    <p>Three patches to the same premise each looked complete when made. The fourth hole was found only by
+    enumerating arrivals systematically instead of reading the diff — which is how the work should have started, and
+    is what <a href="../decisions/dec-51-the-epic-gate-reads-its-seams.html">DEC-51</a> now demands of any future
+    attempt. Round 4's bill: <strong>653k tokens</strong>, 3 finders (280k) and 3 verifiers (373k),
+    <code>stage_seconds</code> total 1,063.</p>
+
+    <h3 id="four-rounds">What four rounds of its own review cost, and bought</h3>
+    <table>
+      <thead><tr><th>Round</th><th>Tokens</th><th>Raised</th><th>Verified</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>934k</td><td>5</td><td>5 important</td><td>FAIL</td></tr>
+        <tr><td>2</td><td>716k</td><td>3</td><td>1 blocker · 1 nit waived · 1 refuted</td><td>FAIL</td></tr>
+        <tr><td>3</td><td>522k</td><td>2</td><td>1 blocker · 1 important</td><td>FAIL</td></tr>
+        <tr><td>4</td><td>653k</td><td>4</td><td>3 blockers · 1 important</td><td>FAIL → withdrawn</td></tr>
+        <tr><td><strong>total</strong></td><td><strong>2.83M</strong></td><td><strong>14</strong></td>
+          <td><strong>4 blockers, 8 importants, 1 nit, 1 refuted</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p><strong>This is the clearest evidence DEC-50 has.</strong> A two- or three-finder fleet, judged against
+    <em>no verified blocker or important is lost</em>, found four blockers in the diff it was reviewing — every one
+    of them in the half of the Working Unit that was subsequently withdrawn. The blocker guardrail (a proposed
+    blocker never joins a batch) was exercised on all four. The retired dimensions raised nothing that was missed.</p>
+
     <h2 id="distillation" data-item="distillation">Distillation</h2>
     <table>
       <thead><tr><th>Tier</th><th>Doc</th><th>What it now says</th></tr></thead>
@@ -282,22 +364,22 @@
             priced, the relevance-batching rule and its guardrail, the bar change, and the priced loss</td></tr>
         <tr><td><span class="badge id">T2</span></td>
           <td><code>docs/decisions/dec-51-the-epic-gate-reads-its-seams.html</code></td>
-          <td>New. Which checks left the epic list and which stayed, the 29-round yield that decided it, and the
-            walk waiver's lost self-expiry</td></tr>
+          <td>New, and <strong>withdrawn</strong>. Why the premise was wrong, the four holes with how each arrives,
+            why the merge-commit case decides it, what the attempt cost, and what a future attempt owes</td></tr>
         <tr><td><span class="badge id">T2</span></td><td><code>docs/decisions/decisions-index.html</code></td>
           <td>Both rows, each carrying its numbers</td></tr>
         <tr><td><span class="badge id">T2</span></td><td><code>docs/backlog/roadmap.html</code></td>
-          <td>The per-dimension-attribution row records that W9 took the cut on hand-reconstructed attribution and
-            that the first real <code>by_finder</code> bills are what would confirm or overturn it; the
-            finder-stage-A/B row records that this cut claims no clock win, so the 300s bar is where W8 left it</td></tr>
+          <td>Four rows: per-dimension attribution is still owed and now checkable; the finder-stage A/B is where
+            W8 left it; fleet cuts priced off W6's per-agent means were 2.3× optimistic; the epic-review cut with
+            its four holes and what a next attempt owes; and the pre-existing <code>9·design</code> gap at a tip
+            standalone commit</td></tr>
         <tr><td><span class="badge id">T2</span></td><td><code>docs/decisions/workflow-gates.html</code></td>
-          <td>DEC-2's walk-tip-skip row: the skip stands, its second justification is struck and amended — it was
-            about which notes a commit can carry, never about whether its code was judged</td></tr>
+          <td><strong>Unchanged.</strong> DEC-2's walk-tip-skip row was amended during the attempt and restored on
+            withdrawal — its justification holds again, because the epic reviews its own diff</td></tr>
         <tr><td><span class="badge id">T1</span></td><td><code>docs/workflow.html</code></td>
-          <td>The epic's evidence row, the DoD-E review row, gate checks 3/4/5 scoped to the levels where code
-            lands, the standalone-commit paragraph and its DoD-C row, check 7's account of the tip commit the walk
-            cannot reach, the <code>cr/v5</code> row's fleet shape, who-judges, and the walk waiver's corrected
-            rationale</td></tr>
+          <td>DEC-50 only: the <code>cr/v5</code> row's fleet shape and the who-judges paragraph. Every DEC-51 edit
+            — the epic's evidence row, the DoD rows, gate checks 3/4/5, the standalone-commit paragraph, check 7 and
+            the walk waiver's rationale — was restored on withdrawal</td></tr>
         <tr><td><span class="badge id">rules</span></td>
           <td><code>.claude/skills/code-review/{SKILL.md, rubric.md}</code></td>
           <td>The fleet's shape, the retirement table, the batching rules. No automated test: rule-bearing
@@ -316,15 +398,18 @@
           <code>6·retirement-order</code> and <code>9·design-schema</code> are deliberately folded into the numbered
           families they belong to. Recorded because the table <em>reads</em> as exhaustive and a future reader may
           make the same inference; the honest fix is a clearer doc comment, not more rows</td></tr>
-        <tr><td>Three review rounds, three fix-forward cycles — and a plan that priced none of them</td>
-          <td>W9's plan projected a 61% token saving and no risk beyond the priced dimension loss. What it actually
-            cost was <strong>2.2M tokens across three rounds</strong>, two reproduced blockers of its own making,
-            and four sibling sites restating a rule it moved. Recorded as a reading about <em>process risk in rule
-            changes</em>, which nothing in the workflow currently prices: a diff that moves a rule is not the same
-            risk as a diff that adds a feature, and the fleet is what caught the difference</td></tr>
-        <tr><td>An epic walk waiver that expires with its diff</td>
-          <td>Discovered in this WU and recorded in DEC-51. The fix moves the waiver to a note something still
-            binds — a change to what a note carries, not to what the gate checks, and a separate decision</td></tr>
+        <tr><td>Nothing in the workflow prices the risk of a diff that <em>moves a rule</em></td>
+          <td>W9's plan projected a 61% token saving and no risk beyond the priced dimension loss. Half of it cost
+            <strong>2.83M tokens across four rounds</strong>, three reproduced blockers of its own making, four
+            sibling sites restating a rule it moved — and was then withdrawn. A diff that removes a check is not the
+            same risk as one that adds a feature: it inherits every case the check was quietly covering, and the
+            plan's yield analysis measured what the check <em>returned</em> rather than what it <em>guarded</em>.
+            Worth a standard of its own — a rule-removing diff owes an enumeration of what depended on it before it
+            owes a measurement</td></tr>
+        <tr><td>The epic's own review, if it is ever cut</td>
+          <td>DEC-51 holds the enumeration and the bar a next attempt must clear. A backlog row now carries it, and
+            the pre-existing <code>9·design</code> gap at a tip standalone commit sits beside it — same code, so
+            possibly cheaper taken together</td></tr>
         <tr><td>The first real <code>by_finder</code> bills, against this WU's hand-reconstructed attribution</td>
           <td>Already a backlog row. DEC-50's dimension rulings rest on attribution read by hand from 67
             severity-labelled findings, stated there as a limit. The rows the new shape writes are what would
