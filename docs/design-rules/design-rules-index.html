@@ -9,20 +9,20 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>Design rules — the KB, one file</h1>
-      <p>The enumerable, slug-id'd design rules every Trawler screen design must consider. Hard rules are one-liners — their Tier-1 predicate carries them; soft rules carry the judgment guidance a Tier-3 reviewer needs.</p>
-      <div class="meta">Living T2 · the design-rules KB's single file (index = rulebook) · Trawler · rationale: <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> · tokens: DEC-11 · closed vocabulary: <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> · truncation escape: <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a></div>
+      <p>The enumerable, slug-id'd design rules every Trawler screen design must satisfy, and the vocabularies every screen must agree on. Every rule is a one-liner carried by its Tier-1 predicate, read on the mockup doc; what a predicate cannot judge is the human's reading of the mockup.</p>
+      <div class="meta">Living T2 · the design-rules KB's single file (index = rulebook) · Trawler · rationale: <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> · tokens: DEC-11 · closed vocabulary: <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> · truncation escape: <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> · the cut: <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a></div>
     </div>
   </header>
   <main>
 
     <h2 id="what-this-is">What this is</h2>
-    <p>Most rules are <strong>extracted</strong> — the codebase or a design run already made the decision and this is where it was written down. A marked minority are <strong>principle imports</strong>. Rules are cited by <strong>slug</strong> (stable kebab name, never renamed once a receipt cites it — deprecate instead).</p>
+    <p>Most rules are <strong>extracted</strong> — the codebase or a design run already made the decision and this is where it was written down. A marked minority are <strong>principle imports</strong>. Rules are cited by <strong>slug</strong> (stable kebab name, never renamed once a run or a review row cites it — deprecate instead).</p>
     <table data-c="where-facts-live">
       <thead><tr><th>The fact is…</th><th>It lives in…</th><th>Example</th></tr></thead>
       <tbody>
         <tr><td>a rule binding any design</td><td><strong>this rulebook</strong></td><td><code>mono-for-wire-data</code></td></tr>
         <tr><td>one component's contract</td><td>its <strong>TSDoc in the collection</strong> — <a href="../../ui/src/components/">ui/src/components/</a>. A design file holds it only until the component is built, then retires into the TSDoc (<a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>)</td><td><code>KeyValueRow</code>'s <code>@use</code> / <code>@avoid</code></td></tr>
-        <tr><td>a stage's required artifact shape</td><td><a href="../design-flow.html">flow spec</a> (Tier-1 checks it as <em>completeness</em>, not as a rule)</td><td>"Layout is an annotated ASCII sketch"</td></tr>
+        <tr><td>the mockup doc's required items</td><td><a href="../design-flow.html">flow spec</a> (Tier-1 checks them as <em>completeness</em>, not as a rule)</td><td>"the Given list answers every input the screen was handed"</td></tr>
         <tr><td>a token's <strong>name or value</strong></td><td>code — <a href="../../ui/tailwind.config.js">ui/tailwind.config.js</a></td><td><code>ink-mute: #aea69c</code></td></tr>
       </tbody>
     </table>
@@ -31,31 +31,30 @@
     <div class="diagram" data-c="enforcement-diagram">
       <pre class="mermaid">
 flowchart LR
-  subgraph DESIGN["surface 1 · the design run's artifacts"]
-    H[hard rules] --> T1["Tier-1 · mechanical\ncargo xtask verify-doc"]
-    A[ALL rules] --> T2["Tier-2 · receipt coverage\nevery slug cited, verdict + citation"]
-    S[soft rules] --> T3["Tier-3 · adversarial review\njudged against the artifacts"]
+  subgraph DESIGN["surface 1 · the design run's mockup doc"]
+    H[hard rules] --> T1["Tier-1 · mechanical\ncargo xtask verify-doc, on every write"]
+    J["judgment — hierarchy, grouping,\nmicrocopy, idiom"] --> HR["the human reviewing the mockup\nlogged in the run's review item"]
   end
   subgraph CODE["surface 2 · ui/src/ — the built code"]
     V["design/vocabulary\na local ESLint rule"]
   end
   H -.->|"the token rules,\nagainst real markup"| V
       </pre>
-      <div class="caption">One list, two surfaces. A design can pick an illegal value and so can a built component — <a href="#binds">binds</a> says which. The coverage list = every slug in the <a href="#hard-rules">hard</a> + <a href="#soft-rules">soft</a> tables; a design receipt must cite them all.</div>
+      <div class="caption">One list, two surfaces. A design can pick an illegal value and so can a built component — <a href="#binds">binds</a> says which. Every rule in this book has a predicate; there is no receipt and no coverage list — a run cites a slug only where a review row hits one (<a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a>).</div>
     </div>
     <div class="callout" id="binds" data-c="binds">
       <strong><code>binds</code> — where a rule can be violated.</strong> It decides which surface judges the rule, and whether a screen must answer for it at all.
       <table>
         <thead><tr><th><code>binds</code></th><th>Violated in</th><th>Judged by</th></tr></thead>
         <tbody>
-          <tr><td><code>screen</code></td><td>a screen's layout / composition decisions</td><td>the design run and its receipt</td></tr>
+          <tr><td><code>screen</code></td><td>a screen's layout / composition decisions</td><td>the design run's mockup doc — its Tier-1 predicates, then the human</td></tr>
           <tr><td><code>component</code></td><td>a built component's own markup</td><td>the lint rule and the component's design file</td></tr>
           <tr><td><code>both</code></td><td>either</td><td>both surfaces, each at its own level</td></tr>
         </tbody>
       </table>
     </div>
     <div class="callout" id="litmus" data-c="litmus">
-      <strong>The hard/soft litmus is the check.</strong> If a mechanical predicate exists the rule is <span class="badge auto">hard</span>. If the check is a reviewer's question, it is <span class="badge approval">soft</span>. If neither can be written, it is not a rule yet — it stays out.
+      <strong>The litmus is the predicate.</strong> If a mechanical predicate exists the rule is <span class="badge auto">hard</span> and lives here. If the check is a reviewer's question it is judgment, not a rule of this book — the human reads it on the mockup and the run's review item records the call (<a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a>). If neither can be written, it stays out.
     </div>
     <div class="callout" data-c="consistency-model">
       <strong>Consistency is vocabulary, not vigilance.</strong> Anywhere designs must agree <em>across screens</em> — colours, spacing, key bindings, words — a <a href="#vocabularies">vocabulary</a> fixes the options in one place. A screen never re-decides what <code>warn</code> means — it reuses the entry or proposes a new one.
@@ -129,7 +128,7 @@ flowchart LR
     </table>
 
     <h2 id="hard-rules">Hard rules <span class="badge auto">Tier-1</span></h2>
-    <p>One line each — the predicate is the rule; the gate does the explaining.</p>
+    <p>One line each — the predicate is the rule; the gate does the explaining. Every predicate reads the mockup doc: the mounted mockup, the overflow line under it, the collection hosts' <code>data-order</code>, and the Keyboard item.</p>
     <table data-c="hard-rules-table">
       <thead><tr><th>Slug</th><th>Rule</th><th>Tier-1 check</th><th><a href="#binds">binds</a></th><th>Binds at</th></tr></thead>
       <tbody>
@@ -137,167 +136,23 @@ flowchart LR
         <tr><td><code>spacing-scale</code></td><td><strong>Layout spacing from the 8px scale; control chrome from a named chrome token.</strong> Never a raw value, never an inherited default</td><td>every spacing class resolves to a project token in <code>theme.spacing</code> or <code>maxWidth</code>; arbitrary <code>[…]</code> sizes red — and the mockup's own <code>.a-</code> CSS</td><td><code>both</code></td><td>Draft mockup</td></tr>
         <tr><td><code>type-tokens-only</code></td><td>Only the named families, sizes, line heights, tracking and the one weight</td><td>each type class resolves to its config scale; the mockup's own <code>.a-</code> CSS is judged the same way</td><td><code>both</code></td><td>Draft mockup</td></tr>
         <tr><td><code>radius-tokens</code></td><td>Corner radii from the named set</td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys</td><td><code>component</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>wrap-not-truncate</code></td><td>Long values wrap — never truncate, never widen the column. <strong>One escape</strong>, per <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a>: a declared Frame constraint that makes wrapping impossible (a virtualized fixed-height row) lets a design record <code>violated</code> and ship the cut — if the full value stays reachable by a named route and the cut is visible</td><td>no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code> on payload elements — unchanged: the escape is declared on the receipt, never detected</td><td><code>component</code></td><td>Elements · Draft mockup</td></tr>
-        <tr><td><code>overflow-declared</code></td><td>A zone with unbounded content declares its scroll cap</td><td><strong>one overflow line under the Layout sketch</strong>, naming every unbounded zone</td><td><code>screen</code></td><td>Layout</td></tr>
-        <tr><td><code>state-declarations</code></td><td>Every component declares empty · loading · error · overflow</td><td>states column non-empty per catalog row, read against the registry verdict</td><td><code>component</code></td><td>Elements</td></tr>
-        <tr><td><code>zero-accent</code></td><td>No chromatic colour beyond the palette's chromatic set</td><td>chromatic classes ⊆ the config's chromatic set; inline chromatic colour red</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
-        <tr><td><code>wire-order-preserved</code></td><td>Captured collections render in wire order unless a sort is declared</td><td><code>data-order</code> on every catalog row marked <code>data-wire="collection"</code></td><td><code>component</code></td><td>Elements</td></tr>
-        <tr><td><code>mono-for-wire-data</code></td><td><strong>Verbatim payloads render <code>mono</code>; UI chrome renders <code>ui</code>.</strong></td><td>every element marked <code>data-wire</code> carries the mono family. <code>data-wire="none"</code> for no payload</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
+        <tr><td><code>wrap-not-truncate</code></td><td>Long values wrap — never truncate, never widen the column. <strong>One escape</strong>, per <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a>: a declared constraint that makes wrapping impossible (a virtualized fixed-height row) lets a design record <code>violated</code> and ship the cut — if the full value stays reachable by a named route and the cut is visible</td><td>no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code> on payload elements — unchanged: the escape is declared on the run's review item, never detected</td><td><code>component</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>overflow-declared</code></td><td>A zone with unbounded content declares its scroll cap</td><td><strong>one overflow line under the mockup</strong>, naming every unbounded zone</td><td><code>screen</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>state-declarations</code></td><td>Every component declares empty · loading · error · overflow</td><td><em>retired with the Elements catalog</em> — a mounted component owns its states in its TSDoc; the row and its predicate leave together in E-SIMPDF.W2</td><td><code>component</code></td><td>retired — <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a></td></tr>
+        <tr><td><code>zero-accent</code></td><td>No chromatic colour beyond the palette's chromatic set</td><td>chromatic classes ⊆ the config's chromatic set; inline chromatic colour red</td><td><code>both</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>wire-order-preserved</code></td><td>Captured collections render in wire order unless a sort is declared</td><td><code>data-order</code> on every zone host element marked <code>data-wire="collection"</code></td><td><code>component</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>mono-for-wire-data</code></td><td><strong>Verbatim payloads render <code>mono</code>; UI chrome renders <code>ui</code>.</strong></td><td>every element marked <code>data-wire</code> carries the mono family. <code>data-wire="none"</code> for no payload</td><td><code>both</code></td><td>Draft mockup</td></tr>
         <tr><td><code>uppercase-mute-labels</code></td><td>Zone/column labels use the uppercase-mute pattern</td><td>uppercased non-mono carries the uppercase-mute set. Read on both surfaces</td><td><code>component</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>keyboard-parity</code></td><td>Every pointer interaction has a keyboard path from the conventions</td><td>a keyboard path named per pointer use-case row</td><td><code>both</code></td><td>Interaction</td></tr>
-        <tr><td><code>colour-plus-text</code></td><td>Colour is never the only channel — tinted values carry a text channel</td><td>text channel declared per chromatic row</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>Every pointer interaction has a keyboard path from the conventions</td><td>a key path named per row of the Keyboard item — one row per pointer interaction</td><td><code>both</code></td><td>Keyboard</td></tr>
+        <tr><td><code>colour-plus-text</code></td><td>Colour is never the only channel — tinted values carry a text channel</td><td>text channel declared per chromatic row</td><td><code>both</code></td><td>Draft mockup</td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="wire-marker" id="wire-marker">
       <strong>The one thing a mockup must declare: <code>data-wire</code>.</strong>
-      Three hard rules turn on which elements render a verbatim payload. The mockup says so: <code>data-wire="&lt;what it is&gt;"</code> on every payload element, <code>data-wire="collection"</code> on a catalog row that renders a captured collection, and <code>data-wire="none"</code> once when the screen renders no payload at all.
+      Three hard rules turn on which elements render a verbatim payload. The mockup says so: <code>data-wire="&lt;what it is&gt;"</code> on every payload element, <code>data-wire="collection"</code> on a zone host element that renders a captured collection, and <code>data-wire="none"</code> once when the screen renders no payload at all.
       <br><br>
-      A collection row carries <code>data-order</code> beside it — <code>"wire"</code>, or the sort and why.
+      A collection host carries <code>data-order</code> beside it — <code>"wire"</code>, or the sort and why.
     </div>
-
-    <h2 id="soft-rules">Soft rules <span class="badge approval">Tier-3</span></h2>
-    <p>Principles a reviewer judges — each with its DO/DON'T pair and the question the adversarial reviewer asks.</p>
-    <table data-c="soft-rules-table">
-      <thead><tr><th>Slug</th><th>Principle</th><th>DO · DON'T</th><th>Reviewer asks</th><th><a href="#binds">binds</a></th><th>Seed</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><code>visual-weight-follows-goals</code></td>
-          <td>The visual hierarchy matches the Frame's goal ranking — the top goal owns the most visual weight.</td>
-          <td><span style="color:var(--ok)">✓ top goal "scan failures" → status column carries the most weight</span><br><span style="color:var(--warn)">✗ timestamps heavier than statuses</span></td>
-          <td>Compare the Layout/mockup hierarchy against the Frame goal table, top to bottom — where do they diverge?</td>
-          <td><code>screen</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>grouping-by-relatedness</code></td>
-          <td>Visual proximity mirrors semantic relatedness; every separator marks a real boundary.</td>
-          <td><span style="color:var(--ok)">✓ hairline between request and response legs</span><br><span style="color:var(--warn)">✗ a divider inside one header set</span></td>
-          <td>For each separator and cluster: does the visual boundary match a semantic one?</td>
-          <td><code>screen</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>ordering-by-priority</code></td>
-          <td>Within a zone, order follows the user's scan priority — never alphabet or implementation order. Captured collections are exempt.</td>
-          <td><span style="color:var(--ok)">✓ identity → request → response, the debugging read order</span><br><span style="color:var(--warn)">✗ zones ordered by build convenience</span></td>
-          <td>Read each sequence aloud: whose priority does this order serve?</td>
-          <td><code>screen</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>progressive-disclosure</code></td>
-          <td>The default view is the scan level; depth is one explicit, invited act away.</td>
-          <td><span style="color:var(--ok)">✓ list row → detail panel · raw body → decode toggle</span><br><span style="color:var(--warn)">✗ full bodies inline in the list</span></td>
-          <td>At rest, is the scan clean? After one act, is the depth there?</td>
-          <td><code>screen</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>data-ink-first</code></td>
-          <td>Every non-data pixel earns its place — backgrounds, borders, icons, badges only when they inform.</td>
-          <td><span style="color:var(--ok)">✓ tinted text is the whole StatusPill</span><br><span style="color:var(--warn)">✗ a bordered badge around every status</span></td>
-          <td>Strip each piece of chrome in imagination: is any information lost?</td>
-          <td><code>both</code></td>
-          <td><em>import</em></td>
-        </tr>
-        <tr>
-          <td><code>generous-targets</code></td>
-          <td>A hit target is the largest natural area — never a small glyph beside the thing it acts on.</td>
-          <td><span style="color:var(--ok)">✓ the whole value copies on click</span><br><span style="color:var(--warn)">✗ a 12px icon as the only target</span></td>
-          <td>For each interaction: could the target be bigger for free?</td>
-          <td><code>component</code></td>
-          <td><em>import</em></td>
-        </tr>
-        <tr>
-          <td><code>motion-informs</code></td>
-          <td>Motion and transience only communicate state change; nothing animates for decoration; transient feedback expires (~2 s).</td>
-          <td><span style="color:var(--ok)">✓ confirm chip appears, expires</span><br><span style="color:var(--warn)">✗ hover glow, panels sliding for style</span></td>
-          <td>For each animation: what does it tell the user? "Nothing" fails.</td>
-          <td><code>component</code></td>
-          <td><em>import</em></td>
-        </tr>
-        <tr>
-          <td><code>empty-states-orient</code></td>
-          <td>A zone's empty state says what will appear and — where the user can cause it — how. Where they cannot, it explains what happened.</td>
-          <td><span style="color:var(--ok)">✓ "waiting for traffic — point a client at :7420" · ✓ "not captured — too large"</span><br><span style="color:var(--warn)">✗ a blank panel · ✗ a retry button on a flow the ring has dropped</span></td>
-          <td>Land on each empty state cold: do you know what happened, and — if you can act — what to do next?</td>
-          <td><code>both</code></td>
-          <td><em>import</em></td>
-        </tr>
-        <tr>
-          <td><code>familiar-idioms</code></td>
-          <td>When a devtools convention exists for the job, prefer it; novelty needs a driver in the Frame.</td>
-          <td><span style="color:var(--ok)">✓ network-table row grammar (method · path · status · time) · ✓ "a checklist rather than a wizard"</span><br><span style="color:var(--warn)">✗ a novel traffic viz with no driver</span></td>
-          <td>Does this surface have a genre? If yes: name the idiom it follows, or the driver that justifies departing from it.</td>
-          <td><code>screen</code></td>
-          <td><em>import</em></td>
-        </tr>
-        <tr>
-          <td><code>display-equals-payload</code></td>
-          <td>A displayed wire value is the payload verbatim, or a named and reversible view of it.</td>
-          <td><span style="color:var(--ok)">✓ the view is named — <em>pretty</em> / <em>raw</em> — and one act switches it</span><br><span style="color:var(--warn)">✗ JSON pretty-printed with nothing saying so</span></td>
-          <td>For every displayed wire value: is it the bytes, or a view? If a view — is it named on screen, and is one act enough to get back?</td>
-          <td><code>both</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>labels-add-context</code></td>
-          <td>A label carries only the fact its context doesn't already state.</td>
-          <td><span style="color:var(--ok)">✓ "copy all"</span><br><span style="color:var(--warn)">✗ "copy request headers" (under that heading)</span></td>
-          <td>Read each label in situ: does any word repeat its surroundings?</td>
-          <td><code>both</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>calm-microcopy</code></td>
-          <td>Microcopy is lowercase, terse, unexcited.</td>
-          <td><span style="color:var(--ok)">✓ "copied" · "none"</span><br><span style="color:var(--warn)">✗ "Copied!" · "No headers found."</span></td>
-          <td>Scan all microcopy for case, length, exclamation.</td>
-          <td><code>both</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>one-term-per-concept</code></td>
-          <td>Every user-facing term comes from the <a href="#lexicon">lexicon</a> — one term per concept, one concept per term.</td>
-          <td><span style="color:var(--ok)">✓ "decode" everywhere</span><br><span style="color:var(--warn)">✗ "decode" here, "prettify" there</span></td>
-          <td>Check each label/microcopy term against the lexicon; unknown terms need a proposal entry.</td>
-          <td><code>both</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>confirm-at-point</code></td>
-          <td>Feedback for a user action lands at the interaction point, inline and transient — never a toast across the screen.</td>
-          <td><span style="color:var(--ok)">✓ inline "copied" chip at the value</span><br><span style="color:var(--warn)">✗ a corner toast</span></td>
-          <td>Trace each use-case's feedback: where does the eye have to go?</td>
-          <td><code>component</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>absence-names-itself</code></td>
-          <td>Every distinct absence gets its own wording that names <em>which</em> absence it is. Two causes never share one sentence.</td>
-          <td><span style="color:var(--ok)">✓ five body absences, five sentences — empty · not captured (too large) · streaming · no response yet · no longer captured</span><br><span style="color:var(--warn)">✗ "none" for a response that has not arrived</span></td>
-          <td>List every way this surface can have nothing to show. Does each one have its own words?</td>
-          <td><code>both</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>focus-returns-to-origin</code></td>
-          <td>Dismissing a surface returns focus to whatever opened it.</td>
-          <td><span style="color:var(--ok)">✓ Esc closes the option list, focus is back on the trigger</span><br><span style="color:var(--warn)">✗ focus lost to <code>&lt;body&gt;</code> after a dialog closes</span></td>
-          <td>For each dismissable surface: close it from the keyboard — where is focus now?</td>
-          <td><code>component</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-        <tr>
-          <td><code>choose-before-act</code></td>
-          <td>Within one control row, controls that <em>choose what you are looking at</em> come before controls that <em>act on it</em>.</td>
-          <td><span style="color:var(--ok)">✓ leg and view switches at the row's start, copy and save pushed to its end</span><br><span style="color:var(--warn)">✗ an action button ahead of the selector that decides what it acts on</span></td>
-          <td>Read each control row left to right: does it say what you are looking at before it offers to do something to it?</td>
-          <td><code>screen</code></td>
-          <td><strong>extracted</strong></td>
-        </tr>
-      </tbody>
-    </table>
 
     <div class="callout" data-c="known-violations" id="known-violations">
       <strong>A rule this codebase currently breaks is not recorded here.</strong> It goes to the <a href="../backlog/roadmap.html#rmap-deferred">deferred backlog</a>. A rulebook that lists its own live exceptions teaches that the rules are negotiable.
@@ -310,7 +165,7 @@ flowchart LR
       <tbody>
         <tr><td><strong>a design run</strong></td><td>consumes this list <em>frozen</em>. Findings recorded against it, nothing edited mid-run</td></tr>
         <tr><td><strong>a revision</strong>, after a run</td><td>rules added, retagged or sharpened in place. A cited slug is <strong>never renamed</strong></td></tr>
-        <tr><td><strong>the harness</strong></td><td>hard rules become the Tier-1 predicates; the two rule tables become the receipt-coverage list; a receipt pins the rulebook version (git blob hash)</td></tr>
+        <tr><td><strong>the harness</strong></td><td>hard rules become the Tier-1 predicates, read on the mockup doc. No receipt, no coverage list, no pin (<a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a>)</td></tr>
         <tr><td><strong>epic distillation</strong></td><td>links into <code>docs/work/</code> re-point to the components' post-epic home</td></tr>
       </tbody>
     </table>
@@ -318,9 +173,9 @@ flowchart LR
     <table data-c="growth-table">
       <thead><tr><th>Feed</th><th>Trigger</th><th>Mechanism that makes it stick</th></tr></thead>
       <tbody>
-        <tr><td><strong>design runs</strong></td><td>a design needs a token, term, key binding, or rule that isn't here</td><td>reuse-or-propose: the design proposes the entry, the receipt records the proposal, confirmation lands it here</td></tr>
+        <tr><td><strong>design runs</strong></td><td>a design needs a token, term, key binding, or rule that isn't here</td><td>reuse-or-propose: the design proposes the entry, the run's proposals list records it, confirmation lands it here</td></tr>
         <tr><td><strong>every task's distillation</strong></td><td>a change locks a convention, adds a vocabulary member, or ships UI contradicting a rule</td><td>new distillation-checklist row: write-back, same-session; tip's <code>doc/v1</code> attests the edit</td></tr>
-        <tr><td><strong>rule revision</strong></td><td>a rule proves wrong or a hard check proves too crude</td><td>edit in place; slug immutability keeps every past receipt valid</td></tr>
+        <tr><td><strong>rule revision</strong></td><td>a rule proves wrong or a hard check proves too crude</td><td>edit in place; slug immutability keeps every past run's citation valid</td></tr>
       </tbody>
     </table>
 
