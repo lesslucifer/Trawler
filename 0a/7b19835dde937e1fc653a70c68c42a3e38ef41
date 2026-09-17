@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU simpdf-landing -> epic/simpdf"
+epic: E-SIMPDF
+wu: E-SIMPDF.W2
+branch: wu/simpdf/landing
+base: 2c6aca58e9e4fadf7f8ac8cfdda464056e92d80f
+head: 0a7b19835dde937e1fc653a70c68c42a3e38ef41
+diff_sha256: 58246d3fea341f215a9bebb076c61a5100458f3ad1512054f5ca9702607ab601
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 2
+    important: 3
+    nit: 0
+  stage_seconds:
+    gate0: 16
+    finders: 418
+    verifiers: 299
+    total: 777
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+nits: []
+verdict: PASS
+date: 2026-09-17
