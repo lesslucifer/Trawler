@@ -212,7 +212,7 @@ flowchart TB
           </tbody>
         </table>
       </div>
-      <p class="kd"><strong>The three declarations the mockup carries, in plain HTML.</strong> <code>data-zone="&lt;name&gt;"</code> on each zone host; one <strong>overflow paragraph</strong> under the mockup, opening with the word and naming every zone; <code>data-wire="&lt;what it is&gt;"</code> on each payload element, <code>data-wire="collection"</code> plus <code>data-order</code> on each captured-collection host, and <code>data-wire="none"</code> once when the screen renders no payload. They are plain HTML on purpose: the checker reads them whatever the mounts render inside.</p>
+      <p class="kd"><strong>The three declarations the mockup carries, in plain HTML.</strong> <code>data-zone="&lt;name&gt;"</code> on each zone host; one <strong>overflow paragraph</strong> under the mockup — the mockup's own <code>&lt;p&gt;</code>, opening with <code>overflow:</code> — naming every zone; <code>data-wire="&lt;what it is&gt;"</code> on each payload element, <code>data-wire="collection"</code> plus <code>data-order</code> on each captured-collection host, and <code>data-wire="none"</code> once when the screen renders no payload. They are plain HTML on purpose: the checker reads them whatever the mounts render inside.</p>
       <p class="kd"><strong>Key distinctions:</strong> <strong>Mounting is what closes the fork for good</strong> — a hand-drawn component in correct utilities is still a fork no class check can see. <strong>Zero colour literals in the doc's own CSS</strong> — the tokens live in <code>ui/tailwind.config.js</code> and the mockup only ever writes their utility names. Build what the screen decides, stub what a component owns.</p>
     </div>
 

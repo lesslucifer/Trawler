@@ -172,10 +172,10 @@ pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
         .collect()
 }
 
-// Every slug the rulebook declares, hard and soft. The gate reads it to check a
-// citation is followable rather than merely well-shaped - at the revision it is
-// judging, never the working tree, so a later rename cannot unfollow a citation
-// that resolved when its seam was reviewed.
+// Every slug the rulebook declares - all of them hard since DEC-53. The gate
+// reads it to check a citation is followable rather than merely well-shaped - at
+// the revision it is judging, never the working tree, so a later rename cannot
+// unfollow a citation that resolved when its seam was reviewed.
 pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
     crate::git::read_utf8_at(repo, rev, RULEBOOK)
         .map(|html| rules_from_rulebook(&html))
@@ -1000,17 +1000,19 @@ fn check_wire_order_preserved(failures: &mut Vec<Failure>, mockup: &str) {
 }
 
 // overflow-declared. One overflow line under the mockup, naming every zone the
-// mockup hosts. The line is a paragraph that OPENS with the word, read out of
-// the mockup's own <p> elements: a naked scan over the whole item would read a
-// mount script's `overflow-y-auto` as the declaration, which is a green nobody
-// wrote. Which elements are zones is declared - `data-zone="<name>"` on the host
-// the mockup mounts into - because the ASCII sketch that used to name them is
-// what DEC-53 cut.
+// mockup hosts. Both halves read the tokeniser, which is the only reading that
+// holds: the line is the mockup's own paragraph opening with `overflow:`, and a
+// zone is `data-zone="<name>"` on the host the mockup mounts into, because the
+// ASCII sketch that used to name them is what DEC-53 cut. The prose form is the
+// rulebook's, not this predicate's - the line says which zone is capped and who
+// owns the cap, which no attribute carries.
+const OVERFLOW_OPENS: &str = "overflow:";
+
 fn check_overflow_declared(failures: &mut Vec<Failure>, mockup: &str) {
-    let declaration = elements_of(mockup, "p")
+    let declaration = paragraphs(mockup)
         .into_iter()
-        .map(|p| fragment_text(p).trim().to_lowercase())
-        .find(|text| text.starts_with("overflow"));
+        .map(|text| text.trim().to_lowercase())
+        .find(|text| text.starts_with(OVERFLOW_OPENS));
     let Some(declaration) = declaration else {
         failures.push(Failure {
             check: "overflow-declared·line".to_string(),
@@ -1428,6 +1430,28 @@ fn colour_literal(html: &str) -> Option<String> {
         }
     }
     None
+}
+
+// The mockup's own paragraphs, located by the tokeniser rather than by scanning
+// for the string `<p`. That scan read `<pre>` and `<progress>` as paragraphs -
+// and, finding no close for them, gave up on the real one - and it read a mount
+// script's body as markup, so a line commented out inside the script counted as
+// a declaration. Both directions were wrong, and `nodes` is wrong in neither: it
+// matches the tag name exactly and treats a script or style body as opaque.
+fn paragraphs(html: &str) -> Vec<String> {
+    nodes(html)
+        .into_iter()
+        .filter(|node| node.name == "p" && node.shape == Shape::Open && node.closed)
+        .map(|node| element_text(html, element_content(html, node.span.0).0))
+        .collect()
+}
+
+// The text inside an element, given the span `element_content` returns: that
+// span opens at the element's own tag, so the tag is skipped before the body is
+// read as a fragment.
+fn element_text(html: &str, span: (usize, usize)) -> String {
+    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1).min(span.1);
+    fragment_text(&html[open_end..span.1])
 }
 
 // The text of an element BODY - what `elements_of` hands back, already unwrapped.
@@ -2166,6 +2190,54 @@ chroma_floor: 40
                 "a run carrying the cut {cut} must be red by name, never tolerated"
             );
         }
+    }
+
+    // The declaration is located by the tokeniser, so the three ways a scan for
+    // the string `<p` got it wrong are all closed at once: a native tag that
+    // merely starts with p is not a paragraph, a mount script's body is not
+    // markup, and a word that merely starts with "overflow" is not the line.
+    #[test]
+    fn the_overflow_line_is_the_mockups_own_paragraph_and_nothing_that_looks_like_one() {
+        let before_the_line = |markup: &str| {
+            green_run().replace(
+                "<p>overflow: verdicts scrolls to its own cap</p>",
+                &format!("{markup}<p>overflow: verdicts scrolls to its own cap</p>"),
+            )
+        };
+        for native in [
+            "<pre>GET /flows HTTP/1.1</pre>",
+            "<progress value=\"3\" max=\"10\"></progress>",
+            "<svg><path d=\"M0 0 L1 1\"></path></svg>",
+            "<picture><img src=\"x.png\"></picture>",
+        ] {
+            assert!(
+                !reds(&before_the_line(native)).contains(&"overflow-declared·line".to_string()),
+                "a native tag starting with p is not a paragraph: {native}"
+            );
+        }
+
+        // The failure this check's own comment promises to refuse, reached by a
+        // different route: the line exists only where nothing renders it.
+        let only_in_the_mount =
+            green_run().replace("<p>overflow: verdicts scrolls to its own cap</p>", "").replace(
+                "mount('m-zone'",
+                "// <p>overflow: verdicts scrolls to its own cap</p>\nmount('m-zone'",
+            );
+        assert!(
+            what(&doc_verdict(&only_in_the_mount), "overflow-declared·line")
+                .contains("no overflow"),
+            "a line commented out inside the mount script declares nothing"
+        );
+
+        let merely_starts_with_the_word = green_run().replace(
+            "<p>overflow: verdicts scrolls to its own cap</p>",
+            "<p>Overflowing verdicts are capped elsewhere</p>",
+        );
+        assert!(
+            what(&doc_verdict(&merely_starts_with_the_word), "overflow-declared·line")
+                .contains("no overflow"),
+            "\"Overflowing\" is a sentence about overflow, not the declaration"
+        );
     }
 
     // A zone is named or it is not, and a longer word that merely contains its

@@ -103,16 +103,26 @@
           <tr><td>Doc form</td><td><code>cargo xtask verify-doc</code> green on all 63 docs in the tree</td></tr>
           <tr><td>Notes</td><td><code>test/v2</code> + <code>doc/v1</code> written by <code>cargo xtask notes write wu</code> from one judgment</td></tr>
           <tr><td>Design step</td><td>not owed — <code>cargo xtask design-scope epic/simpdf HEAD</code>: <em>no design artifact in the range</em>; the diff renders no file under <code>ui/src/</code></td></tr>
-          <tr><td>Review</td><td data-c="review-cell">the code-review skill over <code>epic/simpdf..wu/simpdf/landing</code>, three finders per round (correctness · efficiency · altitude — four modules). Rounds 1–3 all <strong>FAIL</strong>: an important (b1289be), then two <strong>blockers</strong> in the same re-homed predicate (a596079, 1dd1b75). <code>cr/v5</code> PASS lands on the final tip</td></tr>
+          <tr><td>Review</td><td data-c="review-cell">the code-review skill over <code>epic/simpdf..wu/simpdf/landing</code>, three finders per round (correctness · efficiency · altitude — four modules). Rounds 1–4 all <strong>FAIL</strong>: an important (b1289be), then four <strong>blockers</strong> and an important, every one of them in <code>check_overflow_declared</code> (a596079, 1dd1b75, and the round-4 fix). Four candidates refuted across the four rounds. <code>cr/v5</code> PASS lands on the final tip</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="review">What the review found</h2>
-    <p>Three rounds, all red. Each found something the one before it missed, and two of the three found it in the same place: <code>check_overflow_declared</code>, the predicate this WU re-homed from an ASCII sketch onto free-text markup. Both blockers were false answers from a hard rule — one refusing a compliant run, one passing a non-compliant one. The substrate swap, not the deletion, is where this WU's risk actually sat.</p>
+    <p>Four rounds, all red, and every real defect in one function: <code>check_overflow_declared</code>, the predicate this WU re-homed from an ASCII sketch onto free-text markup. Four blockers and an important, in both directions — refusing compliant runs and passing non-compliant ones. The deletion this WU is mostly made of produced nothing; the one substrate swap produced all of it. A round-4 candidate arguing the prose form itself was the mistake was <em>refuted</em>: the rulebook and the flow spec require a human-readable line, because it says who owns a cap, which no attribute carries. The form was right; every reading of it was wrong until it read the tokeniser.</p>
     <table data-c="review-table">
       <thead><tr><th>Finding</th><th>Verdict</th><th>Disposition</th></tr></thead>
       <tbody>
+        <tr>
+          <td><strong>2 blockers + 1 important</strong> · round 4 — the overflow paragraph was located by scanning for the string <code>&lt;p</code>: it read <code>&lt;pre&gt;</code> and <code>&lt;progress&gt;</code> as paragraphs and then abandoned the real one (false red); it read the mount script's body as markup, so a line commented out inside the script counted as a declaration (false green); and it accepted any text merely <em>starting</em> with "overflow", so "Overflowing verdicts are capped elsewhere" made a whole run green (false green)</td>
+          <td>all three verified and reproduced against the real checker. Two more candidates refuted: that the prose form itself was the error, and that a word-boundary helper duplicated an unrelated CSS scanner</td>
+          <td>fixed together — the paragraph is now located by the tokeniser, which matches the tag name exactly and treats a script body as opaque, and the line must open with <code>overflow:</code> as the spec's own template writes it. One regression test covers all three routes</td>
+        </tr>
+        <tr>
+          <td><strong>nit</strong> · round 4 — <code>rulebook_slugs</code>' comment still said it returns slugs "hard and soft"</td>
+          <td>verified — no soft table remains in the code or the live rulebook</td>
+          <td>fixed</td>
+        </tr>
         <tr>
           <td><strong>blocker</strong> · round 3 — <code>check_overflow_declared</code> counted a <code>data-zone</code> as declared whenever its name appeared as a plain substring of the overflow line</td>
           <td>verified and reproduced: <code>data-zone="tab"</code> satisfied by the word "table", <code>"log"</code> by "catalog". A false <em>green</em> — the gate accepting a mockup whose zone overflow nobody declared, which is the one thing this rule exists to refuse. Introduced here: the old sketch used single-letter ids compared exactly</td>
