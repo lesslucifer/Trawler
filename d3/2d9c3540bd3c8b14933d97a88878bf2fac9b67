@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPDF
+wu: E-SIMPDF.W2
+branch: wu/simpdf/landing
+tests:
+  unit: { count: 109, covers: "the six-item checklist and a cut station named by its own red; the three re-homed predicates, each with the ✓ and the ✗ of its DEC-53 row; the tally printed with no receipt and the line an unreadable rulebook prints instead; design-scope naming no rulebook blob" }
+  integration: { count: 112, covers: "a run in the surviving shape green through the real binary with the machine-checked tally and no receipt, a run carrying the cut stations refused by name, a kept item silently dropped refused too; the merge gate refusing a design-bearing tip, an uncited surface and an undeclared rendered file with the pin out of every fixture note" }
+  e2e: { count: 4, covers: "the six items driven one at a time over a real git tree, red for exactly what is not yet written; a cut station refused by name; a rule-violating mockup red at the write that produced it and kept out of the tree; the hand-off accounting on a design/v1 note beside a cr/v5 code note passing 9·design" }
