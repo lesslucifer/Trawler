@@ -270,7 +270,7 @@ impl Gate<'_> {
         Ok((tip, base, names, diff_sha256))
     }
 
-    // What Tier-3 must have judged: the docs at the tip, and - at the seam that
+    // What the design step must have covered: the docs at the tip, and - at the seam that
     // built and retired it - a component design whose last state the base never
     // held (DEC-25 D1a). The tip is where the walk re-reads a seam, so the same
     // set comes back at every re-verification. Shared with `mr confirm`, which
@@ -663,12 +663,12 @@ impl Gate<'_> {
             .collect()
     }
 
-    // Tier-3, enforced where Tier-2 could not be: the design dimension of the
-    // code review is an independent agent's judgment, so the only thing a gate
-    // can hold is that it ran, over every design artifact the diff carries, and
-    // against the rulebook that diff ships. Everything below refuses a silence -
-    // a design-bearing PASS that never mentions the design is exactly the
-    // failure the schema bump exists to make visible.
+    // The design step, enforced: what a gate can hold is that it ran, over every
+    // design artifact the diff carries. Everything below refuses a silence - a
+    // design-bearing PASS that never mentions the design is exactly the failure
+    // the schema bump exists to make visible. What the step itself now judges is
+    // the hand-off accounting; the finder that judged the artifact went with
+    // DEC-53, and the human reviewing the mockup is what replaced it.
     fn check_design(
         &self,
         report: &mut Report,
@@ -698,7 +698,7 @@ impl Gate<'_> {
         }
         // Nothing judged, nothing claimed: a build's note carries a design
         // section for its citation and its drops alone, and a verdict or a
-        // rulebook pin over an empty judgment would be a claim about no design.
+        // verdict over an empty judgment would be a claim about no design.
         if artifacts.is_empty() {
             return Ok(());
         }
@@ -712,7 +712,7 @@ impl Gate<'_> {
                         source.note
                     ),
                     format!(
-                        "re-run the code-review skill on {}: a diff carrying a design artifact activates the design finder, and its verdict is the cr/v3 note's design section",
+                        "this tip shipped a cr/v3 note, whose design section carried the verdict - run the design step on {} and write that section, or re-run the review on the current schema so the verdict lands on its own design/v1 note",
                         report.tip_ref
                     ),
                 )
@@ -748,44 +748,7 @@ impl Gate<'_> {
                 "fix the verified design findings and re-run the review until its design dimension passes".to_string(),
             ));
         }
-        self.check_design_pin(report, &carrier, source.check);
         Ok(())
-    }
-
-    // The design verdict is a claim against a specific rulebook - the same claim
-    // the run's own receipt makes, and the same way it went unchecked for three
-    // Working Units. Read at the TIP, never the working tree: a seam is judged
-    // against the rulebook that seam shipped.
-    fn check_design_pin(&self, report: &mut Report, carrier: &DesignCarrier<'_>, check: &str) {
-        let Some(blob) = crate::doc::rulebook_blob(self.repo, &report.tip) else {
-            report.failures.push(Failure::new(
-                check,
-                "the tip carries no readable design rulebook to check the design pin against"
-                    .to_string(),
-                "run the gate from a checkout where the tip's docs/design-rules/design-rules-index.html resolves".to_string(),
-            ));
-            return;
-        };
-        let short_blob = crate::doc::pin_of(&blob);
-        if carrier.rulebook().len() < crate::doc::PIN_MIN {
-            report.failures.push(Failure::new(
-                check,
-                format!(
-                    "the design section pins \"{}\", which names no rulebook blob",
-                    carrier.rulebook()
-                ),
-                format!("pin what the design dimension read: design.rulebook: {short_blob}"),
-            ));
-        } else if !crate::doc::pin_matches(carrier.rulebook(), &blob) {
-            report.failures.push(Failure::new(
-                check,
-                format!(
-                    "the design dimension judged against rulebook {}; this tip ships {short_blob}",
-                    carrier.rulebook()
-                ),
-                format!("the rulebook moved under the review - re-run it against this tip's rulebook and re-pin: design.rulebook: {short_blob}"),
-            ));
-        }
     }
 
     // The surfaces a diff adds that owe a design - the same function
@@ -1049,7 +1012,7 @@ impl Gate<'_> {
         } else {
             (
                 format!("{} is not a design artifact", cited.path),
-                "cite a closed design run or a component design file - a doc that is neither was never judged by Tier-3",
+                "cite a closed design run or a component design file - a doc that is neither is not a design the build could have read",
             )
         };
         report.failures.push(Failure::new(check, what, fix.to_string()));
@@ -1779,7 +1742,7 @@ mod tests {
     #[test]
     fn the_design_verdict_is_read_from_the_note_the_tip_shipped() {
         let legacy: CrNote = serde_yaml::from_str(
-            "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\ndesign:\n  artifacts: [d]\n  rulebook: r\n  verdict: PASS\n",
+            "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\ndesign:\n  artifacts: [d]\n  verdict: PASS\n",
         )
         .unwrap();
         let source = design_source(Some(&legacy), None);
@@ -1826,7 +1789,7 @@ mod tests {
     #[test]
     fn a_legacy_section_outranks_a_design_note_on_the_same_tip() {
         let legacy: CrNote = serde_yaml::from_str(
-            "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\ndesign:\n  artifacts: [d]\n  rulebook: r\n  verdict: PASS\n",
+            "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\ndesign:\n  artifacts: [d]\n  verdict: PASS\n",
         )
         .unwrap();
         let note: DesignNote =

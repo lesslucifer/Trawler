@@ -159,20 +159,16 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
     }
     let mut out = String::new();
     if !artifacts.is_empty() {
-        let pin = doc::rulebook_blob(repo, &tip).map_or_else(
-            || "<unreadable - the design pin cannot be written>".to_string(),
-            |blob| doc::pin_of(&blob).to_string(),
-        );
         let _ = writeln!(
             out,
-            "{} design artifact(s) to judge, against rulebook {pin}:\n{}",
+            "{} design artifact(s) to judge:\n{}",
             artifacts.len(),
             artifacts.join("\n")
         );
         if !retired.is_empty() {
             let _ = writeln!(
                 out,
-                "{} of them left the tree in this range at bytes the base never held - read the last state Tier-3 judges at:\n{}",
+                "{} of them left the tree in this range at bytes the base never held - read the last state the design step answers for:\n{}",
                 retired.len(),
                 retired
                     .iter()
@@ -403,7 +399,39 @@ mod tests {
             for stale in crate::notes::CR_SCHEMAS.iter().filter(|s| **s != carrier) {
                 assert!(!text.contains(*stale), "names {stale}, not {carrier}: {text}");
             }
+            assert!(
+                !text.contains("rulebook"),
+                "nothing pins the rulebook any more, so nothing asks for one (DEC-53): {text}"
+            );
         }
+    }
+
+    // The artifact block, with the pin gone from it: the reviewer is told what to
+    // judge and where the verdict goes, and nothing else.
+    #[test]
+    fn design_scope_lists_the_artifacts_and_pins_no_rulebook() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| crate::git::git(repo, args).unwrap();
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        std::fs::write(repo.join("base.txt"), "base\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "base"]);
+        g(&["branch", "epic/x"]);
+
+        let design = "docs/work/components/status-pill.html";
+        std::fs::create_dir_all(repo.join("docs/work/components")).unwrap();
+        std::fs::write(repo.join(design), "<html><body>one verdict</body></html>\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "design the pill"]);
+
+        let printed = super::design_scope(repo, "epic/x", "HEAD").unwrap().1;
+        assert!(printed.contains("1 design artifact(s) to judge:"), "{printed}");
+        assert!(printed.contains(design), "{printed}");
+        assert!(!printed.contains("rulebook"), "{printed}");
     }
 
     #[test]

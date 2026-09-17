@@ -497,14 +497,14 @@ fn a_run_still_mid_design_passes_and_a_closed_one_needs_the_design_dimension() {
 // The reviewer and the merge gate must never disagree about what is
 // design-bearing, so they call one function - this is the reviewer's door to it.
 #[test]
-fn design_scope_reports_what_the_review_must_judge_and_the_pin_it_writes() {
+fn design_scope_reports_what_the_review_must_judge() {
     let repo = wu_carrying_a_design_run("archived");
     let args: Vec<String> =
         ["design-scope", "epic/x", "wu/x/one"].iter().map(|s| (*s).to_string()).collect();
     let (code, out) = xtask::run(&args, &repo.path).unwrap();
     assert_eq!(code, 0);
     assert!(out.contains(DESIGN_RUN), "{out}");
-    assert!(out.contains(&pin_of(&repo, &repo.sha("wu/x/one"))), "the pin to write: {out}");
+    assert!(!out.contains("rulebook"), "nothing is pinned any more (DEC-53): {out}");
 
     let plain = wu_with_change();
     let (code, out) = xtask::run(&args, &plain.path).unwrap();
@@ -512,14 +512,9 @@ fn design_scope_reports_what_the_review_must_judge_and_the_pin_it_writes() {
     assert!(out.contains("no design artifact"), "{out}");
 }
 
-fn pin_of(repo: &Repo, tip: &str) -> String {
-    let blob = repo.git(&["rev-parse", &format!("{tip}:{RULEBOOK}")]);
-    blob[..7].to_string()
-}
-
-fn design_section(artifacts: &[&str], pin: &str, verdict: &str) -> String {
+fn design_section(artifacts: &[&str], verdict: &str) -> String {
     format!(
-        "design:\n  artifacts: [{}]\n  rulebook: {pin}\n  findings: {{ found: 1, verified: 0, waived: 0 }}\n  verdict: {verdict}\n",
+        "design:\n  artifacts: [{}]\n  findings: {{ found: 1, verified: 0, waived: 0 }}\n  verdict: {verdict}\n",
         artifacts.join(", ")
     )
 }
@@ -550,9 +545,7 @@ fn verify_design_bearing(design: &dyn Fn(&Repo, &str) -> String) -> (Repo, xtask
 
 #[test]
 fn a_complete_cr_v3_greens_a_design_bearing_tip_and_the_receipt_lists_the_check() {
-    let (repo, report) = verify_design_bearing(&|repo, tip| {
-        design_section(&[DESIGN_RUN], &pin_of(repo, tip), "PASS")
-    });
+    let (repo, report) = verify_design_bearing(&|_, _| design_section(&[DESIGN_RUN], "PASS"));
     assert!(report.green(), "{}", format_report(&report));
     let receipt = repo.gate().write_receipt(&report).unwrap();
     assert!(receipt.contains("design"), "the receipt names the check it passed: {receipt}");
@@ -581,7 +574,7 @@ fn a_design_section_that_skips_an_artifact_in_the_diff_is_refused() {
     );
     repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
     let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
-    let design = design_section(&[DESIGN_RUN], &pin_of(&repo, &tip), "PASS");
+    let design = design_section(&[DESIGN_RUN], "PASS");
     repo.note("cr", &tip, &cr_note_v3(&base, &sha, &design));
 
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
@@ -591,46 +584,8 @@ fn a_design_section_that_skips_an_artifact_in_the_diff_is_refused() {
 
 #[test]
 fn a_failing_design_verdict_is_refused() {
-    let (_repo, report) = verify_design_bearing(&|repo, tip| {
-        design_section(&[DESIGN_RUN], &pin_of(repo, tip), "FAIL")
-    });
+    let (_repo, report) = verify_design_bearing(&|_, _| design_section(&[DESIGN_RUN], "FAIL"));
     assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
-}
-
-// The same claim the run's own receipt makes, and the same way it went unchecked
-// for three Working Units: a design verdict is a judgment against one rulebook,
-// and the tip's rulebook is the only one that can be checked against.
-#[test]
-fn a_design_pin_that_names_no_blob_or_another_one_is_refused() {
-    let (_repo, report) =
-        verify_design_bearing(&|_, _| design_section(&[DESIGN_RUN], "796c5", "PASS"));
-    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
-    assert!(format_report(&report).contains("names no rulebook blob"));
-
-    let (repo, report) =
-        verify_design_bearing(&|_, _| design_section(&[DESIGN_RUN], "28f5437", "PASS"));
-    let text = format_report(&report);
-    assert_eq!(checks_of(&report), vec!["9·design"], "{text}");
-    let tip = repo.sha("wu/x/one");
-    assert!(
-        text.contains("28f5437") && text.contains(&pin_of(&repo, &tip)),
-        "both versions: {text}"
-    );
-}
-
-// A rulebook that moves in a LATER Working Unit must not redden this seam: the
-// pin is read at the tip, so a review stays true to the tree it judged.
-#[test]
-fn a_rulebook_that_moves_after_the_review_leaves_the_reviewed_tip_green() {
-    let (repo, report) = verify_design_bearing(&|repo, tip| {
-        design_section(&[DESIGN_RUN], &pin_of(repo, tip), "PASS")
-    });
-    assert!(report.green(), "{}", format_report(&report));
-    let tip = repo.sha("wu/x/one");
-    repo.write(RULEBOOK, "<html>the rulebook, revised by the next Working Unit</html>\n");
-    repo.commit("revise the rulebook");
-    let after = repo.gate().verify(Level::Wu, &tip, "epic/x").unwrap();
-    assert!(after.green(), "{}", format_report(&after));
 }
 
 // The flow spec and two plans quote the declaration inside a <code> block. A
@@ -1043,14 +998,14 @@ fn cites_the_design(repo: &Repo, path: &str, pin: &str) -> String {
 }
 
 /// The note a build writes when it also amended (or authored) the design it
-/// retired: Tier-3's judgment of the design's last state, and the citation.
+/// retired: the design step accounting for the design's last state, and the
+/// citation.
 fn judges_and_cites_the_design(repo: &Repo, pin: &str) -> String {
-    let tip = repo.sha("wu/x/one");
     v3_note_with(
         repo,
         &format!(
             "{}{}",
-            design_section(&[COMPONENT_DESIGN], &pin_of(repo, &tip), "PASS"),
+            design_section(&[COMPONENT_DESIGN], "PASS"),
             implements(COMPONENT_DESIGN, pin)
         ),
     )
@@ -2327,10 +2282,9 @@ fn design_note(repo: &Repo, artifacts: &[&str], verdict: &str, extra: &str) -> S
     paths.dedup();
     let sha = xtask::git::diff_sha256_paths(&repo.path, &base, &tip, &paths).unwrap();
     format!(
-        "schema: design/v1\n{}base: {base}\ndesign_sha256: {sha}\nverdict: {verdict}\nartifacts: [{}]\nrulebook: {}\n{extra}date: 2026-09-12\n",
+        "schema: design/v1\n{}base: {base}\ndesign_sha256: {sha}\nverdict: {verdict}\nartifacts: [{}]\n{extra}date: 2026-09-12\n",
         identity("E9", Some("E9.W1")),
-        artifacts.join(", "),
-        pin_of(repo, &tip)
+        artifacts.join(", ")
     )
 }
 

@@ -26,11 +26,11 @@
   </header>
   <main>
     <h2 id="what">What this is</h2>
-    <p>The per-component design format E-DFLOW.W2 converged on by piloting CopyText through live review rounds. A screen run's Elements stage names components; <strong>this file is where one of them actually gets designed</strong> — deeply enough that the build WU implements it without further decisions. The file compiles down to the component's registry TSDoc (code-as-truth): the doc is the long form with rationale and examples; the TSDoc is its usage summary; the generated index derives from that.</p>
+    <p>The per-component design format E-DFLOW.W2 converged on by piloting CopyText through live review rounds. A screen run's <a href="design-flow.html#closing">proposals</a> list names the components it needed and the vocabulary lacked; <strong>this file is where one of them actually gets designed</strong> — deeply enough that the build WU implements it without further decisions. The file compiles down to the component's registry TSDoc (code-as-truth): the doc is the long form with rationale and examples; the TSDoc is its usage summary; the generated index derives from that.</p>
     <div class="diagram" data-c="compile-path">
       <pre class="mermaid">
 flowchart LR
-  EL["Elements stage names<br/>a component"] --> DOC["design file<br/>docs/work/components/&lt;name&gt;.html"]
+  EL["a run proposes<br/>a component"] --> DOC["design file<br/>docs/work/components/&lt;name&gt;.html"]
   DOC --> LOOP{"review loop<br/>(comments, rounds)"}
   LOOP -->|"changes"| DOC
   LOOP -->|"confirmed"| BUILD["build WU:<br/>ui/src/components/*.tsx"]
