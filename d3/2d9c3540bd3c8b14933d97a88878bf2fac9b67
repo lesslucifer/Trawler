@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-SIMPDF
+wu: E-SIMPDF.W2
+branch: wu/simpdf/landing
+changes:
+  - path: "docs/component-design.html"
+    tier: T1
+    action: updated
+    distills: "a component is named by a run's proposals list, not by the cut Elements stage"
+  - path: "docs/design-flow.html"
+    tier: T1
+    action: updated
+    distills: "the surviving sequence: the registry read, one mockup doc of six items, the three-step close, the hand-off accounting as the whole design step"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "the retired state-declarations row removed with its predicate, leaving twelve hard rules"
+  - path: "docs/documentation-system.html"
+    tier: T1
+    action: updated
+    distills: "the design KB is rules carried by their predicates and the vocabularies; no soft tag, no receipt"
+  - path: "docs/work-planning.html"
+    tier: T1
+    action: updated
+    distills: "what the checker adds to a design run's item list: the twelve hard rules and the mockup's composition checks"
+  - path: "docs/work/2026-09-17-simpdf-w2-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan, with the check that loses its input named before the diff"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "design/v1 carries the accounting the verdict follows and no rulebook field; check 9 pins nothing"
+  - path: "docs/work/2026-09-17-simpdf-w2-result.html"
+    tier: T3
+    action: added
+    distills: "what the landing delivered, the deviation the plan declared, and the review round it paid"
