@@ -26,7 +26,7 @@ usage:
   cargo xtask verify-dod commit-msg <msg-file>                (commit-msg hook: docs need an mr trailer)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
-  cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
+  cargo xtask design-scope <base> <head>                     (what the design step must account for: the artifacts, the new surfaces, the files it renders)
   cargo xtask preflight <wu|epic> <tip> [--target <ref>] [--defer-gate0]  (the review's first step: gate0 + the notes it reads, before any finder spawns; --defer-gate0 skips the suite so it can run beside the finders)
   cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
   cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
@@ -404,6 +404,22 @@ mod tests {
                 "nothing pins the rulebook any more, so nothing asks for one (DEC-53): {text}"
             );
         }
+    }
+
+    // The usage line is the command's contract as a reader meets it, before
+    // running anything. It went on promising the pin for a whole Working Unit
+    // after DEC-53 removed it from the output, so the one place a reader is told
+    // what to expect was the one place nothing checked.
+    #[test]
+    fn the_usage_line_promises_only_what_design_scope_prints() {
+        let line = super::USAGE
+            .lines()
+            .find(|line| line.contains("design-scope"))
+            .expect("design-scope is named in the usage");
+        assert!(
+            !line.contains("rulebook"),
+            "the usage promises a rulebook pin design-scope no longer writes: {line}"
+        );
     }
 
     // The artifact block, with the pin gone from it: the reviewer is told what to

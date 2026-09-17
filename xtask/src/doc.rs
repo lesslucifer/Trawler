@@ -1662,7 +1662,7 @@ fn text(bytes: &[u8]) -> String {
 }
 
 // quick-xml hands back subslices of the input, so this is arithmetic, not a
-// search - the reading `check_elements_map` already takes of its tree spans.
+// search: the offset is where the part already sits in the whole.
 fn offset_in(html: &str, part: &[u8]) -> usize {
     part.as_ptr() as usize - html.as_ptr() as usize
 }
