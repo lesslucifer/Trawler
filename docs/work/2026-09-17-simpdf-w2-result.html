@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-SIMPDF.W2 — result</h1>
       <p>DEC-53 landed in the spec, the checker, the gate, the skill and the flow e2e, in one commit. Net −1471 lines. One deviation, named in the plan before the diff.</p>
-      <div class="meta">v1 · 2026-09-17 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W2</span> · tips 48a792d · b1289be + this report</div>
+      <div class="meta">v1 · 2026-09-17 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W2</span> · tips 48a792d · b1289be · a596079 + this report</div>
     </div>
   </header>
   <main>
@@ -33,7 +33,7 @@
           <tr>
             <td>3</td>
             <td>The three re-homed rules read the mockup doc, and each still bites</td>
-            <td><span class="badge auto">delivered</span> — <code>overflow-declared</code> reads a paragraph opening with the word and every <code>data-zone</code> host; <code>wire-order-preserved</code> reads <code>data-order</code> on the mockup's collection hosts; <code>keyboard-parity</code> reads the Keyboard item. Each has its ✓ and its ✗; the overflow line additionally refuses a mount's own <code>overflow-auto</code> class as an answer</td>
+            <td><span class="badge auto">delivered</span> — <code>overflow-declared</code> reads a paragraph opening with the word — read as the unwrapped fragment it is, per the review's blocker — and every <code>data-zone</code> host; <code>wire-order-preserved</code> reads <code>data-order</code> on the mockup's collection hosts; <code>keyboard-parity</code> reads the Keyboard item. Each has its ✓ and its ✗; the overflow line additionally refuses a mount's own <code>overflow-auto</code> class as an answer</td>
           </tr>
           <tr>
             <td>4</td>
@@ -103,27 +103,38 @@
           <tr><td>Doc form</td><td><code>cargo xtask verify-doc</code> green on all 63 docs in the tree</td></tr>
           <tr><td>Notes</td><td><code>test/v2</code> + <code>doc/v1</code> written by <code>cargo xtask notes write wu</code> from one judgment</td></tr>
           <tr><td>Design step</td><td>not owed — <code>cargo xtask design-scope epic/simpdf HEAD</code>: <em>no design artifact in the range</em>; the diff renders no file under <code>ui/src/</code></td></tr>
-          <tr><td>Review</td><td data-c="review-cell">the code-review skill over <code>epic/simpdf..wu/simpdf/landing</code>: three finders (correctness · efficiency · altitude — four modules), two verified findings and one refuted. Round 1 <strong>FAIL</strong> on the important below; fixed in b1289be, re-run to <code>cr/v5</code> PASS on the final tip</td></tr>
+          <tr><td>Review</td><td data-c="review-cell">the code-review skill over <code>epic/simpdf..wu/simpdf/landing</code>, three finders per round (correctness · efficiency · altitude — four modules). Round 1 <strong>FAIL</strong> on an important, fixed in b1289be. Round 2 <strong>FAIL</strong> on a <strong>blocker</strong> the first round missed, fixed in a596079. <code>cr/v5</code> PASS lands on the final tip</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="review">What the review found</h2>
+    <p>Two rounds, both red. The second caught what the first missed, which is the case for re-running rather than re-reading.</p>
     <table data-c="review-table">
       <thead><tr><th>Finding</th><th>Verdict</th><th>Disposition</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>important</strong> — <code>xtask/src/lib.rs</code>: the <code>USAGE</code> line for <code>design-scope</code> still promised "the rulebook pin it writes" after this WU removed exactly that output</td>
+          <td><strong>blocker</strong> · round 2 — <code>check_overflow_declared</code> read the overflow paragraph with a reader that skips an opening tag, but <code>elements_of</code> had already stripped it, so everything before the first <code>&gt;</code> in the body was eaten</td>
+          <td>verified and reproduced: an overflow line naming its zone in <code>&lt;code&gt;</code> — the idiom this codebase uses for every other identifier, and one nothing in the spec forbids — was read as <em>no overflow line at all</em>. A hard rule refusing the run that obeyed it. Introduced by this WU: the old sketch-parsing version had no such path</td>
+          <td>fixed in a596079 at the root — the reader was doing two jobs and only the fragment one has callers left. Regression test written failing first; <code>check_keyboard_parity</code>'s identical (harmless) misuse moved over with it</td>
+        </tr>
+        <tr>
+          <td><strong>important</strong> · round 1 — <code>xtask/src/lib.rs</code>: the <code>USAGE</code> line for <code>design-scope</code> still promised "the rulebook pin it writes" after this WU removed exactly that output</td>
           <td>verified — the only place left in the tree asserting the command writes a pin, and the first thing a reader meets</td>
           <td>fixed in b1289be, with a regression test binding the line to what the command prints, written failing first</td>
         </tr>
         <tr>
-          <td><strong>nit</strong> — <code>xtask/src/doc.rs</code>: the comment above <code>offset_in</code> cited <code>check_elements_map</code>, deleted by this WU</td>
+          <td><strong>nit</strong> · round 1 — <code>xtask/src/doc.rs</code>: the comment above <code>offset_in</code> cited <code>check_elements_map</code>, deleted by this WU</td>
           <td>verified — the function beneath it is still live and called; only the illustrative rationale was stale</td>
           <td>fixed in b1289be</td>
         </tr>
         <tr>
-          <td><strong>refuted</strong> — <code>check_overflow_declared</code> passes vacuously when a mockup carries no <code>data-zone</code> at all: one boilerplate overflow paragraph satisfies the rule</td>
+          <td><strong>refuted</strong> · round 2 — three <code>Tier-3</code> comments in <code>gate.rs</code> name a tier DEC-53 retired, while this WU reworded neighbouring prose in the same file</td>
+          <td>refuted as filed: two of the three sit in untouched test functions with no adjacent edit, so the "worsened here" reasoning fails for them. The third, inside <code>check_citation</code>, is real at nit level</td>
+          <td>the one real site fixed in a596079 and recorded as a nit; the other two left as the pre-existing drift they are</td>
+        </tr>
+        <tr>
+          <td><strong>refuted</strong> · round 1 — <code>check_overflow_declared</code> passes vacuously when a mockup carries no <code>data-zone</code> at all: one boilerplate overflow paragraph satisfies the rule</td>
           <td>the behaviour is real and was reproduced, but it <em>predates</em> this diff — the old predicate parsed zones out of an ASCII sketch and had the same hole, and returned with no failure at all when the sketch was absent. This WU is strictly tighter, so the gap is carried forward, not introduced</td>
           <td>dropped from the verdict; recorded as a follow-up below rather than lost</td>
         </tr>
