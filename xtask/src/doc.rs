@@ -1022,7 +1022,7 @@ fn check_overflow_declared(failures: &mut Vec<Failure>, mockup: &str) {
     let mut missing: Vec<String> = attrs(mockup, "data-zone")
         .into_iter()
         .map(|zone| zone.value.trim().to_lowercase())
-        .filter(|zone| !zone.is_empty() && !declaration.contains(zone.as_str()))
+        .filter(|zone| !zone.is_empty() && !names_zone(&declaration, zone))
         .collect();
     missing.sort_unstable();
     missing.dedup();
@@ -1033,6 +1033,21 @@ fn check_overflow_declared(failures: &mut Vec<Failure>, mockup: &str) {
             fix: "every data-zone the mockup hosts is named: it scrolls, it is capped, or it cannot overflow".to_string(),
         });
     }
+}
+
+// A zone is named where the line says its name and not merely where some longer
+// word contains it: `tab` is not declared by "table", nor `log` by "catalog".
+// The sketch this rule used to read had single-letter zone ids and compared them
+// exactly; free-text names re-opened the question, and the wrong answer here is
+// the dangerous one - the gate goes green over a zone nobody declared. `-` and
+// `_` count as part of a word, so `list` is not answered for by `flow-list`.
+fn names_zone(declaration: &str, zone: &str) -> bool {
+    let inside_word = |c: char| c.is_alphanumeric() || c == '-' || c == '_';
+    declaration.match_indices(zone).any(|(at, _)| {
+        let before = declaration[..at].chars().next_back();
+        let after = declaration[at + zone.len()..].chars().next();
+        !before.is_some_and(inside_word) && !after.is_some_and(inside_word)
+    })
 }
 
 // keyboard-parity. Every pointer interaction has a keyboard path. Re-homed onto
@@ -2151,6 +2166,32 @@ chroma_floor: 40
                 "a run carrying the cut {cut} must be red by name, never tolerated"
             );
         }
+    }
+
+    // A zone is named or it is not, and a longer word that merely contains its
+    // name is not naming it. The sketch this rule used to read had single-letter
+    // zone ids and compared them exactly; free-text names re-opened the question,
+    // and a substring test answers it wrong in the direction that matters - the
+    // gate goes green over a zone whose overflow nobody declared.
+    #[test]
+    fn a_zone_is_not_named_by_a_longer_word_that_merely_contains_it() {
+        let two_zones = |line: &str| {
+            green_run()
+                .replace(Z, "data-zone=\"verdicts\"></div><div data-zone=\"tab\"")
+                .replace("<p>overflow: verdicts scrolls to its own cap</p>", line)
+        };
+        let collides =
+            two_zones("<p>overflow: verdicts scrolls to its own cap, rendered as a data table</p>");
+        assert!(
+            what(&doc_verdict(&collides), "overflow-declared·zones").contains("zone tab"),
+            "\"table\" does not declare what the tab zone does"
+        );
+
+        let named = two_zones("<p>overflow: verdicts scrolls to its own cap; tab is pinned</p>");
+        assert!(
+            !reds(&named).contains(&"overflow-declared·zones".to_string()),
+            "the zone is named as itself, so the line answers for it"
+        );
     }
 
     // The overflow line is read as a fragment, and a fragment carries no wrapping
