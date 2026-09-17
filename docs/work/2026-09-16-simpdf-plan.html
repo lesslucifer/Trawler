@@ -8,86 +8,101 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-SIMPDF — the design flow, re-costed</h1>
-      <p>Six staged artifacts, a close step and a forced-coverage receipt over every soft rule — priced once at design time, never against what fifteen closed runs actually produced. Measure the yield, cut what does not pay, publish the bill.</p>
-      <div class="meta">Draft v1 · 2026-09-16 · Trawler · T3 epic plan · <span class="badge id">E-SIMPDF</span></div>
+      <h1>E-SIMPDF — the design flow, cut to the mockup</h1>
+      <p>Six staged artifacts, two loop-backs, a five-step close, a 17-row receipt and an adversarial finder were built so an agent would think before it drew. The human reviewing the mockup is the gate anyway, and every round of that review re-edits the upstream artifacts to keep them consistent with it. Keep the mockup and the lists that record what the screen was handed, what keys drive it and what the human said; cut the rest; land it in the spec, the rulebook, the checker and the skill together.</p>
+      <div class="meta">Draft v2.2 · 2026-09-17 · Trawler · T3 epic plan · <span class="badge id">E-SIMPDF</span> · supersedes v1 (2026-09-16, a measure-then-cut plan in five WUs) · v2.2 folds in the owner's seven review comments</div>
     </div>
   </header>
   <main>
 
     <h2 id="intent">Intent</h2>
     <p data-item="intent">
-      <a href="../design-flow.html">The design flow</a> was built by E-DFLOW and has never
-      been re-costed. <a href="../backlog/roadmap.html">E-SIMPWF</a> did exactly this for the
-      code review and left three rules behind it —
-      <a href="../decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html">DEC-48</a>
-      (a round is bought on the clock and the bill),
-      <a href="../decisions/dec-49-a-parallel-stage-costs-its-slowest-member.html">DEC-49</a>
-      (a cut is priced against a corpus before it is taken) and
-      <a href="../decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a>
-      (carry only the dimensions that pay) — but it simplified nothing about the design flow
-      itself, and said so. Today every screen design pays for six staged artifacts, a
-      five-list close, a receipt that must carry a verdict for all <strong>20</strong> soft
-      slugs in the rulebook whether or not the screen ever met them, and three tiers of
-      judgment. Nobody has asked what each of those returns. <strong>Now</strong>, because
-      the roadmap's next UI work (E-ONBOARD, E-REPLAY's composer) runs this flow again at
-      full price, and because the corpus needed to answer the question already exists:
-      <strong>15 closed runs</strong> and <strong>25 component design files</strong> sitting
-      in git history. The epic's product is a measurement first and a cut second — and a
-      measurement that refuses a cut is a result, not a failure.
+      <a href="../design-flow.html">The design flow</a> was built by E-DFLOW so an AI agent would
+      think before it drew, and it has never been re-scoped. Fifteen closed runs later the owner's
+      reading is that the design still needs the human's feedback on the mockup, every time, so the
+      artifacts that exist to make the agent think are not the gate. They are cost: each is edited
+      again after every review round to stay consistent with the mockup it was supposed to precede.
+      v1 of this plan proposed to count the corpus and bill a paired re-run before cutting anything,
+      borrowing E-SIMPWF's discipline
+      (<a href="../decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html">DEC-48</a> ·
+      <a href="../decisions/dec-49-a-parallel-stage-costs-its-slowest-member.html">DEC-49</a> ·
+      <a href="../decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a>).
+      The owner scoped that out: this is a scope call, not a cost optimisation. What survives of the
+      discipline is DEC-50's habit — the corpus number stands beside each cut so a later reading
+      cannot re-buy a station without new evidence — and the numbers are already in this plan.
+      <strong>Now</strong>, because E-ONBOARD and E-REPLAY's composer run this flow next, at full
+      price.
     </p>
 
-    <h2 id="subject">What a run costs today</h2>
+    <h2 id="subject">Every station, what the corpus shows, and the call</h2>
     <table data-c="cost-today">
-      <thead><tr><th>Component of the flow</th><th>Charged per run</th><th>What is known about its yield</th></tr></thead>
+      <thead><tr><th>Station</th><th>Charged per run</th><th>What the recovered runs show</th><th>Call</th></tr></thead>
       <tbody>
-        <tr><td><strong>Substrate load</strong> — registry index + rulebook, frozen for the run</td><td>2 commands, read once</td><td>cheap; the receipt pin depends on it</td></tr>
-        <tr><td><strong>6 stages</strong> — Frame · Layout · Elements · Interaction · Draft mockup · Tune</td><td>one authored artifact each, machine-checked for density and shape</td><td><span class="badge approval">unmeasured</span> — no count of which stage's output a later stage or a Tier-3 finder ever cited</td></tr>
-        <tr><td><strong>Two loop-backs</strong> — Elements→Layout, Tune→Layout</td><td>spec'd as real</td><td><span class="badge approval">unmeasured</span> — no count of how often either fired</td></tr>
-        <tr><td><strong>Close</strong> — 5 steps, incl. walking the predecessor run (<a href="../decisions/dec-40-the-predecessor-is-the-checklist.html">DEC-40</a>)</td><td>a full second pass over the superseded run</td><td><span class="badge approval">unmeasured</span></td></tr>
-        <tr><td><strong>Receipt</strong> — forced coverage, every soft slug, in rulebook order</td><td><strong>20 rows</strong> today (17 when the last run was written)</td><td>sampled: the most recent run reads <strong>13 satisfied · 3 inherited · 1 satisfied-via-proposal</strong> over its 17 rows</td></tr>
-        <tr><td><strong>4 closing lists</strong> — proposals · capabilities · blocked-on · review</td><td>one row per item</td><td>proposals and blocked-on demonstrably feed later epics; capabilities and review <span class="badge approval">unmeasured</span></td></tr>
-        <tr><td><strong>3 tiers</strong> — verify-doc · receipt coverage · adversarial review</td><td>Tier-3 is a spawned finder + verifiers</td><td>priced by <a href="../decisions/dec-48-the-round-is-bought-on-the-clock-and-the-bill.html">DEC-48</a>'s rule, never actually billed for a design round</td></tr>
-        <tr><td><strong>The artifact itself</strong></td><td>≈ <strong>108 KB</strong> of authored HTML for the most recent run</td><td>the one hard number this plan has</td></tr>
+        <tr><td><strong>Substrate load</strong> — registry index + rulebook</td><td>2 commands, read once; the second hashes the rulebook to pin it</td><td>the registry read is cheap and the mockup cannot mount without it. The pin exists for the receipt, and the receipt goes</td><td><span class="badge auto">keep</span> the registry read · <span class="badge approval">drop</span> the pin, everywhere it is written or checked</td></tr>
+        <tr><td><strong>1 · Frame</strong> — driver table + <em>Given / Not given</em></td><td>one table, seven density predicates</td><td>reviewer instructions moved it in 15 of 83 review rows, mostly to stay consistent. Its <em>Given</em> line is the source of the capabilities list, and that list is behind the finder's most repeated verified catch: an input marked <em>deliberately unused</em> for a reason the shipped code disproved (runs 3 and 8)</td><td><span class="badge approval">cut</span> the table · <span class="badge auto">keep</span> Given as a list on the mockup doc (open question 3)</td></tr>
+        <tr><td><strong>2 · Layout</strong> — ASCII zone sketch + overflow line</td><td>one sketch</td><td>the Tune → Layout loop-back fired in 8 of 14 runs, and every firing was the sketch going stale once the mockup existed and being re-edited. Hosts <code>overflow-declared</code></td><td><span class="badge approval">cut</span> · the mockup is the layout; the overflow line moves under it</td></tr>
+        <tr><td><strong>3 · Elements</strong> — tiered catalog, registry verdict per component, @use/@avoid trace, gist per row</td><td>the largest artifact: 30 KB of the last run's 106, three times the mockup</td><td>31 of 83 review rows moved it. Its two real outputs are the proposals list and the reuse warrant, and the mockup already enforces reuse mechanically — <code>mockup·hand-drawn</code> refuses any component not mounted from <code>window.Trawler</code>, and nothing unbuilt can be mounted. Hosts <code>state-declarations</code> · <code>wire-order-preserved</code></td><td><span class="badge approval">cut</span> the catalog · <span class="badge auto">keep</span> proposals</td></tr>
+        <tr><td><strong>4 · Interaction</strong> — use-case table, zone → delta, keyboard column</td><td>one table</td><td>hosts <code>keyboard-parity</code>; a key path is the one thing a static mockup cannot show</td><td><span class="badge approval">cut</span> the table · <span class="badge auto">keep</span> keyboard-parity on a new keyboard item — one row per pointer interaction, its key path — the owner's call</td></tr>
+        <tr><td><strong>5 · Draft mockup</strong> — mounted real components, state toggle, zero colour literals</td><td>11 KB of 106</td><td>the artifact the human reviews. 9 of the 13 hard rules read it</td><td><span class="badge auto">keep</span></td></tr>
+        <tr><td><strong>6 · Tune</strong> — drawn before/after, a slug per row</td><td>one table</td><td>5 rows in the last run and its reasoning block was empty. It is what the human does when they look at the mockup</td><td><span class="badge approval">cut</span></td></tr>
+        <tr><td><strong>Two loop-backs</strong> — Elements → Layout · Tune → Layout</td><td>spec'd as real</td><td>every recorded firing is a re-edit of an earlier artifact to match a later one. With the stages gone there is nothing to loop back to</td><td><span class="badge approval">gone</span> with the stages</td></tr>
+        <tr><td><strong>Close</strong> — 5 steps: ① walk the predecessor (<a href="../decisions/dec-40-the-predecessor-is-the-checklist.html">DEC-40</a>) · ② re-pin the rulebook · ③ fill the review item · ④ green · ⑤ archive</td><td>a second pass over the superseded run, a hash, the review item, green, archive</td><td>① is the owner's call to retire: the human reads the new mockup, and no finder reads the walk any more. ② is the receipt's and goes with it. ③ is the human's own record; ④ ⑤ are what the gate reads</td><td><span class="badge auto">keep</span> as 3 steps: review · green · archive · <span class="badge approval">retire</span> ① and ②</td></tr>
+        <tr><td><strong>Receipt</strong> — forced coverage, every soft slug</td><td><strong>17 rows</strong> (v1 said 20; the rulebook holds 17, as did the last run's receipt)</td><td>9 parsed receipts, 147 verdicts: <strong>0 violated · 0 blocked</strong>. Two Tier-3 notes say in their own words that no false <code>satisfied</code> was found. A self-claim that has never once said no carries no information</td><td><span class="badge approval">cut</span> · the soft-rules table goes with it, the hard rules and the vocabularies stay (open question 4)</td></tr>
+        <tr><td><strong>4 lists</strong> — capabilities · proposals · blocked-on · review</td><td>one row per item</td><td>proposals and blocked-on feed later epics (a token, lexicon rows, a store change); capabilities is the Given list's answer; review is the human's feedback, logged — 83 rows across the corpus, 30 in one run</td><td><span class="badge auto">keep</span> all four, short</td></tr>
+        <tr><td><strong>3 tiers</strong> — verify-doc · receipt · adversarial finder</td><td>Tier-1 on every write; Tier-3 one finder + a fresh verifier per finding</td><td>32 Tier-3 rounds judged an artifact: found 95 · verified 31 · waived 4, none a false soft-rule verdict. The repo holds <strong>0</strong> <code>design/v1</code> notes — every verdict sits in an old <code>cr</code> note and the new skill has never run</td><td>Tier-1 <span class="badge auto">keeps</span> 12 of the 13 hard-rule checks — nine on the mockup, three re-homed beside it — and the items · Tier-2 <span class="badge approval">gone</span> · Tier-3's finder <span class="badge approval">dropped</span> — the owner's call; the step is the hand-off accounting alone</td></tr>
+        <tr><td><strong>The artifact</strong> — one HTML doc, 11 items, the mounted mockup</td><td>106 KB at the last close; run 11 reached 131 KB with a 28 KB review item</td><td>the part the human reviews is a tenth of the bytes</td><td>one doc: the mockup and its four lists</td></tr>
       </tbody>
     </table>
-    <p class="caption">Every <span class="badge approval">unmeasured</span> cell is W1's job. The epic cuts nothing it has not first counted.</p>
+    <p class="caption">Numbers taken 2026-09-17 from each run's last state in git history: 14 of the 16 named runs recovered (two unreachable by path), receipts parsed for 9, "moved" counts are word hits in the review item's second column. A heuristic pass recorded here so every call can be checked — not a measurement WU, and not a bill: no clock and no tokens were ever recorded for a design round, and this plan does not pretend to have them.</p>
 
-    <div class="diagram" data-c="the-question">
+    <table data-c="receipt-verdicts">
+      <thead><tr><th>Receipt verdict, 9 runs</th><th>Count</th><th></th><th>Last run at its close</th><th>KB</th></tr></thead>
+      <tbody>
+        <tr><td><code>satisfied</code></td><td>120</td><td></td><td>Elements</td><td>30</td></tr>
+        <tr><td><code>inherited</code></td><td>21</td><td></td><td>Interaction</td><td>14</td></tr>
+        <tr><td><code>satisfied-via-proposal</code></td><td>5</td><td></td><td>Draft mockup</td><td>11</td></tr>
+        <tr><td><code>n/a</code></td><td>1</td><td></td><td>Frame · Layout</td><td>10 · 9</td></tr>
+        <tr><td><code>violated</code> · <code>violated-inherited</code> · <code>blocked</code></td><td><strong>0</strong></td><td></td><td>capabilities · proposals · review · tune · receipt · blocked-on</td><td>3 · 3 · 3 · 2 · 2 · 1</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">Left: what Tier-2 ever said. Right: where the bytes went in the most recent run — the reviewed part is the third row.</p>
+
+    <div class="diagram" data-c="the-shape">
       <pre class="mermaid">
-flowchart LR
-  S[["substrate:
-registry + rulebook"]] --> F[Frame]
-  F --> L[Layout] --> E[Elements] --> I[Interaction] --> D["Draft mockup"] --> T[Tune] --> R[["receipt 20 rows
-+ 4 lists"]]
-  R --> C[["close: 5 steps,
-incl. walk the predecessor"]]
-  E -. "loop-back: fired how often?" .-> L
-  T -. "loop-back: fired how often?" .-> L
-  F -.->|"cited downstream how often?"| Q(("what did
-this yield
-over 15 runs?"))
-  D -.-> Q
-  T -.-> Q
-  R -.-> Q
-  C -.-> Q
+flowchart TB
+  subgraph today["today — six stages · five lists · five-step close · a finder"]
+    direction LR
+    S1[["substrate
++ rulebook pin"]] --> F[Frame] --> L[Layout] --> E[Elements] --> I[Interaction] --> D["Draft mockup"] --> T[Tune] --> R[["receipt
++ 4 lists"]] --> C[["close ①–⑤"]] --> T3[["Tier-3 finder
++ verifiers"]]
+    E -. loop-back .-> L
+    T -. loop-back .-> L
+  end
+  subgraph after["after — the mockup and its lists"]
+    direction LR
+    S2[["registry"]] --> M["mockup
+mounted · stateful"] --> LL[["given · keyboard · proposals
+blocked-on · review"]] --> CC[["close
+review · green · archive"]] --> HO[["hand-off accounting
+implements / undesigned"]]
+  end
       </pre>
-      <div class="caption">Hình 1 — the flow as it stands, with the epic's only question attached to each station. The shape is not in dispute; the price of each station is.</div>
+      <div class="caption">Hình 1 — the flow today and after. The human reviews the mockup in both; only the second stops paying for artifacts that the review re-edits.</div>
     </div>
 
     <h2 id="use-cases">Use-case requirements</h2>
     <p data-item="use-cases">
-      <strong>A process epic — it delivers no <code>UC-*</code> behaviour and changes
-      none.</strong> No proxy behaviour, no API surface and no shipped screen moves; this
-      epic designs nothing and builds nothing a user can see. What changes is the contract
-      an AI agent follows when it <em>does</em> design a screen, so the truth lands in T2
-      decisions (the receipt cut and the stage cut, each its own record, next free number
-      after <a href="../decisions/decisions-index.html">DEC-52</a>), in the T2 rulebook
-      where a slug's coverage obligation is stated
-      (<a href="../design-rules/design-rules-index.html">design-rules-index</a>,
-      governed by <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a>), and in the
-      T1 <a href="../design-flow.html">design flow spec</a>, which is rule-bearing text and
-      is therefore edited under a <code>Reviewed-By</code> trailer.
+      <strong>A process epic — it delivers no <code>UC-*</code> behaviour and changes none.</strong>
+      No proxy behaviour, no API surface and no shipped screen moves; this epic designs nothing and
+      builds nothing a user can see. What changes is the contract an AI agent follows when it
+      <em>does</em> design a screen, so the truth lands in one T2 decision (the next free number after
+      <a href="../decisions/decisions-index.html">DEC-52</a>), in the T2 rulebook where the receipt
+      obligation and the soft-rules table are
+      (<a href="../design-rules/design-rules-index.html">design-rules-index</a>, governed by
+      <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a>, which the record amends), in the T1
+      <a href="../design-flow.html">design flow spec</a>, which is rule-bearing and is edited under a
+      <code>Reviewed-By</code> trailer, and in the design-review skill, which is infrastructure.
     </p>
 
     <h2 id="expected">Expected result</h2>
@@ -98,28 +113,33 @@ over 15 runs?"))
         <tbody>
           <tr>
             <td>1</td>
-            <td>A <strong>yield table over the whole corpus</strong> exists: one row per stage, per loop-back, per close step and per soft slug, each carrying what it produced across all 15 runs — a design change, a caught violation, a proposal, a blocked-on entry, or nothing.</td>
-            <td>The W1 measurement doc. Every number is reproducible from git history by the commands the doc names.</td>
+            <td><strong>One decision record</strong> names every station kept or cut with its corpus row beside it, states the surviving shape, and names what it amends or supersedes: DEC-15's three tiers, DEC-40's walk (superseded — retired), DEC-14's soft-rules table and receipt obligation, DEC-24/46's Tier-3 scope, and why DEC-49's fewer-agents test is met — the design step's fleet is one finder and its verifiers, so removing them removes the stage whole and both axes go.</td>
+            <td><code>docs/decisions/dec-53-…</code>, routed in the decisions index; the amended records carry a status line pointing at it.</td>
           </tr>
           <tr>
             <td>2</td>
-            <td>Every station of the flow is <strong>explicitly kept or cut</strong>, and each verdict cites its row in the yield table. Nothing survives by default and nothing is cut on taste.</td>
-            <td>Two decision records, one for the receipt and one for the stages, each naming what it kept and why.</td>
+            <td><code>docs/design-flow.html</code>, the rulebook, <code>verify-doc</code>'s predicates and the design-review skill <strong>agree</strong>: a run written to the new spec is green; a run still carrying a cut item is red with a named check; no predicate passes vacuously.</td>
+            <td><code>cargo xtask verify-doc</code> over the spec's own example shape; the flow e2e, rewritten to the surviving sequence.</td>
           </tr>
           <tr>
             <td>3</td>
-            <td><code>docs/design-flow.html</code>, the rulebook's coverage obligation and <code>verify-doc</code>'s predicates <strong>agree</strong> — a run written to the new spec is green, and a run carrying a cut station is not silently tolerated.</td>
-            <td><code>cargo xtask verify-doc</code> over the new spec's own example shapes; the flow e2e, rewritten to the surviving sequence.</td>
+            <td>The design step <strong>spawns nothing</strong>: <code>design-scope</code>, the hand-off accounting, the <code>design/v1</code> note. No rulebook pin is written, printed or checked anywhere. The rubric file is gone because it has no reader.</td>
+            <td>The skill text; <code>.claude/skills/code-review/design-rubric.md</code> absent; <code>verify-dod</code> still refuses a design-bearing tip with no note, a new surface with no citation, a rendered file neither cited nor declared.</td>
           </tr>
           <tr>
             <td>4</td>
-            <td>The saving is stated as a <strong>measured</strong> number, on both axes DEC-48 names, from a paired re-run — never as a projection.</td>
-            <td>W5's bill: one corpus screen re-designed under the new shape, its clock and tokens against the archived original's.</td>
+            <td>The <strong>four stage-bound hard rules</strong> — <code>overflow-declared</code> · <code>state-declarations</code> · <code>wire-order-preserved</code> · <code>keyboard-parity</code> — each have a stated fate: re-homed onto the mockup doc, or retired with the stage that carried them. No rule is added; the record names every one removed.</td>
+            <td>The rulebook's hard table names only the mockup doc — <em>Draft mockup</em> and its <em>Keyboard</em> item — in its Binds-at column; the closed vocabulary (DEC-17) is untouched.</td>
           </tr>
           <tr>
             <td>5</td>
-            <td>If the corpus shows every station pays, the epic <strong>closes reporting that</strong>, with the numbers, and cuts nothing.</td>
-            <td>The epic result report. This is a legitimate outcome, not a deviation.</td>
+            <td>The flow e2e exercises the <strong>path a live tip takes</strong>: the fake reviewer writes a <code>cr/v5</code> code note and a <code>design/v1</code> accounting note, not the retired <code>cr/v3</code> carrier.</td>
+            <td><code>xtask/tests/e2e_design_flow.rs</code> writes no <code>cr/v3</code>; the gate's legacy branch stays for old seams and is covered by its own unit tests.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>The first <strong>live run</strong> of the new shape is not this epic's. The next UI epic runs it and records its clock and tokens, so a design round has a bill for the first time.</td>
+            <td>The roadmap row this epic leaves behind names that obligation.</td>
           </tr>
         </tbody>
       </table>
@@ -128,189 +148,113 @@ over 15 runs?"))
     <h2 id="non-goals">Non-goals</h2>
     <div data-item="non-goals">
       <p>
-        The backlog row that opened this epic lists seven inherited items.
-        <strong>None of them are in scope</strong> — the owner scoped this epic to the
-        re-costing alone, and each item below stays a
-        <a href="../backlog/roadmap.html">roadmap</a> row, re-homed at this epic's close so
-        it is not lost with the row that carried it.
+        The backlog row that opened this epic lists seven inherited items. Five stay
+        <a href="../backlog/roadmap.html">roadmap</a> rows, re-homed at this epic's close; two
+        dissolve because the cut makes them the same edit.
       </p>
       <table data-c="out-of-scope">
-        <thead><tr><th>Stays a backlog row</th><th>Why it is not this epic's</th></tr></thead>
+        <thead><tr><th>Inherited item</th><th>What this epic does with it</th></tr></thead>
         <tbody>
-          <tr><td>DEC-15 · 24 · 25 · 28 · 29 still name the retired <code>cr/v3</code> carrier</td><td>A records-correctness chore against <a href="../decisions/dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a>, independent of what the flow costs.</td></tr>
-          <tr><td>The design rubric still lives at <code>.claude/skills/code-review/design-rubric.md</code></td><td>A relocation. It moves cleanly whether or not any station is cut.</td></tr>
-          <tr><td><code>xtask/tests/e2e_design_flow.rs</code> drives the legacy carrier</td><td>This epic rewrites that file's <em>stage expectations</em> and nothing else — the note it writes stays as found. See <a href="#open-questions">open question 1</a>.</td></tr>
-          <tr><td><code>6·run-closed</code> / <code>6·retirement-order</code> refuse at the merge, not the preflight (<a href="../decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>)</td><td>Where a refusal fires, not what the flow costs.</td></tr>
-          <tr><td>Tier-1 cannot read a mockup's mounted JSX</td><td>A checker-reach defect. It makes the mockup's predicates weaker, not more expensive.</td></tr>
-          <tr><td>The shared <code>target/</code> leaks into <code>design-e2e</code>'s temp repos</td><td>Pre-existing, and orthogonal — unless it blocks running the suite at all (<a href="#open-questions">open question 1</a>).</td></tr>
-          <tr><td>The review skill's rule files restate the schema they name</td><td>Explicitly the owner's call per <code>CLAUDE.md</code>, not a gate's.</td></tr>
+          <tr><td>DEC-15 · 24 · 25 · 28 · 29 still name the retired <code>cr/v3</code> carrier</td><td>Stays a row. DEC-53 amends what those records <em>decide</em> where the cut touches it, and W1 adds a status line to each; the carrier name inside their prose is a records chore against <a href="../decisions/dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a>.</td></tr>
+          <tr><td>The design rubric still lives at <code>.claude/skills/code-review/design-rubric.md</code></td><td><strong>Dissolves.</strong> With the finder gone the rubric has no reader; W2 deletes it rather than relocating it.</td></tr>
+          <tr><td><code>xtask/tests/e2e_design_flow.rs</code> drives the legacy carrier</td><td><strong>Dissolves.</strong> W2 rewrites the fake reviewer's step anyway — no finder, an accounting-only note — and writing that note as <code>design/v1</code> beside a <code>cr/v5</code> code note is the same edit (expected result 5). The gate's own <code>cr/v3</code> branch stays: it is grandfathering for seams the epic gate re-walks.</td></tr>
+          <tr><td><code>6·run-closed</code> / <code>6·retirement-order</code> refuse at the merge, not the preflight (<a href="../decisions/dec-43-the-preflight-covers-only-what-can-void-a-pass.html">DEC-43</a>)</td><td>Stays a row. Where a refusal fires, not what the flow asks for.</td></tr>
+          <tr><td>Tier-1 cannot read a mockup's mounted JSX</td><td>Stays a row. Anything re-homed onto the mockup doc lands on plain HTML the checker reads (open question 2), so the cut does not widen the blind spot.</td></tr>
+          <tr><td>The shared <code>target/</code> leaks into <code>design-e2e</code>'s temp repos</td><td>Stays a row, unless it blocks running the suite at all (<a href="#open-questions">open question 1</a>).</td></tr>
+          <tr><td>The review skill's rule files restate the schema they name</td><td>Stays a row — the owner's call per <code>CLAUDE.md</code>.</td></tr>
         </tbody>
       </table>
-      <p>Also out of scope, for the same reason — they change the flow rather than price it:</p>
+      <p>Also out of scope:</p>
       <ul>
-        <li><strong>No new design rules and no rulebook growth.</strong> A slug may lose its forced-coverage obligation; no slug is added, and the closed vocabulary (<a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a>) is untouched.</li>
-        <li><strong>No screen is designed.</strong> W5 re-runs the flow over a screen the corpus already holds, as a paired measurement; its artifact is evidence, never a shipped design, and it hands nothing to a build.</li>
-        <li><strong>The code review's own shape is not reopened.</strong> E-SIMPWF owns it, and its open measurements are its own backlog rows.</li>
-        <li><strong>No hard rule and no Tier-1 predicate is relaxed for cost.</strong> Hard rules are the cheap half by construction; if the measurement says otherwise, that is a finding for a later epic, not a cut here.</li>
+        <li><strong>No measurement WU.</strong> v1's corpus count and paired re-run are struck. The scan in this plan is the evidence; nothing is re-counted and no saving is projected or reported — expected result 6 is where the first real bill comes from.</li>
+        <li><strong>No screen is designed.</strong> The flow e2e's fake agent is the only run this epic writes.</li>
+        <li><strong>No new design rules.</strong> The soft-rules table is removed whole and one hard rule retires with its stage; nothing is added, no slug is renamed, and the closed vocabulary (<a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a>) is untouched.</li>
+        <li><strong>No mockup-bound predicate is relaxed.</strong> The nine hard rules that read the mockup keep their Tier-1 checks exactly.</li>
+        <li><strong>Component design files keep their own review loop</strong> (<a href="../component-design.html">component-design</a>): confirmed by the reviewer, retired into TSDoc under DEC-16. The finder's removal touches them only in that no agent second-reads a design the reviewer already confirmed.</li>
+        <li><strong>The code review's own shape is not reopened.</strong> E-SIMPWF owns it.</li>
       </ul>
     </div>
 
-    <h2 id="wu-map">The five Working Units</h2>
+    <h2 id="wu-map">The two Working Units</h2>
     <table data-c="wu-map">
       <thead><tr><th>WU</th><th>Subject</th><th>Produces</th><th>Depends on</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge id">W1</span></td><td>The corpus, counted</td><td>the yield table — no verdicts</td><td>none</td></tr>
-        <tr><td><span class="badge id">W2</span></td><td>The receipt's 20 rows</td><td>a decision: which slugs stay forced</td><td>W1</td></tr>
-        <tr><td><span class="badge id">W3</span></td><td>The 6 stages + the close</td><td>a decision: which artifacts stay</td><td>W1</td></tr>
-        <tr><td><span class="badge id">W4</span></td><td>Spec · rulebook · checker</td><td>the cuts, landed and enforced</td><td>W2 + W3</td></tr>
-        <tr><td><span class="badge id">W5</span></td><td>The paired re-run</td><td>the measured bill; the epic e2e</td><td>W4</td></tr>
+        <tr><td><span class="badge id">W1</span></td><td>The decision</td><td>DEC-53 · the rulebook without its receipt obligation and its soft-rules table · status lines on the records it amends</td><td>none</td></tr>
+        <tr><td><span class="badge id">W2</span></td><td>The landing</td><td>spec · checker · e2e · skill, moved together; the epic e2e</td><td>W1</td></tr>
       </tbody>
     </table>
-    <p class="caption">W2 and W3 read the same table and decide different halves — they are independent of each other and may land in either order.</p>
+    <p class="caption">Decide once, land once. W1 is docs-only; W2 carries all the code.</p>
 
     <div class="callout">
-      <strong>The rule this epic owes itself.</strong>
-      <a href="../decisions/dec-49-a-parallel-stage-costs-its-slowest-member.html">DEC-49</a>
-      says a cut is priced against a corpus before it is taken, and E-SIMPWF.W9's own round
-      proved the sharper half: its projection was <strong>2.3× optimistic</strong> because a
-      station's cost is set as much by how hard its agent works as by how many stations there
-      are. So W1 counts <em>yield</em> from the archive, which history can answer, and W5
-      measures <em>cost</em> live, which only a re-run can. A projected saving is never
-      reported as a saving.
+      <strong>What v1 got wrong, in one line.</strong> It treated a scope call as a cost question and
+      booked three WUs to answer it. The numbers in this plan are not a price; they are the record that
+      the stations being cut never carried the quality — the review rows did — kept beside each cut so
+      it cannot be re-bought without new evidence.
     </div>
 
     <div data-item="wu-summaries">
 
       <div data-wu="E-SIMPDF.W1">
-        <h3 id="w1">E-SIMPDF.W1 — the corpus, counted</h3>
+        <h3 id="w1">E-SIMPDF.W1 — the decision</h3>
         <p data-item="wu-summary">
-          Walk every closed design run in git history — 15 named runs plus the two
-          candidates <code>2026-09-04-flow-list-shell.html</code> and
-          <code>2026-09-06-shell-list-second-pass.html</code>, whose status this WU settles —
-          and the 25 component design files, and record what each station of the flow
-          produced. One row per stage, per loop-back, per close step and per soft slug;
-          per row, across the corpus: how often it changed the design, caught a violation,
-          raised a proposal, raised a blocked-on entry, or returned nothing. Verdict
-          distribution per slug (<code>satisfied</code> · <code>inherited</code> ·
-          <code>n/a</code> · <code>blocked</code> · <code>violated</code> …) is the receipt's
-          half; downstream citation — did any later stage or Tier-3 finder ever refer to this
-          artifact — is the stages' half. <strong>No verdicts and no cuts</strong>: this WU
-          publishes numbers and the commands that reproduce them.
+          Write DEC-53. Station by station, keep or cut, each with its corpus row from this plan. The
+          surviving shape: the registry read · one mockup doc carrying the Given list, the mounted stateful mockup, a keyboard list, proposals, blocked-on and review · a three-step close (fill the review item ·
+          green · archive) · the hand-off accounting as the whole of the design step, with no rulebook
+          pin anywhere. The fate of the four stage-bound hard rules (open question 2) and how much of
+          the rulebook goes (open question 4). What the record amends or supersedes: DEC-15's three
+          tiers become one tier and an accounting step; DEC-40 is superseded — the predecessor walk is
+          retired, the human reads the new mockup; DEC-14's rulebook loses its receipt obligation and
+          its soft-rules table; DEC-24/46's Tier-3 scope shrinks to §6–§7 of the skill; DEC-25's
+          pointer stands unchanged; DEC-49's test is met because the stage is removed whole. Edit the
+          rulebook to match — the "coverage list" sentence, the Tier-2 and Tier-3 nodes of the
+          enforcement diagram, the harness row of the lifecycle table, the soft-rules table itself, the retired hard row, and keyboard-parity's Binds-at moved from Interaction to the keyboard item. Add a status line to each amended record and route DEC-53 in the
+          decisions index.
         </p>
         <p data-item="wu-maps-to">
-          E-SIMPDF · the corpus DEC-49 requires before any cut is priced. Serves W2 and W3,
-          which each read one half of its table.
+          E-SIMPDF · expected results 1 and 4 · the T2 half of the cut. Adds no rule and renames no
+          slug.
         </p>
         <p data-item="wu-expected">
-          Expected result 1 holds. A T3 measurement doc whose every number is reproducible
-          by a reader from the commands it names, with the corpus enumerated by path and
-          commit. Where a number cannot be recovered from history — a run's clock or token
-          bill, which was never recorded — the doc says so in that cell rather than
-          estimating it.
+          DEC-53 exists and reads as above. The rulebook states no receipt obligation, carries no soft-rules table, and its hard table's Binds-at column names only the mockup doc's items. No
+          code changes; the diff is docs-only and carries no design artifact, so its test evidence is
+          <code>waived</code> with that reason on the note and it owes no design step.
         </p>
-        <p data-item="wu-deps">none — first WU; W2, W3 and W5 all read its table.</p>
+        <p data-item="wu-deps">none — first WU.</p>
       </div>
 
       <div data-wu="E-SIMPDF.W2">
-        <h3 id="w2">E-SIMPDF.W2 — the receipt, re-costed</h3>
+        <h3 id="w2">E-SIMPDF.W2 — the landing</h3>
         <p data-item="wu-summary">
-          Decide, slug by slug against W1's distribution, which of the rulebook's 20 soft
-          rules keep their forced-coverage obligation and which move to a cheaper form or
-          leave the receipt. The live question is what <code>inherited</code> is worth: the
-          flow calls it "a first-class verdict, not a dodge", and a slug that reads
-          <code>inherited</code> in every run of the corpus is a row that costs an author a
-          line and a reviewer a read while asserting nothing about the screen. The counter-case
-          is the reason forced coverage exists at all — "a receipt that only lists the rules
-          the design happened to think about proves nothing" — so a cut must show the slug is
-          <em>structurally</em> inapplicable, never merely quiet. Lands as a decision record
-          stating the surviving set, the rejected alternatives, and the exact predicate W4
-          implements.
+          Land DEC-53 in the four places that must never disagree, in one WU. The T1
+          <a href="../design-flow.html">design flow spec</a> rewritten to the surviving sequence — the
+          stages, the closing lists, §7 and §8 replaced by the mockup doc, its lists (Given · keyboard · proposals · blocked-on · review), the three-step close and the accounting step; the "Run it" table shortened to match, the
+          <code>hash-object</code> row gone — under a <code>Reviewed-By</code> trailer.
+          <code>verify-doc</code> in <code>xtask/src/doc.rs</code>: the design-run item list becomes
+          mockup · capabilities · keyboard · proposals · blocked-on · review; every Frame, Elements, Interaction,
+          Tune and receipt predicate removed, not left to pass vacuously; <code>capabilities·answered</code>
+          rewired to read the list itself; the overflow line and <code>data-order</code> re-homed onto the mockup doc's plain HTML; keyboard-parity's check reading the new keyboard item — a key path per row; a run carrying a cut item red by name. The gate: the
+          <code>design/v1</code> <code>rulebook</code> field and its pin check removed, and
+          <code>design-scope</code> stops printing a blob to pin. The design-review skill's §3–§5
+          removed so the step is <code>design-scope</code>, the hand-off accounting and the note, with
+          the verdict following the accounting alone; the rubric deleted. The flow e2e rewritten: after
+          each surviving item the run is red for exactly the items not yet written; the fake reviewer
+          writes <code>cr/v5</code> and <code>design/v1</code> notes; the rulebook-moves assertion
+          retired with the receipt; the violating-mockup assertion kept.
         </p>
         <p data-item="wu-maps-to">
-          E-SIMPDF · the receipt half of expected result 2 · amends the coverage obligation
-          the rulebook (DEC-14) states, without touching any rule's content.
+          E-SIMPDF · expected results 2, 3 and 5 · the T1, T4 and infrastructure half. Implements W1
+          and adds no rule of its own.
         </p>
         <p data-item="wu-expected">
-          A numbered T2 decision naming which slugs stay forced, which do not, and the
-          evidence row behind each call — or, if the distribution supports no cut, that
-          finding stated with its numbers (expected result 5, receipt half). The rulebook's
-          own coverage statement is edited to match. No checker change lands here.
+          Expected results 2, 3 and 5 hold: a run written to the new spec is green, a run carrying a
+          cut item is refused with a named check, the spec, the rulebook, the checker's failure output
+          and the skill all state the same shape, and the e2e writes the notes a live tip writes. Every
+          predicate and gate check changed carries a unit test in <code>xtask/src/</code>; the e2e is
+          green under <code>--features design-e2e</code>. Then the epic closes: distillation, the
+          roadmap row struck, five inherited items re-homed as their own row, and the next UI epic's
+          obligation to record its first run's clock and tokens written beside them.
         </p>
-        <p data-item="wu-deps">E-SIMPDF.W1. Independent of W3 — either may land first.</p>
-      </div>
-
-      <div data-wu="E-SIMPDF.W3">
-        <h3 id="w3">E-SIMPDF.W3 — the stages and the close, re-costed</h3>
-        <p data-item="wu-summary">
-          The same judgment over the six staged artifacts, the two loop-backs and the
-          five-step close. The questions W1's table answers: which stage's output was ever
-          read by a downstream stage or cited by a Tier-3 finder; whether either loop-back
-          ever fired; whether the predecessor walk (<a href="../decisions/dec-40-the-predecessor-is-the-checklist.html">DEC-40</a>)
-          ever caught a dropped answer, which is the single thing it exists to catch; and
-          whether any two stages are answering the same question at two prices — Elements'
-          fit trace against Tune's before/after being the obvious suspects. A stage may be
-          <em>merged</em> rather than cut; the cheapest available result is two artifacts
-          becoming one. Lands as a decision record with the surviving sequence.
-        </p>
-        <p data-item="wu-maps-to">
-          E-SIMPDF · the stage half of expected result 2 · rewrites the sequence the T1
-          design flow spec states.
-        </p>
-        <p data-item="wu-expected">
-          A numbered T2 decision naming the surviving stages, merges and close steps with the
-          evidence row behind each, and what a run written to it looks like — or that the
-          corpus supports no cut, with its numbers. No spec or checker change lands here.
-        </p>
-        <p data-item="wu-deps">E-SIMPDF.W1. Independent of W2 — either may land first.</p>
-      </div>
-
-      <div data-wu="E-SIMPDF.W4">
-        <h3 id="w4">E-SIMPDF.W4 — the spec, the rulebook and the checker move together</h3>
-        <p data-item="wu-summary">
-          Land W2's and W3's decisions in the three places that must never disagree: the T1
-          <a href="../design-flow.html">design flow spec</a> (rule-bearing — a
-          <code>Reviewed-By</code> trailer), the rulebook's coverage obligation, and
-          <code>verify-doc</code>'s predicates in <code>xtask/src/doc.rs</code> together with
-          their failure output, which the flow names as the agent's oracle. A cut station's
-          predicates are removed, not left to pass vacuously; a merged stage gets the union
-          of its parents' checks. The flow e2e is rewritten to the surviving sequence — same
-          property, new stage list: after every stage the run is red for exactly the stages
-          not yet written.
-        </p>
-        <p data-item="wu-maps-to">
-          E-SIMPDF · expected result 3 · implements W2 and W3, adds no rule of its own.
-        </p>
-        <p data-item="wu-expected">
-          Expected result 3 holds: a run written to the new spec is green, a run carrying a
-          cut station is refused with a named check, and the spec, the rulebook and the
-          checker's failure output all state the same sequence. If W2 and W3 both concluded
-          "no cut", this WU collapses to the documentation of that finding.
-        </p>
-        <p data-item="wu-deps">E-SIMPDF.W2 and E-SIMPDF.W3 — both decisions, since spec and checker land in one commit.</p>
-      </div>
-
-      <div data-wu="E-SIMPDF.W5">
-        <h3 id="w5">E-SIMPDF.W5 — the paired re-run, and the bill</h3>
-        <p data-item="wu-summary">
-          The arm only a live run can supply. Re-design one screen the corpus already holds,
-          under the new shape, end to end — the same screen, so the two arms are paired and
-          the comparison is against a known artifact rather than a projection. Measure both
-          axes DEC-48 names, clock and tokens, and publish them against what the archived
-          original shows. The output is evidence: the re-run's artifact is not handed to any
-          build and retires with the WU. Then the epic closes — distillation, and the seven
-          inherited items re-homed as their own backlog row.
-        </p>
-        <p data-item="wu-maps-to">
-          E-SIMPDF · expected result 4 · the measured half of DEC-48/49 that W1's archive
-          walk structurally cannot provide.
-        </p>
-        <p data-item="wu-expected">
-          Expected result 4 holds. A stated saving (or cost) in seconds and tokens from one
-          paired run, with the sample size — one — stated as plainly as the number, per the
-          2.3× correction E-SIMPWF.W9 recorded against its own projection. A re-run that
-          comes out <em>more</em> expensive is reported as found.
-        </p>
-        <p data-item="wu-deps">E-SIMPDF.W4 — there is no new shape to run until it lands.</p>
+        <p data-item="wu-deps">E-SIMPDF.W1 — the spec and the checker implement the record, and land in one commit.</p>
       </div>
 
     </div>
@@ -320,27 +264,25 @@ over 15 runs?"))
       <p>
         The epic's end-to-end proof is the flow harness that already exists —
         <code>xtask/tests/e2e_design_flow.rs</code>, feature-gated behind
-        <code>design-e2e</code> — rewritten in W4 to the surviving sequence. It is the right
-        e2e because the flow's whole point is the <em>sequence</em>: a fake designing agent
-        emits one artifact at a time, a fake human answers each, and all three tiers judge the
-        result over a real git tree.
+        <code>design-e2e</code> — rewritten in W2 to the surviving sequence. A fake designing agent
+        emits one item at a time, a fake human answers each, and the checker and the merge gate judge
+        the result over a real git tree.
       </p>
       <table>
         <thead><tr><th>Asserts, under the new shape</th><th>The failure it refuses</th></tr></thead>
         <tbody>
-          <tr><td>After every surviving stage, the run is red for <strong>exactly</strong> the surviving stages not yet written</td><td>a cut station still being demanded, or a kept one silently dropped — the vacuous-green failure mode</td></tr>
-          <tr><td>The receipt is complete against the <strong>surviving</strong> slug set and red against the old one</td><td>W2's cut landing in the spec but not in the predicate, or the reverse</td></tr>
-          <tr><td>The rulebook moving under an open run still re-opens the close's re-pin</td><td>a receipt complete against a rulebook nobody has read since — the property must survive the cut</td></tr>
-          <tr><td>A rule-violating mockup still reds <strong>at the stage that wrote it</strong></td><td>a breach surfacing only at the end, where it is expensive</td></tr>
+          <tr><td>After the registry read and after each surviving item — mockup · capabilities · keyboard · proposals · blocked-on · review — the run is red for <strong>exactly</strong> the items not yet written</td><td>a cut station still being demanded, or a kept one silently dropped — the vacuous-green failure mode</td></tr>
+          <tr><td>A run still carrying a cut item — a Frame table, a receipt — is red with a <strong>named</strong> check</td><td>the old shape surviving by tolerance, so that a spec and a checker disagree without anyone seeing it</td></tr>
+          <tr><td>A rule-violating mockup reds <strong>at the write that produced it</strong>, and the chain from there keeps it out of the tree</td><td>a breach surfacing only at the merge, where it is expensive</td></tr>
+          <tr><td>A closed run's tip that adds a new surface with no <code>implements</code> citation is refused at <code>verify-dod</code>; with the citation, a <code>design/v1</code> note written from the accounting alone, beside a <code>cr/v5</code> code note, passes <code>9·design</code></td><td>the hand-off dying with the finder — and the e2e proving only the legacy <code>cr/v3</code> path, as it does today</td></tr>
+          <tr><td><em>Retired:</em> the rulebook moving under an open run re-opens the re-pin</td><td>nothing in a run pins the rulebook once the receipt is gone</td></tr>
         </tbody>
       </table>
       <p>
         Per <a href="../testing-strategy.html">the testing standard</a>, the lower levels are
-        additive and non-negotiable: W4's predicate changes carry unit tests in
-        <code>xtask/src/doc.rs</code>; W2, W3 and W5 are measurement and decision WUs whose
-        diffs change no code, so their test evidence is <code>waived</code> with that reason
-        recorded on the note. W1 is likewise docs-only unless its counting is scripted, in
-        which case the script carries its own unit tests.
+        additive and non-negotiable: W2's predicate and gate changes carry unit tests in
+        <code>xtask/src/</code>; W1 changes no code, so its test evidence is
+        <code>waived</code> with that reason recorded on the note.
       </p>
     </div>
 
@@ -349,48 +291,79 @@ over 15 runs?"))
       <table>
         <thead><tr><th>Tier</th><th>Doc</th><th>What it absorbs</th></tr></thead>
         <tbody>
-          <tr><td>T2</td><td><code>docs/decisions/dec-53-…</code> (next free number)</td><td>W2's receipt cut — the surviving slug set and the evidence per call</td></tr>
-          <tr><td>T2</td><td><code>docs/decisions/dec-54-…</code></td><td>W3's stage cut — the surviving sequence, merges and close steps</td></tr>
-          <tr><td>T2</td><td><a href="../decisions/decisions-index.html">decisions-index.html</a></td><td>both new records routed</td></tr>
-          <tr><td>T2</td><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>the coverage obligation, if W2 changes which slugs a receipt must carry</td></tr>
-          <tr><td>T2</td><td><a href="../backlog/roadmap.html">roadmap.html</a></td><td>this epic's row struck; the seven inherited items re-homed as their own row; W5's bill added to the rows that price a cut</td></tr>
-          <tr><td>T1</td><td><a href="../design-flow.html">design-flow.html</a></td><td>the surviving sequence, the close, and the "Run it" command table — rule-bearing, so <code>Reviewed-By</code></td></tr>
-          <tr><td>T1</td><td><a href="../work-planning.html">work-planning.html</a></td><td>its <code>design-run</code> row defers to the flow for item semantics — checked against the new list, edited only if it now reads false</td></tr>
-          <tr><td>T4</td><td><code>xtask/src/doc.rs</code> · <code>xtask/tests/e2e_design_flow.rs</code></td><td>the predicates and the sequence — code wins conflicts</td></tr>
-          <tr><td>T3</td><td>this plan · the four WU plans · five results · W1's measurement</td><td>distilled, then archived out of git per DEC-3</td></tr>
+          <tr><td>T2</td><td><code>docs/decisions/dec-53-…</code> (next free number)</td><td>the whole cut — one record, station by station, with what it amends and supersedes</td></tr>
+          <tr><td>T2</td><td><a href="../decisions/decisions-index.html">decisions-index.html</a></td><td>the record routed; DEC-40 marked superseded</td></tr>
+          <tr><td>T2</td><td>DEC-14 · DEC-15 · DEC-24 · DEC-40 · DEC-46</td><td>a status line each, pointing at DEC-53 for the clause it amends or supersedes</td></tr>
+          <tr><td>T2</td><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>the receipt obligation struck; the soft-rules table removed; the enforcement diagram reduced to Tier-1 and the accounting; the lifecycle's harness row; one hard row retired; keyboard-parity's Binds-at moved to the keyboard item</td></tr>
+          <tr><td>T2</td><td><a href="../backlog/roadmap.html">roadmap.html</a></td><td>this epic's row struck; five inherited items re-homed as their own row; the next UI epic's first-run bill obligation</td></tr>
+          <tr><td>T1</td><td><a href="../design-flow.html">design-flow.html</a></td><td>the mockup doc, its lists (Given · keyboard · proposals · blocked-on · review), the three-step close, the accounting step, the "Run it" table — rule-bearing, so <code>Reviewed-By</code></td></tr>
+          <tr><td>T1</td><td><a href="../work-planning.html">work-planning.html</a> · <a href="../component-design.html">component-design.html</a></td><td>each checked against the new shape and edited only where it now reads false</td></tr>
+          <tr><td>T4</td><td><code>xtask/src/doc.rs</code> · <code>xtask/src/gate.rs</code> · <code>xtask/tests/e2e_design_flow.rs</code></td><td>the item list and predicates; the pin check removed; the sequence and the current note carriers — code wins conflicts</td></tr>
+          <tr><td>infra</td><td><code>.claude/skills/design-review/SKILL.md</code> · <code>.claude/skills/code-review/design-rubric.md</code></td><td>§3–§5 removed from the skill and the pin gone from its note; the rubric deleted</td></tr>
+          <tr><td>T3</td><td>this plan · two WU plans · two results</td><td>distilled, then archived out of git per DEC-3</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
+      <p>Settled by the owner on v2 and moved out of this table: the Tier-3 finder is dropped; close step ① (the predecessor walk) is retired and DEC-40 superseded; the rulebook pin goes everywhere; the e2e moves to the current note carriers; keyboard-parity is kept, on a keyboard item of its own. Each now reads as a decision in the sections above.</p>
       <table>
         <thead><tr><th>#</th><th>Undecided</th><th>Proposed default</th></tr></thead>
         <tbody>
           <tr>
             <td>1</td>
-            <td>W4 must rewrite <code>e2e_design_flow.rs</code>'s stage expectations, but that same file carries two things this epic declared out of scope — the legacy <code>cr/v3</code> carrier, and the shared-<code>target/</code> leak that fails 2 of its 4 cases before any edit.</td>
-            <td><strong>Touch the stage expectations only.</strong> Leave the note-writing as found. If the <code>target/</code> leak blocks running the suite at all, isolate it for the run (a per-run <code>CARGO_TARGET_DIR</code>) rather than fixing the hook, and escalate rather than absorbing the backlog row silently.</td>
+            <td>The shared-<code>target/</code> leak fails 2 of the e2e's 4 cases before any edit, and it is an inherited row this epic declared out of scope.</td>
+            <td><strong>Isolate, do not fix.</strong> If the leak blocks running the suite at all, give the run its own <code>CARGO_TARGET_DIR</code> rather than fixing the hook, and escalate rather than absorbing the backlog row silently.</td>
           </tr>
           <tr>
             <td>2</td>
-            <td>Does the corpus support any cut at all? The one sampled receipt reads 13 satisfied / 3 inherited / 1 via-proposal — three quiet rows out of seventeen is not obviously waste.</td>
-            <td><strong>Let W1 answer it.</strong> If every station pays, the epic closes on expected result 5 — the measurement is the deliverable, and E-SIMPWF.W9's withdrawn DEC-51 is the precedent for a cut that was correctly refused after four rounds.</td>
+            <td>
+              The four hard rules whose stage is cut. What each says, where its check reads today, and a concrete case:
+              <table>
+                <thead><tr><th>Rule</th><th>Says</th><th>Checked today at</th><th>✓ / ✗</th></tr></thead>
+                <tbody>
+                  <tr><td><code>overflow-declared</code></td><td>a zone with unbounded content declares its scroll cap</td><td>Layout — one overflow line under the sketch naming every unbounded zone</td><td>✓ "the flow list scrolls, capped by the viewport; the header and the detail rail are pinned" · ✗ a list zone with no line, so the page grows with the capture</td></tr>
+                  <tr><td><code>state-declarations</code></td><td>every component declares empty · loading · error · overflow</td><td>Elements — a non-empty States cell per catalog row</td><td>✓ a local row reading "empty: none · loading: skeleton · error: warn text · overflow: wraps" · ✗ a row whose States cell is blank, so the empty case is met first in the built app</td></tr>
+                  <tr><td><code>wire-order-preserved</code></td><td>captured collections render in wire order unless a sort is declared</td><td>Elements — <code>data-order</code> on every catalog row marked <code>data-wire="collection"</code></td><td>✓ response headers in the order the server sent them, or <code>data-order="alpha — the user looks a header up by name"</code> · ✗ headers sorted alphabetically with nothing saying so</td></tr>
+                  <tr><td><code>keyboard-parity</code></td><td>every pointer interaction has a keyboard path from the conventions</td><td>Interaction — a key path named per pointer use-case row</td><td>✓ "click a row opens the detail; ↑ ↓ then Enter does the same; Esc closes it" · ✗ a hover-only copy button with no key path</td></tr>
+                </tbody>
+              </table>
+            </td>
+            <td><code>overflow-declared</code> <strong>re-homed</strong>: one overflow line under the mockup. <code>wire-order-preserved</code> <strong>re-homed</strong>: <code>data-order</code> on the zone host elements, which are plain HTML the checker reads (the mounted-JSX blindness stays its own row). <code>state-declarations</code> <strong>retired</strong>: a mounted component owns its states, the run never re-declares what a component owns, and with no soft table there is nowhere to retag it. <code>keyboard-parity</code> <strong>kept — the owner's call</strong>: re-homed onto a new, small <em>keyboard</em> item on the mockup doc, one row per pointer interaction naming its key path from the conventions, because the Interaction table was too large to keep for one column's sake; its Binds-at moves from Interaction to that item. W1 settles the other three.</td>
           </tr>
           <tr>
             <td>3</td>
-            <td>Past runs' clock and token bills were never recorded, so W1 can measure yield from history but not cost.</td>
-            <td><strong>Proxy cost by authored artifact size and station count in W1, labelled as a proxy</strong>, and take the real bill only in W5's paired re-run. No cut is justified on the proxy alone.</td>
+            <td>
+              Does the Given list survive without the Frame? What it is: the functional inputs the screen
+              <em>receives</em> from the app and did not design — props, callbacks and data — each answered
+              <code>used</code> · <code>deliberately unused</code> · <code>blocked</code>, with where.
+              The last run's own rows: <code>trustProbe / proxyProbe</code> (the two probe results),
+              <code>onRecheck</code> (a callback — used by one control, because one reading answers both
+              probes), <code>hostOs</code> (picks the default target), <code>proxyAddr</code> (never a
+              hard-coded port), <code>everProven</code>, <code>onInstallCa / onSetProxy / onUnsetProxy</code>,
+              and <code>stepStatus</code> — <em>deliberately unused</em>, with the reason. <em>Not given</em>
+              names what the screen may not assume exists. The point of the list: an input cannot be designed
+              away in silence — run 8 marked "unset the proxy" <em>deliberately unused</em> for a reason the
+              shipped code disproved, and this list is where it was caught.
+            </td>
+            <td><strong>Yes.</strong> It moves from the Frame to the top of the mockup doc and the item keeps its name. Its completeness stays mechanical (<code>capabilities·answered</code>); the truth of a <em>deliberately unused</em> row is now the human's to read, since no finder does. Dropping it loses the only place a run says which inputs it ignored and why — the build then finds out.</td>
           </tr>
           <tr>
             <td>4</td>
-            <td>Which screen W5 re-runs.</td>
-            <td><strong>The most recent corpus run</strong> (E-RFINISH.W7's onboarding re-design) — its artifact is the closest to today's spec, so the paired comparison isolates the cut rather than three months of drift. W5 confirms against W1's enumeration.</td>
-          </tr>
-          <tr>
-            <td>5</td>
-            <td>Whether a slug that leaves forced coverage leaves the <em>rulebook</em> too.</td>
-            <td><strong>No.</strong> Coverage and membership are separate; a rule a screen need not answer for is still a rule a reviewer may cite. W2 changes the obligation, never the list.</td>
+            <td>
+              How much of the rulebook goes with the receipt? The pin is settled: gone everywhere. The document
+              has three layers with three different consumers after the cut:
+              <table>
+                <thead><tr><th>Layer</th><th>Still consumed by</th></tr></thead>
+                <tbody>
+                  <tr><td>the 17 <strong>soft rules</strong> (visual weight follows goals, calm microcopy, …)</td><td>nothing mechanical. The agent's reading before it draws; a slug a review row may cite. Or the human's taste, which is the owner's model</td></tr>
+                  <tr><td>the 13 <strong>hard rules</strong> (colour, type, spacing, radius tokens; wrap-not-truncate; …)</td><td><code>verify-doc</code>'s nine mockup predicates and the <code>design/vocabulary</code> ESLint rule over <code>ui/src/</code>. The flow spec names the rulebook rows, not the checker source, as the agent's oracle when a check reds</td></tr>
+                  <tr><td>the <strong>vocabularies</strong> — token sets, chromatic meanings, the lexicon, the keyboard conventions, the sanctioned escapes</td><td>every screen and component that must agree with the others: one term per concept, one meaning per tint, which component owns each mapping</td></tr>
+                </tbody>
+              </table>
+            </td>
+            <td><strong>The soft-rules table goes; the hard rules and the vocabularies stay.</strong> The two retired hard rows leave with it. Removing the whole document is a larger call than this plan takes on its own: it would orphan the oracle text the mockup's nine predicates point at, the ESLint rule's rationale and the lexicon, and it supersedes <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> and <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> outright. If the owner means the whole document, W1 does that too — say so on this row.</td>
           </tr>
         </tbody>
       </table>
