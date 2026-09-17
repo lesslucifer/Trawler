@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aab5fd39f34851f0dfad114" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPDF.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPDF.W1 — result</h1>
+      <p>DEC-53 written and routed, the rulebook cut to the hard rules and the vocabularies, six records carrying a status line. Docs only, one deviation, no follow-up beyond what W2 already owns.</p>
+      <div class="meta">v1 · 2026-09-17 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W1</span> · tip <code>781c563</code> + this report</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome-table">
+        <thead><tr><th>#</th><th>Planned</th><th>Shipped</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>DEC-53 exists, routed, station by station with a corpus row per call</td><td><span class="badge auto">delivered</span> — <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">dec-53</a>: 12 station rows, the six-item mockup doc, the four hard rules' fates, the rulebook's layers, eight amended/superseded clauses, six rejected alternatives; a row in <a href="../decisions/decisions-index.html">the index</a> (v22)</td></tr>
+          <tr><td>2</td><td>No soft-rules table, no receipt obligation</td><td><span class="badge auto">delivered</span> — the section is gone; the enforcement diagram is Tier-1 and the human; the coverage-list caption, the binds and litmus callouts, the lifecycle harness row and the growth table's receipt clause rewritten</td></tr>
+          <tr><td>3</td><td>Binds-at names only the mockup doc's items, one row retired</td><td><span class="badge auto">delivered</span> — nine rows read Draft mockup, <code>keyboard-parity</code> reads Keyboard, <code>state-declarations</code> reads <em>retired — DEC-53</em>; the Tier-1 check column re-homed for <code>overflow-declared</code>, <code>wire-order-preserved</code>, <code>keyboard-parity</code> and the wire-marker callout</td></tr>
+          <tr><td>4</td><td>Status lines on the amended records; DEC-40 superseded</td><td><span class="badge auto">delivered</span>, plus one — DEC-34 (deviation 1)</td></tr>
+          <tr><td>5</td><td>Docs-only diff, suite green</td><td><span class="badge auto">delivered</span> — 10 files, all under <code>docs/</code>; <code>every_hard_rule_in_the_live_rulebook_carries_a_predicate</code> green against the cut rulebook</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations-table">
+      <thead><tr><th>#</th><th>From the plan</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>DEC-34 gained a status line and an index status the epic plan did not list</td><td>its escape clause says "declared on the receipt"; with the receipt gone the declaration moves to the review item, and a record whose clause moved gets the same pointer as the other five</td></tr>
+        <tr><td>2</td><td>The epic plan's W1 block says the retired hard row is removed; it is marked retired in place</td><td>the checker's drift alarm refuses a predicate whose rule the book no longer states, and the predicate is W2's — declared in the W1 plan before the edit, so a plan-level statement rather than a discovery</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence-table">
+        <thead><tr><th>What</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>The plan</td><td><a href="2026-09-17-simpdf-w1-plan.html">2026-09-17-simpdf-w1-plan.html</a> · commit <code>d23f780</code></td></tr>
+          <tr><td>The decision, the rulebook, the status lines, the index</td><td>commit <code>781c563</code> — 9 T2 files</td></tr>
+          <tr><td>Doc form</td><td><code>cargo xtask verify-doc</code> green on all 11 docs the range touches (this report included)</td></tr>
+          <tr><td>Tests</td><td>none added — unit and integration waived on the <code>test/v2</code> note (docs-only, no design artifact); the one live-tree test that reads the rulebook run and green</td></tr>
+          <tr><td>Review</td><td>no <code>cr/v5</code> demanded — the diff changes no code path; no design step — it carries no design artifact</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation-table">
+      <thead><tr><th>Tier</th><th>Doc</th><th>Now carries</th></tr></thead>
+      <tbody>
+        <tr><td>T2</td><td><code>dec-53-the-design-flow-is-the-mockup-and-its-lists.html</code></td><td>the whole cut and its evidence</td></tr>
+        <tr><td>T2</td><td><code>decisions-index.html</code></td><td>DEC-53 routed; DEC-40 superseded; DEC-14/15/24/34/46 marked amended</td></tr>
+        <tr><td>T2</td><td><code>design-rules-index.html</code></td><td>hard rules and vocabularies only, bound to the mockup doc</td></tr>
+        <tr><td>T2</td><td>DEC-14 · 15 · 24 · 34 · 40 · 46</td><td>a status line each; bodies untouched</td></tr>
+        <tr><td>T1</td><td>—</td><td>nothing: the flow spec is W2's edit, under a Reviewed-By trailer</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups-table">
+      <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Delete the <code>state-declarations</code> row with its predicate; re-home the checks the rulebook's Tier-1 column now describes; remove the pin from the note, the gate and <code>design-scope</code>; the spec, skill and e2e</td><td>E-SIMPDF.W2 — already planned</td></tr>
+        <tr><td>Until W2 lands, the checker still demands the cut stages of a design run: no run is written between the two WUs</td><td>the epic — a sequencing fact, not new work</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
