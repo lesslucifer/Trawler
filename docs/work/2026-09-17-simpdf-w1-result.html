@@ -46,8 +46,8 @@
           <tr><td>The plan</td><td><a href="2026-09-17-simpdf-w1-plan.html">2026-09-17-simpdf-w1-plan.html</a> · commit <code>d23f780</code></td></tr>
           <tr><td>The decision, the rulebook, the status lines, the index</td><td>commit <code>781c563</code> — 9 T2 files</td></tr>
           <tr><td>Doc form</td><td><code>cargo xtask verify-doc</code> green on all 11 docs the range touches (this report included)</td></tr>
-          <tr><td>Tests</td><td>none added — unit and integration waived on the <code>test/v2</code> note (docs-only, no design artifact); the one live-tree test that reads the rulebook run and green</td></tr>
-          <tr><td>Review</td><td>no <code>cr/v5</code> demanded — the diff changes no code path; no design step — it carries no design artifact</td></tr>
+          <tr><td>Tests</td><td>none added — <code>cargo xtask notes write</code> ruled the range exempt (no code path, no design artifact) and wrote no <code>test/v2</code> or <code>doc/v1</code>, so the waivers the plan drafted live here, not on a note; the one live-tree test that reads the rulebook run and green, and <code>cargo test -p xtask</code> green in full (301 unit + 149 integration)</td></tr>
+          <tr><td>Review · gate</td><td>no <code>cr/v5</code> demanded — the diff changes no code path; no design step — it carries no design artifact. <code>cargo xtask verify-dod wu</code> against <code>epic/simpdf</code>: every check green but <code>8·manual-review</code>, which awaits the owner's <code>mr confirm</code></td></tr>
         </tbody>
       </table>
     </div>
