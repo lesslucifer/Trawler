@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v21 · 2026-09-12 · Trawler</div>
+      <div class="meta">v22 · 2026-09-17 · Trawler</div>
     </div>
   </header>
   <main>
@@ -60,13 +60,13 @@
           <td><a href="dec-14-design-rules-kb.html"><code>dec-14-design-rules-kb.html</code></a></td>
           <td><span class="badge id">DEC-14</span></td>
           <td>The design rulebook lives in a fourth T2 KB <code>docs/design-rules/</code> (living, updated in place; slug immutability keeps design receipts valid) — not T1 (rules grow per-task), not <code>decisions/</code> (append-only, the DEC-5 precedent); growth wired via the distillation checklist + <code>doc/v1</code> notes</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · amended by DEC-53</td>
         </tr>
         <tr>
           <td><a href="dec-15-design-run-enforcement.html"><code>dec-15-design-run-enforcement.html</code></a></td>
           <td><span class="badge id">DEC-15</span></td>
           <td>A design run is a governed artifact checked on every write; its receipt covers <strong>soft rules only</strong> — a rule with a Tier-1 predicate is judged by the predicate, never by the run's claim about itself — with coverage read from the rulebook on disk and the unimplemented gap printed rather than filed. The gate proves a receipt is complete and well-formed, never that it is true — and a governed doc answers for its htmldoc layer (<code>data-htmldoc-id</code> on <code>&lt;html&gt;</code> + the bootstrap that injects <code>doc.css</code>) before the exempt gate, because a doc that cannot render is not a governed doc</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · amended by DEC-53</td>
         </tr>
         <tr>
           <td><a href="dec-16-design-file-retirement.html"><code>dec-16-design-file-retirement.html</code></a></td>
@@ -157,7 +157,7 @@
             <strong>a design-bearing diff is never docs-only-exempt</strong>: a design is a docs-only
             <em>deliverable</em>, and the exemption had already let W2 land 14 component design files with
             no code review at all</td>
-          <td><span class="badge auto">active</span> · two clauses superseded by DEC-29</td>
+          <td><span class="badge auto">active</span> · two clauses superseded by DEC-29 · amended by DEC-53</td>
         </tr>
         <tr>
           <td><a href="dec-25-design-build-handoff.html"><code>dec-25-design-build-handoff.html</code></a></td>
@@ -305,7 +305,7 @@
             predicate (it cannot see row height, so it would have to trust the subject), an eighth verdict
             <code>violated-by-constraint</code> beside DEC-15's fixed seven (reads as absolution where
             <code>violated</code> plus a reason is already honest). Carries <code>display-equals-payload</code>'s identical violation</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · amended by DEC-53</td>
         </tr>
         <tr>
           <td><a href="dec-35-citations-resolve-or-fail.html"><code>dec-35-citations-resolve-or-fail.html</code></a></td>
@@ -394,7 +394,7 @@
             only the new run found none of them, and the three that opened the predecessor found all six.
             Nothing machine-checks it — Tier-3 is the only reader that can, and it must be handed the
             predecessor's path. Rejected: leaving it to the review, a receipt item, a vocabulary Proposal</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge approval">superseded</span> by DEC-53</td>
         </tr>
         <tr>
           <td><a href="dec-41-motion-informs-bans-decoration-not-progress.html"><code>dec-41-motion-informs-bans-decoration-not-progress.html</code></a></td>
@@ -506,7 +506,7 @@
             design diff would owe a review), reading the verdict off the design run's receipt (the hand-off is a fact
             about the build, not the run), and keeping no note at all (the gate can see what a diff carries, never
             that anyone read it)</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · amended by DEC-53</td>
         </tr>
         <tr>
           <td><a href="dec-47-severity-decides-the-verdict.html"><code>dec-47-severity-decides-the-verdict.html</code></a></td>
@@ -646,6 +646,23 @@
             Rejected: renaming canonical to <code>AGENTS.md</code>/<code>.codex</code>, a
             <code>config.toml</code> fallback filename for T0, keeping the copies with a drift test,
             one symlink per skill</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-53-the-design-flow-is-the-mockup-and-its-lists.html"><code>dec-53-the-design-flow-is-the-mockup-and-its-lists.html</code></a></td>
+          <td><span class="badge id">DEC-53</span></td>
+          <td><strong>A design run is one mockup doc — the Given list, the mounted stateful mockup, a Keyboard
+            list, proposals, blocked-on and review — judged by Tier-1 on every write and by the human at the
+            mockup, closed in three steps (review · green · archive), and handed to the build by the accounting
+            alone.</strong> Fifteen closed runs: the human reviewing the mockup was the gate every time, and every
+            artifact upstream of it was re-edited after each round to stay consistent. Cut, each beside its corpus
+            row: the Frame, Layout, Elements and Interaction stages, Tune, both loop-backs, the 17-row receipt
+            (147 verdicts, 0 violated, 0 blocked), the soft-rules table, the rulebook pin, the predecessor walk and
+            the Tier-3 finder. <code>overflow-declared</code> and <code>wire-order-preserved</code> re-homed onto the
+            mockup, <code>keyboard-parity</code> onto the Keyboard item, <code>state-declarations</code> retired.
+            Amends DEC-14, DEC-15, DEC-24, DEC-34, DEC-46; supersedes DEC-40; DEC-25 stands; DEC-49's test met
+            because the stage goes whole. Rejected: measuring first, a receipt without a finder, the Frame for
+            Given's sake, dropping <code>keyboard-parity</code>, removing the whole rulebook</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
