@@ -1,7 +1,7 @@
 schema: doc/v1
 epic: E-SIMPDF
 wu: E-SIMPDF.W2
-branch: HEAD
+branch: wu/simpdf/landing
 changes:
   - path: "docs/component-design.html"
     tier: T1
