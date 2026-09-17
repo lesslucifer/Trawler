@@ -991,7 +991,7 @@ impl Gate<'_> {
             report.failures.push(Failure::new(check, what, fix));
         }
         // Bytes that do not decode are not a design either: returning here would
-        // accept the one citation nobody can read as though Tier-3 had judged it.
+        // accept the one citation nobody can read as though it named a real design.
         let Ok(html) = String::from_utf8(bytes) else {
             report.failures.push(Failure::new(
                 check,

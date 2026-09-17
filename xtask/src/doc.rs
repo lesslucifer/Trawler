@@ -1009,7 +1009,7 @@ fn check_wire_order_preserved(failures: &mut Vec<Failure>, mockup: &str) {
 fn check_overflow_declared(failures: &mut Vec<Failure>, mockup: &str) {
     let declaration = elements_of(mockup, "p")
         .into_iter()
-        .map(|p| inner_text(p, (0, p.len())).trim().to_lowercase())
+        .map(|p| fragment_text(p).trim().to_lowercase())
         .find(|text| text.starts_with("overflow"));
     let Some(declaration) = declaration else {
         failures.push(Failure {
@@ -1052,9 +1052,7 @@ fn check_keyboard_parity(failures: &mut Vec<Failure>, keyboard: &str) {
     let silent = rows
         .iter()
         .filter(|row| {
-            elements_of(row, "td")
-                .last()
-                .is_none_or(|cell| inner_text(cell, (0, cell.len())).trim().is_empty())
+            elements_of(row, "td").last().is_none_or(|cell| fragment_text(cell).trim().is_empty())
         })
         .count();
     if silent > 0 {
@@ -1417,11 +1415,16 @@ fn colour_literal(html: &str) -> Option<String> {
     None
 }
 
-fn inner_text(html: &str, span: (usize, usize)) -> String {
-    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1).min(span.1);
+// The text of an element BODY - what `elements_of` hands back, already unwrapped.
+// It reads from the first character, because a body has no opening tag of its
+// own to skip: a reader that skipped one would eat everything before the first
+// `>` the body itself contains, so a zone named `<code>verdicts</code>` in the
+// overflow line would read as no overflow line at all - a hard rule refusing the
+// run that obeyed it.
+fn fragment_text(fragment: &str) -> String {
     let mut out = String::new();
     let mut in_tag = false;
-    for c in html[open_end..span.1].chars() {
+    for c in fragment.chars() {
         match c {
             '<' => in_tag = true,
             '>' => in_tag = false,
@@ -2146,6 +2149,25 @@ chroma_floor: 40
             assert!(
                 what(&doc_verdict(&carried), "item·unknown-tag").contains(cut),
                 "a run carrying the cut {cut} must be red by name, never tolerated"
+            );
+        }
+    }
+
+    // The overflow line is read as a fragment, and a fragment carries no wrapping
+    // tag - so reading it the way an element is read eats every word before the
+    // first `>` the body itself contains. A zone named in <code>, which is how
+    // this codebase writes an identifier everywhere else, then read as a mockup
+    // declaring no overflow at all: a hard rule refusing a run that obeyed it.
+    #[test]
+    fn an_overflow_line_that_names_its_zone_in_markup_is_still_read() {
+        for line in [
+            "<p>overflow: <code>verdicts</code> scrolls to its own cap</p>",
+            "<p>overflow: verdicts scrolls to its own <code>cap</code></p>",
+        ] {
+            let doc = green_run().replace("<p>overflow: verdicts scrolls to its own cap</p>", line);
+            assert!(
+                !reds(&doc).contains(&"overflow-declared·line".to_string()),
+                "inline markup is not a missing declaration: {line}"
             );
         }
     }
