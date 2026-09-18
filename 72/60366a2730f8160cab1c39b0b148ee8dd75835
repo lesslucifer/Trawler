@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { count: 92, covers: "the 9·design-schema refusal a closed design run draws when the tip carries a legacy cr/v2 note: the red names the contract it found and the fix names the design step the verdict comes from, which is what DEC-53 left of it after the finder was removed" }
+  integration: { waived: "the commit changes one assertion inside an existing integration-level test over a real git repo; there is no bounded contract here that is not that test" }
+  e2e: { waived: "no user-facing flow moves - the flow e2e already drives the surviving shape and is green" }
