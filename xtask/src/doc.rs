@@ -24,28 +24,8 @@ const WU_RESULT: &[&str] = &["outcome", "deviations", "evidence", "distillation"
 const EPIC_RESULT: &[&str] =
     &["outcome", "wu-rollup", "deviations", "evidence", "distillation", "follow-ups"];
 const WU_SUB: &[&str] = &["wu-summary", "wu-maps-to", "wu-expected", "wu-deps"];
-const DESIGN_RUN: &[&str] = &[
-    "frame",
-    "layout",
-    "elements",
-    "interaction",
-    "mockup",
-    "tune",
-    "receipt",
-    "capabilities",
-    "proposals",
-    "blocked-on",
-    "review",
-];
-const VERDICTS: &[&str] = &[
-    "satisfied",
-    "inherited",
-    "satisfied-via-proposal",
-    "blocked",
-    "n/a",
-    "violated",
-    "violated-inherited",
-];
+const DESIGN_RUN: &[&str] =
+    &["mockup", "capabilities", "keyboard", "proposals", "blocked-on", "review"];
 // Hard rules whose Tier-1 predicate exists today. Hand-maintained: nothing
 // derives "this slug has a predicate" from a function name. Forgetting an entry
 // undercounts the numerator, which reads as more work remaining - the safe
@@ -58,7 +38,6 @@ const HARD_PREDICATES: &[&str] = &[
     "radius-tokens",
     "zero-accent",
     "overflow-declared",
-    "state-declarations",
     "wrap-not-truncate",
     "mono-for-wire-data",
     "wire-order-preserved",
@@ -86,19 +65,11 @@ fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     }
 }
 
-pub struct Rule {
-    pub slug: String,
-    pub hard: bool,
-}
-
-// The rulebook a run is judged against: its slugs, and the blob the receipt must
-// pin. Read together because a receipt pinning a version nobody hashed is the
-// same claim as a receipt pinning nothing - `rulebook: <anything>` passed for
-// three Working Units, which is what W3's promise ("the receipt pins the blob it
-// ran against") actually bought.
+// The hard rules a run is judged against. Every rule in the book is hard and
+// carries a predicate (DEC-53), so the list is the numerator's denominator and
+// nothing else - there is no receipt to cover and no blob to pin.
 pub struct Rulebook {
-    rules: Vec<Rule>,
-    blob: Option<String>,
+    rules: Vec<String>,
 }
 
 // A pin shorter than this names no blob: git's own abbreviation floor, and the
@@ -117,8 +88,8 @@ pub fn pin_of(blob: &str) -> &str {
     blob.get(..PIN_MIN).unwrap_or(blob)
 }
 
-// What pulls the design dimension into a code review. Tier-3 judges a FINISHED
-// design, so a run doc counts once it is closed at the tip - the merge that
+// What pulls the design step onto a tip. It answers for a FINISHED design, so a
+// run doc counts once it is closed at the tip - the merge that
 // closes it is the first one answerable for it, and a run still `draft` is
 // judged at the merge that finishes it, which touches the file again. A
 // component design file is a finished contract the moment it is in the tree.
@@ -127,10 +98,6 @@ pub fn design_artifact(path: &str, html: &str) -> Option<&'static str> {
         return Some("component-design");
     }
     (design_run_status(html)? == "archived").then_some("design-run")
-}
-
-pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
-    crate::git::blob_of(repo, rev, RULEBOOK)
 }
 
 fn shaped_file(file: &str, exts: &[&str]) -> bool {
@@ -205,13 +172,13 @@ pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
         .collect()
 }
 
-// Every slug the rulebook declares, hard and soft. The gate reads it to check a
-// citation is followable rather than merely well-shaped - at the revision it is
-// judging, never the working tree, so a later rename cannot unfollow a citation
-// that resolved when its seam was reviewed.
+// Every slug the rulebook declares - all of them hard since DEC-53. The gate
+// reads it to check a citation is followable rather than merely well-shaped - at
+// the revision it is judging, never the working tree, so a later rename cannot
+// unfollow a citation that resolved when its seam was reviewed.
 pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
     crate::git::read_utf8_at(repo, rev, RULEBOOK)
-        .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
+        .map(|html| rules_from_rulebook(&html))
         .unwrap_or_default()
 }
 
@@ -220,26 +187,19 @@ pub fn rulebook(repo: &Path) -> Option<Rulebook> {
         .ok()
         .map(|html| rules_from_rulebook(&html))
         .filter(|rules| !rules.is_empty())?;
-    Some(Rulebook { rules, blob: crate::git::git(repo, &["hash-object", RULEBOOK]).ok() })
+    Some(Rulebook { rules })
 }
 
-#[derive(Deserialize)]
-struct Receipt {
-    rulebook: String,
-    soft: BTreeMap<String, String>,
-}
-
-pub fn rules_from_rulebook(html: &str) -> Vec<Rule> {
+pub fn rules_from_rulebook(html: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for (table, hard) in [("hard-rules-table", true), ("soft-rules-table", false)] {
-        let Some(declared) = attrs(html, "data-c").into_iter().find(|a| a.value == table) else {
-            continue;
-        };
-        let ((start, end), _) = element_content(html, declared.tag);
-        for row in html[start..end].split("<tr").skip(1) {
-            if let Some(slug) = row_slug(row) {
-                out.push(Rule { slug, hard });
-            }
+    let Some(declared) = attrs(html, "data-c").into_iter().find(|a| a.value == "hard-rules-table")
+    else {
+        return out;
+    };
+    let ((start, end), _) = element_content(html, declared.tag);
+    for row in html[start..end].split("<tr").skip(1) {
+        if let Some(slug) = row_slug(row) {
+            out.push(slug);
         }
     }
     out
@@ -323,46 +283,19 @@ pub fn vocabulary(repo: &Path) -> Result<Vocabulary, String> {
 }
 
 // The component vocabulary: the collection's own TSDoc, emitted by
-// scripts/design-registry.mjs (W7 ①) and never stored. `designed` is the other
-// half of the roster - a component whose contract still lives in its design
-// file because no code carries it yet (DEC-16: a design file with no code is
-// not retired, it is unbuilt). The two sets are disjoint, and check_retirement
-// is what keeps them that way.
-#[derive(Deserialize)]
-pub struct Component {
-    states: String,
-}
-
+// scripts/design-registry.mjs (W7 ①) and never stored. Only the names are read
+// now - what consumes the roster is check_retirement, and a design file whose
+// component has code is a second copy of a contract the TSDoc already owns
+// (DEC-16). The contract's own fields are the TSDoc's, never re-read here.
 pub struct Roster {
-    registry: BTreeMap<String, Component>,
-    designed: BTreeSet<String>,
+    registry: BTreeSet<String>,
 }
 
-impl Roster {
-    fn resolves(&self, name: &str) -> bool {
-        self.registry.contains_key(name) || self.designed.contains(name)
-    }
-
-    fn citable_states(&self, name: &str) -> bool {
-        self.registry.get(name).is_some_and(|c| !c.states.trim().is_empty())
-    }
-}
-
-// No folder means no design is in flight, which is the resting state now that
-// no unbuilt design survives its epic - not an unreadable roster. The registry
-// half is the one that must be answerable, and it still is.
 pub fn roster(repo: &Path) -> Result<Roster, String> {
-    let designed = std::fs::read_dir(repo.join(COMPONENTS))
-        .map(|entries| {
-            entries
-                .filter_map(|entry| {
-                    let name = entry.ok()?.file_name().into_string().ok()?;
-                    Some(component_name(name.strip_suffix(".html")?))
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    Ok(Roster { registry: oracle(repo, REGISTRY)?, designed })
+    let emitted: serde_yaml::Mapping = oracle(repo, REGISTRY)?;
+    let registry =
+        emitted.into_keys().filter_map(|name| name.as_str().map(str::to_string)).collect();
+    Ok(Roster { registry })
 }
 
 // A catalog row keys itself by the slug of the component it names, which is the
@@ -417,14 +350,13 @@ struct Occurrence {
 type Tagged = (usize, Occurrence);
 
 pub fn verify_html(html: &str) -> Verdict {
-    verify_html_against(html, None, None, None)
+    verify_html_against(html, None, None)
 }
 
 pub fn verify_html_against(
     html: &str,
     rulebook: Option<&Rulebook>,
     vocabulary: Option<&Vocabulary>,
-    roster: Option<&Roster>,
 ) -> Verdict {
     let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
         return Verdict::Ungoverned { failures: Vec::new() };
@@ -524,161 +456,26 @@ pub fn verify_html_against(
 
     let mut summary = None;
     if artifacts.iter().any(|a| a == "design-run") {
-        let receipt = top_items.iter().find(|(_, o)| o.value == "receipt").map(|(_, o)| o);
-        summary = check_receipt(&mut failures, receipt, html, rulebook);
-        check_composition(&mut failures, html, &top_items, roster);
+        check_composition(&mut failures, html, &top_items);
         let allowed = read_pragmas(&mut failures, html);
-        check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed, roster);
-        summary = summary.map(|s| format!("{s}\n{}", allowed.tally()));
+        check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed);
+        summary = Some(format!("{}\n{}", tally_line(rulebook), allowed.tally()));
     }
 
     Verdict::Checked { artifacts, failures, summary }
 }
 
-// The receipt is a YAML document, parsed as one: serde_yaml owns indentation,
-// quoting, duplicate keys and error positions, so this only splits the scalar.
-fn check_receipt(
-    failures: &mut Vec<Failure>,
-    receipt: Option<&Occurrence>,
-    html: &str,
-    rulebook: Option<&Rulebook>,
-) -> Option<String> {
-    let receipt = receipt?;
-    let parsed: Receipt = match serde_yaml::from_str(&inner_text(html, receipt.span)) {
-        Ok(parsed) => parsed,
-        Err(e) => {
-            failures.push(Failure {
-                check: "receipt·yaml".to_string(),
-                what: format!("the receipt block is not valid YAML: {e}"),
-                fix: "the receipt is `rulebook: <blob>` plus a `soft:` map of `<slug>: <verdict> — <why>`".to_string(),
-            });
-            return None;
-        }
-    };
+// The machine-checked tally, printed on every run: how many of the rulebook's
+// hard rules carry a predicate, and - while any does not - which. With the
+// receipt gone this is the only thing a run says about the rulebook, and it is a
+// count of predicates, never a claim that the design honours them.
+fn tally_line(rulebook: Option<&Rulebook>) -> String {
     let Some(rulebook) = rulebook else {
-        failures.push(Failure {
-            check: "receipt·rulebook-unreadable".to_string(),
-            what: format!("cannot read {RULEBOOK} - receipt coverage is unverifiable"),
-            fix: "run verify-doc from the repo root so the rulebook's slug list can be read"
-                .to_string(),
-        });
-        return None;
+        return format!("hard rules: {RULEBOOK} unreadable - no machine-checked tally");
     };
-    check_pin(failures, parsed.rulebook.trim(), rulebook);
-
-    let rules = &rulebook.rules;
-    let soft: Vec<&str> = rules.iter().filter(|r| !r.hard).map(|r| r.slug.as_str()).collect();
-    let hard: Vec<&str> = rules.iter().filter(|r| r.hard).map(|r| r.slug.as_str()).collect();
-    let missing: Vec<&str> =
-        soft.iter().copied().filter(|s| !parsed.soft.contains_key(*s)).collect();
-    for slug in &missing {
-        failures.push(Failure {
-            check: format!("receipt·{slug}"),
-            what: format!("no row for soft rule \"{slug}\""),
-            fix: format!("add `{slug}: <verdict> — <why>` under soft:"),
-        });
-    }
-
-    let mut counts: Vec<usize> = vec![0; VERDICTS.len()];
-    for (slug, value) in &parsed.soft {
-        if hard.contains(&slug.as_str()) {
-            failures.push(Failure {
-                check: "receipt·unknown-slug".to_string(),
-                what: format!("\"{slug}\" is a hard rule"),
-                fix: "hard rules are machine-checked, not receipted - drop the row".to_string(),
-            });
-            continue;
-        }
-        if !soft.contains(&slug.as_str()) {
-            let nearest =
-                missing.iter().map(|m| (edit_distance(slug, m), *m)).min().filter(|(d, _)| *d <= 3);
-            failures.push(Failure {
-                check: "receipt·unknown-slug".to_string(),
-                what: nearest.map_or_else(
-                    || format!("\"{slug}\" is not a rulebook slug"),
-                    |(_, m)| format!("unknown slug \"{slug}\" / missing soft rule \"{m}\""),
-                ),
-                fix: nearest.map_or_else(
-                    || format!("drop the row, or add \"{slug}\" to the rulebook first"),
-                    |(_, m)| format!("rename the row to `{m}`"),
-                ),
-            });
-            continue;
-        }
-        let (verdict, why) = value
-            .split_once('—')
-            .map_or((value.trim(), ""), |(verdict, why)| (verdict.trim(), why.trim()));
-        match VERDICTS.iter().position(|v| *v == verdict) {
-            Some(i) => counts[i] += 1,
-            None => failures.push(Failure {
-                check: format!("receipt·{slug}"),
-                what: format!("verdict \"{verdict}\" is not one of the seven"),
-                fix: format!("use one of: {}", VERDICTS.join(" · ")),
-            }),
-        }
-        if why.is_empty() {
-            failures.push(Failure {
-                check: format!("receipt·{slug}"),
-                what: format!("\"{slug}\" carries no citation"),
-                fix: "every row cites its evidence: `<verdict> — <why>` (em dash)".to_string(),
-            });
-        }
-    }
-
-    Some(tally_line(&soft, &missing, &counts, &hard))
-}
-
-// The pin, compared against the rulebook it names rather than merely being
-// present. A stale pin is the one receipt claim that reads as evidence while
-// being unread: every verdict under it was written against rules that have since
-// moved. An archived run is exempt before this runs - a run that closed under an
-// older rulebook is a record, not a stale claim.
-fn check_pin(failures: &mut Vec<Failure>, pinned: &str, rulebook: &Rulebook) {
-    let mut fail = |check: &str, what: String, fix: String| {
-        failures.push(Failure { check: check.to_string(), what, fix });
-    };
-    if pinned.is_empty() {
-        fail(
-            "receipt·rulebook",
-            "the receipt names no rulebook version".to_string(),
-            format!("pin it: rulebook: $(git hash-object {RULEBOOK})"),
-        );
-        return;
-    }
-    let Some(blob) = &rulebook.blob else {
-        fail(
-            "receipt·rulebook-unverifiable",
-            format!("cannot hash {RULEBOOK} - the pin names a version nothing here can check"),
-            "run verify-doc from the repo root with git on PATH".to_string(),
-        );
-        return;
-    };
-    let pin = pinned.to_ascii_lowercase();
-    let short = pin_of(blob);
-    if pin.len() < PIN_MIN {
-        fail(
-            "receipt·rulebook",
-            format!("the pin \"{pinned}\" is too short to name a blob"),
-            format!("pin at least {PIN_MIN} characters: rulebook: {short}"),
-        );
-    } else if !pin_matches(&pin, blob) {
-        fail(
-            "receipt·rulebook-stale",
-            format!("the receipt ran against rulebook {pinned}; {RULEBOOK} is now {short}"),
-            format!("re-read the rulebook, re-judge every soft row against it and re-pin: rulebook: {short} - or archive the run if it closed under the older one"),
-        );
-    }
-}
-
-fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) -> String {
-    let verdicts: Vec<String> = VERDICTS
-        .iter()
-        .zip(counts)
-        .filter(|(_, n)| **n > 0)
-        .map(|(v, n)| format!("{n} {v}"))
-        .collect();
+    let hard = &rulebook.rules;
     let unchecked: Vec<&str> =
-        hard.iter().copied().filter(|s| !HARD_PREDICATES.contains(s)).collect();
+        hard.iter().map(String::as_str).filter(|s| !HARD_PREDICATES.contains(s)).collect();
     // "(design)" is the whole point of the line: the predicates judge the design
     // run, and ui/src/ is judged by design/vocabulary. Without the label a full
     // count reads as a claim about the built UI, which no predicate here makes.
@@ -688,66 +485,32 @@ fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) 
         format!(" — {} unchecked: {}", unchecked.len(), unchecked.join(" "))
     };
     format!(
-        "receipt {}/{} soft · {}\nhard rules: {}/{} machine-checked (design){gap}",
-        soft.len() - missing.len(),
-        soft.len(),
-        verdicts.join(" · "),
+        "hard rules: {}/{} machine-checked (design){gap}",
         hard.len() - unchecked.len(),
         hard.len(),
     )
 }
 
-fn check_composition(
-    failures: &mut Vec<Failure>,
-    html: &str,
-    items: &[Tagged],
-    roster: Option<&Roster>,
-) {
+fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) {
     let item = |name: &str| {
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
     };
-    if let Some(elements) = item("elements") {
-        check_elements_map(failures, elements);
-        check_avoid_cited(failures, elements);
-        check_cited_components(failures, elements, roster);
-        check_gist_and_collapse(
-            failures,
-            elements,
-            "elements·gist",
-            "catalog rows",
-            "the Fit column",
-        );
-    }
-    if let Some(interaction) = item("interaction") {
-        check_gist_and_collapse(
-            failures,
-            interaction,
-            "interaction·gist",
-            "use-case rows",
-            "the responds column",
-        );
-    }
-    if let Some(tune) = item("tune") {
-        check_tune_drawn(failures, tune);
-    }
     if let Some(capabilities) = item("capabilities") {
         check_capabilities(failures, capabilities);
     }
     if let Some(review) = item("review") {
         check_review_record(failures, review);
     }
-    let owed = item("elements").map(mounts_owed).unwrap_or_default();
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
             failures.push(Failure {
                 check: "mockup·state".to_string(),
                 what: "the mockup is static - no state switch".to_string(),
-                fix: "add data-state-toggle for the states the Interaction table named".to_string(),
+                fix: "add data-state-toggle for every state the screen can reach - the mockup is the only place the human sees them".to_string(),
             });
         }
-        check_mockup_mounts(failures, &owed, mockup);
     }
-    check_assets(failures, html, !owed.is_empty());
+    check_assets(failures, html);
     if let Some(literal) = colour_literal(html) {
         failures.push(Failure {
             check: "mockup·colour-literals".to_string(),
@@ -756,20 +519,14 @@ fn check_composition(
                 .to_string(),
         });
     }
-    if let Some(frame) = item("frame") {
-        check_frame_density(failures, frame);
-    }
 }
 
 // W5 made a specimen the component itself - build-specimens.mjs compiles
 // ui/src/components/ plus React into one classic script a file:// page can load
-// as window.Trawler - and the design RUN never migrated, so run #4 hand-drew
-// seven components the registry already ships. A drawn reuse is the silent fork
-// the mockup rules exist to stop, from the one direction no class check reaches:
-// every utility is correct and the rendering is still the doc's own invention.
-// `propose` has nothing to mount, `build local` and `n/a` are not composed, and
-// an `extend` mounts its base - the delta is the only part it draws.
-const MOUNTED: &[&str] = &["reuse", "extend"];
+// as window.Trawler. With the Elements catalog gone nothing enumerates which
+// components a run reuses, so the bundle is what keeps a reuse from being drawn:
+// a component's rendering is reachable only through window.Trawler, and a run
+// that does not load it cannot mount anything (DEC-53).
 const CDN: &str = "https://cdn.tailwindcss.com";
 const THEME: &str = "../../doc-assets/components/tw-config.js";
 const SPECIMEN: &str = "../../doc-assets/components/specimen.js";
@@ -777,48 +534,11 @@ const SPECIMEN: &str = "../../doc-assets/components/specimen.js";
 /// the run spec's own template is only correct while it spells this string.
 pub const BUNDLE: &str = "../../doc-assets/components/specimens.bundle.js";
 
-fn mounts_owed(elements: &str) -> Vec<String> {
-    let mut owed: Vec<String> = catalog_rows(elements)
-        .into_iter()
-        .filter(|(_, row)| MOUNTED.iter().any(|v| row.contains(&format!(">{v}<"))))
-        .map(|(name, _)| name)
-        .collect();
-    owed.sort_unstable();
-    owed.dedup();
-    owed
-}
-
-// The mount is read as a JSX tag rather than as a marking, because a marking is
-// exactly what a hand-drawn imitation can also carry. `<Notice` cannot be
-// written by drawing: the element name IS the component. Read off the raw
-// mockup slice on purpose - the tokeniser treats a <script> body as data (HTML's
-// raw-text rule), and the mount script is where the composition lives.
-fn check_mockup_mounts(failures: &mut Vec<Failure>, owed: &[String], mockup: &str) {
-    let drawn: Vec<&str> =
-        owed.iter().filter(|name| !mounted(mockup, name)).map(String::as_str).collect();
-    if drawn.is_empty() {
-        return;
-    }
-    failures.push(Failure {
-        check: "mockup·hand-drawn".to_string(),
-        what: format!("the mockup draws what the collection already ships: {}", drawn.join(" ")),
-        fix: format!("mount it - `const {{ {} }} = window.Trawler` and render the component inside data-item=\"mockup\"; only a propose row, a build local element and an extend's declared delta are drawn", drawn.join(", ")),
-    });
-}
-
-fn mounted(mockup: &str, name: &str) -> bool {
-    let tag = format!("<{name}");
-    mockup
-        .match_indices(&tag)
-        .any(|(at, _)| mockup[at + tag.len()..].starts_with([' ', '\n', '\t', '>', '/']))
-}
-
 // One tag, three things, in the order they must arrive: the app theme, the
-// shared specimen behaviours, then the collection. The trio the bundle replaces
-// stays legal for a run that mounts nothing - a theme and a state switch are all
-// such a run needs - but loading both double-binds every state toggle, because
-// the bundle imports specimen.js for its side effects.
-fn check_assets(failures: &mut Vec<Failure>, html: &str, mounting: bool) {
+// shared specimen behaviours, then the collection. Loading the bundle's parts
+// beside it double-binds every state toggle, because the bundle imports
+// specimen.js for its side effects, and two toggles per click is no toggle.
+fn check_assets(failures: &mut Vec<Failure>, html: &str) {
     let loads = |asset: &str| html.contains(&format!("src=\"{asset}\""));
     let mut fail = |what: String, fix: &str| {
         failures
@@ -830,29 +550,18 @@ fn check_assets(failures: &mut Vec<Failure>, html: &str, mounting: bool) {
             "compose the app's own utilities instead of re-typing them",
         );
     }
-    if loads(BUNDLE) {
-        for asset in [THEME, SPECIMEN] {
-            if loads(asset) {
-                fail(
-                    format!("{asset} is loaded beside the bundle, which already folds it in"),
-                    "load the bundle alone - a second copy of specimen.js binds every state toggle twice, and two toggles per click is no toggle",
-                );
-            }
-        }
-        return;
-    }
-    if mounting {
+    if !loads(BUNDLE) {
         fail(
-            format!("the mockup composes components but the run does not load {BUNDLE}"),
-            "a mounted component comes from window.Trawler - build it with `cargo xtask ui specimens` and load the bundle instead of re-typing the rendering",
+            format!("the run does not load {BUNDLE}"),
+            "the mockup mounts real components from window.Trawler - build the collection with `cargo xtask ui specimens` and load the bundle instead of re-typing a rendering",
         );
         return;
     }
     for asset in [THEME, SPECIMEN] {
-        if !loads(asset) {
+        if loads(asset) {
             fail(
-                format!("the run does not load {asset}"),
-                "compose the component design files' own rendering instead of re-typing it",
+                format!("{asset} is loaded beside the bundle, which already folds it in"),
+                "load the bundle alone - a second copy of specimen.js binds every state toggle twice",
             );
         }
     }
@@ -898,7 +607,7 @@ pub fn component_designed(path: &str) -> Option<String> {
 // are not violations but the case DEC-16 names: a design file with no code is
 // not retired, it is unbuilt.
 fn check_retirement(failures: &mut Vec<Failure>, name: &str, roster: &Roster) {
-    if roster.registry.contains_key(name) {
+    if roster.registry.contains(name) {
         failures.push(Failure {
             check: "components·unretired".to_string(),
             what: format!("{name}'s contract is its TSDoc, and this file still holds a copy"),
@@ -949,18 +658,18 @@ fn stylesheet_classes(html: &str) -> Vec<(String, String)> {
     out
 }
 
-// ─── the thirteen hard rules ────────────────────────────────────────────────
+// ─── the twelve hard rules ──────────────────────────────────────────────────
 //
 // Each predicate is named for its slug and judges the DESIGN RUN, never
 // ui/src/ - that surface is design/vocabulary's (the rulebook's binds axis).
-// Five read the closed vocabulary; the rest read what the doc declares.
+// Five read the closed vocabulary; the rest read what the mockup doc declares -
+// nine on the mockup itself, three beside it (DEC-53).
 fn check_hard_rules(
     failures: &mut Vec<Failure>,
     html: &str,
     items: &[Tagged],
     vocabulary: Option<&Vocabulary>,
     allowed: &Allowances,
-    roster: Option<&Roster>,
 ) {
     let item = |name: &str| {
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
@@ -977,15 +686,12 @@ fn check_hard_rules(
     check_uppercase_mute_labels(failures, html, vocabulary);
     check_colour_plus_text(failures, html, vocabulary);
     check_wire_data(failures, html, item("mockup").is_some());
-    if let Some(layout) = item("layout") {
-        check_overflow_declared(failures, layout);
+    if let Some(mockup) = item("mockup") {
+        check_overflow_declared(failures, mockup);
+        check_wire_order_preserved(failures, mockup);
     }
-    if let Some(elements) = item("elements") {
-        check_state_declarations(failures, elements, roster);
-        check_wire_order_preserved(failures, elements);
-    }
-    if let Some(interaction) = item("interaction") {
-        check_keyboard_parity(failures, interaction);
+    if let Some(keyboard) = item("keyboard") {
+        check_keyboard_parity(failures, keyboard);
     }
 }
 
@@ -1203,9 +909,9 @@ const WIRE_HOSTILE: &[&str] = &["truncate", "text-ellipsis", "whitespace-nowrap"
 
 // The marking rule reads the whole doc - a payload can be marked outside the
 // mockup, and the wrapping half scans every class - but the DEMAND for a marking
-// waits for the mockup, the way overflow waits for the layout and keyboard parity
-// for the interaction. A run five stages from its mockup being told the mockup
-// marks no payload is a prompt for work the flow has not reached (E-DFLOW.W7 ⑤).
+// waits for the mockup, the way overflow and wire order wait for it too. A run
+// whose mockup is not written yet, told it marks no payload, is a prompt for
+// work it has not reached (E-DFLOW.W7 ⑤).
 fn check_wire_data(failures: &mut Vec<Failure>, html: &str, mockup_written: bool) {
     let marked = attrs(html, "data-wire");
     let declared = attrs(html, "class");
@@ -1263,15 +969,16 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str, mockup_written: bool
 // all, which is the rule's n/a path and must be said, not assumed.
 // The answer is declared, never inferred from prose: no keyword can tell "sorted
 // newest first, because the ring is a stack" from "the rows look orderly", and a
-// keyword that scans markup instead reads `border` as an answer. So the row says
-// so - the same shape `data-wire` itself uses, one attribute beside it.
-fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
+// keyword that scans markup instead reads `border` as an answer. So the zone
+// host says so - the same shape `data-wire` itself uses, one attribute beside
+// it, on the plain HTML the mockup mounts into (DEC-53).
+fn check_wire_order_preserved(failures: &mut Vec<Failure>, mockup: &str) {
     let collections: Vec<Attr> =
-        attrs(elements, "data-wire").into_iter().filter(|w| w.value == "collection").collect();
+        attrs(mockup, "data-wire").into_iter().filter(|w| w.value == "collection").collect();
     if collections.is_empty() {
         return;
     }
-    let declared = attrs(elements, "data-order");
+    let declared = attrs(mockup, "data-order");
     let silent = collections
         .iter()
         .filter(|row| {
@@ -1286,167 +993,90 @@ fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
                 collections.len()
             ),
             fix:
-                "the row carries data-order=\"wire\", or names the sort and why it beats the wire's"
+                "the zone host carries data-order=\"wire\", or names the sort and why it beats the wire's"
                     .to_string(),
         });
     }
 }
 
-// overflow-declared. One overflow line under the Layout sketch, naming every
-// zone the sketch draws. A range names the zones it spans - "B-D" answers for C.
-fn check_overflow_declared(failures: &mut Vec<Failure>, layout: &str) {
-    let Some(sketch) = elements_of(layout, "pre").into_iter().next() else {
-        return;
-    };
-    let text = inner_text(&format!("<pre>{sketch}</pre>"), (0, sketch.len() + 11));
-    let Some(at) = text.to_lowercase().find("overflow") else {
+// overflow-declared. One overflow line under the mockup, naming every zone the
+// mockup hosts. Both halves read the tokeniser, which is the only reading that
+// holds: the line is the mockup's own paragraph opening with `overflow:`, and a
+// zone is `data-zone="<name>"` on the host the mockup mounts into, because the
+// ASCII sketch that used to name them is what DEC-53 cut. The prose form is the
+// rulebook's, not this predicate's - the line says which zone is capped and who
+// owns the cap, which no attribute carries.
+const OVERFLOW_OPENS: &str = "overflow:";
+
+fn check_overflow_declared(failures: &mut Vec<Failure>, mockup: &str) {
+    let declaration = paragraphs(mockup)
+        .into_iter()
+        .map(|text| text.trim().to_lowercase())
+        .find(|text| text.starts_with(OVERFLOW_OPENS));
+    let Some(declaration) = declaration else {
         failures.push(Failure {
             check: "overflow-declared·line".to_string(),
-            what: "the Layout sketch declares no overflow".to_string(),
-            fix: "one overflow line under the sketch: which zones scroll, which are capped, and which cap a component already owns".to_string(),
+            what: "the mockup declares no overflow".to_string(),
+            fix: "one overflow line under the mockup - a paragraph opening with \"overflow:\": which zones scroll, which are capped, and which cap a component already owns".to_string(),
         });
         return;
     };
-    let declaration = &text[at..];
-    let missing: Vec<String> = sketch_zones(&text[..at])
+    let mut missing: Vec<String> = attrs(mockup, "data-zone")
         .into_iter()
-        .filter(|zone| !names_zone(declaration, *zone))
-        .map(|zone| zone.to_string())
+        .map(|zone| zone.value.trim().to_lowercase())
+        .filter(|zone| !zone.is_empty() && !names_zone(&declaration, zone))
         .collect();
+    missing.sort_unstable();
+    missing.dedup();
     if !missing.is_empty() {
         failures.push(Failure {
             check: "overflow-declared·zones".to_string(),
             what: format!("the overflow line is silent about zone {}", missing.join(" ")),
-            fix: "every zone the sketch draws is named: it scrolls, it is capped, or it cannot overflow".to_string(),
+            fix: "every data-zone the mockup hosts is named: it scrolls, it is capped, or it cannot overflow".to_string(),
         });
     }
 }
 
-// The sketch's zone ids: a single capital opening a boxed row. Anything the
-// sketch says in its margin notes is commentary, not a zone.
-fn sketch_zones(sketch: &str) -> Vec<char> {
-    let mut zones: Vec<char> = Vec::new();
-    for line in sketch.lines() {
-        let mut chars = line.trim_start().chars();
-        if chars.next() != Some('│') {
-            continue;
-        }
-        let rest: String = chars.collect();
-        let mut body = rest.trim_start().chars();
-        if let (Some(id), Some(' ')) = (body.next(), body.next()) {
-            if id.is_ascii_uppercase() && !zones.contains(&id) {
-                zones.push(id);
-            }
-        }
-    }
-    zones
+// A zone is named where the line says its name and not merely where some longer
+// word contains it: `tab` is not declared by "table", nor `log` by "catalog".
+// The sketch this rule used to read had single-letter zone ids and compared them
+// exactly; free-text names re-opened the question, and the wrong answer here is
+// the dangerous one - the gate goes green over a zone nobody declared. `-` and
+// `_` count as part of a word, so `list` is not answered for by `flow-list`.
+fn names_zone(declaration: &str, zone: &str) -> bool {
+    let inside_word = |c: char| c.is_alphanumeric() || c == '-' || c == '_';
+    declaration.match_indices(zone).any(|(at, _)| {
+        let before = declaration[..at].chars().next_back();
+        let after = declaration[at + zone.len()..].chars().next();
+        !before.is_some_and(inside_word) && !after.is_some_and(inside_word)
+    })
 }
 
-fn names_zone(declaration: &str, zone: char) -> bool {
-    let chars: Vec<char> = declaration.chars().collect();
-    for (i, c) in chars.iter().enumerate() {
-        if *c == zone {
-            return true;
-        }
-        let (Some(from), Some(to)) = (chars.get(i.wrapping_sub(1)), chars.get(i + 1)) else {
-            continue;
-        };
-        if matches!(c, '-' | '–' | '—')
-            && from.is_ascii_uppercase()
-            && to.is_ascii_uppercase()
-            && (*from..=*to).contains(&zone)
-        {
-            return true;
-        }
-    }
-    false
-}
-
-// state-declarations. Every catalog row answers empty · loading · error ·
-// overflow. A reuse may answer by citation - its file already decided; a propose
-// has no file to cite, so an em dash there is a component nobody has designed.
-//
-// W4 finding 12: which of the two a row is was read off the VERDICT WORD, which
-// is a guess about the registry rather than a reading of it. With the oracle it
-// is a lookup - a bare citation is complete when the component it names really
-// declares @states, and empty when nothing does.
-fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str, roster: Option<&Roster>) {
-    let rows = data_rows(elements);
-    let mut blank = 0usize;
-    let mut proposed = 0usize;
-    let mut uncitable: Vec<String> = Vec::new();
-    // Key and cells are read off the same chunk: pairing two row lists by index
-    // holds only while every catalog row is both keyed and three cells wide,
-    // which is an assumption the map check enforces elsewhere and this one
-    // would silently inherit.
-    for (name, row) in catalog_rows(elements) {
-        let cells = elements_of(row, "td");
-        if cells.len() < 3 {
-            continue;
-        }
-        let cell = cells.last().map(|c| inner_text(c, (0, c.len()))).unwrap_or_default();
-        let states = cell.trim();
-        if states.is_empty() {
-            blank += 1;
-            continue;
-        }
-        if !states.chars().all(|c| c == '—' || c.is_whitespace()) {
-            continue;
-        }
-        // Two ways a dash can be empty, and they are not the same red. A verdict
-        // with no file yet has none to cite whatever the registry holds -
-        // proposing a name that happens to be taken does not make the proposal's
-        // states someone else's. A verdict that answers FROM a file is checked
-        // against the registry rather than against its own verdict word (W4
-        // finding 12). A row that is neither - dissolved, or placed by nothing -
-        // designs no component, so it declares no states.
-        let verdicted = |set: &[&str]| set.iter().any(|v| row.contains(&format!(">{v}<")));
-        if verdicted(UNBUILT) {
-            proposed += 1;
-        } else if verdicted(CITES_ITS_FILE) && !roster.is_some_and(|r| r.citable_states(&name)) {
-            uncitable.push(name);
-        }
-    }
-    if blank > 0 {
+// keyboard-parity. Every pointer interaction has a keyboard path. Re-homed onto
+// the Keyboard item, which exists for this one column: a key path is the one
+// thing a static mockup cannot show, and the Interaction table it used to ride
+// was too large to keep for a column's sake (DEC-53).
+fn check_keyboard_parity(failures: &mut Vec<Failure>, keyboard: &str) {
+    let rows = data_rows(keyboard);
+    if rows.is_empty() {
         failures.push(Failure {
-            check: "state-declarations·blank".to_string(),
-            what: format!("{blank} of {} catalog rows declare no states", rows.len()),
-            fix: "every component answers empty · loading · error · overflow - \"—\" counts, blank does not".to_string(),
+            check: "keyboard-parity·path".to_string(),
+            what: "the Keyboard item names no interaction".to_string(),
+            fix: "one row per pointer interaction: what it does | its key path from the rulebook's conventions - a screen the pointer cannot drive says so in a row of its own".to_string(),
         });
+        return;
     }
-    if proposed > 0 {
-        failures.push(Failure {
-            check: "state-declarations·proposed".to_string(),
-            what: format!("{proposed} proposed components answer their states with \"—\""),
-            fix: "a citation completes the cell for a reuse, never for a propose - a component that does not exist yet has no file to cite".to_string(),
-        });
-    }
-    if !uncitable.is_empty() {
-        failures.push(Failure {
-            check: "state-declarations·uncitable".to_string(),
-            what: format!("\"—\" cites a @states nothing declares: {}", uncitable.join(" ")),
-            fix: "the cell cites the component's own file - name a component whose TSDoc declares @states, or state the states here".to_string(),
-        });
-    }
-}
-
-// keyboard-parity. Every pointer interaction has a keyboard path; a use case
-// that is passive says so, which is an answer and not a blank.
-fn check_keyboard_parity(failures: &mut Vec<Failure>, interaction: &str) {
-    let rows = data_rows(interaction);
     let silent = rows
         .iter()
         .filter(|row| {
-            elements_of(row, "td")
-                .last()
-                .is_none_or(|cell| inner_text(cell, (0, cell.len())).trim().is_empty())
+            elements_of(row, "td").last().is_none_or(|cell| fragment_text(cell).trim().is_empty())
         })
         .count();
     if silent > 0 {
         failures.push(Failure {
             check: "keyboard-parity·path".to_string(),
-            what: format!("{silent} of {} use cases name no keyboard path", rows.len()),
-            fix: "name the binding from the rulebook's conventions, propose a new one, or say the use case is passive".to_string(),
+            what: format!("{silent} of {} pointer interactions name no keyboard path", rows.len()),
+            fix: "name the binding from the rulebook's conventions, propose a new one, or say the interaction is passive".to_string(),
         });
     }
 }
@@ -1654,248 +1284,6 @@ fn line_text(html: &str, line: usize) -> &str {
     html.lines().nth(line.saturating_sub(1)).unwrap_or_default()
 }
 
-// A reuse is a rejection test that passed, so the trace must show the rejection
-// half. Run #3 cited CopyButton's `@use` "any one-click copy affordance"
-// correctly and shipped a wrong reuse for a whole stage — both that component's
-// and CopyText's `@avoid` lines excluded it, and neither was consulted. The
-// reading ORDER is unobservable in the artifact; that the `@avoid` was consulted
-// at all is not.
-fn check_avoid_cited(failures: &mut Vec<Failure>, elements: &str) {
-    let claimed: Vec<&str> = elements_of(elements, "tr")
-        .into_iter()
-        .filter(|r| ["reuse", "extend"].iter().any(|v| r.contains(&format!(">{v}<"))))
-        .collect();
-    let silent = claimed.iter().filter(|r| !r.contains("@avoid")).count();
-    if silent > 0 {
-        failures.push(Failure {
-            check: "elements·avoid-cited".to_string(),
-            what: format!(
-                "{silent} of {} reuse/extend rows cite no @avoid",
-                claimed.len()
-            ),
-            fix: "a reuse names the @avoid it clears, not only the @use it matches - the @avoid is the half that discriminates".to_string(),
-        });
-    }
-}
-
-// The registry gate requirement #1 never had: until W7 ① nothing here could read
-// a TSDoc block, so a catalog was checked for SHAPE and never for TRUTH and a
-// reuse could name a component that does not exist. A row claiming a component
-// is already available - reuse, extend, or considered-and-rejected - must name
-// one; propose, build local and dissolved name what is deliberately absent.
-//
-// What a citation SAYS stays Tier-3's (W7 ④). The text is a paraphrase of the
-// clause, and a row legitimately cites OTHER components' contracts - run #2's
-// SectionBand row cites Section's @avoid, run #3's StepList row cites
-// CopyText's - so no match between a quote and a clause is decidable here.
-fn check_cited_components(failures: &mut Vec<Failure>, elements: &str, roster: Option<&Roster>) {
-    let Some(roster) = roster else {
-        failures.push(Failure {
-            check: "elements·registry-unreadable".to_string(),
-            what: format!("cannot read the component roster via {REGISTRY}"),
-            fix: format!("run verify-doc from the repo root with node available - every reuse resolves against {COMPONENTS} and the collection's TSDoc, and cannot pass unread"),
-        });
-        return;
-    };
-    let mut unresolved: Vec<String> = catalog_rows(elements)
-        .into_iter()
-        .filter(|(_, row)| PLACED.iter().any(|v| row.contains(&format!(">{v}<"))))
-        .map(|(name, _)| name)
-        .filter(|name| !roster.resolves(name))
-        .collect();
-    unresolved.sort_unstable();
-    unresolved.dedup();
-    if !unresolved.is_empty() {
-        failures.push(Failure {
-            check: "elements·unresolved".to_string(),
-            what: format!("no component exists for: {}", unresolved.join(" ")),
-            fix: format!("a reuse resolves to the collection's TSDoc or to a design file in {COMPONENTS} - name the component that exists, or verdict the row propose"),
-        });
-    }
-}
-
-// Verdicts that claim the component is already available to reuse. `n/a` is one
-// of them: a row that considered and rejected a component is a rejection OF
-// something, and run #3's two are both real roster entries.
-const PLACED: &[&str] = &["reuse", "extend", "n/a"];
-// A component this run still owes a design: nothing to cite, so its states are
-// stated here. An `extend` owes the delta even though its base has a file.
-const UNBUILT: &[&str] = &["propose", "extend"];
-// The verdicts whose states really do live in the component's own TSDoc.
-const CITES_ITS_FILE: &[&str] = &["reuse", "n/a"];
-
-// Rows do not nest, so the catalog is split on the opening tag rather than
-// matched: data-key rides that tag, and an element's body - which is what
-// elements_of returns - is exactly where it is not.
-fn catalog_rows(elements: &str) -> Vec<(String, &str)> {
-    elements
-        .split("<tr")
-        .skip(1)
-        .filter_map(|row| Some((component_name(row_key(row)?), row)))
-        .collect()
-}
-
-fn row_key(row: &str) -> Option<&str> {
-    const KEY: &str = "data-key=\"";
-    let head = row.split_once('>')?.0;
-    let at = head.find(KEY)? + KEY.len();
-    head[at..].find('"').map(|end| &head[at..at + end])
-}
-
-// A highlight that lights one place traces nothing: the map's whole value is
-// clicking a component in the tree and seeing its catalog row light up too. The
-// old check passed on data-map plus any single data-key, so a keyed tree over an
-// unkeyed table — half the map dead — read as green.
-fn check_elements_map(failures: &mut Vec<Failure>, elements: &str) {
-    let mut fail = |what: String, fix: &str| {
-        failures.push(Failure { check: "elements·map".to_string(), what, fix: fix.to_string() });
-    };
-    if !elements.contains("data-map") {
-        fail(
-            "the catalog is not a keyed map".to_string(),
-            "wrap tree + table in data-map and key every component mention data-key=\"<slug>\" (behaviour: doc-assets/components/specimen.js)",
-        );
-        return;
-    }
-    // The tree half is what <pre> encloses; the catalog half is every key that isn't
-    // in it. A row's key rides its <tr> opening tag, which inner-text extraction
-    // drops, so the catalog is identified by exclusion rather than by its own tag.
-    let tree_spans: Vec<(usize, usize)> = elements_of(elements, "pre")
-        .into_iter()
-        .map(|body| {
-            let at = body.as_ptr() as usize - elements.as_ptr() as usize;
-            (at, at + body.len())
-        })
-        .collect();
-    let in_tree = |at: usize| tree_spans.iter().any(|&(s, e)| at >= s && at < e);
-    let (tree, catalog): (Vec<_>, Vec<_>) =
-        attrs(elements, "data-key").into_iter().partition(|key| in_tree(key.at));
-    let keys = |half: Vec<Attr>| -> Vec<String> { half.into_iter().map(|key| key.value).collect() };
-    let (tree_keys, row_keys) = (keys(tree), keys(catalog));
-    for (half, keys, fix) in [
-        (
-            "tree",
-            &tree_keys,
-            "key every component mention in the placement tree: data-key=\"<slug>\"",
-        ),
-        ("catalog", &row_keys, "key every catalog row: <tr data-key=\"<slug>\">"),
-    ] {
-        if keys.is_empty() {
-            fail(format!("the {half} half of the map carries no data-key"), fix);
-        }
-    }
-    let mut unpaired: Vec<&str> = tree_keys
-        .iter()
-        .filter(|k| !row_keys.contains(k) && !k.is_empty())
-        .map(String::as_str)
-        .collect();
-    unpaired.sort_unstable();
-    unpaired.dedup();
-    if !unpaired.is_empty() && !row_keys.is_empty() {
-        let names = unpaired;
-        fail(
-            format!("placed but not in the catalog: {}", names.join(" ")),
-            "every component in the tree resolves to a catalog row (reuse · extend · propose)",
-        );
-    }
-}
-
-// "Every cell is a clause, not a sentence, and never a paragraph" — the Frame's
-// own form rule, mechanised. The mean is what bites: a per-cell cap alone is
-// gameable by splitting one paragraph across two rows, which keeps the prose and
-// passes the check. Calibrated on the accepted run #2 (mean 9.0, max 35).
-const FRAME_CELL_MEAN: usize = 12;
-const FRAME_CELL_MAX: usize = 40;
-// The `on this screen` cell is a ✓/✗ pair — two clauses by design, so it is
-// measured on its own budget instead of dragging the reasoning columns' mean up
-// to meet it. Calibrated on the rulebook's 14 DO/DON'T cells (mean 13.7, max 19),
-// widened for a screen-specific example naming real copy or a real component.
-const FRAME_EXAMPLE_MEAN: usize = 24;
-const FRAME_EXAMPLE_MAX: usize = 36;
-// purpose · given · not-given — the Frame's three named lines, nothing else
-const FRAME_PROSE_BLOCKS: usize = 3;
-const FRAME_PROSE_WORDS: usize = 60;
-// A gist is the verdict alone — the trace lives in the collapsed half. Calibrated
-// on run #3's 30 gists (mean 9.6, max 13): a ceiling that holds today and reds
-// the failure it exists for, an agent writing the 900-char trace into the
-// visible column.
-const GIST_MAX_WORDS: usize = 14;
-
-// A run doc has two readers: an agent that needs the whole trace and a human who
-// needs the verdict. Both tables state the conclusion in a .gist and collapse the
-// proof behind <details>. What this catches is the regression, not the shape — an
-// agent writing the trace straight into the visible cell.
-fn check_gist_and_collapse(
-    failures: &mut Vec<Failure>,
-    fragment: &str,
-    check: &str,
-    unit: &str,
-    column: &str,
-) {
-    let rows = data_rows(fragment);
-    if rows.is_empty() {
-        return;
-    }
-    let mut fail = |what: String, fix: String| {
-        failures.push(Failure { check: check.to_string(), what, fix });
-    };
-    let bare = rows.iter().filter(|r| !r.contains("class=\"gist\"")).count();
-    if bare > 0 {
-        fail(
-            format!("{bare} of {} {unit} carry no gist", rows.len()),
-            format!("{column} states the verdict in <div class=\"gist\">, one line"),
-        );
-    }
-    let uncollapsed = rows.iter().filter(|r| !r.contains("<details")).count();
-    if uncollapsed > 0 {
-        fail(
-            format!("{uncollapsed} of {} {unit} collapse nothing", rows.len()),
-            "the trace goes behind <details class=\"why\"> - written for the agent, not read by the reviewer".to_string(),
-        );
-    }
-    let longest = gists(fragment).into_iter().map(words).max();
-    if let Some(over) = longest.filter(|w| *w > GIST_MAX_WORDS) {
-        fail(
-            format!("a gist runs {over} words (max {GIST_MAX_WORDS})"),
-            "the gist is the verdict; the reasoning is what <details> is for".to_string(),
-        );
-    }
-}
-
-// Tune judges how the screen LOOKS, so its before/after is drawn, not described.
-// Run #3's prose version needed three sentences to say what a ragged column and
-// an aligned one show at a glance.
-fn check_tune_drawn(failures: &mut Vec<Failure>, tune: &str) {
-    let rows: Vec<&str> = data_rows(tune);
-    let mut fail = |what: String, fix: &str| {
-        failures.push(Failure { check: "tune·drawn".to_string(), what, fix: fix.to_string() });
-    };
-    if rows.is_empty() {
-        fail(
-            "Tune has no before/after table".to_string(),
-            "one row per call: what changed | before (drawn) | after (drawn) | the soft-rule slug",
-        );
-        return;
-    }
-    let undrawn = rows.iter().filter(|r| r.matches("class=\"tb\"").count() < 2).count();
-    if undrawn > 0 {
-        fail(
-            format!("{undrawn} of {} tune calls are not drawn", rows.len()),
-            "before and after are each a <pre class=\"tb\"> - a stage that judges appearance shows it",
-        );
-    }
-    let unslugged = rows
-        .iter()
-        .filter(|r| elements_of(r, "td").last().is_none_or(|last| !last.contains("<code>")))
-        .count();
-    if unslugged > 0 {
-        fail(
-            format!("{unslugged} of {} tune calls cite no soft-rule slug", rows.len()),
-            "a call with no slug to cite is a rulebook hole - it goes to the findings, not into the design",
-        );
-    }
-}
-
 const CAPABILITY_STATES: [&str; 3] = ["used", "deliberately unused", "blocked"];
 
 fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
@@ -1910,7 +1298,7 @@ fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
     if rows.is_empty() {
         fail(
             "no capability rows".to_string(),
-            "one row per Frame `Given`: what it is | used · deliberately unused · blocked | where / why",
+            "one row per input the screen was handed: what it is | used · deliberately unused · blocked | where / why",
         );
         return;
     }
@@ -1930,9 +1318,8 @@ fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
     }
 }
 
-// W4 run #2, finding 29: two reviewer instructions moved the Layout sketch, two
-// catalog rows, two use-cases, the mockup, four receipt rows and the cross-check,
-// and the run read as if the stages had produced all of it. The strongest signal
+// W4 run #2, finding 29: two reviewer instructions moved half the run and it
+// read as if the design had produced all of it. The strongest signal
 // a run carries - a human overrode the design, and here is the contract it hit -
 // was the one the artifact dropped. So the moved column is answered from the
 // run's own item names: "the reviewer changed things" is not an answer, and
@@ -1946,7 +1333,7 @@ fn check_review_record(failures: &mut Vec<Failure>, review: &str) {
     if rows.is_empty() {
         fail(
             "the review item records no instruction".to_string(),
-            "one row per reviewer instruction: what was said | what it moved (the stages, or `nothing`) | the contract it hit",
+            "one row per reviewer instruction: what was said | what it moved (a run item, or `nothing`) | the contract it hit",
         );
         return;
     }
@@ -1957,13 +1344,13 @@ fn check_review_record(failures: &mut Vec<Failure>, review: &str) {
         .iter()
         .filter(|r| {
             let moved = cell(r, 1);
-            !moved.contains("nothing") && !DESIGN_RUN.iter().any(|stage| moved.contains(stage))
+            !moved.contains("nothing") && !DESIGN_RUN.iter().any(|item| moved.contains(item))
         })
         .count();
     if unmoved > 0 {
         fail(
-            format!("{unmoved} of {} review rows name no stage they moved", rows.len()),
-            "name the stages the instruction moved, or `nothing` if the design held - a run that rewrites its own history silently is the defect this item exists to refuse",
+            format!("{unmoved} of {} review rows name no item they moved", rows.len()),
+            "name the run items the instruction moved, or `nothing` if the design held - a run that rewrites its own history silently is the defect this item exists to refuse",
         );
     }
     let uncited = rows
@@ -1976,48 +1363,6 @@ fn check_review_record(failures: &mut Vec<Failure>, review: &str) {
             "cite what the change hit: a rule slug, a component's @use/@avoid, or a decision record - <code>taste</code> when the design genuinely had latitude there",
         );
     }
-}
-
-fn is_example(cell: &str) -> bool {
-    cell.contains('✓') || cell.contains('✗')
-}
-
-// The gist bodies, found by their opening tag rather than by filtering every
-// <div>: a run doc's cells nest divs, and only the one carrying the marker class
-// is the gist.
-fn gists(fragment: &str) -> Vec<&str> {
-    const OPEN: &str = "<div class=\"gist\">";
-    fragment
-        .match_indices(OPEN)
-        .filter_map(|(at, _)| {
-            let body = &fragment[at + OPEN.len()..];
-            body.find("</div>").map(|end| &body[..end])
-        })
-        .collect()
-}
-
-fn words(fragment: &str) -> usize {
-    let mut count = 0;
-    let mut in_tag = false;
-    let mut in_word = false;
-    for c in fragment.chars() {
-        match c {
-            '<' => {
-                in_tag = true;
-                in_word = false;
-            }
-            '>' => in_tag = false,
-            _ if in_tag => {}
-            c if c.is_whitespace() => in_word = false,
-            _ => {
-                if !in_word {
-                    count += 1;
-                    in_word = true;
-                }
-            }
-        }
-    }
-    count
 }
 
 // A stage table's data rows: three cells or more. The header (<th>) and any
@@ -2066,103 +1411,6 @@ fn elements_of<'a>(fragment: &'a str, tag: &str) -> Vec<&'a str> {
     out
 }
 
-fn mean_check(
-    failures: &mut Vec<Failure>,
-    cells: &[usize],
-    cap: usize,
-    check: &str,
-    label: &str,
-    fix: &str,
-) {
-    let total: usize = cells.iter().sum();
-    let count = cells.len();
-    if count > 0 && total > cap * count {
-        let over = cells.iter().filter(|w| **w > cap).count();
-        let (whole, tenth) = (total / count, total * 10 / count % 10);
-        failures.push(Failure {
-            check: check.to_string(),
-            what: format!(
-                "{label} average {whole}.{tenth} words (max {cap}); {over} of {count} are over"
-            ),
-            fix: fix.to_string(),
-        });
-    }
-}
-
-fn check_frame_density(failures: &mut Vec<Failure>, frame: &str) {
-    let driver_rows = data_rows(frame);
-    let unexampled = driver_rows.iter().filter(|r| !is_example(r)).count();
-    if unexampled > 0 {
-        failures.push(Failure {
-            check: "frame·example".to_string(),
-            what: format!("{unexampled} of {} driver rows carry no ✓/✗ pair", driver_rows.len()),
-            fix: "every driver lands on a concrete example: ✓ what honours it, ✗ the plausible thing that breaks it".to_string(),
-        });
-    }
-
-    let (examples, reasoning): (Vec<usize>, Vec<usize>) = elements_of(frame, "td")
-        .into_iter()
-        .filter(|c| words(c) > 0)
-        .map(|c| (words(c), is_example(c)))
-        .fold((Vec::new(), Vec::new()), |(mut ex, mut re), (w, is_ex)| {
-            if is_ex {
-                ex.push(w);
-            } else {
-                re.push(w);
-            }
-            (ex, re)
-        });
-
-    mean_check(
-        failures,
-        &reasoning,
-        FRAME_CELL_MEAN,
-        "frame·cell-density",
-        "driver cells",
-        "every cell is a clause, not a sentence, and never a paragraph - the row is the reasoning, not the cell",
-    );
-    if let Some(longest) = reasoning.iter().copied().max().filter(|w| *w > FRAME_CELL_MAX) {
-        failures.push(Failure {
-            check: "frame·cell-length".to_string(),
-            what: format!("a driver cell runs {longest} words (max {FRAME_CELL_MAX})"),
-            fix: "split the reasoning across the row's columns, or cut it to a clause".to_string(),
-        });
-    }
-
-    mean_check(
-        failures,
-        &examples,
-        FRAME_EXAMPLE_MEAN,
-        "frame·example-density",
-        "✓/✗ pairs",
-        "an example is two clauses - name the concrete thing, not the reasoning behind it",
-    );
-    if let Some(longest) = examples.iter().copied().max().filter(|w| *w > FRAME_EXAMPLE_MAX) {
-        failures.push(Failure {
-            check: "frame·example-length".to_string(),
-            what: format!("a ✓/✗ pair runs {longest} words (max {FRAME_EXAMPLE_MAX})"),
-            fix: "one concrete ✓ and one concrete ✗ - not a paragraph each".to_string(),
-        });
-    }
-
-    let prose: Vec<usize> = elements_of(frame, "p").into_iter().map(words).collect();
-    if prose.len() > FRAME_PROSE_BLOCKS {
-        failures.push(Failure {
-            check: "frame·prose-blocks".to_string(),
-            what: format!("{} prose blocks in the Frame (max {FRAME_PROSE_BLOCKS})", prose.len()),
-            fix: "the Frame is purpose + capabilities + the driver table - commentary about the run belongs in the findings table".to_string(),
-        });
-    }
-    if let Some(longest) = prose.iter().copied().max().filter(|w| *w > FRAME_PROSE_WORDS) {
-        failures.push(Failure {
-            check: "frame·prose-length".to_string(),
-            what: format!("a Frame prose block runs {longest} words (max {FRAME_PROSE_WORDS})"),
-            fix: "purpose is one sentence; capabilities are one ·-separated line".to_string(),
-        });
-    }
-}
-
-// A complete hex token only: `#mock` is an id selector, `#2b2622` is a colour.
 fn colour_literal(html: &str) -> Option<String> {
     for block in html.split("<style").skip(1) {
         let css = block.split("</style>").next().unwrap_or(block);
@@ -2184,11 +1432,38 @@ fn colour_literal(html: &str) -> Option<String> {
     None
 }
 
-fn inner_text(html: &str, span: (usize, usize)) -> String {
+// The mockup's own paragraphs, located by the tokeniser rather than by scanning
+// for the string `<p`. That scan read `<pre>` and `<progress>` as paragraphs -
+// and, finding no close for them, gave up on the real one - and it read a mount
+// script's body as markup, so a line commented out inside the script counted as
+// a declaration. Both directions were wrong, and `nodes` is wrong in neither: it
+// matches the tag name exactly and treats a script or style body as opaque.
+fn paragraphs(html: &str) -> Vec<String> {
+    nodes(html)
+        .into_iter()
+        .filter(|node| node.name == "p" && node.shape == Shape::Open && node.closed)
+        .map(|node| element_text(html, element_content(html, node.span.0).0))
+        .collect()
+}
+
+// The text inside an element, given the span `element_content` returns: that
+// span opens at the element's own tag, so the tag is skipped before the body is
+// read as a fragment.
+fn element_text(html: &str, span: (usize, usize)) -> String {
     let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1).min(span.1);
+    fragment_text(&html[open_end..span.1])
+}
+
+// The text of an element BODY - what `elements_of` hands back, already unwrapped.
+// It reads from the first character, because a body has no opening tag of its
+// own to skip: a reader that skipped one would eat everything before the first
+// `>` the body itself contains, so a zone named `<code>verdicts</code>` in the
+// overflow line would read as no overflow line at all - a hard rule refusing the
+// run that obeyed it.
+fn fragment_text(fragment: &str) -> String {
     let mut out = String::new();
     let mut in_tag = false;
-    for c in html[open_end..span.1].chars() {
+    for c in fragment.chars() {
         match c {
             '<' => in_tag = true,
             '>' => in_tag = false,
@@ -2429,7 +1704,7 @@ fn text(bytes: &[u8]) -> String {
 }
 
 // quick-xml hands back subslices of the input, so this is arithmetic, not a
-// search - the reading `check_elements_map` already takes of its tree spans.
+// search: the offset is where the part already sits in the whole.
 fn offset_in(html: &str, part: &[u8]) -> usize {
     part.as_ptr() as usize - html.as_ptr() as usize
 }
@@ -2649,14 +1924,14 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         if vocab.is_none() && designs {
             vocab = Some(vocabulary(repo));
         }
-        if names.is_none() && designs {
+        if names.is_none() && component.is_some() {
             names = Some(roster(repo));
         }
         let vocab_read = vocab.as_ref().and_then(|read| read.as_ref().ok());
         let roster_read = names.as_ref().and_then(|read| read.as_ref().ok());
         let verdict = match component {
             Some(name) => verify_component(&html, &name, roster_read, vocab_read),
-            None => verify_html_against(&html, rules.as_ref(), vocab_read, roster_read),
+            None => verify_html_against(&html, rules.as_ref(), vocab_read),
         };
         let verdict = with_links(verdict, &html, &resolved);
         if verdict.red() {
@@ -2717,11 +1992,10 @@ mod tests {
     use std::fmt::Write as _;
 
     use super::{
-        attrs, check_frame_density, check_links, component_designed, declares_a_design,
-        edit_distance, elements_of, format_verdict, link_targets, registry_entry,
-        rules_from_rulebook, screen_file, surface_name, ui_surface, verify_component, verify_html,
-        verify_html_against, with_links, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
-        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        attrs, check_links, component_designed, declares_a_design, edit_distance, elements_of,
+        format_verdict, link_targets, registry_entry, rules_from_rulebook, screen_file,
+        surface_name, ui_surface, verify_component, verify_html, verify_html_against, with_links,
+        Roster, Verdict, Vocabulary, CAPABILITY_STATES,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -2774,25 +2048,14 @@ mod tests {
     const RULEBOOK: &str = "<table data-c=\"hard-rules-table\"><tbody>\
          <tr><td><code>colour-tokens-only</code></td><td>no literals</td></tr>\
          <tr><td><code>spacing-scale</code></td><td>from the scale</td></tr>\
-         </tbody></table>\
-         <table data-c=\"soft-rules-table\"><tbody>\
-         <tr><td><code>data-ink-first</code></td><td>ink</td><td><code>text-xs</code></td></tr>\
-         <tr><td><code>calm-microcopy</code></td><td>calm</td></tr>\
          </tbody></table>";
-
-    // The pin is the fixture receipt's, so the unit tests judge coverage against a
-    // rulebook the receipt genuinely names; the pin's own checks move it.
-    const PIN: &str = "28f5437";
 
     fn rules() -> super::Rulebook {
         rulebook_of(RULEBOOK)
     }
 
     fn rulebook_of(html: &str) -> super::Rulebook {
-        super::Rulebook {
-            rules: rules_from_rulebook(html),
-            blob: Some(format!("{PIN}c0ffee1a2b3c4d5e6f708192a3b4c5d6e7f8")),
-        }
+        super::Rulebook { rules: rules_from_rulebook(html) }
     }
 
     // A hand-written stand-in for what scripts/design-vocabulary.mjs emits, so
@@ -2822,247 +2085,52 @@ chroma_floor: 40
         serde_yaml::from_str(VOCABULARY).expect("the test vocabulary parses like the real one")
     }
 
-    // Two components with code and one whose contract is still its design file -
-    // the two halves of the roster, and the disjointness check_retirement keeps.
+    // Two components with code: what check_retirement reads a design file against.
     fn roster() -> Roster {
-        Roster {
-            registry: ["Section", "CopyText"]
-                .into_iter()
-                .map(|name| (name.to_string(), Component { states: "rest · hover".to_string() }))
-                .collect(),
-            designed: ["BodyViewer"].into_iter().map(str::to_string).collect(),
-        }
+        Roster { registry: ["Section", "CopyText"].into_iter().map(str::to_string).collect() }
     }
 
-    fn receipt(rows: &str) -> String {
-        format!("<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n{rows}</pre>")
-    }
-
-    // The mockup the fixture ships, and the mount inside it: five tests swap one
-    // or the other, and a literal repeated five times drifts on the first edit.
-    const RUN_MOUNT: &str = "<script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>";
-    const RUN_MOCKUP: &str = "<div data-item=\"mockup\" data-wire=\"none\"><div id=\"m-zone\"></div>\
+    // The mockup the fixture ships: several tests swap a piece of it, and a
+    // literal repeated that often drifts on the first edit. The zone host, the
+    // overflow line and the state toggle are all load-bearing - three re-homed
+    // predicates read them (DEC-53).
+    const RUN_MOCKUP: &str = "<div data-item=\"mockup\" data-wire=\"none\">\
+             <div id=\"m-zone\" data-zone=\"verdicts\"></div>\
              <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+             <p>overflow: verdicts scrolls to its own cap</p>\
              <button data-state-toggle=\"mock\">flip</button></div>";
 
-    fn design_run(receipt_block: &str) -> String {
+    // The three declarations the re-homed rules read, named once: several tests
+    // swap a zone host for a collection host or blank the key path, and a literal
+    // repeated that often drifts on the first edit.
+    const Z: &str = "data-zone=\"verdicts\"";
+    const COLL: &str = "data-zone=\"verdicts\" data-wire=\"collection\"";
+    const KEY: &str =
+        "<td><code>\u{2191}</code> / <code>\u{2193}</code> then <code>Enter</code></td>";
+
+    fn green_run() -> String {
         let body = format!(
             "<script src=\"https://cdn.tailwindcss.com\"></script>\
              <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
              <style>.mock{{color:var(--a-ink);}}</style>\
              <main data-artifact=\"design-run\">\
-             <p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
-             <div data-item=\"elements\" data-map>\
-             <pre><span data-key=\"section\">Section</span></pre>\
-             <table><tr data-key=\"section\"><td>Section</td><td>reuse</td>\
-             <td><div class=\"gist\">fits the labelled-zone use</div>\
-             <details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td></tr>\
-             </table></div>\
-             <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
-             <td><div class=\"gist\">B renders the real verdicts</div>\
-             <details class=\"why\"><div>B → status</div></details></td></tr></table>\
              {RUN_MOCKUP}\
-             <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
-             <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
-             {receipt_block}\
              <table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
              <td>B1's button</td></tr></table>\
+             <table data-item=\"keyboard\"><tr><td>open a verdict</td><td>the row</td>\
+             <td><code>↑</code> / <code>↓</code> then <code>Enter</code></td></tr></table>\
              <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p>\
-             <table data-item=\"review\"><tr><td>copy icon only</td><td>elements · mockup</td>\
+             <table data-item=\"review\"><tr><td>copy icon only</td><td>mockup</td>\
              <td><code>CopyButton</code> @avoid</td></tr></table></main>"
         );
         with_layer(&body)
     }
 
-    fn green_run() -> String {
-        design_run(&receipt(
-            "  data-ink-first: satisfied — no card frames\n  calm-microcopy: inherited — lowercase\n",
-        ))
-    }
-
-    fn frame_run(frame_body: &str) -> String {
-        green_run().replace("<p data-item=\"frame\">drivers</p>", frame_body)
-    }
-
-    fn cells(count: usize, words_each: usize) -> String {
-        format!("<td>{}</td>", "word ".repeat(words_each)).repeat(count)
-    }
-
-    #[test]
-    fn a_frame_of_clauses_passes_the_density_check() {
-        let body = format!(
-            "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
-            cells(20, FRAME_CELL_MEAN)
-        );
-        assert!(!verify_html_against(
-            &frame_run(&body),
-            Some(&rules()),
-            Some(&vocab()),
-            Some(&roster())
-        )
-        .red());
-    }
-
-    #[test]
-    fn a_frame_of_paragraphs_is_red_by_its_mean() {
-        let body = format!(
-            "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
-            cells(20, FRAME_CELL_MEAN + 6)
-        );
-        let v =
-            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(v.red());
-        assert!(
-            what(&v, "frame·cell-density").contains("average 18.0 words"),
-            "{:?}",
-            failures(&v)
-        );
-    }
-
-    // The mean is the load-bearing half: splitting a bloated cell across two rows
-    // keeps every cell under the ceiling while the prose survives intact.
-    #[test]
-    fn splitting_a_long_cell_across_rows_does_not_dodge_the_check() {
-        let split = format!(
-            "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
-            cells(20, FRAME_CELL_MAX / 2)
-        );
-        let v = verify_html_against(
-            &frame_run(&split),
-            Some(&rules()),
-            Some(&vocab()),
-            Some(&roster()),
-        );
-        assert!(v.red(), "half-length cells still average over the mean");
-        let checks = failures(&v);
-        assert!(checks.contains(&"frame·cell-density".to_string()), "{checks:?}");
-        assert!(!checks.contains(&"frame·cell-length".to_string()), "no cell breaks the ceiling");
-    }
-
-    #[test]
-    fn one_runaway_cell_is_red_even_when_the_mean_holds() {
-        let body = format!(
-            "<div data-item=\"frame\"><p>purpose</p><table>{}<td>{}</td></table></div>",
-            cells(40, 1),
-            "word ".repeat(FRAME_CELL_MAX + 1)
-        );
-        let v =
-            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(v.red());
-        assert!(what(&v, "frame·cell-length").contains("41 words"), "{:?}", failures(&v));
-    }
-
-    #[test]
-    fn commentary_bolted_onto_the_frame_is_red() {
-        let body = "<div data-item=\"frame\"><p>purpose</p><p>given</p><p>not given</p>\
-                    <p>why this screen matters</p><table><td>clause</td></table></div>";
-        let v =
-            verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(v.red());
-        assert!(what(&v, "frame·prose-blocks").contains("4 prose blocks"), "{:?}", failures(&v));
-    }
-
-    #[test]
-    fn a_purpose_paragraph_is_red() {
-        let body = format!(
-            "<div data-item=\"frame\"><p>{}</p><table><td>clause</td></table></div>",
-            "word ".repeat(FRAME_PROSE_WORDS + 1)
-        );
-        let v =
-            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(v.red());
-        assert!(what(&v, "frame·prose-length").contains("61 words"), "{:?}", failures(&v));
-    }
-
-    fn frame_of(run: &str) -> &str {
-        run.split_once("data-item=\"frame\"")
-            .and_then(|(_, rest)| rest.split_once("data-item=\"layout\""))
-            .expect("a run carries a frame and a layout")
-            .0
-    }
-
-    fn density_of(frame: &str) -> Vec<String> {
-        let mut found = Vec::new();
-        check_frame_density(&mut found, frame);
-        found.into_iter().map(|f| f.check).collect()
-    }
-
-    // The two calibration runs are COPIES kept under xtask/fixtures/, not the
-    // live docs. A design run is a T3 work doc: it is archived out of git when
-    // its epic closes, and a test that reads one stops compiling the day that
-    // happens. What these tests need is a frozen specimen of an accepted run,
-    // which is exactly what a fixture is.
-    //
-    // Calibration: the reasoning columns of the accepted run #2 Frame must pass
-    // untouched, or the thresholds measure the checker's taste, not the flow's
-    // rule. Run #2 predates the ✓/✗ column (added at run #3), so it is expected
-    // to fail frame·example and nothing else — the density limits still hold on a
-    // Frame written before them.
-    #[test]
-    fn the_accepted_run_2_frame_passes_every_density_limit() {
-        let reported =
-            density_of(frame_of(include_str!("../fixtures/run-2-frame-calibration.html")));
-        assert_eq!(reported, vec!["frame·example".to_string()], "{reported:?}");
-    }
-
-    // The example column exists to be filled: run #1 left 7 of 11 criteria cells
-    // blank and the column silently rotted. A ✓/✗ pair per driver is checked.
-    #[test]
-    fn a_driver_row_without_an_example_is_red() {
-        let body = "<div data-item=\"frame\"><table>\
-                    <tr><td>driver</td><td>why</td><td>therefore</td>\
-                    <td><span>✓ concrete</span><span>✗ concrete</span></td></tr>\
-                    <tr><td>driver</td><td>why</td><td>therefore</td><td>a criterion</td></tr>\
-                    </table></div>";
-        let v =
-            verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(v.red());
-        assert!(what(&v, "frame·example").contains("1 of 2"), "{:?}", failures(&v));
-    }
-
-    // A ✓/✗ pair is two clauses by design; measuring it against the one-clause
-    // cap would force the reasoning columns to pad or the examples to go vague.
-    #[test]
-    fn an_example_pair_is_measured_on_its_own_budget() {
-        let clause = FRAME_CELL_MEAN - 1; // each half a legal one-clause cell
-        let pair = format!(
-            "<td><span>✓ {}</span><span>✗ {}</span></td>",
-            "word ".repeat(clause),
-            "word ".repeat(clause)
-        );
-        let body = format!(
-            "<div data-item=\"frame\"><table><tr><td>driver</td><td>why</td><td>therefore</td>{pair}</tr></table></div>"
-        );
-        let reported = density_of(frame_of(&frame_run(&body)));
-        assert!(reported.is_empty(), "two legal clauses in one pair must pass: {reported:?}");
-    }
-
-    #[test]
-    fn a_bloated_example_pair_is_still_red() {
-        let pair = format!(
-            "<td><span>✓ {}</span><span>✗ {}</span></td>",
-            "word ".repeat(FRAME_EXAMPLE_MAX),
-            "word ".repeat(FRAME_EXAMPLE_MAX)
-        );
-        let body = format!(
-            "<div data-item=\"frame\"><table><tr><td>driver</td><td>why</td><td>therefore</td>{pair}</tr></table></div>"
-        );
-        let reported = density_of(frame_of(&frame_run(&body)));
-        assert!(reported.contains(&"frame·example-length".to_string()), "{reported:?}");
-    }
-
     #[test]
     fn rulebook_slugs_are_read_from_the_rulebook_tables() {
-        let extracted: Vec<(String, bool)> =
-            rules().rules.into_iter().map(|r| (r.slug, r.hard)).collect();
         assert_eq!(
-            extracted,
-            vec![
-                ("colour-tokens-only".to_string(), true),
-                ("spacing-scale".to_string(), true),
-                ("data-ink-first".to_string(), false),
-                ("calm-microcopy".to_string(), false),
-            ],
+            rules().rules,
+            vec!["colour-tokens-only".to_string(), "spacing-scale".to_string()],
             "header rows and non-slug code spans must not become rules"
         );
     }
@@ -3092,17 +2160,183 @@ chroma_floor: 40
         );
     }
 
+    // DEC-53's whole shape, asserted as a list rather than inferred from which
+    // fixtures happen to pass: six items, and a run still writing one of the cut
+    // stations is told which one by name rather than tolerated.
+    #[test]
+    fn the_run_owes_the_six_items_and_a_cut_station_is_named() {
+        assert_eq!(
+            super::DESIGN_RUN,
+            ["mockup", "capabilities", "keyboard", "proposals", "blocked-on", "review"],
+        );
+        let half =
+            green_run().replace("<table data-item=\"keyboard\">", "<table data-item=\"kyboard\">");
+        let owed = reds(&half);
+        assert!(owed.contains(&"item·keyboard".to_string()), "{owed:?}");
+        assert!(
+            what(&doc_verdict(&half), "item·unknown-tag").contains("missing item \"keyboard\""),
+            "a near miss pairs with the item it meant"
+        );
+
+        for cut in ["frame", "layout", "elements", "interaction", "tune", "receipt"] {
+            let carried = green_run().replace(
+                "<p data-item=\"proposals\">band</p>",
+                &format!(
+                    "<p data-item=\"{cut}\">the old shape</p><p data-item=\"proposals\">band</p>"
+                ),
+            );
+            assert!(
+                what(&doc_verdict(&carried), "item·unknown-tag").contains(cut),
+                "a run carrying the cut {cut} must be red by name, never tolerated"
+            );
+        }
+    }
+
+    // The declaration is located by the tokeniser, so the three ways a scan for
+    // the string `<p` got it wrong are all closed at once: a native tag that
+    // merely starts with p is not a paragraph, a mount script's body is not
+    // markup, and a word that merely starts with "overflow" is not the line.
+    #[test]
+    fn the_overflow_line_is_the_mockups_own_paragraph_and_nothing_that_looks_like_one() {
+        let before_the_line = |markup: &str| {
+            green_run().replace(
+                "<p>overflow: verdicts scrolls to its own cap</p>",
+                &format!("{markup}<p>overflow: verdicts scrolls to its own cap</p>"),
+            )
+        };
+        for native in [
+            "<pre>GET /flows HTTP/1.1</pre>",
+            "<progress value=\"3\" max=\"10\"></progress>",
+            "<svg><path d=\"M0 0 L1 1\"></path></svg>",
+            "<picture><img src=\"x.png\"></picture>",
+        ] {
+            assert!(
+                !reds(&before_the_line(native)).contains(&"overflow-declared·line".to_string()),
+                "a native tag starting with p is not a paragraph: {native}"
+            );
+        }
+
+        // The failure this check's own comment promises to refuse, reached by a
+        // different route: the line exists only where nothing renders it.
+        let only_in_the_mount =
+            green_run().replace("<p>overflow: verdicts scrolls to its own cap</p>", "").replace(
+                "mount('m-zone'",
+                "// <p>overflow: verdicts scrolls to its own cap</p>\nmount('m-zone'",
+            );
+        assert!(
+            what(&doc_verdict(&only_in_the_mount), "overflow-declared·line")
+                .contains("no overflow"),
+            "a line commented out inside the mount script declares nothing"
+        );
+
+        let merely_starts_with_the_word = green_run().replace(
+            "<p>overflow: verdicts scrolls to its own cap</p>",
+            "<p>Overflowing verdicts are capped elsewhere</p>",
+        );
+        assert!(
+            what(&doc_verdict(&merely_starts_with_the_word), "overflow-declared·line")
+                .contains("no overflow"),
+            "\"Overflowing\" is a sentence about overflow, not the declaration"
+        );
+    }
+
+    // A zone is named or it is not, and a longer word that merely contains its
+    // name is not naming it. The sketch this rule used to read had single-letter
+    // zone ids and compared them exactly; free-text names re-opened the question,
+    // and a substring test answers it wrong in the direction that matters - the
+    // gate goes green over a zone whose overflow nobody declared.
+    #[test]
+    fn a_zone_is_not_named_by_a_longer_word_that_merely_contains_it() {
+        let two_zones = |line: &str| {
+            green_run()
+                .replace(Z, "data-zone=\"verdicts\"></div><div data-zone=\"tab\"")
+                .replace("<p>overflow: verdicts scrolls to its own cap</p>", line)
+        };
+        let collides =
+            two_zones("<p>overflow: verdicts scrolls to its own cap, rendered as a data table</p>");
+        assert!(
+            what(&doc_verdict(&collides), "overflow-declared·zones").contains("zone tab"),
+            "\"table\" does not declare what the tab zone does"
+        );
+
+        let named = two_zones("<p>overflow: verdicts scrolls to its own cap; tab is pinned</p>");
+        assert!(
+            !reds(&named).contains(&"overflow-declared·zones".to_string()),
+            "the zone is named as itself, so the line answers for it"
+        );
+    }
+
+    // The overflow line is read as a fragment, and a fragment carries no wrapping
+    // tag - so reading it the way an element is read eats every word before the
+    // first `>` the body itself contains. A zone named in <code>, which is how
+    // this codebase writes an identifier everywhere else, then read as a mockup
+    // declaring no overflow at all: a hard rule refusing a run that obeyed it.
+    #[test]
+    fn an_overflow_line_that_names_its_zone_in_markup_is_still_read() {
+        for line in [
+            "<p>overflow: <code>verdicts</code> scrolls to its own cap</p>",
+            "<p>overflow: verdicts scrolls to its own <code>cap</code></p>",
+        ] {
+            let doc = green_run().replace("<p>overflow: verdicts scrolls to its own cap</p>", line);
+            assert!(
+                !reds(&doc).contains(&"overflow-declared·line".to_string()),
+                "inline markup is not a missing declaration: {line}"
+            );
+        }
+    }
+
+    // Re-homed from the Layout sketch onto the mockup (DEC-53). The line is a
+    // paragraph opening with the word, so a mount's own `overflow-y-auto` cannot
+    // answer for it, and the zones it must name are declared beside the mounts.
+    #[test]
+    fn the_mockup_declares_its_overflow_and_names_every_zone_it_hosts() {
+        let silent = green_run().replace("<p>overflow: verdicts scrolls to its own cap</p>", "");
+        assert!(what(&doc_verdict(&silent), "overflow-declared·line").contains("no overflow"));
+
+        let mounted_class = green_run().replace(
+            "<p>overflow: verdicts scrolls to its own cap</p>",
+            "<div class=\"overflow-auto\"></div>",
+        );
+        assert!(
+            what(&doc_verdict(&mounted_class), "overflow-declared·line").contains("no overflow"),
+            "a utility class is a rendering, not a declaration"
+        );
+
+        let second_zone =
+            green_run().replace(Z, "data-zone=\"verdicts\"></div><div data-zone=\"detail\"");
+        assert!(
+            what(&doc_verdict(&second_zone), "overflow-declared·zones").contains("zone detail"),
+            "a zone the line skipped is named"
+        );
+        assert!(
+            !reds(&green_run()).contains(&"overflow-declared·line".to_string()),
+            "the fixture's own line answers for the zone it hosts"
+        );
+    }
+
     #[test]
     fn conforming_design_run_is_green_with_a_computed_tally() {
-        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()), Some(&roster()));
+        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()));
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
-        assert!(summary.contains("receipt 2/2 soft · 1 satisfied · 1 inherited"), "{summary}");
         assert!(summary.contains("hard rules: 2/2 machine-checked (design)"), "{summary}");
         assert!(summary.contains("design-allow: 0 live suppression"), "{summary}");
     }
 
-    // The surface label is the load-bearing word: 13/13 without it reads as a
+    // A tally is a count of predicates, so a rulebook nobody can read has no
+    // count to print - and saying so beats printing a number the checker did not
+    // measure. The run itself is unaffected: the twelve predicates read the
+    // mockup doc, never the book.
+    #[test]
+    fn an_unreadable_rulebook_says_so_instead_of_claiming_a_tally() {
+        let v = verify_html_against(&green_run(), None, Some(&vocab()));
+        assert!(!v.red(), "{:?}", failures(&v));
+        let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
+        assert!(summary.contains("unreadable - no machine-checked tally"), "{summary}");
+        assert!(summary.contains("design-allow: 0 live suppression"), "{summary}");
+    }
+
+    // The surface label is the load-bearing word: 12/12 without it reads as a
     // claim about the built UI, which no predicate in this file makes.
     #[test]
     fn the_gap_line_names_the_surface_and_the_slugs_still_unchecked() {
@@ -3112,7 +2346,7 @@ chroma_floor: 40
              <tr><td><code>spacing-scale</code></td>",
         );
         let rules = rulebook_of(&widened);
-        let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()), Some(&roster()));
+        let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(
             summary.contains("2/3 machine-checked (design) — 1 unchecked: not-a-predicate"),
@@ -3121,211 +2355,11 @@ chroma_floor: 40
     }
 
     #[test]
-    fn a_missing_soft_slug_fails_by_name() {
-        let doc = design_run(&receipt("  data-ink-first: satisfied — no card frames\n"));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert_eq!(failures(&v), vec!["receipt·calm-microcopy"]);
-    }
-
-    #[test]
-    fn a_hard_slug_in_the_receipt_is_red() {
-        let doc = design_run(&receipt(
-            "  data-ink-first: satisfied — x\n  calm-microcopy: satisfied — y\n  spacing-scale: satisfied — z\n",
-        ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(what(&v, "receipt·unknown-slug").contains("machine-checked, not receipted"));
-    }
-
-    #[test]
-    fn a_misspelled_slug_pairs_with_the_missing_one() {
-        let doc = design_run(&receipt(
-            "  data-ink-first: satisfied — x\n  calm-microcopi: satisfied — y\n",
-        ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        let msg = what(&v, "receipt·unknown-slug");
-        assert!(msg.contains("calm-microcopi") && msg.contains("calm-microcopy"), "{msg}");
-    }
-
-    #[test]
-    fn a_verdict_outside_the_enum_and_a_missing_why_each_fail() {
-        let doc = design_run(&receipt(
-            "  data-ink-first: probably-fine — x\n  calm-microcopy: satisfied\n",
-        ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(what(&v, "receipt·data-ink-first").contains("not one of the seven"));
-        assert!(what(&v, "receipt·calm-microcopy").contains("no citation"));
-    }
-
-    #[test]
-    fn malformed_receipt_yaml_reports_the_parser_position() {
-        let doc = design_run(
-            "<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n  data-ink-first: ok\n   calm-microcopy: ok\n</pre>",
-        );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        let msg = what(&v, "receipt·yaml");
-        assert!(msg.contains("line"), "serde_yaml's own position is the error text: {msg}");
-    }
-
-    #[test]
-    fn an_unreadable_rulebook_is_red_never_silently_green() {
-        let v = verify_html(&green_run());
-        assert!(v.red(), "coverage that cannot be checked must not pass");
-        assert!(what(&v, "receipt·rulebook-unreadable").contains("unverifiable"));
-    }
-
-    #[test]
-    fn an_unpinned_rulebook_version_is_red() {
-        let doc = green_run().replace("rulebook: 28f5437", "rulebook: \"\"");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(failures(&v).contains(&"receipt·rulebook".to_string()));
-    }
-
-    // W3 promised the receipt pins the rulebook blob it ran against; until now
-    // any string passed, so every verdict under a moved rulebook read as evidence
-    // while being unread.
-    #[test]
-    fn a_receipt_pinning_a_version_that_is_not_the_rulebook_on_disk_is_red() {
-        let doc = green_run().replace("rulebook: 28f5437", "rulebook: 9999999");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        let hit = what(&v, "receipt·rulebook-stale");
-        assert!(hit.contains("9999999") && hit.contains(PIN), "names both versions: {hit}");
-        assert!(hit.contains("re-judge"), "the fix is a re-run, not a re-typed sha: {hit}");
-    }
-
-    #[test]
-    fn a_full_length_pin_of_the_same_blob_resolves() {
-        let full = rules().blob.expect("the fixture rulebook is hashed");
-        let doc = green_run().replace("rulebook: 28f5437", &format!("rulebook: {full}"));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(!v.red(), "{:?}", failures(&v));
-    }
-
-    #[test]
-    fn a_pin_too_short_to_name_a_blob_is_red() {
-        let doc = green_run().replace("rulebook: 28f5437", "rulebook: 28f");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(what(&v, "receipt·rulebook").contains("too short"));
-    }
-
-    // The rulebook read but not hashable is the same shape of hole as one that
-    // could not be read at all: a pin nothing can check is not a pin.
-    #[test]
-    fn a_pin_that_cannot_be_hashed_is_red_never_silently_green() {
-        let unhashable = super::Rulebook { rules: rules_from_rulebook(RULEBOOK), blob: None };
-        let v =
-            verify_html_against(&green_run(), Some(&unhashable), Some(&vocab()), Some(&roster()));
-        assert!(what(&v, "receipt·rulebook-unverifiable").contains("nothing here can check"));
-    }
-
-    #[test]
-    fn an_unkeyed_elements_catalog_is_red() {
-        let doc = green_run().replace(" data-map", "").replace("data-key=\"section\"", "");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
-        assert!(what(&v, "elements·map").contains("specimen.js"));
-    }
-
-    // The hole run #3 fell through: data-map plus one data-key passed, so a keyed
-    // tree over an unkeyed table read as green while half the map did nothing.
-    #[test]
-    fn a_keyed_tree_over_an_unkeyed_catalog_is_red() {
-        let doc = green_run().replace("<tr data-key=\"section\">", "<tr>");
-        assert!(what(&doc_verdict(&doc), "elements·map").contains("catalog half"));
-    }
-
-    #[test]
-    fn a_keyed_catalog_under_an_unkeyed_tree_is_red() {
-        let doc = green_run().replace("<span data-key=\"section\">", "<span>");
-        assert!(what(&doc_verdict(&doc), "elements·map").contains("tree half"));
-    }
-
-    // A component drawn in the tree with no catalog row never faced the
-    // reuse-or-propose pass at all — the stage's one load-bearing question.
-    #[test]
-    fn a_placed_component_with_no_catalog_row_is_red() {
-        let doc = green_run().replace(
-            "<pre><span data-key=\"section\">Section</span></pre>",
-            "<pre><span data-key=\"section\">Section</span>\
-             <span data-key=\"notice\">Notice</span></pre>",
-        );
-        assert!(what(&doc_verdict(&doc), "elements·map").contains("notice"));
-    }
-
-    // These two judge run #3's form, not its status, and archiving it exempts
-    // the whole doc - so they would keep passing while asserting nothing.
-    fn reopened(run: &str) -> String {
-        let open = run.replace(" data-status=\"archived\"", "");
-        assert_ne!(open, run, "run is not archived - reopening it is now a silent no-op");
-        open
-    }
-
-    #[test]
-    fn the_run_3_elements_map_is_a_live_two_half_map() {
-        let doc = reopened(include_str!("../fixtures/run-3-form-calibration.html"));
-        assert!(!failures(&doc_verdict(&doc)).contains(&"elements·map".to_string()));
-    }
-
-    #[test]
     fn a_static_mockup_is_red() {
         let doc = green_run().replace("data-state-toggle=\"mock\"", "");
-        assert!(what(&doc_verdict(&doc), "mockup·state").contains("Interaction table"));
-    }
-
-    #[test]
-    fn a_catalog_row_that_states_the_trace_instead_of_a_gist_is_red() {
-        let doc = green_run().replace("<div class=\"gist\">fits the labelled-zone use</div>", "");
-        assert!(what(&doc_verdict(&doc), "elements·gist").contains("carry no gist"));
-    }
-
-    #[test]
-    fn a_use_case_row_that_collapses_nothing_is_red() {
-        let doc = green_run()
-            .replace("<details class=\"why\"><div>B → status</div></details>", "B → status");
-        assert!(what(&doc_verdict(&doc), "interaction·gist").contains("collapse nothing"));
-    }
-
-    // The regression the pattern exists for: the trace written straight into the
-    // visible column instead of behind the toggle.
-    #[test]
-    fn a_gist_that_runs_long_is_red() {
-        let doc = green_run()
-            .replace("fits the labelled-zone use", &"clause ".repeat(GIST_MAX_WORDS + 1));
-        assert!(what(&doc_verdict(&doc), "elements·gist").contains("max 14"));
-    }
-
-    #[test]
-    fn a_reuse_that_cites_only_its_use_line_is_red() {
-        let doc = green_run().replace("@avoid nesting", "");
-        assert!(what(&doc_verdict(&doc), "elements·avoid-cited").contains("cite no @avoid"));
-    }
-
-    // A propose row has no @avoid to clear - the component does not exist yet.
-    #[test]
-    fn a_propose_row_owes_no_avoid_citation() {
-        let doc =
-            green_run().replace("<td>reuse</td>", "<td>propose</td>").replace("@avoid nesting", "");
-        assert!(!failures(&doc_verdict(&doc)).contains(&"elements·avoid-cited".to_string()));
-    }
-
-    #[test]
-    fn a_tune_call_described_instead_of_drawn_is_red() {
-        let doc = green_run().replace("<pre class=\"tb\">before</pre>", "it was cramped");
-        assert!(what(&doc_verdict(&doc), "tune·drawn").contains("not drawn"));
-    }
-
-    #[test]
-    fn a_tune_call_with_no_slug_is_red() {
-        let doc = green_run().replace("<code>data-ink-first</code>", "it reads better");
-        assert!(what(&doc_verdict(&doc), "tune·drawn").contains("no soft-rule slug"));
-    }
-
-    #[test]
-    fn a_prose_tune_stage_is_red() {
-        let doc = green_run().replace(
-            "<table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
-             <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>",
-            "<p data-item=\"tune\">Before: cramped. After: roomier.</p>",
+        assert!(
+            what(&doc_verdict(&doc), "mockup·state").contains("every state the screen can reach")
         );
-        assert!(what(&doc_verdict(&doc), "tune·drawn").contains("no before/after table"));
     }
 
     // Run #3 designed a received capability away and only the cross-check caught
@@ -3366,7 +2400,7 @@ chroma_floor: 40
     #[test]
     fn a_review_item_with_no_instruction_row_is_red() {
         let doc = green_run().replace(
-            "<tr><td>copy icon only</td><td>elements · mockup</td>\
+            "<tr><td>copy icon only</td><td>mockup</td>\
              <td><code>CopyButton</code> @avoid</td></tr>",
             "<tr><td>the reviewer had notes</td></tr>",
         );
@@ -3374,16 +2408,16 @@ chroma_floor: 40
     }
 
     #[test]
-    fn a_review_row_that_names_no_stage_it_moved_is_red() {
-        let doc = green_run().replace("<td>elements · mockup</td>", "<td>several things</td>");
-        assert!(what(&doc_verdict(&doc), "review·recorded").contains("no stage"));
+    fn a_review_row_that_names_no_item_it_moved_is_red() {
+        let doc = green_run().replace("<td>mockup</td>", "<td>several things</td>");
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("no item"));
     }
 
     // An instruction the design argued and held is a first-class outcome - the
     // row exists to record that it was heard, not that it won.
     #[test]
     fn a_review_row_that_moved_nothing_says_so_and_passes() {
-        let doc = green_run().replace("<td>elements · mockup</td>", "<td>nothing</td>");
+        let doc = green_run().replace("<td>mockup</td>", "<td>nothing</td>");
         assert!(!doc_verdict(&doc).red(), "{:?}", failures(&doc_verdict(&doc)));
     }
 
@@ -3405,23 +2439,8 @@ chroma_floor: 40
         );
     }
 
-    #[test]
-    fn the_run_3_form_rules_hold_on_the_real_doc() {
-        let doc = reopened(include_str!("../fixtures/run-3-form-calibration.html"));
-        let reds = failures(&doc_verdict(&doc));
-        for check in [
-            "elements·gist",
-            "interaction·gist",
-            "tune·drawn",
-            "capabilities·answered",
-            "elements·avoid-cited",
-        ] {
-            assert!(!reds.contains(&check.to_string()), "{check} red on run #3: {reds:?}");
-        }
-    }
-
     fn doc_verdict(html: &str) -> Verdict {
-        verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster()))
+        verify_html_against(html, Some(&rules()), Some(&vocab()))
     }
 
     #[test]
@@ -3440,21 +2459,6 @@ chroma_floor: 40
         );
     }
 
-    // The trio the bundle replaces stays legal for a run that composes nothing:
-    // a theme and a state switch are all such a run needs, and W9 ④.5 migrates
-    // the flow without invalidating a run that never mounted.
-    #[test]
-    fn a_run_that_mounts_nothing_may_still_load_the_trio() {
-        let doc = green_run()
-            .replace(
-                "src=\"../../doc-assets/components/specimens.bundle.js\"></script>",
-                "src=\"../../doc-assets/components/tw-config.js\"></script>\
-                 <script src=\"../../doc-assets/components/specimen.js\" defer></script>",
-            )
-            .replace("<td>reuse</td>", "<td>propose</td>");
-        assert!(!doc_verdict(&doc).red(), "{:?}", failures(&doc_verdict(&doc)));
-    }
-
     // Both at once is the migration's own trap: the bundle imports specimen.js
     // for its side effects, so a second copy binds every toggle twice and the
     // state switch stops switching while every predicate stays green.
@@ -3466,72 +2470,6 @@ chroma_floor: 40
              <script src=\"../../doc-assets/components/specimen.js\" defer></script>",
         );
         assert!(what(&doc_verdict(&doc), "assets·specimen").contains("twice"));
-    }
-
-    // What run #4 shipped: seven components the registry already builds, drawn
-    // by hand in correct utilities, past a green gate. The verdict word in the
-    // catalog is what owes the mount.
-    #[test]
-    fn a_mockup_that_draws_a_reuse_instead_of_mounting_it_is_red() {
-        let drawn = green_run().replace(
-            RUN_MOUNT,
-            "<section class=\"border-b border-hairline px-4 py-3\">headers</section>",
-        );
-        let red = what(&doc_verdict(&drawn), "mockup·hand-drawn");
-        assert!(red.contains("Section"), "{red}");
-
-        let mounted_without_the_bundle = green_run()
-            .replace("src=\"../../doc-assets/components/specimens.bundle.js\"", "src=\"mine.js\"");
-        assert!(
-            what(&doc_verdict(&mounted_without_the_bundle), "assets·specimen").contains("composes"),
-            "a mount with nothing to mount FROM renders an empty div beside correct prose"
-        );
-    }
-
-    // A mount is a component element, not a marking: run #4's drawn imitation
-    // carried every key and class the map demanded. `<section` is the browser's
-    // tag, `<Section` is the collection's - one character, and only one of them
-    // can be hand-drawn.
-    #[test]
-    fn the_mount_is_read_as_a_component_element_not_as_a_marking() {
-        let keyed_imitation = green_run().replace(
-            RUN_MOUNT,
-            "<div data-key=\"section\" class=\"border-b border-hairline px-4 py-3\">headers</div>",
-        );
-        assert!(what(&doc_verdict(&keyed_imitation), "mockup·hand-drawn").contains("Section"));
-
-        for near_miss in ["<Sections title=\"headers\">", "<SectionBand>"] {
-            let doc = green_run().replace("<Section title=\"headers\">", near_miss);
-            assert!(
-                doc_verdict(&doc).red(),
-                "{near_miss} is a different component - a prefix match would pass it"
-            );
-        }
-    }
-
-    // Only the verdicts that claim an existing component owe one. A propose has
-    // nothing to mount yet, and `n/a` was considered and rejected - neither is
-    // in the mockup at all.
-    #[test]
-    fn only_reuse_and_extend_owe_a_mount() {
-        for verdict in ["propose", "build local", "n/a", "dissolved"] {
-            let doc =
-                green_run().replace("<td>reuse</td>", &format!("<td>{verdict}</td>")).replace(
-                    RUN_MOUNT,
-                    "<div class=\"border-b border-hairline px-4 py-3\">headers</div>",
-                );
-            assert!(
-                !failures(&doc_verdict(&doc)).contains(&"mockup·hand-drawn".to_string()),
-                "{verdict} owes no mount"
-            );
-        }
-        let extended = green_run()
-            .replace("<td>reuse</td>", "<td>extend</td>")
-            .replace(RUN_MOUNT, "<div class=\"border-b border-hairline px-4 py-3\">headers</div>");
-        assert!(
-            what(&doc_verdict(&extended), "mockup·hand-drawn").contains("Section"),
-            "an extend mounts its base - the delta is the only part it draws"
-        );
     }
 
     #[test]
@@ -3656,8 +2594,7 @@ chroma_floor: 40
     // will redo.
     #[test]
     fn an_archived_run_is_silent_but_a_ready_one_is_not() {
-        let stale = design_run(&receipt("  data-ink-first: satisfied — x\n"))
-            .replace("<div class=\"gist\">fits the labelled-zone use</div>", "");
+        let stale = green_run().replace("<p>overflow: verdicts scrolls to its own cap</p>", "");
         assert!(!failures(&doc_verdict(&stale)).is_empty(), "a ready run is checked");
         let archived = stale.replace(
             "data-artifact=\"design-run\"",
@@ -3674,11 +2611,11 @@ chroma_floor: 40
 
     // What activates the review's design dimension. The asymmetry is the point:
     // Tier-1 goes SILENT on an archived run (closed under an older contract) and
-    // Tier-3 wakes up on exactly that file, because a finished design is the only
+    // the design step wakes up on exactly that file, because a finished design is the only
     // kind there is anything independent to say about.
     #[test]
     fn only_a_closed_run_or_a_component_file_is_a_design_artifact() {
-        let run = design_run(&receipt("  data-ink-first: satisfied — x\n"));
+        let run = green_run();
         let archived = run.replace(
             "data-artifact=\"design-run\"",
             "data-artifact=\"design-run\" data-status=\"archived\"",
@@ -3953,11 +2890,11 @@ chroma_floor: 40
     }
 
     fn reds(html: &str) -> Vec<String> {
-        failures(&verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())))
+        failures(&verify_html_against(html, Some(&rules()), Some(&vocab())))
     }
 
     fn raised(html: &str) -> Vec<crate::gate::Failure> {
-        match verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())) {
+        match verify_html_against(html, Some(&rules()), Some(&vocab())) {
             Verdict::Checked { failures, .. } => failures,
             _ => panic!("expected a checked verdict"),
         }
@@ -3977,35 +2914,39 @@ chroma_floor: 40
         // family of checks for one `item·` red and quietly narrows the guard.
         let bare = doc("design-run", "", "<p>nothing tagged at all</p>");
         let broken = green_run()
-            .replace("class=\"gist\"", "class=\"gistx\"")
-            .replace("<details class=\"why\">", "<b>")
-            .replace("</details>", "</b>")
-            .replace(" data-map", "")
             .replace(" data-wire=\"none\"", "")
             .replace("data-state-toggle=\"mock\"", "static")
-            .replace("class=\"tb\"", "class=\"prose\"")
-            .replace("@avoid nesting", "a good fit")
-            .replace("src=\"../../doc-assets/components/specimen.js\"", "src=\"mine.js\"")
-            .replace("rulebook: 28f5437", "rulebook: x")
+            .replace("<p>overflow: verdicts scrolls to its own cap</p>", "")
+            .replace("specimens.bundle.js", "mine.js")
             .replace("<td>used</td>", "<td>maybe</td>")
-            .replace("<td>elements · mockup</td>", "<td>the reviewer changed things</td>")
+            .replace("<td>mockup</td>", "<td>the reviewer changed things</td>")
             .replace(".mock{color:var(--a-ink);}", ".mock{color:#f7f5f0;}");
-        let unresolved = green_run()
-            .replace("data-key=\"section\"", "data-key=\"ghost\"")
-            .replace(">Section<", ">Ghost<");
-        let off_vocabulary = mockup("<span class=\"text-pink-500 font-mono truncate\">x</span>");
-        let hard_slug = design_run(&receipt("  spacing-scale: satisfied — a hard slug\n"));
-        let prose_frame = frame_run(&format!(
-            "<div data-item=\"frame\"><p>{}</p><p>b</p><p>c</p><p>d</p><table>{}</table></div>",
-            "word ".repeat(FRAME_PROSE_WORDS + 1),
-            cells(4, FRAME_CELL_MAX + 1)
-        ));
+        let unanswered = green_run()
+            .replace("data-zone=\"verdicts\"", "data-zone=\"verdicts\" data-wire=\"collection\"")
+            .replace("<code>\u{2191}</code> / <code>\u{2193}</code> then <code>Enter</code>", "")
+            .replace("<td><code>CopyButton</code> @avoid</td>", "<td>it felt wrong</td>");
+        let off_vocabulary = mockup(
+            "<span class=\"text-pink-500 font-mono truncate rounded-xl p-[13px]\">x</span>\
+             <span class=\"text-[#ff00aa]\">tinted</span>\
+             <span class=\"uppercase text-ink\">LABEL</span>\
+             <!-- design-allow: text-pink-500 -->\
+             <div class=\"text-pink-500\">excused by nothing</div>",
+        );
+        // The cut stations, still being written: the failure a run gets for
+        // carrying what DEC-53 removed, and the one for a zone the line skipped.
+        let cut_station = green_run().replace(
+            "<p data-item=\"proposals\">band</p>",
+            "<p data-item=\"frame\">drivers</p><p data-item=\"receipt\">rulebook: x</p>\
+             <p data-item=\"proposals\">band</p>",
+        );
+        let silent_zone =
+            green_run().replace(Z, "data-zone=\"verdicts\"></div><div data-zone=\"detail\"");
 
-        let fixtures = [bare, broken, unresolved, off_vocabulary, hard_slug, prose_frame];
+        let fixtures = [bare, broken, unanswered, off_vocabulary, cut_station, silent_zone];
         let raised: Vec<crate::gate::Failure> = fixtures.iter().flat_map(|d| raised(d)).collect();
         let distinct: super::BTreeSet<&str> = raised.iter().map(|f| f.check.as_str()).collect();
         assert!(
-            distinct.len() >= 30,
+            distinct.len() >= 25,
             "the fixtures must exercise a real spread of checks, got {}: {distinct:?}",
             distinct.len()
         );
@@ -4027,7 +2968,6 @@ chroma_floor: 40
             &mockup("<span class=\"text-pink-500\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
-            Some(&roster()),
         );
         assert!(what(&v, "colour-tokens-only·off-vocabulary").contains("resolves to nothing"));
         assert!(
@@ -4042,7 +2982,6 @@ chroma_floor: 40
             &mockup("<span class=\"p-[13px]\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
-            Some(&roster()),
         );
         assert!(what(&v, "spacing-scale·off-vocabulary").contains("names 13px inline"));
     }
@@ -4055,7 +2994,6 @@ chroma_floor: 40
             &mockup("<span class=\"text-[#ff00aa]\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
-            Some(&roster()),
         );
         assert!(what(&v, "zero-accent·off-set").contains("chromatic colour outside the set"));
 
@@ -4085,7 +3023,6 @@ chroma_floor: 40
             &mockup("<div class=\"rounded-md\">x</div>"),
             Some(&rules()),
             Some(&vocab()),
-            Some(&roster()),
         );
         assert!(what(&v, "radius-tokens·off-vocabulary").contains("rounded-md"));
     }
@@ -4097,7 +3034,7 @@ chroma_floor: 40
         let legal =
             mockup("<span class=\"hover:focus-visible:text-ink !p-2 bg-canvas/wash\">x</span>");
         assert!(
-            !verify_html_against(&legal, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
+            !verify_html_against(&legal, Some(&rules()), Some(&vocab())).red(),
             "{:?}",
             reds(&legal)
         );
@@ -4105,7 +3042,7 @@ chroma_floor: 40
         let wrong_step = mockup("<span class=\"bg-canvas/loose\">x</span>");
         assert!(
             what(
-                &verify_html_against(&wrong_step, Some(&rules()), Some(&vocab()), Some(&roster())),
+                &verify_html_against(&wrong_step, Some(&rules()), Some(&vocab())),
                 "colour-tokens-only·off-vocabulary"
             )
             .contains("bg-canvas/loose"),
@@ -4121,7 +3058,7 @@ chroma_floor: 40
             "<style>.mock{color:var(--a-ink);}</style>",
             "<style>.a-measure{max-width:460px;padding:16px;font-size:12px;}</style>",
         );
-        let v = verify_html_against(&raw, Some(&rules()), Some(&vocab()), Some(&roster()));
+        let v = verify_html_against(&raw, Some(&rules()), Some(&vocab()));
         assert!(what(&v, "spacing-scale·raw-value").contains("max-width: 460px"));
         assert!(
             !failures(&v).contains(&"type-tokens-only·raw-value".to_string()),
@@ -4135,11 +3072,7 @@ chroma_floor: 40
             "<style>.mock{color:var(--a-ink);}</style>",
             "<style>.a-win{margin:0 auto;max-width:100%;padding:8px 24px;color:var(--a-ink);}</style>",
         );
-        assert!(
-            !verify_html_against(&ok, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
-            "{:?}",
-            reds(&ok)
-        );
+        assert!(!verify_html_against(&ok, Some(&rules()), Some(&vocab())).red(), "{:?}", reds(&ok));
     }
 
     // Both archived runs wrote their labels' tracking by hand - one as an
@@ -4148,7 +3081,7 @@ chroma_floor: 40
     fn an_uppercase_label_that_tracks_by_hand_is_red_on_either_surface() {
         let by_class = mockup("<div class=\"uppercase tracking-[.06em] text-ink-mute\">zone</div>");
         assert!(what(
-            &verify_html_against(&by_class, Some(&rules()), Some(&vocab()), Some(&roster())),
+            &verify_html_against(&by_class, Some(&rules()), Some(&vocab())),
             "uppercase-mute-labels·pattern"
         )
         .contains("tracking-[.06em]"));
@@ -4158,7 +3091,7 @@ chroma_floor: 40
             "<style>.a-zone-lbl{text-transform:uppercase;letter-spacing:0.05em;}</style>",
         );
         assert!(what(
-            &verify_html_against(&by_css, Some(&rules()), Some(&vocab()), Some(&roster())),
+            &verify_html_against(&by_css, Some(&rules()), Some(&vocab())),
             "uppercase-mute-labels·pattern"
         )
         .contains(".a-zone-lbl"));
@@ -4182,7 +3115,6 @@ chroma_floor: 40
             &mockup("<span class=\"text-ok\"></span>"),
             Some(&rules()),
             Some(&vocab()),
-            Some(&roster()),
         );
         assert!(what(&v, "colour-plus-text·channel").contains("says nothing"));
 
@@ -4216,7 +3148,6 @@ chroma_floor: 40
             &mockup("<span data-wire=\"uri\" class=\"text-ink\">https://x</span>"),
             Some(&rules()),
             Some(&vocab()),
-            Some(&roster()),
         );
         assert!(what(&v, "mono-for-wire-data·family").contains("does not render mono"));
 
@@ -4244,10 +3175,7 @@ chroma_floor: 40
 
     #[test]
     fn a_captured_collection_that_declares_no_ordering_is_red_and_a_screen_without_one_is_not() {
-        let collection = green_run().replace(
-            "<tr data-key=\"section\">",
-            "<tr data-key=\"section\" data-wire=\"collection\">",
-        );
+        let collection = green_run().replace(Z, COLL);
         assert!(what(&doc_verdict(&collection), "wire-order-preserved·ordering")
             .contains("no ordering"));
         assert!(
@@ -4261,12 +3189,12 @@ chroma_floor: 40
     // row declares its answer, the same way it declares which elements are wire.
     #[test]
     fn the_ordering_answer_is_a_declaration_and_prose_is_not_one() {
-        let collection = |row: &str| green_run().replace("<tr data-key=\"section\">", row);
+        let collection = |host: &str| green_run().replace(Z, host);
 
         for silent in [
-            "<tr data-key=\"section\" data-wire=\"collection\" class=\"border-b border-hairline\">",
-            "<tr data-key=\"section\" data-wire=\"collection\"><td>sorted newest first</td>",
-            "<tr data-key=\"section\" data-wire=\"collection\" data-order=\"  \">",
+            "data-wire=\"collection\" class=\"border-b border-hairline\"",
+            "data-wire=\"collection\" title=\"sorted newest first\"",
+            "data-wire=\"collection\" data-order=\"  \"",
         ] {
             assert!(
                 what(&doc_verdict(&collection(silent)), "wire-order-preserved·ordering")
@@ -4276,12 +3204,11 @@ chroma_floor: 40
         }
 
         for answered in [
-            "<tr data-key=\"section\" data-wire=\"collection\" data-order=\"wire\">",
-            "<tr data-key=\"section\" data-wire=\"collection\" data-order=\"newest first — the ring is a stack\">",
+            "data-wire=\"collection\" data-order=\"wire\"",
+            "data-wire=\"collection\" data-order=\"newest first — the ring is a stack\"",
         ] {
             assert!(
-                !reds(&collection(answered))
-                    .contains(&"wire-order-preserved·ordering".to_string()),
+                !reds(&collection(answered)).contains(&"wire-order-preserved·ordering".to_string()),
                 "a declared ordering answers the rule: {answered}"
             );
         }
@@ -4292,10 +3219,8 @@ chroma_floor: 40
     // a doc quoting the contract it is judged by is the likeliest place for it.
     #[test]
     fn an_attribute_quoted_inside_another_value_declares_nothing() {
-        let decoy_order = green_run().replace(
-            "<tr data-key=\"section\">",
-            "<tr data-key=\"section\" data-wire=\"collection\" title='say data-order=\"wire\" here'>",
-        );
+        let decoy_order =
+            green_run().replace(Z, "data-wire=\"collection\" title='say data-order=\"wire\" here'");
         assert!(
             what(&doc_verdict(&decoy_order), "wire-order-preserved·ordering")
                 .contains("no ordering"),
@@ -4366,7 +3291,7 @@ chroma_floor: 40
             "<script>const NT = 'p-[13px]'; if (a < b) render(`<span class=\"${NT}\">x</span>`);</script>",
         );
         assert!(
-            !verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
+            !verify_html_against(&doc, Some(&rules()), Some(&vocab())).red(),
             "{:?}",
             reds(&doc)
         );
@@ -4378,12 +3303,12 @@ chroma_floor: 40
     #[test]
     fn a_fault_does_not_silence_the_declarations_after_it() {
         let doc = green_run().replace(
-            "<p data-item=\"frame\">",
-            "<span title=\"oops>x</span><p data-item=\"frame\">",
+            "<table data-item=\"capabilities\">",
+            "<span title=\"oops>x</span><table data-item=\"capabilities\">",
         );
         let reported = reds(&doc);
         assert!(reported.contains(&"markup·escaped".to_string()), "{reported:?}");
-        for silenced in ["item·receipt", "item·capabilities", "item·proposals"] {
+        for silenced in ["item·keyboard", "item·capabilities", "item·proposals"] {
             assert!(!reported.contains(&silenced.to_string()), "{silenced} lost: {reported:?}");
         }
     }
@@ -4399,130 +3324,6 @@ chroma_floor: 40
         );
         let v = verify_html(&doc("wu-result", "", &commented));
         assert_eq!(failures(&v), vec!["item·evidence"]);
-    }
-
-    fn layout(sketch: &str) -> String {
-        green_run().replace(
-            "<p data-item=\"layout\">zones</p>",
-            &format!("<div data-item=\"layout\"><pre>{sketch}</pre></div>"),
-        )
-    }
-
-    #[test]
-    fn a_layout_that_never_says_what_scrolls_is_red() {
-        let silent = layout("│ A  identity\n│ B  target\n");
-        assert!(
-            what(&doc_verdict(&silent), "overflow-declared·line").contains("declares no overflow")
-        );
-    }
-
-    #[test]
-    fn a_zone_the_overflow_line_skips_is_named() {
-        let partial = layout("│ A  identity\n│ B  target\n\noverflow: A is pinned\n");
-        assert!(what(&doc_verdict(&partial), "overflow-declared·zones").contains("zone B"));
-    }
-
-    // "B–D" answers for C: a range names every zone it spans, or the rule would
-    // force a run to spell out what it already said.
-    #[test]
-    fn a_range_answers_for_the_zones_it_spans() {
-        let ranged = layout(
-            "│ A  identity\n│ B  target\n│ C  request\n│ D  response\n\noverflow: A pinned · B–D scroll as one\n",
-        );
-        assert!(
-            !reds(&ranged).contains(&"overflow-declared·zones".to_string()),
-            "{:?}",
-            reds(&ranged)
-        );
-    }
-
-    #[test]
-    fn a_catalog_row_that_declares_no_states_is_red() {
-        let blank = green_run().replace(
-            "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td>",
-            "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td><td>  </td>",
-        );
-        assert!(
-            what(&doc_verdict(&blank), "state-declarations·blank").contains("declare no states")
-        );
-    }
-
-    // The gate requirement #1 never had. Until the oracle, a catalog was checked
-    // for shape and never for truth: a reuse could name a component that does
-    // not exist and nothing said so.
-    #[test]
-    fn a_reuse_of_a_component_that_does_not_exist_is_red() {
-        let fabricated = green_run().replace("data-key=\"section\"", "data-key=\"section-band\"");
-        assert!(what(&doc_verdict(&fabricated), "elements·unresolved")
-            .contains("no component exists for: SectionBand"));
-
-        // Run #2's real defect, replayed: a reuse of a component whose contract
-        // is nowhere, beside an extend of one that was never built.
-        assert!(reds(&green_run()).iter().all(|check| check != "elements·unresolved"));
-    }
-
-    // The roster has two halves. A component whose contract moved to code is in
-    // the collection's TSDoc; one still designed and unbuilt is its design file,
-    // and citing it is not a defect (DEC-16).
-    #[test]
-    fn a_component_designed_but_not_yet_built_resolves() {
-        let designed = green_run().replace("data-key=\"section\"", "data-key=\"body-viewer\"");
-        assert!(!reds(&designed).contains(&"elements·unresolved".to_string()));
-    }
-
-    // A propose names what is deliberately absent, so it is never asked to
-    // resolve - the whole point of the verdict is that the component is owed.
-    #[test]
-    fn a_propose_may_name_a_component_that_does_not_exist() {
-        let proposed = green_run()
-            .replace("data-key=\"section\"", "data-key=\"step-list\"")
-            .replace("<td>reuse</td>", "<td>propose</td>");
-        assert!(!reds(&proposed).contains(&"elements·unresolved".to_string()));
-    }
-
-    // Silence must not read as green: five citations that resolve against
-    // nothing look exactly like five that resolve.
-    #[test]
-    fn a_run_without_the_registry_emitter_is_red() {
-        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()), None);
-        assert!(
-            what(&v, "elements·registry-unreadable").contains("cannot read the component roster")
-        );
-    }
-
-    // W4 finding 12: which rows may answer by citation was read off the VERDICT
-    // WORD, which is a guess about the registry rather than a reading of it.
-    #[test]
-    fn a_citation_resolves_against_the_registry_not_the_verdict_word() {
-        let cited = |key: &str| {
-            green_run()
-                .replace("data-key=\"section\"", &format!("data-key=\"{key}\""))
-                .replace(
-                    "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td>",
-                    "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td><td>—</td>",
-                )
-        };
-        assert!(!reds(&cited("copy-text")).contains(&"state-declarations·uncitable".to_string()));
-
-        // BodyViewer is designed, not coded - there is no TSDoc holding states
-        // for the cell to be citing.
-        assert!(what(&doc_verdict(&cited("body-viewer")), "state-declarations·uncitable")
-            .contains("cites a @states nothing declares: BodyViewer"));
-    }
-
-    // A reuse may answer by citation - its file already decided. A propose has
-    // no file to cite, so an em dash there is a component nobody has designed.
-    #[test]
-    fn a_proposed_component_cannot_answer_its_states_with_an_em_dash() {
-        let cited = green_run().replace(
-            "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td>",
-            "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td><td>—</td>",
-        );
-        assert!(!reds(&cited).contains(&"state-declarations·proposed".to_string()));
-
-        let proposed = cited.replace("<td>reuse</td>", "<td>propose</td>");
-        assert!(what(&doc_verdict(&proposed), "state-declarations·proposed")
-            .contains("no file to cite"));
     }
 
     // ─── the design files ───────────────────────────────────────────────────
@@ -4648,12 +3449,15 @@ chroma_floor: 40
     }
 
     #[test]
-    fn a_use_case_with_no_keyboard_path_is_red() {
-        let silent = green_run().replace(
-            "<details class=\"why\"><div>B → status</div></details></td></tr>",
-            "<details class=\"why\"><div>B → status</div></details></td><td> </td></tr>",
-        );
+    fn a_pointer_interaction_with_no_keyboard_path_is_red() {
+        let silent = green_run().replace(KEY, "<td> </td>");
         assert!(what(&doc_verdict(&silent), "keyboard-parity·path").contains("no keyboard path"));
+        let empty = green_run()
+            .replace(&format!("<tr><td>open a verdict</td><td>the row</td>{KEY}</tr>"), "");
+        assert!(
+            what(&doc_verdict(&empty), "keyboard-parity·path").contains("names no interaction"),
+            "an empty Keyboard item is a screen nobody asked about, not a screen with no pointer"
+        );
     }
 
     // The step's own gate: the live rulebook's hard table and this file's
@@ -4662,15 +3466,14 @@ chroma_floor: 40
     #[test]
     fn every_hard_rule_in_the_live_rulebook_carries_a_predicate() {
         let live = include_str!("../../docs/design-rules/design-rules-index.html");
-        let hard: Vec<String> =
-            rules_from_rulebook(live).into_iter().filter(|r| r.hard).map(|r| r.slug).collect();
+        let hard = rules_from_rulebook(live);
         let unchecked: Vec<&String> =
             hard.iter().filter(|s| !super::HARD_PREDICATES.contains(&s.as_str())).collect();
         assert!(unchecked.is_empty(), "hard rules with no Tier-1 predicate: {unchecked:?}");
         let orphans: Vec<&&str> =
             super::HARD_PREDICATES.iter().filter(|p| !hard.iter().any(|s| s == *p)).collect();
         assert!(orphans.is_empty(), "predicates for rules the book no longer states: {orphans:?}");
-        assert_eq!(hard.len(), 13, "the hard list is frozen at thirteen for this WU");
+        assert_eq!(hard.len(), 12, "state-declarations retired with the Elements catalog (DEC-53)");
     }
 
     // ─── the design-allow pragma ───────────────────────────────────────────
@@ -4685,7 +3488,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr] — the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(summary.contains("design-allow: 1 live suppression"), "{summary}");
@@ -4742,7 +3545,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr] -- the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
         assert!(!v.red(), "{:?}", failures(&v));
     }
 
@@ -4755,8 +3558,7 @@ chroma_floor: 40
             "grid-cols-[--tw-cols] -- the template shape comes from a custom property",
             "<div class=\"grid-cols-[--tw-cols]\">x</div>",
         );
-        let reds =
-            failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())));
+        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
@@ -4769,8 +3571,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr]--the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let reds =
-            failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())));
+        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
@@ -4810,7 +3611,7 @@ chroma_floor: 40
 
     #[test]
     fn a_vocabulary_that_cannot_be_read_is_red_never_silently_green() {
-        let v = verify_html_against(&green_run(), Some(&rules()), None, None);
+        let v = verify_html_against(&green_run(), Some(&rules()), None);
         assert!(v.red(), "five rules that cannot be checked must not pass");
         assert!(what(&v, "vocabulary·unreadable").contains("cannot pass unread"));
     }
@@ -4835,10 +3636,7 @@ chroma_floor: 40
     #[test]
     fn a_reasonless_class_carrying_its_own_dashes_is_red_and_says_which_reading_it_took() {
         let doc = pragma("grid-cols-[--tw-cols]", "<div class=\"grid-cols-[--tw-cols]\">x</div>");
-        let said = what(
-            &verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())),
-            "design-allow",
-        );
+        let said = what(&verify_html_against(&doc, Some(&rules()), Some(&vocab())), "design-allow");
         assert!(said.contains("grid-cols-[--tw-cols]` read as this class plus a reason"), "{said}");
     }
 

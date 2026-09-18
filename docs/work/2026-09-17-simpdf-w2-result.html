@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aab7b7d9f34851f0dfad13c" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPDF.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPDF.W2 — result</h1>
+      <p>DEC-53 landed in the spec, the checker, the gate, the skill and the flow e2e, in one commit. Net −1471 lines. One deviation, named in the plan before the diff.</p>
+      <div class="meta">v1 · 2026-09-17 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W2</span> · tips 48a792d · b1289be · a596079 · 1dd1b75 + this report</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome-table">
+        <thead><tr><th>#</th><th>Planned</th><th>Shipped</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>The checker demands the six surviving items and nothing else; a cut station is red by name</td>
+            <td><span class="badge auto">delivered</span> — <code>DESIGN_RUN</code> is <code>mockup · capabilities · keyboard · proposals · blocked-on · review</code>; each of the six cut stations is named by <code>item·unknown-tag</code>, asserted one at a time in a unit test and again over the real binary</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>No predicate passes vacuously — each cut station's checks deleted with it</td>
+            <td><span class="badge auto">delivered</span> — <code>check_receipt</code> · <code>check_pin</code> · <code>check_frame_density</code> · <code>check_elements_map</code> · <code>check_avoid_cited</code> · <code>check_cited_components</code> · <code>check_gist_and_collapse</code> · <code>check_tune_drawn</code> · <code>check_state_declarations</code> gone with their helpers, constants, fixtures and tests. <code>grep 'frame·\|elements·\|interaction·\|tune·\|receipt·' xtask/src/doc.rs</code> → 0</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>The three re-homed rules read the mockup doc, and each still bites</td>
+            <td><span class="badge auto">delivered</span> — <code>overflow-declared</code> reads a paragraph opening with the word — read as the unwrapped fragment it is, per the review's blocker — and every <code>data-zone</code> host; <code>wire-order-preserved</code> reads <code>data-order</code> on the mockup's collection hosts; <code>keyboard-parity</code> reads the Keyboard item. Each has its ✓ and its ✗; the overflow line additionally refuses a mount's own <code>overflow-auto</code> class as an answer</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>state-declarations</code> gone from the rulebook, <code>HARD_PREDICATES</code> and the code together</td>
+            <td><span class="badge auto">delivered</span> — the hard table has 12 rows; <code>every_hard_rule_in_the_live_rulebook_carries_a_predicate</code> green and frozen at twelve; a run prints <code>hard rules: 12/12 machine-checked (design)</code></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>No rulebook pin written, printed or checked anywhere</td>
+            <td><span class="badge auto">delivered</span> — <code>check_design_pin</code>, <code>Design.rulebook</code>, <code>DesignCarrier::rulebook()</code>, <code>Rulebook.blob</code> and <code>rulebook_blob</code> gone; <code>design-scope</code> prints artifacts and surfaces only, asserted by a unit test and by the e2e's own scope reader</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>The design step spawns nothing; the rubric is absent</td>
+            <td><span class="badge auto">delivered</span> — <code>design-rubric.md</code> deleted; the skill is §1 scope · §2 what the diff owes · §3 the accounting · §4 the verdict · §5 the note · §6 return. <code>verify-dod</code> still refuses a design-bearing tip with no note, an uncited surface and an undeclared rendered file — the existing <code>dod_gate</code> tests, green with the pin out of every fixture</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>The flow e2e exercises the path a live tip takes</td>
+            <td><span class="badge auto">delivered</span> — the six items driven one at a time; the fake reviewer writes <code>cr/v5</code> + <code>design/v1</code>; <code>grep cr/v3 xtask/tests/e2e_design_flow.rs</code> → 0. Green under <code>--features design-e2e</code>, and green under the shared <code>target/</code> (see deviations)</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>Spec, rulebook, checker output and skill state one shape</td>
+            <td><span class="badge auto">delivered</span> — <code>design-flow.html</code> rewritten under a <code>Reviewed-By</code> trailer: the mockup doc's six items, the three-step close, the hand-off as the whole design step, the <code>hash-object</code> row gone from <em>Run it</em></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="caption">16 files · +1038 −2509. <code>xtask/src/doc.rs</code> alone goes 4983 → 3646 lines.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations-table">
+        <thead><tr><th>#</th><th>From the plan</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>mockup·hand-drawn</code> is deleted, not re-homed, and <code>assets·specimen</code> becomes unconditional in its place</td>
+            <td>Its <em>owed</em> list came from the Elements catalog's <em>reuse</em>/<em>extend</em> rows, and nothing in the surviving six re-supplies it; keeping the check would have left exactly the vacuous green expected result 2 refuses. Declared in the W2 plan's callout before the diff, so a plan-level statement rather than a discovery. <strong>What this costs:</strong> <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a>'s Elements row justifies the cut partly by "the mockup already enforces reuse mechanically". After this WU the surviving mechanical force is narrower — the bundle is the only route to a component's rendering, so a run that does not load it can mount nothing — but no check counts a drawn reuse against a catalog any more. The row overstates what remains; see follow-ups</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Four T1 docs edited, where the plan's edit table named two</td>
+            <td>The plan listed <code>work-planning.html</code> and <code>component-design.html</code> as "checked, edited only where they now read false". Two more read false once the pin went: <code>workflow.html</code> documented <code>design/v1</code>'s <code>rulebook</code> field and check 9 pinning the blob, and <code>documentation-system.html</code> described the rulebook as hard/soft with slugs cited by receipts. Both are the distillation rule, not new scope</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>The soft half of <code>rules_from_rulebook</code> removed, which the plan did not itemise</td>
+            <td>The parser still read a <code>soft-rules-table</code> W1 had deleted, so <code>Rule.hard</code> was always true — a branch no rulebook could take. It is receipt machinery, so it went with the receipt: <code>rules_from_rulebook</code> returns the hard slugs and <code>Rule</code> is gone</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence-table">
+        <thead><tr><th>What</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>The plan</td><td><a href="2026-09-17-simpdf-w2-plan.html">2026-09-17-simpdf-w2-plan.html</a> · commit 8c8e749</td></tr>
+          <tr><td>The landing</td><td>commit 48a792d — 16 files, <code>Reviewed-By: key vuluu</code></td></tr>
+          <tr><td>Unit</td><td><code>xtask/src/doc.rs</code> · <code>xtask/src/lib.rs</code> — 107 at the tip. The six-item checklist and each cut station named; the three re-homed predicates' ✓ and ✗; the tally with no receipt and the line an unreadable rulebook prints instead; <code>design-scope</code> naming no blob</td></tr>
+          <tr><td>Integration</td><td><code>xtask/tests/verify_doc.rs</code> · <code>xtask/tests/dod_gate.rs</code> — 112 at the tip. A run in the surviving shape green through the real binary; a run carrying the cut stations red by name; a kept item silently dropped red too; the gate's refusals with the pin out of every fixture note</td></tr>
+          <tr><td>E2e</td><td><code>xtask/tests/e2e_design_flow.rs</code> — 4 under <code>--features design-e2e</code></td></tr>
+          <tr><td>Tree</td><td><code>cargo xtask gate0</code> green — fmt · clippy <code>--workspace --all-targets --all-features -D warnings</code> · the whole suite</td></tr>
+          <tr><td>Doc form</td><td><code>cargo xtask verify-doc</code> green on all 63 docs in the tree</td></tr>
+          <tr><td>Notes</td><td><code>test/v2</code> + <code>doc/v1</code> written by <code>cargo xtask notes write wu</code> from one judgment</td></tr>
+          <tr><td>Design step</td><td>not owed — <code>cargo xtask design-scope epic/simpdf HEAD</code>: <em>no design artifact in the range</em>; the diff renders no file under <code>ui/src/</code></td></tr>
+          <tr><td>Review</td><td data-c="review-cell">the code-review skill over <code>epic/simpdf..wu/simpdf/landing</code>, three finders per round (correctness · efficiency · altitude — four modules). Rounds 1–4 all <strong>FAIL</strong>: an important (b1289be), then four <strong>blockers</strong> and an important, every one of them in <code>check_overflow_declared</code> (a596079, 1dd1b75, 13f7c6a). Round 5 returned five candidates and <strong>every one was refuted</strong> — <code>cr/v5</code> PASS on 13f7c6a, bound to <code>diff_sha256 58246d3f…</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="review">What the review found</h2>
+    <p>Five rounds. Four red, and every real defect in one function: <code>check_overflow_declared</code>, the predicate this WU re-homed from an ASCII sketch onto free-text markup. Four blockers and an important, in both directions — refusing compliant runs and passing non-compliant ones. The deletion this WU is mostly made of produced nothing; the one substrate swap produced all of it. A round-4 candidate arguing the prose form itself was the mistake was <em>refuted</em>: the rulebook and the flow spec require a human-readable line, because it says who owns a cap, which no attribute carries. The form was right; every reading of it was wrong until it read the tokeniser. Round 5 is the shape of a finished predicate: five candidates, all of them mechanically <em>true</em> and reproduced by their verifiers, and all five refuted anyway — three because no author in this tree produces the input they need, two because they name code this WU never touched. The fleet stopped finding defects and started finding the boundary of the codebase.</p>
+    <table data-c="review-table">
+      <thead><tr><th>Finding</th><th>Verdict</th><th>Disposition</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>5 refuted</strong> · round 5 — two proposed blockers (<code>paragraphs</code> drops an uppercase <code>&lt;P&gt;</code>; <code>data-zone</code> values arrive entity-encoded while the paragraph text arrives decoded) and three importants (<code>element_text</code> is a pure wrapper over <code>fragment_text</code>; <code>elements_of</code> still reads <code>&lt;track&gt;</code> as a <code>&lt;tr&gt;</code>; <code>DESIGN_RUN</code>'s <code>"review"</code> is matched by unbounded <code>.contains()</code>)</td>
+          <td>every mechanism reproduced against the real checker — and every claim refuted on the two tests that decide a finding rather than a bug. <em>Reachability</em>: no HTML file in this tree has ever used an uppercase tag, the flow spec spells the template lowercase, every real zone name doubles as a DOM <code>id</code> and so is a plain slug, and <code>&lt;track&gt;</code> appears nowhere in the project. <em>Scope</em>: <code>elements_of</code>, <code>data_rows</code> and both <code>.contains()</code> sites are byte-identical to BASE, and <code>DESIGN_RUN</code> already carried <code>"review"</code> — this WU <em>removed</em> tr-consuming callers and dropped six more collision-prone run items, narrowing the surface it was accused of widening</td>
+          <td>none fixed, none waived — nothing survived to disposition. The <code>element_text</code> claim was refuted on a third ground worth keeping: collapsing the wrapper would trade a named precondition for an algebraic coincidence, and round 2's blocker was precisely a reader applied to the wrong kind of span</td>
+        </tr>
+        <tr>
+          <td><strong>2 blockers + 1 important</strong> · round 4 — the overflow paragraph was located by scanning for the string <code>&lt;p</code>: it read <code>&lt;pre&gt;</code> and <code>&lt;progress&gt;</code> as paragraphs and then abandoned the real one (false red); it read the mount script's body as markup, so a line commented out inside the script counted as a declaration (false green); and it accepted any text merely <em>starting</em> with "overflow", so "Overflowing verdicts are capped elsewhere" made a whole run green (false green)</td>
+          <td>all three verified and reproduced against the real checker. Two more candidates refuted: that the prose form itself was the error, and that a word-boundary helper duplicated an unrelated CSS scanner</td>
+          <td>fixed together — the paragraph is now located by the tokeniser, which matches the tag name exactly and treats a script body as opaque, and the line must open with <code>overflow:</code> as the spec's own template writes it. One regression test covers all three routes</td>
+        </tr>
+        <tr>
+          <td><strong>nit</strong> · round 4 — <code>rulebook_slugs</code>' comment still said it returns slugs "hard and soft"</td>
+          <td>verified — no soft table remains in the code or the live rulebook</td>
+          <td>fixed</td>
+        </tr>
+        <tr>
+          <td><strong>blocker</strong> · round 3 — <code>check_overflow_declared</code> counted a <code>data-zone</code> as declared whenever its name appeared as a plain substring of the overflow line</td>
+          <td>verified and reproduced: <code>data-zone="tab"</code> satisfied by the word "table", <code>"log"</code> by "catalog". A false <em>green</em> — the gate accepting a mockup whose zone overflow nobody declared, which is the one thing this rule exists to refuse. Introduced here: the old sketch used single-letter ids compared exactly</td>
+          <td>fixed in 1dd1b75 — <code>names_zone</code> matches on word boundaries, counting <code>-</code> and <code>_</code> inside a word. Regression test written failing first</td>
+        </tr>
+        <tr>
+          <td><strong>blocker</strong> · round 2 — <code>check_overflow_declared</code> read the overflow paragraph with a reader that skips an opening tag, but <code>elements_of</code> had already stripped it, so everything before the first <code>&gt;</code> in the body was eaten</td>
+          <td>verified and reproduced: an overflow line naming its zone in <code>&lt;code&gt;</code> — the idiom this codebase uses for every other identifier, and one nothing in the spec forbids — was read as <em>no overflow line at all</em>. A hard rule refusing the run that obeyed it. Introduced by this WU: the old sketch-parsing version had no such path</td>
+          <td>fixed in a596079 at the root — the reader was doing two jobs and only the fragment one has callers left. Regression test written failing first; <code>check_keyboard_parity</code>'s identical (harmless) misuse moved over with it</td>
+        </tr>
+        <tr>
+          <td><strong>important</strong> · round 1 — <code>xtask/src/lib.rs</code>: the <code>USAGE</code> line for <code>design-scope</code> still promised "the rulebook pin it writes" after this WU removed exactly that output</td>
+          <td>verified — the only place left in the tree asserting the command writes a pin, and the first thing a reader meets</td>
+          <td>fixed in b1289be, with a regression test binding the line to what the command prints, written failing first</td>
+        </tr>
+        <tr>
+          <td><strong>nit</strong> · round 1 — <code>xtask/src/doc.rs</code>: the comment above <code>offset_in</code> cited <code>check_elements_map</code>, deleted by this WU</td>
+          <td>verified — the function beneath it is still live and called; only the illustrative rationale was stale</td>
+          <td>fixed in b1289be</td>
+        </tr>
+        <tr>
+          <td><strong>refuted</strong> · round 2 — three <code>Tier-3</code> comments in <code>gate.rs</code> name a tier DEC-53 retired, while this WU reworded neighbouring prose in the same file</td>
+          <td>refuted as filed: two of the three sit in untouched test functions with no adjacent edit, so the "worsened here" reasoning fails for them. The third, inside <code>check_citation</code>, is real at nit level</td>
+          <td>the one real site fixed in a596079 and recorded as a nit; the other two left as the pre-existing drift they are</td>
+        </tr>
+        <tr>
+          <td><strong>refuted</strong> · round 1 — <code>check_overflow_declared</code> passes vacuously when a mockup carries no <code>data-zone</code> at all: one boilerplate overflow paragraph satisfies the rule</td>
+          <td>the behaviour is real and was reproduced, but it <em>predates</em> this diff — the old predicate parsed zones out of an ASCII sketch and had the same hole, and returned with no failure at all when the sketch was absent. This WU is strictly tighter, so the gap is carried forward, not introduced</td>
+          <td>dropped from the verdict; recorded as a follow-up below rather than lost</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table data-c="distillation-table">
+        <thead><tr><th>Tier</th><th>Doc</th><th>Now carries</th></tr></thead>
+        <tbody>
+          <tr><td>T1</td><td><a href="../design-flow.html">design-flow.html</a></td><td>the surviving sequence: the registry read, the mockup doc's six items, the three-step close, the hand-off accounting as the whole design step</td></tr>
+          <tr><td>T1</td><td><a href="../workflow.html">workflow.html</a></td><td><code>design/v1</code> carries the accounting the verdict follows and no rulebook field; check 9 pins nothing</td></tr>
+          <tr><td>T1</td><td><a href="../work-planning.html">work-planning.html</a> · <a href="../component-design.html">component-design.html</a> · <a href="../documentation-system.html">documentation-system.html</a></td><td>what the checker adds to a run's item list; a component is named by a run's proposals; the KB is rules carried by their predicates plus the vocabularies</td></tr>
+          <tr><td>T2</td><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>twelve hard rules — the retired row left with its predicate</td></tr>
+          <tr><td>T4</td><td><code>xtask/src/doc.rs</code> · <code>gate.rs</code> · <code>lib.rs</code> · <code>notes.rs</code> · the three test files</td><td>the item list, the twelve predicates, the pin's absence, the current note carriers</td></tr>
+          <tr><td>infra</td><td><code>.claude/skills/design-review/SKILL.md</code></td><td>scope · accounting · verdict · note; the finder's sections and the rubric deleted</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups-table">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a>'s Elements row claims the mockup "already enforces reuse mechanically" via <code>mockup·hand-drawn</code>. That check died with the catalog it read (deviation 1); the row should say what actually survives — the bundle as the only route to a component's rendering</td><td>the epic's close, as a records chore against the amended record</td></tr>
+          <tr><td>The roadmap row struck, five inherited items re-homed as their own row, and the next UI epic's obligation to record its first run's clock and tokens written beside them</td><td>the epic's close — E-SIMPDF, already planned</td></tr>
+          <tr><td>The shared <code>target/</code> leak the epic plan reserved an escape for (open question 1) did not fire: all four e2e tests pass under the default <code>CARGO_TARGET_DIR</code>. The inherited backlog row stands untouched</td><td>nobody — recorded so the escape is not re-bought without new evidence</td></tr>
+          <tr><td><code>overflow-declared</code> is elective: a mockup that marks no <code>data-zone</code> satisfies it with one boilerplate line. <code>mono-for-wire-data</code> solved the same author-declares-the-subject problem with a mandatory <em>mark every one, or say <code>none</code> once</em>; <code>overflow-declared</code> never got that guard, in either the old shape or this one. Refuted here as pre-existing, so it belongs on the deferred backlog, not in this WU</td><td>a backlog row — the first UI epic to run the new flow is where it would bite</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

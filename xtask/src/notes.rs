@@ -193,16 +193,15 @@ impl Candidates {
     }
 }
 
-/// Tier-3's verdict: what the design dimension judged, the rulebook blob it
-/// judged against, and the outcome. Its absence on a design-bearing diff is the
-/// silence the schema bump exists to make loud — a PASS where nobody looked at
-/// the design must not read like one where somebody did.
+/// The design step's verdict: what it judged and the outcome. Its absence on a
+/// design-bearing diff is the silence the schema bump exists to make loud — a
+/// PASS where nobody looked at the design must not read like one where somebody
+/// did. No rulebook field: the verdict follows the hand-off accounting alone,
+/// and there is nothing left to pin (DEC-53).
 #[derive(Deserialize)]
 pub struct Design {
     #[serde(default)]
     pub artifacts: Vec<String>,
-    #[serde(default)]
-    pub rulebook: String,
     /// Absent when the section carries no judgment — a build's citation or an
     /// epic's drop record. A design-bearing diff is refused without it.
     #[serde(default)]
@@ -305,10 +304,6 @@ impl<'a> DesignCarrier<'a> {
 
     pub fn artifacts(&self) -> &'a [String] {
         self.design().artifacts.as_slice()
-    }
-
-    pub fn rulebook(&self) -> &'a str {
-        &self.design().rulebook
     }
 
     pub fn verdict(&self) -> &'a str {
@@ -854,7 +849,6 @@ base: aaaa
 diff_sha256: cccc
 design:
   artifacts: [docs/work/2026-08-13-dflow-run-4.html]
-  rulebook: 796c547
   findings: { found: 3, verified: 1, waived: 0 }
   verdict: PASS
 verdict: PASS
@@ -863,7 +857,6 @@ verdict: PASS
         let design = note.design.expect("the design section");
         let design = DesignCarrier::Section(&design);
         assert_eq!(design.verdict(), "PASS");
-        assert_eq!(design.rulebook(), "796c547");
         assert!(design.judged("docs/work/2026-08-13-dflow-run-4.html"));
         assert!(!design.judged("docs/work/components/button.html"), "unlisted is unjudged");
 
@@ -953,7 +946,6 @@ base: aaaa
 design_sha256: cccc
 verdict: PASS
 artifacts: [docs/work/2026-08-13-dflow-run-4.html]
-rulebook: 796c547
 implements:
   - path: docs/work/components/status-pill.html
     blob: 28f5437
@@ -966,7 +958,6 @@ undesigned:
         let carrier = DesignCarrier::Note(&note);
         assert_eq!(note.design_sha256, "cccc");
         assert_eq!(carrier.verdict(), "PASS");
-        assert_eq!(carrier.rulebook(), "796c547");
         assert!(carrier.judged("docs/work/2026-08-13-dflow-run-4.html"));
         assert_eq!(carrier.built().collect::<Vec<_>>(), vec!["ui/src/components/StatusPill.tsx"]);
         assert!(carrier.claims("ui/src/FlowDetail.tsx"));
