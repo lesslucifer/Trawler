@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU E-SIMPDF.W3 -> epic/simpdf (round 3 of 3)"
+epic: E-SIMPDF
+wu: E-SIMPDF.W3
+branch: wu/simpdf/hook-lint-cache
+base: bfdc345ab43d08a67fdcb7d377cf1724ed6e8408
+head: 42e55f25e7f06ed831114bf603bb43b166f1069a
+diff_sha256: 87eb3edb1cdf0a1ce3df19cdc0d4cc3659a8fd28f9181e1d85d4d9d5623fe906
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  shards: 1
+  candidates: { blocker: 0, important: 1, nit: 0 }
+  stage_seconds: { gate0: 29, finders: 445, verifiers: 194, total: 639 }
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+nits:
+  - finding: "push_entry hashes a symlink's link text, never the referenced target's bytes"
+    waived: "Every tracked symlink here resolves to an independently tracked path, so the aggregate key still moves when their content does - demonstrated by the verifier. It would bite only on a symlink pointing at a build input outside the tracked set, which is not this repo's convention."
+  - finding: "build_inputs spawned two git ls-files processes where one listing suffices"
+    fixed: "One `ls-files -z --cached --others --exclude-standard`; the combined call was verified to return a byte-identical path set."
+  - finding: "lint_cache_path was pub with no caller outside its module"
+    fixed: "Round 1 made it private; round 2 gave it the caller that earns the visibility - xtask/tests/lint_spawn.rs now names the marker instead of restating target/.lint-green, which would have gone stale silently."
+  - finding: "lint_spawn.rs's hermetic() is another per-suite copy of the test git-environment rule"
+    waived: "Accepted tracked debt, not new drift: docs/backlog/roadmap.html records the per-suite temp-repo harness duplication with the disposition 'fold into whichever WU next opens two of them', and DEC-2 names the local scrub copies in the hook-test helpers as a deliberate choice. The verifier also found the claim undercounted the pre-existing copies, and that extraction would need a tooling->core dev-dependency across two workspace packages."
+verdict: PASS
+date: 2026-09-18
