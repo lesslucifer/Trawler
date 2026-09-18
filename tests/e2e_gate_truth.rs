@@ -167,12 +167,11 @@ fn the_four_fixes_hold_at_one_seam() {
         );
     };
 
-    // The design dimension judges the retired design at its last state (DEC-29),
-    // pinned against the rulebook the tip ships - the section every citation
-    // below sits under.
-    let rulebook_pin = repo.blob(&tip, RULEBOOK);
+    // The design step judges the retired design at its last state (DEC-29) - the
+    // section every citation below sits under. No rulebook pin: DEC-53 removed
+    // the field and the check that read it.
     let judged = format!(
-        "design:\n  artifacts: [{DESIGN}]\n  rulebook: {rulebook_pin}\n  \
+        "design:\n  artifacts: [{DESIGN}]\n  \
          findings: {{ found: 0, verified: 0, waived: 0 }}\n  verdict: PASS\n"
     );
 

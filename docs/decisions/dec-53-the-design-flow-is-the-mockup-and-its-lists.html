@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aab5e179f34851f0dfad109">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-53: the design flow is the mockup and its lists</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-53 — the design flow is the mockup and its lists</h1>
+      <p>Six staged artifacts, two loop-backs, a five-step close, a 17-row receipt and an adversarial finder were built so an agent would think before it drew. Fifteen closed runs say the human reviewing the mockup was the gate every time, and every artifact upstream of the mockup was re-edited after each round to stay consistent with it. What survives is the mockup and the lists that record what the screen was handed, what keys drive it, what it proposes, what blocked it and what the human said.</p>
+      <div class="meta">Decided 2026-09-17 · E-SIMPDF.W1 · active · amends <a href="dec-14-design-rules-kb.html">DEC-14</a>, <a href="dec-15-design-run-enforcement.html">DEC-15</a>, <a href="dec-24-design-review-dimension.html">DEC-24</a>, <a href="dec-34-fixed-height-rows-truncate.html">DEC-34</a>, <a href="dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a> · supersedes <a href="dec-40-the-predecessor-is-the-checklist.html">DEC-40</a> · the corpus scan it rests on is the E-SIMPDF plan v2.2 (T3, archived at the epic's close)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>A design run is one mockup doc: the Given list, the mounted stateful mockup, a
+      Keyboard list, proposals, blocked-on and review — mounted from the registry, judged by Tier-1
+      on every write and by the human at the mockup, closed in three steps, and handed to the build by
+      the accounting alone.</strong> The Frame, Layout, Elements and Interaction stages, the Tune
+      table, both loop-backs, the receipt, the soft-rules table, the rulebook pin, the predecessor
+      walk and the Tier-3 finder are cut. No rule is added, no slug renamed, no mockup-bound
+      predicate relaxed. This is a scope call, not a cost optimisation: the numbers below are the
+      record that the cut stations never carried the quality — the review rows did — kept beside each
+      cut so it cannot be re-bought without new evidence (<a href="dec-50-the-fleet-carries-only-the-dimensions-that-pay.html">DEC-50</a>'s habit).</p>
+    </div>
+
+    <h2 id="shape">The shape, before and after</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph before["before — six stages · five lists · a five-step close · a finder"]
+    direction LR
+    S1[["registry + rulebook pin"]] --> F[Frame] --> L[Layout] --> E[Elements] --> I[Interaction] --> D["Draft mockup"] --> T[Tune] --> R[["receipt + 4 lists"]] --> C[["close ①–⑤"]] --> T3[["Tier-3 finder + verifiers"]]
+    E -. loop-back .-> L
+    T -. loop-back .-> L
+  end
+  subgraph after["after — the mockup doc"]
+    direction LR
+    S2[["registry"]] --> M["mockup — mounted · stateful"] --> LL[["Given · Keyboard · proposals · blocked-on · review"]] --> CC[["close: review · green · archive"]] --> HO[["hand-off accounting"]]
+  end
+      </pre>
+      <div class="caption">The human reviews the mockup in both. Only the second stops paying for artifacts that the review re-edits.</div>
+    </div>
+
+    <h2 id="stations">Every station, its corpus row, and the call</h2>
+    <p>Numbers from each run's last state in git history: 14 of 16 named runs recovered, receipts parsed for 9, "moved" = word hits in the review item's second column. A heuristic pass recorded so every call can be checked, not a bill — no clock or token count was ever recorded for a design round.</p>
+    <table data-c="stations-table">
+      <thead><tr><th>Station</th><th>What the corpus shows</th><th>Call</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Substrate</strong> — registry index + rulebook pin</td><td>the registry read is cheap and the mockup cannot mount without it; the pin exists for the receipt</td><td><span class="badge auto">keep</span> the registry read · <span class="badge approval">cut</span> the pin, everywhere it is written or checked</td></tr>
+        <tr><td><strong>1 · Frame</strong> — driver table + Given / Not given</td><td>moved in 15 of 83 review rows, mostly to stay consistent. Its Given line feeds the capabilities list, which caught the finder's most repeated verified catch: an input marked <em>deliberately unused</em> for a reason the shipped code disproved (runs 3 and 8)</td><td><span class="badge approval">cut</span> the table · <span class="badge auto">keep</span> Given as the first list on the mockup doc</td></tr>
+        <tr><td><strong>2 · Layout</strong> — ASCII zone sketch + overflow line</td><td>the Tune → Layout loop-back fired in 8 of 14 runs; every firing was the sketch going stale once the mockup existed</td><td><span class="badge approval">cut</span> — the mockup is the layout; the overflow line moves under it</td></tr>
+        <tr><td><strong>3 · Elements</strong> — tiered catalog, registry verdict per row, @use/@avoid trace</td><td>30 KB of the last run's 106, three times the mockup; moved in 31 of 83 rows. Its two real outputs are the proposals list and the reuse warrant, and the mockup enforces reuse by construction: the specimen bundle is the only route to a component's rendering, so a run that does not load it can mount nothing (<a href="#hand-drawn-correction">what this claimed at first</a>)</td><td><span class="badge approval">cut</span> the catalog · <span class="badge auto">keep</span> proposals</td></tr>
+        <tr><td><strong>4 · Interaction</strong> — use-case table, zone → delta, keyboard column</td><td>hosts <code>keyboard-parity</code>; a key path is the one thing a static mockup cannot show</td><td><span class="badge approval">cut</span> the table · <span class="badge auto">keep</span> <code>keyboard-parity</code> on a Keyboard item of its own</td></tr>
+        <tr><td><strong>5 · Draft mockup</strong> — mounted real components, state toggle, zero colour literals</td><td>11 KB of 106; the artifact the human reviews; 9 of the 13 hard rules read it</td><td><span class="badge auto">keep</span></td></tr>
+        <tr><td><strong>6 · Tune</strong> — drawn before/after, a slug per row</td><td>5 rows in the last run, its reasoning block empty. It is what the human does when they look at the mockup</td><td><span class="badge approval">cut</span></td></tr>
+        <tr><td><strong>Two loop-backs</strong> — Elements → Layout · Tune → Layout</td><td>every recorded firing re-edited an earlier artifact to match a later one</td><td><span class="badge approval">gone</span> with the stages</td></tr>
+        <tr><td><strong>Close</strong> — ① walk the predecessor · ② re-pin · ③ review item · ④ green · ⑤ archive</td><td>① is a second pass over the superseded run that no reader consumes once the finder is gone; ② is the receipt's</td><td><span class="badge auto">keep</span> as three steps: review · green · archive · <span class="badge approval">retire</span> ① and ②</td></tr>
+        <tr><td><strong>Receipt</strong> — forced coverage of every soft slug, 17 rows</td><td>9 parsed receipts, 147 verdicts: 120 satisfied · 21 inherited · 5 satisfied-via-proposal · 1 n/a · <strong>0 violated · 0 blocked</strong>. Two Tier-3 notes say no false <em>satisfied</em> was found. A self-claim that has never said no carries no information</td><td><span class="badge approval">cut</span> — the soft-rules table goes with it; hard rules and vocabularies stay</td></tr>
+        <tr><td><strong>4 lists</strong> — capabilities · proposals · blocked-on · review</td><td>proposals and blocked-on feed later epics; capabilities answers Given; review is the human's feedback logged — 83 rows across the corpus, 30 in one run</td><td><span class="badge auto">keep</span> all four, short</td></tr>
+        <tr><td><strong>3 tiers</strong> — verify-doc · receipt · adversarial finder</td><td>32 Tier-3 rounds judged an artifact: 95 found · 31 verified · 4 waived, none a false soft-rule verdict. The repo holds 0 <code>design/v1</code> notes; the new skill never ran</td><td><span class="badge auto">keep</span> Tier-1 — 12 of 13 checks, nine on the mockup and three re-homed beside it — and the items · <span class="badge approval">cut</span> Tier-2 · <span class="badge approval">drop</span> the Tier-3 finder</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="hand-drawn-correction" id="hand-drawn-correction">
+      <p><strong>Corrected at the epic's close: <code>mockup·hand-drawn</code> did not survive the cut it was cited in.</strong>
+      The Elements row above first read "the mockup already enforces reuse mechanically: <code>mockup·hand-drawn</code> refuses
+      any component not mounted from <code>window.Trawler</code>". E-SIMPDF.W2 deleted that check rather than re-homing it —
+      its owed list was built from the catalog's reuse/extend rows, and none of the six surviving items re-supplies one, so
+      keeping it would have left exactly the vacuous green this record refuses. <code>assets·specimen</code> became
+      unconditional in its place.</p>
+      <p>What remains is narrower and still mechanical: the bundle is the only route to a component's rendering, so nothing
+      unbuilt can be mounted. What is gone is the count — no check measures a drawn reuse against a catalog any more. The cut
+      stands on the corpus row beside it; this sentence is the part that was wrong.</p>
+    </div>
+
+    <h2 id="mockup-doc">The mockup doc — six items, what reads each</h2>
+    <table data-c="items-table">
+      <thead><tr><th>Item</th><th>One row per…</th><th>Read by</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Given</strong> — <code>data-item="capabilities"</code>, the name kept</td><td>input the screen receives from the app and did not design — a prop, callback or datum — answered <em>used · deliberately unused · blocked</em>, with where or why; <em>Not given</em> names what the screen may not assume</td><td><code>capabilities·answered</code>, reading the list itself; the truth of a <em>deliberately unused</em> row is the human's to read</td></tr>
+        <tr><td><strong>Mockup</strong> — mounted, stateful, zero colour literals</td><td>the screen, every state reachable from the toggle; one overflow line under it naming every unbounded zone; <code>data-wire</code> on payload elements and <code>data-order</code> on collection hosts</td><td>the nine mockup predicates, plus <code>overflow-declared</code> and <code>wire-order-preserved</code> re-homed onto its plain HTML; the human</td></tr>
+        <tr><td><strong>Keyboard</strong> — new, small</td><td>pointer interaction, with its key path from the <a href="../design-rules/design-rules-index.html#keyboard-conventions">conventions</a></td><td><code>keyboard-parity</code></td></tr>
+        <tr><td><strong>Proposals</strong></td><td>entry the design needed and the vocabulary lacked — kind · what · why nothing fits · owner</td><td>the rulebook's reuse-or-propose feed; later epics</td></tr>
+        <tr><td><strong>Blocked-on</strong></td><td>decision the design could not make because something upstream is missing</td><td>later epics</td></tr>
+        <tr><td><strong>Review</strong></td><td>reviewer instruction acted on — what was said · what moved · the contract hit (a slug, a component's @use/@avoid, a record, or taste). Also where <a href="dec-34-fixed-height-rows-truncate.html">DEC-34</a>'s truncation escape is declared</td><td><code>review·recorded</code>; the run's own record of the human's calls</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="hard-rules">The four stage-bound hard rules</h2>
+    <table data-c="hard-rules-table">
+      <thead><tr><th>Slug</th><th>Checked today at</th><th>Fate</th></tr></thead>
+      <tbody>
+        <tr><td><code>overflow-declared</code></td><td>Layout — one overflow line under the sketch</td><td><span class="badge auto">re-homed</span> — one overflow line under the mockup</td></tr>
+        <tr><td><code>wire-order-preserved</code></td><td>Elements — <code>data-order</code> per catalog row marked <code>data-wire="collection"</code></td><td><span class="badge auto">re-homed</span> — <code>data-order</code> on the zone host elements, plain HTML the checker reads; the mounted-JSX blind spot stays its own roadmap row</td></tr>
+        <tr><td><code>state-declarations</code></td><td>Elements — a non-empty States cell per catalog row</td><td><span class="badge approval">retired</span> — a mounted component owns its states in its TSDoc (<a href="dec-16-design-file-retirement.html">DEC-16</a>); the run never re-declares what a component owns, and with no soft table there is nowhere to retag it</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>Interaction — a key path per pointer use-case row</td><td><span class="badge auto">re-homed</span> — the Keyboard item, one row per pointer interaction; the Interaction table was too large to keep for one column's sake</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="retired-row-sequencing">
+      <p><strong>The retired row leaves the table with its predicate, not before.</strong> The checker's drift alarm (<code>xtask/src/doc.rs</code>, <em>every hard rule in the live rulebook carries a predicate</em>) reads the live rulebook and refuses a predicate whose rule the book no longer states. So this record's WU marks the row <em>retired — DEC-53</em> — the rulebook's deprecate-with-a-pointer rule for a slug past runs cited — and E-SIMPDF.W2 deletes row and predicate in one commit. Until then the checker still reads the cut stages; the record leads the code by one Working Unit, by design.</p>
+    </div>
+
+    <h2 id="rulebook">How much of the rulebook goes</h2>
+    <table data-c="rulebook-layers">
+      <thead><tr><th>Layer</th><th>Consumed after the cut by</th><th>Call</th></tr></thead>
+      <tbody>
+        <tr><td>the 17 soft rules</td><td>nothing mechanical — the agent's reading before it draws, or the human's taste, which is the owner's model</td><td><span class="badge approval">removed</span> whole; a review row may still cite a hard slug or a component contract</td></tr>
+        <tr><td>the 13 hard rules</td><td><code>verify-doc</code>'s predicates on the mockup doc and the <code>design/vocabulary</code> ESLint rule over <code>ui/src/</code>; the oracle text the spec names when a check reds</td><td><span class="badge auto">stay</span> — one row retired as above</td></tr>
+        <tr><td>the vocabularies — tokens, chromatic meanings, lexicon, keyboard conventions, the sanctioned escapes</td><td>every screen and component that must agree with the others</td><td><span class="badge auto">stay</span> — <a href="dec-17-closed-vocabulary.html">DEC-17</a> untouched</td></tr>
+        <tr><td>the receipt obligation and the pin</td><td>nobody — no receipt, no coverage list, nothing to pin against</td><td><span class="badge approval">removed</span> from the rulebook's enforcement diagram, lifecycle and growth tables; from the note, the gate and <code>design-scope</code> in W2</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="amends">What this record amends or supersedes</h2>
+    <table data-c="amends-table">
+      <thead><tr><th>Record</th><th>Clause</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td><a href="dec-14-design-rules-kb.html">DEC-14</a></td><td>the rulebook is "the coverage list the design harness checks receipts against"; the receipt pins its blob</td><td>the rulebook is the hard rules and the vocabularies; no receipt, no coverage list, no pin. Its home, slug immutability and growth wiring stand</td></tr>
+        <tr><td><a href="dec-15-design-run-enforcement.html">DEC-15</a></td><td>three tiers — mechanical · self-reflex receipt · adversarial review — "all complete"</td><td>one tier and an accounting step. Tier-1 keeps twelve predicates on the mockup doc; Tier-2's receipt and Tier-3's finder are retired. "A silence reads as a pass" still holds where it bound the gate</td></tr>
+        <tr><td><a href="dec-24-design-review-dimension.html">DEC-24</a></td><td>Tier-3 judges soft rules and the warrants on the artifact; a design-bearing diff is never docs-only-exempt</td><td>no finder judges the artifact — the human did, at the mockup. The design step is <code>design-scope</code>, the hand-off accounting and the note, i.e. §6–§7 of the skill; its §3–§5 go, with the rubric. The exemption rule stands: a design-bearing diff still owes the note</td></tr>
+        <tr><td><a href="dec-25-design-build-handoff.html">DEC-25</a></td><td>the three-half hand-off; nothing judges the build against its design</td><td>unchanged — the accounting is now the whole design step</td></tr>
+        <tr><td><a href="dec-34-fixed-height-rows-truncate.html">DEC-34</a></td><td>the truncation escape is declared on the receipt, never detected</td><td>declared on the mockup doc's review item — the constraint, the visible cut, the route to the full value — never detected</td></tr>
+        <tr><td><a href="dec-40-the-predecessor-is-the-checklist.html">DEC-40</a></td><td>a re-run's close begins by walking the predecessor; Tier-3 is handed its path</td><td><strong>superseded</strong>. The human reads the new mockup; no finder reads the walk. The incident it records stands as history</td></tr>
+        <tr><td><a href="dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a></td><td><code>design/v1</code> carries the artifacts judged, the rulebook blob, its own verdict and the accounting</td><td>the note carries the artifacts in scope and the accounting; the verdict follows the accounting alone; no rulebook field, no pin check. Its carrier, ref and <code>design_sha256</code> stand</td></tr>
+        <tr><td><a href="dec-49-a-parallel-stage-costs-its-slowest-member.html">DEC-49</a></td><td>a "fewer agents" proposal must say which member it removes and whether it is the slowest</td><td>met: the design step's fleet is one finder and its verifiers, so removing them removes the stage whole and both axes go</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Count the corpus and bill a paired re-run before cutting (the plan's v1)</td><td>treats a scope call as a cost question; no clock or tokens were ever recorded for a design round, so the bill would be invented. The scan above is the evidence and the first real bill is the next UI epic's</td></tr>
+        <tr><td>Keep the receipt without the finder</td><td>a self-claim that returned 0 violated in 147 verdicts, with no reader left to catch a false <em>satisfied</em></td></tr>
+        <tr><td>Keep the Frame for the Given list's sake</td><td>the list is what caught the run-8 defect; the driver table around it moved 15 times to stay consistent. The list moves to the mockup doc and keeps its name</td></tr>
+        <tr><td>Drop <code>keyboard-parity</code> with the Interaction table</td><td>a key path is the one thing a static mockup cannot show — the owner's call to keep it, on an item small enough to own one column</td></tr>
+        <tr><td>Remove the whole rulebook</td><td>orphans the oracle text the nine mockup predicates point at, the ESLint rule's rationale and the lexicon, and supersedes DEC-14 and DEC-17 outright — a larger call than this record takes</td></tr>
+        <tr><td>Keep close step ① as a human step</td><td>the human reads the new mockup; a stage-by-stage walk over a superseded run has no stages left to walk</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="where">Where this lives</h2>
+    <table data-c="where">
+      <thead><tr><th>Artifact</th><th>Landed by</th></tr></thead>
+      <tbody>
+        <tr><td>the rulebook — <a href="../design-rules/design-rules-index.html">design-rules-index.html</a>: no receipt obligation, no soft table, Binds-at on the mockup doc's items, one row marked retired</td><td>E-SIMPDF.W1, with this record</td></tr>
+        <tr><td>the flow spec <a href="../design-flow.html">design-flow.html</a> · the checker <code>xtask/src/doc.rs</code> · the gate's pin check · <code>design-scope</code> · the design-review skill §3–§5 and the rubric · the flow e2e</td><td>E-SIMPDF.W2, in one commit</td></tr>
+        <tr><td>the first live run's clock and tokens — a design round's first bill</td><td>the next UI epic to run the flow, named in the roadmap at this epic's close</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

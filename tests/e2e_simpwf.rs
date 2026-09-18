@@ -148,15 +148,14 @@ fn cr_v5(wu: Option<&str>, base: &str, code_sha: &str) -> String {
     )
 }
 
-/// The design step's own verdict, pinned to the artifact bytes it read and the
-/// rulebook the tip ships.
+/// The design step's own verdict, pinned to the artifact bytes it read - and to
+/// nothing else: DEC-53 retired the rulebook pin the note used to carry.
 fn design_v1(repo: &GitRepo, wu: &str, base: &str, tip: &str) -> String {
     format!(
         "schema: design/v1\n{}base: {base}\ndesign_sha256: {}\nverdict: PASS\n\
-         artifacts: [{DESIGN_RUN}]\nrulebook: {}\ndate: 2026-09-15\n",
+         artifacts: [{DESIGN_RUN}]\ndate: 2026-09-15\n",
         identity(Some(wu)),
-        repo.paths_sha(base, tip, &[DESIGN_RUN]),
-        &repo.blob(tip, RULEBOOK)[..7]
+        repo.paths_sha(base, tip, &[DESIGN_RUN])
     )
 }
 

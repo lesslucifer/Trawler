@@ -2,15 +2,15 @@
 //! repo, through the real `xtask` binary, real `node` oracles, real git and the
 //! real merge hook (no shims).
 //!
-//! A fake designing agent emits one stage artifact at a time and a fake human
-//! answers each with a taste instruction; all three tiers then judge the result.
-//! **Tier-1** (`verify-doc`, the write-time hook) must name exactly what is
-//! still owed at every stage — a flow that goes quiet, or that reds for
-//! something other than being half-written, has stalled. **Tier-2** (the run's
-//! own receipt) is re-opened when the rulebook moves under the run, which is the
-//! close's first step. **Tier-3** (the design dimension of the code review)
-//! rides the merge: `design-scope` says what must be judged, the `cr/v3` note
-//! says it was, and `9·design` refuses the merge when it does not.
+//! A fake designing agent emits one item of the mockup doc at a time and a fake
+//! human answers with a taste instruction; the checker and the merge gate then
+//! judge the result. **Tier-1** (`verify-doc`, the write-time hook) must name
+//! exactly what is still owed after every item — a flow that goes quiet, or that
+//! reds for something other than being half-written, has stalled — and must
+//! refuse a run still carrying one of the stations DEC-53 cut. The **design
+//! step** rides the merge: `design-scope` says what is in scope, the `design/v1`
+//! note accounts for it beside a `cr/v5` code note, and `9·design` refuses the
+//! merge when it does not.
 //!
 //! The waiver W1 through W6 each wrote in identical words is paid here.
 #![cfg(all(unix, feature = "design-e2e"))]
@@ -22,30 +22,24 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use xtask::git::{diff_sha256, sha256_hex, show_bytes};
+use xtask::git::{diff_names, diff_sha256_paths, sha256_hex, show_bytes};
 
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const RUN: &str = "docs/work/2026-08-13-dflow-run-4.html";
 const WU_RESULT: &str = "docs/work/2026-08-13-dflow-w7-result.html";
 const COMPONENTS: &str = "docs/work/components";
 
-// The rulebook the run is judged against. Two hard slugs (both predicated) and
-// two soft ones, which is all the receipt's coverage rule needs to bite.
-const SOFT_RULES: &[&str] = &["data-ink-first", "calm-microcopy"];
-
-fn rulebook_html(soft: &[&str]) -> String {
-    let rows = |slugs: &[&str]| {
-        let mut out = String::new();
-        for slug in slugs {
-            let _ = write!(out, "<tr><td><code>{slug}</code></td></tr>");
-        }
-        out
-    };
+// The rulebook the run is judged against: two hard slugs, both predicated, which
+// is all the tally and the gate's slug-citation check need. There is no soft
+// half any more (DEC-53).
+fn rulebook_html() -> String {
+    let mut rows = String::new();
+    for slug in ["colour-tokens-only", "spacing-scale"] {
+        let _ = write!(rows, "<tr><td><code>{slug}</code></td></tr>");
+    }
     format!(
-        "<html><body><table data-c=\"hard-rules-table\"><tbody>{}</tbody></table>\
-         <table data-c=\"soft-rules-table\"><tbody>{}</tbody></table></body></html>\n",
-        rows(&["colour-tokens-only", "spacing-scale"]),
-        rows(soft)
+        "<html><body><table data-c=\"hard-rules-table\"><tbody>{rows}</tbody></table>\
+         </body></html>\n"
     )
 }
 
@@ -71,7 +65,7 @@ impl Flow {
         // Tracked, the tally the gate appends mid-merge becomes an unstaged
         // change that `git merge --abort` then refuses to undo.
         flow.write(".gitignore", "/target\n");
-        flow.write(RULEBOOK, &rulebook_html(SOFT_RULES));
+        flow.write(RULEBOOK, &rulebook_html());
         flow.write_vocabulary();
         flow.write_collection();
         flow.commit("the substrate a design run loads");
@@ -189,11 +183,6 @@ impl Flow {
     fn verify_run(&self) -> Output {
         self.xtask(&["verify-doc", RUN])
     }
-
-    /// The pin a receipt must carry: `git hash-object` over the rulebook on disk.
-    fn pin(&self) -> String {
-        self.git(&["hash-object", RULEBOOK])[..7].to_string()
-    }
 }
 
 fn stdout(out: &Output) -> String {
@@ -210,11 +199,11 @@ fn failed_checks(out: &Output) -> Vec<String> {
 
 // ─── the fake human ─────────────────────────────────────────────────────────
 //
-// What the reviewer said · what it moved (a stage, or `nothing` when the design
-// argued and held) · the contract it hit. The third row is the one the `review`
-// item exists for: an instruction heard and refused is evidence too.
+// What the reviewer said · what it moved (a run item, or `nothing` when the
+// design argued and held) · the contract it hit. The third row is the one the
+// `review` item exists for: an instruction heard and refused is evidence too.
 const REVIEWER: &[[&str; 3]] = &[
-    ["lead the catalog with the verdict", "elements", "<code>data-ink-first</code>"],
+    ["lead the row with the verdict", "mockup", "<code>data-ink-first</code>"],
     ["one copy affordance, not two", "mockup", "<code>Section</code> @avoid"],
     ["keep the header pinned", "nothing", "<code>taste</code>"],
 ];
@@ -231,115 +220,58 @@ fn review_artifact() -> String {
 
 // ─── the fake designing agent ───────────────────────────────────────────────
 
-const MOCKUP_COMPLIANT: &str = "<div id=\"m-zone\"></div>\
-     <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>";
+const MOCKUP_COMPLIANT: &str = "";
 // The silent fork: a colour the closed vocabulary does not emit, written into
 // the mockup as if it were a token. Run #2 shipped this shape once.
-const MOCKUP_VIOLATING: &str = "<div id=\"m-zone\"></div>\
-     <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
-     <div class=\"text-crimson\">oops</div>";
+const MOCKUP_VIOLATING: &str = "<div class=\"text-crimson\">oops</div>";
 
-/// The eleven artifacts, in the order the flow emits them. `mockup` is the
-/// stage the violating run breaks, so its body is the only variable.
-fn stages(pin: &str, mockup_body: &str) -> Vec<(&'static str, String)> {
+/// The six items of the mockup doc, in the order the flow writes them. `mockup`
+/// is the one the violating run breaks, so its body is the only variable.
+fn items(mockup_body: &str) -> Vec<(&'static str, String)> {
     vec![
-        ("frame", frame()),
-        ("layout", layout()),
-        ("elements", elements()),
-        ("interaction", interaction()),
         ("mockup", mockup(mockup_body)),
-        ("tune", tune()),
-        ("receipt", receipt(pin, SOFT_RULES)),
         ("capabilities", capabilities()),
+        ("keyboard", keyboard()),
         ("proposals", "<p data-item=\"proposals\">none — the roster covered every zone</p>".into()),
         ("blocked-on", "<p data-item=\"blocked-on\">none</p>".into()),
         ("review", review_artifact()),
     ]
 }
 
-fn frame() -> String {
-    "<div data-item=\"frame\">\
-     <p>Purpose: read one flow and decide whether to act on it.</p>\
-     <p>Given: CA install · proxy unset</p>\
-     <p>Not given: no remote probe</p>\
-     <table><tr><th>Driver</th><th>why</th><th>therefore</th><th>on this screen</th></tr>\
-     <tr><td>read the verdict fast</td><td>the reviewer is the bottleneck</td>\
-     <td>the verdict leads the row</td>\
-     <td>✓ status column first<br>✗ status buried in prose</td></tr>\
-     <tr><td>Section must not nest</td><td>its contract says so</td><td>zones stay flat</td>\
-     <td>✓ one Section per zone<br>✗ a Section inside a Section</td></tr></table></div>"
-        .to_string()
-}
-
-fn layout() -> String {
-    "<div data-item=\"layout\"><pre>\n\
-     ┌───────────────┐\n\
-     │ A  header     │  ← pinned\n\
-     ├───────────────┤\n\
-     │ B  verdicts   │  ← the reading surface\n\
-     └───────────────┘\n\n\
-     overflow: A is pinned · B scrolls to its own cap\n\
-     </pre></div>"
-        .to_string()
-}
-
-fn elements() -> String {
-    "<div data-item=\"elements\" data-map>\
-     <pre>panel\n\
-     ├─ A header ── <span data-key=\"section\">Section</span>\n\
-     └─ B verdicts ── <span data-key=\"section\">Section</span></pre>\
-     <table><tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>States</th></tr>\
-     <tr data-key=\"section\"><td>Section</td><td>T2 <b>reuse</b> · A · B</td>\
-     <td><div class=\"gist\">clears the nesting @avoid, lands in the labelled-zone @use</div>\
-     <details class=\"why\"><div>@avoid nesting: the zoning keeps every Section flat</div></details></td>\
-     <td>—</td></tr></table></div>"
-        .to_string()
-}
-
-fn interaction() -> String {
-    "<table data-item=\"interaction\">\
-     <tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard</th></tr>\
-     <tr><td>land cold</td><td>read the verdict fast</td><td>opens the flow</td>\
-     <td><div class=\"gist\">B renders the real verdicts, A stays pinned</div>\
-     <details class=\"why\"><div>A → UNCHANGED · B → verdict rows</div></details></td>\
-     <td><code>j</code> / <code>k</code></td></tr></table>"
-        .to_string()
-}
-
-fn mockup(body: &str) -> String {
+/// The mockup: the mounted screen, the zone hosts three predicates read, the
+/// overflow line under it and the state toggle.
+fn mockup(extra: &str) -> String {
     format!(
-        "<div data-item=\"mockup\" data-wire=\"none\">{body}\
+        "<div data-item=\"mockup\" data-wire=\"none\">\
+         <div id=\"m-header\" data-zone=\"header\"></div>\
+         <div id=\"m-zone\" data-zone=\"verdicts\"></div>\
+         <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+         <p>overflow: header is pinned · verdicts scrolls to its own cap</p>{extra}\
          <button class=\"statebtn\" data-state-toggle=\"mock\" data-state-class=\"inflight\" \
          data-label-off=\"▶ show inflight\" data-label-on=\"◀ show base\">▶ show inflight</button></div>"
     )
 }
 
-fn tune() -> String {
-    "<table data-item=\"tune\"><tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr>\
-     <tr><td>weight</td><td><pre class=\"tb\">status  ok</pre></td>\
-     <td><pre class=\"tb\">ok  status</pre></td><td><code>data-ink-first</code></td></tr></table>"
+fn capabilities() -> String {
+    "<table data-item=\"capabilities\"><tr><th>Given</th><th>State</th><th>Where / why</th></tr>\
+     <tr><td>CA install</td><td>used</td><td>the header action</td></tr>\
+     <tr><td>proxy unset</td><td>deliberately unused</td><td>a non-goal for this panel</td></tr></table>"
         .to_string()
 }
 
-const WHY: &[(&str, &str)] = &[
-    ("data-ink-first", "satisfied — the verdict leads its row"),
-    ("calm-microcopy", "inherited — Section owns its labels"),
-    ("hero-one", "n/a — this panel has no hero"),
-];
-
-fn receipt(pin: &str, soft: &[&str]) -> String {
-    let mut rows = String::new();
-    for slug in soft {
-        let why = WHY.iter().find(|(s, _)| s == slug).map(|(_, w)| *w).unwrap();
-        let _ = writeln!(rows, "  {slug}: {why}");
-    }
-    format!("<pre data-item=\"receipt\">rulebook: {pin}\nsoft:\n{rows}</pre>")
+fn keyboard() -> String {
+    "<table data-item=\"keyboard\"><tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>\
+     <tr><td>open a verdict</td><td>the verdicts zone</td>\
+     <td><code>↑</code> / <code>↓</code> then <code>Enter</code>; <code>Esc</code> closes</td></tr></table>"
+        .to_string()
 }
 
-fn capabilities() -> String {
-    "<table data-item=\"capabilities\"><tr><th>Given</th><th>State</th><th>Where / why</th></tr>\
-     <tr><td>CA install</td><td>used</td><td>zone A action</td></tr>\
-     <tr><td>proxy unset</td><td>deliberately unused</td><td>a non-goal for this panel</td></tr></table>"
+/// The shape DEC-53 cut, still being written: one item per cut station, so the
+/// checker has to name each rather than tolerate it.
+fn cut_stations() -> String {
+    "<p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
+     <p data-item=\"elements\">a catalog</p><p data-item=\"interaction\">use cases</p>\
+     <p data-item=\"tune\">before/after</p><pre data-item=\"receipt\">rulebook: 28f5437</pre>"
         .to_string()
 }
 
@@ -359,20 +291,20 @@ fn run_doc(status: &str, body: &str) -> String {
     )
 }
 
-/// Drive the agent through `stages`, writing one artifact at a time and asking
-/// Tier-1 what is still owed after each. The whole assertion of the flow's
-/// plumbing lives here: after stage *n* the run must be red **for exactly the
-/// stages not yet written** — never quietly green (which would mean nothing is
-/// asked for), and never red for anything else (which would mean the stage just
-/// written was refused without being wrong).
-fn drive(flow: &Flow, stages: &[(&'static str, String)]) {
+/// Drive the agent through `items`, writing one at a time and asking Tier-1
+/// what is still owed after each. The whole assertion of the flow's plumbing
+/// lives here: after item *n* the run must be red **for exactly the items not
+/// yet written** — never quietly green (which would mean nothing is asked for),
+/// and never red for anything else (which would mean the item just written was
+/// refused without being wrong).
+fn drive(flow: &Flow, items: &[(&'static str, String)]) {
     let mut body = String::new();
-    for (at, (item, artifact)) in stages.iter().enumerate() {
+    for (at, (item, artifact)) in items.iter().enumerate() {
         body.push_str(artifact);
         flow.write(RUN, &run_doc("", &body));
         let out = flow.verify_run();
         let owed: Vec<String> =
-            stages[at + 1..].iter().map(|(next, _)| format!("item·{next}")).collect();
+            items[at + 1..].iter().map(|(next, _)| format!("item·{next}")).collect();
         let mut got = failed_checks(&out);
         got.sort();
         let mut want = owed.clone();
@@ -412,7 +344,7 @@ fn retired(path: &str, carried_by: &str) -> String {
     )
 }
 
-fn bless(flow: &Flow, tip: &str, cr: &str, changes: &str) {
+fn bless(flow: &Flow, tip: &str, design: Option<&str>, changes: &str) {
     flow.note(
         "test",
         tip,
@@ -425,7 +357,13 @@ fn bless(flow: &Flow, tip: &str, cr: &str, changes: &str) {
         tip,
         &format!("schema: doc/v1\n{IDENTITY}{changes}t2_waived: \"no T2 fact moved\"\n"),
     );
-    flow.note("cr", tip, cr);
+    flow.note("cr", tip, &cr_note(flow, tip));
+    match design {
+        Some(note) => flow.note("design", tip, note),
+        None => {
+            flow.git_raw(&["notes", "--ref=design", "remove", tip]);
+        }
+    }
     let bytes = show_bytes(&flow.path, tip, WU_RESULT).unwrap();
     flow.note(
         "mr",
@@ -438,12 +376,33 @@ fn bless(flow: &Flow, tip: &str, cr: &str, changes: &str) {
     );
 }
 
-fn cr_note(flow: &Flow, tip: &str, schema: &str, design: &str) -> String {
+/// The code review's note, on the schema a review written today declares. It
+/// binds the bytes of the code paths the diff changes - not the whole diff - and
+/// it carries no design section: since DEC-46 the design verdict travels on its
+/// own note, and since DEC-53 there is no finder whose verdict it could carry.
+fn cr_note(flow: &Flow, tip: &str) -> String {
     let base = flow.git(&["rev-parse", "epic/x"]);
-    let sha = diff_sha256(&flow.path, &base, tip).unwrap();
+    let sha = code_sha256(flow, &base, tip);
     format!(
-        "schema: {schema}\n{IDENTITY}base: {base}\nhead: {tip}\ndiff_sha256: {sha}\nverdict: PASS\n{design}date: 2026-08-13\n"
+        "schema: {}\n{IDENTITY}base: {base}\nhead: {tip}\ndiff_sha256: {sha}\nverdict: PASS\ndate: 2026-08-13\n",
+        xtask::notes::cr_schema()
     )
+}
+
+/// What a code-bound review binds, computed the way the gate recomputes it: the
+/// code paths the range changes, and nothing else. An empty answer says the diff
+/// changed no code, which is a note that binds nothing rather than a hash of an
+/// empty diff.
+fn code_sha256(flow: &Flow, base: &str, tip: &str) -> String {
+    let paths: Vec<String> = diff_names(&flow.path, base, tip)
+        .unwrap()
+        .into_iter()
+        .filter(|p| xtask::notes::is_code(p))
+        .collect();
+    if paths.is_empty() {
+        return String::new();
+    }
+    diff_sha256_paths(&flow.path, base, tip, &paths).unwrap()
 }
 
 /// Merge a branch into its target through the real hook, and report what the
@@ -458,34 +417,28 @@ fn merge_into(flow: &Flow, target: &str, branch: &str) -> (bool, String) {
     (out.status.success(), said)
 }
 
-// ─── tier 3, read from the one function the reviewer and the gate share ─────
+// ─── the design step, read from the one function it and the gate share ──────
 
 struct Scope {
     artifacts: Vec<String>,
     surfaces: Vec<String>,
     touched: Vec<String>,
-    pin: String,
 }
 
-/// What `cargo xtask design-scope` prints, parsed the way a reviewer reads it —
-/// the note below is written from this and nothing else, which is the whole
-/// point of the reviewer and the merge gate calling one function. Two blocks:
-/// the designs this diff must have judged, and the surfaces it must cite.
+/// What `cargo xtask design-scope` prints, parsed the way the design step reads
+/// it — the note below is written from this and nothing else, which is the whole
+/// point of the step and the merge gate calling one function. Three blocks: the
+/// designs in scope, the surfaces the diff must cite, and the files it touched.
 fn design_scope(flow: &Flow, branch: &str) -> Scope {
     let out = flow.xtask(&["design-scope", "epic/x", branch]);
     assert!(out.status.success(), "design-scope: {}", stdout(&out));
     let text = stdout(&out);
-    let mut scope = Scope {
-        artifacts: Vec::new(),
-        surfaces: Vec::new(),
-        touched: Vec::new(),
-        pin: String::new(),
-    };
+    assert!(!text.contains("rulebook"), "nothing pins the rulebook any more: {text}");
+    let mut scope = Scope { artifacts: Vec::new(), surfaces: Vec::new(), touched: Vec::new() };
     let mut block = 0;
     for line in text.lines() {
         if line.contains("design artifact(s) to judge") {
             block = 0;
-            scope.pin = line.trim_end_matches(':').split_whitespace().last().unwrap().to_string();
         } else if line.contains("left the tree in this range") {
             block = 3;
         } else if line.contains("new surface(s)") {
@@ -504,31 +457,45 @@ fn design_scope(flow: &Flow, branch: &str) -> Scope {
     scope
 }
 
-fn design_section(scope: &Scope, verdict: &str) -> String {
+/// The `design/v1` note the design step writes, bound to exactly the bytes the
+/// gate recomputes over: the artifacts in scope plus every rendered file the
+/// diff touched (DEC-46). `body` is the accounting — the citations and the
+/// declarations — which is the whole of what the verdict follows (DEC-53).
+fn design_note(flow: &Flow, tip: &str, scope: &Scope, verdict: &str, body: &str) -> String {
+    let base = flow.git(&["rev-parse", "epic/x"]);
+    let mut paths: Vec<String> = scope.artifacts.clone();
+    paths.extend(scope.touched.iter().cloned());
+    paths.extend(scope.surfaces.iter().cloned());
+    paths.sort();
+    paths.dedup();
+    let bound = if paths.is_empty() {
+        String::new()
+    } else {
+        diff_sha256_paths(&flow.path, &base, tip, &paths).unwrap()
+    };
     format!(
-        "design:\n  artifacts: [{}]\n  rulebook: {}\n  findings: {{ found: 0, verified: 0, waived: 0 }}\n  verdict: {verdict}\n",
-        scope.artifacts.join(", "),
-        scope.pin
+        "schema: design/v1\n{IDENTITY}base: {base}\ndesign_sha256: {bound}\nverdict: {verdict}\n\
+         artifacts: [{}]\n{body}date: 2026-08-13\n",
+        scope.artifacts.join(", ")
     )
 }
 
-/// The citation block, appended under the same `design:` key — on its own for a
-/// build that judged nothing, after [`design_section`] for one that amended the
-/// design it was handed.
+/// The citation: which design a new surface was built from, and which of its
+/// bytes the build read.
 fn cites(pairs: &[(&str, &str, &str)]) -> String {
-    let mut out = String::from("  implements:\n");
+    let mut out = String::from("implements:\n");
     for (path, blob, built) in pairs {
-        let _ = write!(out, "    - path: {path}\n      blob: {blob}\n      built: [{built}]\n");
+        let _ = write!(out, "  - path: {path}\n    blob: {blob}\n    built: [{built}]\n");
     }
     out
 }
 
 /// The other answer a build can give: this file needed no design, and here is
-/// why. Same key, same section — an edit is accounted for, never judged.
+/// why. An edit is accounted for, never judged.
 fn declares(records: &[(&str, &str)]) -> String {
-    let mut out = String::from("  undesigned:\n");
+    let mut out = String::from("undesigned:\n");
     for (path, why) in records {
-        let _ = write!(out, "    - path: {path}\n      why: \"{why}\"\n");
+        let _ = write!(out, "  - path: {path}\n    why: \"{why}\"\n");
     }
     out
 }
@@ -536,12 +503,12 @@ fn declares(records: &[(&str, &str)]) -> String {
 // ─── the flow, end to end ───────────────────────────────────────────────────
 
 #[test]
-fn the_whole_design_flow_runs_green_and_the_three_tiers_land_it() {
+fn the_whole_design_flow_runs_green_and_the_merge_gate_lands_it() {
     let flow = Flow::new();
 
-    // ① Tier-1, stage by stage: the agent writes one artifact and the harness
-    // answers with exactly what is still owed.
-    drive(&flow, &stages(&flow.pin(), MOCKUP_COMPLIANT));
+    // ① Tier-1, item by item: the agent writes one and the harness answers with
+    // exactly what is still owed.
+    drive(&flow, &items(MOCKUP_COMPLIANT));
 
     // The human's instructions are all recorded, including the one the design
     // argued and held - a run that rewrites its own history silently is the
@@ -551,82 +518,77 @@ fn the_whole_design_flow_runs_green_and_the_three_tiers_land_it() {
         assert!(written.contains(said), "the reviewer instruction \"{said}\" is not recorded");
     }
 
-    // ② Tier-2: the receipt is checked against the rulebook ON DISK, so the
-    // green above is a claim about one version of it and nothing more.
+    // ② The tally the green carries: every hard rule the book states has a
+    // predicate, and nothing claims a receipt was read (DEC-53).
     let green = flow.verify_run();
-    assert!(stdout(&green).contains("receipt 2/2 soft"), "{}", stdout(&green));
+    let text = stdout(&green);
+    assert!(text.contains("hard rules: 2/2 machine-checked (design)"), "{text}");
+    assert!(!text.contains("receipt"), "{text}");
 
-    // ③ The rulebook moves under the open run - another Working Unit lands a
-    // soft rule on the epic, and this one picks its epic up. Both halves of the
-    // close's first step must bite: the pin is stale, and the new rule is
-    // unreceipted.
-    flow.git(&["checkout", "-q", "epic/x"]);
-    let mut soft = SOFT_RULES.to_vec();
-    soft.push("hero-one");
-    flow.write(RULEBOOK, &rulebook_html(&soft));
-    flow.commit("a later Working Unit adds a soft rule");
-    flow.git(&["checkout", "-q", "wu/x/one"]);
-    flow.git(&["merge", "--no-ff", "-q", "-m", "pick up the epic", "epic/x"]);
-
-    let reopened = flow.verify_run();
-    let checks = failed_checks(&reopened);
-    assert!(checks.contains(&"receipt·rulebook-stale".to_string()), "{}", stdout(&reopened));
-    assert!(checks.contains(&"receipt·hero-one".to_string()), "{}", stdout(&reopened));
-
-    // ④ The close, step ①: re-judge every soft row against the rulebook that is
-    // actually there, then re-pin.
+    // ③ The shape the record cut, still being written: each cut station is
+    // refused BY NAME. A checker that merely ignored them would let the old flow
+    // survive by tolerance, with the spec and the code disagreeing unseen.
     let mut body = String::new();
-    for (_, artifact) in stages(&flow.pin(), MOCKUP_COMPLIANT) {
+    for (_, artifact) in items(MOCKUP_COMPLIANT) {
         body.push_str(&artifact);
     }
-    let body = body.replace(&receipt(&flow.pin(), SOFT_RULES), &receipt(&flow.pin(), &soft));
-    flow.write(RUN, &run_doc("", &body));
-    let repinned = flow.verify_run();
-    assert!(repinned.status.success(), "re-judged and re-pinned: {}", stdout(&repinned));
-    assert!(stdout(&repinned).contains("receipt 3/3 soft"), "{}", stdout(&repinned));
+    flow.write(RUN, &run_doc("", &format!("{body}{}", cut_stations())));
+    let old_shape = flow.verify_run();
+    assert!(!old_shape.status.success(), "a run carrying the cut stations is not green");
+    let said = stdout(&old_shape);
+    for cut in ["frame", "layout", "elements", "interaction", "tune", "receipt"] {
+        assert!(said.contains(cut), "the red does not name the cut {cut}: {said}");
+    }
 
-    // ⑤ The close, step ④: archive it, in the commit that finishes the run.
+    // ④ The close: green the run, then archive it in the commit that finishes it.
+    flow.write(RUN, &run_doc("", &body));
+    assert!(flow.verify_run().status.success(), "{}", stdout(&flow.verify_run()));
     flow.write(RUN, &run_doc("archived", &body));
     assert!(stdout(&flow.verify_run()).contains("archived"), "a closed run is not re-opened");
     flow.write(WU_RESULT, "<html><body>the WU result report</body></html>\n");
     let tip = flow.commit("close the fourth design run");
 
-    // ⑥ Tier-3 activates: one function tells the reviewer what to judge and the
-    // merge what to demand.
+    // ⑤ The design step activates: one function tells it what is in scope and
+    // the merge what to demand.
     let scope = design_scope(&flow, "wu/x/one");
-    assert_eq!(scope.artifacts, vec![RUN.to_string()], "the closed run is what Tier-3 judges");
-    assert_eq!(scope.pin, flow.pin(), "and the rulebook its verdict is a claim about");
+    assert_eq!(scope.artifacts, vec![RUN.to_string()], "the closed run is what it answers for");
 
-    // A cr/v2 PASS is a review from before the design dimension existed. On a
-    // design-bearing tip it is silence, and the merge refuses it.
+    // A code note alone is silence about the design. The merge refuses it, and
+    // the red says which note is missing.
     let changes = doc_changes(&[(RUN, "added"), (WU_RESULT, "added")]);
-    bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v2", ""), &changes);
+    bless(&flow, &tip, None, &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/one");
-    assert!(!merged, "a design-bearing tip must not merge on a cr/v2 note: {said}");
-    assert!(said.contains("9·design-schema"), "{said}");
-    assert!(said.contains("design finder"), "the red says how to get the missing evidence: {said}");
-
-    // A cr/v3 whose design section skips the artifact is the same silence, one
-    // schema later - and this one its own schema says it should have covered.
-    flow.git(&["checkout", "-q", "wu/x/one"]);
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", ""));
-    let (merged, said) = merge_into(&flow, "epic/x", "wu/x/one");
-    assert!(!merged, "a cr/v3 with no design section must not merge: {said}");
+    assert!(!merged, "a design-bearing tip must not merge with no design note: {said}");
     assert!(said.contains("9·design"), "{said}");
+    assert!(said.contains("design/v1"), "the red names the note it wants: {said}");
 
-    // A failing design verdict is not a merge either: the gate holds that the
-    // dimension ran AND passed.
+    // A note bound to other bytes is the same silence, one step later: it says a
+    // step ran, over something this tip does not ship.
     flow.git(&["checkout", "-q", "wu/x/one"]);
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &design_section(&scope, "FAIL")));
+    let elsewhere =
+        design_note(&flow, &tip, &scope, "PASS", "").replace("design_sha256: ", "design_sha256: 0");
+    bless(&flow, &tip, Some(&elsewhere), &changes);
+    let (merged, said) = merge_into(&flow, "epic/x", "wu/x/one");
+    assert!(!merged, "a note pinned to other bytes must not merge: {said}");
+    assert!(said.contains("different bytes"), "{said}");
+
+    // A failing verdict is not a merge either: the gate holds that the step ran
+    // AND passed.
+    flow.git(&["checkout", "-q", "wu/x/one"]);
+    bless(&flow, &tip, Some(&design_note(&flow, &tip, &scope, "FAIL", "")), &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/one");
     assert!(!merged, "a failing design verdict must not merge: {said}");
 
-    // ⑦ The note written from what design-scope printed - every artifact judged,
-    // pinned to the rulebook the tip ships - and the merge lands.
+    // ⑥ The note written from what design-scope printed, beside the code note -
+    // the two carriers a live tip ships - and the merge lands.
     flow.git(&["checkout", "-q", "wu/x/one"]);
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &design_section(&scope, "PASS")));
+    bless(&flow, &tip, Some(&design_note(&flow, &tip, &scope, "PASS", "")), &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/one");
-    assert!(merged, "a complete cr/v3 lands the design-bearing merge: {said}");
+    assert!(merged, "a complete design/v1 lands the design-bearing merge: {said}");
+    assert!(
+        flow.git(&["notes", "--ref=cr", "show", &tip]).contains(xtask::notes::cr_schema()),
+        "the code note the tip ships is the current schema, not the retired carrier"
+    );
 
     let receipt = flow.git(&["notes", "--ref=dod", "show", &tip]);
     assert!(receipt.contains("dod/v1"), "green writes the receipt: {receipt}");
@@ -635,27 +597,24 @@ fn the_whole_design_flow_runs_green_and_the_three_tiers_land_it() {
 }
 
 /// The other half of the epic's e2e requirement: a rule-violating input reds.
-/// It reds **at the stage that wrote it** — not at the end, and not at the
+/// It reds **at the write that produced it** — not at the end, and not at the
 /// merge — and the chain from there is what keeps it out of the tree: a run
 /// that cannot be greened cannot be closed, and a run left open cannot merge.
 #[test]
-fn a_rule_violating_mockup_reds_at_its_own_stage_and_never_reaches_the_epic() {
+fn a_rule_violating_mockup_reds_at_the_write_that_produced_it_and_never_reaches_the_epic() {
     let flow = Flow::new();
-    let pin = flow.pin();
-    let stages = stages(&pin, MOCKUP_VIOLATING);
+    let items = items(MOCKUP_VIOLATING);
 
     let mut body = String::new();
-    for (at, (item, artifact)) in stages.iter().enumerate() {
+    for (at, (item, artifact)) in items.iter().enumerate() {
         body.push_str(artifact);
         flow.write(RUN, &run_doc("", &body));
         let checks = failed_checks(&flow.verify_run());
-        let breached = checks.iter().any(|c| c == "colour-tokens-only·off-vocabulary");
-        assert_eq!(
-            breached,
-            at >= 4,
-            "the breach is reported from the mockup stage onward, at {item}: {checks:?}"
+        assert!(
+            checks.iter().any(|c| c == "colour-tokens-only·off-vocabulary"),
+            "the mockup is the first item written, so the breach is reported from there onward, at {item}: {checks:?}"
         );
-        if at == 4 {
+        if at == 0 {
             assert!(
                 stdout(&flow.verify_run()).contains("text-crimson"),
                 "the red names the class that broke the rule"
@@ -663,7 +622,7 @@ fn a_rule_violating_mockup_reds_at_its_own_stage_and_never_reaches_the_epic() {
         }
     }
 
-    // Every stage is written and the run is still red: the close's step ③ - green
+    // Every item is written and the run is still red: the close's step ② - green
     // the run - cannot be reached, so the run cannot honestly be archived.
     let finished = flow.verify_run();
     assert!(!finished.status.success(), "a complete but violating run stays red");
@@ -677,12 +636,7 @@ fn a_rule_violating_mockup_reds_at_its_own_stage_and_never_reaches_the_epic() {
     // Committed open - the only honest state left - the merge refuses it.
     flow.write(WU_RESULT, "<html><body>the WU result report</body></html>\n");
     let tip = flow.commit("the run that could not be closed");
-    bless(
-        &flow,
-        &tip,
-        &cr_note(&flow, &tip, "cr/v3", ""),
-        &doc_changes(&[(RUN, "added"), (WU_RESULT, "added")]),
-    );
+    bless(&flow, &tip, None, &doc_changes(&[(RUN, "added"), (WU_RESULT, "added")]));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/one");
     assert!(!merged, "a run left open must not merge: {said}");
     assert!(said.contains("6·run-closed"), "{said}");
@@ -708,7 +662,7 @@ fn pill_contract(states: &str) -> String {
     )
 }
 
-/// The design Working Unit: a component contract, judged by Tier-3 and landed on
+/// The design Working Unit: a component contract, accounted for and landed on
 /// the epic. Returns the blob a build that reads it must cite.
 fn land_the_contract(flow: &Flow) -> String {
     flow.write(PILL_DESIGN, &pill_contract("rest · hover"));
@@ -727,20 +681,20 @@ fn land_the_contract(flow: &Flow) -> String {
     bless(
         flow,
         &tip,
-        &cr_note(flow, &tip, "cr/v3", &design_section(&scope, "PASS")),
+        Some(&design_note(flow, &tip, &scope, "PASS", "")),
         &doc_changes(&[(PILL_DESIGN, "added"), (DECISION, "added"), (WU_RESULT, "added")]),
     );
     let (merged, said) = merge_into(flow, "epic/x", "wu/x/one");
-    assert!(merged, "a judged design lands: {said}");
+    assert!(merged, "a design in scope, accounted for, lands: {said}");
     flow.git(&["rev-parse", &format!("epic/x:{PILL_DESIGN}")])
 }
 
 /// The build Working Unit: the component the contract describes - and, per
 /// DEC-16, the contract retired in the same Working Unit, so the tip no longer
 /// ships the design the build read. This is the history every build WU produces
-/// (DEC-28), and the one E-DFLOW's fixtures never drove. Returns the tip and the
-/// doc-note changes a legal note carries.
-fn build_the_pill_and_retire_its_design(flow: &Flow) -> (String, String) {
+/// (DEC-28), and the one E-DFLOW's fixtures never drove. Returns the tip, the
+/// doc-note changes a legal note carries, and what the design step was handed.
+fn build_the_pill_and_retire_its_design(flow: &Flow) -> (String, String, Scope) {
     flow.git(&["checkout", "-q", "-b", "wu/x/two", "epic/x"]);
     flow.write(PILL, PILL_SOURCE);
     flow.remove(PILL_DESIGN);
@@ -752,7 +706,7 @@ fn build_the_pill_and_retire_its_design(flow: &Flow) -> (String, String) {
     );
 
     let scope = design_scope(flow, "wu/x/two");
-    assert!(scope.artifacts.is_empty(), "the build judges no design - it consumes one");
+    assert!(scope.artifacts.is_empty(), "the build answers for no design - it consumes one");
     assert_eq!(
         scope.surfaces,
         vec![PILL.to_string()],
@@ -760,31 +714,31 @@ fn build_the_pill_and_retire_its_design(flow: &Flow) -> (String, String) {
     );
     let changes =
         format!("{}{}", doc_changes(&[(WU_RESULT, "updated")]), retired(PILL_DESIGN, "@states"));
-    (tip, changes)
+    (tip, changes, scope)
 }
 
 /// The hand-over, driven: a Working Unit that adds a surface says which design
 /// it was built from and which bytes of it it read. The last leg is D1a case 2 —
-/// a build that amends the design it was handed re-enters Tier-3 on its own
-/// merge, with nobody having to remember the rule.
+/// a build that amends the design it was handed re-enters the design step on its
+/// own merge, with nobody having to remember the rule.
 #[test]
 fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it() {
     let flow = Flow::new();
     let handed = land_the_contract(&flow);
 
     // ① The build, on wu/x/two: the component, and the design retired with it.
-    let (tip, changes) = build_the_pill_and_retire_its_design(&flow);
+    let (tip, changes, scope) = build_the_pill_and_retire_its_design(&flow);
 
     // ② The silent build: the trigger fired and the note names no design.
-    bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", ""), &changes);
+    bless(&flow, &tip, None, &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(!merged, "a new surface with no citation must not merge: {said}");
     assert!(said.contains("accounts for none of them"), "{said}");
     assert!(said.contains("StatusPill.tsx"), "the red names the surface that owes one: {said}");
 
     // ②b A reason is not an answer for something nobody has ever designed.
-    let excused = format!("design:\n{}", declares(&[(PILL, "small, and the tier is obvious")]));
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &excused));
+    let excused = declares(&[(PILL, "small, and the tier is obvious")]);
+    flow.note("design", &tip, &design_note(&flow, &tip, &scope, "PASS", &excused));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(!merged, "a new surface may not be declared undesigned: {said}");
     assert!(said.contains("new surface this diff adds"), "{said}");
@@ -792,14 +746,14 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
     // ③ Path and blob: the design, and which of its bytes the build read. The
     // path is gone from the tip; it resolves at its last state in the tip's
     // history, and the pin must be that state's.
-    let mistyped = format!("design:\n{}", cites(&[(PILL_DESIGN, "0000000", PILL)]));
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &mistyped));
+    let mistyped = cites(&[(PILL_DESIGN, "0000000", PILL)]);
+    flow.note("design", &tip, &design_note(&flow, &tip, &scope, "PASS", &mistyped));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(!merged, "a pin the retired design never carried must not merge: {said}");
     assert!(said.contains("before it left the tree"), "the red names the last state: {said}");
 
-    let cited = format!("design:\n{}", cites(&[(PILL_DESIGN, &handed[..7], PILL)]));
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &cited));
+    let cited = cites(&[(PILL_DESIGN, &handed[..7], PILL)]);
+    flow.note("design", &tip, &design_note(&flow, &tip, &scope, "PASS", &cited));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(merged, "a citation resolving in the tip's history lands the build: {said}");
 
@@ -825,12 +779,8 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
 
     // The stale citation - the blob this build was handed is not the blob its own
     // amendment left behind. A path-only pointer passes this; a blob does not.
-    let stale = format!(
-        "{}{}",
-        design_section(&scope, "PASS"),
-        cites(&[(PILL_DESIGN, &handed[..7], SCREEN)])
-    );
-    bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", &stale), &changes);
+    let stale = cites(&[(PILL_DESIGN, &handed[..7], SCREEN)]);
+    bless(&flow, &tip, Some(&design_note(&flow, &tip, &scope, "PASS", &stale)), &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/three");
     assert!(!merged, "a citation of bytes the tip no longer ships must not merge: {said}");
     assert!(
@@ -840,8 +790,10 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
 
     // Re-pinned, and the amendment itself unjudged: the design section is the
     // same one Tier-3 writes, so the re-judgment is demanded automatically.
-    let unjudged = format!("design:\n{}", cites(&[(PILL_DESIGN, &amended[..7], SCREEN)]));
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &unjudged));
+    let unaccounted =
+        design_note(&flow, &tip, &scope, "PASS", &cites(&[(PILL_DESIGN, &amended[..7], SCREEN)]))
+            .replace(&format!("artifacts: [{PILL_DESIGN}]"), "artifacts: []");
+    flow.note("design", &tip, &unaccounted);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/three");
     assert!(!merged, "an amended design nobody re-judged must not merge: {said}");
     assert!(
@@ -852,12 +804,8 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
     );
 
     // Re-judged and re-pinned.
-    let complete = format!(
-        "{}{}",
-        design_section(&scope, "PASS"),
-        cites(&[(PILL_DESIGN, &amended[..7], SCREEN)])
-    );
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &complete));
+    let complete = cites(&[(PILL_DESIGN, &amended[..7], SCREEN)]);
+    flow.note("design", &tip, &design_note(&flow, &tip, &scope, "PASS", &complete));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/three");
     assert!(merged, "a re-judged amendment citing the bytes it left lands: {said}");
 
@@ -877,22 +825,21 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
         "and the reviewer is told what it did touch"
     );
 
-    bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", ""), &changes);
+    bless(&flow, &tip, None, &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/four");
     assert!(!merged, "an unaccounted edit must not merge: {said}");
     assert!(said.contains(SCREEN), "the red names the file it re-shaped: {said}");
 
     let reason = "a copy fix inside the existing layout";
-    let excused = format!("design:\n{}", declares(&[(SCREEN, reason)]));
-    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &excused));
+    let excused = declares(&[(SCREEN, reason)]);
+    flow.note("design", &tip, &design_note(&flow, &tip, &scope, "PASS", &excused));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/four");
     assert!(merged, "a stated reason lands the edit: {said}");
     assert!(said.contains(reason), "and the reason is billed where the epic reads it: {said}");
 }
 
-fn bless_epic(flow: &Flow, tip: &str, design: &str) {
+fn bless_epic(flow: &Flow, tip: &str, design: Option<&str>) {
     let base = flow.git(&["merge-base", "main", tip]);
-    let sha = diff_sha256(&flow.path, &base, tip).unwrap();
     flow.note(
         "test",
         tip,
@@ -912,9 +859,23 @@ fn bless_epic(flow: &Flow, tip: &str, design: &str) {
         "cr",
         tip,
         &format!(
-            "schema: cr/v3\n{EPIC_IDENTITY}base: {base}\nhead: {tip}\ndiff_sha256: {sha}\nverdict: PASS\n{design}date: 2026-08-13\n"
+            "schema: {}\n{EPIC_IDENTITY}base: {base}\nhead: {tip}\ndiff_sha256: {}\nverdict: PASS\ndate: 2026-08-13\n",
+            xtask::notes::cr_schema(),
+            code_sha256(flow, &base, tip)
         ),
     );
+    match design {
+        Some(body) => flow.note(
+            "design",
+            tip,
+            &format!(
+                "schema: design/v1\n{EPIC_IDENTITY}base: {base}\ndesign_sha256: \n{body}date: 2026-08-13\n"
+            ),
+        ),
+        None => {
+            flow.git_raw(&["notes", "--ref=design", "remove", tip]);
+        }
+    }
     let report = "<html><body>the epic result report</body></html>\n";
     flow.note(
         "mr",
@@ -928,7 +889,7 @@ fn bless_epic(flow: &Flow, tip: &str, design: &str) {
 }
 
 fn dropped(path: &str, why: &str) -> String {
-    format!("design:\n  dropped:\n    - path: {path}\n      why: \"{why}\"\n")
+    format!("dropped:\n  - path: {path}\n    why: \"{why}\"\n")
 }
 
 /// The downstream half of the rule (D3·E): a design's life ends at its epic.
@@ -947,26 +908,30 @@ fn a_design_nobody_built_refuses_the_epic_merge_until_the_drop_is_recorded() {
     flow.write("src/lib.rs", "pub fn base() {}\npub fn shipped() {}\n");
     flow.write(WU_RESULT, "<html><body>the code WU result</body></html>\n");
     let tip = flow.commit("ship code the design never touched");
-    bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", ""), &doc_changes(&[(WU_RESULT, "updated")]));
+    bless(&flow, &tip, None, &doc_changes(&[(WU_RESULT, "updated")]));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(merged, "a build that adds no surface owes no citation: {said}");
 
     // Check 6 satisfied, and the contract now traceable only through the range.
     flow.git(&["rm", "-q", PILL_DESIGN, WU_RESULT]);
     let epic_tip = flow.commit("archive the work docs out of git");
-    bless_epic(&flow, &epic_tip, "");
+    bless_epic(&flow, &epic_tip, None);
 
     let (merged, said) = merge_into(&flow, "main", "epic/x");
     assert!(!merged, "an epic that designed a component and built nothing must not land: {said}");
     assert!(said.contains("components·unbuilt"), "{said}");
     assert!(said.contains("StatusPill"), "the red names the component nobody built: {said}");
 
-    bless_epic(&flow, &epic_tip, &dropped(PILL_DESIGN, "   "));
+    bless_epic(&flow, &epic_tip, Some(&dropped(PILL_DESIGN, "   ")));
     let (merged, said) = merge_into(&flow, "main", "epic/x");
     assert!(!merged, "a drop with no reason records that it went, not why: {said}");
     assert!(said.contains("components·unbuilt"), "{said}");
 
-    bless_epic(&flow, &epic_tip, &dropped(PILL_DESIGN, "never built - the row states its verdict"));
+    bless_epic(
+        &flow,
+        &epic_tip,
+        Some(&dropped(PILL_DESIGN, "never built - the row states its verdict")),
+    );
     let (merged, said) = merge_into(&flow, "main", "epic/x");
     assert!(merged, "a drop with a reason lands the epic: {said}");
     assert!(
