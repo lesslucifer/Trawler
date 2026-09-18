@@ -1,0 +1,68 @@
+schema: doc/v1
+epic: E-SIMPDF
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "E-SIMPDF's row closed; three inherited items re-homed as rows of their own and two more lifted out of the plan's non-goals table; five new rows - the first live run's clock-and-token bill, the cr/v3 records chore, the refusal position, overflow-declared's elective gap, and Gate 0 running no feature-gated suite; E-ONBOARD's parked design input named with its carrier"
+  - path: "docs/component-design.html"
+    tier: T1
+    action: updated
+    distills: "the component design's own loop read against the cut shape and edited only where it named the retired stages"
+  - path: "docs/decisions/dec-14-design-rules-kb.html"
+    tier: T2
+    action: updated
+    distills: "a status line: DEC-53 removes the rulebook's receipt obligation and its soft-rules table; the vocabularies and the hard rules stand"
+  - path: "docs/decisions/dec-15-design-run-enforcement.html"
+    tier: T2
+    action: updated
+    distills: "a status line: DEC-53 reduces the three tiers to Tier-1 and a hand-off accounting"
+  - path: "docs/decisions/dec-24-design-review-dimension.html"
+    tier: T2
+    action: updated
+    distills: "a status line: DEC-53 shrinks the Tier-3 scope to the accounting sections of the design-review skill"
+  - path: "docs/decisions/dec-34-fixed-height-rows-truncate.html"
+    tier: T2
+    action: updated
+    distills: "a status line: its escape clause said declared on the receipt, and with the receipt gone the declaration moves to the review item"
+  - path: "docs/decisions/dec-40-the-predecessor-is-the-checklist.html"
+    tier: T2
+    action: updated
+    distills: "superseded by DEC-53 - the predecessor walk retires, the human reads the new mockup"
+  - path: "docs/decisions/dec-46-the-design-verdict-has-its-own-note.html"
+    tier: T2
+    action: updated
+    distills: "a status line: the design/v1 note survives the cut and carries the accounting alone, with no rulebook pin"
+  - path: "docs/decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html"
+    tier: T2
+    action: added
+    distills: "the whole cut, station by station with its corpus row: the mockup doc's six items, the three-step close, the hand-off accounting as the whole design step, the four stage-bound hard rules' fates, what it amends and supersedes, six rejected alternatives - and the correction that mockup·hand-drawn did not survive the cut it was cited in"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-53 and DEC-54 routed; DEC-40 marked superseded; DEC-14 · 15 · 24 · 34 · 46 marked amended"
+  - path: "docs/decisions/workflow-gates.html"
+    tier: T2
+    action: updated
+    distills: "DEC-54 - the cache key is the tree's content and not its history, two markers with a one-way implication, cargo xtask lint as the commit hook's one call; and a superseded-key note on DEC-11, whose stated key definition this makes false"
+  - path: "docs/design-flow.html"
+    tier: T1
+    action: updated
+    distills: "the flow as it is run now: the registry read, the mockup doc and its six items, the three-step close, the hand-off accounting, and a Run it table with no hash-object row - landed under a Reviewed-By trailer"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "the rulebook as hard rules and vocabularies only - no receipt obligation, no soft-rules table, an enforcement diagram of Tier-1 and the human, a Binds-at column naming only the mockup doc's items, and one hard row marked retired"
+  - path: "docs/documentation-system.html"
+    tier: T1
+    action: updated
+    distills: "the rulebook described as what it now is, with no soft slugs cited by a receipt"
+  - path: "docs/work-planning.html"
+    tier: T1
+    action: updated
+    distills: "the planning standard read against the cut shape and edited where it named a retired stage"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "check 9 and the design/v1 note without the rulebook pin; the pre-commit row, the DoD-C row and the command block naming cargo xtask lint and the content-keyed skip"
