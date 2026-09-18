@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-SIMPDF
 wu: E-SIMPDF.W3
-branch: wu/simpdf/hook-lint-cache
 base: bfdc345ab43d08a67fdcb7d377cf1724ed6e8408
 tip: 42e55f25e7f06ed831114bf603bb43b166f1069a
 diff_sha256: f7d4ed18d522d411dda700060e45c0d1e2e5e8694b59213b43a9f4df404f09d8
