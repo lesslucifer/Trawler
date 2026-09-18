@@ -207,31 +207,96 @@ pub fn diff_sha256_paths(
     sha256_hex(&diff.stdout)
 }
 
-// A content hash of everything a `cargo` build sees: HEAD, tracked changes
-// (staged or not), and untracked non-ignored files. git stash create looked
-// like the primitive for this but silently drops untracked files, so the parts
-// are hashed explicitly. Over-invalidates on a stray untracked file (safe
-// direction: a needless rebuild, never a false skip).
+/// The two listings whose union is every path a `cargo` build may read: the
+/// index (so a tracked file deleted from the worktree still has an entry to
+/// record as absent) and untracked non-ignored files.
+const BUILD_INPUT_LISTINGS: [&[&str]; 2] =
+    [&["ls-files", "-z"], &["ls-files", "--others", "--exclude-standard", "-z"]];
+
+fn build_inputs(repo: &Path) -> Result<Vec<String>, String> {
+    let mut paths = Vec::new();
+    for args in BUILD_INPUT_LISTINGS {
+        let listing = cmd(repo)
+            .args(args)
+            .output()
+            .map_err(|e| format!("failed to spawn git {}: {e}", args.join(" ")))?;
+        if !listing.status.success() {
+            return Err(format!(
+                "git {}: {}",
+                args.join(" "),
+                String::from_utf8_lossy(&listing.stderr).trim_end()
+            ));
+        }
+        // A path the key cannot address is an error, never a silently dropped
+        // entry: dropping one would be a false skip, the one direction a cache
+        // must never fail in.
+        let listed = String::from_utf8(listing.stdout).map_err(|_| {
+            format!("git {} listed a non-UTF-8 path; the key cannot address it", args.join(" "))
+        })?;
+        paths.extend(listed.split('\0').filter(|p| !p.is_empty()).map(str::to_string));
+    }
+    paths.sort_unstable();
+    paths.dedup();
+    Ok(paths)
+}
+
+#[cfg(unix)]
+fn is_executable(meta: &std::fs::Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt as _;
+    meta.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable(_meta: &std::fs::Metadata) -> bool {
+    false
+}
+
+/// Every field is length-prefixed so no file's contents can imitate the framing
+/// of a following entry.
+fn push_field(bytes: &mut Vec<u8>, tag: u8, field: &[u8]) {
+    bytes.push(tag);
+    bytes.extend_from_slice(field.len().to_string().as_bytes());
+    bytes.push(0);
+    bytes.extend_from_slice(field);
+}
+
+/// What a build would read at `path`: a symlink's target, a file's contents plus
+/// its executable bit, or the fact that nothing is there. The old key got
+/// deletions and mode flips for free out of `git diff HEAD`; reading the
+/// worktree does not, so each is recorded as itself.
+fn push_entry(bytes: &mut Vec<u8>, repo: &Path, path: &str) {
+    push_field(bytes, b'p', path.as_bytes());
+    let full = repo.join(path);
+    match std::fs::symlink_metadata(&full) {
+        Err(_) => bytes.push(b'0'),
+        Ok(meta) if meta.is_symlink() => {
+            let target = std::fs::read_link(&full).unwrap_or_default();
+            push_field(bytes, b'l', target.to_string_lossy().as_bytes());
+        }
+        Ok(meta) => {
+            bytes.push(if is_executable(&meta) { b'x' } else { b'-' });
+            match std::fs::read(&full) {
+                Ok(content) => push_field(bytes, b'f', &content),
+                Err(_) => bytes.push(b'?'),
+            }
+        }
+    }
+}
+
+/// A content hash of everything a `cargo` build reads: every tracked and
+/// untracked non-ignored path, its contents, its executable bit, and the fact
+/// of a deletion. Deliberately **not** `HEAD` or `git diff HEAD` — identical
+/// content under a new commit is the same tree to every compiler, and hashing
+/// history made each commit a false miss (DEC-54; DEC-11 keyed the old shape).
+/// The index is not hashed either: fmt, clippy and the tests read the worktree,
+/// so the key describes what the compiler sees. Over-invalidates on a stray
+/// untracked file (safe direction: a needless rebuild, never a false skip).
 // ponytail: untracked-but-not-ignored files invalidate the cache; tighten only
 // if scratch files in the tree prove to churn it noisily.
 pub fn worktree_key(repo: &Path) -> Result<String, String> {
-    let head = git(repo, &["rev-parse", "HEAD"])?;
-    let diff = cmd(repo)
-        .args(["diff", "HEAD", "--no-color", "--no-ext-diff"])
-        .output()
-        .map_err(|e| format!("failed to spawn git diff HEAD: {e}"))?;
-    if !diff.status.success() {
-        return Err(format!("git diff HEAD: {}", String::from_utf8_lossy(&diff.stderr).trim_end()));
-    }
-    let untracked = git(repo, &["ls-files", "--others", "--exclude-standard"])?;
-    let mut bytes = head.into_bytes();
-    bytes.extend_from_slice(&diff.stdout);
-    for path in untracked.lines() {
-        bytes.extend_from_slice(path.as_bytes());
-        bytes.push(0);
-        if let Ok(content) = std::fs::read(repo.join(path)) {
-            bytes.extend_from_slice(&content);
-        }
+    let mut bytes = Vec::new();
+    for path in build_inputs(repo)? {
+        push_entry(&mut bytes, repo, &path);
     }
     sha256_hex(&bytes)
 }
@@ -584,5 +649,36 @@ mod tests {
             git_outcome(missing, &["status"], &[]).is_ok(),
             "git ran and refused - that is an outcome"
         );
+    }
+
+    // The key frames every variable-length field with its length, so no file's
+    // contents can imitate the start of the next entry - the one way a pure
+    // delimiter scheme could hash two different trees alike.
+    #[test]
+    fn a_files_contents_cannot_imitate_the_next_entry() {
+        let mut framed = Vec::new();
+        super::push_field(&mut framed, b'p', b"a");
+        super::push_field(&mut framed, b'f', b"\0p\x001\0b");
+        let mut two_entries = Vec::new();
+        super::push_field(&mut two_entries, b'p', b"a");
+        super::push_field(&mut two_entries, b'f', b"");
+        super::push_field(&mut two_entries, b'p', b"b");
+        assert_ne!(framed, two_entries);
+    }
+
+    #[test]
+    fn an_empty_field_is_not_an_absent_one() {
+        let mut empty = Vec::new();
+        super::push_field(&mut empty, b'f', b"");
+        assert_ne!(empty, vec![b'0'], "an empty file must not hash as a missing one");
+    }
+
+    #[test]
+    fn the_field_tag_separates_a_link_target_from_the_same_bytes_as_content() {
+        let mut link = Vec::new();
+        super::push_field(&mut link, b'l', b"target");
+        let mut content = Vec::new();
+        super::push_field(&mut content, b'f', b"target");
+        assert_ne!(link, content);
     }
 }

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aace3439f34851f0dfad1aa" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-SIMPDF.W3 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-SIMPDF.W3 — the commit hook stops re-proving a green tree</h1>
+      <p>Gate 0's cache already knows when the tree is unchanged, and the pre-commit hook does not ask it. Worse, its key hashes <code>HEAD</code>, so every commit invalidates a proof the content never touched. Make the key the tree's content, give the lint pair its own green marker, and let the hook read both.</p>
+      <div class="meta">Draft v1 · 2026-09-18 · Trawler · T3 WU plan · <span class="badge id">E-SIMPDF.W3</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <code>cargo fmt --check</code> and <code>cargo clippy</code> run at commit time only when the
+      working tree's <strong>content</strong> differs from the content last proven to pass them: the
+      cache key is the bytes the compiler reads — every tracked and untracked non-ignored path, its
+      contents, its executable bit, and the fact of a deletion — and no longer <code>HEAD</code> or
+      <code>git diff HEAD</code>, so a commit that changes no content does not invalidate the proof
+      and a WU's second commit pays nothing. A skip fires only when the recomputed key equals a
+      stored one, never on a stored verdict, so a tree that was not verified can never report green;
+      every invalidation <code>xtask/tests/gate0_cache.rs</code> pins today still fires, and a
+      tracked deletion and a mode flip now fire too. The lint pair gets its own
+      <code>target/.lint-green</code> marker, a matching <code>target/.gate0-green</code> counts as
+      proof of it because Gate 0 caches only after fmt and clippy have both passed, and
+      <code>.cargo-husky/hooks/pre-commit</code> asks one command — <code>cargo xtask lint</code> —
+      instead of running the pair blind. DEC-6's refusal on <code>main</code> stays the hook's first
+      act, before any cargo process starts, and the <code>--workspace</code> guarantee survives the
+      move to <code>gate0::CLIPPY</code>'s own test.
+    </p>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-SIMPDF</span> — by the owner's call at this WU's open, not by the
+      epic plan's expected results, which are the design flow's alone and which this WU neither
+      advances nor touches. It extends
+      <a href="../decisions/workflow-gates.html">DEC-11</a>'s principle — gate speed is bought by
+      caching under DEC-2, never by relaxing it — from the review path to the commit path, and
+      amends DEC-11's recorded key definition, which this WU makes false. The record is
+      <strong>DEC-54</strong>, carried by this WU rather than a separate one. No
+      <code>UC-*</code>: nothing a user can see moves.
+    </p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected-table">
+        <thead><tr><th>#</th><th>Observable after</th><th>How to check</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>A commit on a tree already proven green runs no fmt and no clippy — including the second commit of a WU, where the content is unchanged and only <code>HEAD</code> moved.</td>
+            <td><code>cargo xtask lint</code> prints the skip line naming the key it stood on. The hook's log in <code>tests/dod_hooks.rs</code> records one <code>xtask lint</code> call and no <code>clippy</code> call.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>A content-neutral commit does not invalidate the proof. This is the defect: today's key changes across it.</td>
+            <td><code>xtask/tests/gate0_cache.rs</code> — stage an edit, take the key, commit, take it again: equal. Measured before this WU at <code>ca92183e…</code> → <code>847a2513…</code> (a false miss); after, equal.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Every invalidation DEC-11 pinned still fires, and two the old key caught only through <code>git diff HEAD</code> keep firing on their own terms.</td>
+            <td>The five existing tests pass unchanged (clean tree stable · tracked edit · whitespace edit · untracked source file · gitignored file ignored), plus two new: a tracked <strong>deletion</strong> and an <strong>executable-bit flip</strong> each change the key.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>A tree nobody verified never skips. The marker stores a key, never a verdict.</td>
+            <td>Unit test in <code>xtask/src/gate0.rs</code>: a marker holding any other key is a miss; a red run writes no marker.</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>A full Gate 0 green is accepted as proof for the lint half, so a review preflight's run is not paid twice.</td>
+            <td>Unit test: <code>.gate0-green</code> matching the key satisfies <code>lint</code> with no cargo process spawned. The converse does not hold — <code>.lint-green</code> never satisfies Gate 0.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>The refusal on <code>main</code> is still instant, and clippy still lints every workspace member.</td>
+            <td>The guard is the first block in the hook, above the <code>cargo xtask lint</code> line (DEC-6's stated ordering). <code>gate0::CLIPPY</code> keeps <code>--workspace</code>, pinned by <code>clippy_lints_every_workspace_member</code>; the hook test that read the flag off the hook text now asserts the delegation instead.</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>DEC-11's key definition is amended in the open, not quietly falsified.</td>
+            <td>DEC-54 in <code>docs/decisions/workflow-gates.html</code> states the new key and what it supersedes; DEC-11 carries a status line pointing at it — <span class="badge id">E-SIMPDF.W1</span>'s precedent.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="shape">The shape</h2>
+
+    <div class="diagram" data-c="flow-diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph before["today — the hook runs the pair blind"]
+    direction LR
+    B1["pre-commit"] --> B2["cargo fmt --check"] --> B3["cargo clippy<br/>0.1s warm · 11s after a test run · minutes cold"]
+    B4[["target/.gate0-green<br/>key = HEAD + diff HEAD + untracked"]]:::unread
+  end
+  subgraph after["after — the hook asks, and the key is the content"]
+    direction LR
+    A1["pre-commit"] --> A2["cargo xtask lint"]
+    A2 --> A3{"content key<br/>matches a marker?"}
+    A3 -- yes --> A4["skip — naming the key"]
+    A3 -- no --> A5["fmt · clippy"] --> A6[["write .lint-green"]]
+    A7[[".gate0-green<br/>counts: Gate 0 caches<br/>only after both passed"]] --> A3
+  end
+  classDef unread stroke-dasharray: 4 3
+      </pre>
+      <div class="caption">Hình 1 — the cache exists in both; only the second one is consulted, and only the second survives a commit.</div>
+    </div>
+
+    <table data-c="key-table">
+      <thead><tr><th>Key input</th><th>Today</th><th>After</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>HEAD</code> sha</td><td>hashed</td><td class="warn">dropped</td><td>The defect. Identical content under a new <code>HEAD</code> is the same tree to every compiler, and hashing history makes each commit a false miss.</td></tr>
+        <tr><td><code>git diff HEAD</code></td><td>hashed</td><td class="warn">dropped</td><td>Only ever a proxy for tracked content, and one that carried <code>HEAD</code> with it. Replaced by reading the files.</td></tr>
+        <tr><td>Tracked file contents</td><td>via the diff</td><td>read directly</td><td>What fmt and clippy actually read.</td></tr>
+        <tr><td>Untracked non-ignored contents</td><td>hashed</td><td>hashed</td><td>Unchanged — a new source file is a build input (DEC-11's <code>git stash create</code> note).</td></tr>
+        <tr><td>Tracked deletion</td><td>via the diff</td><td>explicit absence marker</td><td>The diff used to cover this for free; reading files does not, so absence is recorded as itself or a deletion goes invisible.</td></tr>
+        <tr><td>Executable bit</td><td>via the diff</td><td>hashed</td><td>Same reason, and this repo's hook tests depend on modes — Gate 0 runs the suite on this key.</td></tr>
+        <tr><td>Index / staging state</td><td>not hashed</td><td>not hashed</td><td>Unchanged, and deliberate: fmt, clippy and the tests read the worktree, not the index. The key describes what the compiler sees.</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">Measured on this repo — 312 files, 4.0 MB: the content key costs <strong>27 ms</strong> in one process against the old key's <strong>42 ms</strong> (which forks git twice). The key gets cheaper, not dearer; the clippy it stands in for is 0.1 s at best and minutes at worst.</p>
+
+    <div class="callout">
+      <strong>Why two markers and not one.</strong> A marker means "this exact content passed this
+      exact check set". <code>.gate0-green</code> vouches for fmt + clippy + the whole suite;
+      <code>.lint-green</code> for fmt + clippy alone. Collapsing them would either let a lint-only
+      pass satisfy Gate 0 — a cache reporting green for tests it never ran, the one thing DEC-11
+      forbids — or make the hook pay for the test suite. The implication runs one way only, and the
+      reader encodes that direction.
+    </div>
+
+    <h2 id="edits">The edits</h2>
+    <table data-c="edits-table">
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/git.rs</code></td><td><code>worktree_key</code> becomes content-addressed: enumerate <code>ls-files</code> ∪ <code>ls-files --others --exclude-standard</code>, sort, and hash path + NUL + (contents · mode, or an absence marker) per entry. One function; every caller keeps its signature.</td></tr>
+        <tr><td><code>xtask/src/gate0.rs</code></td><td><code>lint(repo)</code> beside <code>gate0(repo)</code>: reads <code>.lint-green</code> or <code>.gate0-green</code>, runs fmt then <code>CLIPPY</code> on a miss, writes <code>.lint-green</code> on green. <code>gate0</code> itself is untouched except to share the marker readers.</td></tr>
+        <tr><td><code>xtask/src/lib.rs</code></td><td><code>["lint"] =&gt; gate0::lint(repo)</code> in <code>run</code>, plus its <code>USAGE</code> line.</td></tr>
+        <tr><td><code>.cargo-husky/hooks/pre-commit</code></td><td>The two cargo lines become <code>cargo xtask lint</code>. The <code>main</code> guard stays first; the <code>MERGE_HEAD</code> arm is untouched. Installed at build time, so the hook is reinstalled by the next <code>cargo build</code>.</td></tr>
+        <tr><td><code>docs/decisions/workflow-gates.html</code></td><td>DEC-54 appended; DEC-11 gains a status line naming it. Routed in <code>decisions-index.html</code>.</td></tr>
+        <tr><td><code>docs/workflow.html</code></td><td>The command table gains <code>cargo xtask lint</code>. <strong>T1, rule-bearing</strong> — this edit lands under a <code>Reviewed-By</code> trailer via <code>mr commit</code>, which is the user's to run.</td></tr>
+        <tr><td><code>docs/work/2026-09-16-simpdf-plan.html</code></td><td>A W3 row, stating that this WU is admitted by the owner's call and serves none of the epic's expected results.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-table">
+        <thead><tr><th>Level</th><th>What it covers</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge auto">unit</span> <code>xtask/src/gate0.rs</code></td>
+            <td>The lint marker round-trips and lives under <code>target/</code> · a marker holding another key is a miss · a red run writes no marker · a matching <code>.gate0-green</code> satisfies <code>lint</code> · a matching <code>.lint-green</code> does <strong>not</strong> satisfy <code>gate0</code> (the one-way implication) · <code>CLIPPY</code> still carries <code>--workspace</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="badge auto">unit</span> <code>xtask/src/git.rs</code></td>
+            <td>The key's enumeration and hashing: sorted order is stable regardless of the order git lists paths in; an absence marker is distinguishable from an empty file; the mode bit reaches the hash.</td>
+          </tr>
+          <tr>
+            <td><span class="badge auto">integration</span> <code>xtask/tests/gate0_cache.rs</code></td>
+            <td>Over a real temp repo, the contract as a whole: the five properties DEC-11 pinned, unchanged and still asserting invalidation · <strong>new</strong> — a content-neutral commit leaves the key equal (the defect this WU fixes) · a tracked deletion changes it · an executable-bit flip changes it · a staged-but-uncommitted tree and the committed tree that follows it share a key.</td>
+          </tr>
+          <tr>
+            <td><span class="badge auto">integration</span> <code>tests/dod_hooks.rs</code> <code>--features hook-tests</code></td>
+            <td>The hook wiring, through the existing fake-cargo shim: a commit on a WU branch records one <code>xtask lint</code> call and no bare <code>clippy</code> call (replacing <code>commits_on_non_main_branches_are_unaffected_by_the_main_guard</code>'s <code>fmt</code> assertion) · <code>the_pre_commit_clippy_pass_lints_every_workspace_member</code> becomes an assertion that the hook delegates to <code>cargo xtask lint</code>, with the <code>--workspace</code> guarantee re-homed onto <code>gate0::CLIPPY</code>'s own test · the <code>main</code> refusal still fires with the cargo shim never invoked · the <code>MERGE_HEAD</code> arms still reach <code>verify-dod hook wu|epic</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="badge approval">e2e</span></td>
+            <td><span class="badge id">waived</span> — this WU is a Working Unit, not an epic, and its bounded contract is the key and the marker, which the integration suites exercise end to end over real git repos and the real hook. No user-facing flow moves, so there is no full flow to drive. Recorded as <code>waived</code> on the <code>test/v2</code> note with this reason.</td>
+          </tr>
+          <tr>
+            <td><span class="badge auto">doc form</span></td>
+            <td><code>cargo xtask verify-doc</code> over this plan, the amended epic plan, the decisions pages and the result report.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="caption">This diff changes code, so it owes a <code>cr/v5</code> PASS bound to it. It carries no design artifact and renders no file under <code>ui/src/</code>, so it owes no design step.</p>
+    </div>
+
+    <h2 id="risks">The four facts that shape this WU</h2>
+    <table data-c="risks-table">
+      <thead><tr><th>Fact</th><th>What it means here</th></tr></thead>
+      <tbody>
+        <tr><td>The key is Gate 0's too, not only the hook's</td><td>Changing <code>worktree_key</code> changes what the review preflight caches on. That is the point — its false miss re-runs the <em>whole test suite</em>, the expensive one — but it widens the blast radius past the hook, so the five pinned properties are the acceptance criteria, not a formality.</td></tr>
+        <tr><td>DEC-11 states the old key verbatim</td><td>"key = full worktree hash (HEAD + git diff HEAD + untracked non-ignored contents)". This WU makes that sentence false, so the record is amended in the same diff — never left to a later pass.</td></tr>
+        <tr><td>The hook is installed by cargo-husky at build time</td><td>Editing <code>.cargo-husky/hooks/pre-commit</code> does not change the installed hook until a build runs. The result report states the reinstall, and the hook tests read the versioned file rather than the installed one.</td></tr>
+        <tr><td>A T1 doc is in the diff</td><td><code>docs/workflow.html</code> is rule-bearing, so the commit carrying it needs a <code>Reviewed-By</code> trailer through <code>cargo xtask mr commit</code> — manual review, which is the user's to run. It is staged and the command printed; never run by the agent.</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

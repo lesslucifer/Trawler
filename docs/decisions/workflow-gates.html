@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v8 · 2026-07-11 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v9 · 2026-09-18 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -311,7 +311,7 @@
     <table data-c="dec-11-choices-table">
       <thead><tr><th>Choice</th><th>Why — do not "simplify" it away / do not retry without new leverage</th></tr></thead>
       <tbody>
-        <tr><td><strong>Adopted:</strong> Gate 0 (fmt+clippy+tests) skips when the working tree is byte-identical to the last green run — key = full worktree hash (HEAD + <code>git diff HEAD</code> + untracked non-ignored contents), cached in a local <code>target/.gate0-green</code> file</td><td>The cache stores the key it vouches for, never a bare verdict, so a skip fires only when the recomputed key matches — DEC-2 applied to a cache. A file under <code>target/</code>, deliberately not a git note: the fact is ephemeral and per-checkout, <code>cargo clean</code> co-invalidates it, and it never syncs (another machine has not run this build). Recovers the cargo bucket previously paid 2–3× per review.</td></tr>
+        <tr><td><strong>Adopted:</strong> Gate 0 (fmt+clippy+tests) skips when the working tree is byte-identical to the last green run — key = full worktree hash (HEAD + <code>git diff HEAD</code> + untracked non-ignored contents), cached in a local <code>target/.gate0-green</code> file <em>(key definition superseded by <a href="#dec-54">DEC-54</a>, which drops HEAD and the diff for the tree's content; the cache's shape and its store-the-key rule are unchanged)</em></td><td>The cache stores the key it vouches for, never a bare verdict, so a skip fires only when the recomputed key matches — DEC-2 applied to a cache. A file under <code>target/</code>, deliberately not a git note: the fact is ephemeral and per-checkout, <code>cargo clean</code> co-invalidates it, and it never syncs (another machine has not run this build). Recovers the cargo bucket previously paid 2–3× per review.</td></tr>
         <tr><td>Rejected: note/doc skeleton generation (W1, C4)</td><td>A/B (n=3/arm): on a capable model the hand-authored arm passed the gate first try, so the round-trip saving never reproduced — ~31% fewer tokens but ~1.9× wall-clock in print-only form. The win is contingent on weaker models or harder diffs; not adopted.</td></tr>
         <tr><td>Rejected: faster review model (W3, C6)</td><td>A/B on a labeled diff: Sonnet finders 2/2 known-real, ~25% faster — but Sonnet verifiers flipped 3/9 verdicts vs ground truth (a spurious PASS→FAIL), and the verify phase had no wall-clock headroom (47s vs 50s). Verifier quality is the binding constraint; owner closed the epic without adopting the switch for either role.</td></tr>
         <tr><td>Rejected: context-pack for finders (W6)</td><td>A known-real finding escaped and the critical path grew +63%. Failed on both axes.</td></tr>
@@ -328,6 +328,9 @@
     independent restructurings (pack, shard, stream) all lost their A/Bs against that floor, so do
     not retry them without changing the floor itself (a faster <em>trustworthy</em> verifier, or
     W4's safe-delta scoping).</p>
+    <p><em>(Amended by <a href="#dec-54">DEC-54</a>: the principle is unchanged and the cut list
+    stands, but the key is now the tree's content, and the commit hook — which this record left
+    running the lint pair blind — reads a cache of its own.)</em></p>
 
 <h2 id="dec-27"><span class="badge id">DEC-27</span> The human signature goes last — <code>mr confirm</code> refuses a tip whose tree can still move</h2>
     <table data-c="dec-27-facts">
@@ -369,6 +372,56 @@
     skipped rather than guessed — check 5 still refuses a stale review at the merge, so the failure mode is
     a wasted signature, never a bad landing. Existing <code>mr/v1</code> notes verify unchanged; the signed
     payload is untouched.</p>
+
+<h2 id="dec-54"><span class="badge id">DEC-54</span> The cache key is the tree's content, not its history — and the commit hook reads a cache of its own</h2>
+    <table data-c="dec-54-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-09-18</td></tr>
+        <tr><th>Origin</th><td><span class="badge id">E-SIMPDF.W3</span> — the owner asked why <code>cargo xtask mr commit</code> waits minutes before the signing passphrase. It does not: <code>mr_commit</code> spends microseconds and then calls <code>git commit -S</code>, whose <code>pre-commit</code> hook ran <code>cargo fmt --check</code> and <code>cargo clippy --workspace --all-targets --all-features</code> blind, ahead of the signature git can only take afterwards. Admitted into E-SIMPDF by the owner's call; its lineage is <a href="#dec-11">DEC-11</a> / E-GATEFAST</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/git.rs · worktree_key</code> · <code>xtask/src/gate0.rs · lint</code> · <code>.cargo-husky/hooks/pre-commit</code> · <code>xtask/tests/gate0_cache.rs</code> · <code>tests/dod_hooks.rs</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-54-context">Context</h3>
+    <p>DEC-11 built the cache that answers "has this tree already been proven green?" and wired it
+    to the review preflight alone. The commit hook — the gate an agent crosses most often — never
+    asked it. Two facts made simply wiring it up insufficient:</p>
+    <table data-c="dec-54-facts-table">
+      <thead><tr><th>Fact</th><th>Measured</th></tr></thead>
+      <tbody>
+        <tr><td>The old key hashed <code>HEAD</code>, so a commit invalidated a proof its content never touched — and a Working Unit is many commits</td><td>Across a content-neutral commit in a scratch repo the key moved <code>ca92183e…</code> → <code>847a2513…</code>; a content key held at <code>b824d8cf…</code></td></tr>
+        <tr><td>Clippy's cost is bimodal, not small: it is near-free warm, but <code>cargo clippy</code> and <code>cargo test</code> invalidate each other's fingerprints, so any hook run following the suite recompiles the graph</td><td>0.1 s warm · 11 s after a test run · minutes cold. DEC-6 already called it "a minutes-long clippy run" when it put the <code>main</code> refusal first</td></tr>
+        <tr><td>Reading the worktree is cheaper than the <code>git diff</code> it replaces</td><td>312 files / 4.0 MB: 27 ms for the content key against 42 ms for the old one, which forks git twice</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-54-choices">Choices</h3>
+    <table data-c="dec-54-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Adopted:</strong> <code>worktree_key</code> hashes content — every tracked and untracked non-ignored path, its bytes, its executable bit, and the fact of a deletion — and neither <code>HEAD</code> nor <code>git diff HEAD</code></td><td>Identical content under a new commit is the same tree to every compiler, so hashing history bought nothing and cost a false miss per commit. It is DEC-11's own invariant read strictly: the key must describe what the build reads. Every invalidation DEC-11 pinned still fires, which is the acceptance criterion rather than a formality — the deletion and the mode bit came free from <code>git diff HEAD</code> and are now recorded as themselves, or they would have gone invisible.</td></tr>
+        <tr><td><strong>Adopted:</strong> two markers — <code>.gate0-green</code> (fmt+clippy+tests) and <code>.lint-green</code> (fmt+clippy) — with a matching <code>.gate0-green</code> accepted as proof at the lint level and never the reverse</td><td>A marker means "this content passed <em>this</em> check set". One file with a level in it would either let a lint-only pass answer for tests that never ran — a cache reporting green for work it did not do, the one thing DEC-11 forbids — or make every commit pay for the suite. The implication runs one way, and the reader encodes that direction rather than leaving it to a caller.</td></tr>
+        <tr><td><strong>Adopted:</strong> the hook calls one command, <code>cargo xtask lint</code></td><td>The skip rule, the marker paths and the <code>--workspace</code> scoping then live in tested Rust instead of shell. The hook test that used to read <code>--workspace</code> off the hook text now asserts the delegation, and the flag is pinned by <code>gate0::CLIPPY</code>'s own test — the guarantee moved, it was not dropped.</td></tr>
+        <tr><td><strong>Rejected:</strong> prompt for the signature first, then check</td><td>What the owner asked for, and git cannot do it. <code>pre-commit</code> → <code>commit-msg</code> → write and sign the commit object is git's fixed order, and no hook runs after signing that can still refuse. The only way to put the prompt first is <code>--no-verify</code> plus a <code>post-commit</code> check that resets on red, which the workflow forbids outright.</td></tr>
+        <tr><td><strong>Rejected:</strong> move the lint pair to <code>pre-push</code>, where the suite already runs</td><td>Defensible under "the merge is the gate", but it lets a red tree sit in local history and it relaxes a gate rather than caching it — DEC-11's standing rule. Caching reaches the same speed with no rule changed.</td></tr>
+        <tr><td><strong>Rejected:</strong> narrow the hook's clippy (drop <code>--all-targets</code>/<code>--all-features</code>, or scope it to staged packages)</td><td>Same objection: it buys speed by checking less. The scoping is load-bearing — without <code>--workspace</code> the <code>xtask</code> member, where every gate and hook lives, goes unlinted by the gate that proves the tree green.</td></tr>
+        <tr><td><strong>Rejected:</strong> reuse <code>.gate0-green</code> alone, without a lint marker</td><td>A miss would then run the whole test suite at commit time — worse than the pair it replaced. The weaker marker exists precisely so a miss costs only what the hook always cost.</td></tr>
+        <tr><td><strong>Not hashed:</strong> the index</td><td>Deliberate, and unchanged from DEC-11: fmt, clippy and the tests read the worktree, so the key describes what the compiler sees. A tree staged differently from disk was never covered by either key.</td></tr>
+        <tr><td><strong>Not adopted here:</strong> the signing prompt itself</td><td>The wait and the prompt are separable. <code>user.signingkey</code> pointing at an encrypted private key makes <code>ssh-keygen -Y sign</code> decrypt it on every signature; pointing it at the <code>.pub</code> with the key in an agent removes the prompt entirely. That is local configuration, not a repo rule, so it is recorded here and not enforced.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-54-consequences">Consequences</h3>
+    <p>A commit on a tree already proven green runs no fmt and no clippy, including the second and
+    every later commit of a Working Unit, where only <code>HEAD</code> moves. The review preflight
+    gains the same relief for free, and its miss was the expensive one — it re-ran the whole suite.
+    A key that no longer mentions <code>HEAD</code> also works on an unborn branch, where
+    <code>rev-parse HEAD</code> used to error. The blast radius is wider than the hook: every caller
+    of <code>worktree_key</code> now keys on content, so the five invalidation properties
+    <code>gate0_cache.rs</code> pins are the contract, joined by a content-neutral commit holding
+    the key, a tracked deletion changing it, and an executable-bit flip changing it. The hook is
+    installed by cargo-husky at build time, so the new one takes effect after this lands and a build
+    runs — until then a checkout keeps the blind pair.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>

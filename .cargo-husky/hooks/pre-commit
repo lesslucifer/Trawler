@@ -19,13 +19,12 @@ EOF
   exit 1
 fi
 
-echo "[pre-commit] cargo fmt --check"
-cargo fmt --all -- --check
-
-# --workspace, or only `trawler` is linted: the repo root is a package as well as
-# a workspace, and every hook, gate and design check lives in the xtask member.
-echo "[pre-commit] cargo clippy -D warnings"
-cargo clippy --workspace --all-targets --all-features -- -D warnings
+# fmt + clippy, skipped when this exact tree content already passed them - the
+# pair used to run blind on every commit, so a WU paid for clippy once per
+# commit instead of once per change (DEC-54). The --workspace scoping lives in
+# xtask::gate0::CLIPPY, pinned by its own test.
+echo "[pre-commit] cargo xtask lint"
+cargo xtask lint
 
 # Conflicted merges never reach pre-merge-commit; their completion lands here
 # with MERGE_HEAD on disk - gate it the same way.
