@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-SIMPDF
 wu: E-SIMPDF.W2
-branch: HEAD
 base: 2c6aca58e9e4fadf7f8ac8cfdda464056e92d80f
 tip: 0a7b19835dde937e1fc653a70c68c42a3e38ef41
 diff_sha256: d5be0d9f1029f90e197a4aa01b7f2014ad28b2dd8208d10571f1c8456d211a6b
