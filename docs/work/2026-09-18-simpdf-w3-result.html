@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-SIMPDF.W3 — result</h1>
       <p>The cache key stopped hashing history, the commit hook started asking the cache, and the same question went from 12.45 s to a skip. Two deviations, both named. The one thing the plan predicted and got wrong: a build does not reinstall the hook here, because three worktrees share one hooks directory.</p>
-      <div class="meta">v2 · 2026-09-18 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W3</span> · tips bda9733 · 840ad51 · cc593bd + the review’s fixes</div>
+      <div class="meta">v2 · 2026-09-18 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W3</span> · tips bda9733 · 840ad51 · cc593bd · 35c4460 + the review’s fixes</div>
     </div>
   </header>
   <main>
@@ -146,8 +146,34 @@
       </tbody>
     </table>
     <p class="caption">
-      The fixed tip is re-reviewed from scratch; this report does not speak for that round's verdict,
-      which lives on the <code>cr/v5</code> note bound to the code it judged.
+      Round 1 of three. Each fixed tip is re-reviewed from scratch; this report does not speak for the
+      last round's verdict, which lives on the <code>cr/v5</code> note bound to the code it judged.
+    </p>
+
+    <h3 id="review-2">Round 2 — the fix's own defects</h3>
+    <p>
+      Re-reviewing the fixed tip found <strong>two importants, both inside the test file round 1
+      added</strong>, and nothing in the production code. Worth recording as the cost of the fix, not
+      just its benefit: a test written to close a gap is itself unreviewed code.
+    </p>
+    <table data-c="review-2-table">
+      <thead><tr><th>Finding</th><th>Verdict</th><th>Disposition</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>important</strong> · <code>lint_spawn.rs</code>'s git calls scrub only <code>GIT_*</code>, leaving <code>HOME</code> and the contributor's real gitconfig — including <code>commit.gpgsign</code> — in reach. Every sibling helper in the repo guards this; this file was the lone outlier.</td>
+          <td><span class="badge warn">real</span> — reproduced at exit 128 with a <code>HOME</code> carrying <code>commit.gpgsign=true</code>. On a working SSH-signing setup it is worse than a failure: an interactive prompt, so a hang.</td>
+          <td><strong>Fixed</strong> — a <code>hermetic()</code> builder sets <code>HOME</code> to a tempdir, <code>GIT_CONFIG_GLOBAL</code>/<code>GIT_CONFIG_SYSTEM</code> to <code>/dev/null</code> and the author/committer identity, plus <code>commit.gpgsign=false</code> on the repo. Verified by running the suite green under the same poisoned <code>HOME</code> that fails an unguarded commit.</td>
+        </tr>
+        <tr>
+          <td><strong>important</strong> · the red-run assertion hardcodes <code>target/.lint-green</code>, duplicating a path <code>gate0.rs</code> owns. A rename would leave it asserting the absence of a file nothing writes — and no other test in the file would catch it.</td>
+          <td><span class="badge warn">real</span> — the rubric's own "duplicated rule that will drift" case; the verifier confirmed no sibling assertion is positioned to fail first.</td>
+          <td><strong>Fixed</strong> — the test names <code>gate0::lint_cache_path</code>. This reverses round 1's third nit, which made that function private for want of an external caller: the right answer was a caller, not privacy. <code>cache_path</code> earns its <code>pub</code> the same way, through <code>preflight.rs</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="caption">
+      Round 2 raised nothing against <code>git.rs</code> or <code>gate0.rs</code>, and its efficiency
+      finder returned an empty list after re-measuring the cache-hit path at 30–40 ms.
     </p>
 
     <h2 id="distillation">Distillation</h2>

@@ -17,6 +17,7 @@ use tempfile::TempDir;
 struct Env {
     _dir: TempDir,
     repo: std::path::PathBuf,
+    home: std::path::PathBuf,
     log: std::path::PathBuf,
     path: String,
 }
@@ -28,8 +29,10 @@ impl Env {
         let dir = TempDir::new().unwrap();
         let repo = dir.path().join("repo");
         let bin = dir.path().join("bin");
+        let home = dir.path().join("home");
         fs::create_dir_all(&repo).unwrap();
         fs::create_dir_all(&bin).unwrap();
+        fs::create_dir_all(&home).unwrap();
         let log = dir.path().join("cargo-calls.log");
 
         let shim = bin.join("cargo");
@@ -43,12 +46,17 @@ impl Env {
         let env = Self {
             _dir: dir,
             repo,
+            home,
             log,
             path: format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default()),
         };
         env.git(&["init", "-q", "-b", "main"]);
         env.git(&["config", "user.email", "lint@test"]);
         env.git(&["config", "user.name", "lint"]);
+        // Belt and braces with the scrubbed HOME above: a contributor with
+        // commit.gpgsign on would otherwise have this suite's commits block on a
+        // Touch ID prompt that never comes.
+        env.git(&["config", "commit.gpgsign", "false"]);
         // The marker lands under target/, which the key would otherwise hash as
         // an untracked build input - writing the proof would invalidate the very
         // tree it vouches for. Every cargo repo ignores target/; this one must
@@ -61,12 +69,29 @@ impl Env {
     }
 
     fn git(&self, args: &[&str]) {
-        let out = scrubbed("git").args(args).current_dir(&self.repo).output().unwrap();
+        let out = self.hermetic("git").args(args).current_dir(&self.repo).output().unwrap();
         assert!(out.status.success(), "git {args:?}: {}", String::from_utf8_lossy(&out.stderr));
     }
 
+    /// A command that cannot see the developer's git identity, signing setup or
+    /// hooks: `scrubbed` drops inherited `GIT_*`, and these put the ambient
+    /// config out of reach too. Without them a globally-configured
+    /// `commit.gpgsign` reaches this suite's commits.
+    fn hermetic(&self, program: impl AsRef<Path>) -> Command {
+        let mut cmd = scrubbed(program);
+        cmd.env("HOME", &self.home)
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .env("GIT_CONFIG_SYSTEM", "/dev/null")
+            .env("GIT_AUTHOR_NAME", "lint")
+            .env("GIT_AUTHOR_EMAIL", "lint@test.invalid")
+            .env("GIT_COMMITTER_NAME", "lint")
+            .env("GIT_COMMITTER_EMAIL", "lint@test.invalid");
+        cmd
+    }
+
     fn lint(&self) -> (bool, String) {
-        let out = scrubbed(env!("CARGO_BIN_EXE_xtask"))
+        let out = self
+            .hermetic(env!("CARGO_BIN_EXE_xtask"))
             .arg("lint")
             .current_dir(&self.repo)
             .env("PATH", &self.path)
@@ -139,7 +164,10 @@ fn a_red_run_refuses_and_caches_nothing() {
     let env = Env::new(1);
     let (ok, said) = env.lint();
     assert!(!ok, "a red lint must exit non-zero: {said}");
-    assert!(!env.repo.join("target/.lint-green").exists(), "a red run must not vouch for the tree");
+    assert!(
+        !xtask::gate0::lint_cache_path(&env.repo).exists(),
+        "a red run must not vouch for the tree"
+    );
     let (still_red, _) = env.lint();
     assert!(!still_red, "nothing was cached, so the next run must re-run and refuse again");
 }

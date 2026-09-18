@@ -22,7 +22,11 @@ pub fn cache_path(repo: &Path) -> PathBuf {
 /// one with a level in it: a marker means "this content passed this check set",
 /// and collapsing them would either let a lint-only pass answer for tests that
 /// never ran, or make the hook pay for the suite.
-fn lint_cache_path(repo: &Path) -> PathBuf {
+///
+/// `pub` so `xtask/tests/lint_spawn.rs` can name the marker rather than restate
+/// its path — a second copy of the name would go stale silently, leaving the
+/// test asserting the absence of a file nothing writes any more.
+pub fn lint_cache_path(repo: &Path) -> PathBuf {
     repo.join("target").join(".lint-green")
 }
 
