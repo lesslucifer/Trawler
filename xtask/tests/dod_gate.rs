@@ -491,7 +491,7 @@ fn a_run_still_mid_design_passes_and_a_closed_one_needs_the_design_dimension() {
     let report = closed.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert_eq!(checks_of(&report), vec!["9·design-schema"], "{}", format_report(&report));
     assert!(format_report(&report).contains("cr/v2"), "the red names the contract it found");
-    assert!(format_report(&report).contains("design finder"), "the fix names how to get one");
+    assert!(format_report(&report).contains("design step"), "the fix names how to get one");
 }
 
 // The reviewer and the merge gate must never disagree about what is
