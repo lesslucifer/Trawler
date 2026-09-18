@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-SIMPDF.W3 — result</h1>
       <p>The cache key stopped hashing history, the commit hook started asking the cache, and the same question went from 12.45 s to a skip. Two deviations, both named. The one thing the plan predicted and got wrong: a build does not reinstall the hook here, because three worktrees share one hooks directory.</p>
-      <div class="meta">v1 · 2026-09-18 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W3</span> · tips bda9733 · 840ad51 + this report</div>
+      <div class="meta">v2 · 2026-09-18 · Trawler · T3 WU result · <span class="badge id">E-SIMPDF.W3</span> · tips bda9733 · 840ad51 · cc593bd + the review’s fixes</div>
     </div>
   </header>
   <main>
@@ -85,7 +85,7 @@
           <tr><td>What <code>git diff HEAD</code> used to cover for free still fires</td><td><code>deleting_a_tracked_file_changes_the_key</code> · <code>staging_the_deletion_of_a_tracked_file_changes_the_key</code> · <code>flipping_the_executable_bit_changes_the_key</code> · <code>an_empty_tracked_file_is_not_a_deleted_one</code></td></tr>
           <tr><td>A tree nobody verified never skips; a Gate 0 green proves the lint level and never the reverse</td><td><code>xtask/src/gate0.rs</code> units — <code>a_marker_holding_another_key_proves_nothing</code> · <code>a_full_gate0_green_proves_the_lint_level_too</code> · <code>a_lint_green_does_not_prove_gate0</code></td></tr>
           <tr><td>The hook delegates, runs neither tool blind, and keeps DEC-6's refusal first</td><td><code>tests/dod_hooks.rs</code> under <code>--features hook-tests</code> — <code>the_pre_commit_lint_pass_delegates_to_the_cached_gate</code> · <code>the_main_guard_sits_above_the_lint_pass</code> · a real commit through the versioned hook records <code>xtask lint</code> and no bare <code>clippy</code> · the <code>main</code> refusal spawns no cargo process at all</td></tr>
-          <tr><td>The <code>--workspace</code> guarantee survived the move out of the hook</td><td><code>gate0::CLIPPY</code>'s own <code>clippy_lints_every_workspace_member</code>; the hook test that used to read the flag off the hook text now asserts the delegation</td></tr>
+          <tr><td>The <code>--workspace</code> guarantee survived the move out of the hook</td><td><code>xtask/tests/lint_spawn.rs</code> — the real binary against a fake <code>cargo</code> on <code>PATH</code>, asserting the <em>spawned</em> argv carries <code>--workspace --all-targets --all-features -D warnings</code>, that fmt runs first, that a green run caches and the next spawns nothing, and that a red run caches nothing. <code>gate0::CLIPPY</code>'s unit test still pins the constant; the hook test asserts the delegation. The first of these did not exist until the review demanded it — see the review section.</td></tr>
           <tr><td>The key addresses every path or fails, never drops one</td><td>A non-UTF-8 listing is an <code>Err</code>, not a skipped entry — a dropped path would be a false skip, the one direction a cache must never fail in</td></tr>
         </tbody>
       </table>
@@ -102,6 +102,53 @@
         </tbody>
       </table>
     </div>
+
+    <h2 id="review">The review round</h2>
+    <p>
+      Three finders — correctness, efficiency, altitude — over a three-module diff, then three
+      relevance-batched verifiers. <strong>Six candidates, three refuted, one important, two nits.</strong>
+      The round is worth reading because the important finding was a claim this very report made
+      about itself.
+    </p>
+    <table data-c="review-table">
+      <thead><tr><th>Finding</th><th>Verdict</th><th>Disposition</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>important</strong> · the <code>--workspace</code> guarantee is pinned on the <code>CLIPPY</code> constant, not on the command <code>run_lints</code> actually spawns</td>
+          <td><span class="badge warn">real</span> — the verifier dropped <code>--workspace</code> from <code>run_lints</code>, left <code>CLIPPY</code> untouched, and every test in the workspace stayed green</td>
+          <td><strong>Fixed</strong> — <code>xtask/tests/lint_spawn.rs</code>. Reproduced the escape before writing it and confirmed the new suite fails by name after it. DEC-54's own text asserted the guarantee had moved intact; that sentence was wrong and is corrected in the record.</td>
+        </tr>
+        <tr>
+          <td>nit · <code>build_inputs</code> spawns two <code>git ls-files</code> processes where one would do</td>
+          <td><span class="badge warn">real</span> — verified byte-identical output for the combined call, ~7 ms per commit</td>
+          <td><strong>Fixed</strong> — one <code>ls-files -z --cached --others --exclude-standard</code>.</td>
+        </tr>
+        <tr>
+          <td>nit · <code>lint_cache_path</code> is <code>pub</code> with no cross-crate caller</td>
+          <td><span class="badge warn">real</span></td>
+          <td><strong>Fixed</strong> — made private. <code>cache_path</code>'s <code>pub</code> is earned by <code>xtask/tests/preflight.rs</code>; this one's was not.</td>
+        </tr>
+        <tr>
+          <td>nit · <code>push_entry</code> hashes a symlink's link text, never the target's bytes</td>
+          <td><span class="badge warn">real</span> — demonstrated on a symlink pointing outside the tracked set</td>
+          <td><strong>Waived</strong> — all four tracked symlinks here resolve to independently-tracked paths, so the aggregate key still moves when their content does. It would bite only if a symlink pointed at a build input outside the tracked set, which is not this repo's convention.</td>
+        </tr>
+        <tr>
+          <td>important · the whole-tree hash buffer is not streamed into the hasher</td>
+          <td><span class="badge auto">refuted</span></td>
+          <td>Measured: 45–53 ms for a whole cache-hit run against ~12 s for a cold lint. Re-litigates the O(tree) cost DEC-54 adopts deliberately.</td>
+        </tr>
+        <tr>
+          <td>important · an unreadable path collapses to one byte, so the cache could green a tree it never verified</td>
+          <td><span class="badge auto">refuted</span></td>
+          <td>A path <code>fs::read</code> cannot read, <code>cargo</code> cannot read either — same user, same process model — so the build fails and nothing is cached. The submodule case that could diverge needs a submodule; this repo has none.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="caption">
+      The fixed tip is re-reviewed from scratch; this report does not speak for that round's verdict,
+      which lives on the <code>cr/v5</code> note bound to the code it judged.
+    </p>
 
     <h2 id="distillation">Distillation</h2>
     <div data-item="distillation">
@@ -127,6 +174,8 @@
           <tr><td><strong>The hook is live only after this reaches <code>main</code> and a build runs in each worktree.</strong> Until then every checkout keeps the blind pair — deviation 1.</td><td>Closes itself at the epic merge. No row needed; stated here so the next agent to wonder why a commit is still slow reads the answer rather than re-diagnosing it.</td></tr>
           <tr><td>The signing prompt itself is separable from the wait. <code>user.signingkey</code> points at an encrypted private key, so <code>ssh-keygen -Y sign</code> decrypts it on every signature; pointing it at the <code>.pub</code> with the key in an agent removes the prompt. Local configuration, not a repo rule.</td><td>Recorded in DEC-54's choices as explicitly not adopted. The owner was offered it twice and neither took nor refused it; it is theirs to make.</td></tr>
           <tr><td>Gate 0's own false miss is fixed as a side effect, and its miss was the expensive one — the whole suite. Nobody has measured what that is worth across a review round.</td><td>The next epic that runs a review round has the numbers for free in its <code>stage_seconds</code> (DEC-48). Not worth a WU of its own.</td></tr>
+          <tr><td><strong>The shared <code>target/</code> handed this WU two false test failures.</strong> Subagents in the review fleet built inside scratch worktrees against this same target directory, leaving a <code>target/debug/xtask</code> whose <code>CLIPPY</code> disagreed with the source, and a <code>dod_hooks</code> test binary whose baked-in <code>CARGO_MANIFEST_DIR</code> pointed at a deleted path. Both looked like real regressions until forced rebuilds cleared them.</td><td>Not an accident: <code>.gitworktreecopy</code> carries <code>~&gt; target</code>, so every new worktree <em>symlinks</em> this one's build cache — the line's own comment says it is there to build incrementally, and the file documents an isolated-build-dir escape hatch right below it. Any agent that builds in a scratch worktree therefore overwrites the source worktree's binaries. An existing roadmap row names <code>target/</code> leaking into temp repos; this is the same defect reaching the review fleet, a wider blast radius than that row describes. Fold it in there — and until then, a red suite in a worktree is re-run against a forced rebuild before it is believed.</td></tr>
+          <tr><td><strong>Pre-existing red:</strong> <code>xtask/tests/dod_gate.rs</code>'s <code>a_run_still_mid_design_passes_and_a_closed_one_needs_the_design_dimension</code> fails, and fails identically at this WU's base commit <code>bfdc345</code> — verified in an isolated worktree. It concerns the design dimension, which this WU does not touch.</td><td>Not this WU's, and outside its scope to fix. It escapes <code>gate0</code> because <code>dod_gate</code> is behind <code>required-features = ["hook-tests"]</code> and <code>nextest run --all</code> does not enable it — so the epic tip carries a red suite no gate runs. Belongs to whoever owns the design-dimension check; flagged here because nothing else would surface it.</td></tr>
           <tr><td>DEC-11's "never started" lever — the provably-safe delta that would let a trailing docs-only fix skip the full sweep — is still open, and is still the higher-value cut.</td><td>Unchanged by this WU; stays DEC-11's open item.</td></tr>
         </tbody>
       </table>

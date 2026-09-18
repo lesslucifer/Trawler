@@ -207,34 +207,31 @@ pub fn diff_sha256_paths(
     sha256_hex(&diff.stdout)
 }
 
-/// The two listings whose union is every path a `cargo` build may read: the
-/// index (so a tracked file deleted from the worktree still has an entry to
-/// record as absent) and untracked non-ignored files.
-const BUILD_INPUT_LISTINGS: [&[&str]; 2] =
-    [&["ls-files", "-z"], &["ls-files", "--others", "--exclude-standard", "-z"]];
+/// Every path a `cargo` build may read, in one listing: the index — so a tracked
+/// file deleted from the worktree still has an entry to record as absent — and
+/// untracked non-ignored files. `--cached` and `--others` are disjoint sets, so
+/// git emits each path once.
+const BUILD_INPUTS: &[&str] = &["ls-files", "-z", "--cached", "--others", "--exclude-standard"];
 
 fn build_inputs(repo: &Path) -> Result<Vec<String>, String> {
-    let mut paths = Vec::new();
-    for args in BUILD_INPUT_LISTINGS {
-        let listing = cmd(repo)
-            .args(args)
-            .output()
-            .map_err(|e| format!("failed to spawn git {}: {e}", args.join(" ")))?;
-        if !listing.status.success() {
-            return Err(format!(
-                "git {}: {}",
-                args.join(" "),
-                String::from_utf8_lossy(&listing.stderr).trim_end()
-            ));
-        }
-        // A path the key cannot address is an error, never a silently dropped
-        // entry: dropping one would be a false skip, the one direction a cache
-        // must never fail in.
-        let listed = String::from_utf8(listing.stdout).map_err(|_| {
-            format!("git {} listed a non-UTF-8 path; the key cannot address it", args.join(" "))
-        })?;
-        paths.extend(listed.split('\0').filter(|p| !p.is_empty()).map(str::to_string));
+    let listing = cmd(repo)
+        .args(BUILD_INPUTS)
+        .output()
+        .map_err(|e| format!("failed to spawn git ls-files: {e}"))?;
+    if !listing.status.success() {
+        return Err(format!(
+            "git ls-files: {}",
+            String::from_utf8_lossy(&listing.stderr).trim_end()
+        ));
     }
+    // A path the key cannot address is an error, never a silently dropped entry:
+    // dropping one would be a false skip, the one direction a cache must never
+    // fail in.
+    let listed = String::from_utf8(listing.stdout).map_err(|_| {
+        "git ls-files listed a non-UTF-8 path; the key cannot address it".to_string()
+    })?;
+    let mut paths: Vec<String> =
+        listed.split('\0').filter(|p| !p.is_empty()).map(str::to_string).collect();
     paths.sort_unstable();
     paths.dedup();
     Ok(paths)

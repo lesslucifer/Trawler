@@ -22,7 +22,7 @@ pub fn cache_path(repo: &Path) -> PathBuf {
 /// one with a level in it: a marker means "this content passed this check set",
 /// and collapsing them would either let a lint-only pass answer for tests that
 /// never ran, or make the hook pay for the suite.
-pub fn lint_cache_path(repo: &Path) -> PathBuf {
+fn lint_cache_path(repo: &Path) -> PathBuf {
     repo.join("target").join(".lint-green")
 }
 
