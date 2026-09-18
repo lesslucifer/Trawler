@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-SIMPDF
+base: ca9a4764e21a83dce1a311926cfcec02f087fd8b
+tip: 94a0c82cd240f60d625f65e7c5806f93843c5dfa
+diff_sha256: 4830feb048a28af7d303d04691bd23561bb48dda74ca187381868ff2725b36a7
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-09-18
