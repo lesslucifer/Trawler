@@ -261,14 +261,21 @@ fn push_field(bytes: &mut Vec<u8>, tag: u8, field: &[u8]) {
 /// its executable bit, or the fact that nothing is there. The old key got
 /// deletions and mode flips for free out of `git diff HEAD`; reading the
 /// worktree does not, so each is recorded as itself.
-fn push_entry(bytes: &mut Vec<u8>, repo: &Path, path: &str) {
+///
+/// A target is hashed as the bytes the filesystem holds, never as lossy text:
+/// `to_string_lossy` maps every invalid sequence onto one replacement character,
+/// so two links pointing at different places hashed alike - a false skip, which
+/// is the one direction this key must never fail in. A target that cannot be
+/// read is an `Err` for the same reason, as a path that cannot be listed is.
+fn push_entry(bytes: &mut Vec<u8>, repo: &Path, path: &str) -> Result<(), String> {
     push_field(bytes, b'p', path.as_bytes());
     let full = repo.join(path);
     match std::fs::symlink_metadata(&full) {
         Err(_) => bytes.push(b'0'),
         Ok(meta) if meta.is_symlink() => {
-            let target = std::fs::read_link(&full).unwrap_or_default();
-            push_field(bytes, b'l', target.to_string_lossy().as_bytes());
+            let target = std::fs::read_link(&full)
+                .map_err(|e| format!("read link {}: {e}", full.display()))?;
+            push_field(bytes, b'l', target.as_os_str().as_encoded_bytes());
         }
         Ok(meta) => {
             bytes.push(if is_executable(&meta) { b'x' } else { b'-' });
@@ -278,6 +285,7 @@ fn push_entry(bytes: &mut Vec<u8>, repo: &Path, path: &str) {
             }
         }
     }
+    Ok(())
 }
 
 /// A content hash of everything a `cargo` build reads: every tracked and
@@ -293,7 +301,7 @@ fn push_entry(bytes: &mut Vec<u8>, repo: &Path, path: &str) {
 pub fn worktree_key(repo: &Path) -> Result<String, String> {
     let mut bytes = Vec::new();
     for path in build_inputs(repo)? {
-        push_entry(&mut bytes, repo, &path);
+        push_entry(&mut bytes, repo, &path)?;
     }
     sha256_hex(&bytes)
 }

@@ -2027,8 +2027,8 @@ mod tests {
 
         // The silence names the surface; a stated nothing is not that silence;
         // then a path nobody ever shipped, bytes the tip does not ship, bytes a
-        // retired design never carried, a pin too short to be a blob, a doc Tier-3
-        // never judged, and an open run. Then the three ways an accounting
+        // retired design never carried, a pin too short to be a blob, a doc the
+        // design step never covered, and an open run. Then the three ways an accounting
         // contradicts itself.
         let cite = |path: &str, pin: &str| implements(path, pin, PILL);
         for (section, red) in [
@@ -2305,7 +2305,7 @@ mod tests {
     // The refusal only the citation path can produce, and the schema tagging that
     // decides whether the walk may drop it. A design whose bytes do not decode was
     // being accepted in silence - the one citation nobody can read, passing as
-    // though Tier-3 had judged it.
+    // though the design step had covered it.
     #[test]
     fn a_citation_nobody_can_read_is_refused_under_its_own_note_schema() {
         let dir = tempfile::TempDir::new().unwrap();

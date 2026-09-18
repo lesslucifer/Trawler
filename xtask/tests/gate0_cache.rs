@@ -178,3 +178,34 @@ fn a_repo_with_no_commits_still_has_a_key() {
     std::fs::write(path.join("a.rs"), "pub fn a() {}\n").unwrap();
     assert!(worktree_key(&path).is_ok(), "the hook runs before the first commit too");
 }
+
+// A symlink's target is bytes, not text: `to_string_lossy` mapped every invalid
+// sequence onto U+FFFD, so two links pointing at different places hashed alike -
+// a false skip, the one direction the key must never fail in. This repo tracks
+// four real symlinks, so the branch is live on every run.
+#[cfg(unix)]
+#[test]
+fn two_symlinks_with_different_non_utf8_targets_do_not_share_a_key() {
+    use std::os::unix::ffi::OsStrExt as _;
+
+    let repo = Repo::new();
+    let link = repo.path.join("link");
+    let target = |bytes: &[u8]| {
+        let _ = std::fs::remove_file(&link);
+        std::os::unix::fs::symlink(std::ffi::OsStr::from_bytes(bytes), &link).unwrap();
+        repo.key()
+    };
+    assert_ne!(target(b"\xff\xfe"), target(b"\xff\xff"), "different targets, different tree");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_retargeted_symlink_changes_the_key() {
+    let repo = Repo::new();
+    let link = repo.path.join("link");
+    std::os::unix::fs::symlink("src/lib.rs", &link).unwrap();
+    let before = repo.key();
+    std::fs::remove_file(&link).unwrap();
+    std::os::unix::fs::symlink("src/other.rs", &link).unwrap();
+    assert_ne!(before, repo.key(), "a build following the link reads somewhere else");
+}
