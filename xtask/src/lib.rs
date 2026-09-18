@@ -31,6 +31,7 @@ usage:
   cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
   cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
+  cargo xtask lint                                           (pre-commit hook: fmt+clippy, skipped when this tree content already passed them)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
@@ -56,6 +57,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["notes", "write", rest @ ..] => notes_write::run(rest, repo),
         ["tally", rest @ ..] => tally::run(rest, repo),
         ["gate0"] => gate0::gate0(repo),
+        ["lint"] => gate0::lint(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["ui", rest @ ..] => ui::run(rest, repo),

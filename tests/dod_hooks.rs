@@ -96,21 +96,39 @@ fn repo_with_wu_branch(env: &Env, tmp: &Path) -> PathBuf {
     repo
 }
 
-// The repo root is a package as well as a workspace, so a clippy call without
-// --workspace lints `trawler` and silently skips `xtask` - where every hook, gate
-// and design check lives. docs/testing-strategy.html rests on this pass keeping the
-// workflow-tooling suites compiling, and those suites are all in that member.
+fn versioned_pre_commit() -> String {
+    fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(".cargo-husky/hooks/pre-commit"))
+        .expect("read the versioned pre-commit hook")
+}
+
+// The hook delegates the lint pair so the cache can answer for it (DEC-54); the
+// --workspace scoping the pair needs now lives in xtask::gate0::CLIPPY, pinned
+// by clippy_lints_every_workspace_member there. Running either tool straight
+// from the hook would reintroduce the blind re-run this replaced, so the hook
+// must name neither.
 #[test]
-fn the_pre_commit_clippy_pass_lints_every_workspace_member() {
-    let hook = fs::read_to_string(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join(".cargo-husky/hooks/pre-commit"),
-    )
-    .expect("read the versioned pre-commit hook");
-    let clippy = hook
-        .lines()
-        .find(|line| line.trim_start().starts_with("cargo clippy"))
-        .expect("the hook runs clippy");
-    assert!(clippy.contains("--workspace"), "xtask escapes the lint without --workspace: {clippy}");
+fn the_pre_commit_lint_pass_delegates_to_the_cached_gate() {
+    let hook = versioned_pre_commit();
+    assert!(
+        hook.lines().any(|line| line.trim_start() == "cargo xtask lint"),
+        "the hook must ask the cached gate: {hook}"
+    );
+    for blind in ["cargo clippy", "cargo fmt"] {
+        assert!(
+            !hook.lines().any(|line| line.trim_start().starts_with(blind)),
+            "`{blind}` straight from the hook runs on every commit, cache or not"
+        );
+    }
+}
+
+// DEC-6: the refusal on main must be instant and unambiguous, so it sits above
+// the lint line - a minutes-long clippy must never bury it.
+#[test]
+fn the_main_guard_sits_above_the_lint_pass() {
+    let hook = versioned_pre_commit();
+    let guard = hook.find("direct commits on main are not allowed").expect("the main guard");
+    let lint = hook.find("cargo xtask lint").expect("the lint line");
+    assert!(guard < lint, "the refusal must come before any cargo process starts");
 }
 
 #[test]
@@ -231,7 +249,7 @@ fn direct_commit_on_main_is_refused_with_branch_guidance() {
     assert!(stderr.contains("direct commits on main are not allowed"), "got: {stderr}");
     assert!(stderr.contains("epic/<slug>"), "guidance must show the branch commands: {stderr}");
     assert!(stderr.contains("wu/<epic-slug>/<slug>"), "got: {stderr}");
-    assert!(!env.calls().contains("fmt"), "refusal must happen before fmt/clippy run");
+    assert!(env.calls().is_empty(), "refusal must happen before any cargo process runs");
 }
 
 #[test]
@@ -264,7 +282,12 @@ fn commits_on_non_main_branches_are_unaffected_by_the_main_guard() {
     env.git_ok(&repo, &["add", "-A"]);
     env.git_ok(&repo, &["commit", "-q", "-m", "commit on wu branch"]);
 
-    assert!(env.calls().contains("fmt"), "normal pre-commit checks must still run");
+    let calls = env.calls();
+    assert!(calls.contains("xtask lint"), "normal pre-commit checks must still run: {calls}");
+    assert!(
+        !calls.lines().any(|line| line.starts_with("clippy")),
+        "the hook must not also run clippy blind: {calls}"
+    );
 }
 
 #[test]

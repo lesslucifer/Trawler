@@ -175,15 +175,26 @@ implements / undesigned"]]
       </ul>
     </div>
 
-    <h2 id="wu-map">The two Working Units</h2>
+    <h2 id="wu-map">The Working Units</h2>
     <table data-c="wu-map">
       <thead><tr><th>WU</th><th>Subject</th><th>Produces</th><th>Depends on</th></tr></thead>
       <tbody>
         <tr><td><span class="badge id">W1</span></td><td>The decision</td><td>DEC-53 · the rulebook without its receipt obligation and its soft-rules table · status lines on the records it amends</td><td>none</td></tr>
         <tr><td><span class="badge id">W2</span></td><td>The landing</td><td>spec · checker · e2e · skill, moved together; the epic e2e</td><td>W1</td></tr>
+        <tr><td><span class="badge id">W3</span></td><td>The commit hook stops re-proving a green tree</td><td>DEC-54 · a content-addressed <code>worktree_key</code> · <code>cargo xtask lint</code> and its marker · the pre-commit hook reading them</td><td>none</td></tr>
       </tbody>
     </table>
     <p class="caption">Decide once, land once. W1 is docs-only; W2 carries all the code.</p>
+
+    <div class="callout warn">
+      <strong>W3 is admitted by the owner's call, not by this plan's scope.</strong> The epic's
+      subject is the design flow, and W3's is gate plumbing — Gate 0's cache key and the pre-commit
+      hook that never consulted it. It serves none of the expected results above, advances no station
+      call, and its lineage is <a href="../decisions/workflow-gates.html">DEC-11</a> / E-GATEFAST
+      rather than DEC-53. It was offered its own epic off <code>main</code> and the owner chose to
+      land it here; recorded so the epic's close accounts for it as an admitted guest and no later
+      reading mistakes it for part of the cut.
+    </div>
 
     <div class="callout">
       <strong>What v1 got wrong, in one line.</strong> It treated a scope call as a cost question and
@@ -255,6 +266,40 @@ implements / undesigned"]]
           obligation to record its first run's clock and tokens written beside them.
         </p>
         <p data-item="wu-deps">E-SIMPDF.W1 — the spec and the checker implement the record, and land in one commit.</p>
+      </div>
+
+      <div data-wu="E-SIMPDF.W3">
+        <h3 id="w3">E-SIMPDF.W3 — the commit hook stops re-proving a green tree</h3>
+        <p data-item="wu-summary">
+          Gate 0 caches a green tree under <code>target/.gate0-green</code>, and
+          <code>.cargo-husky/hooks/pre-commit</code> never asks it — it runs
+          <code>cargo fmt --check</code> and <code>cargo clippy --workspace --all-targets
+          --all-features</code> blind on every commit. Worse, the cache key hashes <code>HEAD</code>
+          and <code>git diff HEAD</code>, so a commit that changes no content still invalidates the
+          proof and a WU's second commit pays again. Make <code>worktree_key</code>
+          content-addressed — every tracked and untracked non-ignored path, its contents, its
+          executable bit, and the fact of a deletion, and no history — give the lint pair its own
+          <code>target/.lint-green</code> marker with a matching <code>.gate0-green</code> counting
+          as proof of it, add <code>cargo xtask lint</code> as the one command the hook calls, and
+          record the new key as DEC-54 with a status line on DEC-11, whose stated key definition this
+          WU makes false. Full plan:
+          <a href="2026-09-18-simpdf-w3-plan.html">E-SIMPDF.W3 plan</a>.
+        </p>
+        <p data-item="wu-maps-to">
+          No expected result of this epic — see the note under the WU table. It extends DEC-11's
+          principle (gate speed is bought by caching under DEC-2, never by relaxing it) from the
+          review path to the commit path, and carries its own record rather than splitting one off.
+        </p>
+        <p data-item="wu-expected">
+          A commit on a tree already proven green runs no fmt and no clippy, including the second
+          commit of a WU where only <code>HEAD</code> moved; every invalidation
+          <code>xtask/tests/gate0_cache.rs</code> pins still fires, and a tracked deletion and an
+          executable-bit flip now fire on their own terms; a tree nobody verified never skips,
+          because the marker stores a key and never a verdict; DEC-6's refusal on <code>main</code>
+          stays the hook's first act and clippy still carries <code>--workspace</code>, re-homed onto
+          <code>gate0::CLIPPY</code>'s own test.
+        </p>
+        <p data-item="wu-deps">None — it shares no file with W1 or W2, and the epic's design-flow work is already merged.</p>
       </div>
 
     </div>
