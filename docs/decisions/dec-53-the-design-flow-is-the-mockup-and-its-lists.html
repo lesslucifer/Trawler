@@ -54,7 +54,7 @@ flowchart TB
         <tr><td><strong>Substrate</strong> — registry index + rulebook pin</td><td>the registry read is cheap and the mockup cannot mount without it; the pin exists for the receipt</td><td><span class="badge auto">keep</span> the registry read · <span class="badge approval">cut</span> the pin, everywhere it is written or checked</td></tr>
         <tr><td><strong>1 · Frame</strong> — driver table + Given / Not given</td><td>moved in 15 of 83 review rows, mostly to stay consistent. Its Given line feeds the capabilities list, which caught the finder's most repeated verified catch: an input marked <em>deliberately unused</em> for a reason the shipped code disproved (runs 3 and 8)</td><td><span class="badge approval">cut</span> the table · <span class="badge auto">keep</span> Given as the first list on the mockup doc</td></tr>
         <tr><td><strong>2 · Layout</strong> — ASCII zone sketch + overflow line</td><td>the Tune → Layout loop-back fired in 8 of 14 runs; every firing was the sketch going stale once the mockup existed</td><td><span class="badge approval">cut</span> — the mockup is the layout; the overflow line moves under it</td></tr>
-        <tr><td><strong>3 · Elements</strong> — tiered catalog, registry verdict per row, @use/@avoid trace</td><td>30 KB of the last run's 106, three times the mockup; moved in 31 of 83 rows. Its two real outputs are the proposals list and the reuse warrant, and the mockup enforces reuse mechanically: <code>mockup·hand-drawn</code> refuses any component not mounted from <code>window.Trawler</code></td><td><span class="badge approval">cut</span> the catalog · <span class="badge auto">keep</span> proposals</td></tr>
+        <tr><td><strong>3 · Elements</strong> — tiered catalog, registry verdict per row, @use/@avoid trace</td><td>30 KB of the last run's 106, three times the mockup; moved in 31 of 83 rows. Its two real outputs are the proposals list and the reuse warrant, and the mockup enforces reuse by construction: the specimen bundle is the only route to a component's rendering, so a run that does not load it can mount nothing (<a href="#hand-drawn-correction">what this claimed at first</a>)</td><td><span class="badge approval">cut</span> the catalog · <span class="badge auto">keep</span> proposals</td></tr>
         <tr><td><strong>4 · Interaction</strong> — use-case table, zone → delta, keyboard column</td><td>hosts <code>keyboard-parity</code>; a key path is the one thing a static mockup cannot show</td><td><span class="badge approval">cut</span> the table · <span class="badge auto">keep</span> <code>keyboard-parity</code> on a Keyboard item of its own</td></tr>
         <tr><td><strong>5 · Draft mockup</strong> — mounted real components, state toggle, zero colour literals</td><td>11 KB of 106; the artifact the human reviews; 9 of the 13 hard rules read it</td><td><span class="badge auto">keep</span></td></tr>
         <tr><td><strong>6 · Tune</strong> — drawn before/after, a slug per row</td><td>5 rows in the last run, its reasoning block empty. It is what the human does when they look at the mockup</td><td><span class="badge approval">cut</span></td></tr>
@@ -65,6 +65,18 @@ flowchart TB
         <tr><td><strong>3 tiers</strong> — verify-doc · receipt · adversarial finder</td><td>32 Tier-3 rounds judged an artifact: 95 found · 31 verified · 4 waived, none a false soft-rule verdict. The repo holds 0 <code>design/v1</code> notes; the new skill never ran</td><td><span class="badge auto">keep</span> Tier-1 — 12 of 13 checks, nine on the mockup and three re-homed beside it — and the items · <span class="badge approval">cut</span> Tier-2 · <span class="badge approval">drop</span> the Tier-3 finder</td></tr>
       </tbody>
     </table>
+
+    <div class="callout warn" data-c="hand-drawn-correction" id="hand-drawn-correction">
+      <p><strong>Corrected at the epic's close: <code>mockup·hand-drawn</code> did not survive the cut it was cited in.</strong>
+      The Elements row above first read "the mockup already enforces reuse mechanically: <code>mockup·hand-drawn</code> refuses
+      any component not mounted from <code>window.Trawler</code>". E-SIMPDF.W2 deleted that check rather than re-homing it —
+      its owed list was built from the catalog's reuse/extend rows, and none of the six surviving items re-supplies one, so
+      keeping it would have left exactly the vacuous green this record refuses. <code>assets·specimen</code> became
+      unconditional in its place.</p>
+      <p>What remains is narrower and still mechanical: the bundle is the only route to a component's rendering, so nothing
+      unbuilt can be mounted. What is gone is the count — no check measures a drawn reuse against a catalog any more. The cut
+      stands on the corpus row beside it; this sentence is the part that was wrong.</p>
+    </div>
 
     <h2 id="mockup-doc">The mockup doc — six items, what reads each</h2>
     <table data-c="items-table">
