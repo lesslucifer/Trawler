@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 0a7b19835dde937e1fc653a70c68c42a3e38ef41
+base: 2c6aca58e9e4fadf7f8ac8cfdda464056e92d80f
+tier: key
+signer: vuluu
+report: docs/work/2026-09-17-simpdf-w2-result.html
+report_sha256: 8e66413e6128aef54981d8bffde937c60e2a84d739f907388cd612c1f10ec885
+date: 2026-09-18
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDVIePOwhLcBK7l/+H5fSGmkZOX0skNszzDz3guqKYBIi6ncGJqA82kLa
+  azEZ2RjeD/224wSq+M4j4hjXGny48N
+  -----END SSH SIGNATURE-----
