@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-SIMPDF
+wu: E-SIMPDF.W3
+branch: HEAD
+tests:
+  unit: { count: 27, covers: "The two markers and the one-way implication between them: a marker holding another key proves nothing, a full .gate0-green proves the lint level, a .lint-green never proves Gate 0, and the proof names which marker answered. Plus the key's framing - contents that could imitate the next entry, an empty file against a missing one, a link target against the same bytes as content - and that CLIPPY still carries --workspace, the guarantee re-homed here when the hook stopped naming it." }
+  integration: { count: 30, covers: "The key's whole contract over real git repos: the five invalidations DEC-11 pinned still fire, a content-neutral commit and an identical tree on another branch keep the key (the defect this WU fixes), and a tracked deletion, a staged deletion, an executable-bit flip and an emptied-versus-deleted file each change it. Through the real xtask binary and a fake cargo on PATH (lint_spawn.rs): the spawned clippy carries --workspace --all-targets --all-features -D warnings, fmt runs before clippy, a green run caches and the next spawns nothing, a red run caches nothing, and an edited tree re-runs the pair. Through the versioned pre-commit hook and a fake cargo: a real commit records one xtask lint call and no bare clippy, the hook names neither tool directly, DEC-6's main refusal sits above the lint line and spawns no cargo process at all, and both MERGE_HEAD arms still reach verify-dod." }
+  e2e: { waived: "A Working Unit's contract is bounded and this one is the cache key and the marker, which the integration suites already drive end to end over real git repos and the real versioned hook. No user-facing flow moves - no proxy behaviour, no API surface, no screen - so there is no full flow to exercise. The epic's own e2e obligation is unaffected and already met by E-SIMPDF.W2's design-flow harness." }
