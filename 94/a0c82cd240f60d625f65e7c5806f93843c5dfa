@@ -1,0 +1,43 @@
+schema: cr/v5
+scope: "epic E-SIMPDF -> main"
+epic: E-SIMPDF
+branch: epic/simpdf
+base: ca9a4764e21a83dce1a311926cfcec02f087fd8b
+head: 94a0c82cd240f60d625f65e7c5806f93843c5dfa
+diff_sha256: 837dbe0f9e24f1f94de58a0d53460f38cdcc781afb83f30ae1ab37e1345f5b44
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: inherited-session-default
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 7
+    nit: 1
+  stage_seconds:
+    finders: 501
+    verifiers: 340
+    total: 900
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 1, verified: 1 }
+    altitude:    { found: 5, verified: 5 }
+findings: { found: 8, verified: 7, waived: 0 }
+nits:
+  - finding: "round 1, important: push_entry hashed a symlink target through to_string_lossy, so two links pointing at different places shared a key, and a read_link failure hashed as an empty target - a false skip"
+    fixed: "the target is hashed as the bytes the filesystem holds and a read_link failure propagates as an Err through worktree_key; two regression tests, the collision one written failing first (94a0c82)"
+  - finding: "round 1: tests/e2e_gate_truth.rs wrote a rulebook pin into a design note under a comment describing a check this epic deleted"
+    fixed: "the field and its blob read are gone and the comment states that DEC-53 removed the check (94a0c82)"
+  - finding: "round 1: tests/e2e_simpwf.rs's design_v1 helper wrote the same retired pin"
+    fixed: "the field is gone and the doc comment says the verdict pins the artifact bytes and nothing else (94a0c82)"
+  - finding: "round 1: two test comments in xtask/src/gate.rs still narrated Tier-3 in a file whose production text this epic had renamed"
+    fixed: "both read the design step (94a0c82)"
+  - finding: "round 2: paragraphs() re-tokenises the mockup once per <p> via element_content, making check_overflow_declared O(p*n) where the sketch-scanning version it replaced was O(n)"
+    waived: "verified real and measured through the shipped binary - 187ms at 1600 paragraphs, quadrupling per doubling - but the input is one screen's mockup, which DEC-53 bounds by what an agent writes and a human reviews in one sitting: the corpus's real runs carry 1 to 6 paragraphs, sub-millisecond. A cost that does not grow with data is not the rubric's important, and a fix here buys another round's fleet to move a dormant constant"
+  - finding: "round 2: five more residues of the retired pin and the retired Tier-3 vocabulary - seeded_repo's doc comment and its now-unread RULEBOOK fixture write in tests/e2e_gate_truth.rs, one comment in xtask/tests/dod_gate.rs, one comment and one assertion message in xtask/tests/e2e_design_flow.rs"
+    waived: "each verified real and each verified inert: no gate reads them, no assertion matches their text, and the one that is code rather than prose is provably unreachable fixture data. Round 1's identical class was fixed because that round was already failing on an important and the fix was free; round 2 carries no important, so fixing comments would buy a third fleet and land unreviewed code to do it. Recorded here instead, which is what this list is for"
+  - finding: "round 2: push_entry's doc comment can be misread as stating a general read-failure-is-an-Err rule that only the symlink arm implements"
+    waived: "the sentence's antecedent is the symlink target two sentences above, so the comment is scoped to the arm that implements it - a legibility nit on a fast diff pass, with no contradiction in the code"
+verdict: PASS
+date: 2026-09-18
