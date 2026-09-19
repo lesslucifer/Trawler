@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 92f102fe6977e970a79713b8aa2e96c7c904cb06
+base: 7cb564d91f26300b57018d237add2c2057b41fb0
+tier: key
+signer: vuluu
+report: docs/work/2026-09-19-onboard-design-of-record-result.html
+report_sha256: fc2817effdd2b15730976100782ba40daa28582169684a609e385da982245f18
+date: 2026-09-19
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBiF5JFA6dnDSDCc1H7uQdq5J1flPS+d5nk0IvfvWdQKtpNOPRbRfr7wH
+  ruAhHPvsxEyZOdrzHjMqzxf/1tGcAO
+  -----END SSH SIGNATURE-----
