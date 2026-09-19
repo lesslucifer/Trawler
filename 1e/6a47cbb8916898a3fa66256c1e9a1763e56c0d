@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU onboarding-redesign/reach -> epic/onboarding-redesign"
+epic: E-ONBOARD
+wu: E-ONBOARD.W1
+branch: wu/onboarding-redesign/reach
+base: 3deaa40e256fc7f142e3452fa77256173a34cade
+head: 1e6a47cbb8916898a3fa66256c1e9a1763e56c0d
+diff_sha256: e8f83ece821898e0c8d66233b00251cac8821bd9ba30fccb18c52666c1553b65
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: inherited-session-default
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 0
+  stage_seconds:
+    finders: 345
+    verifiers: 175
+    total: 540
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "round 1, blocker: Controller::arm stopped the armed session before attempting the new binds, so a re-arm that bound nothing - a stale address off the interface list, a port collision - silently revoked an exposure the user had confirmed and a device was routing through, leaving a 400 as the only trace. Reproduced by the verifier against a running controller"
+    fixed: "arming the address already armed returns what is listening and touches nothing; arming a different one brings the new pair up before the old goes down, so everything that can fail happens before anything that cannot be undone. Two named integration tests, both written failing against the old code (53f8611)"
+  - finding: "round 1, important: Controller::spawn_proxy called ca::load_or_create - blocking fs reads, and CPU-bound key generation on a cold CA - on a tokio worker thread while holding the arm lock, contending every concurrent reader of the reach state"
+    fixed: "CaMaterial carries the key PEM and ca::issuer rebuilds an authority from bytes held since boot, so arming a live process reads no disk; a controller handed PEMs it cannot parse refuses to listen rather than panicking, with a unit test (53f8611)"
+  - finding: "round 2, blocker: arm and disarm both held the controller's mutex across Armed::stop, which waits on the outgoing proxy task - gated by any exchange a device still has open, measured at five seconds against one held request and unbounded in principle. Every reader of the reach state queued behind it, including the disarm that revokes the exposure"
+    fixed: "the lock covers the swap and the bind that must not race a second arm, and nothing else; disarm takes the slot in a statement of its own because an if-let on the lock holds the guard for the whole body. The regression test holds an exchange open through the reachable proxy and polls across the whole drain window - reading once raced ahead of the lock and passed against the bug (5d192d6)"
+verdict: PASS
+date: 2026-09-19
