@@ -202,28 +202,29 @@ fn unready_reasons(tip: Tip, review: Option<(&str, &str)>, bound: Option<&str>) 
         missing
             .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
     }
-    // Only the code arm owes a review. A design run and no code owes its notes
-    // and no review (DEC-46), which is how the merge gate already reads it:
-    // `check_review` returns early on an empty code hash. Demanding one here
-    // refused a tip the gate greens and left every codeless design Working Unit
-    // unsignable, and so unmergeable.
-    if tip.gated == Gated::Code {
-        match review {
-            None => missing.push(format!(
-                "no {} note - nobody has reviewed this tip",
-                crate::notes::cr_schema()
-            )),
-            Some((verdict, _)) if verdict != "PASS" => {
-                missing.push(format!("the review verdict is {verdict} - fix and re-review"));
-            }
-            Some((_, reviewed)) => {
-                if bound.is_some_and(|h| h != reviewed) {
-                    missing.push(
-                        "the review note judged a different diff - re-review this tip".to_string(),
-                    );
-                }
-            }
+    // Only the code arm owes a review, so only there is an ABSENT note a reason
+    // to refuse: a design run and no code owes its notes and no review (DEC-46),
+    // which is how the merge gate reads it too - `check_review` drops a
+    // code-bound note on a codeless diff. Demanding one here refused a tip the
+    // gate greens and left every codeless design Working Unit unsignable.
+    //
+    // A note that IS present is judged on either arm. `review` has already been
+    // narrowed to the notes the gate reads, so reaching this with `Some` on the
+    // design arm means a legacy whole-bound note the merge will judge - and
+    // signing past it would attest a tip the merge then refuses.
+    match review {
+        None if tip.gated == Gated::Code => missing
+            .push(format!("no {} note - nobody has reviewed this tip", crate::notes::cr_schema())),
+        Some((verdict, _)) if verdict != "PASS" => {
+            missing.push(format!("the review verdict is {verdict} - fix and re-review"));
         }
+        Some((_, reviewed)) if bound.is_some_and(|h| h != reviewed) => {
+            missing
+                .push("the review note judged a different diff - re-review this tip".to_string());
+        }
+        // An absent note on the design arm, and a present one that passed and
+        // binds this diff: both are ready.
+        _ => {}
     }
     missing
 }
@@ -234,8 +235,16 @@ fn unready_reasons(tip: Tip, review: Option<(&str, &str)>, bound: Option<&str>) 
 /// reads, so this never refuses a tip the merge gate would green.
 fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>, gated: bool) -> Vec<String> {
     let cr = crate::git::parsed_note::<crate::notes::CrNote>(repo, "cr", tip);
-    let bound = cr
-        .as_ref()
+    // Which notes the gate actually reads, which is not "all of them" and not
+    // "none on a codeless tip" either: `check_review` drops a note whose schema
+    // binds code when the diff changes none, and judges every other note it
+    // finds — a legacy whole-bound `cr/v2`/`cr/v3` included, whatever the diff
+    // touched. Filtering here rather than at the verdict keeps the two halves of
+    // "is this signable" reading the same notes the merge will.
+    let judged = cr.as_ref().filter(|c| {
+        range.is_none_or(|(_, code)| !crate::notes::binds_code(&c.schema) || !code.is_empty())
+    });
+    let bound = judged
         .zip(range)
         .and_then(|(c, (whole, code))| crate::gate::reviewed_binding(&c.schema, whole, code));
     // The empty code hash is `code_sha256`'s own way of saying "no code path
@@ -254,7 +263,7 @@ fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>, gated: bool)
             has_test: note(repo, "test", tip).is_some(),
             has_doc: note(repo, "doc", tip).is_some(),
         },
-        cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
+        judged.map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
         bound,
     )
 }
@@ -1484,23 +1493,43 @@ mod tests {
         assert!(r.iter().all(|m| !m.contains("reviewed")), "no review is owed here: {r:?}");
     }
 
-    // A review note that turns up on a codeless tip is not a reason to refuse
-    // either - the gate ignores it, so the signature must not read it as stale
-    // or failing and block on something no rule asked for.
+    // The note the gate DROPS reaches here as `None`, because `tip_unready`
+    // filters it: a code-bound schema on a diff with no code path. So a stale or
+    // failing cr/v5 left on a codeless design tip must not block its signature.
     #[test]
-    fn a_review_note_on_a_codeless_tip_is_ignored_rather_than_judged() {
+    fn a_code_bound_review_note_on_a_codeless_tip_never_reaches_the_verdict() {
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::DesignOnly, has_test: true, has_doc: true },
+            None,
+            None,
+        );
+        assert!(r.is_empty(), "{r:?}");
+    }
+
+    // ...but the note the gate READS is judged on the design arm too. A legacy
+    // whole-bound cr/v2 or cr/v3 binds whatever the diff changed, so
+    // `reviewed_binding` hands it back on a codeless tip and `check_review`
+    // refuses a FAIL verdict or a stale hash. Skipping it here signed a tip the
+    // merge then refused - reproduced against a real repo before this was
+    // narrowed, and the reason the review arm keys on the note rather than on
+    // the arm.
+    #[test]
+    fn a_legacy_whole_bound_note_is_judged_even_with_no_code_in_the_diff() {
         let failed = super::unready_reasons(
             super::Tip { gated: super::Gated::DesignOnly, has_test: true, has_doc: true },
             Some(("FAIL", "abc")),
-            None,
+            Some("abc"),
         );
-        assert!(failed.is_empty(), "{failed:?}");
+        assert_eq!(failed.len(), 1, "{failed:?}");
+        assert!(failed[0].contains("verdict is FAIL"), "{failed:?}");
+
         let stale = super::unready_reasons(
             super::Tip { gated: super::Gated::DesignOnly, has_test: true, has_doc: true },
             Some(("PASS", "old")),
             Some("new"),
         );
-        assert!(stale.is_empty(), "{stale:?}");
+        assert_eq!(stale.len(), 1, "{stale:?}");
+        assert!(stale[0].contains("different diff"), "{stale:?}");
     }
 
     #[test]

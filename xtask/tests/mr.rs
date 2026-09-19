@@ -269,6 +269,41 @@ fn a_closed_design_run_with_no_code_signs_without_a_review() {
     );
 }
 
+// The narrowing has one edge, found by the review of the commit that made it and
+// reproduced against a real repo: the gate drops a note whose schema BINDS CODE
+// on a codeless diff, but a legacy `cr/v2`/`cr/v3` binds the whole diff and is
+// judged whatever the diff touched. Skipping the review arm for every codeless
+// design tip therefore signed a tip `verify-dod` still refuses on a FAIL verdict
+// — a signature attesting something unmergeable. The confirm now reads exactly
+// the notes the gate reads.
+#[test]
+fn a_legacy_review_note_still_blocks_a_codeless_design_tip() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    repo.git(&["checkout", "-q", "-b", "wu/x/legacy"]);
+    repo.write(
+        "docs/work/a-run.html",
+        "<html><main data-artifact=\"design-run\" data-status=\"archived\">run</main></html>\n",
+    );
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "a closed design run, no code"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    // cr/v3: whole-diff-bound, so `reviewed_binding` hands it back even here.
+    cr_note(&repo, "HEAD", "FAIL", &diff_hash(&repo, "HEAD", "main"));
+
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--target", "main", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(
+        code, 1,
+        "a legacy note the merge gate still judges must block the signature: {out}"
+    );
+    assert!(out.contains("verdict is FAIL"), "{out}");
+}
+
 // The narrowing is not a hole: the same tip, once it also carries a code path,
 // owes its review again. One test each way, because a predicate that always
 // said "no review" would pass the test above and break every real Working Unit.
