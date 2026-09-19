@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-ONBOARD
 wu: E-ONBOARD.W2
-branch: HEAD
 base: 7cb564d91f26300b57018d237add2c2057b41fb0
 tip: 39c0d6c4bc0fc274332eb5e6d81c9928cd569978
 diff_sha256: ddeb06123c44841c55bf7ceec25d8845f75beddeb76f3c114726ceddd492ceea
