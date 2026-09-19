@@ -1,0 +1,19 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W3
+base: 714e261436b30b65998705d1831dcfb691425947
+design_sha256: e15edebaf8098a0cba375678780ce1230b875b58e4e0e10cd66bbb7a82cb3ca3
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 7dbce2b84bdf3dad885fd09a021e0101d6fe07b1
+    built: [ui/src/Onboarding.tsx, ui/src/components/Notice.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The shell's wiring, not a surface: it renders no zone of its own and draws nothing new. What it gained is the reach seam's plumbing - read /reach on entering setup, invoke the shell's confirm, arm only on a yes - passed straight through to the screen, whose rendering of it is designed in the run cited above."
+  - path: ui/src/ProxyCloseDialog.tsx
+    why: "An import line followed its module: the quit dialog's proxy-client vocabulary moved to ui/src/proxyTargets.ts so setup.ts could be organised by platform. The dialog's markup, copy and behaviour are byte-identical, and the dialog is this epic's declared non-goal."
+  - path: ui/src/components/StatusLine.tsx
+    why: "A type-only import moved with its module - StepStatusView and StepTone now come from ui/src/verdicts.ts. Nothing it renders changed."
+date: 2026-09-19
