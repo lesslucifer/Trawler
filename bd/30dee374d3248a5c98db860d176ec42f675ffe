@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU onboarding-build -> epic/onboarding-redesign"
+epic: E-ONBOARD
+wu: E-ONBOARD.W3
+branch: wu/onboarding-redesign/build
+base: 714e261436b30b65998705d1831dcfb691425947
+head: bd30dee374d3248a5c98db860d176ec42f675ffe
+diff_sha256: 5d0e19fcf9c64e229cad7ee2f8ab94a3554ea1559d20aa997b54912bc23c23ed
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: session default, not pinned by the run
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 0
+  stage_seconds:
+    finders: 497
+    verifiers: 130
+    total: 627
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 1 }
+findings: { found: 3, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "setup.ts and proxyTargets.ts import from each other - the axis reads the reversals from the proxy vocabulary, which reads HostOs back from the axis - inverting the one direction both modules' comments assert."
+    waived: "The return edge is import type, erased by tsc, so no value crosses it and no runtime cycle exists; tsc --noEmit and eslint are both clean and the project runs no import-cycle rule. It cannot drift silently either - widening HostOs with a member ProxyTarget lacks reds tsc in proxyTargets.ts immediately. Fixing it moves a four-literal union to a file of its own, which would orphan this note and buy a third fleet for no observable change; it is recorded as a follow-up for whichever WU next opens either module."
+verdict: PASS
+date: 2026-09-19
