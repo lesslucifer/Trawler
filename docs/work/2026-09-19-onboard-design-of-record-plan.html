@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aae2e9e9f34851f0dfad25e" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBOARD.W2 plan: the design of record</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBOARD.W2 — the design of record, closed</h1>
+      <p>The parked run comes back into the tree, gets amended for the address W1 landed, and
+        closes. Five platforms stop apologising and start printing steps that work.</p>
+      <div class="meta">v1 · 2026-09-19 · Trawler · T3 (docs/work/) ·
+        branch <code>wu/onboarding-redesign/design-of-record</code> ·
+        epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
+        depends on <a href="2026-09-19-onboard-reach-plan.html">W1</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      The onboarding screen's design run — parked open at <code>bfdc345</code> — is restored into
+      <code>docs/work/</code> under this epic's identity, amended so that every one of the eight
+      platforms it offers renders real steps against the reach seam W1 shipped instead of a
+      cannot-reach notice, re-verified six-item green under the current checker, and closed
+      <code>data-status="archived"</code> with a <code>design/v1</code> note that hands W3 a path
+      and a blob to build from.
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <tr><th>Serves</th><th>How</th></tr>
+        <tr>
+          <td><a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD.W2</a>, whole</td>
+          <td>the epic plan's second WU: restore, re-identify, amend for W1, re-verify, close,
+            hand off. The epic's shape diagram makes W2 the only edge into W3, because an added
+            surface may only be cited — W3 cannot build a screen no closed run describes</td>
+        </tr>
+        <tr>
+          <td><a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a></td>
+          <td>the six items and the three-step close are what this WU executes; the review item
+            records the amendment round and the contract it hit</td>
+        </tr>
+        <tr>
+          <td><a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a></td>
+          <td>the hand-off is a pointer, never a judgment of the build. This WU writes the
+            pointer; nothing here judges W3</td>
+        </tr>
+        <tr>
+          <td>UC-ONBOARD — <em>gains reach</em>, <em>gains honest silence</em></td>
+          <td>W1 delivered the address; this WU is where the screen's design stops saying
+            <em>nowhere to point</em> and starts naming host, port and certificate URL. The
+            un-probeable rows keep their own words — that half of the contract is already
+            designed and must survive the amendment intact</td>
+        </tr>
+        <tr>
+          <td>The run's blocked-on list, rows 1–3</td>
+          <td>rows 1 and 2 (<em>no reachable address</em>, <em>nothing to render</em>) close against
+            what W1 landed. Row 3 (per-platform instruction content) stays open — it is addressed to
+            the build WU — but its <em>what the run did meanwhile</em> is re-written against the
+            real API instead of against a draft</td>
+        </tr>
+        <tr>
+          <td>The epic's standing bill</td>
+          <td>this is the design round the epic measures. Wall-clock and tokens are recorded in
+            this WU's result and carried into the epic result — the design flow's first number</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="inputs">What W1 actually handed this run</h2>
+    <p>The amendment is written against the shipped seam, not against the plan's description of it.
+      These are the facts the mockup may print.</p>
+    <table data-c="w1-inputs">
+      <tr><th>Fact</th><th>Shape at the tip</th><th>What the design may say with it</th></tr>
+      <tr>
+        <td>the choice of address</td>
+        <td><code>GET /reach</code> → <code>interfaces: [{name, address}]</code> — the host's own
+          non-loopback, non-link-local addresses, enumerated by the core</td>
+        <td>the user picks from addresses that exist. The screen never renders a field to type
+          into, and never invents <code>0.0.0.0</code></td>
+      </tr>
+      <tr>
+        <td>armed / not armed</td>
+        <td><code>armed: boolean</code>, with <code>proxy</code>, <code>api</code> and
+          <code>ca_cert_url</code> all <code>null</code> until it is true</td>
+        <td>the two states the off-machine platforms render. Null is the design's cue for
+          <em>the precondition that cannot be met yet</em> — not a blank line</td>
+      </tr>
+      <tr>
+        <td>the printed address</td>
+        <td><code>proxy</code> = host:port a device routes to · <code>ca_cert_url</code> = the
+          certificate URL that works over that address, brackets kept for IPv6</td>
+        <td>the device guides print a real host, a real port and a real URL. The
+          <code>setup.ts</code> prose punt (<em>"Host = your machine's LAN address"</em>) has an
+          answer and leaves the design</td>
+      </tr>
+      <tr>
+        <td>the cost of arming</td>
+        <td><code>POST /reach</code> behind the shell's confirm — names the address, says the
+          captured flows become readable, says the exposure ends with the session</td>
+        <td>arming is an action on the screen with a confirm behind it, in the same shape
+          DEC-13 already gives the CA install and the proxy write. The design shows the action and
+          cites the confirm; it does not restate the dialog's words</td>
+      </tr>
+      <tr>
+        <td>what does <em>not</em> survive</td>
+        <td>reach is re-armed per launch; the CORS grant did not widen</td>
+        <td>the design may not draw a remembered reachable state. A relaunch returns to
+          not armed, and the Given list's <em>Not given</em> line says so</td>
+      </tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>Observable at this WU's tip by a reader who was not here.</p>
+      <table>
+        <tr><th>#</th><th>After this WU</th><th>Checked by</th></tr>
+        <tr>
+          <td>1</td>
+          <td>One design run doc is tracked at <code>docs/work/2026-09-17-onboarding-design-run.html</code>,
+            carrying <code>data-artifact="design-run"</code> and <code>data-status="archived"</code> —
+            the same path the parked commit used, so its lineage reads as a resumption rather than
+            as a second run</td>
+          <td>the tree · <code>6·run-closed</code> at the merge</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Its identity is this epic's: the meta line names E-ONBOARD.W2 and the branch, and the
+            run states in its own words that it was parked open by E-SIMPDF and resumed here. It
+            keeps its minted <code>data-htmldoc-id</code> — a resumed run is the same document, and
+            re-minting would orphan the comment history the first round left on it</td>
+          <td>the doc · <code>htmldoc·id</code></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>The mockup renders all eight platforms with no unreachable-platform notice left in
+            it: selecting an off-machine platform with reach armed shows a host, a port and a
+            certificate URL; with reach not armed it shows the precondition that cannot be met and
+            the action that meets it, and offers no step that cannot work</td>
+          <td>the mockup's state toggle · the human at the mockup</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>The Given list gains the reach inputs as rows in their own right, each ending
+            <em>used</em> / <em>deliberately unused</em> / <em>blocked</em>, and its
+            <em>Not given</em> line no longer claims Trawler binds <code>127.0.0.1</code> only —
+            it claims instead what is still absent, including that reach does not survive a
+            relaunch</td>
+          <td><code>capabilities·answered</code> · the human, for whether each row is honest</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Blocked-on rows 1 and 2 are closed with what closed them named — DEC-55 and the
+            landed seam — rather than deleted. Row 3 stays open against the build WU with its
+            interim answer re-written against the real API. Rows 4–6 are untouched, because W1
+            moved nothing under them</td>
+          <td>the doc · the epic review, for whether a closed row is really closed</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Every pointer interaction the amendment adds — choosing an address, arming, disarming —
+            has a keyboard row naming its key path from the conventions, or a
+            <em>proposed:</em> path that becomes a proposals row</td>
+          <td><code>keyboard-parity·path</code></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><code>cargo xtask verify-doc</code> is green on the run under the current checker —
+            including the three rules E-SIMPDF re-homed onto the mockup doc: the overflow line
+            names every <code>data-zone</code>, every collection host carries
+            <code>data-order</code>, and the doc carries its htmldoc id and bootstrap. Archived
+            does not exempt those</td>
+          <td><code>cargo xtask verify-doc</code></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>The review item records this round: what the reviewer said, what it moved (naming
+            the items), and the contract each call hit. The first round's rows survive — the
+            record is appended to, never replaced</td>
+          <td><code>review·recorded</code> · <code>item·review</code></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>A <code>design/v1</code> note on the tip carries the accounting: the closed run as
+            the artifact, and — because this WU renders no file under <code>ui/src/</code> — an
+            empty built set rather than a citation it has not earned. W3 cites this run's blob;
+            this WU produces it</td>
+          <td><code>9·design</code> at the merge · <code>cargo xtask design-scope</code></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>The round's wall-clock and token count are recorded in this WU's result report —
+            the first measurement the design flow has ever had</td>
+          <td>the WU result · carried into the epic result</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="not-here">What this WU does not do</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>Any change under <code>ui/src/</code> — the screen itself, <code>setup.ts</code>,
+        the <code>useNow</code> tick</td><td>W3. This WU ships a document and no code</td></tr>
+      <tr><td>Re-designing what the first round already decided — the platform axis, the absent
+        probe row off-machine, the un-probeable glyph, the latched way out</td>
+        <td>settled at the first human gate. The amendment is scoped to what W1 changed;
+          re-opening a settled call is a review row of its own, not a silent edit</td></tr>
+      <tr><td>Designing the quit dialog</td><td>out of the epic entirely — owner's call at the
+        init round</td></tr>
+      <tr><td>Closing blocked-on rows 4–6 (platform attribution, the probe beyond macOS and
+        Windows, the regression-while-proven call)</td><td>W1 moved nothing under them; they
+        leave this epic as they entered it, and W4 records the residue</td></tr>
+      <tr><td>Archiving the run out of the tree</td><td>the epic gate, per DEC-3. <em>Archived</em>
+        here means <code>data-status="archived"</code> — the run closed. The file stays tracked
+        until the epic closes, because W3 must cite a path that resolves</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <p>This WU changes no code path — <code>src/</code>, <code>xtask/</code>,
+        <code>tests/</code>, <code>ui/src/</code> and <code>ui/e2e/</code> are all untouched — but
+        it is <strong>not</strong> exempt: a design is a docs-only deliverable, so the gate keeps a
+        design-bearing diff gated on purpose. The evidence it owes and does not owe is therefore
+        decided per layer, not by the docs-only shortcut.</p>
+      <table>
+        <tr><th>Level</th><th>What asserts what</th></tr>
+        <tr>
+          <td><strong>Unit</strong></td>
+          <td><em>Waived</em> — <code>waived: "the WU adds no executable code; its only artifact
+            is a design run doc, and every predicate over that doc is already a checker
+            rule."</em> The claim is not that the work is untested: <code>verify-doc</code> is the
+            test, and it is a suite that already exists and already runs on every write and at
+            every turn end. Writing a unit test here would mean testing the checker, which
+            <code>xtask/src/doc.rs</code>'s own tests do</td>
+        </tr>
+        <tr>
+          <td><strong>Integration</strong></td>
+          <td><em>Waived</em> — <code>waived: "the WU's contract is a green, closed, citable run;
+            the checker asserts green and 6·run-closed asserts closed at this very merge, so the
+            contract is asserted by the gate that reads it rather than by a test beside it."</em>
+            The WU contract at integration level would be <em>the run is consumable by W3</em>,
+            and the mechanism that proves it is <code>design-scope</code> + <code>9·design</code>,
+            run for real at this merge</td>
+        </tr>
+        <tr>
+          <td><strong>E2E</strong></td>
+          <td><em>Waived</em> — <code>waived: "the epic's e2e lands at W4 against the built
+            screen; a design doc renders no surface for a driver to touch."</em> Same reason W1
+            waived it, and the epic plan's no-waiver clause is satisfied at W4, which takes the
+            e2e whole</td>
+        </tr>
+      </table>
+      <p><strong>What actually runs before the merge, and must be green:</strong></p>
+      <table>
+        <tr><th>Check</th><th>Asserting</th></tr>
+        <tr><td><code>cargo xtask verify-doc docs/work/2026-09-17-onboarding-design-run.html</code></td>
+          <td>six items present and non-empty · no cut station · the twelve hard rules on the
+            mockup · state toggle · zero colour literals · <code>data-wire</code> ·
+            overflow names every zone · <code>data-order</code> on collection hosts · a key path
+            per pointer interaction · every Given answered · the review item recorded · the
+            specimens bundle loaded once · htmldoc id and bootstrap. Batched: edit once, verify
+            once, batch residuals, verify again — never a cycle per rule</td></tr>
+        <tr><td><code>cargo xtask verify-doc docs/work/*.html</code></td>
+          <td>this plan and the result report, plus the link check on every doc the WU touches —
+            a citation into a file no commit holds is red wherever it sits</td></tr>
+        <tr><td><code>cargo xtask design-scope epic/onboarding-redesign HEAD</code></td>
+          <td>that the closed run is in scope and that no <code>ui/src/</code> file is, so the
+            <code>design/v1</code> note's accounting is derived rather than asserted</td></tr>
+        <tr><td><code>cargo xtask gate0</code></td>
+          <td>unchanged green — the guard that this WU really did leave the code alone</td></tr>
+        <tr><td><code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/onboarding-redesign</code></td>
+          <td>every red the merge would refuse, read before attempting it</td></tr>
+      </table>
+      <p><strong>No code review.</strong> The diff changes no code path, so <code>cr/v5</code> is
+        not demanded and a review left here would be ignored (DEC-46). The design step runs
+        instead, and writes <code>design/v1</code>. The human gate is the mockup itself, plus the
+        <code>mr/v1</code> attestation, which is required at every WU without exception.</p>
+    </div>
+
+    <h2 id="sequence">Order of work</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">
+flowchart TD
+  A["restore bfdc345's run to docs/work/
+same path, same htmldoc id"] --> B["re-identify onto E-ONBOARD.W2
+meta line · the resumption stated"]
+  B --> C["amend against W1's shipped seam
+Given rows · mockup zones · device guides"]
+  C --> D["close blocked-on rows 1-2
+name what closed them"]
+  D --> E["keyboard rows for the new interactions"]
+  E --> V1{"verify-doc"}
+  V1 -- red --> C
+  V1 -- green --> H["the human reads the mockup"]
+  H -- "a call" --> R["review item: what moved, the contract"] --> C
+  H -- "held" --> CL["step 3: data-status=archived"]
+  CL --> N["notes write · design step -> design/v1"]
+  N --> MR["mr confirm - the human signs, last"]
+  MR --> M["merge --no-ff into the epic"]
+      </pre>
+      <div class="caption">The close is three steps and they are ordered: the review item is
+        filled, the run goes green, then it is archived. A red run is not closeable, and an
+        archived one that was never green is a rule the checker still applies.</div>
+    </div>
+
+    <h2 id="risks">What could go wrong, and the answer</h2>
+    <table data-c="risks">
+      <tr><th>Risk</th><th>Answer</th></tr>
+      <tr>
+        <td>The run was written under the checker as it stood on 2026-09-17 and parked as a draft,
+          so <em>every</em> rule has been silent on it since. It may be red in ways the first round
+          never saw — E-SIMPDF re-homed three rules onto the mockup doc after it was parked</td>
+        <td>expected, and budgeted. The first <code>verify-doc</code> after the restore is a
+          discovery run, not a regression. Its output is the work list; residuals are batched into
+          a second pass</td>
+      </tr>
+      <tr>
+        <td>Amending the mockup means re-mounting real components against the current registry.
+          An entry's <code>@use</code>/<code>@avoid</code> may have moved since the run was
+          written, making a mount that was a reuse into a proposal</td>
+        <td>the substrate is re-loaded at the start of the round
+          (<code>node scripts/design-registry.mjs</code>), not assumed from the parked doc. A fit
+          that no longer holds becomes a proposals row, which is exactly what that list is for</td>
+      </tr>
+      <tr>
+        <td>Amending for reach touches the same zones the first round's human already approved,
+          and quietly changing a settled call would spend a judgment nobody made</td>
+        <td>the amendment is scoped to the reach seam. Anything it forces outside that scope is
+          raised to the human as a call in its own right and recorded in the review item with the
+          contract it hit — the run's review list is append-only</td>
+      </tr>
+      <tr>
+        <td>The bill is the epic's deliverable and is trivially lost — no round in the corpus has
+          ever recorded one</td>
+        <td>the clock starts at the restore and the token count is read at the close; both land in
+          this WU's result before the <code>mr</code> signature, because the report's bytes are
+          what the human signs</td>
+      </tr>
+    </table>
+
+    <h2 id="docs">Docs this WU touches</h2>
+    <table data-c="docs">
+      <tr><th>Path</th><th>Tier</th><th>Why</th></tr>
+      <tr><td><code>docs/work/2026-09-17-onboarding-design-run.html</code></td><td>T3</td>
+        <td>the deliverable: restored, amended, closed</td></tr>
+      <tr><td><code>docs/work/2026-09-19-onboard-design-of-record-plan.html</code></td><td>T3</td>
+        <td>this plan</td></tr>
+      <tr><td><code>docs/work/2026-09-19-onboard-design-of-record-result.html</code></td><td>T3</td>
+        <td>the result report the <code>mr/v1</code> note attests, carrying the bill</td></tr>
+      <tr><td><code>docs/work/2026-09-07-onboarding-redesign-plan.html</code></td><td>T3</td>
+        <td>only if the amendment changes what a later WU must do. The W2 summary block stands as
+          written; an edit here is a deviation and is recorded as one</td></tr>
+    </table>
+    <p><strong>No T2 synthesis, and the reason is on the record.</strong> The screen's truth reaches
+      <code>docs/use-cases/web-ui.html</code> and the lexicon reaches
+      <code>docs/design-rules/</code> at W4, after W3 has built what W2 designed — distilling a
+      design before its build would put a claim in T2 the tree cannot yet support. The
+      <code>doc/v1</code> note carries <code>t2_waived</code> with that reason.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

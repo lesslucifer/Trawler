@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aaba6239f34851f0dfad141">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: the onboarding screen</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- theme + shared specimen behaviours + the real collection, one classic
+       script so the doc opens over file://. Generated, git-ignored:
+       `cargo xtask ui specimens`. -->
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    /* doc.css styles bare h2 · h3 · p · li for this page's own prose, and a
+       mounted component emits those elements too — Section's heading arrives
+       with a 3rem margin and a 2px rule it does not own. Neutralised inside the
+       mock so the mockup shows the component, not the doc. */
+    .a-mock h2,.a-mock h3{margin:0;padding:0;border:0}
+    .a-mock p,.a-mock li{color:inherit}
+    /* mockup assembly only — zoning and state visibility. every magnitude the
+       design owns is a token utility on the element itself. */
+    .a-mock{display:block}
+    .a-zone{display:block}
+    /* lifecycle states */
+    .a-st-proven,.a-st-checking,.a-st-tunnel,.a-st-installing{display:none}
+    .a-st-idle,.a-st-rest{display:block}
+    .proven .a-st-idle,.checking .a-st-idle,.tunnel .a-st-idle{display:none}
+    .proven .a-st-proven{display:block}
+    .checking .a-st-checking{display:block}
+    .tunnel .a-st-tunnel{display:block}
+    .installing .a-st-installing{display:block}
+    .installing .a-st-rest,.checking .a-st-rest{display:none}
+    /* the selected platform — one at a time, the screen's primary axis */
+    .a-pf-sim,.a-pf-off{display:none}
+    .a-pf-machine,.a-pf-probed{display:block}
+    .p-sim .a-pf-machine,.p-off .a-pf-machine{display:none}
+    .p-sim .a-pf-sim{display:block}
+    .p-off .a-pf-off{display:block}
+    .p-off .a-pf-probed{display:none}
+    /* reach — armed or not. Only ever visible inside an off-machine platform,
+       which is the only one whose instructions depend on it. */
+    .a-rch-on{display:none}
+    .a-rch-off{display:block}
+    .reached .a-rch-off{display:none}
+    .reached .a-rch-on{display:block}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — the onboarding screen</h1>
+      <p>A run of the <a href="../design-flow.html">simplified design flow</a> on the screen that
+        gets a user from a fresh install to a first decrypted flow. Its purpose is two-fold: a real
+        design of the screen, and the first end-to-end exercise of the flow as
+        <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a> cut it — six items,
+        one human gate, a three-step close.</p>
+      <p><strong>Parked, then resumed.</strong> Round 1 ran under E-SIMPDF and committed this run
+        <em>open</em> (<code>data-status="draft"</code>, <code>bfdc345</code>) on purpose: its own
+        top blocked-on row was that Trawler binds <code>127.0.0.1</code> only, so five of the eight
+        platforms it offers had nothing to point at and the design could not honestly close.
+        <a href="2026-09-19-onboard-reach-plan.html">E-ONBOARD.W1</a> built that bind and its
+        address. Round 2 resumes the run here, amends it against what W1 actually shipped, and
+        closes it as this epic's design of record — same document, same id, one continuous
+        record.</p>
+      <div class="meta">Design run · opened 2026-09-17 · resumed 2026-09-19 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBOARD.W2</strong> · branch <code>wu/onboarding-redesign/design-of-record</code> ·
+        epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
+        substrate re-loaded at round 2: registry (30 entries, emitted) · rulebook (12 hard rules) ·
+        <code>ui/src/Onboarding.tsx</code> read for <strong>capabilities only</strong> ·
+        round 1 rebuilt the screen around a single platform choice · round 2 gave that choice an
+        address to print</div>
+    </div>
+  </header>
+
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="given">Given — what the screen is handed</h2>
+    <p>Not given (may not be assumed to exist): any attribution of observed traffic to a platform or a
+      device · a network-reachability check — nothing tells the screen a device actually arrived at the
+      address, only that Trawler is listening there · any memory of a reach the user armed, which dies
+      with the process and is re-armed per launch
+      (<a href="../decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a>) · any observable
+      per-step completion · any persistence of the selected platform, so a relaunch returns to
+      <em>this machine</em> · a notification channel outside the window.</p>
+    <p class="kd"><strong>What round 2 changed here.</strong> Round 1's not-given line opened with
+      <em>a network address a device could reach Trawler at (it binds to <code>127.0.0.1</code> only)</em>.
+      That is no longer true, so it leaves this line and arrives below as five given rows. What
+      replaced it is narrower and still absent: Trawler now says <em>where</em> it is listening, and
+      still never says whether anyone came.</p>
+    <table data-item="capabilities" data-c="given-table">
+      <thead><tr><th>Given</th><th>State</th><th>Where / why</th></tr></thead>
+      <tbody>
+        <tr><td><code>state.phase</code> — checking · onboarding · proven</td><td>used</td>
+          <td><strong>verdict</strong> and <strong>try</strong> — which sentence the screen leads with, and which
+            verdict every precondition reads. Round 3 split the zone by phase: <em>checking</em> and the two failing
+            readings lead the screen, and <em>proven</em> renders at the bottom instead, where the request that
+            proved it was made</td></tr>
+        <tr><td><code>state.everProven</code></td><td>used</td>
+          <td><strong>back</strong> — the way out exists only once capture has been proven at least once</td></tr>
+        <tr><td><code>state.step</code> + the <code>goto</code> events</td><td>deliberately unused</td>
+          <td>the design has no cursor to move. A stepper needs per-step progress, which nothing observes and
+            <code>StepList</code>'s <code>@avoid</code> refuses to draw — so both preconditions are open at once and
+            the screen never claims a position in a sequence. The <strong>platform</strong> choice is the one
+            axis the user moves along, and it is a selection, not a step</td></tr>
+        <tr><td><code>dispatch</code></td><td>used</td>
+          <td><strong>back</strong> — the one event this screen raises (<code>exit</code>); <code>re-invoke</code> belongs to the header's StatusDot, not here</td></tr>
+        <tr><td><code>os</code> — the host platform</td><td>used</td>
+          <td><strong>platform</strong> — it names the first option (<em>this machine — macOS</em>) and selects it by
+            default; it no longer gates anything, because the user's choice does</td></tr>
+        <tr><td><code>proxyAddr</code></td><td>used</td>
+          <td><strong>preconditions</strong> and <strong>try</strong> — every command this machine runs is built from
+            it. Round 1 also leaned on it for the off-machine case, where it was a loopback address the screen refused
+            to print to a phone; that job now belongs to <code>reach.proxy</code>, and <code>proxyAddr</code> is once
+            again only what it says it is — the address <em>this machine</em> routes to</td></tr>
+        <tr><td><code>reach.armed</code></td><td>used</td>
+          <td><strong>preconditions</strong> — the one verdict an off-machine platform can honestly carry, and the
+            branch every off-machine instruction reads. It is a fact about this machine, not a probe of the device,
+            which is why it is rendered where the trust and proxy probes are not</td></tr>
+        <tr><td><code>reach.interfaces</code> — <code>{name, address}[]</code></td><td>used</td>
+          <td><strong>preconditions</strong> — the addresses the core enumerated, which is what makes the choice one
+            that exists. The screen never renders a field to type an address into: an address the host does not hold
+            is refused at the bind, and a picker over what it does hold cannot produce that refusal</td></tr>
+        <tr><td><code>reach.proxy</code> — host:port, or <code>null</code></td><td>used</td>
+          <td><strong>preconditions</strong> and <strong>try</strong> — the two values a device's proxy settings
+            actually want. <code>null</code> is not a blank line: it is what the unmet reach precondition renders
+            instead of steps</td></tr>
+        <tr><td><code>reach.ca_cert_url</code></td><td>used</td>
+          <td><strong>preconditions</strong> — the certificate route. It turns round 1's carry-the-file guide into a
+            URL the device opens, which is the step that makes a phone's setup one screen long instead of a file
+            transfer</td></tr>
+        <tr><td><code>reach.api</code></td><td>deliberately unused</td>
+          <td>the control API's own address. Every instruction the screen gives points at either the proxy or the
+            certificate URL, and both are already rendered; printing a third address would offer the user something to
+            point at that no step of theirs uses. It is <em>given</em>, and the screen answers for ignoring it here</td></tr>
+        <tr><td><code>onArmReach(address)</code></td><td>used</td>
+          <td><strong>preconditions</strong> — the reach action, offered only off-machine and only while not armed.
+            The shell's confirm sits behind it (DEC-13's rule for anything that changes what this host exposes); the
+            screen raises the action and never restates the dialog's words</td></tr>
+        <tr><td><code>onDisarmReach()</code></td><td>used</td>
+          <td><strong>preconditions</strong> — the reversal, offered only while armed, in the same bare-button shape
+            as <em>stop routing through Trawler</em>. The screen never offers to undo something it did not do</td></tr>
+        <tr><td><code>trustProbe</code> — trusted · untrusted · unknown</td><td>used</td>
+          <td><strong>preconditions</strong> — the trust verdict, passed through unranked, <strong>and only while the
+            selected platform is this machine or a simulator that shares its stores</strong>. A probe of the wrong
+            machine is worse than no probe, so off-machine it is not rendered at all</td></tr>
+        <tr><td><code>proxyProbe</code> — ours · foreign · none · unknown</td><td>used</td>
+          <td><strong>preconditions</strong> — same scoping as the trust probe, including the <em>another proxy is set</em> verdict</td></tr>
+        <tr><td><code>probing</code></td><td>used</td>
+          <td><strong>probe</strong> — the in-flight line; it outranks every precondition verdict (StatusLine's precedence contract)</td></tr>
+        <tr><td><code>probedAt</code></td><td>used</td>
+          <td><strong>probe</strong> — <em>checked 2 minutes ago</em>, so a stale verdict says so instead of looking current</td></tr>
+        <tr><td><code>traffic.lastFlowAt</code> — a decrypted HTTPS flow</td><td>used</td>
+          <td><strong>try</strong> — the only proof the screen accepts, and what turns trust ✓ where no probe can
+            reach. It renders beside the request that produces it, not at the top of the screen</td></tr>
+        <tr><td><code>traffic.lastTunnelAt</code> — a connection with no decrypt</td><td>blocked</td>
+          <td><strong>verdict</strong> — it produces the <em>arriving but not decrypting</em> sentence, but it cannot be
+            tied to the platform the user just selected. The screen now knows what the user is setting up and still
+            cannot say whether the traffic came from it. See blocked-on</td></tr>
+        <tr><td><code>traffic.ever</code></td><td>used</td>
+          <td><strong>verdict</strong> — separates <em>nothing has ever arrived</em> from <em>nothing is arriving now</em>; they are different problems</td></tr>
+        <tr><td><code>onInstallCa</code></td><td>used</td>
+          <td><strong>preconditions</strong> — the trust action, offered only on <em>this machine</em>: it installs into
+            this host's store, which is a lie anywhere else</td></tr>
+        <tr><td><code>onSaveCa</code></td><td>used</td>
+          <td><strong>preconditions</strong> — step 1 of every manual route, on every platform: off-machine the saved
+            file is the thing the user carries over. Its resolved name is what the confirmation quotes, never the name we asked for</td></tr>
+        <tr><td><code>onSetProxy</code></td><td>used</td>
+          <td><strong>preconditions</strong> — same gate as the install: this machine only</td></tr>
+        <tr><td><code>onUnsetProxy</code></td><td>used</td>
+          <td><strong>preconditions</strong> — offered only once the proxy is ours, so the screen never offers to undo something it did not do</td></tr>
+        <tr><td><code>onRecheck</code></td><td>used</td>
+          <td><strong>probe</strong> — one global re-read, never a per-step one; it disappears with the probe row on an
+            off-machine platform, because there is nothing here it could re-read</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="mockup">Draft mockup</h2>
+    <p class="kd">Every composed element is <strong>mounted from the collection</strong> —
+      <code>window.Trawler</code>, the real <code>ui/src/components/</code> — so what renders below is
+      the shipped component, not a drawing of one. Screen-owned: the zoning, the column, the guide
+      captions. Stubbed: the clipboard write's host permissions and the elevated commands themselves;
+      every control is otherwise live — the platform Select really opens and filters, CopyText really
+      copies and confirms, Disclosure really discloses. The first two buttons under the mockup stand in
+      for the platform Select (it is live, but a real selection cannot drive the mockup's CSS);
+      <em>reach armed</em> flips the second axis — it only changes anything under
+      <em>iPhone or iPad</em>, because it is the only platform whose instructions depend on it; the rest
+      flip the lifecycle states. They compose, but each is meant to be read alone.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-mock mx-auto max-w-dialog-max bg-canvas py-6 font-ui text-body text-ink-body" id="mock">
+
+          <div class="a-zone px-4" data-zone="verdict">
+            <div class="a-st-idle" id="m-verdict-idle"></div>
+            <div class="a-st-checking" id="m-verdict-checking"></div>
+            <div class="a-st-tunnel" id="m-verdict-tunnel"></div>
+          </div>
+
+          <div class="a-zone px-4 pt-4" data-zone="platform">
+            <p class="font-ui text-chrome uppercase tracking-label text-ink-mute">what are you setting up</p>
+            <div class="a-pf-machine pt-2" id="m-platform-machine"></div>
+            <div class="a-pf-sim pt-2" id="m-platform-sim"></div>
+            <div class="a-pf-off pt-2" id="m-platform-off"></div>
+          </div>
+
+          <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4 pt-3" data-zone="probe">
+            <div class="a-st-rest" id="m-probe-rest"></div>
+            <div class="a-st-checking" id="m-probe-checking"></div>
+            <div id="m-probe-again"></div>
+          </div>
+
+          <div class="a-zone pt-3" data-zone="preconditions" id="m-preconditions"></div>
+
+          <div class="a-zone px-4 pt-4" data-zone="try">
+            <div class="a-pf-machine">
+              <p class="font-ui text-chrome text-ink-mute">make any request — or run this</p>
+              <p class="pt-2 font-mono" data-wire="shell command" id="m-try"></p>
+            </div>
+            <div class="a-pf-sim">
+              <p class="font-ui text-chrome text-ink-mute">open any site in the Simulator</p>
+            </div>
+            <div class="a-pf-off">
+              <div class="a-rch-off" id="m-try-off-unreached"></div>
+              <div class="a-rch-on" id="m-try-off-reached"></div>
+            </div>
+            <div class="a-st-proven pt-3" id="m-verdict-proven"></div>
+          </div>
+
+          <div class="a-zone a-st-proven px-4 pt-4" data-zone="back" id="m-back"></div>
+
+        </div>
+      </div>
+      <p>overflow: <strong>verdict</strong>, <strong>platform</strong>, <strong>probe</strong>,
+        <strong>try</strong> and <strong>back</strong> are bounded by their content — one sentence, one
+        control, one chrome row, a command plus the one-sentence outcome under it, and one button — and none
+        of them scrolls; the platform
+        Select's own popup is capped by the component (<code>listing-max</code>), not by this screen.
+        <strong>preconditions</strong> is the one unbounded zone: its guide's StepList grows with the
+        platform it renders, and neither StepList nor Disclosure may cap or scroll its own content. Its
+        cap is therefore the page — the column scrolls whole, the window owns it, and no zone here holds
+        an inner scroller.</p>
+      <p class="kd"><strong>The address control's shape is decided by a count the design cannot know.</strong>
+        A host holds one address as often as it holds four, and no single control covers the range inside
+        its contract. One rule, three renderings, and each one sits inside the entry it uses:
+        <strong>one address</strong> — no control at all; the action names it
+        (<em>let devices reach Trawler at 192.168.1.24</em>), because a choice of one is chrome pretending
+        to be agency. <strong>Two to four</strong> — <code>SegmentedControl</code>, all addresses visible,
+        which is what the mockup renders. <strong>Five or more</strong> — <code>Select</code>, whose
+        <code>@use</code> names a target picker and whose <code>@avoid</code> excludes exactly the two-to-four
+        case the segment group takes. Nothing is forced past an <code>@avoid</code> line, so this is reuse
+        across the whole range and not a proposal — see the review item, where the fit was judged.</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-sim"
+              data-label-off="▶ platform: iOS Simulator" data-label-on="◀ back to this machine">▶ platform: iOS Simulator</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-off"
+              data-label-off="▶ platform: iPhone or iPad" data-label-on="◀ back to this machine">▶ platform: iPhone or iPad</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="reached"
+              data-label-off="▶ reach armed" data-label-on="◀ reach not armed">▶ reach armed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="checking"
+              data-label-off="▶ show checking" data-label-on="◀ hide checking">▶ show checking</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="tunnel"
+              data-label-off="▶ show arriving, not decrypting" data-label-on="◀ hide arriving, not decrypting">▶ show arriving, not decrypting</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="installing"
+              data-label-off="▶ show install running" data-label-on="◀ hide install running">▶ show install running</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="proven"
+              data-label-off="▶ show capturing" data-label-on="◀ hide capturing">▶ show capturing</button>
+      <script type="text/babel">
+        const { React, createRoot, Notice, Section, StatusLine, Button, Select, SegmentedControl,
+                StepList, CopyText, Disclosure, Spinner, TimestampText } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+        const MINUTES_AGO = Date.now() - 2 * 60 * 1000;
+
+        const command = (value, label) => (
+          <span data-wire="shell command" className="font-mono">
+            <CopyText value={value} label={label} />
+          </span>
+        );
+
+        /* One list, one choice, and every instruction below it is that platform's.
+           The first entry is the only one the app can act on itself; the rest are
+           named for what the user is holding, not for an operating system. */
+        const PLATFORMS = [
+          { id: "this", label: "This machine — macOS" },
+          { id: "mac", label: "Another Mac" },
+          { id: "windows", label: "Another Windows PC" },
+          { id: "ubuntu", label: "Another Ubuntu machine" },
+          { id: "ios-sim", label: "iOS Simulator" },
+          { id: "android-sim", label: "Android emulator" },
+          { id: "ios", label: "iPhone or iPad" },
+          { id: "android", label: "Android device" },
+        ];
+
+        /* screen-owned assembly: the guide is one platform's steps, with its
+           reversal in the same disclosure as the thing it reverses. No picker
+           lives in here any more — the screen has exactly one, at the top. */
+        const Guide = ({ steps, undoTitle, undo }) => (
+          <Disclosure summary="set it up by hand">
+            <StepList steps={steps} />
+            {undo && <>
+              <p className="pt-3 font-ui text-chrome text-ink-mute">{undoTitle}</p>
+              <div className="pt-2"><StepList steps={undo} /></div>
+            </>}
+          </Disclosure>
+        );
+
+        /* verdict → act → guide. The name is Section's heading, never a label the
+           screen draws beside the verdict. */
+        const Precondition = ({ title, children }) => <Section title={title}>{children}</Section>;
+        const verdict = (cls, status) => (
+          <div className={cls} key={cls}><StatusLine status={status} /></div>
+        );
+
+        const saveStep = <>Save Trawler's certificate as trawler-ca.pem <Button frame="bare" tone="mute" onClick={noop}>save…</Button></>;
+
+        /* The addresses the core enumerated — never a field to type into. Two is
+           the ordinary count (Wi-Fi and Ethernet), which is why the mockup shows
+           two; the cardinality rule under the mockup covers one and many. */
+        const ADDRESSES = [
+          { value: "192.168.1.24", label: "Wi-Fi · 192.168.1.24" },
+          { value: "10.0.4.7", label: "Ethernet · 10.0.4.7" },
+        ];
+
+        const certUrl = (
+          <span data-wire="certificate url" className="font-mono">
+            <CopyText value="http://192.168.1.24:7421/ca.crt" label="the certificate URL" />
+          </span>
+        );
+
+        mount("m-verdict-idle",
+          <Notice tone="mute" detail="finish the two steps below, then make any request">
+            nothing has reached Trawler yet
+          </Notice>);
+        /* PROPOSED — Notice tone="pending": a spinner in the glyph column the
+           three shipped tones already own. Rendered screen-owned here because
+           the collection does not ship it yet; the delta is on proposals. */
+        mount("m-verdict-checking",
+          <div className="flex items-start gap-chrome-gap">
+            <span className="shrink-0 py-chrome-y font-ui text-body text-ink-mute"><Spinner /></span>
+            <Notice tone="mute" detail="reading this machine's certificate store and proxy settings">
+              checking what is already set up
+            </Notice>
+          </div>);
+        mount("m-verdict-tunnel",
+          <Notice tone="warn" detail="the trust step below says what to fix, and for which platform">
+            traffic is arriving, but nothing is decrypting
+          </Notice>);
+        mount("m-verdict-proven",
+          <Notice tone="ok" detail={<span>last flow <TimestampText timestamp={MINUTES_AGO} format="relative" /></span>}>
+            Trawler is capturing
+          </Notice>);
+
+        /* one picker per shape, each live: a mockup whose trigger disagrees with
+           the instructions under it is showing a screen that cannot exist. */
+        const picker = (value) => <Select options={PLATFORMS} value={value} onChange={noop} label="platform" />;
+        mount("m-platform-machine", picker("this"));
+        mount("m-platform-sim", picker("ios-sim"));
+        mount("m-platform-off", picker("ios"));
+
+        mount("m-probe-rest",
+          <span className="font-ui text-control text-ink-mute">
+            checked <TimestampText timestamp={MINUTES_AGO} format="relative" />
+          </span>);
+        mount("m-probe-checking",
+          <span className="flex items-center gap-chrome-gap font-ui text-control text-ink-mute">
+            <Spinner /> checking this machine…
+          </span>);
+        mount("m-probe-again",
+          <Button frame="bare" tone="mute" onClick={noop}>check again</Button>);
+
+        mount("m-preconditions",
+          <Section variant="band" title="what has to be true">
+            <div className="a-pf-off">
+              <Precondition title="let this device reach Trawler">
+                <div className="a-rch-off">
+                  <StatusLine status={{ glyph: "○", tone: "muted", short: "Trawler answers on this machine only" }} />
+                  <p className="pt-3 font-ui text-chrome uppercase tracking-label text-ink-mute">listen on</p>
+                  <div className="pt-2">
+                    <SegmentedControl options={ADDRESSES} value="192.168.1.24" onChange={noop} ariaLabel="address to listen on" />
+                  </div>
+                  <div className="pt-3"><Button onClick={noop}>let devices reach Trawler</Button></div>
+                  <div className="pt-3">
+                    <Notice tone="mute" detail="Anything on that network will be able to route through the proxy and to read the flows Trawler has captured. Trawler stops listening when you turn this off, and whenever it quits.">
+                      Trawler will ask before it starts listening
+                    </Notice>
+                  </div>
+                </div>
+                <div className="a-rch-on">
+                  <StatusLine status={{ glyph: "✓", tone: "ok", short: "listening on 192.168.1.24 — until Trawler quits" }} />
+                  <div className="pt-2">
+                    <Button frame="bare" tone="mute" onClick={noop}>stop listening</Button>
+                  </div>
+                </div>
+              </Precondition>
+            </div>
+
+            <Precondition title="trust Trawler's certificate">
+              <div className="a-pf-probed">
+                {verdict("a-st-idle", { glyph: "◐", tone: "muted", short: "can't check on this platform" })}
+                {verdict("a-st-checking", { glyph: "⟳", tone: "muted", short: "reading the certificate store…" })}
+                {verdict("a-st-tunnel", { glyph: "⚠", tone: "warn", short: "not trusted where the traffic starts" })}
+                {verdict("a-st-installing", { glyph: "⟳", tone: "muted", short: "installing — approve the prompt…" })}
+                {verdict("a-st-proven", { glyph: "✓", tone: "ok", short: "trusted — proven by a decrypted flow" })}
+              </div>
+              <div className="a-pf-off">
+                {verdict("a-pf-off", { glyph: "◐", tone: "muted", short: "can't check another device from here" })}
+              </div>
+
+              {/* the verdict owns the alarm; the remedy is a separate element and
+                  stays mute, so one failure never raises two warn glyphs. */}
+              <div className="a-st-tunnel pt-2">
+                <Notice tone="mute">
+                  something is routing to Trawler and none of it is decrypting — the platform it comes from
+                  does not trust the certificate yet. The steps below are that platform's.
+                </Notice>
+              </div>
+
+              <div className="a-pf-machine pt-2">
+                <div className="a-st-rest"><Button onClick={noop}>install certificate</Button></div>
+                <div className="a-st-checking"><Button onClick={noop} disabled>install certificate</Button></div>
+                <div className="a-st-installing"><Button onClick={noop} disabled>install certificate</Button></div>
+              </div>
+
+              <div className="a-pf-machine pt-3">
+                <Guide
+                  steps={[
+                    saveStep,
+                    <>Run it in a terminal: {command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem", "the trust command")}</>,
+                    "Or double-click the file and set the Trawler CA to Always Trust.",
+                    "Firefox keeps its own store — import it there too.",
+                  ]}
+                  undoTitle="to remove it later"
+                  undo={[
+                    <>Run: {command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
+                    "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
+                  ]}
+                />
+              </div>
+              <div className="a-pf-sim pt-3">
+                <Notice tone="mute">the Simulator uses this Mac's certificate store — installing it here covers it</Notice>
+                <Guide steps={["Restart the Simulator if it was running when the certificate went in."]} />
+              </div>
+              <div className="a-pf-off pt-3">
+                <div className="a-rch-off">
+                  <Notice tone="mute">the certificate route opens once Trawler is reachable — the step above opens it</Notice>
+                </div>
+                <div className="a-rch-on">
+                  <Guide
+                    steps={[
+                      <>On the device, open {certUrl} — it downloads the profile.</>,
+                      "Open it: Settings → General → VPN & Device Management → install the profile.",
+                      "Then turn it on: Settings → General → About → Certificate Trust Settings.",
+                      <>No browser on it? {saveStep} and carry the file over instead.</>,
+                    ]}
+                  />
+                </div>
+              </div>
+            </Precondition>
+
+            <Precondition title="route its traffic through Trawler">
+              <div className="a-pf-probed">
+                {verdict("a-st-idle", { glyph: "○", tone: "muted", short: "nothing is routed here yet" })}
+                {verdict("a-st-checking", { glyph: "⟳", tone: "muted", short: "reading the proxy settings…" })}
+                {verdict("a-st-installing", { glyph: "○", tone: "muted", short: "nothing is routed here yet" })}
+                {verdict("a-st-tunnel", { glyph: "✓", tone: "ok", short: "receiving traffic" })}
+                {verdict("a-st-proven", { glyph: "✓", tone: "ok", short: "receiving traffic" })}
+              </div>
+
+              <div className="a-pf-machine pt-2">
+                <div className="a-st-rest"><Button onClick={noop}>set system proxy</Button></div>
+                <div className="a-st-checking"><Button onClick={noop} disabled>set system proxy</Button></div>
+                {/* installing a certificate does not change whether traffic is routed,
+                    so this action stays live rather than vanishing with the shared rest block. */}
+                <div className="a-st-installing"><Button onClick={noop}>set system proxy</Button></div>
+                <div className="a-st-proven"><Button frame="bare" tone="mute" onClick={noop}>stop routing through Trawler</Button></div>
+              </div>
+
+              <div className="a-pf-machine pt-3">
+                <Guide
+                  steps={[
+                    <>Run — this sets the Wi-Fi service; change the name for Ethernet: {command("networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420", "the proxy command")}</>,
+                  ]}
+                  undoTitle="to turn it off later"
+                  undo={[
+                    <>Turns it off per enabled service, keeping the saved address: {command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the proxy-off command")}</>,
+                  ]}
+                />
+              </div>
+              <div className="a-pf-sim pt-3">
+                <Notice tone="mute">the Simulator uses this Mac's system proxy — setting it here covers it</Notice>
+              </div>
+              <div className="a-pf-off pt-3">
+                <div className="a-rch-off">
+                  <Notice tone="mute">there is no address to point the device at yet — the reach step above makes one</Notice>
+                </div>
+                <div className="a-rch-on">
+                  <div className="flex gap-4">
+                    <div>
+                      <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">server</p>
+                      <p className="pt-2 font-mono" data-wire="proxy host">
+                        <CopyText value="192.168.1.24" label="the proxy host" />
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">port</p>
+                      <p className="pt-2 font-mono" data-wire="proxy port">
+                        <CopyText value="7420" label="the proxy port" />
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-3">
+                    <Guide
+                      steps={[
+                        "On the device: Settings → Wi-Fi → the network it is on → Configure Proxy → Manual.",
+                        "Put the server and port above into it, and save.",
+                      ]}
+                      undoTitle="to turn it off later"
+                      undo={["Settings → Wi-Fi → the network → Configure Proxy → Off."]}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Precondition>
+          </Section>);
+
+        mount("m-try",
+          <span data-wire="shell command" className="font-mono">
+            <CopyText value="curl -x http://127.0.0.1:7420 https://example.com" label="the try-it command" />
+          </span>);
+        mount("m-try-off-unreached",
+          <Notice tone="mute">nothing to try until Trawler is reachable and the device is pointed at it</Notice>);
+        mount("m-try-off-reached",
+          <Notice tone="mute">open any site on the device — the first decrypted flow is what ends setup</Notice>);
+        mount("m-back",
+          <Button frame="bare" tone="mute" onClick={noop}>‹ back to flows</Button>);
+      </script>
+    </div>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <thead><tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr></thead>
+      <tbody>
+        <tr><td>click the platform picker, then click an option</td><td>platform</td><td>Tab to the trigger · Enter opens · ↑ / ↓ move without selecting, no wrap · type-to-filter narrows (<em>and</em>roid) · Enter takes · Esc closes unchanged, focus returns to the trigger</td></tr>
+        <tr><td>click <em>check again</em></td><td>probe</td><td>Tab to it · Enter or Space — activate the focused element</td></tr>
+        <tr><td>click <em>install certificate</em> / <em>set system proxy</em> / <em>stop routing</em></td><td>preconditions</td><td>Tab to it · Enter or Space. A disabled action is out of the tab order, so the in-flight window cannot be re-fired by keyboard either</td></tr>
+        <tr><td>click <em>save…</em> inside a guide's first step</td><td>preconditions</td><td>Tab to it · Enter or Space; the host's save dialog takes focus from there</td></tr>
+        <tr><td>click <em>set it up by hand</em> to disclose a guide</td><td>preconditions</td><td>Tab to the summary · Enter or Space toggles; focus never moves on toggle (Disclosure's <code>@states</code>)</td></tr>
+        <tr><td>click a command to copy it whole</td><td>preconditions, try</td><td>Tab to it · Enter or Space copies, and the confirm reads at the value</td></tr>
+        <tr><td>drag-select part of a command</td><td>preconditions, try</td><td>native selection + ⌘C — never intercepted (CopyText's selection guard)</td></tr>
+        <tr><td>click an address segment</td><td>preconditions</td><td>Tab reaches the group once — only the
+          selected segment is tabbable (roving tabindex) · ← / → (and ↑ / ↓) move focus without selecting, no wrap ·
+          Enter or Space takes the focused one. Movement never commits, which is the same contract the platform
+          Select carries one zone above</td></tr>
+        <tr><td>click <em>let devices reach Trawler</em></td><td>preconditions</td><td>Tab to it · Enter or Space —
+          activate the focused element. The shell's confirm takes focus from there, and Esc on that dialog is a
+          <em>Cancel</em>: nothing is armed until it is answered</td></tr>
+        <tr><td>click <em>stop listening</em></td><td>preconditions</td><td>Tab to it · Enter or Space. It exists
+          only while armed, so it never sits in the tab order as a no-op</td></tr>
+        <tr><td>click the server, the port or the certificate URL to copy it</td><td>preconditions</td><td>Tab to it ·
+          Enter or Space copies, and the confirm reads at the value (CopyText). Drag-selecting part of one is native
+          selection + ⌘C, never intercepted</td></tr>
+        <tr><td>click <em>back to flows</em></td><td>back</td><td>Tab to it · Enter or Space</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <thead><tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>lexicon entry</td>
+          <td><em>arriving</em> — a connection Trawler received and could not decrypt</td>
+          <td>The screen must name a third thing that is neither <em>flow</em> (there is none — nothing decrypted) nor
+            <em>not capturing</em> (something is plainly reaching us). The rulebook's lexicon has a term for the exchange
+            and a term for the milestone, and nothing for the half-arrival between them, so the verdict and the headline
+            each invent their own words for it — which is the drift a vocabulary exists to stop</td>
+          <td>rulebook · <code>docs/design-rules/</code> lexicon table</td></tr>
+        <tr><td>lexicon entry</td>
+          <td><em>platform</em> — the one thing a run of setup is for: this machine, another machine, a simulator or a device</td>
+          <td>The substrate calls its members <em>targets</em> and splits them into two lists (<code>TrustTarget</code>,
+            <code>ProxyTarget</code>) whose members are operating systems and one browser. The screen now asks the user a
+            single question with one answer, and that answer is not an operating system — <em>iOS Simulator</em> and
+            <em>iPhone</em> share one. A screen-level term with no home in the lexicon is how two screens end up asking
+            the same question in two vocabularies</td>
+          <td>rulebook · <code>docs/design-rules/</code> lexicon table</td></tr>
+        <tr><td>component extension</td>
+          <td><code>Notice</code> <code>tone="pending"</code> — a Spinner in the glyph column, sentence and detail
+            unchanged at <code>ink-mute</code>. Delta against the shipped component: one more member of
+            <code>NoticeTone</code>, whose <code>TONE</code> entry supplies a spinner where <code>warn</code> supplies
+            ⚠ and <code>ok</code> supplies ✓; no new slot, no new layout, no interaction</td>
+          <td><code>Notice</code>'s <code>@use</code> already claims <em>pending</em> as one of the four nothings a
+            zone must distinguish, but its <code>@states</code> ships only mute · warn · ok, so a pending zone renders
+            as an untoned sentence and reads as settled. <code>StatusLine</code> owns an in-flight spinner and cannot
+            be borrowed for it: this zone is a one-sentence outcome, which <code>StatusLine</code>'s
+            <code>@avoid</code> sends back to <code>Notice</code>. The alternative — a screen-owned spinner beside a
+            mute Notice, which is what the mockup renders until this lands — forks the glyph column: two elements
+            drawing one component's anatomy, in every screen that ever needs a pending zone</td>
+          <td>registry · <code>ui/src/components/Notice.tsx</code></td></tr>
+        <tr><td colspan="4"><strong>No token or key binding was proposed, and no component beyond the extension above.</strong>
+          Round 1: twelve placements resolved to nine registry entries and zero local elements — including the
+          disclosure this screen's predecessor had to build local, which is now <code>Disclosure</code> (T1) and
+          mounted here unchanged. The single platform Select lands inside <code>Select</code>'s <code>@use</code>
+          (one choice, eight options, a target picker) and needs no option groups, which its <code>@avoid</code>
+          refuses. Round 2 added placements for the reach seam and one further entry,
+          <code>SegmentedControl</code>, for the address choice; the substrate was re-loaded before it was used and
+          no entry's <code>@use</code> or <code>@avoid</code> had moved under the mockup since round 1. The
+          cardinality rule under the mockup is how the address control stays inside two contracts instead of
+          stretching one, which is the only thing round 2 could plausibly have proposed and did not.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <thead><tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr></thead>
+      <p class="kd">Rows are closed, never deleted — a blocker that vanishes reads as a blocker nobody
+        had. <strong>Closed</strong> names what closed it and where.</p>
+      <tbody>
+        <tr><td><strong>CLOSED — round 2.</strong> <s>Trawler cannot be reached from anywhere but this machine.</s>
+          The proxy bound to <code>127.0.0.1</code> and the control API with it, so five of the eight platforms the
+          screen offers had nothing to point at and no route to fetch the certificate either — and a bind beyond
+          loopback was an authorization question nobody had answered</td>
+          <td>was: domain · core + control API</td>
+          <td><strong>closed by <a href="2026-09-19-onboard-reach-plan.html">E-ONBOARD.W1</a></strong>, which ruled the
+            question in <a href="../decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a> — reach is an
+            authorization decision, off by default, one named interface address, one explicit confirm, re-armed per
+            launch — and then built it. Round 2 spent the answer: the off-machine platforms gained a reach precondition
+            with the address choice and the action in it, and their trust and routing steps became steps that work
+            rather than a notice saying they cannot</td></tr>
+        <tr><td><strong>CLOSED — round 2.</strong> <s>A network address to render once that bind exists</s> — round 1
+          had only <code>proxyAddr</code>, a loopback address it refused to print to a phone, and
+          <code>setup.ts</code>'s Android line punted with prose (<em>"Host = your machine's LAN address"</em>)</td>
+          <td>was: domain · control API</td>
+          <td><strong>closed by W1's <code>GET /reach</code></strong>: <code>interfaces</code> is the choice,
+            <code>proxy</code> is the host and port the device's proxy settings want, and <code>ca_cert_url</code> is
+            the certificate route. All three are Given rows now, and the mockup prints them. The prose punt has an
+            answer and is the build's to delete — see the row below, which is still open</td></tr>
+        <tr><td>instruction content for the platforms the user named: <code>TrustTarget</code> has no iPhone or iPad
+          member and no <em>another machine</em> member, and its single <code>android</code> entry conflates the emulator
+          with a device — the emulator's host note (10.0.2.2) and the device's blocker sit in the same array</td>
+          <td>build WU · <code>ui/src/setup.ts</code></td>
+          <td>wrote the iOS-device steps in the mockup as a draft the build must confirm, and split emulator from device
+            in the picker so the two stop sharing one answer</td></tr>
+        <tr><td>any attribution of an undecrypted connection to a platform — <code>traffic.lastTunnelAt</code> says
+          <em>something arrived</em> and nothing more. The screen now knows which platform the user is setting up and
+          still cannot say whether the traffic came from it</td>
+          <td>domain · the control API (a capture-side fact, not a UI change)</td>
+          <td>wrote the advice as advice — <em>where the traffic is coming from</em> — and refused to name a device the
+            app cannot know. The verdict is honest; the remedy is weaker than it should be</td></tr>
+        <tr><td>a trust probe that resolves off macOS and Windows — Linux, the NSS store and every external device
+          stay <code>unknown</code> forever</td>
+          <td>domain · the control API</td>
+          <td>gave the un-probeable case its own glyph (◐) and its own words, and dropped the probe row entirely
+            off-machine, so a verdict about this Mac is never shown under a question about a phone</td></tr>
+        <tr><td>a decision on whether a user who has proven capture once may leave setup <em>while</em> a precondition
+          has regressed — <code>everProven</code> latches, so the way out stays open on a broken machine</td>
+          <td>product · <a href="../use-cases/use-cases-index.html">UC-ONBOARD</a></td>
+          <td>kept the way out open and let the header's StatusDot carry the regression, on the reading that trapping a
+            user in setup is the worse failure. Named here because the design made that call without being told to</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>"We've done the simplification for design flow, let's perform a sample run to verify.
+          I want to design the onboarding screen."</td>
+          <td><code>capabilities</code> · <code>mockup</code> · <code>keyboard</code> ·
+            <code>proposals</code> · <code>blocked-on</code> — the run exists at all, and it is driven as a real
+            design rather than a fixture: the <code>capabilities</code> list is read from the screen's own props,
+            and no item was populated to trip a predicate</td>
+          <td><code>DEC-53</code> —
+            <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">the design flow is the
+            mockup and its lists</a>, whose six items this run is the first live instance of</td></tr>
+        <tr><td>Round 1 — "as a user we usually focus on one platform at a time (the desired one the user is trying to
+          set up on): one single platform selection, all instructions after it for that platform only". The eight
+          members were given: this machine (auto-detected), another Mac / Windows / Ubuntu, iOS Simulator, Android
+          simulator, iOS device, Android device</td>
+          <td><code>mockup</code> — a <strong>platform</strong> zone now sits under the verdict and above everything it
+            governs, holding the screen's one Select; the two pickers that lived inside the guides are gone, each guide
+            renders one platform's steps, the one-click actions and the probe row are scoped to <em>this machine</em>,
+            and the try zone says a different thing per platform.
+            <code>capabilities</code> — <code>os</code> demoted from a gate to a default, both probes rescoped, and the
+            not-given line gained platform persistence and a reachable address.
+            <code>blocked-on</code> — three new rows, of which the loopback bind is a blocker the old shape could hide
+            because no platform was ever named out loud.
+            <code>proposals</code> — <em>platform</em> as a lexicon entry.
+            <code>keyboard</code> — the picker's row moved to the top and is now the screen's first stop</td>
+          <td><code>taste</code> — the reviewer's call on the screen's primary axis, which no predicate reaches. It lands
+            on <code>Select</code>'s <code>@use</code> (one choice, eight options, a target picker, no groups) and is what
+            surfaced <code>src/config.rs</code>'s loopback bind as a design blocker rather than a deployment detail</td></tr>
+        <tr><td>Round 2 — "close the parked run as this epic's design of record: amend it for what W1 landed,
+          so the five platforms that had nothing to point at get real steps and the guides stop apologising"</td>
+          <td><code>capabilities</code> — the not-given line lost the loopback claim and gained two narrower
+            absences (no reachability check; no memory of an armed reach), and five <code>reach.*</code> rows plus
+            two callbacks arrived, one of them <em>deliberately unused</em> (<code>reach.api</code>).
+            <code>mockup</code> — a second axis, <em>armed</em> / <em>not armed</em>, orthogonal to the platform
+            one and visible only under an off-machine platform; a new <strong>let this device reach Trawler</strong>
+            precondition that renders first off-machine, carrying the address choice, the action and its reversal;
+            the trust guide's carry-the-file route replaced by the certificate URL, with the file kept as the
+            no-browser fallback; the routing branch's warn notice replaced by the server and port as copyable values
+            and a device guide; and the try zone answering differently per reach state.
+            <code>keyboard</code> — four rows for what the amendment added.
+            <code>blocked-on</code> — rows 1 and 2 closed against W1, struck rather than deleted.
+            <strong>Not moved:</strong> the platform axis, the absent probe row off-machine, the un-probeable glyph
+            and words, and the latched way out — all settled at round 1's gate, none of them touched by reach</td>
+          <td><code>taste</code>, plus two contracts the amendment had to answer to.
+            <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> — an action that changes what this
+            host exposes costs one explicit confirm, which is why arming is a Button with the shell's dialog behind
+            it and not a toggle that acts on flip; and its reversal-symmetry, which is why <em>stop listening</em>
+            exists and is offered only while armed.
+            <strong>Reuse-or-propose, fit-first</strong> — the address control was the round's one real fit question.
+            <code>Select</code>'s <code>@use</code> names a target picker but its <code>@avoid</code> refuses two to
+            four options; <code>SegmentedControl</code> takes exactly that band and refuses more than four; neither
+            is honest for one. The design took all three renderings under one cardinality rule rather than forcing
+            either entry past its <code>@avoid</code> line, so the round proposed nothing — the rule is written under
+            the mockup</td></tr>
+        <tr><td>Round 3 — <em>"checking should have loading spinner"</em>, on the verdict zone's
+          <em>checking what is already set up</em></td>
+          <td><code>mockup</code> — the checking verdict gains a spinner in the glyph column.
+            <code>proposals</code> — a component extension, <code>Notice</code> <code>tone="pending"</code>,
+            because the collection does not ship it; the mockup renders the delta screen-owned until it lands</td>
+          <td><code>Notice</code>'s <code>@use</code> / <code>@states</code> — <em>pending</em> is one of the four
+            nothings its <code>@use</code> claims, and none of its three tones can show it. The reviewer read a
+            settled sentence where the screen meant <em>working on it</em>, which is the gap exactly.
+            <code>StatusLine</code>'s <code>@avoid</code> is what stopped the cheap fix: a one-sentence zone-level
+            outcome is Notice's, so the spinner had to come to Notice rather than the zone going to StatusLine</td></tr>
+        <tr><td>Round 3 — <em>"the error should be in the trust section so user can understand what to fix this"</em>,
+          on <em>traffic is arriving, but nothing is decrypting</em> and its detail line</td>
+          <td><code>mockup</code> — the explanation left the headline and became a remedy inside the trust
+            precondition, rendered in the <em>arriving</em> state under the trust verdict. The headline's detail now
+            names where the fix is instead of restating the cause. The remedy is <code>tone="mute"</code>: the
+            verdict above it already carries ⚠, and one failure raising two warn glyphs is two alarms for one fact</td>
+          <td><code>StatusLine</code>'s <code>@avoid</code> — <em>"rendering the remedy: a verdict plus an
+            instruction is two elements — pass <code>StepStatusView.remedy</code> to a Notice"</em>. Round 1 had
+            written the verdict and left the remedy in the headline, which is the half of that rule that is easy to
+            miss: the two elements existed, but in different zones, so the instruction never sat with the thing it
+            instructs</td></tr>
+        <tr><td>Round 3 — <em>"No UI for this?"</em>, on the <em>install running</em> state, asked from the
+          <strong>route its traffic through Trawler</strong> precondition</td>
+          <td><code>mockup</code> — that precondition gains an <em>installing</em> verdict (○ <em>nothing is routed
+            here yet</em>) and keeps its <em>set system proxy</em> action live while the certificate installs</td>
+          <td>a real hole, not taste. <code>.installing .a-st-rest{display:none}</code> is a lifecycle rule written
+            for the trust action — where rest must give way to the in-flight variant — but it applies to both
+            preconditions, and the routing one had no <code>a-st-installing</code> block to take over. So during an
+            install its verdict <em>and</em> its action both went blank: a heading over nothing. The fix does not add
+            an in-flight state to the routing action, because installing a certificate does not route any traffic —
+            it stops an unrelated precondition from vanishing. Avoiding a disabled button also keeps
+            <code>Button</code>'s <code>@avoid</code> fork D4 out of it: nothing is disabled, so nothing owes a
+            progress line</td></tr>
+        <tr><td>Round 3 — <em>"the final status should be at the bottom with the make any request section"</em>,
+          on <em>Trawler is capturing</em></td>
+          <td><code>mockup</code> — the proven verdict moved out of the verdict zone into the <strong>try</strong>
+            zone, under the request prompt and above <em>back to flows</em>. The verdict zone now renders nothing
+            once capture is proven, and the three unproven readings keep it.
+            <code>capabilities</code> — <code>state.phase</code> and <code>traffic.lastFlowAt</code> re-pointed at
+            the zone that now renders them</td>
+          <td><code>taste</code>, and it lands on the screen's own argument. The proof this screen accepts is a real
+            decrypted flow (<a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>'s surviving
+            invariant), and the request that produces one is made in the try zone — so the outcome now reads where
+            the action is, and the way out sits directly beneath it. No verdict was reworded; one moved</td></tr>
+        <tr><td>Round 3, close — <em>"LGTM"</em> on the four fixes above</td>
+          <td><strong>nothing</strong>. The reviewer read the amended mockup and raised no further call, so the run
+            closed on this reading: review item filled, <code>verify-doc</code> green, then
+            <code>data-status="archived"</code>. This row exists because the gate closing is itself the fact the
+            item records — a run that archived with no final row would not say who let it</td>
+          <td><a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a> — the human
+            is the judge of everything a predicate cannot reach, and what survives of that judgment is this list. No
+            agent re-reads the design after the human has</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
