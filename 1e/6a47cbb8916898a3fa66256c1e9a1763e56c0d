@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 1e6a47cbb8916898a3fa66256c1e9a1763e56c0d
+base: 3deaa40e256fc7f142e3452fa77256173a34cade
+tier: key
+signer: vuluu
+report: docs/work/2026-09-19-onboard-reach-result.html
+report_sha256: ac3105d3ccbb7e32ab518574b63b0dbed77f3aa947db603ba0c40a72bcd3a573
+date: 2026-09-19
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA/rgU8YnnEWBxcVwpuTTfFVBHHbgWDiHS4pg9Y5fchjNbtjMaAYpA9xh
+  Wu3/150ZV/Z1VxhNpfH+4FDMBSxEQI
+  -----END SSH SIGNATURE-----
