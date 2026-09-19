@@ -17,6 +17,7 @@ import {
 } from "./components/index";
 import {
   canAutoSetup,
+  CA_FILENAME,
   isProbed,
   needsReach,
   platformChoices,
@@ -38,6 +39,7 @@ import {
   type ProxyProbe,
   type Running,
   type ScreenVerdict,
+  type StepStatusView,
   type Traffic,
   type TrustProbe,
 } from "./verdicts";
@@ -99,16 +101,14 @@ const DISARM_NOTE: ActionNotes = {
 // steps below name a file, so the note does too.
 const fileName = (path: string) => path.split(/[/\\]/).pop() ?? path;
 
-const CA_FILE = "trawler-ca.pem";
-
 const SAVECA_NOTE: ActionNotes = {
   running: { tone: "pending", text: "saving…" },
   done: (path: string) => ({
     tone: "ok",
     text:
-      fileName(path) === CA_FILE
-        ? `saved as ${CA_FILE}. now trust it with the steps here.`
-        : `saved as ${fileName(path)} — the steps here name ${CA_FILE}, so use ${fileName(path)} instead.`,
+      fileName(path) === CA_FILENAME
+        ? `saved as ${CA_FILENAME}. now trust it with the steps here.`
+        : `saved as ${fileName(path)} — the steps here name ${CA_FILENAME}, so use ${fileName(path)} instead.`,
   }),
   nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
@@ -147,9 +147,10 @@ type ActionHandle = ReturnType<typeof useAction>;
 const TICK_MS = 1000;
 
 // Recency is judged against a clock that keeps moving while the screen is open,
-// or a verdict true at mount would stay true forever. It lives inside the two
-// components that read a traffic verdict, so a tick re-renders those and not the
-// instructions, the picker or the guides, which no clock can change.
+// or a verdict true at mount would stay true forever. It lives inside each
+// component that reads a traffic verdict and nowhere above them, so a tick
+// re-renders those and not the instructions, the picker or the guides, which no
+// clock can change.
 function useNow(): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -359,9 +360,9 @@ function LeadVerdict({ phase, traffic }: { phase: OnbState["phase"]; traffic: Tr
 
 // The outcome reads where the request that produces it is made, which is the one
 // thing DEC-13 accepts as proof that setup is over.
-function ProvenOutcome({ traffic }: { traffic: Traffic }) {
+function ProvenOutcome({ phase, traffic }: { phase: OnbState["phase"]; traffic: Traffic }) {
   const now = useNow();
-  if (screenVerdict("onboarding", traffic, now) !== "capturing") return null;
+  if (screenVerdict(phase, traffic, now) !== "capturing") return null;
   return (
     <div data-testid="proven" className="pt-3">
       <Notice
@@ -375,6 +376,34 @@ function ProvenOutcome({ traffic }: { traffic: Traffic }) {
         Trawler is capturing
       </Notice>
     </div>
+  );
+}
+
+// StatusLine renders the verdict and refuses the instruction that goes with it
+// (its @avoid: "a verdict plus an instruction is two elements — pass
+// StepStatusView.remedy to a Notice"). This is that Notice, so a short verdict
+// never costs the guidance the resolver computed for it.
+function Verdict({
+  testId,
+  status,
+  stated,
+}: {
+  testId: string;
+  status: StepStatusView;
+  // What the action's own note is already saying. A failed action's remedy IS
+  // its error, and one failure stated twice reads as two.
+  stated?: string;
+}) {
+  const remedy = status.remedy === stated ? undefined : status.remedy;
+  return (
+    <>
+      <StatusLine status={status} />
+      {remedy !== undefined && (
+        <div data-testid={`${testId}-guidance`} className="pt-2">
+          <Notice tone="mute">{remedy}</Notice>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -652,6 +681,15 @@ export function Onboarding({
     action.state === "running" ? r : probing ? "checking" : null;
   const failure = (action: ActionHandle) => (action.state === "failed" ? action.error : undefined);
 
+  const trustVerdict = probed
+    ? trustStatus(trustProbe, running(install, "installing"), failure(install))
+    : UNPROBEABLE_TRUST;
+  const routeVerdict = proxyStatus(
+    proxyProbe,
+    running(setProxyAction, "setting"),
+    failure(setProxyAction),
+  );
+
   return (
     <div className="flex h-full flex-col overflow-auto">
       <div className="mx-auto w-full max-w-dialog-max py-6">
@@ -688,13 +726,7 @@ export function Onboarding({
             )}
 
             <Precondition testId="trust" title="trust Trawler's certificate">
-              <StatusLine
-                status={
-                  probed
-                    ? trustStatus(trustProbe, running(install, "installing"), failure(install))
-                    : UNPROBEABLE_TRUST
-                }
-              />
+              <Verdict testId="trust" status={trustVerdict} stated={failure(install)} />
               <ArrivingRemedy traffic={traffic} />
               {oneClick && install.trigger && (
                 <div className="pt-2">
@@ -733,13 +765,7 @@ export function Onboarding({
 
             <Precondition testId="route" title="route its traffic through Trawler">
               {probed && (
-                <StatusLine
-                  status={proxyStatus(
-                    proxyProbe,
-                    running(setProxyAction, "setting"),
-                    failure(setProxyAction),
-                  )}
-                />
+                <Verdict testId="route" status={routeVerdict} stated={failure(setProxyAction)} />
               )}
               {oneClick && setProxyAction.trigger && (
                 <div className="pt-2">
@@ -814,7 +840,7 @@ export function Onboarding({
           ) : (
             <Notice tone="mute">{setup.tryIt}</Notice>
           )}
-          <ProvenOutcome traffic={traffic} />
+          <ProvenOutcome phase={state.phase} traffic={traffic} />
         </div>
 
         {state.everProven && (

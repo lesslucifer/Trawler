@@ -357,6 +357,19 @@ describe("the lead verdict, and the outcome that leaves it", () => {
     expect(screen.getAllByTestId("spinner").length).toBeGreaterThan(0);
   });
 
+  // The screen may not state two contradictory readings of one fact. While the
+  // launch check runs, a flow the stream already delivered must not let the try
+  // zone announce capture under a headline that says it is still checking.
+  it("never announces capture under a headline that is still checking", () => {
+    draw({
+      state: { ...onboarding, phase: "checking" },
+      traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000), ever: true },
+    });
+
+    expect(zone("lead-verdict")).toHaveTextContent("checking what is already set up");
+    expect(zone("proven")).toBeNull();
+  });
+
   it("separates nothing-ever from nothing-now", () => {
     draw({ traffic: NO_TRAFFIC });
     expect(zone("lead-verdict")).toHaveTextContent("nothing has reached Trawler yet");
@@ -413,6 +426,52 @@ describe("the guide is hidden only where something else is offered first", () =>
 test("idle dates the last flow rather than repeating the setup advice", () => {
   draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(RECENT_MS * 4), ever: true } });
   expect(zone("lead-verdict")).toHaveTextContent(/last flow/);
+});
+
+// StatusLine renders the verdict and refuses its instruction, so the screen owes
+// the second element. UC-ONBOARD: "the verdict and what to do about it are two
+// elements, so a short verdict never costs the instruction".
+describe("a verdict that implies an instruction renders both", () => {
+  it("points an un-probeable platform at the answer that will settle it", () => {
+    draw({ trustProbe: "unknown" });
+    expect(screen.getByTestId("trust-guidance")).toHaveTextContent(
+      "the traffic verdict is what proves it",
+    );
+  });
+
+  it("names the conflict a foreign proxy is, and what to do about it", () => {
+    draw({ proxyProbe: "foreign" });
+    expect(screen.getByTestId("route-guidance")).toHaveTextContent(/point it at Trawler here/);
+  });
+
+  it("states a failure once, not twice", async () => {
+    draw({ onInstallCa: vi.fn(async () => Promise.reject(new Error("user declined"))) });
+    fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
+
+    await screen.findByText(/the steps below do it by hand/);
+    expect(screen.getByTestId("install-ca-status")).toHaveTextContent("user declined");
+    expect(zone("trust-guidance")).toBeNull();
+  });
+
+  it("says nothing extra where the verdict is the whole answer", () => {
+    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    expect(zone("trust-guidance")).toBeNull();
+    expect(zone("route-guidance")).toBeNull();
+  });
+});
+
+// The certificate's name is one fact, and the save confirmation judges the file
+// that landed against the name the steps beside it run on. A second copy of that
+// name would decide this message against steps built from the other one.
+test("a renamed save is confirmed against the name the steps here actually use", async () => {
+  draw({ onSaveCa: vi.fn(async () => "/tmp/my-ca.pem") });
+  fireEvent.click(within(screen.getByTestId("precondition-trust")).getByText("set it up by hand"));
+  fireEvent.click(screen.getByRole("button", { name: "save…" }));
+
+  const note = await screen.findByTestId("save-ca-status");
+  expect(note).toHaveTextContent("saved as my-ca.pem");
+  expect(note).toHaveTextContent(`the steps here name ${setup.CA_FILENAME}`);
+  expect(screen.getByTestId("precondition-trust")).toHaveTextContent(setup.SAVE_CA_STEP);
 });
 
 describe("the way out", () => {

@@ -6,7 +6,7 @@
 // Pure data and pure functions; no I/O, no React.
 
 import type { ProxyTarget } from "./proxyTargets";
-import { proxyOffSnippet } from "./proxyTargets";
+import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
 
 export type HostOs = "macos" | "windows" | "linux" | "other";
 
@@ -235,18 +235,22 @@ const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
   terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
 };
 
-const ROUTE_UNDO_LEAD: Record<OsTarget | "terminal", string> = {
-  macos: "Turns it off per enabled service, keeping the saved address:",
-  windows: "Disable the WinINET proxy (keeps the saved address):",
-  linux: "GNOME — back to no proxy:",
-  terminal: "Clear the environment variables:",
-};
+// proxyOffSteps owns the reversal's prose and splices its command in as a step;
+// the screen needs the same sentences with the command as a value to take, so
+// the command step is replaced in place rather than the prose being retyped.
+function reversal(t: OsTarget | "terminal"): GuideStep[] {
+  const command = proxyOffSnippet(t);
+  const parts = proxyOffSteps(t).map((step) =>
+    step === command ? { copy: step, label: "the proxy-off command" } : step,
+  );
+  return [parts];
+}
 
 function osRoute(t: OsTarget | "terminal", addr: string): Guide {
   return {
     steps: [[ROUTE_LEAD[t], { copy: routeCommand(t, addr)!, label: "the proxy command" }]],
     undoTitle: "to turn it off later",
-    undo: [[ROUTE_UNDO_LEAD[t], { copy: proxyOffSnippet(t)!, label: "the proxy-off command" }]],
+    undo: reversal(t),
   };
 }
 
