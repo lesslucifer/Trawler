@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU onboarding-build -> epic/onboarding-redesign"
+epic: E-ONBOARD
+wu: E-ONBOARD.W3
+branch: wu/onboarding-redesign/build
+base: 714e261436b30b65998705d1831dcfb691425947
+head: 9a7c2b1b2225fc58fce8ea73aefec864b092eda7
+diff_sha256: be74328de6ba3dc5dc7bd6de172195d39d46e6213f484a50b0d8c4516305c233
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: session default, not pinned by the run
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 5
+    nit: 2
+  stage_seconds:
+    finders: 434
+    verifiers: 222
+    total: 656
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency:  { found: 1, verified: 1 }
+    altitude:    { found: 4, verified: 3 }
+findings: { found: 6, verified: 5, waived: 0 }
+waivers: []
+nits:
+  - finding: "useNow runs one setInterval per calling component, so the screen holds three 1 Hz timers where one shared clock would do."
+    waived: "Bounded, cleaned up on unmount, and it does not grow with data; the verifier that tested the drift this was thought to cause refuted it - the three mount in one commit and tick in lockstep. Sharing them costs module-level mutable state for nothing observable."
+verdict: FAIL
+date: 2026-09-19
