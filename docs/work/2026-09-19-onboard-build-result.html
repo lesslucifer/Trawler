@@ -9,9 +9,9 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-ONBOARD.W3 — result: the build</h1>
-      <p>The screen asks one question and every instruction under it belongs to the answer. Reading
-        UC-ONBOARD against the built tree — rather than against the run's audit — is what earned
-        this WU its last commit.</p>
+      <p>The screen asks one question and every instruction under it belongs to the answer. Two
+        passes over the same contract — the UC re-check, then the review — found four promises the
+        rebuild had dropped and one screen stating two readings of one fact.</p>
       <div class="meta">v1 · 2026-09-19 · Trawler · T3 (docs/work/) ·
         branch <code>wu/onboarding-redesign/build</code> ·
         plan <a href="2026-09-19-onboard-build-plan.html">W3 plan</a> ·
@@ -57,7 +57,8 @@
         <tr><td>8</td><td>every UI-rendering file accounted for in a <code>design/v1</code>
           note</td><td>written at the tip; gate check 9 judges it at the merge</td></tr>
         <tr><td>9</td><td>UC-ONBOARD's promises re-checked against the tree</td>
-          <td>done, and it found three losses — see deviation 2. They are restored and pinned</td></tr>
+          <td>done, and it found three losses — see deviation 2. The review found a fourth the
+            re-check had missed (deviation 11). All four are restored and pinned</td></tr>
       </table>
     </div>
 
@@ -73,7 +74,7 @@
       <tr><td><code>ui/src/proxyTargets.ts</code> <em>(new)</em></td><td>the proxy-client
         vocabulary — the quit dialog's picker, and the routing reversal the screen reads for this
         machine</td><td>75</td></tr>
-      <tr><td><code>ui/src/Onboarding.tsx</code></td><td>the six zones</td><td>831</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code></td><td>the six zones</td><td>860</td></tr>
       <tr><td><code>ui/src/components/Notice.tsx</code></td><td><code>tone="pending"</code> and the
         TSDoc that now carries it</td><td>+14</td></tr>
       <tr><td><code>ui/src/App.tsx</code></td><td>the reach seam: read on entry, confirm then arm,
@@ -191,6 +192,52 @@
             asserting a screen nobody designed. The gate does not run it — the WU's suite is the
             Vitest suite and <code>cargo test --all</code>, both green</td>
         </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>The review found a blocker, and it was the same class of defect as
+            deviation 2.</strong> <code>ProvenOutcome</code> judged capture against a hardcoded
+            <code>"onboarding"</code> phase instead of the real one, so a flow the stream had
+            already delivered could render <em>Trawler is capturing</em> in the try zone under a
+            headline still reading <em>checking what is already set up</em> — the screen stating
+            two readings of one fact at once</td>
+          <td>reproduced by the verifier against a real render before it was believed, and the
+            regression test was written first and failed against the bug. Worth naming as a
+            class, not a slip: splitting the verdict across two zones is what round 3 of the design
+            asked for, and the split is exactly what let one zone answer a question the other was
+            still asking. <strong>It also says what the WU's own tests missed</strong> — no test
+            exercised <code>phase === "checking"</code>, because the screen's tests were written
+            around the states the mockup drew</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><strong>Three importants, each one fact held twice or not at all.</strong> The
+            certificate's name was a second constant inside the screen, live enough to decide which
+            save confirmation the user reads; the routing reversal's sentences were restated in
+            <code>setup.ts</code> and had <em>already drifted</em> from
+            <code>proxyTargets.ts</code> on macOS, inside the same diff whose module comment
+            promises the screen reads them from there; and
+            <code>trustStatus</code>/<code>proxyStatus</code> computed guidance that nothing
+            rendered</td>
+          <td>the third is a fourth UC loss, found where the epic's own rule aimed but this WU's
+            re-check did not reach: <code>StatusLine</code> refuses the instruction by contract
+            (<code>@avoid</code>: "a verdict plus an instruction is two elements"), so dropping the
+            <code>Notice</code> silently dropped the promise with it — the un-probeable verdict
+            stopped pointing anywhere and the foreign-proxy verdict stopped naming the conflict.
+            All three fixed and pinned; a failure already stated by its action's note is not stated
+            twice</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td><strong>Two candidates were refuted, and both refutations are worth keeping.</strong>
+            The stepper contract still exported by <code>onboardingMachine.ts</code> was read as
+            stale; the design of record names it deliberately unused, which is why it stands. The
+            three clocks were read as drifting apart near the recency boundary; tested under fake
+            timers they tick in lockstep, because all three mount in one commit</td>
+          <td>the first is the design of record doing its job as a record — a reviewer who could
+            not see it would have deleted a contract on purpose. The second is the corpus's 70%
+            refutation rate earning its keep: the mechanism was plausible and did not
+            reproduce</td>
+        </tr>
       </table>
     </div>
 
@@ -205,7 +252,8 @@
         <tr><td>Commits, in order</td>
           <td><code>aa27b8e</code> the plan · <code>65fce7b</code> the two moves, pure ·
             <code>d72ed25</code> the rebuild · <code>ebd9422</code> the UC re-check's three
-            restorations</td></tr>
+            restorations · <code>836aed9</code> the review's blocker and its three
+            importants</td></tr>
         <tr><td>Unit — the axis and its instruction sets</td>
           <td><code>ui/src/setup.test.ts</code>, 70 tests: the eight members and their order, the
             probed two, the reach-needing five, the emulator against the device, the prose-punt
@@ -231,8 +279,13 @@
             address and the screen renders what answered · stop listening needs no second dialog ·
             a core that will not say leaves the screen honest. Plus the existing one-click,
             save, probe and tunnel seams, re-aimed at the rebuilt screen</td></tr>
+        <tr><td>The review</td>
+          <td>round 1 <code>FAIL</code> on <code>9a7c2b1b</code> — 3 finders, 4 verifiers, 1
+            blocker and 3 importants verified, 2 candidates refuted, 1 nit waived (three 1 Hz
+            timers, bounded and cleaned up, whose supposed drift the verifier refuted). Round 2 on
+            the fixed tip is what this WU merges on</td></tr>
         <tr><td>Suite</td>
-          <td><code>ui</code>: 977 Vitest tests, 53 files, green · <code>cargo test --all</code>:
+          <td><code>ui</code>: 983 Vitest tests, 53 files, green · <code>cargo test --all</code>:
             green · <code>tsc --noEmit</code>, <code>eslint</code> (design vocabulary rule
             included) and <code>cargo xtask ui build</code>: clean</td></tr>
         <tr><td>The design it was built from</td>
