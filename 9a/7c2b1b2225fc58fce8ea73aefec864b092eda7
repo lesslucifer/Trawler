@@ -18,8 +18,8 @@ fleet:
     nit: 2
   stage_seconds:
     finders: 434
-    verifiers: 222
-    total: 656
+    verifiers: 340
+    total: 774
   by_finder:
     correctness: { found: 2, verified: 2 }
     efficiency:  { found: 1, verified: 1 }
