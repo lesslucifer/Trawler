@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W3
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-19-onboard-build-plan.html"
+    tier: T3
+    action: added
+    distills: "The build's requirement, the module split the two E-REDESIGN nits ask for, the instruction matrix for all eight platforms the run's blocked-on row 3 handed the build, and the test plan at both levels."
+  - path: "docs/work/2026-09-19-onboard-build-result.html"
+    tier: T3
+    action: added
+    distills: "What shipped against the nine expected rows, the nine deviations — chief among them that re-checking UC-ONBOARD against the tree found three promises the rebuild had dropped — the evidence, and the four follow-ups W4 and the dialog's successor epic inherit."
+t2_waived: "UC-ONBOARD's restatement and the run's two lexicon proposals are W4's distillation items, listed in the epic's distillation plan; this WU's deviations are their input. Notice's contract gained tone=pending where a built component's contract lives, in its TSDoc (DEC-16). Writing the T2 rows here would put one fact in two tiers."
