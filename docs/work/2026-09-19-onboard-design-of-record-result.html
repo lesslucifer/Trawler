@@ -10,8 +10,9 @@
     <div class="inner">
       <h1>E-ONBOARD.W2 — result: the design of record, closed</h1>
       <p>The parked run came back, took the address W1 built, took four calls from the reviewer,
-        and closed. It also produced the design flow's first bill — which says something the epic
-        did not expect.</p>
+        and closed. It also produced the design flow's first bill — which says something the epic did
+        not expect — and, at the signature, a gate bug that made this whole class of Working Unit
+        unmergeable.</p>
       <div class="meta">v1 · 2026-09-19 · Trawler · T3 (docs/work/) ·
         branch <code>wu/onboarding-redesign/design-of-record</code> ·
         plan <a href="2026-09-19-onboard-design-of-record-plan.html">W2 plan</a> ·
@@ -163,6 +164,28 @@
             round that forgets to note its start commit cannot reconstruct the first figure. Follow-up
             raised</td>
         </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>The WU changed code after all, and the plan said it would not.</strong>
+            <code>cargo xtask mr confirm</code> refused this tip: <em>no cr/v5 note - nobody has reviewed
+            this tip</em>. It was not a missing step. <code>is_gated</code> is a disjunction — the diff
+            changes a code path, <em>or</em> it carries a design artifact — and the confirm read it as one
+            fact, so a design-bearing codeless tip was asked for a review that
+            <a href="../decisions/dec-46-the-design-verdict-has-its-own-note.html">DEC-46</a> says it does not owe and
+            that <code>notes write</code> explicitly declines to ask for. The tip could not be signed, so
+            <code>8·manual-review</code> could never go green</td>
+          <td><strong>the Working Unit the design flow produces most was unmergeable</strong>, and the only
+            route out was a review note nobody was entitled to write. Fixed here, on the owner's call, rather
+            than in an epic of its own: <code>xtask/src/mr.rs</code> now carries
+            <code>Gated::{No, DesignOnly, Code}</code> and demands a review only on the code arm, which is
+            what the merge gate has always done — <code>check_review</code> returns early on an empty code
+            hash, and <code>code_sha256</code> returns the empty string rather than hashing an empty diff
+            precisely so a caller can tell the difference. <strong>The cost to this WU:</strong> its unit
+            waiver is withdrawn (five unit tests, two integration), it now owes a <code>cr/v5</code> review it
+            was planned not to need, and its <em>this WU ships a document and no code</em> premise is false.
+            <strong>What it did not cost:</strong> no T1 edit — <code>workflow.html</code> already reads
+            <em>"…where the diff changes code"</em>, so the doc was right and the code had drifted from it</td>
+        </tr>
       </table>
     </div>
 
@@ -178,8 +201,16 @@
             <code>bfdc345</code> · <code>a3d147d</code> round 2 · <code>62a1ab2</code> round 3 ·
             <code>85e26f5</code> the close</td></tr>
         <tr><td>Tests</td>
-          <td><strong>none, all three layers waived</strong> — the WU adds no executable code. Reasons are on
-            the <code>test/v2</code> note, one per layer, as the plan wrote them</td></tr>
+          <td><strong>five unit, two integration; e2e waived.</strong> All of them belong to deviation 5, not
+            to the design half, which still adds no executable code. Unit
+            (<code>xtask/src/mr.rs</code>): a gated codeless tip owes its notes and no review · it still owes
+            those two notes · a review note that turns up on such a tip is ignored rather than judged as
+            stale or failing · plus the two existing cases re-pointed at the enum. Integration
+            (<code>xtask/tests/mr.rs</code>), over a real git tree because the bug was in how the confirm
+            derives its range, not in the predicate it feeds: a closed design run with no code signs with no
+            review, and — the other direction, so a predicate that always answered <em>no review</em> cannot
+            pass — the same tip with a code path added still owes one. The integration test was run against
+            the unfixed code first and reproduced the exact refusal the owner hit</td></tr>
         <tr><td>What ran instead, all green</td>
           <td><code>verify-doc</code> on the run — 12/12 hard rules, 0 <code>design-allow</code> suppressions ·
             <code>verify-doc</code> over <code>docs/work/*.html</code> — 5 docs, none red ·
@@ -253,6 +284,18 @@
         </tr>
         <tr>
           <td>3</td>
+          <td><strong>No design Working Unit before this one ever reached a signature.</strong> The bug in
+            deviation 5 sat in <code>mr confirm</code> behind a step every earlier design run stopped short
+            of — E-SIMPDF parked its run open precisely so it would not have to close one. The gate e2e
+            (<code>xtask/tests/e2e_design_flow.rs</code>) asserts a closed run's tip passes
+            <code>9·design</code>, but nothing drove it through <code>mr confirm</code>, which is where it
+            died</td>
+          <td><strong>the roadmap</strong> — worth one row: the flow e2e proves the merge gate reads a closed
+            run and says nothing about whether a human can sign one. The two halves of "can this land" are
+            tested apart</td>
+        </tr>
+        <tr>
+          <td>4</td>
           <td><strong>The flow has no meter.</strong> This bill was assembled from commit timestamps and the
             session transcript. The method is written down above and is reproducible, but it is manual, it
             depends on knowing the round's first and last commit, and it cannot bill an item separately</td>
@@ -261,7 +304,7 @@
             measurement, the measurement needs to survive not being remembered</td>
         </tr>
         <tr>
-          <td>4</td>
+          <td>5</td>
           <td><strong>Blocked-on rows 3–6 leave this WU open.</strong> Row 3 (per-platform instruction content)
             is the build's and its interim answer was re-written against the real API. Rows 4, 5 and 6
             (platform attribution, the trust probe beyond macOS and Windows, the regression-while-proven call)
