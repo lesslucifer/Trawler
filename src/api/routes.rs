@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use axum::body::Bytes;
@@ -16,15 +17,17 @@ use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
-use super::view::{self, FlowPageView, FlowSummary, FlowView};
+use super::view::{self, FlowPageView, FlowSummary, FlowView, ReachView};
 use super::{curl, decode, har};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
+use crate::reach;
 use crate::store::{FlowFilter, StatusMatch, Store, STATUS_GRAMMAR};
 
 #[derive(Clone)]
 pub struct AppState {
     pub store: Arc<Store>,
     pub ca_cert_pem: Arc<String>,
+    pub reach: Arc<reach::Controller>,
 }
 
 /// The filter half of a listing request. Every endpoint that selects flows
@@ -297,6 +300,41 @@ pub async fn ca_cert(State(state): State<AppState>) -> Response {
         .into_response()
 }
 
+/// Can another device get here, and at which address? Answered whether or not
+/// anything is armed, because "nothing yet, and here is what you could pick" is
+/// the answer the setup screen needs before the user has decided.
+pub async fn reach_status(State(state): State<AppState>) -> Json<ReachView> {
+    Json(ReachView::new(state.reach.addresses().await, reach::interfaces()))
+}
+
+#[derive(Deserialize)]
+pub struct ArmReachQuery {
+    address: String,
+}
+
+/// Turn reach on for one address — an authorization act, off by default and
+/// gone at shutdown (DEC-55). The listener serves this same router, so a device
+/// that can reach the proxy can also fetch the certificate that makes it useful.
+pub async fn arm_reach(
+    State(state): State<AppState>,
+    Json(query): Json<ArmReachQuery>,
+) -> Response {
+    let Ok(address) = query.address.parse::<IpAddr>() else {
+        return bad_request("address must be an IP address this machine holds");
+    };
+    match state.reach.arm(address, super::router_from(state.clone())).await {
+        Ok(addresses) => Json(ReachView::new(Some(addresses), reach::interfaces())).into_response(),
+        Err(refusal) => (StatusCode::BAD_REQUEST, refusal.to_string()).into_response(),
+    }
+}
+
+/// Back to loopback. Idempotent — the request names an end state, and a caller
+/// that was already there asked for nothing wrong.
+pub async fn disarm_reach(State(state): State<AppState>) -> Json<ReachView> {
+    state.reach.disarm().await;
+    Json(ReachView::new(None, reach::interfaces()))
+}
+
 fn body_response(state: &AppState, id: &str, leg: Leg, decode: BodyView) -> Response {
     let Some(flow_id) = parse_flow_id(id) else {
         return bad_id();
@@ -379,7 +417,13 @@ mod tests {
         for uri in uris {
             store.insert(FlowBuilder::new().uri(uri).status(200).build());
         }
-        AppState { store, ca_cert_pem: Arc::new("PEM".into()) }
+        let pems = crate::ca::CaPems { cert: "PEM".into(), key: String::new() };
+        let reach = Arc::new(crate::reach::Controller::new(
+            crate::Config::default(),
+            Arc::clone(&store),
+            pems,
+        ));
+        AppState { store, ca_cert_pem: Arc::new("PEM".into()), reach }
     }
 
     async fn export(state: &AppState, query: &str) -> (StatusCode, axum::http::HeaderMap, Value) {
@@ -725,5 +769,46 @@ mod tests {
         for wired in ["/flows", "/stream", "EventSource"] {
             assert!(html.contains(wired), "shell page must wire {wired}");
         }
+    }
+
+    #[tokio::test]
+    async fn an_unarmed_reach_offers_choices_and_promises_no_address() {
+        let state = state_with(&[]);
+
+        let view = super::reach_status(State(state.clone())).await.0;
+
+        assert!(!view.armed);
+        assert_eq!(view.proxy, None, "an address nothing is listening on is the lie to avoid");
+        assert_eq!(view.api, None);
+        assert_eq!(view.ca_cert_url, None);
+        for interface in &view.interfaces {
+            assert!(!interface.address.is_loopback(), "loopback is not another device's address");
+        }
+    }
+
+    #[tokio::test]
+    async fn arming_refuses_what_is_not_an_address_before_it_refuses_where_to_bind() {
+        let state = state_with(&[]);
+
+        let response = super::arm_reach(
+            State(state.clone()),
+            axum::Json(super::ArmReachQuery { address: "my-laptop.local".into() }),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let reason = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        assert!(String::from_utf8_lossy(&reason).contains("IP address"));
+        assert!(state.reach.addresses().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn disarming_what_was_never_armed_reports_the_state_the_caller_asked_for() {
+        let state = state_with(&[]);
+
+        let view = super::disarm_reach(State(state.clone())).await.0;
+
+        assert!(!view.armed);
+        assert!(state.reach.addresses().await.is_none());
     }
 }

@@ -1,3 +1,4 @@
+mod reach;
 mod setup;
 
 #[cfg(feature = "e2e")]
@@ -14,7 +15,8 @@ pub fn run() {
             setup::unset_proxy,
             setup::proxy_status,
             setup::notice_dismissed,
-            setup::dismiss_notice
+            setup::dismiss_notice,
+            reach::confirm_reach
         ]);
     #[cfg(feature = "e2e")]
     let builder = builder

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aae1a899f34851f0dfad239">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-55: reach beyond loopback is an authorization decision</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-55 — reach beyond loopback is an authorization decision</h1>
+      <p>Trawler may listen where another device can reach it. That is not a configuration flag:
+        it is off by default, it costs one explicit confirm, it dies with the process, and it binds
+        one address the user named — never every address the host holds.</p>
+      <div class="meta">v1 · 2026-09-19 · Trawler · T2 decision · minted by
+        <strong>E-ONBOARD.W1</strong> ·
+        relates to <a href="dec-13-onboarding-capabilities.html">DEC-13</a>,
+        <a href="dec-12-native-ui-stack.html">DEC-12</a> ·
+        UC-ONBOARD</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <p>Trawler bound <code>127.0.0.1</code> for both servers since the first commit, and the rest
+      of the system quietly leaned on it — most visibly the control API's open CORS grant, which
+      <a href="../architecture.html">architecture.html</a> justified with "adding no exposure beyond
+      the bind address". The onboarding redesign broke that silence: once the setup screen makes the
+      user <em>name</em> a platform, five of the eight it offers — another machine, an iPhone, an
+      Android device, and the two emulators that are only sometimes local — have no address to point
+      at and no route to fetch the certificate. The screen could either apologise to five of eight
+      platforms, or Trawler could answer off this machine.</p>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The core gains a reach choice. By default both servers bind
+        loopback and nothing outside the machine can connect. A user may arm reach on <strong>one
+        interface address</strong>, at which point the proxy and the control API <em>also</em> listen
+        there and <code>/ca.crt</code> is fetchable over it. Arming is an authorization act, not a
+        setting: the native shell asks first, the answer is not written down, and it lasts exactly as
+        long as the process. Nothing finer — no token, no TLS, no per-origin CORS — is added, and
+        the grant does not widen with the bind.</p>
+    </div>
+
+    <h2 id="rules">The four rules</h2>
+    <table data-c="rules">
+      <thead><tr><th>Rule</th><th>What it means in the tree</th><th>Why this way</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Off by default</strong></td>
+          <td><code>Config::default()</code> is <code>Reach::Local</code>; loopback is the only
+            bind until something arms it. Arming <em>adds</em> a second pair of listeners and never
+            moves the first</td>
+          <td>Every install that does not need reach pays nothing for it, and the loopback path —
+            the ~90% single-machine case — cannot regress by accident</td>
+        </tr>
+        <tr>
+          <td><strong>One named address</strong></td>
+          <td>The unspecified address (<code>0.0.0.0</code>, <code>::</code>) is refused with a
+            reason. Any other address is adjudicated by the bind: one the host does not hold fails,
+            in the OS's own words</td>
+          <td>The screen has to print an address anyway, so nothing is gained by listening on all of
+            them — and a mistaken confirm then costs one network instead of every network the host
+            is attached to. The control API enumerates the routable interfaces so the user picks
+            from what exists rather than typing</td>
+        </tr>
+        <tr>
+          <td><strong>One explicit confirm</strong></td>
+          <td>The Tauri shell owns the ask (<code>confirm_reach</code>), the same place the CA
+            install and the system-proxy write already live per
+            <a href="dec-13-onboarding-capabilities.html">DEC-13</a>. The dialog names the address
+            and what becomes reachable through it</td>
+          <td>DEC-13's rule is that an action changing what the host exposes costs one explicit
+            confirm. This changes what the host exposes</td>
+        </tr>
+        <tr>
+          <td><strong>Re-armed per launch</strong></td>
+          <td>Nothing persists. The listeners live in the process; shutdown takes them with it</td>
+          <td>The revert-on-quit symmetry DEC-13 requires of the system proxy, got for free by never
+            writing the state down. A host-affecting state Trawler set does not outlive the session
+            that confirmed it</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="exposure">What arming actually exposes — stated, not implied</h2>
+    <div class="callout warn" data-c="exposure">
+      <p>Arming reach exposes <strong>the proxy and the whole control API</strong> on the chosen
+        address. The control API serves the captured flows, their bodies and their headers, so
+        anything on that network can read the traffic Trawler has captured, clear it, or route its
+        own traffic through the proxy. That is what the confirm buys, and the dialog says so.</p>
+      <p>This is a deliberate boundary, not an oversight. Splitting the surface — a remote route for
+        <code>/ca.crt</code> alone, a token, TLS on the control API, a per-origin CORS policy — is
+        real work with its own design, and E-ONBOARD explicitly does not take it. The residue leaves
+        as a backlog row rather than as an unstated assumption.</p>
+    </div>
+
+    <h2 id="limits">What the confirm is, and is not</h2>
+    <table data-c="limits">
+      <thead><tr><th>It is</th><th>It is not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The record that a user decided to expose this machine — the difference between
+            Trawler being reachable and Trawler having been <em>made</em> reachable</td>
+          <td>An access control against a process that already holds loopback. Anything that can
+            reach the control API can arm reach, exactly as it can already clear the capture or read
+            every flow. The trust boundary is unchanged; what changed is that the default is no
+            longer the only possibility</td>
+        </tr>
+        <tr>
+          <td>Unavoidable in the product path: the screen's only route to reach runs through the
+            shell's dialog</td>
+          <td>Unforgeable. A local script may drive the API directly, and always could</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="cors">The CORS grant does not widen</h2>
+    <p>The control API answers every request with <code>Access-Control-Allow-Origin: *</code>,
+      because the native app is a cross-origin client of it
+      (<a href="dec-12-native-ui-stack.html">DEC-12</a>). That grant is unchanged by this record and
+      unchanged by arming: the same middleware, the same headers, over both addresses. What
+      <em>is</em> retired is the sentence that justified it — "the surface is loopback-only" is no
+      longer true of an armed process, and the honest justification is the one above: the grant
+      permits nothing the bind does not already permit, and the bind is now a confirmed decision
+      rather than a constant.</p>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="rejected">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A CLI flag or config file entry — <code>--listen 0.0.0.0</code></td>
+          <td>It makes exposure a default someone can inherit. A flag in a shell profile or a
+            checked-in config outlives every session and asks nobody. The whole point is that the
+            decision is taken by a person, for a session.
+            <strong>What this does and does not forbid:</strong> the vice is <em>inheritance</em> —
+            a value read from the environment that arms a later session nobody consented in. The
+            core's <code>Config</code> carries a reach choice that <code>serve</code> acts on, and
+            that is not the rejected thing: nothing parses it from a flag, a variable or a file,
+            the shipped binary passes <code>Config::default()</code> (loopback), and the desktop
+            shell cannot touch it at all — it is an out-of-process client
+            (<a href="dec-12-native-ui-stack.html">DEC-12</a>) that arms through the control API.
+            It is the seam a headless embedder with no UI to ask through would use, and a test
+            uses. <strong>If a flag, variable or config file is ever wired to it, that is this
+            row</strong>, and it needs a confirm or a new decision</td>
+        </tr>
+        <tr>
+          <td>Binding <code>0.0.0.0</code> and letting the screen pick which address to print</td>
+          <td>It listens on networks the user never named — a VPN, a bridged container network, a
+            conference Wi-Fi — to render one address. The blast radius of a mistaken confirm should
+            be the network the user was thinking about</td>
+        </tr>
+        <tr>
+          <td>Persisting the opt-in so setup is not repeated</td>
+          <td>It converts a session decision into a standing one, and it would have to be reverted
+            on quit to keep DEC-13's symmetry — which is the same work as re-arming, with a file to
+            get wrong</td>
+        </tr>
+        <tr>
+          <td>Shipping a token or TLS with the bind</td>
+          <td>Worth doing, and too big to ride along. Bundling it would make this record about
+            authentication rather than about the decision to expose, and would have stalled the
+            screen that needed the address</td>
+        </tr>
+        <tr>
+          <td>Putting the bind in the core's startup and restarting the core to arm</td>
+          <td>The shell is an out-of-process client (DEC-12) and does not own the core's lifetime;
+            a restart would drop every captured flow to turn a listener on</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aae1e7e9f34851f0dfad244" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBOARD.W1 result: reach</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBOARD.W1 — result: reach</h1>
+      <p>Trawler answers off this machine when a user says so, and says nothing when they
+        have not. The address the API reports is the address that answers.</p>
+      <div class="meta">v1 · 2026-09-19 · Trawler · T3 (docs/work/) ·
+        branch <code>wu/onboarding-redesign/reach</code> ·
+        plan <a href="2026-09-19-onboard-reach-plan.html">E-ONBOARD.W1 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered, against the requirement as written.</strong> Every row of the plan's
+        expected result is asserted by a test that runs in the suite.</p>
+      <table>
+        <tr><th>#</th><th>Planned</th><th>Shipped</th><th>Asserted by</th></tr>
+        <tr>
+          <td>1</td><td>loopback-only by default, no address promised</td>
+          <td><code>Config::default()</code> is <code>Reach::Local</code>;
+            <code>GET /reach</code> answers <code>armed:false</code> with three null addresses and
+            the routable interfaces listed</td>
+          <td><code>a_fresh_core_answers_only_this_machine</code> ·
+            <code>an_unarmed_reach_offers_choices_and_promises_no_address</code> ·
+            <code>nothing_is_reachable_until_something_says_so</code></td>
+        </tr>
+        <tr>
+          <td>2</td><td>arming binds a second pair and reports it; the certificate fetches over
+            it; traffic lands in the same capture</td>
+          <td>as planned — the reach listener serves the same router, so
+            <code>/ca.crt</code> needed no second definition</td>
+          <td><code>arming_adds_a_proxy_and_an_api_that_answer_at_the_reported_address</code> ·
+            <code>traffic_from_the_reachable_proxy_lands_in_the_same_capture</code></td>
+        </tr>
+        <tr>
+          <td>3</td><td>the unspecified address refused by name; an address the host lacks refused
+            by the bind</td>
+          <td>as planned, both with the reason on the wire</td>
+          <td><code>every_address_this_machine_holds_is_not_an_address_a_user_named</code> ·
+            <code>an_address_this_machine_does_not_hold_is_refused_by_the_bind</code> ·
+            <code>the_unspecified_address_is_refused_by_name</code></td>
+        </tr>
+        <tr>
+          <td>4</td><td>disarm stops the pair, loopback keeps serving; shutdown does too</td>
+          <td>as planned, plus the re-arm rules the review forced out: arming the address already
+            armed changes nothing, and arming a different one brings the new pair up before the old
+            goes down</td>
+          <td><code>disarming_takes_the_reachable_pair_away_and_leaves_loopback_serving</code> ·
+            <code>arming_the_address_already_armed_leaves_that_session_untouched</code> ·
+            <code>a_refused_re_arm_leaves_the_working_session_exactly_as_it_was</code> ·
+            <code>a_headless_core_can_boot_armed_and_gives_its_listeners_back_at_shutdown</code></td>
+        </tr>
+        <tr>
+          <td>5</td><td>the CORS grant is identical over both addresses</td>
+          <td>as planned — all four grant headers compared, not just the origin</td>
+          <td><code>the_cross_origin_grant_does_not_widen_with_the_bind</code></td>
+        </tr>
+        <tr>
+          <td>6</td><td><code>Config</code> carries the choice; a headless core can boot armed</td>
+          <td>as planned</td>
+          <td><code>a_headless_core_can_boot_armed_…</code> ·
+            <code>an_armed_config_names_the_address_without_moving_the_local_bind</code></td>
+        </tr>
+        <tr>
+          <td>7</td><td>the shell's <code>confirm_reach</code></td>
+          <td>as planned; the message is a pure function with three tests over what it must say</td>
+          <td><code>ui/src-tauri/src/reach.rs</code> tests</td>
+        </tr>
+        <tr>
+          <td>8</td><td>the typed client carries the three calls</td>
+          <td>as planned; <code>apiStub</code> answers them with the product's own default</td>
+          <td>four tests in <code>ui/src/api.test.ts</code></td>
+        </tr>
+        <tr>
+          <td>9</td><td>DEC-55 states the boundary</td>
+          <td>as planned, indexed here rather than at W4 — see deviations</td>
+          <td>the record and its index row</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="shape">What the code looks like</h2>
+    <table data-c="shape">
+      <tr><th>File</th><th>What it now owns</th></tr>
+      <tr><td><code>src/config.rs</code></td>
+        <td><code>Reach::{Local, Interface(IpAddr)}</code> and the <code>reach</code> field.
+          <code>proxy_addr</code>/<code>api_addr</code> keep their meaning as the local bind and
+          are not moved by arming</td></tr>
+      <tr><td><code>src/reach.rs</code> (new)</td>
+        <td>interface enumeration, the address refusal, and the <code>Controller</code> that
+          arms, disarms and reports. The reach proxy is a second <code>Proxy</code> over the same
+          <code>Store</code>, with an issuer of its own — <code>RcgenAuthority</code> consumes the
+          one it is given — rebuilt from the PEMs held since boot rather than from disk</td></tr>
+      <tr><td><code>src/ca.rs</code></td>
+        <td><code>CaPems</code> and <code>ca::issuer</code>: the CA as bytes, and the one place any
+          authority past the first is built from them</td></tr>
+      <tr><td><code>src/api/mod.rs</code></td>
+        <td><code>/reach</code>, and <code>router_from(state)</code> — which is how the reach
+          listener serves exactly what loopback serves instead of a second definition that could
+          drift. The CORS comment's "loopback-only" justification is restated against the
+          boundary rather than the constant</td></tr>
+      <tr><td><code>src/api/routes.rs</code> · <code>view.rs</code></td>
+        <td>the three handlers and <code>ReachView</code></td></tr>
+      <tr><td><code>src/lib.rs</code></td>
+        <td><code>serve</code> builds the controller, arms a configured reach at boot, and
+          <code>shutdown</code> disarms. <code>run</code> logs which of the two states it is in</td></tr>
+      <tr><td><code>ui/src/api.ts</code> · <code>apiStub.ts</code></td>
+        <td><code>ReachState</code> and the three calls</td></tr>
+      <tr><td><code>ui/src-tauri/src/reach.rs</code> (new)</td>
+        <td><code>confirm_reach</code> — the ask, and nothing else</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <tr><th>Deviation</th><th>Why</th></tr>
+        <tr>
+          <td><strong>DEC-55's index row landed here, not at W4</strong>, where the epic plan's
+            distillation table allocated it</td>
+          <td>The decisions index is the read path an agent checks before "fixing" something odd.
+            A record invisible there for the length of an epic is a record not doing its job. W4's
+            distillation item for it is therefore already satisfied; nothing else moved</td>
+        </tr>
+        <tr>
+          <td><strong>No candidate-list check on the arming address.</strong> The plan implied the
+            user picks from what the API enumerates; the code refuses only the unspecified address
+            and lets the bind adjudicate the rest</td>
+          <td>The kernel already owns the question "does this machine hold that address", and
+            duplicating it as a list would have been a second, staler answer — and would have made
+            the hermetic loopback test impossible, because loopback is deliberately not offered as
+            a choice. Enumeration stays what it was for: the choice the screen offers. The refusal
+            that carries the decision — one named address, never all of them — is enforced
+            exactly</td>
+        </tr>
+        <tr>
+          <td><strong>Re-arm semantics were unplanned, and the first attempt at them was a
+            blocker.</strong> The code as first written stopped the armed session before trying
+            the new binds, so a re-arm that bound nothing silently revoked an exposure a user had
+            confirmed and a device was routing through — a 400 was the only trace. The review
+            reproduced it against a running controller. Now: arming the address already armed is a
+            no-op returning what is listening, and arming a different one brings the new pair up
+            before the old goes down, so a refusal costs nothing</td>
+          <td>Reported and fixed inside this WU, with both rules under named tests written before
+            the fix. Recorded here rather than only in the review note because the rule it
+            established — nothing a user confirmed is torn down by a request that failed — is the
+            kind of thing W3 needs to be able to rely on</td>
+        </tr>
+        <tr>
+          <td><strong>The arm lock does not span a teardown.</strong> The second review round
+            found that both <code>arm</code> and <code>disarm</code> held the controller's mutex
+            across the outgoing session's drain</td>
+          <td>That drain waits on a device's open exchange — measured at five seconds against a
+            held request, and unbounded in principle. While it ran, every reader of the reach state
+            queued behind it, including the disarm a user issues to revoke the exposure, which is
+            the one thing DEC-55 promises stays available. The lock now covers the swap and the
+            bind that must not race a second arm, and nothing else. The regression test polls
+            across the whole drain window rather than reading once — the first version of it raced
+            ahead of the lock and passed against the bug</td>
+        </tr>
+        <tr>
+          <td><strong>The CA is carried as bytes, not re-read.</strong> <code>CaMaterial</code>
+            gained the key PEM and a shared <code>ca::issuer</code>; the controller rebuilds its
+            authority from memory</td>
+          <td>Also from the review: the first version called <code>ca::load_or_create</code> —
+            blocking file I/O, and key generation on a cold CA — on a tokio worker thread while
+            holding the arm lock, which is the execution-context discipline the project has already
+            ruled on. A second authority is still required because
+            <code>RcgenAuthority</code> consumes the issuer it is given; only the disk read is
+            gone</td>
+        </tr>
+        <tr>
+          <td><strong>A dependency joined the core:</strong> <code>if-addrs</code> 0.15</td>
+          <td>There is no std interface enumeration, and the alternative was parsing
+            <code>ifconfig</code>/<code>ipconfig</code> output from a core that DEC-13 keeps out of
+            shelling to the OS</td>
+        </tr>
+        <tr>
+          <td><strong>No <code>ui/src/*.tsx</code> was touched</strong>, as planned — so this WU
+            carries no design accounting of its own</td>
+          <td>W3 rebuilds the screen from the closed run and wires the confirm to this client.
+            Wiring reach into the stepper W3 deletes would have been work thrown away</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <tr><th>What</th><th>Where</th></tr>
+        <tr><td>Commits</td>
+          <td><code>db82cd7</code> plan + DEC-55 + index ·
+            <code>8d88f5c</code> the core ·
+            <code>9a55dba</code> the client and the shell's ask ·
+            one review-fix commit carrying the two findings below</td></tr>
+        <tr><td>Review</td>
+          <td>Three rounds, three finders each (correctness, efficiency, altitude — the diff spans
+            more than one module). Round 1: six candidates, two verified — a blocker (a failed
+            re-arm revoked a working session) and an important (blocking disk I/O on a runtime
+            thread under the lock). Round 2: five candidates, one verified — a blocker (the lock
+            spanned the outgoing session's drain). Round 3 is what the <code>cr/v5</code> note on
+            the tip records. Nine candidates were refuted across the two rounds, including three
+            altitude claims about composition-root duplication that hudsucker's by-value
+            <code>Issuer</code> requires, and an information-disclosure claim DEC-55 settles
+            deliberately</td></tr>
+        <tr><td>Integration — the WU's contract</td>
+          <td><code>tests/reach.rs</code>, 11 tests, all over ephemeral ports with the second
+            listener on loopback; no test touches the public network</td></tr>
+        <tr><td>Unit — Rust core</td>
+          <td><code>src/reach.rs</code> 6 · <code>src/config.rs</code> 2 ·
+            <code>src/api/routes.rs</code> 3 · <code>/reach</code> added to the router's
+            route-coverage test</td></tr>
+        <tr><td>Unit — shell and client</td>
+          <td><code>ui/src-tauri/src/reach.rs</code> 3 · <code>ui/src/api.test.ts</code> 4</td></tr>
+        <tr><td>Suites green</td>
+          <td><code>cargo xtask gate0</code> green · <code>pnpm test</code> 940 passing ·
+            <code>pnpm lint</code> + <code>tsc -b</code> clean ·
+            <code>cargo clippy</code> clean in <code>ui/src-tauri</code> too</td></tr>
+        <tr><td>E2E</td>
+          <td>None, by the epic plan: the e2e drives the rebuilt screen and is W4's. Declared as a
+            waiver in <code>test/v2</code> with that reason</td></tr>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <tr><th>Tier</th><th>What now carries this WU's truth</th></tr>
+        <tr><td>T2 decision</td>
+          <td><code>docs/decisions/dec-55-reach-is-an-authorization-decision.html</code> — the four
+            rules, what arming actually exposes, what the confirm is and is not, why the CORS grant
+            survives, and five rejected alternatives</td></tr>
+        <tr><td>T2 index</td>
+          <td><code>docs/decisions/decisions-index.html</code> — DEC-55's row</td></tr>
+        <tr><td>T2 use case</td>
+          <td><strong>Not yet.</strong> UC-ONBOARD's <em>gains reach</em> row is restated at W4,
+            where the epic plan puts it, because the contract a user sees is the screen W3 builds —
+            restating it here would describe a promise nothing renders</td></tr>
+        <tr><td>T1</td>
+          <td><strong>Owed, at W4.</strong> <code>architecture.html</code> still argues the CORS
+            grant from "loopback-only", which an armed process falsifies. The corrected reasoning
+            is in DEC-55 and in the code comment now; the T1 edit is rule-bearing and commits
+            through <code>mr commit</code> with a listed authoriser</td></tr>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <tr><th>Owed</th><th>To whom</th></tr>
+        <tr>
+          <td><code>architecture.html</code>'s CORS justification, restated against the bind as a
+            boundary rather than as loopback</td>
+          <td><strong>W4</strong> — already in the epic's distillation plan</td>
+        </tr>
+        <tr>
+          <td>The authorization residue DEC-55 names and defers: a token, TLS on the control API,
+            a narrowed CORS policy, or splitting the remote surface so only
+            <code>/ca.crt</code> is reachable</td>
+          <td><strong>W4's backlog row</strong>, as the epic plan requires. Stated debt, not an
+            unstated assumption</td>
+        </tr>
+        <tr>
+          <td>The reach listener serves the whole control API, so an armed
+            <code>Arc&lt;Controller&gt;</code> is reachable from the router it serves — a cycle
+            that lives exactly as long as the armed session and is broken by
+            <code>disarm</code></td>
+          <td><strong>Nobody, unless the surface splits.</strong> Recorded because it is the kind
+            of thing a later reader should find explained rather than discover</td>
+        </tr>
+        <tr>
+          <td><code>serve()</code> spawns the primary proxy task before its later fallible steps,
+            so any <code>?</code> after that point — the API bind, the proxy build, and now a
+            boot-time arm — returns <code>Err</code> while that task runs on detached</td>
+          <td><strong>Nobody in this epic.</strong> Raised as a blocker in round 2 and refuted as
+            pre-existing: this WU adds one more fallible call to a sequence that already had the
+            shape. Recorded because the fix — unwinding what <code>serve</code> started — is a
+            real improvement someone should take deliberately</td>
+        </tr>
+        <tr>
+          <td><code>ui/src-tauri/</code> is outside the gate's code paths
+            (<code>src/</code>, <code>xtask/</code>, <code>tests/</code>,
+            <code>ui/src/</code>, <code>ui/e2e/</code>), so a diff touching only the shell would
+            owe no review, and gate 0 never builds it</td>
+          <td><strong>Nobody in this epic</strong> — pre-existing, found here because this WU adds
+            a shell file. This diff is reviewed anyway on its other paths</td>
+        </tr>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

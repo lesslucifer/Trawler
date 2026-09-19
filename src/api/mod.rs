@@ -18,10 +18,20 @@ use routes::AppState;
 /// Build the control API: the embedded UI shell, filtered listing, a HAR 1.2
 /// export of it and the import that reads one back (or a pasted `curl`
 /// command, under `?format=curl`), a connection tally
-/// (`/stats`), full-flow detail, raw or decoded bodies, a live SSE stream, and
-/// the CA download.
-pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
-    let state = AppState { store, ca_cert_pem };
+/// (`/stats`), full-flow detail, raw or decoded bodies, a live SSE stream, the
+/// reach control (`/reach`), and the CA download.
+pub fn router(
+    store: Arc<Store>,
+    ca_cert_pem: Arc<String>,
+    reach: Arc<crate::reach::Controller>,
+) -> Router {
+    router_from(AppState { store, ca_cert_pem, reach })
+}
+
+/// The same router from a state that already exists — how an armed reach
+/// listener comes to serve exactly what loopback serves, rather than a second
+/// definition that could drift from it.
+pub fn router_from(state: AppState) -> Router {
     Router::new()
         .route("/", get(routes::ui_page))
         .route("/flows", get(routes::list_flows).delete(routes::clear_flows))
@@ -38,6 +48,10 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
         .route("/flows/{id}/request/body", get(routes::request_body))
         .route("/flows/{id}/response/body", get(routes::response_body))
         .route("/stream", get(routes::stream))
+        .route(
+            "/reach",
+            get(routes::reach_status).post(routes::arm_reach).delete(routes::disarm_reach),
+        )
         .route("/ca.crt", get(routes::ca_cert))
         .layer(middleware::from_fn(allow_cross_origin))
         .with_state(state)
@@ -70,9 +84,11 @@ const DOCUMENT_EXPANSION: usize = 2;
 /// `POST` joined the grant with HAR import and `DELETE` with clearing — the
 /// methods that change capture state — and the export's response headers joined
 /// it when the app started reading the filename off one. The reasoning behind
-/// `*` is unchanged: the surface is loopback-only, and everything it now accepts
-/// is equally reachable with `curl`, so the grant adds no exposure the bind
-/// address does not already imply.
+/// `*` survives reach (DEC-55) because it never rested on the bind being
+/// loopback, only on the bind being the boundary: everything the grant permits
+/// is equally reachable with `curl` from wherever the surface is bound, so the
+/// grant adds no exposure the bind does not already imply. Arming widens the
+/// bind and leaves this untouched.
 async fn allow_cross_origin(request: axum::extract::Request, next: middleware::Next) -> Response {
     let mut response = if request.method() == Method::OPTIONS {
         StatusCode::NO_CONTENT.into_response()
@@ -106,7 +122,7 @@ mod tests {
 
     #[tokio::test]
     async fn router_serves_the_ui_shell_and_every_preexisting_route() {
-        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
         for (path, expected) in [
             ("/", StatusCode::OK),
             ("/flows", StatusCode::OK),
@@ -116,6 +132,7 @@ mod tests {
             ("/flows/not-a-uuid/request/body", StatusCode::BAD_REQUEST),
             ("/flows/not-a-uuid/response/body", StatusCode::BAD_REQUEST),
             ("/stream", StatusCode::OK),
+            ("/reach", StatusCode::OK),
             ("/ca.crt", StatusCode::OK),
         ] {
             let request = Request::builder().uri(path).body(Body::empty()).expect("request");
@@ -140,7 +157,7 @@ mod tests {
                 .resp_body(captured(&vec![0xffu8; RING_CAP * 3 / 4]))
                 .build(),
         );
-        let router = super::router(Arc::clone(&store), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::clone(&store), "PEM");
 
         let export = Request::builder().uri("/flows/export").body(Body::empty()).expect("request");
         let exported = router.clone().oneshot(export).await.expect("response");
@@ -170,7 +187,7 @@ mod tests {
     // assumed because it would regress silently.
     #[tokio::test]
     async fn export_is_a_route_of_its_own_not_a_flow_id() {
-        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
         let request = Request::builder().uri("/flows/export").body(Body::empty()).expect("request");
         let response = router.oneshot(request).await.expect("response");
         assert_eq!(response.status(), StatusCode::OK);
@@ -181,7 +198,7 @@ mod tests {
     // the first POST on the surface — both would regress silently.
     #[tokio::test]
     async fn import_is_a_post_route_of_its_own() {
-        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
         let get = Request::builder().uri("/flows/import").body(Body::empty()).expect("request");
         let response = router.clone().oneshot(get).await.expect("response");
         assert_eq!(
@@ -204,7 +221,7 @@ mod tests {
     // regress silently, since axum answers 405 either way.
     #[tokio::test]
     async fn delete_answers_only_where_removal_lives() {
-        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
         for (path, expected) in [
             ("/flows", StatusCode::OK),
             ("/flows/00000000-0000-0000-0000-000000000000", StatusCode::NOT_FOUND),
@@ -223,7 +240,7 @@ mod tests {
     // CORS grant and a preflight OPTIONS short-circuits with the same headers.
     #[tokio::test]
     async fn every_response_carries_the_cross_origin_grant() {
-        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
         let request = Request::builder().uri("/flows").body(Body::empty()).expect("request");
         let response = router.clone().oneshot(request).await.expect("response");
         assert_eq!(response.headers()["access-control-allow-origin"], "*");
@@ -247,7 +264,7 @@ mod tests {
     // the app reads null and has to invent a filename the server already chose.
     #[tokio::test]
     async fn the_export_filename_is_readable_by_a_cross_origin_client() {
-        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
         let request = Request::builder().uri("/flows/export").body(Body::empty()).expect("request");
         let response = router.oneshot(request).await.expect("response");
 

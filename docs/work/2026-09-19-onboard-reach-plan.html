@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aae1a359f34851f0dfad237" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBOARD.W1 plan: reach</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBOARD.W1 — reach: Trawler answers off this machine</h1>
+      <p>The bind stops being a constant and becomes an authorization decision: off by default,
+        armed by one explicit confirm, reported as an address a second device can actually use.</p>
+      <div class="meta">v1 · 2026-09-19 · Trawler · T3 (docs/work/) ·
+        branch <code>wu/onboarding-redesign/reach</code> ·
+        epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      Trawler binds loopback only until a user explicitly turns reachability on; once on, it also
+      binds one interface address the user named, the control API reports that address and the
+      certificate URL that works over it, and the proxy and <code>/ca.crt</code> answer there —
+      with the CORS grant unchanged and the opt-in dying with the process.
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <tr><th>Serves</th><th>How</th></tr>
+        <tr>
+          <td><a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD.W1</a>, whole</td>
+          <td>the epic plan's first WU: the decision record, the bind, the reported address, the
+            shell's confirm. Nothing downstream may print an address that does not exist</td>
+        </tr>
+        <tr>
+          <td>UC-ONBOARD — <em>gains reach</em></td>
+          <td>a platform that is not this machine can be pointed at Trawler. This WU delivers the
+            address and the certificate route; W3 renders them</td>
+        </tr>
+        <tr>
+          <td>The parked design run's first two blocked-on rows</td>
+          <td><em>no reachable address</em> and <em>nothing to render</em> — five of the eight
+            platforms the new picker offers had nothing to point at. W2 closes the rows against
+            what lands here</td>
+        </tr>
+        <tr>
+          <td><a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a></td>
+          <td>an action that changes what the host exposes costs one explicit confirm, carried by
+            the Tauri shell — the same shape as the trust store and the system proxy</td>
+        </tr>
+        <tr>
+          <td>DEC-55 (minted here)</td>
+          <td>the epic plan's open questions 1–3, answered on the record: one named interface, no
+            authorization finer than the opt-in, no survival across a relaunch</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  subgraph shell["Tauri shell — ui/src-tauri"]
+    C["confirm_reach(address)
+native dialog, names what it exposes"]
+  end
+  subgraph core["core — src/"]
+    CFG["config::Reach
+Local (default) | Interface(ip)"]
+    CTL["reach::Controller
+arm · disarm · armed"]
+    API["GET/POST/DELETE /reach
+the address, the interfaces, the cert URL"]
+    L1["loopback listeners
+proxy + control API — always"]
+    L2["reach listeners
+same ports, the named address — only when armed"]
+  end
+  C -- "user said yes" --> API
+  CFG --> CTL
+  API --> CTL
+  CTL --> L2
+  CTL -. "never touches" .-> L1
+      </pre>
+      <div class="caption">The loopback bind is untouched by arming — reach <em>adds</em> a second
+        pair of listeners rather than moving the first. Disarming drops them; so does process exit,
+        which is why the opt-in cannot outlive a launch.</div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <tr><th>#</th><th>Observable after this WU</th><th>Where</th></tr>
+        <tr>
+          <td>1</td>
+          <td>With reachability off — the default — both servers bind loopback exactly as today and
+            <code>GET /reach</code> answers <code>armed: false</code> with a null address, a null
+            certificate URL, and the machine's routable interfaces listed as candidates</td>
+          <td>integration · unit</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code>POST /reach {"address": …}</code> binds the proxy and the control API on that
+            address too, and answers with both socket addresses and the <code>/ca.crt</code> URL
+            that works over it. A request through the reach proxy address is captured into the same
+            store; the certificate fetches over the reach API address</td>
+          <td>integration</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>The unspecified address (<code>0.0.0.0</code>, <code>::</code>) is refused with a
+            reason: reach binds one interface, never every address the host holds. An address the
+            host does not hold is refused by the bind itself, with the OS's own words</td>
+          <td>unit · integration</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><code>DELETE /reach</code> stops both reach listeners — the address stops answering —
+            while loopback keeps serving. So does <code>shutdown()</code>, so an opt-in cannot
+            survive the process that was confirmed for it</td>
+          <td>integration</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>The CORS grant is byte-identical over the reach address and over loopback: arming
+            widens the bind, never the grant</td>
+          <td>integration</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><code>Config</code> carries the choice, so a headless core can boot armed
+            (<code>Reach::Interface(ip)</code>) without a UI — and boots
+            <code>Reach::Local</code> when nothing says otherwise</td>
+          <td>unit · integration</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>The Tauri shell exposes <code>confirm_reach</code>: a native dialog naming the
+            address and what becomes reachable through it, returning the user's answer. W3 calls it;
+            nothing arms without it having been asked</td>
+          <td>unit (src-tauri)</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>The typed client carries the three calls, so W3 builds against a contract rather than
+            inventing one</td>
+          <td>unit (vitest)</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><a href="../decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a>
+            states the boundary in the open: what arming exposes (the proxy <em>and</em> the control
+            API, so the captured flows with it), what the confirm is and is not, and what is
+            deliberately deferred</td>
+          <td>the record · its index row</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="decisions">What DEC-55 settles</h2>
+    <div class="callout" data-c="dec-55-content">
+      <p>The epic plan left three questions open at this WU. The record answers all three, and
+        states the exposure plainly rather than implying it.</p>
+      <table>
+        <tr><th>Question</th><th>Ruling</th></tr>
+        <tr>
+          <td>Bind <code>0.0.0.0</code>, or one interface the user names?</td>
+          <td><strong>One named address.</strong> The unspecified address is refused outright — the
+            screen must print an address anyway, and a mistaken confirm should cost one network,
+            not every one the host is on</td>
+        </tr>
+        <tr>
+          <td>Does the control API need a token, TLS or a narrowed CORS policy once reachable?</td>
+          <td><strong>No, and the boundary is written down.</strong> The confirmed opt-in is this
+            epic's whole authorization boundary. Arming exposes the proxy and the control API —
+            captured traffic included — to the chosen network; the record says so, so the residue
+            is stated debt rather than an unstated assumption. The CORS grant does not widen</td>
+        </tr>
+        <tr>
+          <td>Does the opt-in survive a relaunch?</td>
+          <td><strong>No — re-armed per launch.</strong> Nothing is persisted; the listeners live
+            in the process. It is the revert-on-quit symmetry DEC-13 already requires of the system
+            proxy, got for free by never writing the state down</td>
+        </tr>
+      </table>
+      <p>And one thing the record must not overclaim: the confirm establishes <em>user intent</em>.
+        It is not an access control against something that already holds loopback — anything that
+        can reach the control API can arm reach, exactly as anything that can reach it can already
+        clear the capture. Reach is off by default and turns on only by an explicit act; that is
+        the property, and the record states its limit.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <p>Every test is hermetic: ephemeral ports, a temp CA dir, a local origin. The second
+        listener is bound on loopback — which is what makes "a second device" assertable without
+        the network this suite may not touch. No test reaches a real interface.</p>
+      <table>
+        <tr><th>Level</th><th>File</th><th>What it asserts</th></tr>
+        <tr>
+          <td><strong>integration</strong><br>the WU's contract</td>
+          <td><code>tests/reach.rs</code> (new)</td>
+          <td>
+            <ol>
+              <li>default boots loopback-only; <code>/reach</code> reports unarmed with null
+                addresses</li>
+              <li>arming binds a second proxy + API pair and reports both; traffic through the
+                reach proxy lands in the same store</li>
+              <li><code>/ca.crt</code> over the reach API address returns the same PEM the loopback
+                address serves</li>
+              <li>the unspecified address is refused; nothing is armed afterwards</li>
+              <li>disarming stops the reach pair while loopback keeps answering</li>
+              <li>the CORS response headers over the reach address equal those over loopback</li>
+              <li><code>Config { reach: Interface(ip) }</code> boots armed, and
+                <code>shutdown()</code> takes the reach listeners with it</li>
+            </ol>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>unit</strong><br>all code this WU adds</td>
+          <td><code>src/config.rs</code></td>
+          <td><code>Reach</code> defaults to <code>Local</code>; a configured interface survives
+            the struct</td>
+        </tr>
+        <tr>
+          <td><strong>unit</strong></td>
+          <td><code>src/reach.rs</code> (new)</td>
+          <td>the address predicate — unspecified refused, loopback and private and global
+            accepted; the candidate filter — loopback and link-local addresses are not offered to a
+            second device, routable ones are; the reported certificate URL is built from the bound
+            API address; arm/disarm/re-arm state transitions</td>
+        </tr>
+        <tr>
+          <td><strong>unit</strong></td>
+          <td><code>src/api/routes.rs</code></td>
+          <td>the three handlers' status codes and body shape, driven through the router: the
+            unarmed body, the refusal's message, the armed body's fields</td>
+        </tr>
+        <tr>
+          <td><strong>unit</strong></td>
+          <td><code>ui/src-tauri/src/reach.rs</code> (new)</td>
+          <td>the confirm message names the address and says the control API and the captured
+            flows become reachable — not just "the proxy"</td>
+        </tr>
+        <tr>
+          <td><strong>unit</strong></td>
+          <td><code>ui/src/api.test.ts</code></td>
+          <td>the client's three reach calls: the paths and methods they issue, the body the arm
+            sends, and the parsed shape each returns</td>
+        </tr>
+        <tr>
+          <td><strong>e2e</strong></td>
+          <td>—</td>
+          <td><em>Deferred to W4, by the epic plan.</em> The e2e drives the rebuilt screen, which
+            does not exist until W3; an e2e here would have no surface to drive. The epic owes one
+            and takes it — this WU is not where it can be written</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="scope">Kept out of this WU</h2>
+    <table data-c="out-of-scope">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr>
+        <td>Any <code>ui/src/*.tsx</code> — no screen renders the reach control yet</td>
+        <td>W3, which rebuilds <code>Onboarding.tsx</code> from the closed design and wires the
+          confirm to the client this WU lands</td>
+      </tr>
+      <tr>
+        <td><code>architecture.html</code>'s CORS justification, which today argues from
+          "loopback-only"</td>
+        <td>W4 — it is a T1 edit, rule-bearing, and commits through
+          <code>mr commit</code> with a listed authoriser. DEC-55 carries the reasoning in the
+          meantime</td>
+      </tr>
+      <tr>
+        <td>The per-platform instruction sets that will consume the address</td>
+        <td>W3's <code>setup.ts</code> split</td>
+      </tr>
+      <tr>
+        <td>Tokens, TLS on the control API, per-origin CORS</td>
+        <td>Out of the epic entirely; DEC-55 names the boundary and W4 records the residue as a
+          backlog row</td>
+      </tr>
+    </table>
+
+    <h2 id="docs">Docs this WU touches</h2>
+    <table data-c="docs-touched">
+      <tr><th>Doc</th><th>Tier</th><th>Why</th></tr>
+      <tr><td>this plan</td><td>T3</td><td>written before the code</td></tr>
+      <tr><td><code>docs/work/…-onboard-reach-result.html</code></td><td>T3</td>
+        <td>at completion, before the merge</td></tr>
+      <tr><td><code>docs/decisions/dec-55-reach-is-an-authorization-decision.html</code></td>
+        <td>T2</td><td>minted here — the code change's T2 synthesis</td></tr>
+      <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td>
+        <td>its row. The epic plan allocated this to W4; taken here instead, because the index is
+          the read path an agent checks before "fixing" something odd, and a record invisible
+          there for the length of an epic is a record that does not do its job. Recorded as a
+          deviation in this WU's result</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

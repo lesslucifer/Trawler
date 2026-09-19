@@ -127,6 +127,25 @@ export function defaultProxyAddr(): string {
   return import.meta.env.VITE_TRAWLER_PROXY ?? "127.0.0.1:7420";
 }
 
+// One address a second device could route to. The core enumerates them so the
+// screen offers a choice that exists rather than a field to type into.
+export interface ReachInterface {
+  name: string;
+  address: string;
+}
+
+// What GET /reach answers. The three addresses are null unless reach is armed —
+// the screen must be able to tell "not reachable" from "reachable here", and a
+// plausible-looking address for a socket nobody is listening on is the failure
+// this whole seam exists to prevent.
+export interface ReachState {
+  armed: boolean;
+  proxy: string | null;
+  api: string | null;
+  ca_cert_url: string | null;
+  interfaces: ReachInterface[];
+}
+
 export interface StreamHandlers {
   onEvent: () => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
@@ -150,6 +169,11 @@ export interface TrawlerApi {
   caCertPem(): Promise<string>;
   getFlow(id: string): Promise<FlowView>;
   getBody(id: string, leg: Leg, pretty: boolean): Promise<BodyFetch>;
+  reach(): Promise<ReachState>;
+  // Exposing this machine to a network is an authorization act, not a setting
+  // (DEC-55): the shell's confirm comes first, and nothing here is persisted.
+  armReach(address: string): Promise<ReachState>;
+  disarmReach(): Promise<ReachState>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -225,6 +249,27 @@ export function createApi(baseUrl?: string): TrawlerApi {
         bytes: new Uint8Array(await res.arrayBuffer()),
         contentType: res.headers.get("content-type"),
       };
+    },
+    async reach() {
+      const res = await fetch(`${base()}/reach`);
+      if (!res.ok) throw new ApiError(res.status, `GET /reach failed: ${res.status}`);
+      return (await res.json()) as ReachState;
+    },
+    async armReach(address) {
+      const res = await fetch(`${base()}/reach`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      // A refusal here is read by the person who just confirmed, so it carries
+      // the server's own sentence — which address, and why it could not listen.
+      if (!res.ok) throw new Error(await refusal(res));
+      return (await res.json()) as ReachState;
+    },
+    async disarmReach() {
+      const res = await fetch(`${base()}/reach`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await refusal(res));
+      return (await res.json()) as ReachState;
     },
     stream({ onEvent, onConnection, onDown, onUp }) {
       const source = new EventSource(`${base()}/stream`);
