@@ -166,35 +166,62 @@ A signature binds the tree. Every later tree change - a fix, a missed test, a do
 /// code path and no design artifact, so demanding notes of it would refuse a tip
 /// the gate greens and leave a docs-only Working Unit unmergeable — `8·manual-review`
 /// wants an `mr/v1` that `notes write` and the review both decline to supply.
-fn unready_reasons(
-    gated: bool,
+/// Why the gate is asked for a tip at all, which is what decides the evidence it
+/// owes. `is_gated` is a disjunction — a code path, or a design artifact — and
+/// the two arms owe different things, so the reason is carried rather than the
+/// bare answer: a bool pair would admit "not gated but code changed", which is
+/// not a state a range can be in.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Gated {
+    /// Docs or infra only. The merge exempts it, and so does the signature.
+    No,
+    /// A design artifact and no code path: the notes, and no review (DEC-46).
+    DesignOnly,
+    /// A code path, with or without a design beside it: the full set.
+    Code,
+}
+
+/// What the readiness check reads off a tip before a human is asked to sign it:
+/// why it is gated, and which receipts are already on it.
+#[derive(Clone, Copy)]
+struct Tip {
+    gated: Gated,
     has_test: bool,
     has_doc: bool,
-    review: Option<(&str, &str)>,
-    bound: Option<&str>,
-) -> Vec<String> {
-    if !gated {
+}
+
+fn unready_reasons(tip: Tip, review: Option<(&str, &str)>, bound: Option<&str>) -> Vec<String> {
+    if tip.gated == Gated::No {
         return Vec::new();
     }
     let mut missing = Vec::new();
-    if !has_test {
+    if !tip.has_test {
         missing.push("no test/v2 note - the tests it attests may still be unwritten".to_string());
     }
-    if !has_doc {
+    if !tip.has_doc {
         missing
             .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
     }
-    match review {
-        None => missing
-            .push(format!("no {} note - nobody has reviewed this tip", crate::notes::cr_schema())),
-        Some((verdict, _)) if verdict != "PASS" => {
-            missing.push(format!("the review verdict is {verdict} - fix and re-review"));
-        }
-        Some((_, reviewed)) => {
-            if bound.is_some_and(|h| h != reviewed) {
-                missing.push(
-                    "the review note judged a different diff - re-review this tip".to_string(),
-                );
+    // Only the code arm owes a review. A design run and no code owes its notes
+    // and no review (DEC-46), which is how the merge gate already reads it:
+    // `check_review` returns early on an empty code hash. Demanding one here
+    // refused a tip the gate greens and left every codeless design Working Unit
+    // unsignable, and so unmergeable.
+    if tip.gated == Gated::Code {
+        match review {
+            None => missing.push(format!(
+                "no {} note - nobody has reviewed this tip",
+                crate::notes::cr_schema()
+            )),
+            Some((verdict, _)) if verdict != "PASS" => {
+                missing.push(format!("the review verdict is {verdict} - fix and re-review"));
+            }
+            Some((_, reviewed)) => {
+                if bound.is_some_and(|h| h != reviewed) {
+                    missing.push(
+                        "the review note judged a different diff - re-review this tip".to_string(),
+                    );
+                }
             }
         }
     }
@@ -211,10 +238,22 @@ fn tip_unready(repo: &Path, tip: &str, range: Option<(&str, &str)>, gated: bool)
         .as_ref()
         .zip(range)
         .and_then(|(c, (whole, code))| crate::gate::reviewed_binding(&c.schema, whole, code));
+    // The empty code hash is `code_sha256`'s own way of saying "no code path
+    // here" rather than the hash of an empty diff, so it is the predicate the
+    // gate demands a review on. A range nobody can resolve demands one, on the
+    // same reading that treats it as gated.
+    let code_changed = range.is_none_or(|(_, code)| !code.is_empty());
+    let gated = match (gated, code_changed) {
+        (false, _) => Gated::No,
+        (true, true) => Gated::Code,
+        (true, false) => Gated::DesignOnly,
+    };
     unready_reasons(
-        gated,
-        note(repo, "test", tip).is_some(),
-        note(repo, "doc", tip).is_some(),
+        Tip {
+            gated,
+            has_test: note(repo, "test", tip).is_some(),
+            has_doc: note(repo, "doc", tip).is_some(),
+        },
         cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
         bound,
     )
@@ -1346,13 +1385,21 @@ mod tests {
 
     #[test]
     fn a_settled_reviewed_tip_is_ready_to_sign() {
-        let r = super::unready_reasons(true, true, true, Some(("PASS", "abc")), Some("abc"));
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: true, has_doc: true },
+            Some(("PASS", "abc")),
+            Some("abc"),
+        );
         assert!(r.is_empty(), "{r:?}");
     }
 
     #[test]
     fn every_unwritten_receipt_is_named_at_once() {
-        let r = super::unready_reasons(true, false, false, None, Some("abc"));
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: false, has_doc: false },
+            None,
+            Some("abc"),
+        );
         assert_eq!(r.len(), 3, "{r:?}");
         assert!(r[0].contains("test/v2"), "{r:?}");
         assert!(r[1].contains("doc/v1"), "{r:?}");
@@ -1362,7 +1409,11 @@ mod tests {
     #[test]
     fn the_review_a_tip_is_told_to_run_is_the_one_the_gate_demands() {
         let current = crate::notes::cr_schema();
-        let unreviewed = super::unready_reasons(true, true, true, None, Some("abc"));
+        let unreviewed = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: true, has_doc: true },
+            None,
+            Some("abc"),
+        );
         assert_eq!(unreviewed.len(), 1, "{unreviewed:?}");
         for stale in crate::notes::CR_SCHEMAS.iter().filter(|s| **s != current) {
             assert!(
@@ -1377,7 +1428,11 @@ mod tests {
 
     #[test]
     fn an_exempt_tip_is_ready_to_sign_with_no_notes_at_all() {
-        let r = super::unready_reasons(false, false, false, None, None);
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::No, has_test: false, has_doc: false },
+            None,
+            None,
+        );
         assert!(
             r.is_empty(),
             "a diff the merge exempts owes no test/v2, doc/v1 or cr/v5 - demanding them \
@@ -1388,17 +1443,81 @@ mod tests {
 
     #[test]
     fn the_exemption_never_relaxes_a_gated_tip() {
-        let r = super::unready_reasons(true, false, false, None, None);
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: false, has_doc: false },
+            None,
+            None,
+        );
         assert_eq!(r.len(), 3, "{r:?}");
+    }
+
+    // E-ONBOARD.W2 - a design run and no code is gated for its notes and owes no
+    // review (DEC-46). The confirm demanded one anyway, so the tip could not be
+    // signed, so 8·manual-review could never go green: a whole class of Working
+    // Unit - the one the design flow produces most - was unmergeable, and the
+    // only route out was a review note nobody was entitled to write.
+    #[test]
+    fn a_gated_tip_that_changes_no_code_owes_its_notes_and_no_review() {
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::DesignOnly, has_test: true, has_doc: true },
+            None,
+            None,
+        );
+        assert!(
+            r.is_empty(),
+            "a design-bearing diff with no code path owes test/v2 and doc/v1, which it has, \
+             and no cr note - the merge gate's check_review returns early on an empty code \
+             hash, so demanding one here refuses a tip the gate greens. {r:?}"
+        );
+    }
+
+    // The same tip still owes the two notes the design half is gated for: the
+    // fix narrows which evidence a codeless tip owes, never whether it owes any.
+    #[test]
+    fn a_codeless_gated_tip_still_owes_its_test_and_doc_notes() {
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::DesignOnly, has_test: false, has_doc: false },
+            None,
+            None,
+        );
+        assert_eq!(r.len(), 2, "{r:?}");
+        assert!(r.iter().all(|m| !m.contains("reviewed")), "no review is owed here: {r:?}");
+    }
+
+    // A review note that turns up on a codeless tip is not a reason to refuse
+    // either - the gate ignores it, so the signature must not read it as stale
+    // or failing and block on something no rule asked for.
+    #[test]
+    fn a_review_note_on_a_codeless_tip_is_ignored_rather_than_judged() {
+        let failed = super::unready_reasons(
+            super::Tip { gated: super::Gated::DesignOnly, has_test: true, has_doc: true },
+            Some(("FAIL", "abc")),
+            None,
+        );
+        assert!(failed.is_empty(), "{failed:?}");
+        let stale = super::unready_reasons(
+            super::Tip { gated: super::Gated::DesignOnly, has_test: true, has_doc: true },
+            Some(("PASS", "old")),
+            Some("new"),
+        );
+        assert!(stale.is_empty(), "{stale:?}");
     }
 
     #[test]
     fn a_failing_or_unbound_review_blocks_the_signature() {
-        let failed = super::unready_reasons(true, true, true, Some(("FAIL", "abc")), Some("abc"));
+        let failed = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: true, has_doc: true },
+            Some(("FAIL", "abc")),
+            Some("abc"),
+        );
         assert_eq!(failed.len(), 1);
         assert!(failed[0].contains("verdict is FAIL"), "{failed:?}");
 
-        let stale = super::unready_reasons(true, true, true, Some(("PASS", "old")), Some("new"));
+        let stale = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: true, has_doc: true },
+            Some(("PASS", "old")),
+            Some("new"),
+        );
         assert_eq!(stale.len(), 1);
         assert!(stale[0].contains("different diff"), "{stale:?}");
     }
@@ -1408,9 +1527,17 @@ mod tests {
     // 5·diff-binding still refuses a stale review later.
     #[test]
     fn an_unresolvable_target_drops_only_the_binding_check() {
-        let r = super::unready_reasons(true, true, true, Some(("PASS", "abc")), None);
+        let r = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: true, has_doc: true },
+            Some(("PASS", "abc")),
+            None,
+        );
         assert!(r.is_empty(), "{r:?}");
-        let still_fails = super::unready_reasons(true, true, true, Some(("FAIL", "abc")), None);
+        let still_fails = super::unready_reasons(
+            super::Tip { gated: super::Gated::Code, has_test: true, has_doc: true },
+            Some(("FAIL", "abc")),
+            None,
+        );
         assert_eq!(still_fails.len(), 1, "{still_fails:?}");
     }
 

@@ -230,6 +230,72 @@ fn a_code_free_tip_carrying_a_cr_v4_note_still_signs() {
     assert_eq!(code, 0, "{out}");
 }
 
+// E-ONBOARD.W2 — the Working Unit the design flow produces most: a closed
+// design run and no code at all. `is_gated` is true because of the artifact, so
+// the docs-only exemption correctly does not apply and the tip owes test/v2,
+// doc/v1 and design/v1 — but it changes no code path, so it owes no review
+// (DEC-46), exactly as the merge gate reads it. The confirm demanded one anyway,
+// which left the tip unsignable and so unmergeable: `8·manual-review` wanted an
+// mr/v1 that `mr confirm` refused to write, and no review was entitled to exist.
+// Asserted over a real tree, because the bug was in how the confirm derives the
+// range rather than in the predicate it feeds.
+#[test]
+fn a_closed_design_run_with_no_code_signs_without_a_review() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    repo.git(&["checkout", "-q", "-b", "wu/x/design"]);
+    repo.write(
+        "docs/work/a-run.html",
+        "<html><main data-artifact=\"design-run\" data-status=\"archived\">run</main></html>\n",
+    );
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "a closed design run, no code"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--target", "main", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(
+        code, 0,
+        "a design-bearing tip that changes no code owes no cr note - the merge gate greens it, \
+         so the confirm must too, or the design flow's output can never be merged: {out}"
+    );
+    assert!(
+        repo.git(&["notes", "--ref=mr", "show", "HEAD"]).contains("schema: mr/v1"),
+        "the confirm should have written the note it was refusing"
+    );
+}
+
+// The narrowing is not a hole: the same tip, once it also carries a code path,
+// owes its review again. One test each way, because a predicate that always
+// said "no review" would pass the test above and break every real Working Unit.
+#[test]
+fn a_design_run_that_also_changes_code_still_owes_its_review() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    repo.git(&["checkout", "-q", "-b", "wu/x/design-and-code"]);
+    repo.write(
+        "docs/work/a-run.html",
+        "<html><main data-artifact=\"design-run\" data-status=\"archived\">run</main></html>\n",
+    );
+    repo.write("src/lib.rs", "pub fn one() -> u8 { 1 }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "a closed run and the code it describes"]);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--target", "main", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("nobody has reviewed this tip"), "{out}");
+}
+
 #[test]
 fn confirm_writes_a_well_formed_note_attesting_the_report() {
     let repo = Repo::new(ALLOWED);
