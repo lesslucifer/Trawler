@@ -162,11 +162,15 @@ impl Default for FlowBuilder {
 
 /// The control API over `store`, with a reach controller nothing has armed —
 /// what every API test that is not about reach needs, so none of them has to
-/// know how reach is constructed.
+/// know how reach is constructed. Its CA is the string it was handed, which is
+/// not a certificate: arming this router's reach fails rather than listening,
+/// which is the right answer for a test that never meant to.
 pub fn api_router(store: std::sync::Arc<crate::Store>, ca_cert_pem: &str) -> axum::Router {
+    let pems = crate::ca::CaPems { cert: ca_cert_pem.to_string(), key: String::new() };
     let reach = std::sync::Arc::new(crate::reach::Controller::new(
         crate::Config::default(),
         std::sync::Arc::clone(&store),
+        pems,
     ));
     crate::api::router(store, std::sync::Arc::new(ca_cert_pem.to_string()), reach)
 }

@@ -51,10 +51,12 @@
         </tr>
         <tr>
           <td>4</td><td>disarm stops the pair, loopback keeps serving; shutdown does too</td>
-          <td>as planned, plus re-arming replaces rather than accumulates — found while writing
-            the tests, and now a rule with a test of its own</td>
+          <td>as planned, plus the re-arm rules the review forced out: arming the address already
+            armed changes nothing, and arming a different one brings the new pair up before the old
+            goes down</td>
           <td><code>disarming_takes_the_reachable_pair_away_and_leaves_loopback_serving</code> ·
-            <code>arming_a_second_time_replaces_rather_than_accumulates</code> ·
+            <code>arming_the_address_already_armed_leaves_that_session_untouched</code> ·
+            <code>a_refused_re_arm_leaves_the_working_session_exactly_as_it_was</code> ·
             <code>a_headless_core_can_boot_armed_and_gives_its_listeners_back_at_shutdown</code></td>
         </tr>
         <tr>
@@ -137,11 +139,28 @@
             exactly</td>
         </tr>
         <tr>
-          <td><strong>Re-arm semantics were unplanned.</strong> Arming while armed replaces the
-            previous pair</td>
-          <td>Discovered writing the tests: the alternative is accumulating listeners a user
-            cannot see or stop, which breaks "what is reported is what is reachable". Now a rule
-            with its own test</td>
+          <td><strong>Re-arm semantics were unplanned, and the first attempt at them was a
+            blocker.</strong> The code as first written stopped the armed session before trying
+            the new binds, so a re-arm that bound nothing silently revoked an exposure a user had
+            confirmed and a device was routing through — a 400 was the only trace. The review
+            reproduced it against a running controller. Now: arming the address already armed is a
+            no-op returning what is listening, and arming a different one brings the new pair up
+            before the old goes down, so a refusal costs nothing</td>
+          <td>Reported and fixed inside this WU, with both rules under named tests written before
+            the fix. Recorded here rather than only in the review note because the rule it
+            established — nothing a user confirmed is torn down by a request that failed — is the
+            kind of thing W3 needs to be able to rely on</td>
+        </tr>
+        <tr>
+          <td><strong>The CA is carried as bytes, not re-read.</strong> <code>CaMaterial</code>
+            gained the key PEM and a shared <code>ca::issuer</code>; the controller rebuilds its
+            authority from memory</td>
+          <td>Also from the review: the first version called <code>ca::load_or_create</code> —
+            blocking file I/O, and key generation on a cold CA — on a tokio worker thread while
+            holding the arm lock, which is the execution-context discipline the project has already
+            ruled on. A second authority is still required because
+            <code>RcgenAuthority</code> consumes the issuer it is given; only the disk read is
+            gone</td>
         </tr>
         <tr>
           <td><strong>A dependency joined the core:</strong> <code>if-addrs</code> 0.15</td>
@@ -165,12 +184,19 @@
         <tr><td>Commits</td>
           <td><code>db82cd7</code> plan + DEC-55 + index ·
             <code>8d88f5c</code> the core ·
-            <code>9a55dba</code> the client and the shell's ask</td></tr>
+            <code>9a55dba</code> the client and the shell's ask ·
+            one review-fix commit carrying the two findings below</td></tr>
+        <tr><td>Review</td>
+          <td>Three finders (correctness, efficiency, altitude — the diff spans more than one
+            module) raised six candidates; verifiers confirmed two and refuted four. The first
+            round returned <strong>FAIL</strong> on a verified blocker and a verified important,
+            both fixed here; the second round is what the <code>cr/v5</code> note on the tip
+            records</td></tr>
         <tr><td>Integration — the WU's contract</td>
-          <td><code>tests/reach.rs</code>, 9 tests, all over ephemeral ports with the second
+          <td><code>tests/reach.rs</code>, 10 tests, all over ephemeral ports with the second
             listener on loopback; no test touches the public network</td></tr>
         <tr><td>Unit — Rust core</td>
-          <td><code>src/reach.rs</code> 5 · <code>src/config.rs</code> 2 ·
+          <td><code>src/reach.rs</code> 6 · <code>src/config.rs</code> 2 ·
             <code>src/api/routes.rs</code> 3 · <code>/reach</code> added to the router's
             route-coverage test</td></tr>
         <tr><td>Unit — shell and client</td>

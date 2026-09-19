@@ -417,8 +417,12 @@ mod tests {
         for uri in uris {
             store.insert(FlowBuilder::new().uri(uri).status(200).build());
         }
-        let reach =
-            Arc::new(crate::reach::Controller::new(crate::Config::default(), Arc::clone(&store)));
+        let pems = crate::ca::CaPems { cert: "PEM".into(), key: String::new() };
+        let reach = Arc::new(crate::reach::Controller::new(
+            crate::Config::default(),
+            Arc::clone(&store),
+            pems,
+        ));
         AppState { store, ca_cert_pem: Arc::new("PEM".into()), reach }
     }
 

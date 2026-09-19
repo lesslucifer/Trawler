@@ -21,9 +21,10 @@ use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
+use crate::ca::{self, CaPems};
 use crate::config::Config;
 use crate::store::Store;
-use crate::{ca, upstream_connector, wait_for_shutdown, Recorder};
+use crate::{upstream_connector, wait_for_shutdown, Recorder};
 
 /// One address a second device could route to, with the interface it belongs to
 /// so a user picking between three of them can tell which is the Wi-Fi.
@@ -60,6 +61,7 @@ pub enum Error {
         address: SocketAddr,
         source: io::Error,
     },
+    Ca(String),
     Proxy(String),
 }
 
@@ -70,6 +72,7 @@ impl fmt::Display for Error {
                 write!(f, "reach binds one interface address, not every address this machine holds")
             }
             Error::Bind { address, source } => write!(f, "could not listen on {address}: {source}"),
+            Error::Ca(detail) => write!(f, "could not build a certificate authority: {detail}"),
             Error::Proxy(detail) => write!(f, "could not start the proxy: {detail}"),
         }
     }
@@ -114,6 +117,7 @@ fn is_unicast_link_local(address: Ipv6Addr) -> bool {
 pub struct Controller {
     config: Config,
     store: Arc<Store>,
+    ca: CaPems,
     armed: Mutex<Option<Armed>>,
 }
 
@@ -125,8 +129,8 @@ struct Armed {
 }
 
 impl Controller {
-    pub fn new(config: Config, store: Arc<Store>) -> Self {
-        Self { config, store, armed: Mutex::new(None) }
+    pub fn new(config: Config, store: Arc<Store>, ca: CaPems) -> Self {
+        Self { config, store, ca, armed: Mutex::new(None) }
     }
 
     pub async fn addresses(&self) -> Option<Addresses> {
@@ -134,8 +138,13 @@ impl Controller {
     }
 
     /// Bind the proxy and the control API on `address` as well, serving `api`
-    /// there. Re-arming on a second address replaces the first rather than
-    /// accumulating listeners, so what a user sees is what is reachable.
+    /// there.
+    ///
+    /// Arming the address already armed changes nothing and reports what is
+    /// already listening. Arming a different one brings the new pair up
+    /// *before* the old pair goes down, so a refusal cannot cost a user the
+    /// exposure they confirmed — a device routing through it would lose its
+    /// route to a request that bound nothing.
     ///
     /// An address this machine does not hold is refused by the bind itself, in
     /// the OS's own words — there is no list to check it against that the
@@ -145,22 +154,25 @@ impl Controller {
             return Err(Error::Unspecified);
         }
         let mut slot = self.armed.lock().await;
-        if let Some(previous) = slot.take() {
-            previous.stop().await;
+        if let Some(current) = slot.as_ref().filter(|armed| armed.addresses.proxy.ip() == address) {
+            return Ok(current.addresses);
         }
 
-        let proxy_listener = bind(SocketAddr::new(address, self.config.proxy_addr.port())).await?;
-        let api_listener = bind(SocketAddr::new(address, self.config.api_addr.port())).await?;
-        let addresses = Addresses {
-            proxy: proxy_listener.local_addr().map_err(|source| Error::Bind {
-                address: SocketAddr::new(address, self.config.proxy_addr.port()),
-                source,
-            })?,
-            api: api_listener.local_addr().map_err(|source| Error::Bind {
-                address: SocketAddr::new(address, self.config.api_addr.port()),
-                source,
-            })?,
-        };
+        let next = self.listen_on(address, api).await?;
+        let addresses = next.addresses;
+        if let Some(previous) = slot.replace(next) {
+            previous.stop().await;
+        }
+        info!("reachable at http://{} — control API on http://{}", addresses.proxy, addresses.api);
+        Ok(addresses)
+    }
+
+    // Everything that can fail, done before anything that cannot be undone.
+    async fn listen_on(&self, address: IpAddr, api: Router) -> Result<Armed, Error> {
+        let (proxy_listener, proxy) =
+            bind(SocketAddr::new(address, self.config.proxy_addr.port())).await?;
+        let (api_listener, api_addr) =
+            bind(SocketAddr::new(address, self.config.api_addr.port())).await?;
 
         let (shutdown, stop) = watch::channel(false);
         let proxy_task = self.spawn_proxy(proxy_listener, stop.clone())?;
@@ -173,9 +185,7 @@ impl Controller {
             }
         });
 
-        info!("reachable at http://{} — control API on http://{}", addresses.proxy, addresses.api);
-        *slot = Some(Armed { addresses, shutdown, proxy_task, api_task });
-        Ok(addresses)
+        Ok(Armed { addresses: Addresses { proxy, api: api_addr }, shutdown, proxy_task, api_task })
     }
 
     /// Stop answering anywhere but loopback. Idempotent: disarming something
@@ -187,20 +197,17 @@ impl Controller {
     }
 
     // A second `Proxy` over the same store, so traffic a device sends arrives in
-    // the same capture. The CA is re-read rather than shared because
-    // `RcgenAuthority` consumes the issuer, and by the time anything can arm,
-    // `serve` has already written both files.
+    // the same capture. It needs an issuer of its own because `RcgenAuthority`
+    // consumes the one it is given — rebuilt from the PEMs held since boot, so
+    // arming a live process never reads the disk on a runtime thread.
     fn spawn_proxy(
         &self,
         listener: TcpListener,
         stop: watch::Receiver<bool>,
     ) -> Result<JoinHandle<()>, Error> {
-        let material = ca::load_or_create(&self.config);
-        let authority = RcgenAuthority::new(
-            material.issuer,
-            self.config.cert_cache_size,
-            aws_lc_rs::default_provider(),
-        );
+        let issuer = ca::issuer(&self.ca).map_err(Error::Ca)?;
+        let authority =
+            RcgenAuthority::new(issuer, self.config.cert_cache_size, aws_lc_rs::default_provider());
         let proxy = Proxy::builder()
             .with_listener(listener)
             .with_ca(authority)
@@ -229,8 +236,13 @@ impl Armed {
     }
 }
 
-async fn bind(address: SocketAddr) -> Result<TcpListener, Error> {
-    TcpListener::bind(address).await.map_err(|source| Error::Bind { address, source })
+/// The listener and the socket it actually got — resolved here so an ephemeral
+/// port is never reported as the `:0` that was asked for.
+async fn bind(address: SocketAddr) -> Result<(TcpListener, SocketAddr), Error> {
+    let listener =
+        TcpListener::bind(address).await.map_err(|source| Error::Bind { address, source })?;
+    let bound = listener.local_addr().map_err(|source| Error::Bind { address, source })?;
+    Ok((listener, bound))
 }
 
 #[cfg(test)]
@@ -280,6 +292,30 @@ mod tests {
             api: "[2001:db8::1]:7421".parse().unwrap(),
         };
         assert_eq!(addresses.ca_cert_url(), "http://[2001:db8::1]:7421/ca.crt");
+    }
+
+    // The refusal matters because the PEMs are held since boot: a controller
+    // built without real ones (the shared API-test router) must fail the arm
+    // rather than take the process down with it.
+    #[tokio::test]
+    async fn a_controller_without_a_usable_ca_refuses_to_listen_rather_than_panicking() {
+        let controller = Controller::new(
+            Config {
+                proxy_addr: "127.0.0.1:0".parse().expect("addr"),
+                api_addr: "127.0.0.1:0".parse().expect("addr"),
+                ..Config::default()
+            },
+            Arc::new(Store::new(1024, 8)),
+            CaPems { cert: "not a certificate".into(), key: String::new() },
+        );
+
+        let refusal = controller
+            .arm("127.0.0.1".parse().expect("addr"), Router::new())
+            .await
+            .expect_err("a controller with no CA cannot serve HTTPS");
+
+        assert!(matches!(refusal, Error::Ca(_)), "{refusal}");
+        assert_eq!(controller.addresses().await, None);
     }
 
     #[test]

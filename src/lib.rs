@@ -115,8 +115,12 @@ pub async fn serve(config: Config) -> Result<RunningServer, Box<dyn std::error::
 
     let api_listener = TcpListener::bind(config.api_addr).await?;
     let api_addr = api_listener.local_addr()?;
-    let reach = Arc::new(reach::Controller::new(config.clone(), Arc::clone(&store)));
-    let app = api::router(Arc::clone(&store), Arc::new(ca_material.cert_pem), Arc::clone(&reach));
+    let reach = Arc::new(reach::Controller::new(
+        config.clone(),
+        Arc::clone(&store),
+        ca_material.pems.clone(),
+    ));
+    let app = api::router(Arc::clone(&store), Arc::new(ca_material.pems.cert), Arc::clone(&reach));
     // A config that boots armed is how a headless core reaches a device without
     // a UI to confirm at; the arming a user does goes through the control API.
     if let Some(address) = config.reach.address() {

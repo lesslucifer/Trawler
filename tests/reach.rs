@@ -262,7 +262,7 @@ async fn disarming_takes_the_reachable_pair_away_and_leaves_loopback_serving() {
 }
 
 #[tokio::test]
-async fn arming_a_second_time_replaces_rather_than_accumulates() {
+async fn arming_the_address_already_armed_leaves_that_session_untouched() {
     let h = Harness::local().await;
     let (_, first) = h.arm(LOOPBACK).await;
     let first: Value = serde_json::from_str(&first).unwrap();
@@ -271,11 +271,43 @@ async fn arming_a_second_time_replaces_rather_than_accumulates() {
     let (status, second) = h.arm(LOOPBACK).await;
     assert_eq!(status, reqwest::StatusCode::OK);
     let second: Value = serde_json::from_str(&second).unwrap();
-    let second_api = socket(&second["api"]);
 
-    assert_ne!(first_api, second_api, "the ephemeral ports differ, so the swap is observable");
-    assert!(h.client.get(format!("http://{first_api}/stats")).send().await.is_err());
-    assert_eq!(h.get_json(second_api, "/reach").await["armed"], true);
+    assert_eq!(socket(&second["api"]), first_api, "the state asked for was already true");
+    assert_eq!(socket(&second["proxy"]), socket(&first["proxy"]));
+    assert_eq!(
+        h.get_json(first_api, "/reach").await["armed"],
+        true,
+        "the device already routing through this address must not be dropped"
+    );
+
+    h.shutdown().await;
+}
+
+// The failure this guards is silent: a user confirmed an exposure, a phone is
+// routing through it, and a second arm that never binds anything takes it away
+// with nothing but a 400 to say so.
+#[tokio::test]
+async fn a_refused_re_arm_leaves_the_working_session_exactly_as_it_was() {
+    let h = Harness::local().await;
+    let (_, armed) = h.arm(LOOPBACK).await;
+    let armed: Value = serde_json::from_str(&armed).unwrap();
+    let reach_api = socket(&armed["api"]);
+    let reach_proxy = socket(&armed["proxy"]);
+
+    let (status, body) = h.arm("192.0.2.1").await;
+    assert_eq!(status, reqwest::StatusCode::BAD_REQUEST, "{body}");
+
+    let still = h.reach_state().await;
+    assert_eq!(still["armed"], true, "a refused re-arm disarmed a working session");
+    assert_eq!(socket(&still["api"]), reach_api);
+    assert_eq!(socket(&still["proxy"]), reach_proxy);
+    assert_eq!(h.get_json(reach_api, "/reach").await["armed"], true, "the API stopped answering");
+    let through = Harness::through(reach_proxy);
+    assert_eq!(
+        through.get(h.origin_url("/ok")).send().await.unwrap().text().await.unwrap(),
+        "hello",
+        "the proxy a device was routing through stopped answering"
+    );
 
     h.shutdown().await;
 }
