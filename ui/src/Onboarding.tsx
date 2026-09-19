@@ -262,9 +262,19 @@ function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }
   );
 }
 
-function GuideView({ guide, save }: { guide: Guide; save?: ActionHandle }) {
-  return (
-    <Disclosure summary="set it up by hand">
+function GuideView({
+  guide,
+  save,
+  collapsed = true,
+  defaultOpen = false,
+}: {
+  guide: Guide;
+  save?: ActionHandle;
+  collapsed?: boolean;
+  defaultOpen?: boolean;
+}) {
+  const body = (
+    <>
       <GuideSteps steps={guide.steps} save={save} />
       {guide.undo && (
         <>
@@ -274,6 +284,13 @@ function GuideView({ guide, save }: { guide: Guide; save?: ActionHandle }) {
           </div>
         </>
       )}
+    </>
+  );
+
+  if (!collapsed) return body;
+  return (
+    <Disclosure summary="set it up by hand" defaultOpen={defaultOpen}>
+      {body}
     </Disclosure>
   );
 }
@@ -319,9 +336,21 @@ function LeadVerdict({ phase, traffic }: { phase: OnbState["phase"]; traffic: Tr
   const verdict = screenVerdict(phase, traffic, useNow());
   if (verdict === "capturing") return null;
   const { tone, text, detail } = VERDICT[verdict];
+  const lastFlow = traffic.lastDecryptedAt ?? traffic.lastPlainAt;
   return (
     <div data-testid="lead-verdict" data-verdict={verdict}>
-      <Notice tone={tone} detail={detail}>
+      <Notice
+        tone={tone}
+        detail={
+          verdict === "idle" && lastFlow !== null ? (
+            <span>
+              last flow <TimestampText timestamp={lastFlow} format="relative" />
+            </span>
+          ) : (
+            detail
+          )
+        }
+      >
         {text}
       </Notice>
     </div>
@@ -613,6 +642,9 @@ export function Onboarding({
   const probed = isProbed(platform);
   const here = platform === "this";
   const oneClick = here && canAutoSetup(os);
+  // A host with no one-click path has nothing above its guide, so hiding the
+  // guide would hide the only instructions the screen has for it.
+  const handWorkOnly = here && !oneClick;
 
   // The action the user just took outranks the re-read it triggers, so the line
   // says "installing…" until the command has exited, then "checking…".
@@ -683,7 +715,12 @@ export function Onboarding({
               )}
               <div className="pt-3">
                 {setup?.trust ? (
-                  <GuideView guide={setup.trust} save={onSaveCa ? saveCa : undefined} />
+                  <GuideView
+                    guide={setup.trust}
+                    save={onSaveCa ? saveCa : undefined}
+                    collapsed={!handWorkOnly}
+                    defaultOpen={install.state === "failed"}
+                  />
                 ) : (
                   setup === null && (
                     <Notice tone="mute">
@@ -745,7 +782,11 @@ export function Onboarding({
               )}
               <div className="pt-3">
                 {setup?.route ? (
-                  <GuideView guide={setup.route} />
+                  <GuideView
+                    guide={setup.route}
+                    collapsed={!handWorkOnly}
+                    defaultOpen={setProxyAction.state === "failed"}
+                  />
                 ) : (
                   setup === null && (
                     <Notice tone="mute">

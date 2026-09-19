@@ -65,6 +65,8 @@ const choose = (label: string) => {
 };
 
 const zone = (name: string) => screen.queryByTestId(name);
+const disclosure = (precondition: string) =>
+  screen.getByTestId(`precondition-${precondition}`).querySelector("details");
 
 afterEach(() => vi.clearAllMocks());
 
@@ -380,6 +382,37 @@ describe("the lead verdict, and the outcome that leaves it", () => {
     expect(zone("try")).toContainElement(screen.getByTestId("proven"));
     expect(zone("proven")).toHaveTextContent("Trawler is capturing");
   });
+});
+
+// UC-ONBOARD's promises about the manual route, re-checked against the tree
+// rather than trusted from the run's audit: the guide is a fallback where an
+// action leads, and the whole instruction where none does.
+describe("the guide is hidden only where something else is offered first", () => {
+  it("renders inline on a host with no one-click path", () => {
+    draw({ os: "linux" });
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(/update-ca-certificates/);
+    expect(within(screen.getByTestId("precondition-trust")).queryByText("set it up by hand")).toBeNull();
+  });
+
+  it("opens itself when the action it backs up fails", async () => {
+    draw({ onInstallCa: vi.fn(async () => Promise.reject(new Error("declined"))) });
+    fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
+
+    await screen.findByText(/the steps below do it by hand/);
+    expect(disclosure("trust")).toHaveAttribute("open");
+  });
+
+  it("stays shut while the action is still the better route", () => {
+    draw();
+    expect(disclosure("trust")).not.toHaveAttribute("open");
+  });
+});
+
+// An idle verdict that drops the date is the one that started DEC-33: the user
+// cannot tell "set up, quiet now" from "never worked" without it.
+test("idle dates the last flow rather than repeating the setup advice", () => {
+  draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(RECENT_MS * 4), ever: true } });
+  expect(zone("lead-verdict")).toHaveTextContent(/last flow/);
 });
 
 describe("the way out", () => {
