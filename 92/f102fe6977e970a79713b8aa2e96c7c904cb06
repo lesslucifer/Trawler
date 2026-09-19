@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBOARD
+wu: E-ONBOARD.W2
+branch: HEAD
+tests:
+  unit: { waived: "The WU adds no executable code; its only artifact is a design run doc, and every predicate over that doc is already a checker rule. verify-doc is the test and it ran on every write and at every turn end - 12/12 hard rules, 0 design-allow suppressions. A unit test here would be a test of xtask/src/doc.rs, which has its own." }
+  integration: { waived: "The WU's contract is a green, closed, citable run. verify-doc asserts green, 6-run-closed asserts closed at this very merge, and design-scope plus 9-design assert citable - so the contract is asserted by the gate that reads it rather than by a test standing beside it. Three checks the checker does not make were run by hand and are recorded in the result's evidence: the mounted JSX parses, all 16 mount targets resolve with no orphan host or mount, and every component the mockup destructures is exported by ui/src/components/index.ts - a mount that silently renders nothing passes every predicate." }
+  e2e: { waived: "The epic's e2e lands at W4 against the built screen; a design doc renders no surface for a driver to touch. Same ground W1 waived on, and the epic plan's no-waiver clause is satisfied at W4, which takes the e2e whole." }
