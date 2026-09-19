@@ -95,7 +95,10 @@
       <thead><tr><th>Given</th><th>State</th><th>Where / why</th></tr></thead>
       <tbody>
         <tr><td><code>state.phase</code> — checking · onboarding · proven</td><td>used</td>
-          <td><strong>verdict</strong> — which sentence the screen leads with, and which verdict every precondition reads</td></tr>
+          <td><strong>verdict</strong> and <strong>try</strong> — which sentence the screen leads with, and which
+            verdict every precondition reads. Round 3 split the zone by phase: <em>checking</em> and the two failing
+            readings lead the screen, and <em>proven</em> renders at the bottom instead, where the request that
+            proved it was made</td></tr>
         <tr><td><code>state.everProven</code></td><td>used</td>
           <td><strong>back</strong> — the way out exists only once capture has been proven at least once</td></tr>
         <tr><td><code>state.step</code> + the <code>goto</code> events</td><td>deliberately unused</td>
@@ -151,7 +154,8 @@
         <tr><td><code>probedAt</code></td><td>used</td>
           <td><strong>probe</strong> — <em>checked 2 minutes ago</em>, so a stale verdict says so instead of looking current</td></tr>
         <tr><td><code>traffic.lastFlowAt</code> — a decrypted HTTPS flow</td><td>used</td>
-          <td><strong>verdict</strong> — the only proof the screen accepts, and what turns trust ✓ where no probe can reach</td></tr>
+          <td><strong>try</strong> — the only proof the screen accepts, and what turns trust ✓ where no probe can
+            reach. It renders beside the request that produces it, not at the top of the screen</td></tr>
         <tr><td><code>traffic.lastTunnelAt</code> — a connection with no decrypt</td><td>blocked</td>
           <td><strong>verdict</strong> — it produces the <em>arriving but not decrypting</em> sentence, but it cannot be
             tied to the platform the user just selected. The screen now knows what the user is setting up and still
@@ -193,7 +197,6 @@
             <div class="a-st-idle" id="m-verdict-idle"></div>
             <div class="a-st-checking" id="m-verdict-checking"></div>
             <div class="a-st-tunnel" id="m-verdict-tunnel"></div>
-            <div class="a-st-proven" id="m-verdict-proven"></div>
           </div>
 
           <div class="a-zone px-4 pt-4" data-zone="platform">
@@ -223,6 +226,7 @@
               <div class="a-rch-off" id="m-try-off-unreached"></div>
               <div class="a-rch-on" id="m-try-off-reached"></div>
             </div>
+            <div class="a-st-proven pt-3" id="m-verdict-proven"></div>
           </div>
 
           <div class="a-zone a-st-proven px-4 pt-4" data-zone="back" id="m-back"></div>
@@ -231,7 +235,8 @@
       </div>
       <p>overflow: <strong>verdict</strong>, <strong>platform</strong>, <strong>probe</strong>,
         <strong>try</strong> and <strong>back</strong> are bounded by their content — one sentence, one
-        control, one chrome row, one command and one button — and none of them scrolls; the platform
+        control, one chrome row, a command plus the one-sentence outcome under it, and one button — and none
+        of them scrolls; the platform
         Select's own popup is capped by the component (<code>listing-max</code>), not by this screen.
         <strong>preconditions</strong> is the one unbounded zone: its guide's StepList grows with the
         platform it renders, and neither StepList nor Disclosure may cap or scroll its own content. Its
@@ -332,12 +337,18 @@
           <Notice tone="mute" detail="finish the two steps below, then make any request">
             nothing has reached Trawler yet
           </Notice>);
+        /* PROPOSED — Notice tone="pending": a spinner in the glyph column the
+           three shipped tones already own. Rendered screen-owned here because
+           the collection does not ship it yet; the delta is on proposals. */
         mount("m-verdict-checking",
-          <Notice tone="mute" detail="reading this machine's certificate store and proxy settings">
-            checking what is already set up
-          </Notice>);
+          <div className="flex items-start gap-chrome-gap">
+            <span className="shrink-0 py-chrome-y font-ui text-body text-ink-mute"><Spinner /></span>
+            <Notice tone="mute" detail="reading this machine's certificate store and proxy settings">
+              checking what is already set up
+            </Notice>
+          </div>);
         mount("m-verdict-tunnel",
-          <Notice tone="warn" detail="the certificate is not trusted where the traffic is coming from">
+          <Notice tone="warn" detail="the trust step below says what to fix, and for which platform">
             traffic is arriving, but nothing is decrypting
           </Notice>);
         mount("m-verdict-proven",
@@ -401,6 +412,15 @@
                 {verdict("a-pf-off", { glyph: "◐", tone: "muted", short: "can't check another device from here" })}
               </div>
 
+              {/* the verdict owns the alarm; the remedy is a separate element and
+                  stays mute, so one failure never raises two warn glyphs. */}
+              <div className="a-st-tunnel pt-2">
+                <Notice tone="mute">
+                  something is routing to Trawler and none of it is decrypting — the platform it comes from
+                  does not trust the certificate yet. The steps below are that platform's.
+                </Notice>
+              </div>
+
               <div className="a-pf-machine pt-2">
                 <div className="a-st-rest"><Button onClick={noop}>install certificate</Button></div>
                 <div className="a-st-checking"><Button onClick={noop} disabled>install certificate</Button></div>
@@ -447,6 +467,7 @@
               <div className="a-pf-probed">
                 {verdict("a-st-idle", { glyph: "○", tone: "muted", short: "nothing is routed here yet" })}
                 {verdict("a-st-checking", { glyph: "⟳", tone: "muted", short: "reading the proxy settings…" })}
+                {verdict("a-st-installing", { glyph: "○", tone: "muted", short: "nothing is routed here yet" })}
                 {verdict("a-st-tunnel", { glyph: "✓", tone: "ok", short: "receiving traffic" })}
                 {verdict("a-st-proven", { glyph: "✓", tone: "ok", short: "receiving traffic" })}
               </div>
@@ -454,6 +475,9 @@
               <div className="a-pf-machine pt-2">
                 <div className="a-st-rest"><Button onClick={noop}>set system proxy</Button></div>
                 <div className="a-st-checking"><Button onClick={noop} disabled>set system proxy</Button></div>
+                {/* installing a certificate does not change whether traffic is routed,
+                    so this action stays live rather than vanishing with the shared rest block. */}
+                <div className="a-st-installing"><Button onClick={noop}>set system proxy</Button></div>
                 <div className="a-st-proven"><Button frame="bare" tone="mute" onClick={noop}>stop routing through Trawler</Button></div>
               </div>
 
@@ -564,7 +588,20 @@
             <em>iPhone</em> share one. A screen-level term with no home in the lexicon is how two screens end up asking
             the same question in two vocabularies</td>
           <td>rulebook · <code>docs/design-rules/</code> lexicon table</td></tr>
-        <tr><td colspan="4"><strong>No component, token or key binding was proposed — in either round.</strong>
+        <tr><td>component extension</td>
+          <td><code>Notice</code> <code>tone="pending"</code> — a Spinner in the glyph column, sentence and detail
+            unchanged at <code>ink-mute</code>. Delta against the shipped component: one more member of
+            <code>NoticeTone</code>, whose <code>TONE</code> entry supplies a spinner where <code>warn</code> supplies
+            ⚠ and <code>ok</code> supplies ✓; no new slot, no new layout, no interaction</td>
+          <td><code>Notice</code>'s <code>@use</code> already claims <em>pending</em> as one of the four nothings a
+            zone must distinguish, but its <code>@states</code> ships only mute · warn · ok, so a pending zone renders
+            as an untoned sentence and reads as settled. <code>StatusLine</code> owns an in-flight spinner and cannot
+            be borrowed for it: this zone is a one-sentence outcome, which <code>StatusLine</code>'s
+            <code>@avoid</code> sends back to <code>Notice</code>. The alternative — a screen-owned spinner beside a
+            mute Notice, which is what the mockup renders until this lands — forks the glyph column: two elements
+            drawing one component's anatomy, in every screen that ever needs a pending zone</td>
+          <td>registry · <code>ui/src/components/Notice.tsx</code></td></tr>
+        <tr><td colspan="4"><strong>No token or key binding was proposed, and no component beyond the extension above.</strong>
           Round 1: twelve placements resolved to nine registry entries and zero local elements — including the
           disclosure this screen's predecessor had to build local, which is now <code>Disclosure</code> (T1) and
           mounted here unchanged. The single platform Select lands inside <code>Select</code>'s <code>@use</code>
@@ -683,6 +720,50 @@
             is honest for one. The design took all three renderings under one cardinality rule rather than forcing
             either entry past its <code>@avoid</code> line, so the round proposed nothing — the rule is written under
             the mockup</td></tr>
+        <tr><td>Round 3 — <em>"checking should have loading spinner"</em>, on the verdict zone's
+          <em>checking what is already set up</em></td>
+          <td><code>mockup</code> — the checking verdict gains a spinner in the glyph column.
+            <code>proposals</code> — a component extension, <code>Notice</code> <code>tone="pending"</code>,
+            because the collection does not ship it; the mockup renders the delta screen-owned until it lands</td>
+          <td><code>Notice</code>'s <code>@use</code> / <code>@states</code> — <em>pending</em> is one of the four
+            nothings its <code>@use</code> claims, and none of its three tones can show it. The reviewer read a
+            settled sentence where the screen meant <em>working on it</em>, which is the gap exactly.
+            <code>StatusLine</code>'s <code>@avoid</code> is what stopped the cheap fix: a one-sentence zone-level
+            outcome is Notice's, so the spinner had to come to Notice rather than the zone going to StatusLine</td></tr>
+        <tr><td>Round 3 — <em>"the error should be in the trust section so user can understand what to fix this"</em>,
+          on <em>traffic is arriving, but nothing is decrypting</em> and its detail line</td>
+          <td><code>mockup</code> — the explanation left the headline and became a remedy inside the trust
+            precondition, rendered in the <em>arriving</em> state under the trust verdict. The headline's detail now
+            names where the fix is instead of restating the cause. The remedy is <code>tone="mute"</code>: the
+            verdict above it already carries ⚠, and one failure raising two warn glyphs is two alarms for one fact</td>
+          <td><code>StatusLine</code>'s <code>@avoid</code> — <em>"rendering the remedy: a verdict plus an
+            instruction is two elements — pass <code>StepStatusView.remedy</code> to a Notice"</em>. Round 1 had
+            written the verdict and left the remedy in the headline, which is the half of that rule that is easy to
+            miss: the two elements existed, but in different zones, so the instruction never sat with the thing it
+            instructs</td></tr>
+        <tr><td>Round 3 — <em>"No UI for this?"</em>, on the <em>install running</em> state, asked from the
+          <strong>route its traffic through Trawler</strong> precondition</td>
+          <td><code>mockup</code> — that precondition gains an <em>installing</em> verdict (○ <em>nothing is routed
+            here yet</em>) and keeps its <em>set system proxy</em> action live while the certificate installs</td>
+          <td>a real hole, not taste. <code>.installing .a-st-rest{display:none}</code> is a lifecycle rule written
+            for the trust action — where rest must give way to the in-flight variant — but it applies to both
+            preconditions, and the routing one had no <code>a-st-installing</code> block to take over. So during an
+            install its verdict <em>and</em> its action both went blank: a heading over nothing. The fix does not add
+            an in-flight state to the routing action, because installing a certificate does not route any traffic —
+            it stops an unrelated precondition from vanishing. Avoiding a disabled button also keeps
+            <code>Button</code>'s <code>@avoid</code> fork D4 out of it: nothing is disabled, so nothing owes a
+            progress line</td></tr>
+        <tr><td>Round 3 — <em>"the final status should be at the bottom with the make any request section"</em>,
+          on <em>Trawler is capturing</em></td>
+          <td><code>mockup</code> — the proven verdict moved out of the verdict zone into the <strong>try</strong>
+            zone, under the request prompt and above <em>back to flows</em>. The verdict zone now renders nothing
+            once capture is proven, and the three unproven readings keep it.
+            <code>capabilities</code> — <code>state.phase</code> and <code>traffic.lastFlowAt</code> re-pointed at
+            the zone that now renders them</td>
+          <td><code>taste</code>, and it lands on the screen's own argument. The proof this screen accepts is a real
+            decrypted flow (<a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>'s surviving
+            invariant), and the request that produces one is made in the try zone — so the outcome now reads where
+            the action is, and the way out sits directly beneath it. No verdict was reworded; one moved</td></tr>
       </tbody>
     </table>
 
