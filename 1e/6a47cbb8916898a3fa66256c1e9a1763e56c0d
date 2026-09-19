@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-55-reach-is-an-authorization-decision.html"
+    tier: T2
+    action: added
+    distills: "Reach beyond loopback is an authorization decision: off by default, one named interface address, one explicit confirm in the shell, re-armed per launch. Names what the rejected config entry is - inheritance from the environment - and that the core's own Config.reach seam is not it, after a review round read the row the other way. States that arming exposes the control API and the captured flows with it, marks the limit of the confirm, keeps the CORS grant, and records five rejected alternatives."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-55's row, so the record is on the read path an agent checks before changing something load-bearing."
+  - path: "docs/work/2026-09-19-onboard-reach-plan.html"
+    tier: T3
+    action: added
+    distills: "The WU plan: requirement, mapping, the nine observable outcomes, the test plan per level and what is deliberately left to W3 and W4."
+  - path: "docs/work/2026-09-19-onboard-reach-result.html"
+    tier: T3
+    action: added
+    distills: "What shipped against each planned outcome, the seven deviations - including the two blockers the review reproduced and the three fixes they forced - the evidence and the follow-ups owed to W4."
