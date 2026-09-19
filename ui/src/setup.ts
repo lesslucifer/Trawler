@@ -2,6 +2,8 @@
 // which step content to render from the webview UA (== host OS); Rust builds
 // the actual privileged command from std::env::consts::OS at call time.
 
+import type { ProxyTarget } from "./proxyTargets";
+
 export type HostOs = "macos" | "windows" | "linux" | "other";
 export type TrustTarget = "macos" | "windows" | "linux" | "firefox" | "ios-sim" | "android";
 
@@ -149,29 +151,6 @@ export function removalSteps(target: TrustTarget): string[] {
 // Same shape as the trust-ca helpers: pure, no I/O, instruction text as data.
 // Every snippet carries the real configured address — never a hardcoded port.
 
-export type ProxyTarget = "macos" | "windows" | "linux" | "firefox" | "terminal" | "ios-sim" | "android";
-
-export function defaultProxyTarget(os: HostOs): ProxyTarget {
-  return os === "other" ? "terminal" : os;
-}
-
-// Keyed by the union so tsc proves the list offers every target: a member added
-// to ProxyTarget without a label here fails to compile. A runtime check over the
-// list could only ever compare it with itself.
-const PROXY_TARGET_LABELS: Record<ProxyTarget, string> = {
-  macos: "macOS",
-  windows: "Windows",
-  linux: "Linux (GNOME)",
-  firefox: "Firefox",
-  terminal: "Terminal / CLI",
-  "ios-sim": "iOS Simulator",
-  android: "Android",
-};
-
-export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = (
-  Object.keys(PROXY_TARGET_LABELS) as ProxyTarget[]
-).map((id) => ({ id, label: PROXY_TARGET_LABELS[id] }));
-
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");
   return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
@@ -227,174 +206,8 @@ export function proxySteps(t: ProxyTarget, addr: string): string[] {
   }
 }
 
-// --- Two layers of truth (E-REDESIGN.W10) -------------------------------------
-// THIS MACHINE: two read-only probes, re-read on demand — does this host trust
-// the CA, does its system proxy point at Trawler. TRAFFIC: what has reached the
-// proxy, timestamped. A verdict never borrows from the other layer: a flow
-// captured an hour ago says nothing about the proxy now, and a probe says nothing
-// about a phone pointed here. Pure data → unit-tested; the probes live in Rust.
-
-export type TrustProbe = "trusted" | "untrusted" | "unknown";
-export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
-export type StepTone = "ok" | "warn" | "muted";
-
-// `short` is the ≤40-char fragment StatusLine renders — a verdict, not a
-// sentence. Where the verdict also implies an instruction, `remedy` carries it
-// out to a Notice: what is true and what to do about it are two elements.
-export interface StepStatusView {
-  glyph: string;
-  tone: StepTone;
-  short: string;
-  remedy?: string;
-}
-
-// When each kind of traffic last reached Trawler, as epoch ms; null = not in
-// this session. `ever` also counts what the core saw before the UI subscribed
-// (the /stats tally), which carries no time and so can only ever mean "idle".
-export interface Traffic {
-  lastDecryptedAt: number | null;
-  lastPlainAt: number | null;
-  lastTunnelAt: number | null;
-  ever: boolean;
-}
-
-export const NO_TRAFFIC: Traffic = {
-  lastDecryptedAt: null,
-  lastPlainAt: null,
-  lastTunnelAt: null,
-  ever: false,
-};
-
-// "Now" is the last 30 s: long enough to read the screen after one curl, short
-// enough that a browser left alone stops reading as captured.
-export const RECENT_MS = 30_000;
-// A tunnel is answered by its decrypted flow within a moment of opening; until
-// then it is neither proof nor failure.
-export const TUNNEL_GRACE_MS = 3_000;
-
-export type Running = "installing" | "setting" | "checking" | null;
-
-const IN_FLIGHT: Record<Exclude<Running, null>, string> = {
-  installing: "installing…",
-  setting: "setting the proxy…",
-  checking: "checking…",
-};
-
-const inFlight = (running: Exclude<Running, null>): StepStatusView => ({
-  glyph: "⟳",
-  tone: "muted",
-  short: IN_FLIGHT[running],
-});
-
-export function trustStatus(probe: TrustProbe, running: Running, error?: string): StepStatusView {
-  if (running) return inFlight(running);
-  // The probe's positive wins over a stale action error: the CA is trusted
-  // whatever the last click did.
-  if (probe === "trusted") return { glyph: "✓", tone: "ok", short: "trusted on this machine" };
-  if (error) return { glyph: "⚠", tone: "warn", short: "install failed", remedy: error };
-  if (probe === "unknown")
-    return {
-      glyph: "◐",
-      tone: "muted",
-      short: "can't check automatically",
-      remedy: "step 3 shows whether traffic decrypts",
-    };
-  return { glyph: "○", tone: "muted", short: "not trusted on this machine yet" };
-}
-
-export function proxyStatus(probe: ProxyProbe, running: Running, error?: string): StepStatusView {
-  if (running) return inFlight(running);
-  if (probe === "ours") return { glyph: "✓", tone: "ok", short: "system proxy is set to Trawler" };
-  if (error) return { glyph: "⚠", tone: "warn", short: "couldn't set the proxy", remedy: error };
-  if (probe === "foreign")
-    return {
-      glyph: "○",
-      tone: "muted",
-      short: "another proxy is set",
-      remedy: "point it at Trawler here, or capture from a device configured to use Trawler",
-    };
-  if (probe === "unknown")
-    return {
-      glyph: "◐",
-      tone: "muted",
-      short: "can't check automatically",
-      remedy: "step 3 shows whether traffic arrives",
-    };
-  return { glyph: "○", tone: "muted", short: "not set on this machine yet" };
-}
-
-// Positive evidence outranks a failing tunnel: with one client decrypting and
-// another not, the screen's purpose is met, and the failing client shows the
-// moment the working one goes quiet.
-export function trafficStatus(seen: Traffic, now: number): StepStatusView {
-  const recent = (at: number | null): at is number => at !== null && now - at <= RECENT_MS;
-  if (recent(seen.lastDecryptedAt)) return { glyph: "✓", tone: "ok", short: "capturing traffic" };
-  const tunnel = seen.lastTunnelAt;
-  const unanswered =
-    tunnel !== null && (seen.lastDecryptedAt === null || seen.lastDecryptedAt < tunnel);
-  if (recent(tunnel) && unanswered) {
-    if (now - tunnel < TUNNEL_GRACE_MS)
-      return { glyph: "⟳", tone: "muted", short: "a connection just arrived…" };
-    return {
-      glyph: "⚠",
-      tone: "warn",
-      short: "arriving but not decrypting",
-      remedy:
-        "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
-    };
-  }
-  if (recent(seen.lastPlainAt))
-    return {
-      glyph: "◐",
-      tone: "muted",
-      short: "arriving — plain HTTP only",
-      remedy: "an HTTPS request is what proves decryption",
-    };
-  const anything =
-    seen.ever || seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || tunnel !== null;
-  if (anything) return { glyph: "○", tone: "muted", short: "idle — nothing arriving now" };
-  return { glyph: "○", tone: "muted", short: "waiting for your first request" };
-}
-
 // P1 prove-it: the concrete, copyable command that generates the first request.
 // Text only — the app never fires it (epic non-goal); it guides the user.
 export function proveItSnippet(addr: string): string {
   return `curl -x http://${addr} https://example.com`;
-}
-
-// The off-command where one exists, so a caller can render it as a copyable
-// payload without inferring which step is a command from its punctuation.
-export function proxyOffSnippet(t: ProxyTarget): string | null {
-  switch (t) {
-    case "macos":
-      return "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
-    case "windows":
-      return 'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f';
-    case "linux":
-      return "gsettings set org.gnome.system.proxy mode 'none'";
-    case "terminal":
-      return "unset HTTPS_PROXY HTTP_PROXY";
-    default:
-      return null;
-  }
-}
-
-export function proxyOffSteps(t: ProxyTarget): string[] {
-  const snippet = proxyOffSnippet(t);
-  switch (t) {
-    case "macos":
-      return ["Turn it off per enabled service (keeps the saved address):", snippet!];
-    case "windows":
-      return ["Disable the WinINET proxy (keeps the saved address):", snippet!];
-    case "linux":
-      return ["GNOME — back to no proxy:", snippet!];
-    case "firefox":
-      return ["Settings → Network Settings → Settings… → select \"No proxy\"."];
-    case "terminal":
-      return ["Clear the environment variables:", snippet!];
-    case "ios-sim":
-      return ["Turn the host Mac's proxy off (the macOS steps above), then restart the Simulator."];
-    case "android":
-      return ["Wi-Fi → your network → Proxy → None."];
-  }
 }

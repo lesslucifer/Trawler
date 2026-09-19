@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../setup";
+import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
 import { StatusLine } from "./StatusLine";
 
 const glyphClass = (status: StepStatusView) => {

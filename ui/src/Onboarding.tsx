@@ -12,35 +12,39 @@ import {
 } from "./components/index";
 import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
 import {
-  canAutoSetup,
-  CA_FILENAME,
   defaultProxyTarget,
-  defaultTarget,
-  guidedSteps,
-  NO_TRAFFIC,
-  proveItSnippet,
   proxyOffSnippet,
   proxyOffSteps,
-  proxySnippet,
-  proxyStatus,
-  proxySteps,
   PROXY_TARGETS,
+  type ProxyTarget,
+} from "./proxyTargets";
+import {
+  canAutoSetup,
+  CA_FILENAME,
+  defaultTarget,
+  guidedSteps,
+  proveItSnippet,
+  proxySnippet,
+  proxySteps,
   removalSnippet,
   removalSteps,
   SAVE_CA_STEP,
   TARGETS,
-  trafficStatus,
   trustSnippet,
-  trustStatus,
   type HostOs,
+  type TrustTarget,
+} from "./setup";
+import {
+  NO_TRAFFIC,
+  proxyStatus,
+  trafficStatus,
+  trustStatus,
   type ProxyProbe,
-  type ProxyTarget,
   type Running,
   type StepStatusView,
   type Traffic,
   type TrustProbe,
-  type TrustTarget,
-} from "./setup";
+} from "./verdicts";
 
 // The onboarding surface: a checklist of preconditions, each carrying a verdict.
 // Not a wizard — the steps are re-entered out of order, so there is no Back/Next

@@ -4,7 +4,8 @@ import { expect, test, vi } from "vitest";
 import { Onboarding } from "./Onboarding";
 import onboardingSource from "./Onboarding.tsx?raw";
 import { COPY, reduce, type OnbState } from "./onboardingMachine";
-import { guidedSteps, NO_TRAFFIC, proxySnippet, proxySteps, RECENT_MS, SAVE_CA_STEP, TUNNEL_GRACE_MS } from "./setup";
+import { guidedSteps, proxySnippet, proxySteps, SAVE_CA_STEP } from "./setup";
+import { NO_TRAFFIC, RECENT_MS, TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("./setup", async (importOriginal) => {
   const mod = await importOriginal<typeof import("./setup")>();

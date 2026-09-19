@@ -8,7 +8,8 @@ import { apiStub } from "./apiStub";
 import { CAPTURE_COPY } from "./CaptureControls";
 import * as files from "./body";
 import type { OnbState } from "./onboardingMachine";
-import { CA_FILENAME, guidedSteps, TUNNEL_GRACE_MS } from "./setup";
+import { CA_FILENAME, guidedSteps } from "./setup";
+import { TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
 // App wires a quit-time close guard (W5); stub the window so onCloseRequested is a

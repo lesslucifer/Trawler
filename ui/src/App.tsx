@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
-import { CA_FILENAME, hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
+import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
+import type { ProxyProbe, TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
