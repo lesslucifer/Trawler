@@ -146,6 +146,16 @@ export interface ReachState {
   interfaces: ReachInterface[];
 }
 
+// Nothing armed, nothing promised: the state a fresh core reports and the state
+// a screen assumes until one answers.
+export const UNREACHABLE: ReachState = {
+  armed: false,
+  proxy: null,
+  api: null,
+  ca_cert_url: null,
+  interfaces: [],
+};
+
 export interface StreamHandlers {
   onEvent: () => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).

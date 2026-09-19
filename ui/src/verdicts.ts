@@ -1,3 +1,5 @@
+import type { Phase } from "./onboardingMachine";
+
 // DEC-33's two layers of truth, resolved. THIS MACHINE: two read-only probes,
 // re-read on demand — does this host trust the CA, does its system proxy point
 // at Trawler. TRAFFIC: what has reached the proxy, timestamped. A verdict never
@@ -67,8 +69,8 @@ export function trustStatus(probe: TrustProbe, running: Running, error?: string)
     return {
       glyph: "◐",
       tone: "muted",
-      short: "can't check automatically",
-      remedy: "step 3 shows whether traffic decrypts",
+      short: "can't check on this platform",
+      remedy: "the traffic verdict is what proves it",
     };
   return { glyph: "○", tone: "muted", short: "not trusted on this machine yet" };
 }
@@ -88,41 +90,77 @@ export function proxyStatus(probe: ProxyProbe, running: Running, error?: string)
     return {
       glyph: "◐",
       tone: "muted",
-      short: "can't check automatically",
-      remedy: "step 3 shows whether traffic arrives",
+      short: "can't check on this platform",
+      remedy: "the traffic verdict is what proves it",
     };
   return { glyph: "○", tone: "muted", short: "not set on this machine yet" };
 }
 
+// What the wire says, as one name. The words each reading carries are two
+// different things — a precondition's verdict and the screen's lead sentence —
+// so the reading is resolved once and worded twice.
+export type TrafficReading =
+  | "capturing"
+  | "just-arrived"
+  | "not-decrypting"
+  | "plain-only"
+  | "idle"
+  | "waiting";
+
 // Positive evidence outranks a failing tunnel: with one client decrypting and
 // another not, the screen's purpose is met, and the failing client shows the
 // moment the working one goes quiet.
-export function trafficStatus(seen: Traffic, now: number): StepStatusView {
+export function trafficReading(seen: Traffic, now: number): TrafficReading {
   const recent = (at: number | null): at is number => at !== null && now - at <= RECENT_MS;
-  if (recent(seen.lastDecryptedAt)) return { glyph: "✓", tone: "ok", short: "capturing traffic" };
+  if (recent(seen.lastDecryptedAt)) return "capturing";
   const tunnel = seen.lastTunnelAt;
   const unanswered =
     tunnel !== null && (seen.lastDecryptedAt === null || seen.lastDecryptedAt < tunnel);
-  if (recent(tunnel) && unanswered) {
-    if (now - tunnel < TUNNEL_GRACE_MS)
-      return { glyph: "⟳", tone: "muted", short: "a connection just arrived…" };
-    return {
-      glyph: "⚠",
-      tone: "warn",
-      short: "arriving but not decrypting",
-      remedy:
-        "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
-    };
-  }
-  if (recent(seen.lastPlainAt))
-    return {
-      glyph: "◐",
-      tone: "muted",
-      short: "arriving — plain HTTP only",
-      remedy: "an HTTPS request is what proves decryption",
-    };
+  if (recent(tunnel) && unanswered)
+    return now - tunnel < TUNNEL_GRACE_MS ? "just-arrived" : "not-decrypting";
+  if (recent(seen.lastPlainAt)) return "plain-only";
   const anything =
     seen.ever || seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || tunnel !== null;
-  if (anything) return { glyph: "○", tone: "muted", short: "idle — nothing arriving now" };
-  return { glyph: "○", tone: "muted", short: "waiting for your first request" };
+  return anything ? "idle" : "waiting";
 }
+
+const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
+  capturing: { glyph: "✓", tone: "ok", short: "capturing traffic" },
+  "just-arrived": { glyph: "⟳", tone: "muted", short: "a connection just arrived…" },
+  "not-decrypting": {
+    glyph: "⚠",
+    tone: "warn",
+    short: "arriving but not decrypting",
+    remedy:
+      "something is routing to Trawler and none of it is decrypting — the platform it comes from does not trust the certificate yet. The steps below are that platform's.",
+  },
+  "plain-only": {
+    glyph: "◐",
+    tone: "muted",
+    short: "arriving — plain HTTP only",
+    remedy: "an HTTPS request is what proves decryption",
+  },
+  idle: { glyph: "○", tone: "muted", short: "idle — nothing arriving now" },
+  waiting: { glyph: "○", tone: "muted", short: "waiting for your first request" },
+};
+
+export function trafficStatus(seen: Traffic, now: number): StepStatusView {
+  return TRAFFIC_VERDICT[trafficReading(seen, now)];
+}
+
+// The screen's lead sentence. Capture proven is the one reading it does not
+// render: the outcome belongs beside the request that produced it.
+export type ScreenVerdict = "checking" | TrafficReading;
+
+export function screenVerdict(phase: Phase, seen: Traffic, now: number): ScreenVerdict {
+  return phase === "checking" ? "checking" : trafficReading(seen, now);
+}
+
+// A platform this machine cannot read the stores of. Its own glyph and its own
+// words: borrowing this host's answer for a phone is worse than no answer, and
+// saying "not trusted" about a device nobody probed would be a claim.
+export const UNPROBEABLE_TRUST: StepStatusView = {
+  glyph: "◐",
+  tone: "muted",
+  short: "can't check another device from here",
+};

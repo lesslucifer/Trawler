@@ -1,19 +1,17 @@
+import { describe, expect, it, test } from "vitest";
 import {
   canAutoSetup,
-  defaultTarget,
-  guidedSteps,
   hostOs,
-  proveItSnippet,
-  proxySnippet,
-  proxySteps,
-  removalSnippet,
-  removalSteps,
+  isProbed,
+  needsReach,
+  PLATFORM_IDS,
+  platformChoices,
+  setupFor,
   splitProxyAddr,
-  TARGETS,
-  trustSnippet,
+  type GuideStep,
+  type PlatformId,
+  type PlatformSetup,
 } from "./setup";
-import type { TrustTarget } from "./setup";
-import { PROXY_TARGETS, type ProxyTarget } from "./proxyTargets";
 
 const UA = {
   mac: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
@@ -21,11 +19,48 @@ const UA = {
   linux: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)",
 };
 
+const ADDR = "127.0.0.1:9999";
+const REACH = { proxy: "192.168.1.24:9999", caCertUrl: "http://192.168.1.24:7421/ca.crt" };
+const ctx = (over: Partial<Parameters<typeof setupFor>[1]> = {}) => ({
+  os: "macos" as const,
+  proxyAddr: ADDR,
+  reach: REACH,
+  ...over,
+});
+
+const guides = (s: PlatformSetup): GuideStep[] => [
+  ...(s.trust?.steps ?? []),
+  ...(s.trust?.undo ?? []),
+  ...(s.route?.steps ?? []),
+  ...(s.route?.undo ?? []),
+];
+
+const prose = (s: PlatformSetup): string =>
+  [s.trustNote ?? "", s.routeNote ?? "", s.tryIt, s.tryCommand ?? ""]
+    .concat(guides(s).flatMap((step) => step.map((p) => (typeof p === "string" ? p : ""))))
+    .join("\n");
+
+const copies = (s: PlatformSetup): string[] =>
+  guides(s).flatMap((step) =>
+    step.flatMap((p) => (typeof p === "object" && "copy" in p ? [p.copy] : [])),
+  );
+
+const saves = (s: PlatformSetup): number =>
+  guides(s).flatMap((step) => step.filter((p) => typeof p === "object" && "save" in p)).length;
+
+const everything = (s: PlatformSetup): string => [prose(s), ...copies(s)].join("\n");
+
+const setup = (id: PlatformId, over = {}) => {
+  const s = setupFor(id, ctx(over));
+  if (s === null) throw new Error(`${id} refused its instructions`);
+  return s;
+};
+
 test("hostOs maps webview UA samples to the host family", () => {
   expect(hostOs(UA.mac)).toBe("macos");
   expect(hostOs(UA.win)).toBe("windows");
   expect(hostOs(UA.linux)).toBe("linux");
-  expect(hostOs("Mozilla/5.0 (darwin) jsdom/25.0.1")).toBe("other");
+  expect(hostOs("curl/8")).toBe("other");
 });
 
 test("only macOS and Windows have a one-click setup path", () => {
@@ -35,141 +70,217 @@ test("only macOS and Windows have a one-click setup path", () => {
   expect(canAutoSetup("other")).toBe(false);
 });
 
-test("the selector defaults to the detected host, falling back to linux", () => {
-  expect(defaultTarget("macos")).toBe("macos");
-  expect(defaultTarget("windows")).toBe("windows");
-  expect(defaultTarget("linux")).toBe("linux");
-  expect(defaultTarget("other")).toBe("linux");
-});
-
-test("guidedSteps covers every selectable target with plain-text instructions", () => {
-  for (const { id } of TARGETS) {
-    const steps = guidedSteps(id);
-    expect(steps.length).toBeGreaterThan(1);
-    for (const step of steps) expect(typeof step).toBe("string");
-  }
-});
-
-const expects: [TrustTarget, RegExp][] = [
-  ["macos", /security add-trusted-cert .* \/Library\/Keychains\/System\.keychain/],
-  ["windows", /certutil -addstore -f ROOT/],
-  ["linux", /update-ca-certificates/],
-  ["firefox", /own certificate store/],
-  ["ios-sim", /host Mac's trust store/],
-  ["android", /adb push/],
-];
-
-test.each(expects)("guidedSteps(%s) carries the system-specific instruction", (target, rx) => {
-  expect(guidedSteps(target).join("\n")).toMatch(rx);
-});
-
-test("removalSteps covers every target with plain-text instructions", () => {
-  for (const { id } of TARGETS) {
-    const steps = removalSteps(id);
-    expect(steps.length).toBeGreaterThan(0);
-    for (const step of steps) expect(typeof step).toBe("string");
-  }
-});
-
-const removals: [TrustTarget, RegExp][] = [
-  ["macos", /security delete-certificate -c "Trawler Proxy CA"/],
-  ["windows", /certutil -delstore ROOT "Trawler Proxy CA"/],
-  ["linux", /update-ca-certificates --fresh/],
-  ["firefox", /Delete or Distrust/],
-  ["ios-sim", /restart the Simulator/],
-  ["android", /Trusted credentials/],
-];
-
-test.each(removals)("removalSteps(%s) carries the system-specific removal", (target, rx) => {
-  expect(removalSteps(target).join("\n")).toMatch(rx);
-});
-
-// --- Set the proxy (W3) ---
-
 test("splitProxyAddr splits host and port on the last colon", () => {
   expect(splitProxyAddr("127.0.0.1:7420")).toEqual({ host: "127.0.0.1", port: 7420 });
   expect(splitProxyAddr("192.168.1.5:8080")).toEqual({ host: "192.168.1.5", port: 8080 });
 });
 
-const ADDR = "10.1.2.3:9999";
+// The screen's one axis. The order is what the user reads in the picker, and
+// this machine leads it because it is the only member the app can act on itself.
+test("the axis offers the eight platforms, this machine first", () => {
+  expect(PLATFORM_IDS).toEqual([
+    "this",
+    "mac",
+    "windows",
+    "ubuntu",
+    "ios-sim",
+    "android-sim",
+    "ios",
+    "android",
+  ]);
+});
 
-test("every proxy snippet and its steps carry the passed address, never a hardcoded port", () => {
-  for (const { id } of PROXY_TARGETS) {
-    const text = [proxySnippet(id, ADDR) ?? "", ...proxySteps(id, ADDR)].join("\n");
+test("this machine names the detected host, and names nothing it did not detect", () => {
+  expect(platformChoices("macos")[0]).toEqual({ id: "this", label: "This machine — macOS" });
+  expect(platformChoices("windows")[0].label).toBe("This machine — Windows");
+  expect(platformChoices("linux")[0].label).toBe("This machine — Linux");
+  expect(platformChoices("other")[0].label).toBe("This machine");
+});
+
+test("every other platform is named for what the user is holding, not for an OS", () => {
+  const labels = Object.fromEntries(platformChoices("macos").map((p) => [p.id, p.label]));
+  expect(labels).toMatchObject({
+    mac: "Another Mac",
+    windows: "Another Windows PC",
+    ubuntu: "Another Ubuntu machine",
+    "ios-sim": "iOS Simulator",
+    "android-sim": "Android emulator",
+    ios: "iPhone or iPad",
+    android: "Android device",
+  });
+});
+
+// DEC-33's layer rule applied to the axis: a probe reads this machine, so it may
+// only answer for a platform that IS this machine or shares its stores.
+test("the probes answer for this machine and the Simulator that shares its stores, and nothing else", () => {
+  expect(PLATFORM_IDS.filter(isProbed)).toEqual(["this", "ios-sim"]);
+});
+
+test("the five platforms that are somewhere else are the ones that need reach", () => {
+  expect(PLATFORM_IDS.filter(needsReach)).toEqual(["mac", "windows", "ubuntu", "ios", "android"]);
+});
+
+describe("a platform that needs reach has no instructions until it exists", () => {
+  it.each(PLATFORM_IDS.filter(needsReach))("%s offers nothing while reach is unarmed", (id) => {
+    expect(setupFor(id, ctx({ reach: null }))).toBeNull();
+  });
+
+  it.each(PLATFORM_IDS.filter((id) => !needsReach(id)))("%s answers without reach", (id) => {
+    expect(setupFor(id, ctx({ reach: null }))).not.toBeNull();
+  });
+});
+
+describe("every platform's instructions are its own", () => {
+  it.each(PLATFORM_IDS)("%s says what to try", (id) => {
+    expect(setup(id).tryIt).not.toBe("");
+  });
+
+  it("only this machine offers a command to run here", () => {
+    expect(setup("this").tryCommand).toBe("curl -x http://127.0.0.1:9999 https://example.com");
+    for (const id of PLATFORM_IDS.filter((p) => p !== "this")) {
+      expect(setup(id).tryCommand).toBeUndefined();
+    }
+  });
+
+  it.each(PLATFORM_IDS)("%s names no address it was not given", (id) => {
+    const text = everything(setup(id));
     expect(text).not.toMatch(/7420/);
-    // GUI-only clients (firefox, ios-sim) name no numeric port at all.
-    if (proxySnippet(id, ADDR)) expect(text).toContain("9999");
+    expect(text.replace(REACH.caCertUrl, "")).not.toMatch(/7421/);
+  });
+});
+
+// The blocked-on row the run handed the build: the emulator's host note and the
+// device's blocker used to sit in one array, so a user setting up either read
+// the other's answer.
+describe("the Android emulator and the Android device stop sharing one answer", () => {
+  const emulator = () => setup("android-sim");
+  const device = () => setup("android");
+
+  it("differ in whether reach is needed at all", () => {
+    expect(needsReach("android-sim")).toBe(false);
+    expect(needsReach("android")).toBe(true);
+  });
+
+  it("send the certificate by different routes", () => {
+    expect(copies(emulator())).toContain("adb push trawler-ca.pem /sdcard/Download/");
+    expect(copies(device())).toContain(REACH.caCertUrl);
+    expect(copies(device())).not.toContain("adb push trawler-ca.pem /sdcard/Download/");
+  });
+
+  it("point at different hosts — the emulator's alias, the device's reach address", () => {
+    expect(copies(emulator())).toContain("10.0.2.2");
+    expect(everything(emulator())).not.toContain(REACH.proxy);
+    expect(everything(device())).toContain("192.168.1.24");
+    expect(everything(device())).not.toContain("10.0.2.2");
+  });
+
+  it("carry the real port into the emulator's host, never a hardcoded one", () => {
+    const text = everything(setupFor("android-sim", ctx({ proxyAddr: "127.0.0.1:8123" }))!);
+    expect(text).toContain("10.0.2.2:8123");
+    expect(text).not.toMatch(/9999|7420/);
+  });
+
+  it("both state the Android 7+ user-CA caveat, because it is true of both", () => {
+    expect(prose(emulator())).toMatch(/network security config/);
+    expect(prose(device())).toMatch(/network security config/);
+  });
+});
+
+// The punt the old android line shipped: "Host = your machine's LAN address".
+// An instruction that asks the user to know an address Trawler could have
+// printed is the failure this whole epic exists to end.
+test("no instruction punts an address in prose", () => {
+  for (const id of PLATFORM_IDS) {
+    const text = everything(setup(id));
+    expect(text).not.toMatch(/LAN address/i);
+    expect(text).not.toMatch(/your machine's address/i);
+    expect(text).not.toMatch(/see setup notes/i);
   }
 });
 
-const snippets: [ProxyTarget, RegExp][] = [
-  ["macos", /networksetup -setsecurewebproxy .*10\.1\.2\.3 9999/],
-  ["windows", /reg add .*ProxyServer .*10\.1\.2\.3:9999/],
-  ["linux", /gsettings .*9999/],
-  ["terminal", /HTTPS_PROXY=http:\/\/10\.1\.2\.3:9999/],
-];
-
-test.each(snippets)("proxySnippet(%s) is the copyable command with the address", (t, rx) => {
-  expect(proxySnippet(t, ADDR)).toMatch(rx);
-});
-
-test("GUI-only clients have no copyable command", () => {
-  expect(proxySnippet("firefox", ADDR)).toBeNull();
-  expect(proxySnippet("ios-sim", ADDR)).toBeNull();
-  expect(proxySnippet("android", ADDR)).toBeNull();
-});
-
-test("the Android steps say to use the machine's LAN address, not loopback", () => {
-  const text = proxySteps("android", ADDR).join("\n");
-  expect(text).toMatch(/LAN address/);
-  expect(text).not.toMatch(/127\.0\.0\.1/);
-});
-
-test("proveItSnippet carries the real proxy address, never a hardcoded port", () => {
-  expect(proveItSnippet("10.1.2.3:9999")).toBe("curl -x http://10.1.2.3:9999 https://example.com");
-});
-
-// withCommand replaces the step equal to the command, so the resolvers must put
-// that command in exactly once — zero would drop the copy affordance, twice
-// would render two CopyTexts for one command.
-describe("every command is present exactly once in the steps that introduce it", () => {
-  // Coverage of the union is tsc's job, not this file's: PROXY_TARGETS is built
-  // from a Record keyed by ProxyTarget, so a member added without a label fails to
-  // compile. A runtime check here could only compare the list with itself.
-  it.each(TARGETS.map((t) => t.id))("%s: its trust and removal commands each appear once", (id) => {
-    for (const [steps, command] of [
-      [guidedSteps(id), trustSnippet(id)],
-      [removalSteps(id), removalSnippet(id)],
-    ] as [string[], string | null][]) {
-      if (command === null) continue;
-      expect(steps.filter((s) => s === command)).toHaveLength(1);
-    }
+describe("an off-machine platform is pointed at the address reach reported", () => {
+  it.each(PLATFORM_IDS.filter(needsReach))("%s fetches the certificate over it", (id) => {
+    expect(copies(setup(id))).toContain(REACH.caCertUrl);
   });
 
-  // A command named but absent from its steps would render no CopyText at all;
-  // one present but unnamed would stay uncopyable prose. Both are silent, so the
-  // pairing is asserted in both directions.
-  it.each(TARGETS.map((t) => t.id))("%s: no step is an unnamed command", (id) => {
-    const looksLikeCommand = (step: string) =>
-      /^(sudo|certutil|adb|networksetup|reg|gsettings|unset|export|curl) /.test(step);
+  it.each(["mac", "windows", "ubuntu"] as const)("%s routes through it, never loopback", (id) => {
+    const text = everything(setup(id));
+    expect(text).toContain("192.168.1.24");
+    expect(text).not.toContain("127.0.0.1");
+  });
 
-    for (const [steps, command] of [
-      [guidedSteps(id), trustSnippet(id)],
-      [removalSteps(id), removalSnippet(id)],
-    ] as [string[], string | null][]) {
-      for (const step of steps.filter(looksLikeCommand)) {
-        expect(step).toBe(command);
+  it("the devices take the server and port from the zone above rather than restating them", () => {
+    for (const id of ["ios", "android"] as const) {
+      expect(prose(setup(id))).toMatch(/server and port above/);
+    }
+  });
+});
+
+describe("this machine is instructed for the host it is running on", () => {
+  it("macOS gets the keychain route and the networksetup command", () => {
+    const text = everything(setup("this", { os: "macos" }));
+    expect(text).toMatch(/security add-trusted-cert/);
+    expect(text).toMatch(/networksetup -setwebproxy Wi-Fi 127\.0\.0\.1 9999/);
+  });
+
+  it("Windows gets certutil and the registry command", () => {
+    const text = everything(setup("this", { os: "windows" }));
+    expect(text).toMatch(/certutil -addstore/);
+    expect(text).toMatch(/ProxyServer .*127\.0\.0\.1:9999/);
+  });
+
+  it("an unknown host gets the two routes that assume no desktop", () => {
+    const text = everything(setup("this", { os: "other" }));
+    expect(text).toMatch(/update-ca-certificates/);
+    expect(text).toMatch(/export HTTPS_PROXY=http:\/\/127\.0\.0\.1:9999/);
+  });
+
+  it("every route offers its reversal", () => {
+    for (const os of ["macos", "windows", "linux", "other"] as const) {
+      const s = setup("this", { os });
+      expect(s.trust?.undo?.length).toBeGreaterThan(0);
+      expect(s.route?.undo?.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("the Simulator borrows this Mac's answer and says so", () => {
+  it("names the host store and the host proxy rather than repeating their steps", () => {
+    const s = setup("ios-sim");
+    expect(s.trustNote).toMatch(/this Mac's certificate store/);
+    expect(s.routeNote).toMatch(/this Mac's system proxy/);
+    expect(s.route).toBeUndefined();
+  });
+});
+
+// A copyable value that appears twice renders two controls for one fact; one
+// that appears zero times is prose the user has to retype.
+describe("every copyable value is offered exactly once in the guide that introduces it", () => {
+  it.each(PLATFORM_IDS)("%s", (id) => {
+    const taken = copies(setup(id));
+    expect(new Set(taken).size).toBe(taken.length);
+  });
+
+  it.each(PLATFORM_IDS)("%s writes no command as prose", (id) => {
+    const looksLikeCommand = (text: string) =>
+      /^(sudo|certutil|adb|networksetup|reg |gsettings|unset|export|curl|emulator) /.test(text);
+    for (const step of guides(setup(id))) {
+      for (const part of step) {
+        if (typeof part === "string") expect(looksLikeCommand(part)).toBe(false);
       }
     }
   });
+});
 
-  it.each(PROXY_TARGETS.map((t) => t.id))("%s", (id) => {
-    const addr = "10.0.0.1:7420";
-    const pairs: [string[], string | null][] = [[proxySteps(id, addr), proxySnippet(id, addr)]];
-
-    for (const [steps, command] of pairs) {
-      if (command === null) continue;
-      expect(steps.filter((s) => s === command)).toHaveLength(1);
-    }
-  });
+// The save control produces the file the next step names, so it belongs only
+// where a file is the route — never where the certificate is fetched over the
+// network instead.
+test("the save control appears where the file is carried, and once", () => {
+  expect(saves(setup("this"))).toBe(1);
+  expect(saves(setup("android-sim"))).toBe(1);
+  expect(saves(setup("ios"))).toBe(1);
+  expect(saves(setup("android"))).toBe(1);
+  for (const id of ["mac", "windows", "ubuntu", "ios-sim"] as const) {
+    expect(saves(setup(id))).toBe(0);
+  }
 });

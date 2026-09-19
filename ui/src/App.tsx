@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
+import { createApi, defaultProxyAddr, UNREACHABLE, type ReachState, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
 import type { ProxyProbe, TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
@@ -142,6 +142,37 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return () => window.removeEventListener("focus", reprobe);
   }, [state.phase, reprobe]);
 
+  // Reach is a fact about this process, never a stored preference (DEC-55): it
+  // is read when setup opens and re-read from whatever the core answers to the
+  // two calls that change it. A read that fails leaves the screen saying Trawler
+  // answers here only, which is the honest reading of a core that will not say.
+  const [reach, setReach] = useState<ReachState>(UNREACHABLE);
+
+  useEffect(() => {
+    if (state.phase !== "onboarding") return;
+    let live = true;
+    client.reach().then(
+      (r) => live && setReach(r),
+      () => live && setReach(UNREACHABLE),
+    );
+    return () => {
+      live = false;
+    };
+  }, [client, state.phase]);
+
+  // The confirm comes first and the bind only on a yes — the shell asks,
+  // because arming changes what this machine exposes (DEC-13). A dialog that
+  // cannot be shown is a question nobody answered, so nothing is armed.
+  const armReach = async (address: string) => {
+    const allowed = await invoke<boolean>("confirm_reach", { address }).catch(() => false);
+    if (!allowed) return;
+    setReach(await client.armReach(address));
+  };
+
+  const disarmReach = async () => {
+    setReach(await client.disarmReach());
+  };
+
   const installCa = async () => {
     const pem = await client.caCertPem();
     await invoke("install_ca", { pem });
@@ -238,6 +269,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
           onRecheck={reprobe}
+          reach={reach}
+          onArmReach={armReach}
+          onDisarmReach={disarmReach}
         />
       </Layout>
     );

@@ -53,25 +53,6 @@ export function dotStatus(s: OnbState): DotStatus {
 }
 
 export const COPY = {
-  title: "set up Trawler",
-  subtitle: "capture your first HTTPS request",
-  steps: {
-    "trust-ca": {
-      title: "trust the CA",
-      body: "Trawler signs HTTPS with its own certificate; this machine has to trust it.",
-      action: "install certificate",
-    },
-    "set-proxy": {
-      title: "set the proxy",
-      body: "Send your traffic through Trawler. One click on macOS and Windows; a copy-and-paste command elsewhere.",
-      action: "set system proxy",
-    },
-    verify: {
-      title: "make a request",
-      body: "run this anywhere on your machine:",
-      action: null,
-    },
-  },
   back: "back to flows",
   dotTitle: {
     broken: "Not capturing yet — click to set up",

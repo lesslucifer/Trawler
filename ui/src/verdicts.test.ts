@@ -24,7 +24,7 @@ test("trustStatus: the local probe is the whole verdict", () => {
 test("trustStatus: an un-probeable OS says where the answer will show, never 'not set up'", () => {
   const v = trustStatus("unknown", null);
   expect(v.glyph).toBe("◐");
-  expect(v.remedy).toBe("step 3 shows whether traffic decrypts");
+  expect(v.remedy).toBe("the traffic verdict is what proves it");
   expect(v.short).not.toMatch(/not trusted/i);
 });
 
@@ -46,7 +46,7 @@ test("proxyStatus: the local probe is the whole verdict", () => {
 
 test("proxyStatus: not-set vs can't-check are distinct, both calm", () => {
   expect(proxyStatus("unknown", null).glyph).toBe("◐");
-  expect(proxyStatus("unknown", null).remedy).toBe("step 3 shows whether traffic arrives");
+  expect(proxyStatus("unknown", null).remedy).toBe("the traffic verdict is what proves it");
   expect(proxyStatus("unknown", null).short).not.toBe(proxyStatus("none", null).short);
 });
 
@@ -95,7 +95,7 @@ describe("trafficStatus reads recency, never history", () => {
     const v = at({ lastTunnelAt: ago(TUNNEL_GRACE_MS) });
     expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "arriving but not decrypting" });
     expect(v.remedy).toBe(
-      "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
+      "something is routing to Trawler and none of it is decrypting — the platform it comes from does not trust the certificate yet. The steps below are that platform's.",
     );
   });
 
@@ -139,8 +139,8 @@ describe("the short form every verdict carries", () => {
     [
       "trust · probe unknown",
       trustStatus("unknown", null),
-      "can't check automatically",
-      "step 3 shows whether traffic decrypts",
+      "can't check on this platform",
+      "the traffic verdict is what proves it",
     ],
     ["trust · not trusted", trustStatus("untrusted", null), "not trusted on this machine yet", undefined],
     ["proxy · checking", proxyStatus("ours", "checking"), "checking…", undefined],
@@ -156,8 +156,8 @@ describe("the short form every verdict carries", () => {
     [
       "proxy · probe unknown",
       proxyStatus("unknown", null),
-      "can't check automatically",
-      "step 3 shows whether traffic arrives",
+      "can't check on this platform",
+      "the traffic verdict is what proves it",
     ],
     ["proxy · none", proxyStatus("none", null), "not set on this machine yet", undefined],
     ["traffic · capturing", trafficStatus(seen({ lastDecryptedAt: NOW }), NOW), "capturing traffic", undefined],
@@ -171,7 +171,7 @@ describe("the short form every verdict carries", () => {
       "traffic · tunnel unanswered",
       trafficStatus(seen({ lastTunnelAt: NOW - TUNNEL_GRACE_MS }), NOW),
       "arriving but not decrypting",
-      "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
+      "something is routing to Trawler and none of it is decrypting — the platform it comes from does not trust the certificate yet. The steps below are that platform's.",
     ],
     [
       "traffic · plain only",

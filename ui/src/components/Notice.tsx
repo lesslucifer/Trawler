@@ -1,21 +1,23 @@
 import type { ReactNode } from "react";
+import { Spinner } from "./Spinner";
 
-export type NoticeTone = "mute" | "warn" | "ok";
+export type NoticeTone = "mute" | "warn" | "ok" | "pending";
 
-const TONE: Record<NoticeTone, { text: string; glyph: string | null }> = {
+const TONE: Record<NoticeTone, { text: string; glyph: ReactNode }> = {
   mute: { text: "text-ink-mute", glyph: null },
   warn: { text: "text-warn", glyph: "⚠" },
   ok: { text: "text-ok", glyph: "✓" },
+  pending: { text: "text-ink-mute", glyph: <Spinner /> },
 };
 
 /**
  * Notice — one sentence explaining an absence or a failure, with the action that helps if one exists.
  * @tier T1 — renders a sentence at a tone; owns no domain knowledge
- * @anatomy Inter 12px sentence at ink-mute, ink-warn or ok · ⚠ glyph at warn, ✓ at ok, none at mute (aria-hidden; colour is never the only channel) · optional detail line, always ink-mute, 11.5px · optional action slot 8px below, aligned to the sentence not the glyph · no border, no background, no panel chrome
+ * @anatomy Inter 12px sentence at ink-mute, ink-warn or ok · ⚠ glyph at warn, ✓ at ok, a spinner at pending, none at mute (aria-hidden; colour is never the only channel) · optional detail line, always ink-mute, 11.5px · optional action slot 8px below, aligned to the sentence not the glyph · no border, no background, no panel chrome
  * @use any zone that has nothing to show and must say which nothing it is (empty · pending · capped · not captured) · any zone whose load failed · any zone whose whole content is a STANDING positive outcome (tone="ok") — the detail panel's empty-headers zone and its loading line, BodyViewer's five absences and its load failure, the flow list's two empties, the setup screen's "installed" and "proxy set", the quit dialog's "the proxy is off"
  * @avoid transient confirmations of an action (use confirm-at-point at the trigger — CopyButton owns its own; tone="ok" is for a STANDING outcome, not an acknowledgement) · a dismissible message (dismissing leaves the blank zone this component exists to prevent) · a toned value rather than a sentence (that is TonedText, or StatusPill for an HTTP status) · a status verdict with a glyph+name+message shape (that is StatusLine) · wrapping a notice in a card or panel of its own
- * @states not interactive — no rest/hover/focus. Renders: mute bare · mute + detail · warn + ⚠ · warn + detail · ok + ✓ · ok + detail · any tone + action slot
- * @madeof Button (T1) — in the action slot only
+ * @states not interactive — no rest/hover/focus. Renders: mute bare · mute + detail · warn + ⚠ · warn + detail · ok + ✓ · ok + detail · pending + spinner (a zone still resolving; the sentence and detail stay at ink-mute, so it reads as working-on-it rather than as settled) · any tone + action slot
+ * @madeof Button (T1) — in the action slot only · Spinner (T1) — the pending glyph
  */
 export function Notice({
   children,
@@ -34,7 +36,7 @@ export function Notice({
 
   return (
     <div data-tone={tone} className={`flex items-start gap-chrome-gap py-chrome-y ${className}`}>
-      {glyph && (
+      {glyph !== null && (
         <span aria-hidden="true" className={`shrink-0 font-ui text-body ${text}`}>
           {glyph}
         </span>

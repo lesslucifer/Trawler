@@ -1,11 +1,14 @@
-// Pure CA-trust helpers (E-UISETUP.W2) — no I/O, no React. The frontend picks
-// which step content to render from the webview UA (== host OS); Rust builds
-// the actual privileged command from std::env::consts::OS at call time.
+// The platform axis: the one question the setup screen asks, and everything
+// that follows from the answer. A platform is what the user is holding — this
+// machine, another machine, a simulator, a device — never an operating system,
+// because two platforms can share one (iOS Simulator and iPhone) and one
+// platform's OS is only ever an implementation detail of its instructions.
+// Pure data and pure functions; no I/O, no React.
 
 import type { ProxyTarget } from "./proxyTargets";
+import { proxyOffSnippet } from "./proxyTargets";
 
 export type HostOs = "macos" | "windows" | "linux" | "other";
-export type TrustTarget = "macos" | "windows" | "linux" | "firefox" | "ios-sim" | "android";
 
 export function hostOs(ua: string = navigator.userAgent): HostOs {
   if (ua.includes("Windows")) return "windows";
@@ -14,151 +17,202 @@ export function hostOs(ua: string = navigator.userAgent): HostOs {
   return "other";
 }
 
-// "This OS has a one-click local setup path" — one concept shared by both the
-// trust-ca and set-proxy steps (macOS + Windows), so it is not duplicated.
+// "This OS has a one-click local setup path" — one concept shared by the trust
+// and the routing preconditions, so it is not duplicated.
 export function canAutoSetup(os: HostOs): boolean {
   return os === "macos" || os === "windows";
 }
-
-export function defaultTarget(os: HostOs): TrustTarget {
-  return os === "other" ? "linux" : os;
-}
-
-export const TARGETS: readonly { id: TrustTarget; label: string }[] = [
-  { id: "macos", label: "macOS" },
-  { id: "windows", label: "Windows" },
-  { id: "linux", label: "Linux" },
-  { id: "firefox", label: "Firefox" },
-  { id: "ios-sim", label: "iOS Simulator" },
-  { id: "android", label: "Android" },
-];
-
-export const CA_FILENAME = "trawler-ca.pem";
-
-// Step one of every manual route names this file, so the screen owes the user
-// a way to produce it: the save control sits at the end of this sentence, which
-// is why it carries no terminal period.
-export const SAVE_CA_STEP = `Save Trawler's certificate as ${CA_FILENAME}`;
-const DOWNLOAD = SAVE_CA_STEP;
-
-// The one copyable command per target, or null where the steps are point-and-click.
-// Named here rather than inferred at the call site: the module builds the arrays,
-// so it is the module that knows which element is a command. The arrays below
-// splice these values in rather than retyping them — manualSteps renders the copy
-// affordance on `step === command` by string equality, so a drift between the two
-// would silently drop it.
-const TRUST_COMMANDS: Record<TrustTarget, string | null> = {
-  macos: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
-  windows: "certutil -addstore -f ROOT trawler-ca.pem",
-  linux: "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
-  firefox: null,
-  "ios-sim": null,
-  android: "adb push trawler-ca.pem /sdcard/Download/",
-};
-
-const STEPS: Record<TrustTarget, string[]> = {
-  macos: [
-    DOWNLOAD,
-    "Run it in a terminal:",
-    TRUST_COMMANDS.macos!,
-    "Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust.",
-  ],
-  windows: [
-    DOWNLOAD,
-    "In an elevated terminal run:",
-    TRUST_COMMANDS.windows!,
-  ],
-  linux: [
-    DOWNLOAD,
-    "Run it in a terminal:",
-    TRUST_COMMANDS.linux!,
-    "Chrome reads the NSS store instead: certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
-  ],
-  firefox: [
-    "Firefox keeps its own certificate store, separate from the operating system's.",
-    DOWNLOAD,
-    "Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import.",
-    "Select trawler-ca.pem and check \"Trust this CA to identify websites\".",
-  ],
-  "ios-sim": [
-    "The iOS Simulator uses the host Mac's trust store — the macOS install already covers it.",
-    "If the Simulator was running during the install, restart it to pick up the new trust.",
-  ],
-  android: [
-    DOWNLOAD,
-    "Push it to the device:",
-    TRUST_COMMANDS.android!,
-    "Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
-    "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
-  ],
-};
-
-export function trustSnippet(target: TrustTarget): string | null {
-  return TRUST_COMMANDS[target];
-}
-
-export function guidedSteps(target: TrustTarget): string[] {
-  return STEPS[target];
-}
-
-// Trawler's CA is issued with CN "Trawler Proxy CA" — removal keys off that name.
-const REMOVE_COMMANDS: Record<TrustTarget, string | null> = {
-  macos: 'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
-  windows: 'certutil -delstore ROOT "Trawler Proxy CA"',
-  linux: "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
-  firefox: null,
-  "ios-sim": null,
-  android: null,
-};
-
-const REMOVE: Record<TrustTarget, string[]> = {
-  macos: [
-    "Run it in a terminal:",
-    REMOVE_COMMANDS.macos!,
-    "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
-  ],
-  windows: [
-    "In an elevated terminal run:",
-    REMOVE_COMMANDS.windows!,
-  ],
-  linux: [
-    "Run it in a terminal:",
-    REMOVE_COMMANDS.linux!,
-    "NSS store: certutil -d sql:$HOME/.pki/nssdb -D -n trawler",
-  ],
-  firefox: [
-    "Settings → Privacy & Security → Certificates → View Certificates → Authorities.",
-    "Select Trawler Proxy CA → Delete or Distrust.",
-  ],
-  "ios-sim": [
-    "Remove it from the host Mac (the macOS removal above), then restart the Simulator.",
-    "Or reset the Simulator: Device → Erase All Content and Settings.",
-  ],
-  android: [
-    "Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA.",
-  ],
-};
-
-export function removalSnippet(target: TrustTarget): string | null {
-  return REMOVE_COMMANDS[target];
-}
-
-export function removalSteps(target: TrustTarget): string[] {
-  return REMOVE[target];
-}
-
-// --- Set the proxy (E-UISETUP.W3) ---------------------------------------------
-// Same shape as the trust-ca helpers: pure, no I/O, instruction text as data.
-// Every snippet carries the real configured address — never a hardcoded port.
 
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");
   return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
 }
 
-// The one copyable command for the target, or null for GUI-only clients whose
-// steps are point-and-click (Firefox, iOS Simulator, Android).
-export function proxySnippet(t: ProxyTarget, addr: string): string | null {
+export const CA_FILENAME = "trawler-ca.pem";
+
+// Step one of every manual route names this file, so the screen owes the user a
+// way to produce it: the save control sits at the end of this sentence, which is
+// why it carries no terminal period.
+export const SAVE_CA_STEP = `Save Trawler's certificate as ${CA_FILENAME}`;
+
+export const PLATFORM_IDS = [
+  "this",
+  "mac",
+  "windows",
+  "ubuntu",
+  "ios-sim",
+  "android-sim",
+  "ios",
+  "android",
+] as const;
+
+export type PlatformId = (typeof PLATFORM_IDS)[number];
+
+// A step is a sentence with things in it: copyable values the user takes
+// verbatim, and the save control that produces the file the next step names.
+// Modelled as parts rather than as a string the screen pattern-matches, so a
+// command that drifts from its prose cannot silently stop being copyable.
+export type StepPart = string | { copy: string; label: string } | { save: true };
+export type GuideStep = readonly StepPart[];
+
+export interface Guide {
+  steps: GuideStep[];
+  undoTitle?: string;
+  undo?: GuideStep[];
+}
+
+// What one platform's preconditions say. A missing guide is a precondition with
+// nothing for the user to do — the note above it is the whole instruction.
+export interface PlatformSetup {
+  trust?: Guide;
+  trustNote?: string;
+  route?: Guide;
+  routeNote?: string;
+  tryIt: string;
+  tryCommand?: string;
+}
+
+// The addresses an off-machine platform's instructions are built from. Null
+// until the user arms reach, which is why `setupFor` can refuse to answer.
+export interface ReachAddresses {
+  proxy: string;
+  caCertUrl: string;
+}
+
+export interface SetupContext {
+  os: HostOs;
+  proxyAddr: string;
+  reach: ReachAddresses | null;
+}
+
+interface PlatformFacts {
+  label: string;
+  // Do this machine's two probes answer for this platform? Only where the
+  // platform IS this machine or shares its stores — a probe of the wrong
+  // machine is worse than no probe.
+  probed: boolean;
+  // Do this platform's instructions need an address beyond loopback?
+  needsReach: boolean;
+}
+
+const PLATFORMS: Record<PlatformId, PlatformFacts> = {
+  this: { label: "This machine", probed: true, needsReach: false },
+  mac: { label: "Another Mac", probed: false, needsReach: true },
+  windows: { label: "Another Windows PC", probed: false, needsReach: true },
+  ubuntu: { label: "Another Ubuntu machine", probed: false, needsReach: true },
+  "ios-sim": { label: "iOS Simulator", probed: true, needsReach: false },
+  "android-sim": { label: "Android emulator", probed: false, needsReach: false },
+  ios: { label: "iPhone or iPad", probed: false, needsReach: true },
+  android: { label: "Android device", probed: false, needsReach: true },
+};
+
+const OS_NAME: Record<HostOs, string | null> = {
+  macos: "macOS",
+  windows: "Windows",
+  linux: "Linux",
+  other: null,
+};
+
+export function platformLabel(id: PlatformId, os: HostOs): string {
+  const { label } = PLATFORMS[id];
+  if (id !== "this") return label;
+  const named = OS_NAME[os];
+  return named ? `${label} — ${named}` : label;
+}
+
+export function platformChoices(os: HostOs): { id: PlatformId; label: string }[] {
+  return PLATFORM_IDS.map((id) => ({ id, label: platformLabel(id, os) }));
+}
+
+export function isProbed(id: PlatformId): boolean {
+  return PLATFORMS[id].probed;
+}
+
+export function needsReach(id: PlatformId): boolean {
+  return PLATFORMS[id].needsReach;
+}
+
+// The three systems the screen can give commands for. An unknown host gets the
+// Linux trust route and the shell's proxy route: both are the ones that need no
+// knowledge of the desktop it is running on.
+type OsTarget = "macos" | "windows" | "linux";
+
+const hostTarget = (os: HostOs): OsTarget => (os === "other" ? "linux" : os);
+
+const OS_TRUST: Record<OsTarget, { install: GuideStep[]; undoTitle: string; undo: GuideStep[] }> = {
+  macos: {
+    install: [
+      [
+        "Run it in a terminal:",
+        {
+          copy: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+          label: "the trust command",
+        },
+      ],
+      ["Or double-click the file and set the Trawler CA to Always Trust."],
+      ["Firefox keeps its own store — import it there too."],
+    ],
+    undoTitle: "to remove it later",
+    undo: [
+      [
+        "Run:",
+        {
+          copy: 'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+          label: "the removal command",
+        },
+      ],
+      ["Or delete the Trawler Proxy CA entry in Keychain Access → System."],
+    ],
+  },
+  windows: {
+    install: [
+      [
+        "In an elevated terminal run:",
+        { copy: "certutil -addstore -f ROOT trawler-ca.pem", label: "the trust command" },
+      ],
+      ["Firefox keeps its own store — import it there too."],
+    ],
+    undoTitle: "to remove it later",
+    undo: [
+      [
+        "In an elevated terminal run:",
+        { copy: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" },
+      ],
+    ],
+  },
+  linux: {
+    install: [
+      [
+        "Run it in a terminal:",
+        {
+          copy: "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+          label: "the trust command",
+        },
+      ],
+      [
+        "Chrome reads the NSS store instead:",
+        {
+          copy: "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
+          label: "the NSS command",
+        },
+      ],
+      ["Firefox keeps its own store — import it there too."],
+    ],
+    undoTitle: "to remove it later",
+    undo: [
+      [
+        "Run:",
+        {
+          copy: "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+          label: "the removal command",
+        },
+      ],
+      ["NSS store:", { copy: "certutil -d sql:$HOME/.pki/nssdb -D -n trawler", label: "the NSS removal" }],
+    ],
+  },
+};
+
+function routeCommand(t: ProxyTarget, addr: string): string | null {
   const { host, port } = splitProxyAddr(addr);
   switch (t) {
     case "macos":
@@ -174,40 +228,183 @@ export function proxySnippet(t: ProxyTarget, addr: string): string | null {
   }
 }
 
-export function proxySteps(t: ProxyTarget, addr: string): string[] {
-  const { host, port } = splitProxyAddr(addr);
-  const snippet = proxySnippet(t, addr);
-  switch (t) {
-    case "macos":
-      return ["Run — this sets the Wi-Fi service; change the name for Ethernet etc.:", snippet!];
-    case "windows":
-      return ["Run:", snippet!];
-    case "linux":
-      return ["GNOME — run:", snippet!, "Chrome/Electron inherit this system proxy."];
-    case "firefox":
-      return [
-        "Firefox keeps its own proxy settings, separate from the system.",
-        "Settings → Network Settings → Settings… → Manual proxy configuration.",
-        `HTTP Proxy ${host}, Port ${port}, and check "Also use this proxy for HTTPS".`,
-      ];
-    case "terminal":
-      return ["Export the proxy in your shell (curl, npm, and most CLIs honour it):", snippet!];
-    case "ios-sim":
-      return [
-        "The iOS Simulator uses the host Mac's system proxy — the macOS setup already covers it.",
-        "Restart the Simulator if it was running when you set the proxy.",
-      ];
-    case "android":
-      return [
-        `Wi-Fi → your network → Proxy → Manual. Host = your machine's LAN address, Port ${port}.`,
-        "Android emulator: use host 10.0.2.2 to reach the machine it runs on.",
-        "Reaching a device needs Trawler bound beyond loopback — see setup notes.",
-      ];
-  }
+const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
+  macos: "Run — this sets the Wi-Fi service; change the name for Ethernet:",
+  windows: "Run:",
+  linux: "GNOME — run:",
+  terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
+};
+
+const ROUTE_UNDO_LEAD: Record<OsTarget | "terminal", string> = {
+  macos: "Turns it off per enabled service, keeping the saved address:",
+  windows: "Disable the WinINET proxy (keeps the saved address):",
+  linux: "GNOME — back to no proxy:",
+  terminal: "Clear the environment variables:",
+};
+
+function osRoute(t: OsTarget | "terminal", addr: string): Guide {
+  return {
+    steps: [[ROUTE_LEAD[t], { copy: routeCommand(t, addr)!, label: "the proxy command" }]],
+    undoTitle: "to turn it off later",
+    undo: [[ROUTE_UNDO_LEAD[t], { copy: proxyOffSnippet(t)!, label: "the proxy-off command" }]],
+  };
 }
 
-// P1 prove-it: the concrete, copyable command that generates the first request.
-// Text only — the app never fires it (epic non-goal); it guides the user.
-export function proveItSnippet(addr: string): string {
-  return `curl -x http://${addr} https://example.com`;
+const DEVICE_PROXY_UNDO = "to turn it off later";
+
+// The alias every Android emulator resolves to the machine it runs on, which is
+// why the emulator needs no reach: it is already inside this host's loopback.
+const EMULATOR_HOST = "10.0.2.2";
+
+const ANDROID_USER_CA =
+  "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
+
+function downloadStep(where: string, caCertUrl: string, what: string): GuideStep {
+  return [`${where}, open`, { copy: caCertUrl, label: "the certificate URL" }, `— it downloads ${what}.`];
+}
+
+function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+  const target = hostTarget(os);
+  const trust = OS_TRUST[target];
+  return {
+    trust: {
+      steps: [[SAVE_CA_STEP, { save: true }], ...trust.install],
+      undoTitle: trust.undoTitle,
+      undo: trust.undo,
+    },
+    route: osRoute(os === "other" ? "terminal" : target, proxyAddr),
+    tryIt: "make any request — or run this",
+    tryCommand: `curl -x http://${proxyAddr} https://example.com`,
+  };
+}
+
+function anotherMachineSetup(target: OsTarget, reach: ReachAddresses): PlatformSetup {
+  const trust = OS_TRUST[target];
+  return {
+    trust: {
+      steps: [
+        [
+          "On that machine, open",
+          { copy: reach.caCertUrl, label: "the certificate URL" },
+          `and save it as ${CA_FILENAME}.`,
+        ],
+        ...trust.install,
+      ],
+      undoTitle: trust.undoTitle,
+      undo: trust.undo,
+    },
+    route: osRoute(target, reach.proxy),
+    tryIt: "open any site on that machine — the first decrypted flow is what ends setup",
+  };
+}
+
+function deviceSetup(id: "ios" | "android", reach: ReachAddresses): PlatformSetup {
+  const ios = id === "ios";
+  return {
+    trust: {
+      steps: ios
+        ? [
+            downloadStep("On the device", reach.caCertUrl, "the profile"),
+            ["Open it: Settings → General → VPN & Device Management → install the profile."],
+            ["Then turn it on: Settings → General → About → Certificate Trust Settings."],
+            ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
+          ]
+        : [
+            downloadStep("On the device", reach.caCertUrl, "the certificate"),
+            ["Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate."],
+            [ANDROID_USER_CA],
+            ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
+          ],
+    },
+    route: {
+      steps: ios
+        ? [
+            ["On the device: Settings → Wi-Fi → the network it is on → Configure Proxy → Manual."],
+            ["Put the server and port above into it, and save."],
+          ]
+        : [
+            ["On the device: Settings → Wi-Fi → the network it is on → Proxy → Manual."],
+            ["Put the server and port above into it, and save."],
+          ],
+      undoTitle: DEVICE_PROXY_UNDO,
+      undo: ios
+        ? [["Settings → Wi-Fi → the network → Configure Proxy → Off."]]
+        : [["Wi-Fi → the network → Proxy → None."]],
+    },
+    tryIt: "open any site on the device — the first decrypted flow is what ends setup",
+  };
+}
+
+function emulatorSetup(proxyAddr: string): PlatformSetup {
+  const { port } = splitProxyAddr(proxyAddr);
+  return {
+    trust: {
+      steps: [
+        [SAVE_CA_STEP, { save: true }],
+        [
+          "Push it to the emulator:",
+          { copy: "adb push trawler-ca.pem /sdcard/Download/", label: "the push command" },
+        ],
+        ["Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate."],
+        [ANDROID_USER_CA],
+      ],
+      undoTitle: "to remove it later",
+      undo: [
+        ["Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA."],
+      ],
+    },
+    route: {
+      steps: [
+        ["In the emulator: Settings → Wi-Fi → the network it is on → Proxy → Manual."],
+        [
+          "Server",
+          { copy: EMULATOR_HOST, label: "the emulator's host" },
+          "port",
+          { copy: String(port), label: "the proxy port" },
+          "— the alias every emulator resolves to the machine it runs on.",
+        ],
+        [
+          "Or start it with the proxy already set:",
+          {
+            copy: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
+            label: "the emulator command",
+          },
+        ],
+      ],
+      undoTitle: DEVICE_PROXY_UNDO,
+      undo: [["Wi-Fi → the network → Proxy → None."]],
+    },
+    tryIt: "open any site in the emulator — the first decrypted flow is what ends setup",
+  };
+}
+
+const SIMULATOR_SETUP: PlatformSetup = {
+  trustNote: "the Simulator uses this Mac's certificate store — installing it here covers it",
+  trust: { steps: [["Restart the Simulator if it was running when the certificate went in."]] },
+  routeNote: "the Simulator uses this Mac's system proxy — setting it here covers it",
+  tryIt: "open any site in the Simulator",
+};
+
+// Null is the honest answer for a platform whose every instruction needs an
+// address that does not exist yet: there are no steps to show, and inventing
+// one is what the reach precondition exists to prevent.
+export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup | null {
+  if (needsReach(id) && ctx.reach === null) return null;
+  switch (id) {
+    case "this":
+      return localSetup(ctx.os, ctx.proxyAddr);
+    case "mac":
+      return anotherMachineSetup("macos", ctx.reach!);
+    case "windows":
+      return anotherMachineSetup("windows", ctx.reach!);
+    case "ubuntu":
+      return anotherMachineSetup("linux", ctx.reach!);
+    case "ios-sim":
+      return SIMULATOR_SETUP;
+    case "android-sim":
+      return emulatorSetup(ctx.proxyAddr);
+    case "ios":
+    case "android":
+      return deviceSetup(id, ctx.reach!);
+  }
 }
