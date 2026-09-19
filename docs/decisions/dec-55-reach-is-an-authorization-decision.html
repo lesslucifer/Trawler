@@ -132,7 +132,17 @@
           <td>A CLI flag or config file entry — <code>--listen 0.0.0.0</code></td>
           <td>It makes exposure a default someone can inherit. A flag in a shell profile or a
             checked-in config outlives every session and asks nobody. The whole point is that the
-            decision is taken by a person, for a session</td>
+            decision is taken by a person, for a session.
+            <strong>What this does and does not forbid:</strong> the vice is <em>inheritance</em> —
+            a value read from the environment that arms a later session nobody consented in. The
+            core's <code>Config</code> carries a reach choice that <code>serve</code> acts on, and
+            that is not the rejected thing: nothing parses it from a flag, a variable or a file,
+            the shipped binary passes <code>Config::default()</code> (loopback), and the desktop
+            shell cannot touch it at all — it is an out-of-process client
+            (<a href="dec-12-native-ui-stack.html">DEC-12</a>) that arms through the control API.
+            It is the seam a headless embedder with no UI to ask through would use, and a test
+            uses. <strong>If a flag, variable or config file is ever wired to it, that is this
+            row</strong>, and it needs a confirm or a new decision</td>
         </tr>
         <tr>
           <td>Binding <code>0.0.0.0</code> and letting the screen pick which address to print</td>
