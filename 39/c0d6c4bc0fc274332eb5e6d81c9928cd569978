@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: added
+    distills: "The epic's design of record, closed. Restored byte-identical from bfdc345, re-identified onto E-ONBOARD.W2, then amended against the reach seam W1 shipped: five reach.* Given rows plus two callbacks (reach.api deliberately unused, with its reason), a second mockup axis armed/not-armed live only under an off-machine platform, a new 'let this device reach Trawler' precondition carrying the address choice and its reversal, the certificate URL replacing the carry-the-file route, the server and port as copyable values, and four keyboard rows. Blocked-on rows 1 and 2 closed against DEC-55 and struck rather than deleted; rows 3-6 left open. Round 3 took four calls from the reviewer at the mockup - a pending zone that read as settled, a remedy sitting in a different zone from its verdict, a precondition that rendered nothing at all during a certificate install, and the proven verdict moved to the try zone where the request that proves it is made - and raised one component extension, Notice tone='pending'. data-status='archived', so 6-run-closed passes and W3 has a blob to cite."
+  - path: "docs/work/2026-09-19-onboard-design-of-record-plan.html"
+    tier: T3
+    action: added
+    distills: "The WU plan: the requirement, what W1 actually handed the run as against what the epic plan described, ten expected rows, the order of work, four risks, and a test plan waiving all three layers. Its premise that the WU ships a document and no code was falsified at the signature - deviation 5 in the result records that rather than the plan being rewritten after the fact."
+  - path: "docs/work/2026-09-19-onboard-design-of-record-result.html"
+    tier: T3
+    action: added
+    distills: "What shipped against each of the ten expected rows, five deviations, and the design flow's first bill. The deviations that matter: the run was green on the first verify-doc, so the plan's budgeted discovery pass did not exist; the run now proposes a component extension, contradicting the epic plan's claim that it proposed zero components; and mr confirm refused the tip because is_gated is a disjunction it read as one fact, which made every codeless design Working Unit unsignable and so unmergeable. The bill: 78 min 41 s elapsed, of which the agent worked 18 min 40 s, so the human gate is 76% of the flow. Output tokens 145,162 against 19.2M cache read - a single total would report cache traffic and call it design effort. Five follow-ups, including that no design WU before this one ever reached a signature, which is why the bug survived."
+t2_waived: "The screen's truth reaches docs/use-cases/web-ui.html and the run's lexicon proposals reach docs/design-rules/ at W4, after W3 has built what W2 designed - distilling a design before its build would put a claim in T2 the tree cannot support. The code change carries no T2 synthesis of its own either, and that is the load-bearing half of this waiver rather than an omission: workflow.html already states the rule mr confirm now obeys - a cr/v5 PASS is demanded 'where the diff changes code' - so the T1 doc was correct and the implementation had drifted from it. Writing a decision record here would record a decision nobody took."
