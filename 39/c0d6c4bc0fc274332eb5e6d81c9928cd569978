@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU onboarding-redesign/design-of-record -> epic/onboarding-redesign"
+epic: E-ONBOARD
+wu: E-ONBOARD.W2
+branch: wu/onboarding-redesign/design-of-record
+base: 7cb564d91f26300b57018d237add2c2057b41fb0
+head: 39c0d6c4bc0fc274332eb5e6d81c9928cd569978
+diff_sha256: 46e02e31972611cdc8eba85c7aabfb131f6026ccd1f122d4af364ddef846b46c
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: inherited-session-default
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 0
+    finders: 415
+    verifiers: 281
+    total: 760
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "The narrowing went one step too far. unready_reasons skipped the review arm for every Gated::DesignOnly tip, but the merge gate only drops a note whose SCHEMA binds code - reviewed_binding returns Some(whole) unconditionally for the legacy cr/v2 and cr/v3 schemas, so check_review judges them whatever the diff touched. A codeless design tip carrying a legacy FAIL or stale-hash note would therefore be signed by mr confirm and refused by verify-dod: a signature attesting something unmergeable. Reproduced by the verifier in a throwaway repo - verify-dod refused with 3-review and 5-diff-binding while mr confirm exited 0 and wrote the mr/v1 note"
+    fixed: "tip_unready now narrows the note to what check_review would read - filtering a code-bound schema on a codeless diff, keeping every other - and the verdict arm keys on the note rather than on which Gated arm the tip is in; an absent note still fails only on the code arm. The comment this WU had added one commit earlier claiming the gate ignores a review note on a codeless tip was false for legacy schemas and is corrected, its test split into the two cases it conflated. Integration test a_legacy_review_note_still_blocks_a_codeless_design_tip was run against the previous commit's mr.rs and signs (exit 0) where it must refuse. Landed in ef39d47, inside the range this note binds"
+verdict: PASS
+date: 2026-09-19
