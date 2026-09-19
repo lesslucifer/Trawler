@@ -11,6 +11,7 @@ pub mod capture;
 pub mod config;
 pub mod event;
 pub mod flow;
+pub mod reach;
 pub mod recorder;
 pub mod store;
 
@@ -28,7 +29,7 @@ use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
-pub use config::Config;
+pub use config::{Config, Reach};
 pub use event::FlowEvent;
 pub use flow::{Flow, FlowId};
 pub use recorder::Recorder;
@@ -52,6 +53,7 @@ pub fn init_crypto() {
 pub struct RunningServer {
     pub proxy_addr: SocketAddr,
     pub api_addr: SocketAddr,
+    reach: Arc<reach::Controller>,
     shutdown_tx: watch::Sender<bool>,
     proxy_task: JoinHandle<()>,
     api_task: JoinHandle<()>,
@@ -63,10 +65,17 @@ impl RunningServer {
     /// SSE `/stream` connections never complete, so a graceful wait on them
     /// hangs shutdown forever (e.g. Ctrl-C with the UI shell open).
     pub async fn shutdown(self) {
+        self.reach.disarm().await;
         let _ = self.shutdown_tx.send(true);
         let _ = self.proxy_task.await;
         self.api_task.abort();
         let _ = self.api_task.await;
+    }
+
+    /// What an armed session bound, or `None` while Trawler answers only this
+    /// machine. Resolved, so a test that armed an ephemeral port can find it.
+    pub async fn reachable_at(&self) -> Option<reach::Addresses> {
+        self.reach.addresses().await
     }
 }
 
@@ -106,7 +115,13 @@ pub async fn serve(config: Config) -> Result<RunningServer, Box<dyn std::error::
 
     let api_listener = TcpListener::bind(config.api_addr).await?;
     let api_addr = api_listener.local_addr()?;
-    let app = api::router(Arc::clone(&store), Arc::new(ca_material.cert_pem));
+    let reach = Arc::new(reach::Controller::new(config.clone(), Arc::clone(&store)));
+    let app = api::router(Arc::clone(&store), Arc::new(ca_material.cert_pem), Arc::clone(&reach));
+    // A config that boots armed is how a headless core reaches a device without
+    // a UI to confirm at; the arming a user does goes through the control API.
+    if let Some(address) = config.reach.address() {
+        reach.arm(address, app.clone()).await?;
+    }
     let api_task = tokio::spawn(async move {
         let served = axum::serve(api_listener, app)
             .with_graceful_shutdown(wait_for_shutdown(shutdown_rx))
@@ -116,16 +131,16 @@ pub async fn serve(config: Config) -> Result<RunningServer, Box<dyn std::error::
         }
     });
 
-    Ok(RunningServer { proxy_addr, api_addr, shutdown_tx, proxy_task, api_task })
+    Ok(RunningServer { proxy_addr, api_addr, reach, shutdown_tx, proxy_task, api_task })
 }
 
-async fn wait_for_shutdown(mut rx: watch::Receiver<bool>) {
+pub(crate) async fn wait_for_shutdown(mut rx: watch::Receiver<bool>) {
     let _ = rx.wait_for(|stop| *stop).await;
 }
 
 /// Build the proxy-to-origin TLS connector: webpki roots plus any extra CA PEMs
 /// from config (default none reproduces standard system-trust behaviour).
-fn upstream_connector(extra_root_pems: &[String]) -> HttpsConnector<HttpConnector> {
+pub(crate) fn upstream_connector(extra_root_pems: &[String]) -> HttpsConnector<HttpConnector> {
     let mut roots = RootCertStore::empty();
     roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     for pem in extra_root_pems {
@@ -148,6 +163,15 @@ pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     info!("proxy listening on http://{}", server.proxy_addr);
     info!("control API listening on http://{}", server.api_addr);
     info!("CA download at http://{}/ca.crt", server.api_addr);
+    if let Some(addresses) = server.reachable_at().await {
+        info!(
+            "reachable from other devices at http://{} — certificate at {}",
+            addresses.proxy,
+            addresses.ca_cert_url()
+        );
+    } else {
+        info!("loopback only — other devices cannot reach this Trawler");
+    }
 
     shutdown_signal().await;
     info!("shutting down");

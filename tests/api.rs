@@ -17,7 +17,7 @@ use trawler::store::Store;
 use common::{brotli, captured, gzip, FlowBuilder};
 
 fn router_with(store: Arc<Store>) -> Router {
-    trawler::api::router(store, Arc::new("--CA PEM--".to_string()))
+    trawler::test_support::api_router(store, "--CA PEM--")
 }
 
 async fn get(router: &Router, uri: &str) -> (StatusCode, HeaderMap, Vec<u8>) {
@@ -289,7 +289,7 @@ async fn body_204_when_nothing_retained() {
 #[tokio::test]
 async fn ca_cert_download() {
     let store = Arc::new(Store::new(1_000_000, 64));
-    let r = trawler::api::router(store, Arc::new("PEMDATA".to_string()));
+    let r = trawler::test_support::api_router(store, "PEMDATA");
 
     let (status, headers, body) = get(&r, "/ca.crt").await;
     assert_eq!(status, StatusCode::OK);

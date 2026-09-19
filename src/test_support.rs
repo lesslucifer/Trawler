@@ -159,3 +159,14 @@ impl Default for FlowBuilder {
         Self::new()
     }
 }
+
+/// The control API over `store`, with a reach controller nothing has armed —
+/// what every API test that is not about reach needs, so none of them has to
+/// know how reach is constructed.
+pub fn api_router(store: std::sync::Arc<crate::Store>, ca_cert_pem: &str) -> axum::Router {
+    let reach = std::sync::Arc::new(crate::reach::Controller::new(
+        crate::Config::default(),
+        std::sync::Arc::clone(&store),
+    ));
+    crate::api::router(store, std::sync::Arc::new(ca_cert_pem.to_string()), reach)
+}

@@ -9,6 +9,7 @@ use time::OffsetDateTime;
 
 use crate::event::FlowEvent;
 use crate::flow::{BodyRec, Flow, FlowId, FlowSource, Header, NotCapturedReason};
+use crate::reach::{Addresses, Interface};
 use crate::store::FlowPage;
 
 /// The timestamp format every projection puts on the wire, defined once so the
@@ -171,6 +172,32 @@ impl From<&FlowPage> for FlowPageView {
         Self {
             flows: page.flows.iter().map(FlowSummary::from).collect(),
             next_cursor: page.next_cursor.map(|id| id.to_string()),
+        }
+    }
+}
+
+/// What `/reach` reports: whether another device can get here, the two
+/// addresses it would use, the certificate URL that works over them, and the
+/// interfaces on offer. The addresses are null when nothing is armed — there is
+/// no address to give, and inventing a plausible one is what this whole WU
+/// exists to stop the screen doing.
+#[derive(Serialize)]
+pub struct ReachView {
+    pub armed: bool,
+    pub proxy: Option<String>,
+    pub api: Option<String>,
+    pub ca_cert_url: Option<String>,
+    pub interfaces: Vec<Interface>,
+}
+
+impl ReachView {
+    pub fn new(armed: Option<Addresses>, interfaces: Vec<Interface>) -> Self {
+        Self {
+            armed: armed.is_some(),
+            proxy: armed.map(|a| a.proxy.to_string()),
+            api: armed.map(|a| a.api.to_string()),
+            ca_cert_url: armed.map(|a| a.ca_cert_url()),
+            interfaces,
         }
     }
 }
