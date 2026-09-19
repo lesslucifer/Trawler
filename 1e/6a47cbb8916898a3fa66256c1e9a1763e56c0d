@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-ONBOARD
+wu: E-ONBOARD.W1
+branch: wu/onboarding-redesign/reach
+base: 3deaa40e256fc7f142e3452fa77256173a34cade
+tip: 1e6a47cbb8916898a3fa66256c1e9a1763e56c0d
+diff_sha256: d5d52ee291f47a11ad1ea42fa2aa57380bab05283df73ba9169df3413d0ea87c
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-19
