@@ -1,0 +1,9 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W2
+base: 7cb564d91f26300b57018d237add2c2057b41fb0
+design_sha256: 621d015813cf06338845cfefb8b27663b8f152411cdf6e88b3333de14c7a571e
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+accounting: "The diff adds no surface and renders no file - design-scope lists one artifact, zero new surfaces and zero UI-rendering files - so there is nothing to cite and nothing to declare undesigned, and the accounting is complete by construction rather than by assertion. This is the design-producing half of the design-to-build hand-off: the WU closed the run (data-status=archived) so that E-ONBOARD.W3, which does add the surface, has a path and a blob to cite. An implements: block here would name a build this WU did not do. The xtask change this WU also carries renders nothing and is answered by the code review, not here."
+date: 2026-09-19
