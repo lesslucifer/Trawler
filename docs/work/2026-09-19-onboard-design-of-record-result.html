@@ -184,7 +184,16 @@
             waiver is withdrawn (five unit tests, two integration), it now owes a <code>cr/v5</code> review it
             was planned not to need, and its <em>this WU ships a document and no code</em> premise is false.
             <strong>What it did not cost:</strong> no T1 edit — <code>workflow.html</code> already reads
-            <em>"…where the diff changes code"</em>, so the doc was right and the code had drifted from it</td>
+            <em>"…where the diff changes code"</em>, so the doc was right and the code had drifted from it.
+            <strong>And the review earned its keep:</strong> the first cut of the fix narrowed one step too
+            far — it skipped the review arm for <em>every</em> codeless design tip, where the gate only drops
+            a note whose <em>schema</em> binds code. A legacy <code>cr/v2</code>/<code>cr/v3</code> binds the
+            whole diff and is judged whatever the diff touched, so the confirm would have signed a tip
+            <code>verify-dod</code> still refuses on a FAIL verdict. Found as a nit, reproduced against a
+            real repo before it was believed, and fixed in <code>ef39d47</code> — which also corrected a
+            comment this WU had added one commit earlier asserting the gate ignores such a note. Two
+            divergences between the confirm and the gate, one of them introduced by the fix for the
+            other</td>
         </tr>
       </table>
     </div>
@@ -201,16 +210,19 @@
             <code>bfdc345</code> · <code>a3d147d</code> round 2 · <code>62a1ab2</code> round 3 ·
             <code>85e26f5</code> the close</td></tr>
         <tr><td>Tests</td>
-          <td><strong>five unit, two integration; e2e waived.</strong> All of them belong to deviation 5, not
+          <td><strong>seven unit, three integration; e2e waived.</strong> All of them belong to deviation 5, not
             to the design half, which still adds no executable code. Unit
             (<code>xtask/src/mr.rs</code>): a gated codeless tip owes its notes and no review · it still owes
             those two notes · a review note that turns up on such a tip is ignored rather than judged as
-            stale or failing · plus the two existing cases re-pointed at the enum. Integration
+            stale or failing — and, from the review, that a legacy whole-bound note <em>is</em> judged on
+            that same arm · plus the two existing cases re-pointed at the enum. Integration
             (<code>xtask/tests/mr.rs</code>), over a real git tree because the bug was in how the confirm
             derives its range, not in the predicate it feeds: a closed design run with no code signs with no
-            review, and — the other direction, so a predicate that always answered <em>no review</em> cannot
-            pass — the same tip with a code path added still owes one. The integration test was run against
-            the unfixed code first and reproduced the exact refusal the owner hit</td></tr>
+            review; the other direction, so a predicate that always answered <em>no review</em> cannot pass
+            — the same tip with a code path added still owes one; and a legacy <code>cr/v3</code> FAIL note
+            on a codeless design tip still blocks the signature. Two of the three were run against the
+            unfixed code first: the first reproduces the exact refusal the owner hit, the third reproduces
+            the signature the first fix would wrongly have written</td></tr>
         <tr><td>What ran instead, all green</td>
           <td><code>verify-doc</code> on the run — 12/12 hard rules, 0 <code>design-allow</code> suppressions ·
             <code>verify-doc</code> over <code>docs/work/*.html</code> — 5 docs, none red ·
