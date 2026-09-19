@@ -9,22 +9,36 @@
 #![allow(clippy::unwrap_used)]
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 
+use axum::extract::State;
 use axum::routing::get;
 use axum::Router;
 use serde_json::Value;
 use tempfile::{tempdir, TempDir};
 use tokio::net::TcpListener;
+use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 use trawler::{serve, Config, Reach, RunningServer};
 
 const LOOPBACK: &str = "127.0.0.1";
 
+/// Parks until the test releases it, holding an exchange open through whatever
+/// proxy reached it.
+async fn hold(State(release): State<Arc<Notify>>) -> &'static str {
+    release.notified().await;
+    "released"
+}
+
 struct Harness {
     origin: SocketAddr,
     api_addr: SocketAddr,
     client: reqwest::Client,
+    /// Releases whatever is parked on the origin's `/hold` route, so a test can
+    /// keep an exchange open through the proxy for exactly as long as it means
+    /// to — a signal, never a sleep.
+    release: Arc<Notify>,
     server: Option<RunningServer>,
     _ca_dir: TempDir,
     _origin: JoinHandle<()>,
@@ -34,7 +48,11 @@ impl Harness {
     async fn boot(reach: Reach) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let origin = listener.local_addr().unwrap();
-        let app = Router::new().route("/ok", get(|| async { "hello" }));
+        let release = Arc::new(Notify::new());
+        let app = Router::new()
+            .route("/ok", get(|| async { "hello" }))
+            .route("/hold", get(hold))
+            .with_state(Arc::clone(&release));
         let origin_task = tokio::spawn(async move {
             let _ = axum::serve(listener, app).await;
         });
@@ -52,6 +70,7 @@ impl Harness {
             origin,
             api_addr: server.api_addr,
             client: reqwest::Client::builder().timeout(Duration::from_secs(5)).build().unwrap(),
+            release,
             server: Some(server),
             _ca_dir: ca_dir,
             _origin: origin_task,
@@ -123,7 +142,21 @@ impl Harness {
         format!("http://{}{}", self.origin, path)
     }
 
+    /// Poll the capture until the flow for `path` is recorded — the request has
+    /// then genuinely reached the proxy, which no sleep can promise.
+    async fn wait_until_captured(&self, path: &str) {
+        for attempt in 0..200 {
+            let flows = self.get_json(self.api_addr, &format!("/flows?q={path}")).await;
+            if !flows.as_array().unwrap().is_empty() {
+                return;
+            }
+            assert!(attempt < 199, "the proxy never saw {path}");
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+
     async fn shutdown(mut self) {
+        self.release.notify_waiters();
         if let Some(server) = self.server.take() {
             server.shutdown().await;
         }
@@ -357,4 +390,47 @@ async fn a_headless_core_can_boot_armed_and_gives_its_listeners_back_at_shutdown
         client.get(format!("http://{}/stats", armed.api)).send().await.is_err(),
         "an opt-in must not outlive the process it was confirmed for"
     );
+}
+
+// The lock that serialises arming must not span the old session's drain. A
+// device's open exchange keeps the outgoing proxy task pending for as long as
+// it likes — seconds, measurably — and while that drains nobody may be kept
+// from reading reach's state, least of all the user revoking the exposure,
+// which is the one thing DEC-55 promises stays available.
+#[tokio::test]
+async fn a_draining_disarm_never_blocks_a_reader_of_the_state() {
+    let h = Harness::local().await;
+    let (_, armed) = h.arm(LOOPBACK).await;
+    let armed: Value = serde_json::from_str(&armed).unwrap();
+    let reach_proxy = socket(&armed["proxy"]);
+
+    let held = tokio::spawn({
+        let through = Harness::through(reach_proxy);
+        let url = h.origin_url("/hold");
+        async move { through.get(url).send().await.unwrap().text().await.unwrap() }
+    });
+    h.wait_until_captured("/hold").await;
+
+    let disarming = tokio::spawn({
+        let client = h.client.clone();
+        let url = format!("http://{}/reach", h.api_addr);
+        async move { client.delete(url).send().await.unwrap().status() }
+    });
+
+    // Polled rather than read once: the disarm takes the lock a few
+    // milliseconds after it is spawned, so a single read can finish before it
+    // and prove nothing. Every read inside the drain window has to answer.
+    let window = tokio::time::Instant::now() + Duration::from_secs(1);
+    while tokio::time::Instant::now() < window {
+        let read = tokio::time::timeout(Duration::from_millis(300), h.reach_state()).await;
+        assert!(read.is_ok(), "reading /reach blocked behind a disarm draining an open exchange");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    h.release.notify_waiters();
+    assert_eq!(held.await.unwrap(), "released", "the open exchange was cut off by the disarm");
+    assert_eq!(disarming.await.unwrap(), reqwest::StatusCode::OK);
+    assert_eq!(h.server().reachable_at().await, None);
+
+    h.shutdown().await;
 }

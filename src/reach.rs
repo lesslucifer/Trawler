@@ -153,14 +153,22 @@ impl Controller {
         if address.is_unspecified() {
             return Err(Error::Unspecified);
         }
-        let mut slot = self.armed.lock().await;
-        if let Some(current) = slot.as_ref().filter(|armed| armed.addresses.proxy.ip() == address) {
-            return Ok(current.addresses);
-        }
+        // The critical section is the swap, and the bind that must not race a
+        // second arm — never the outgoing session's drain, which waits on a
+        // device's open exchange and would hold every other reader of the state
+        // behind it, including the one trying to revoke the exposure.
+        let (addresses, previous) = {
+            let mut slot = self.armed.lock().await;
+            if let Some(current) =
+                slot.as_ref().filter(|armed| armed.addresses.proxy.ip() == address)
+            {
+                return Ok(current.addresses);
+            }
+            let next = self.listen_on(address, api).await?;
+            (next.addresses, slot.replace(next))
+        };
 
-        let next = self.listen_on(address, api).await?;
-        let addresses = next.addresses;
-        if let Some(previous) = slot.replace(next) {
+        if let Some(previous) = previous {
             previous.stop().await;
         }
         info!("reachable at http://{} — control API on http://{}", addresses.proxy, addresses.api);
@@ -191,7 +199,10 @@ impl Controller {
     /// Stop answering anywhere but loopback. Idempotent: disarming something
     /// already off is the state the caller asked for.
     pub async fn disarm(&self) {
-        if let Some(armed) = self.armed.lock().await.take() {
+        // Taken in a statement of its own so the guard is gone before the
+        // drain: an `if let` on the lock would hold it for the whole body.
+        let armed = self.armed.lock().await.take();
+        if let Some(armed) = armed {
             armed.stop().await;
         }
     }

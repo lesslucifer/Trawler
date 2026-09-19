@@ -98,8 +98,11 @@
       <tr><td><code>src/reach.rs</code> (new)</td>
         <td>interface enumeration, the address refusal, and the <code>Controller</code> that
           arms, disarms and reports. The reach proxy is a second <code>Proxy</code> over the same
-          <code>Store</code>; its CA is re-read from disk because
-          <code>RcgenAuthority</code> consumes the issuer</td></tr>
+          <code>Store</code>, with an issuer of its own — <code>RcgenAuthority</code> consumes the
+          one it is given — rebuilt from the PEMs held since boot rather than from disk</td></tr>
+      <tr><td><code>src/ca.rs</code></td>
+        <td><code>CaPems</code> and <code>ca::issuer</code>: the CA as bytes, and the one place any
+          authority past the first is built from them</td></tr>
       <tr><td><code>src/api/mod.rs</code></td>
         <td><code>/reach</code>, and <code>router_from(state)</code> — which is how the reach
           listener serves exactly what loopback serves instead of a second definition that could
@@ -152,6 +155,18 @@
             kind of thing W3 needs to be able to rely on</td>
         </tr>
         <tr>
+          <td><strong>The arm lock does not span a teardown.</strong> The second review round
+            found that both <code>arm</code> and <code>disarm</code> held the controller's mutex
+            across the outgoing session's drain</td>
+          <td>That drain waits on a device's open exchange — measured at five seconds against a
+            held request, and unbounded in principle. While it ran, every reader of the reach state
+            queued behind it, including the disarm a user issues to revoke the exposure, which is
+            the one thing DEC-55 promises stays available. The lock now covers the swap and the
+            bind that must not race a second arm, and nothing else. The regression test polls
+            across the whole drain window rather than reading once — the first version of it raced
+            ahead of the lock and passed against the bug</td>
+        </tr>
+        <tr>
           <td><strong>The CA is carried as bytes, not re-read.</strong> <code>CaMaterial</code>
             gained the key PEM and a shared <code>ca::issuer</code>; the controller rebuilds its
             authority from memory</td>
@@ -187,13 +202,17 @@
             <code>9a55dba</code> the client and the shell's ask ·
             one review-fix commit carrying the two findings below</td></tr>
         <tr><td>Review</td>
-          <td>Three finders (correctness, efficiency, altitude — the diff spans more than one
-            module) raised six candidates; verifiers confirmed two and refuted four. The first
-            round returned <strong>FAIL</strong> on a verified blocker and a verified important,
-            both fixed here; the second round is what the <code>cr/v5</code> note on the tip
-            records</td></tr>
+          <td>Three rounds, three finders each (correctness, efficiency, altitude — the diff spans
+            more than one module). Round 1: six candidates, two verified — a blocker (a failed
+            re-arm revoked a working session) and an important (blocking disk I/O on a runtime
+            thread under the lock). Round 2: five candidates, one verified — a blocker (the lock
+            spanned the outgoing session's drain). Round 3 is what the <code>cr/v5</code> note on
+            the tip records. Nine candidates were refuted across the two rounds, including three
+            altitude claims about composition-root duplication that hudsucker's by-value
+            <code>Issuer</code> requires, and an information-disclosure claim DEC-55 settles
+            deliberately</td></tr>
         <tr><td>Integration — the WU's contract</td>
-          <td><code>tests/reach.rs</code>, 10 tests, all over ephemeral ports with the second
+          <td><code>tests/reach.rs</code>, 11 tests, all over ephemeral ports with the second
             listener on loopback; no test touches the public network</td></tr>
         <tr><td>Unit — Rust core</td>
           <td><code>src/reach.rs</code> 6 · <code>src/config.rs</code> 2 ·
@@ -256,6 +275,15 @@
             <code>disarm</code></td>
           <td><strong>Nobody, unless the surface splits.</strong> Recorded because it is the kind
             of thing a later reader should find explained rather than discover</td>
+        </tr>
+        <tr>
+          <td><code>serve()</code> spawns the primary proxy task before its later fallible steps,
+            so any <code>?</code> after that point — the API bind, the proxy build, and now a
+            boot-time arm — returns <code>Err</code> while that task runs on detached</td>
+          <td><strong>Nobody in this epic.</strong> Raised as a blocker in round 2 and refuted as
+            pre-existing: this WU adds one more fallible call to a sequence that already had the
+            shape. Recorded because the fix — unwinding what <code>serve</code> started — is a
+            real improvement someone should take deliberately</td>
         </tr>
         <tr>
           <td><code>ui/src-tauri/</code> is outside the gate's code paths
