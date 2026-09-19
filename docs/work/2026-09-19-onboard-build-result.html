@@ -283,7 +283,11 @@
           <td>round 1 <code>FAIL</code> on <code>9a7c2b1b</code> — 3 finders, 4 verifiers, 1
             blocker and 3 importants verified, 2 candidates refuted, 1 nit waived (three 1 Hz
             timers, bounded and cleaned up, whose supposed drift the verifier refuted). Round 2 on
-            the fixed tip is what this WU merges on</td></tr>
+            the fixed tip: <code>PASS</code> — 3 finders, 2 verifiers, no blocker and no important,
+            one nit waived (the type-only import cycle below) and three candidates refuted,
+            including both readings of the arriving remedy's platform attribution — its wording is
+            the design of record's own, and the limitation behind it is an open blocked-on row a
+            human signed off on</td></tr>
         <tr><td>Suite</td>
           <td><code>ui</code>: 983 Vitest tests, 53 files, green · <code>cargo test --all</code>:
             green · <code>tsc --noEmit</code>, <code>eslint</code> (design vocabulary rule
@@ -338,7 +342,14 @@
           four leave with it</td>
           <td><strong>the dialog's successor epic</strong> — W4 writes its backlog row, and this is
             one more item to travel with it</td></tr>
-        <tr><td>The screen is 831 lines and every zone is in one file. Not a defect and not a
+        <tr><td><code>setup.ts</code> and <code>proxyTargets.ts</code> import from each other —
+          the screen's axis reads the reversals from the proxy vocabulary, which reads
+          <code>HostOs</code> back from the axis. Compile-erased in that direction and
+          drift-proof (widening <code>HostOs</code> reds <code>tsc</code> at once), so it was
+          waived rather than bought a third review round; breaking it is a four-literal union
+          moving to a file of its own</td>
+          <td><strong>whichever WU next opens either module</strong></td></tr>
+        <tr><td>The screen is 857 lines and every zone is in one file. Not a defect and not a
           target, but the next WU to open it should split by zone rather than add to the
           middle</td><td>whichever WU next opens <code>Onboarding.tsx</code></td></tr>
       </table>
