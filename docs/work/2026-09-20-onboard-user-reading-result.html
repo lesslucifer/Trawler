@@ -277,8 +277,8 @@
           one important (a consequence of round 3's own fix), one refuted as pre-existing</td></tr>
         <tr><td>5</td><td>3 finders, 2 candidates, 1 verifier agent</td><td><strong>FAIL</strong> —
           one important (the last corner of round 3's expression), one refuted</td></tr>
-        <tr><td>6</td><td>3 finders</td><td><strong>PASS</strong> — on the tip all five fixes
-          left</td></tr>
+        <tr><td>6</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>PASS</strong> —
+          the candidate refuted; efficiency and altitude empty</td></tr>
       </tbody>
     </table>
 
@@ -386,12 +386,29 @@
             disposition the process made deliberately. Five rounds on one control is evidence the
             logic was fragile, not that it sat at the wrong layer — and the rule that fixed it is one
             expression</td></tr>
+        <tr><td>important — switching platform mid-action shows the Simulator's routing task as
+          <em>setting up</em> though no Simulator action ran</td>
+          <td>The render happens; the reading of it does not. The Simulator has no routing state of
+            its own — it follows this Mac's system proxy, which is why its task is titled for the
+            host — and the combined action genuinely is setting that proxy at that moment. The
+            sentence is true of the one store both tasks report on. The verifier reproduced the
+            sequence before saying so</td></tr>
         <tr><td>nit — <code>useAction</code> duck-types the shell's error shape</td>
           <td>The hook was written for this action family and says so; the type is declared in its own
             vocabulary rather than imported, and the structural check is the only way to read an untyped
             IPC rejection. Centralising it beats the alternatives at this size</td></tr>
       </tbody>
     </table>
+
+    <p><strong>What round 6 did not reach, in its own words.</strong> Its correctness finder ran
+      long and was asked to return what it had rather than finish: it declares
+      <code>App.tsx</code>'s wiring beyond what reaches the screen, the <code>windows</code>,
+      <code>ubuntu</code>, <code>ios</code> and <code>android</code> builders in
+      <code>setup.ts</code> beyond spot checks, and the two components beyond their visible logic as
+      unfinished. Those are the areas rounds 1 to 5 swept repeatedly and round 6's own altitude
+      finder read in full, and the unit suite asserts every platform's strings and both components'
+      contracts — so the verdict stands on a covered diff rather than on that one sweep. Recorded
+      here because a round that measured less than it meant to says so.</p>
 
     <h2 id="distillation">Distillation</h2>
 
