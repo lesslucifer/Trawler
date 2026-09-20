@@ -283,8 +283,15 @@
             unchanged, the three refusal wordings, a real failure that is not one, the empty-stderr
             fallback, the reading that carries its address and the one that has none — plus the
             replacement ask, which names the proxy and says it does not come back</td>
-          <td>42 shell tests green (was 27 at W4's tip) · 246 core tests green,
-            untouched</td></tr>
+          <td>36 shell tests green (was 27 at W4's tip) · 754 core tests green across the
+            workspace — 313 in <code>trawler</code>, 441 in <code>xtask</code> — and untouched: this
+            WU changes no file under <code>src/</code>, <code>xtask/</code> or
+            <code>tests/</code>.
+            <strong>Corrected while closing the window round:</strong> this row first read
+            <em>42 shell</em> and <em>246 core</em>, and both were wrong. The shell delta beside it
+            (+9) was right and 27+9 is 36, so 42 was arithmetic nobody ran; 246 was a core figure
+            that had stopped being true before this WU opened. Counted here with
+            <code>cargo test</code>, per package</td></tr>
         <tr><td><strong>unit · components</strong></td>
           <td><code>ChoiceTiles.test.tsx</code> +13 · <code>TaskStep.test.tsx</code> +7, and both
             entries carried through the collection's mount, barrel, registry and citation
@@ -298,7 +305,7 @@
             the tick's scope. <code>setup.test.ts</code> +38 over the platform vocabulary.
             <code>verdicts.test.ts</code> rewritten — every state the three resolvers return, asserted
             literally</td>
-          <td>1065 Vitest tests green in 55 files · <code>eslint</code> and <code>tsc</code>
+          <td>1065 Vitest tests green in 55 files at the first half's tip · <code>eslint</code> and <code>tsc</code>
             clean</td></tr>
         <tr><td><strong>integration</strong></td>
           <td><code>App.test.tsx</code> +7: the one combined command with the PEM and the split address
