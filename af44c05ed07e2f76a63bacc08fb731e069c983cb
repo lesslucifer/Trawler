@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W4
+base: dcf0f7a581031f3616ff570f3a3301fe2d624150
+design_sha256: 4f17730202a6f90b6794080d886570b5baf1445185fea9f6f6b57421ede37d84
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 993ca2e44372f8e6c06dd7e6204b605bf0706955
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The header chip an armed reach now carries is an app-shell element, and this epic's design of record is the setup screen alone - an owner's call recorded in the epic plan. It could not live on that screen anyway: F20 asks for the exposure to hold in every phase including the flow list, which the setup screen does not render. Its shape is the review's F20 row, its words are in the run's copy table, and W6's restatement is where it becomes a promise. The file's other two changes render nothing: the reach state is read in every phase rather than only in setup, and armReach resolves the refusal instead of swallowing it."
+date: 2026-09-20
