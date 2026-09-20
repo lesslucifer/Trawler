@@ -172,6 +172,9 @@
         <tr><td><code>42e1661</code></td><td>this result, as the first round read it</td></tr>
         <tr><td><code>c4acae7</code></td><td>round 2's fix — the banner belongs to one
           transition</td></tr>
+        <tr><td><code>e0db1c9</code></td><td>this result, as the first two rounds read it</td></tr>
+        <tr><td><code>e507e0c</code></td><td>round 3's fix — work that changed this host stays
+          reversible from the moment it ran</td></tr>
       </tbody>
     </table>
 
@@ -262,7 +265,9 @@
           blocker, one nit waived, four refuted</td></tr>
         <tr><td>2</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>FAIL</strong> — one
           important; efficiency and altitude returned empty lists</td></tr>
-        <tr><td>3</td><td>3 finders</td><td><strong>PASS</strong> — on the tip both fixes
+        <tr><td>3</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>FAIL</strong> — one
+          important; efficiency and altitude empty again</td></tr>
+        <tr><td>4</td><td>3 finders</td><td><strong>PASS</strong> — on the tip all three fixes
           left</td></tr>
       </tbody>
     </table>
@@ -291,6 +296,18 @@
           <td>Entering setup retires the announcement, however the user got there — which also left the
             banner's own re-invoke button needing no reset of its own. The regression test walks the
             sequence and was written before the fix</td></tr>
+        <tr><td><strong>important</strong><br>(round 3)</td>
+          <td>The combined action's reversal read the probes alone, so the window between a successful
+            run and the re-read it triggers had no way out — and a trust probe that never answers had
+            none at all. That narrows DEC-13's inherited rule, which the pre-redesign control and the
+            Simulator's own sibling both still honour: an action that changed this host may not become
+            irreversible because a probe has not spoken. The verifier named the rule a fix must not
+            break in the other direction — no step may report itself done from a click</td>
+          <td>The action and its reversal became two controls rather than two halves of one. The way
+            out appears as soon as the action resolved; the action itself stays until the probes say
+            the work is done. Its line also drops the claim it was making about the certificate's
+            current state and says what the button does instead. Both regression tests were written
+            before the fix</td></tr>
         <tr><td>nit</td>
           <td><code>useNow</code> is instantiated by two leaves at once, so two one-second intervals run
             where one clock would do</td>
