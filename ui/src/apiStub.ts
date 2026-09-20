@@ -1,14 +1,4 @@
-import type { ReachState, TrawlerApi } from "./api";
-
-// The default a test inherits is the default the product ships: this machine
-// only, nothing armed, no address promised.
-const UNREACHABLE: ReachState = {
-  armed: false,
-  proxy: null,
-  api: null,
-  ca_cert_url: null,
-  interfaces: [],
-};
+import { UNREACHABLE, type TrawlerApi } from "./api";
 
 // Test support: a whole TrawlerApi whose every method answers emptily, so a test
 // overrides only the calls it is about. Without it each suite spells out the

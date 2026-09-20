@@ -1,585 +1,518 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { useReducer } from "react";
-import { expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { Onboarding } from "./Onboarding";
-import onboardingSource from "./Onboarding.tsx?raw";
-import { COPY, reduce, type OnbState } from "./onboardingMachine";
-import { guidedSteps, NO_TRAFFIC, proxySnippet, proxySteps, RECENT_MS, SAVE_CA_STEP, TUNNEL_GRACE_MS } from "./setup";
+import { COPY, type OnbState } from "./onboardingMachine";
+import * as setup from "./setup";
+import { NO_TRAFFIC, RECENT_MS, type Traffic } from "./verdicts";
+import type { ReachState } from "./api";
 
 vi.mock("./setup", async (importOriginal) => {
   const mod = await importOriginal<typeof import("./setup")>();
-  return { ...mod, guidedSteps: vi.fn(mod.guidedSteps), proxySteps: vi.fn(mod.proxySteps) };
+  return { ...mod, setupFor: vi.fn(mod.setupFor) };
 });
 
 const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
-const atSetProxy: OnbState = { phase: "onboarding", step: "set-proxy", everProven: false };
-const atVerify: OnbState = { phase: "onboarding", step: "verify", everProven: false };
-const ADDR = "10.1.2.3:9999";
+const ADDR = "127.0.0.1:9999";
 
-// Traffic is judged against the screen's own clock, so a fixture states how long
-// ago something arrived rather than when.
-const ago = (ms: number) => Date.now() - ms;
+const INTERFACES = [
+  { name: "Wi-Fi", address: "192.168.1.24" },
+  { name: "Ethernet", address: "10.0.4.7" },
+];
 
-function Harness({
-  start = onboarding,
-  ...props
-}: { start?: OnbState } & Partial<
-  Pick<
-    Parameters<typeof Onboarding>[0],
-    | "os"
-    | "onInstallCa"
-    | "onSaveCa"
-    | "onRecheck"
-    | "trustProbe"
-    | "proxyProbe"
-    | "probing"
-    | "probedAt"
-    | "traffic"
-  >
->) {
-  const [state, dispatch] = useReducer(reduce, start);
-  return <Onboarding state={state} dispatch={dispatch} {...props} />;
-}
-
-// Select is a listbox, not a native <select>: open the trigger, pick the option.
-const choose = (picker: string, option: string | RegExp) => {
-  fireEvent.click(screen.getByRole("button", { name: picker }));
-  fireEvent.click(screen.getByRole("option", { name: option }));
+const UNARMED: ReachState = {
+  armed: false,
+  proxy: null,
+  api: null,
+  ca_cert_url: null,
+  interfaces: INTERFACES,
 };
 
-test("renders all three steps and the active step's body", () => {
-  render(<Onboarding state={{ ...onboarding, step: "verify" }} dispatch={vi.fn()} />);
-  expect(screen.getByText(/trust the CA/)).toBeInTheDocument();
-  expect(screen.getByText(/set the proxy/)).toBeInTheDocument();
-  expect(screen.getByText(/make a request/)).toBeInTheDocument();
-  expect(screen.getByTestId("step-body")).toHaveTextContent(COPY.steps.verify.body);
-});
+const ARMED: ReachState = {
+  armed: true,
+  proxy: "192.168.1.24:9999",
+  api: "192.168.1.24:7421",
+  ca_cert_url: "http://192.168.1.24:7421/ca.crt",
+  interfaces: INTERFACES,
+};
 
-// The checklist is re-entered out of order, so a header click is the whole
-// navigation — there is no prev/next pair to make it a wizard.
-test("clicking a step's header opens it, and only one body is open at a time", () => {
-  render(<Harness />);
-  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
+const ago = (ms: number): number => Date.now() - ms;
+const capturing: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
+const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000) };
 
-  fireEvent.click(screen.getByText(/2 · set the proxy/));
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
-  expect(screen.getAllByTestId("step-body")).toHaveLength(1);
-});
-
-test("no Back/Next pair — a checklist that ships prev/next is claiming to be a wizard", () => {
-  render(<Harness />);
-  expect(screen.queryByTestId("onb-next")).toBeNull();
-  expect(screen.queryByTestId("onb-back")).toBeNull();
-});
-
-test("an auto-capable host shows install wired to onInstallCa, with guided steps behind the manual disclosure", async () => {
-  const onInstallCa = vi.fn(async () => {});
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={onInstallCa} />);
-
-  // P3: the one-click action is primary; the per-OS steps live behind a disclosure.
-  expect(screen.getByTestId("manual")).toBeInTheDocument();
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
-  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
-  expect(onInstallCa).toHaveBeenCalledOnce();
-  expect(await screen.findByText(/we'll confirm it on your first flow/)).toBeInTheDocument();
-});
-
-test("a failed install shows the error and marks the step warn in its status line, not a false done", async () => {
-  const onInstallCa = vi.fn(() => Promise.reject(new Error("GET /ca.crt failed: 500")));
-  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
-  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
-  expect(screen.getByTestId("install-ca-status")).toHaveTextContent("GET /ca.crt failed: 500");
-
-  const status = screen.getByTestId("step-trust-ca-status");
-  expect(status).toHaveTextContent(/install failed/);
-  expect(status).not.toHaveTextContent(/trusted on this machine/);
-});
-
-test("a failed install force-opens the manual route it tells the user to use", async () => {
-  const onInstallCa = vi.fn(() => Promise.reject(new Error("declined")));
-  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
-
-  expect(screen.getByTestId("manual").querySelector("details")).not.toHaveAttribute("open");
-  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
-
-  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
-  expect(screen.getByTestId("manual").querySelector("details")).toHaveAttribute("open");
-});
-
-test("a non-auto host shows the guided steps inline, no disclosure to bury them", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
-  expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-  expect(screen.queryByTestId("manual")).toBeNull();
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/update-ca-certificates/);
-});
-
-test("removal steps are shown for the selected system and switch with it", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
-  expect(screen.getByTestId("removal-steps")).toHaveTextContent(/security delete-certificate/);
-  choose("trust target", "Windows");
-  expect(screen.getByTestId("removal-steps")).toHaveTextContent(/certutil -delstore ROOT/);
-});
-
-test("selecting another system switches the steps and hides the auto install", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
-  choose("trust target", "Firefox");
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/own certificate store/);
-  expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-});
-
-test("guided steps render as text, never markup", () => {
-  vi.mocked(guidedSteps).mockReturnValueOnce(["<b>not bold</b> — literal text"]);
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
-  expect(screen.getByText("<b>not bold</b> — literal text")).toBeInTheDocument();
-});
-
-test("the set-proxy step shows the action wired to onSetProxy, with the snippet alongside", () => {
-  const onSetProxy = vi.fn(async () => {});
+const draw = (props: Partial<Parameters<typeof Onboarding>[0]> = {}) =>
   render(
     <Onboarding
-      state={atSetProxy}
+      state={onboarding}
       dispatch={vi.fn()}
       os="macos"
       proxyAddr={ADDR}
-      onSetProxy={onSetProxy}
-    />,
-  );
-  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup -setwebproxy/);
-  fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
-  expect(onSetProxy).toHaveBeenCalledOnce();
-});
-
-test("changing the client selector switches the shown snippet and steps", () => {
-  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
-  choose("proxy target", /Terminal/);
-  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/HTTPS_PROXY=http:\/\/10\.1\.2\.3:9999/);
-  expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull(); // auto button only on the detected host
-});
-
-// The two "copy command" buttons are retired: CopyText makes the command itself
-// the target and confirms at the value, where the old calls were unguarded and
-// silent on rejection.
-test("the proxy command copies through CopyText, confirming at the value", async () => {
-  const writeText = vi.fn().mockResolvedValue(undefined);
-  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
-
-  fireEvent.click(screen.getByRole("button", { name: /proxy command/ }));
-  expect(writeText).toHaveBeenCalledWith(proxySnippet("macos", ADDR));
-  expect(await screen.findByText("copied")).toBeInTheDocument();
-});
-
-test("a clipboard that rejects says so instead of failing silently", async () => {
-  const writeText = vi.fn().mockRejectedValue(new Error("denied"));
-  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-  render(<Onboarding state={{ ...onboarding, step: "verify" }} dispatch={vi.fn()} proxyAddr={ADDR} />);
-
-  fireEvent.click(screen.getByRole("button", { name: /prove-it command/ }));
-  expect(await screen.findByText(/copy failed/i)).toBeInTheDocument();
-});
-
-test("proxy steps render as text, never markup", () => {
-  vi.mocked(proxySteps).mockReturnValueOnce(["<b>not bold</b> — literal"]);
-  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="linux" proxyAddr={ADDR} />);
-  expect(screen.getByText("<b>not bold</b> — literal")).toBeInTheDocument();
-});
-
-test("a failed set-proxy shows the error, keeps the snippet, and marks the passed step failed", async () => {
-  const onSetProxy = vi.fn(() => Promise.reject(new Error("couldn't set the proxy: denied")));
-  const Harn = () => {
-    const [state, dispatch] = useReducer(reduce, atSetProxy);
-    return <Onboarding state={state} dispatch={dispatch} os="macos" proxyAddr={ADDR} onSetProxy={onSetProxy} />;
-  };
-  render(<Harn />);
-
-  fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
-  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
-  expect(screen.getByTestId("set-proxy-status")).toHaveTextContent("couldn't set the proxy: denied");
-  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
-
-  const status = screen.getByTestId("step-set-proxy-status");
-  expect(status).toHaveTextContent(/couldn't set the proxy/);
-  expect(status).not.toHaveTextContent(/system proxy is set/);
-});
-
-test("stop routing appears only after the proxy was set, and is wired to onUnsetProxy", async () => {
-  const onUnsetProxy = vi.fn(async () => {});
-  render(
-    <Onboarding
-      state={atSetProxy}
-      dispatch={vi.fn()}
-      os="macos"
-      proxyAddr={ADDR}
+      onRecheck={vi.fn()}
+      onInstallCa={vi.fn(async () => {})}
+      onSaveCa={vi.fn(async () => null)}
       onSetProxy={vi.fn(async () => {})}
-      onUnsetProxy={onUnsetProxy}
-    />,
-  );
-  expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
-  fireEvent.click(await screen.findByRole("button", { name: "stop routing through Trawler" }));
-  expect(onUnsetProxy).toHaveBeenCalledOnce();
-  expect(await screen.findByText(/set it again to resume/)).toBeInTheDocument();
-});
-
-// --- P1 prove-it + the honest per-step verdict ---
-
-test("the last step renders the concrete prove-it command with the real address", () => {
-  render(<Onboarding state={{ ...onboarding, step: "verify" }} dispatch={vi.fn()} proxyAddr={ADDR} />);
-  expect(screen.getByText("curl -x http://10.1.2.3:9999 https://example.com")).toBeInTheDocument();
-});
-
-test("the trust status line reflects the probe: trusted → green, untrusted → a calm not-yet", () => {
-  const { rerender } = render(
-    <Onboarding state={onboarding} dispatch={vi.fn()} os="macos" trustProbe="trusted" onInstallCa={vi.fn()} />,
-  );
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/trusted on this machine/);
-  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "ok");
-
-  rerender(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" trustProbe="untrusted" onInstallCa={vi.fn()} />);
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/not trusted on this machine yet/);
-  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "muted");
-});
-
-// The user's own finding: a flow captured earlier kept every step green after
-// the proxy had been turned off. This machine and the traffic are two layers, and
-// a step of one layer never borrows a verdict from the other.
-test("traffic decrypting right now never turns a probed step green — it is step 3's verdict alone", () => {
-  render(
-    <Onboarding
-      state={atVerify}
-      dispatch={vi.fn()}
-      os="macos"
-      trustProbe="untrusted"
-      proxyProbe="none"
-      traffic={{ ...NO_TRAFFIC, lastDecryptedAt: ago(2_000) }}
+      onUnsetProxy={vi.fn(async () => {})}
+      onArmReach={vi.fn(async () => {})}
+      onDisarmReach={vi.fn(async () => {})}
+      {...props}
     />,
   );
 
-  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("capturing traffic");
-  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "ok");
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent("not trusted on this machine yet");
-  expect(screen.getByTestId("step-trust-ca")).not.toHaveAttribute("data-tone", "ok");
-  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("not set on this machine yet");
-  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
+// The screen's one axis. Choosing is what every zone below reads, so the tests
+// choose the way a user does rather than by prop.
+const choose = (label: string) => {
+  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+  fireEvent.click(screen.getByRole("option", { name: label }));
+};
+
+const zone = (name: string) => screen.queryByTestId(name);
+const disclosure = (precondition: string) =>
+  screen.getByTestId(`precondition-${precondition}`).querySelector("details");
+
+afterEach(() => vi.clearAllMocks());
+
+describe("the screen's one axis", () => {
+  it("offers the eight platforms in one Select and asks the question once", () => {
+    draw();
+    fireEvent.click(screen.getByRole("button", { name: "platform" }));
+    expect(screen.getAllByRole("option")).toHaveLength(8);
+    expect(screen.getByText("what are you setting up")).toBeInTheDocument();
+  });
+
+  it("has no second target picker anywhere below it", () => {
+    draw();
+    expect(screen.queryByRole("button", { name: /trust target|proxy target/ })).toBeNull();
+    expect(screen.queryByText(/steps for/)).toBeNull();
+  });
+
+  it("selects this machine by default, named for the detected host", () => {
+    draw();
+    expect(screen.getByRole("button", { name: "platform" })).toHaveTextContent(
+      "This machine — macOS",
+    );
+  });
+
+  // A stepper needs per-step progress, which nothing observes; the axis is a
+  // selection, never a position in a sequence.
+  it("draws no stepper: no numbering, and no control that moves a cursor", () => {
+    const dispatch = vi.fn();
+    const { container } = draw({ dispatch });
+    expect(container.textContent).not.toMatch(/\b1 · |\b2 · |\b3 · /);
+    expect(container.querySelector("[data-testid^='step-']")).toBeNull();
+    for (const button of screen.getAllByRole("button")) fireEvent.click(button);
+    expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ t: "goto" }));
+  });
 });
 
-test("a flow older than the window reads idle, and the open step dates it", () => {
-  const lastDecryptedAt = ago(RECENT_MS + 60_000);
-  render(<Onboarding state={atVerify} dispatch={vi.fn()} traffic={{ ...NO_TRAFFIC, lastDecryptedAt }} />);
+describe("the probe row answers only where a probe can", () => {
+  it("is there for this machine", () => {
+    draw({ probedAt: ago(60_000) });
+    expect(zone("probe")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "check again" })).toBeInTheDocument();
+  });
 
-  const status = screen.getByTestId("step-verify-status");
-  expect(status).toHaveTextContent("idle — nothing arriving now");
-  expect(status).not.toHaveTextContent(/capturing/);
-  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "muted");
-  expect(screen.getByTestId("last-flow")).toHaveTextContent(/last flow at \d\d:\d\d:\d\d/);
-});
+  it("is there for the Simulator, which shares this Mac's stores", () => {
+    draw({ probedAt: ago(60_000) });
+    choose("iOS Simulator");
+    expect(zone("probe")).toBeInTheDocument();
+  });
 
-test("nothing ever seen shows no last-flow line — there is no flow to date", () => {
-  render(<Onboarding state={atVerify} dispatch={vi.fn()} />);
-  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("waiting for your first request");
-  expect(screen.queryByTestId("last-flow")).toBeNull();
-});
-
-// The verdict is a fragment; the instruction it used to carry is a Notice.
-test("a long verdict keeps the fragment on the line and moves its remedy out", () => {
-  render(
-    <Onboarding
-      state={atSetProxy}
-      dispatch={vi.fn()}
-      os="macos"
-      proxyAddr={ADDR}
-      proxyProbe="foreign"
-      onSetProxy={vi.fn()}
-    />,
+  it.each(["iPhone or iPad", "Another Windows PC", "Android emulator"])(
+    "is absent under %s, because there is nothing here it could read",
+    (platform) => {
+      draw({ probedAt: ago(60_000) });
+      choose(platform);
+      expect(zone("probe")).toBeNull();
+    },
   );
 
-  const status = screen.getByTestId("step-set-proxy-status");
-  expect(status).toHaveTextContent("another proxy is set");
-  expect(status).not.toHaveTextContent(/point it at Trawler here/);
-  expect(screen.getByTestId("set-proxy-remedy")).toHaveTextContent(/point it at Trawler here/);
+  it("says what it is doing while it reads, and dates the reading after", () => {
+    const { rerender } = draw({ probing: true });
+    expect(zone("probe")).toHaveTextContent("checking this machine…");
+    expect(screen.getByRole("button", { name: "check again" })).toBeDisabled();
+
+    rerender(
+      <Onboarding state={onboarding} dispatch={vi.fn()} probing={false} probedAt={ago(60_000)} onRecheck={vi.fn()} />,
+    );
+    expect(zone("probe")).toHaveTextContent(/checked/);
+  });
 });
 
-test("a tunnel no flow answered warns on step 3 and says whose certificate is missing", () => {
-  render(
-    <Onboarding
-      state={atVerify}
-      dispatch={vi.fn()}
-      trustProbe="trusted"
-      traffic={{ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS + 1_000) }}
-    />,
-  );
+describe("the un-probeable verdicts carry their own words", () => {
+  it("never borrows this machine's trust answer for another device", () => {
+    draw({ trustProbe: "trusted" });
+    choose("iPhone or iPad");
+    const trust = screen.getByTestId("precondition-trust");
+    expect(trust).toHaveTextContent("can't check another device from here");
+    expect(trust).not.toHaveTextContent("trusted on this machine");
+  });
 
-  const status = screen.getByTestId("step-verify-status");
-  expect(status).toHaveTextContent("arriving but not decrypting");
-  expect(status).not.toHaveTextContent(/doesn't trust Trawler's certificate/);
-  expect(screen.getByTestId("verify-remedy")).toHaveTextContent(
-    "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
-  );
-  // The probe said trusted; the failing client is somewhere else, and step 1 keeps
-  // saying what it knows rather than borrowing the failure.
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent("trusted on this machine");
+  it("renders no routing verdict off-machine rather than this machine's", () => {
+    draw({ proxyProbe: "ours" });
+    choose("Android device");
+    expect(screen.getByTestId("precondition-route")).not.toHaveTextContent(
+      "system proxy is set to Trawler",
+    );
+  });
+
+  it("says can't-check on this platform where the probe itself came back unknown", () => {
+    draw({ trustProbe: "unknown" });
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent("can't check on this platform");
+  });
 });
 
-test("an un-probeable trust step still says where the answer will show", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" trustProbe="unknown" />);
-  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("step 3 shows whether traffic decrypts");
+describe("the one-click actions belong to this machine alone", () => {
+  it("offers install and set-proxy here", () => {
+    draw();
+    expect(screen.getByRole("button", { name: "install certificate" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
+  });
+
+  it.each(["iPhone or iPad", "iOS Simulator", "Another Mac"])("offers neither under %s", (platform) => {
+    draw();
+    choose(platform);
+    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
+  });
+
+  it("offers neither on a host with no one-click path", () => {
+    draw({ os: "linux" });
+    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
+  });
+
+  // DEC-13's inherited assertion: never offer to undo something we did not do.
+  it("offers stop routing only once a proxy here is ours", () => {
+    draw({ proxyProbe: "none" });
+    expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
+
+    draw({ proxyProbe: "ours" });
+    expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
+  });
+
+  // The other half of the same rule: an action that changed this host stays
+  // reversible even where the probe that would confirm it cannot answer.
+  it("offers stop routing after setting the proxy, whatever the probe can say", async () => {
+    draw({ proxyProbe: "unknown", onSetProxy: vi.fn(async () => {}) });
+    fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
+    expect(
+      await screen.findByRole("button", { name: "stop routing through Trawler" }),
+    ).toBeInTheDocument();
+  });
 });
 
-// The failed install already states itself through the action's own Notice; a
-// second copy of the same error under it would say it twice.
-test("a failed install shows its error once, not twice", async () => {
-  const onInstallCa = vi.fn(() => Promise.reject(new Error("declined")));
-  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
+describe("an off-machine platform with nothing to point at", () => {
+  beforeEach(() => {
+    draw({ reach: UNARMED });
+    choose("iPhone or iPad");
+  });
 
-  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
-  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
+  it("states the precondition that cannot be met, in its own zone", () => {
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler answers on this machine only",
+    );
+  });
 
-  expect(screen.getByTestId("install-ca-status")).toHaveTextContent("declined");
-  expect(screen.queryByTestId("trust-ca-remedy")).toBeNull();
+  it("offers the action that meets it, and says the ask comes first", () => {
+    expect(screen.getByRole("button", { name: "let devices reach Trawler" })).toBeInTheDocument();
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler will ask before it starts listening",
+    );
+  });
+
+  it("offers no step that cannot work", () => {
+    expect(screen.queryByRole("group", { name: "set it up by hand" })).toBeNull();
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
+      "the certificate route opens once Trawler is reachable",
+    );
+    expect(screen.getByTestId("precondition-route")).toHaveTextContent(
+      "there is no address to point the device at yet",
+    );
+  });
+
+  // The addresses on offer are the choice; an address in an instruction would
+  // be a promise that a socket is listening there, which is the lie the whole
+  // reach seam exists to prevent.
+  it("prints no address to point the device at — not a loopback one, not a plausible one", () => {
+    for (const precondition of ["trust", "route"]) {
+      const text = screen.getByTestId(`precondition-${precondition}`).textContent ?? "";
+      expect(text).not.toContain("127.0.0.1");
+      expect(text).not.toContain("192.168.1.24");
+    }
+    expect(zone("device-address")).toBeNull();
+  });
+
+  it("says there is nothing to try yet", () => {
+    expect(zone("try")).toHaveTextContent("nothing to try until Trawler is reachable");
+  });
+
+  it("does not offer to stop something it never started", () => {
+    expect(screen.queryByRole("button", { name: "stop listening" })).toBeNull();
+  });
 });
 
-test("the trust-CA command is copyable, not prose the user must retype", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+describe("an off-machine platform once reach is armed", () => {
+  beforeEach(() => {
+    draw({ reach: ARMED });
+    choose("iPhone or iPad");
+  });
 
-  expect(
-    screen.getByRole("button", { name: /copy certificate command/ }),
-  ).toBeInTheDocument();
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
+  it("says where it is listening, and for how long", () => {
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "listening on 192.168.1.24 — until Trawler quits",
+    );
+  });
+
+  it("renders the server and the port the device's settings want, as values to take", () => {
+    const address = screen.getByTestId("device-address");
+    expect(within(address).getByRole("button", { name: /the proxy host/ })).toHaveTextContent(
+      "192.168.1.24",
+    );
+    expect(within(address).getByRole("button", { name: /the proxy port/ })).toHaveTextContent("9999");
+  });
+
+  it("renders the certificate URL a device can open", () => {
+    fireEvent.click(within(screen.getByTestId("precondition-trust")).getByText("set it up by hand"));
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
+      "http://192.168.1.24:7421/ca.crt",
+    );
+  });
+
+  it("offers the reversal it now owes", () => {
+    expect(screen.getByRole("button", { name: "stop listening" })).toBeInTheDocument();
+  });
+
+  it("says what to try on the device", () => {
+    expect(zone("try")).toHaveTextContent("open any site on the device");
+  });
 });
 
-test("the removal command is copyable too", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
-  expect(screen.getByRole("button", { name: /copy removal command/ })).toBeInTheDocument();
+describe("the address to listen on is a choice over what the host holds", () => {
+  const withInterfaces = (count: number) =>
+    draw({
+      reach: {
+        ...UNARMED,
+        interfaces: Array.from({ length: count }, (_, i) => ({
+          name: `if${i}`,
+          address: `10.0.0.${i + 1}`,
+        })),
+      },
+    });
+
+  it("offers no control for one address — the action names it instead", () => {
+    withInterfaces(1);
+    choose("iPhone or iPad");
+    expect(screen.queryByRole("radiogroup", { name: "address to listen on" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "let devices reach Trawler at 10.0.0.1" }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([2, 4])("offers %i addresses as a segment group, all visible", (count) => {
+    withInterfaces(count);
+    choose("iPhone or iPad");
+    const group = screen.getByRole("radiogroup", { name: "address to listen on" });
+    expect(within(group).getAllByRole("radio")).toHaveLength(count);
+  });
+
+  it("offers five as a Select, which is where the segment group stops", () => {
+    withInterfaces(5);
+    choose("iPhone or iPad");
+    expect(screen.queryByRole("radiogroup", { name: "address to listen on" })).toBeNull();
+    expect(screen.getByRole("button", { name: "address to listen on" })).toBeInTheDocument();
+  });
+
+  it("arms the address the user picked, not the one that happened to be first", () => {
+    const onArmReach = vi.fn(async () => {});
+    draw({ reach: UNARMED, onArmReach });
+    choose("iPhone or iPad");
+    fireEvent.click(screen.getByRole("radio", { name: "Ethernet · 10.0.4.7" }));
+    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+    expect(onArmReach).toHaveBeenCalledWith("10.0.4.7");
+  });
+
+  it("says so when the host holds no address to offer, and offers no action", () => {
+    withInterfaces(0);
+    choose("iPhone or iPad");
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "this machine holds no network address",
+    );
+    expect(screen.queryByRole("button", { name: /let devices reach Trawler/ })).toBeNull();
+  });
 });
 
-test("a target whose steps are point-and-click offers no command to copy", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
-  choose("trust target", "Firefox");
-
-  expect(screen.queryByRole("button", { name: /copy certificate command/ })).toBeNull();
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/own certificate store/);
+describe("the emulator is not a device, and says so", () => {
+  it("needs no reach: it renders its steps with reach unarmed", () => {
+    draw({ reach: UNARMED });
+    choose("Android emulator");
+    expect(zone("precondition-reach")).toBeNull();
+    fireEvent.click(within(screen.getByTestId("precondition-route")).getByText("set it up by hand"));
+    expect(screen.getByTestId("precondition-route")).toHaveTextContent("10.0.2.2");
+  });
 });
 
-test("the proxy command appears exactly once — the step list is not doubled", () => {
-  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
+describe("the lead verdict, and the outcome that leaves it", () => {
+  it("leads with a pending sentence while the launch check runs", () => {
+    draw({ state: { ...onboarding, phase: "checking" } });
+    expect(zone("lead-verdict")).toHaveTextContent("checking what is already set up");
+    expect(screen.getAllByTestId("spinner").length).toBeGreaterThan(0);
+  });
 
-  const snippet = proxySnippet("macos", ADDR)!;
-  const steps = screen.getByTestId("proxy-steps");
-  const shown = [...steps.querySelectorAll("li")].filter((li) => li.textContent?.includes(snippet));
+  // The screen may not state two contradictory readings of one fact. While the
+  // launch check runs, a flow the stream already delivered must not let the try
+  // zone announce capture under a headline that says it is still checking.
+  it("never announces capture under a headline that is still checking", () => {
+    draw({
+      state: { ...onboarding, phase: "checking" },
+      traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000), ever: true },
+    });
 
-  expect(shown).toHaveLength(1);
-  expect(screen.getByRole("button", { name: /proxy command/ })).toBeInTheDocument();
+    expect(zone("lead-verdict")).toHaveTextContent("checking what is already set up");
+    expect(zone("proven")).toBeNull();
+  });
+
+  it("separates nothing-ever from nothing-now", () => {
+    draw({ traffic: NO_TRAFFIC });
+    expect(zone("lead-verdict")).toHaveTextContent("nothing has reached Trawler yet");
+
+    draw({ traffic: { ...NO_TRAFFIC, ever: true } });
+    expect(screen.getAllByTestId("lead-verdict")[1]).toHaveTextContent("nothing is arriving now");
+  });
+
+  it("names the arriving failure and sends the reader to the step that fixes it", () => {
+    draw({ traffic: arriving });
+    expect(zone("lead-verdict")).toHaveTextContent("traffic is arriving, but nothing is decrypting");
+    expect(zone("trust-remedy")).toHaveTextContent("does not trust the certificate yet");
+  });
+
+  it("renders the remedy beside the precondition it instructs, not in the headline", () => {
+    draw({ traffic: arriving });
+    expect(screen.getByTestId("precondition-trust")).toContainElement(screen.getByTestId("trust-remedy"));
+  });
+
+  it("puts the proven outcome under the request that made it, and clears the headline", () => {
+    draw({ traffic: capturing });
+    expect(zone("lead-verdict")).toBeNull();
+    expect(zone("try")).toContainElement(screen.getByTestId("proven"));
+    expect(zone("proven")).toHaveTextContent("Trawler is capturing");
+  });
 });
 
-test("the proxy-off command is copyable here too, not a bare string", () => {
-  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
-  expect(screen.getByRole("button", { name: /proxy-off command/ })).toBeInTheDocument();
+// UC-ONBOARD's promises about the manual route, re-checked against the tree
+// rather than trusted from the run's audit: the guide is a fallback where an
+// action leads, and the whole instruction where none does.
+describe("the guide is hidden only where something else is offered first", () => {
+  it("renders inline on a host with no one-click path", () => {
+    draw({ os: "linux" });
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(/update-ca-certificates/);
+    expect(within(screen.getByTestId("precondition-trust")).queryByText("set it up by hand")).toBeNull();
+  });
+
+  it("opens itself when the action it backs up fails", async () => {
+    draw({ onInstallCa: vi.fn(async () => Promise.reject(new Error("declined"))) });
+    fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
+
+    await screen.findByText(/the steps below do it by hand/);
+    expect(disclosure("trust")).toHaveAttribute("open");
+  });
+
+  it("stays shut while the action is still the better route", () => {
+    draw();
+    expect(disclosure("trust")).not.toHaveAttribute("open");
+  });
 });
 
-test("a failed set-proxy shows its error once, not twice", async () => {
-  const onSetProxy = vi.fn(() => Promise.reject(new Error("denied")));
-  const Harn = () => {
-    const [state, dispatch] = useReducer(reduce, atSetProxy);
-    return <Onboarding state={state} dispatch={dispatch} os="macos" proxyAddr={ADDR} onSetProxy={onSetProxy} />;
-  };
-  render(<Harn />);
-
-  fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
-  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
-
-  expect(screen.getByTestId("set-proxy-status")).toHaveTextContent("denied");
-  expect(screen.queryByTestId("set-proxy-remedy")).toBeNull();
+// An idle verdict that drops the date is the one that started DEC-33: the user
+// cannot tell "set up, quiet now" from "never worked" without it.
+test("idle dates the last flow rather than repeating the setup advice", () => {
+  draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(RECENT_MS * 4), ever: true } });
+  expect(zone("lead-verdict")).toHaveTextContent(/last flow/);
 });
 
-// The error lives in the action's own Notice, which only exists on the auto path.
-// Switching the target away unmounts it, so the remedy must come back rather than
-// leaving the error nowhere on screen.
-test("switching target after a failed install keeps the error reachable", async () => {
-  const onInstallCa = vi.fn(() => Promise.reject(new Error("elevation declined")));
-  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
+// StatusLine renders the verdict and refuses its instruction, so the screen owes
+// the second element. UC-ONBOARD: "the verdict and what to do about it are two
+// elements, so a short verdict never costs the instruction".
+describe("a verdict that implies an instruction renders both", () => {
+  it("points an un-probeable platform at the answer that will settle it", () => {
+    draw({ trustProbe: "unknown" });
+    expect(screen.getByTestId("trust-guidance")).toHaveTextContent(
+      "the traffic verdict is what proves it",
+    );
+  });
 
-  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
-  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
+  it("names the conflict a foreign proxy is, and what to do about it", () => {
+    draw({ proxyProbe: "foreign" });
+    expect(screen.getByTestId("route-guidance")).toHaveTextContent(/point it at Trawler here/);
+  });
 
-  choose("trust target", "Firefox");
+  it("states a failure once, not twice", async () => {
+    draw({ onInstallCa: vi.fn(async () => Promise.reject(new Error("user declined"))) });
+    fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
 
-  expect(screen.queryByTestId("install-ca-status")).toBeNull();
-  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("elevation declined");
+    await screen.findByText(/the steps below do it by hand/);
+    expect(screen.getByTestId("install-ca-status")).toHaveTextContent("user declined");
+    expect(zone("trust-guidance")).toBeNull();
+  });
+
+  it("says nothing extra where the verdict is the whole answer", () => {
+    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    expect(zone("trust-guidance")).toBeNull();
+    expect(zone("route-guidance")).toBeNull();
+  });
 });
 
-test("a connection never turns the proxy step green — the proxy step is this machine's probe", () => {
-  render(
-    <Onboarding
-      state={atSetProxy}
-      dispatch={vi.fn()}
-      os="macos"
-      proxyAddr={ADDR}
-      proxyProbe="none"
-      traffic={{ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS + 1_000) }}
-      onSetProxy={vi.fn()}
-    />,
-  );
-  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("not set on this machine yet");
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "muted");
-  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("arriving but not decrypting");
-});
+// The certificate's name is one fact, and the save confirmation judges the file
+// that landed against the name the steps beside it run on. A second copy of that
+// name would decide this message against steps built from the other one.
+test("a renamed save is confirmed against the name the steps here actually use", async () => {
+  draw({ onSaveCa: vi.fn(async () => "/tmp/my-ca.pem") });
+  fireEvent.click(within(screen.getByTestId("precondition-trust")).getByText("set it up by hand"));
+  fireEvent.click(screen.getByRole("button", { name: "save…" }));
 
-test("an un-probeable host shows 'can't check' rather than a false 'not set up'", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" trustProbe="unknown" />);
-  const status = screen.getByTestId("step-trust-ca-status");
-  expect(status).toHaveTextContent(/can't check automatically/);
-  expect(status).not.toHaveTextContent(/not trusted/);
-});
-
-test("back to flows shows only once ever proven", () => {
-  const { rerender } = render(<Onboarding state={onboarding} dispatch={vi.fn()} />);
-  expect(screen.queryByRole("button", { name: COPY.back })).toBeNull();
-  rerender(<Onboarding state={{ ...onboarding, everProven: true }} dispatch={vi.fn()} />);
-  expect(screen.getByRole("button", { name: COPY.back })).toBeInTheDocument();
-});
-
-// A source-level invariant: no rendered assertion can catch a reintroduced tone
-// map, because the screen's output would be indistinguishable from the
-// component's. What is forbidden is mapping a VERDICT tone to a class — plain
-// ink-mute body text is not that, so the check names the two decided tones.
-test("no third tone map — the screen never maps a verdict tone to a class", () => {
-  expect(onboardingSource).not.toMatch(/text-ok|text-warn/);
-});
-
-// "Save Trawler's certificate as trawler-ca.pem" named a file the screen never
-// produced — every manual route began with an instruction the user could not
-// carry out. The step that names the file is the step that produces it: the save
-// control ends the sentence, and its outcome lands beneath, inside the same step.
-test("the certificate is saved from the step that names it — a ↓ at the end of the sentence", async () => {
-  const onSaveCa = vi.fn(async () => "trawler-ca.pem");
-  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
-
-  const save = screen.getByRole("button", { name: "save certificate" });
-  const step = save.closest("li")!;
-  expect(screen.getByTestId("guided-steps")).toContainElement(step);
-  expect(step).toHaveTextContent(SAVE_CA_STEP);
-  expect(save).toHaveTextContent("↓");
-
-  fireEvent.click(save);
-  expect(onSaveCa).toHaveBeenCalledOnce();
-  expect(await screen.findByText(/saved as trawler-ca\.pem/)).toBeInTheDocument();
-  expect(step).toContainElement(screen.getByTestId("save-ca-status"));
-});
-
-test("without a save handler the step stays a sentence, with no dead control", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(SAVE_CA_STEP);
-  expect(screen.queryByRole("button", { name: "save certificate" })).toBeNull();
-});
-
-test("a failed save states why, and never claims the file landed", async () => {
-  const onSaveCa = vi.fn(() => Promise.reject(new Error("GET /ca.crt failed: 500")));
-  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
-  expect(await screen.findByText(/couldn't save the certificate/)).toBeInTheDocument();
-  expect(screen.getByTestId("save-ca-status")).toHaveTextContent("GET /ca.crt failed: 500");
-  expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
-});
-
-// A probe is a reading taken at a moment. Nothing pushes when the user changes
-// the system proxy in System Settings, so a green verdict outlives its truth
-// until something asks again. One reading covers both probed steps, so one
-// control re-takes it — above the steps, not inside each.
-test("one check-again for this machine, above the steps, re-reads both probes", () => {
-  const onRecheck = vi.fn();
-  render(<Harness start={atVerify} os="macos" trustProbe="trusted" probedAt={Date.now()} onRecheck={onRecheck} />);
-
-  const buttons = screen.getAllByRole("button", { name: "check again" });
-  expect(buttons).toHaveLength(1);
-  expect(screen.getByTestId("recheck")).toContainElement(buttons[0]);
-  expect(screen.getByTestId("recheck")).toHaveTextContent(/checked at \d\d:\d\d:\d\d/);
-  for (const step of ["step-trust-ca", "step-set-proxy", "step-verify"]) {
-    expect(screen.getByTestId(step)).not.toContainElement(buttons[0]);
-  }
-
-  fireEvent.click(buttons[0]);
-  expect(onRecheck).toHaveBeenCalledOnce();
-});
-
-// Fork D4: a control disabled in flight needs the progress line beside it. Here
-// the line is the two probed verdicts themselves, in-flight — and only those two,
-// since a probe says nothing about traffic.
-test("while checking, the control is disabled and both probed steps show the in-flight verdict", () => {
-  render(<Harness start={onboarding} os="macos" trustProbe="trusted" proxyProbe="ours" probing onRecheck={vi.fn()} />);
-
-  expect(screen.getByRole("button", { name: "check again" })).toBeDisabled();
-  expect(screen.getByTestId("recheck")).toHaveTextContent("checking this machine…");
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent("checking…");
-  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("checking…");
-  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("waiting for your first request");
-});
-
-test("without a recheck handler the screen offers no control and states no time", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} probedAt={Date.now()} />);
-  expect(screen.queryByTestId("recheck")).toBeNull();
-});
-
-test("re-checking reports a proxy that was green and is no longer", async () => {
-  const view = render(
-    <Onboarding
-      state={atSetProxy}
-      dispatch={vi.fn()}
-      os="macos"
-      proxyProbe="ours"
-      onRecheck={vi.fn()}
-    />,
-  );
-  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/system proxy is set to Trawler/);
-
-  view.rerender(
-    <Onboarding
-      state={atSetProxy}
-      dispatch={vi.fn()}
-      os="macos"
-      proxyProbe="none"
-      onRecheck={vi.fn()}
-    />,
-  );
-  const status = screen.getByTestId("step-set-proxy-status");
-  expect(status).toHaveTextContent("not set on this machine yet");
-  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
-});
-
-// A cancelled save resolves exactly like a completed one. Reporting it as done
-// tells the user a file exists, and step 2 then sends them to a terminal to run
-// sudo against it.
-test("a cancelled save says so, and never claims a file that was not written", async () => {
-  const onSaveCa = vi.fn(async () => null);
-  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
-  expect(await screen.findByText(/nothing was saved/)).toBeInTheDocument();
-  expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
-});
-
-// defaultPath only pre-fills the dialog's name input, so the user can save as
-// anything. Naming the constant would state a file that isn't on disk, and the
-// steps below run against that name.
-test("a save under a different name reports the name that landed, not the one we asked for", async () => {
-  const onSaveCa = vi.fn(async () => "/Users/someone/Downloads/ca-backup.pem");
-  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
-  expect(await screen.findByText(/saved as ca-backup\.pem/)).toBeInTheDocument();
-  expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
-});
-
-// The native dialog resolves a full path; the steps below name a file, so the
-// confirmation names the file and not the directory that holds it.
-test("a save to the asked-for name under any directory confirms plainly", async () => {
-  const onSaveCa = vi.fn(async () => "/Users/someone/Downloads/trawler-ca.pem");
-  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
   const note = await screen.findByTestId("save-ca-status");
-  expect(note).toHaveTextContent("saved as trawler-ca.pem. now trust it with the steps below.");
-  expect(note).not.toHaveTextContent("/Users/someone/Downloads");
+  expect(note).toHaveTextContent("saved as my-ca.pem");
+  expect(note).toHaveTextContent(`the steps here name ${setup.CA_FILENAME}`);
+  expect(screen.getByTestId("precondition-trust")).toHaveTextContent(setup.SAVE_CA_STEP);
+});
+
+describe("the way out", () => {
+  it("is absent until capture has been proven at least once", () => {
+    draw();
+    expect(screen.queryByRole("button", { name: COPY.back })).toBeNull();
+  });
+
+  it("stays open once it has, even with a precondition regressed", () => {
+    const dispatch = vi.fn();
+    draw({ state: { ...onboarding, everProven: true }, trustProbe: "untrusted", dispatch });
+    fireEvent.click(screen.getByRole("button", { name: COPY.back }));
+    expect(dispatch).toHaveBeenCalledWith({ t: "exit" });
+  });
+});
+
+// E-REDESIGN's nit: the one-second tick re-rendered the whole step list, where
+// only the traffic verdict depends on it. `setupFor` is the work the
+// preconditions zone does on every render of the screen, so a tick that leaves
+// it uncalled is a tick that re-rendered the verdict and nothing else.
+describe("the clock reaches the traffic verdict and nothing else", () => {
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+  afterEach(() => vi.useRealTimers());
+
+  it("updates the verdict without re-running the instructions", () => {
+    const resolved = vi.mocked(setup.setupFor);
+    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now(), ever: true } });
+    expect(zone("proven")).toBeInTheDocument();
+
+    resolved.mockClear();
+    act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
+
+    expect(zone("proven")).toBeNull();
+    expect(zone("lead-verdict")).toHaveTextContent("nothing is arriving now");
+    expect(resolved).not.toHaveBeenCalled();
+  });
+});
+
+test("the column scrolls whole — no zone holds an inner scroller", () => {
+  const { container } = draw();
+  const scrollers = container.querySelectorAll("[class*='overflow-auto'],[class*='overflow-y-auto']");
+  expect(scrollers).toHaveLength(1);
+  expect(scrollers[0]).toBe(container.firstElementChild);
 });

@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
+import type { HostOs } from "./setup";
 import {
   defaultProxyTarget,
   proxyOffSnippet,
   proxyOffSteps,
   PROXY_TARGETS,
   type ProxyTarget,
-  type HostOs,
-} from "./setup";
+} from "./proxyTargets";
 import type { CloseMode } from "./closeConfirm";
 import { Button, Checkbox, Notice } from "./components/index";
 import { ModalShell } from "./ModalShell";

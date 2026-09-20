@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../setup";
+import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
 import { StatusLine } from "./StatusLine";
 
 const glyphClass = (status: StepStatusView) => {
@@ -82,15 +82,15 @@ describe("StatusLine", () => {
     const status = trustStatus("unknown", null);
     render(<StatusLine status={status} />);
 
-    expect(screen.getByText("can't check automatically")).toBeInTheDocument();
-    expect(screen.queryByText(/step 3 shows whether traffic decrypts/)).not.toBeInTheDocument();
+    expect(screen.getByText("can't check on this platform")).toBeInTheDocument();
+    expect(screen.queryByText(/the traffic verdict is what proves it/)).not.toBeInTheDocument();
   });
 
   it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
     const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0 }, 10_000);
     render(<StatusLine status={status} />);
 
-    expect(status.remedy).toMatch(/doesn't trust Trawler's certificate/);
+    expect(status.remedy).toMatch(/does not trust the certificate yet/);
     expect(screen.queryByText(status.remedy!)).not.toBeInTheDocument();
   });
 

@@ -2,13 +2,14 @@ import { render, screen, waitFor, fireEvent, act, within } from "@testing-librar
 import { afterEach, beforeAll, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
-import { ApiError, apiAddr } from "./api";
+import { ApiError, apiAddr, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 import { CAPTURE_COPY } from "./CaptureControls";
 import * as files from "./body";
 import type { OnbState } from "./onboardingMachine";
-import { CA_FILENAME, guidedSteps, TUNNEL_GRACE_MS } from "./setup";
+import { CA_FILENAME } from "./setup";
+import { TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
 // App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
@@ -118,7 +119,7 @@ afterEach(() => {
 test("on mount shows the onboarding surface, not the empty flow list", async () => {
   const { api } = mockApi(() => []);
   render(<App api={api} />);
-  expect(await screen.findByText(/trust the CA/)).toBeInTheDocument();
+  expect(await screen.findByText("what are you setting up")).toBeInTheDocument();
   expect(screen.queryByTestId("empty")).toBeNull();
 });
 
@@ -127,13 +128,13 @@ test("launch with a pre-existing decrypted HTTPS flow goes straight to the list"
   render(<App api={api} />);
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
-  expect(screen.queryByText(/trust the CA/)).toBeNull();
+  expect(screen.queryByText("what are you setting up")).toBeNull();
 });
 
 test("launch with only a plain-HTTP flow shows onboarding (http:// is not proof)", async () => {
   const { api } = mockApi(() => [flow({ uri: "http://example.com/" })]);
   render(<App api={api} />);
-  expect(await screen.findByText(/trust the CA/)).toBeInTheDocument();
+  expect(await screen.findByText("what are you setting up")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -141,25 +142,25 @@ test("a decrypted HTTPS flow arriving live flips Verify green and reveals the li
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} />);
-  await screen.findByText(/trust the CA/); // fresh launch → onboarding
+  await screen.findByText("what are you setting up"); // fresh launch → onboarding
 
   rows = [flow({ uri: "https://example.com/" })];
   fire();
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
-  expect(screen.queryByText(/trust the CA/)).toBeNull();
+  expect(screen.queryByText("what are you setting up")).toBeNull();
 });
 
 test("a plain-HTTP flow arriving live does not flip out of onboarding", async () => {
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} />);
-  await screen.findByText(/trust the CA/);
+  await screen.findByText("what are you setting up");
 
   rows = [flow({ uri: "http://example.com/" })];
   fire();
   await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(1));
-  expect(screen.getByText(/trust the CA/)).toBeInTheDocument();
+  expect(screen.getByText("what are you setting up")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -169,7 +170,7 @@ test("a forced-proven phase reveals the flow list", async () => {
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
   expect(row.querySelector(".text-ok")).not.toBeNull();
-  expect(screen.queryByText(/trust the CA/)).toBeNull();
+  expect(screen.queryByText("what are you setting up")).toBeNull();
 });
 
 test("tapping the status dot re-opens setup and stays there despite the captured flow", async () => {
@@ -179,7 +180,7 @@ test("tapping the status dot re-opens setup and stays there despite the captured
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
   fireEvent.click(screen.getByTestId("status-dot"));
-  expect(await screen.findByText(/trust the CA/)).toBeInTheDocument();
+  expect(await screen.findByText("what are you setting up")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.getByRole("button", { name: /back to flows/ })).toBeInTheDocument(); // Back to flows, since ever proven
   fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
@@ -196,8 +197,8 @@ test("Install fetches the PEM and invokes install_ca; the step reports done, not
 
   expect(api.caCertPem).toHaveBeenCalledOnce();
   expect(invoke).toHaveBeenCalledWith("install_ca", { pem: PEM });
-  // command exit 0 is a weak signal — the machine stays in onboarding until W4 captures
-  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
+  // command exit 0 is a weak signal — only a decrypted flow ends setup
+  expect(screen.getByText("what are you setting up")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -216,14 +217,14 @@ test("Save writes the PEM under the filename the manual steps tell the user to r
     });
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "save certificate" }));
+  const trust = await screen.findByTestId("precondition-trust");
+  fireEvent.click(within(trust).getByText("set it up by hand"));
+  fireEvent.click(within(trust).getByRole("button", { name: "save…" }));
   await screen.findByText(new RegExp(`saved as ${CA_FILENAME}`));
 
   expect(api.caCertPem).toHaveBeenCalledOnce();
   expect(saved.name).toBe(CA_FILENAME);
-  for (const step of guidedSteps("macos")) {
-    if (/certificate as /.test(step)) expect(step).toContain(saved.name!);
-  }
+  expect(trust).toHaveTextContent(`Save Trawler's certificate as ${saved.name}`);
   anchorName.mockRestore();
   click.mockRestore();
 });
@@ -245,15 +246,14 @@ test("a rejected install reports failed and keeps the guided steps visible", asy
   render(<App api={api} initialState={ONBOARDING} />);
 
   fireEvent.click(await screen.findByRole("button", { name: "install certificate" }));
-  await screen.findByText(/use the manual steps below/);
+  await screen.findByText(/the steps below do it by hand/);
 
-  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
+  const trust = screen.getByTestId("precondition-trust");
+  fireEvent.click(within(trust).getByText("set it up by hand"));
+  expect(trust).toHaveTextContent(/security add-trusted-cert/);
   expect(screen.getByTestId("install-ca-status")).toHaveTextContent("user declined the elevation prompt");
-  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
-
-  const status = screen.getByTestId("step-trust-ca-status");
-  expect(status).toHaveTextContent(/install failed/);
-  expect(status).not.toHaveTextContent(/trusted on this machine/);
+  expect(trust).toHaveTextContent(/install failed/);
+  expect(trust).not.toHaveTextContent(/trusted on this machine/);
 });
 
 test("Set system proxy invokes set_proxy with the configured address; the step stays active, not proven", async () => {
@@ -266,7 +266,7 @@ test("Set system proxy invokes set_proxy with the configured address; the step s
   await screen.findByText(/we'll confirm it on your first flow/);
 
   expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 });
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
+  expect(screen.getByText("what are you setting up")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -278,9 +278,10 @@ test("a rejected set_proxy reports failed and keeps the snippet visible", async 
   render(<App api={api} initialState={AT_SET_PROXY} />);
 
   fireEvent.click(await screen.findByRole("button", { name: "set system proxy" }));
-  await screen.findByText(/use the manual steps below/);
-  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
+  await screen.findByText(/the steps below do it by hand/);
+  const route = screen.getByTestId("precondition-route");
+  fireEvent.click(within(route).getByText("set it up by hand"));
+  expect(route).toHaveTextContent(/networksetup/);
 });
 
 test("Stop routing invokes unset_proxy after the proxy was set (W5)", async () => {
@@ -296,31 +297,34 @@ test("Stop routing invokes unset_proxy after the proxy was set (W5)", async () =
   expect(invoke).toHaveBeenCalledWith("unset_proxy");
 });
 
-// A tunnel is a live signal about traffic, so it lands on step 3 — first as a
+// A tunnel is a live signal about traffic, so it leads the screen — first as a
 // connection in its grace, then, once no flow has answered it, as the warning
-// that names the missing certificate. The probed steps never hear about it.
-test("a connection event reaches step 3, not the proxy step — and warns once no flow answers it", async () => {
+// that names the missing certificate. The probed preconditions never hear about
+// it: a tunnel says nothing about this machine's stores.
+test("a connection event leads the screen, and warns once no flow answers it", async () => {
   onMacHost();
   const { api, fireConnection } = mockApi(() => []); // no flows ever
-  render(<App api={api} initialState={AT_SET_PROXY} />);
-  await screen.findByTestId("step-set-proxy");
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByTestId("lead-verdict");
 
   fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
   await waitFor(() =>
-    expect(screen.getByTestId("step-verify-status")).toHaveTextContent("a connection just arrived…"),
+    expect(screen.getByTestId("lead-verdict")).toHaveTextContent("a connection just arrived"),
   );
-  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("can't check automatically");
-  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
+  expect(screen.getByTestId("precondition-route")).toHaveTextContent("can't check on this platform");
 
   // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
   const realNow = Date.now;
   vi.spyOn(Date, "now").mockImplementation(() => realNow() + TUNNEL_GRACE_MS + 1_000);
   await waitFor(
-    () => expect(screen.getByTestId("step-verify-status")).toHaveTextContent("arriving but not decrypting"),
+    () =>
+      expect(screen.getByTestId("lead-verdict")).toHaveTextContent(
+        "traffic is arriving, but nothing is decrypting",
+      ),
     { timeout: 3_000 },
   );
-  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "warn");
-  expect(screen.getByTestId("step-trust-ca")).not.toHaveAttribute("data-tone", "warn");
+  expect(screen.getByTestId("lead-verdict")).toHaveAttribute("data-verdict", "not-decrypting");
+  expect(screen.getByTestId("trust-remedy")).toHaveTextContent("does not trust the certificate yet");
   // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
@@ -332,7 +336,7 @@ test("check again and window focus each re-read both probes, and the reading is 
   onMacHost();
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
-  await waitFor(() => expect(screen.getByTestId("recheck")).toHaveTextContent(/checked at \d\d:\d\d:\d\d/));
+  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
   const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_status").length;
   expect(probes()).toBe(2);
 
@@ -341,6 +345,121 @@ test("check again and window focus each re-read both probes, and the reading is 
 
   fireEvent(window, new Event("focus"));
   await waitFor(() => expect(probes()).toBe(6));
+});
+
+// --- the reach seam (E-ONBOARD.W3) -------------------------------------------
+// The WU's contract: the screen renders the addresses the core reports, and it
+// only ever asks the core to expose this machine after the shell has asked the
+// user. Neither half is observable from a test of the screen alone.
+
+const INTERFACES = [
+  { name: "Wi-Fi", address: "192.168.1.24" },
+  { name: "Ethernet", address: "10.0.4.7" },
+];
+
+const ARMED = {
+  armed: true,
+  proxy: "192.168.1.24:7420",
+  api: "192.168.1.24:7421",
+  ca_cert_url: "http://192.168.1.24:7421/ca.crt",
+  interfaces: INTERFACES,
+};
+
+const UNARMED = { ...UNREACHABLE, interfaces: INTERFACES };
+
+async function offMachine(over: Partial<TrawlerApi> = {}) {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  Object.assign(api, over);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText("what are you setting up");
+  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+  fireEvent.click(screen.getByRole("option", { name: "iPhone or iPad" }));
+  return api;
+}
+
+test("entering setup reads the reach state rather than assuming one", async () => {
+  const reach = vi.fn(async () => UNARMED);
+  const armReach = vi.fn(async () => ARMED);
+  await offMachine({ reach, armReach });
+
+  await waitFor(() => expect(reach).toHaveBeenCalledOnce());
+  expect(armReach).not.toHaveBeenCalled();
+  await waitFor(() =>
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler answers on this machine only",
+    ),
+  );
+});
+
+// DEC-55: arming is an authorization act, so the ask comes first and the bind
+// only on a yes. A cancelled dialog must cost nothing at all.
+test("a refused confirm arms nothing — no POST, no address, no listening", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "confirm_reach" ? false : undefined,
+  );
+  const armReach = vi.fn(async () => ARMED);
+  await offMachine({ reach: async () => UNARMED, armReach });
+
+  fireEvent.click(await screen.findByRole("button", { name: "let devices reach Trawler" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("confirm_reach", { address: "192.168.1.24" }),
+  );
+  expect(armReach).not.toHaveBeenCalled();
+  expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+    "Trawler answers on this machine only",
+  );
+  expect(screen.queryByTestId("device-address")).toBeNull();
+});
+
+test("an allowed confirm arms that address, and the screen renders what answered", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "confirm_reach" ? true : undefined,
+  );
+  const armReach = vi.fn(async () => ARMED);
+  await offMachine({ reach: async () => UNARMED, armReach });
+
+  fireEvent.click(await screen.findByRole("button", { name: "let devices reach Trawler" }));
+
+  await waitFor(() => expect(armReach).toHaveBeenCalledWith("192.168.1.24"));
+  const address = await screen.findByTestId("device-address");
+  expect(within(address).getByRole("button", { name: /the proxy host/ })).toHaveTextContent(
+    "192.168.1.24",
+  );
+  expect(within(address).getByRole("button", { name: /the proxy port/ })).toHaveTextContent("7420");
+});
+
+// The reversal of an exposure is not itself an exposure, so it needs no second
+// dialog: nothing new is being granted by taking one away.
+test("stop listening takes the exposure away without asking again", async () => {
+  const disarmReach = vi.fn(async () => UNARMED);
+  await offMachine({ reach: async () => ARMED, disarmReach });
+
+  fireEvent.click(await screen.findByRole("button", { name: "stop listening" }));
+
+  await waitFor(() => expect(disarmReach).toHaveBeenCalledOnce());
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "confirm_reach")).toHaveLength(0);
+  await waitFor(() =>
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler answers on this machine only",
+    ),
+  );
+});
+
+test("a core that will not say leaves the screen saying Trawler answers here only", async () => {
+  await offMachine({
+    reach: async () => {
+      throw new Error("no core");
+    },
+  });
+
+  await waitFor(() =>
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler answers on this machine only",
+    ),
+  );
+  expect(screen.queryByTestId("device-address")).toBeNull();
 });
 
 // Choosing a host offered by the dropdown, rather than typing one: the options
@@ -856,7 +975,7 @@ test("a retry that fails again keeps the band and re-enables the way out", async
 test("the onboarding phase renders no connection band", async () => {
   const { api } = shellApi(() => Promise.reject(new TypeError("Failed to fetch")));
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByText(/trust the CA/);
+  await screen.findByText("what are you setting up");
   expect(screen.queryByText("trawler is not answering")).toBeNull();
 });
 

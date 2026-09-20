@@ -79,6 +79,32 @@ describe("Notice", () => {
     expect(root?.className ?? "").not.toContain("bg-");
   });
 
+  // The gap the run found: Notice's @use claims "pending" as one of the four
+  // nothings a zone must distinguish, and none of the three shipped tones could
+  // show it — so a zone still resolving rendered as one that had settled.
+  it("shows a spinner in the glyph column at pending, and keeps the sentence mute", () => {
+    render(
+      <Notice tone="pending" detail="reading this machine's certificate store">
+        checking what is already set up
+      </Notice>,
+    );
+
+    expect(screen.getByTestId("spinner")).toBeInTheDocument();
+    expect(screen.getByText("checking what is already set up").className).toContain("text-ink-mute");
+  });
+
+  it("gives pending its own tone rather than borrowing another's", () => {
+    const { container } = render(<Notice tone="pending">checking</Notice>);
+    expect(container.querySelector("[data-tone='pending']")).toBeInTheDocument();
+  });
+
+  it("leaves the three shipped tones without a spinner", () => {
+    for (const tone of ["mute", "warn", "ok"] as const) {
+      const { queryByTestId } = render(<Notice tone={tone}>settled</Notice>);
+      expect(queryByTestId("spinner")).not.toBeInTheDocument();
+    }
+  });
+
   it("is not interactive and cannot be dismissed", () => {
     render(<Notice tone="warn">could not load</Notice>);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
