@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aafa29e9f34851f0dfad2f1" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBOARD.W5 plan: the user-reading build</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBOARD.W5 — the user-reading build</h1>
+      <p>The screen a first-time user can finish: a title, one sentence of purpose, a question in their
+        words, eight tiles they can see, numbered tasks whose state something observed, and one obvious
+        button.</p>
+      <div class="meta">v1 · 2026-09-20 · Trawler · T3 (docs/work/) ·
+        branch <code>wu/onboarding-redesign/user-reading-build</code> ·
+        epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
+        builds <a href="2026-09-17-onboarding-design-run.html">the design of record</a> (round 4, archived) ·
+        answers <a href="2026-09-20-onboard-po-review.html">the PO review</a>'s P1 row ·
+        follows <a href="2026-09-20-onboard-p0-and-reading-round-plan.html">W4</a></div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="one-sentence">
+      <strong>The requirement, in one sentence.</strong> Build the screen round 4 of the design of record
+      designed — cited by path and blob, never re-derived — so that a user who has never seen Trawler
+      can finish setup for this Mac and for a phone without reading the epic's vocabulary.
+      <table>
+        <tr><th>What W4 left</th><th>What W5 owes it</th></tr>
+        <tr><td>a closed six-item run whose mockup reads as a first-time user reads it, and two component
+          entries it proposed and did not build</td><td>the screen, the two components, and a
+          <code>design/v1</code> note citing that run's blob for every rendered file the diff
+          touches</td></tr>
+        <tr><td>a screen with no false sentence on it</td><td>a screen with no <em>unreadable</em> sentence
+          on it — the truth model is untouched, the audience changes</td></tr>
+        <tr><td>two blocked-on rows the P1 build inherits, both needing the shell</td><td>the address the
+          foreign-proxy sentence names, and the one elevated act that costs one password prompt</td></tr>
+      </table>
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+
+    <p data-item="requirement">The twelve P1 findings, each a change to what the screen says or how it is shaped. The design of
+      record already resolved every one of them into a mockup and a copy table; this WU is the build of
+      that resolution, and the copy table is <strong>cited, never re-written</strong> — a screen whose copy
+      is derived a second time is a screen with two designs.</p>
+
+    <table data-item="maps-to" data-c="p1-set">
+      <thead><tr><th>#</th><th>What the user meets now</th><th>What this WU builds</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">F1</span></td>
+          <td>a lowercase grey failure verdict leads the screen — <em>nothing has reached Trawler
+            yet</em> — before the user knows what Trawler is</td>
+          <td>a title and a purpose sentence lead; the verdict's facts become each task's state, and the
+            lead zone stops carrying a verdict at all</td>
+          <td><code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F2</span></td>
+          <td>zone names as labels: <em>WHAT ARE YOU SETTING UP</em>, <em>WHAT HAS TO BE TRUE</em>,
+            <em>LET THIS DEVICE REACH TRAWLER</em></td>
+          <td>the user's question — <em>which device's traffic do you want to see</em> — and tasks titled
+            by what the user does</td>
+          <td><code>Onboarding.tsx</code> · <code>setup.ts</code></td></tr>
+        <tr><td><span class="badge id">F3</span></td>
+          <td><em>flow</em>, <em>verdict</em>, <em>reach</em>, <em>platform</em>, <em>route its
+            traffic</em>, <em>listen on</em>, <em>decrypting</em> as a heading</td>
+          <td>none of the seven on this screen, asserted as an absence over the rendered text.
+            <em>request</em>, <em>website</em>, <em>device</em>, <em>certificate</em>, <em>proxy</em>
+            instead</td>
+          <td><code>Onboarding.tsx</code> · <code>setup.ts</code> · <code>verdicts.ts</code></td></tr>
+        <tr><td><span class="badge id">F4</span></td>
+          <td>sentences about the probes' limits: <em>can't check another device from here</em>, <em>the
+            traffic verdict is what proves it</em>, <em>nothing to try until Trawler is reachable…</em></td>
+          <td>the same honesty worded as the user's action and what they will see: <em>we'll confirm this
+            on your iPhone's first request</em></td>
+          <td><code>verdicts.ts</code> · <code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F6</span></td>
+          <td>the one question is a dropdown nobody opened</td>
+          <td><code>ChoiceTiles</code>: eight tiles, every option visible, one tab stop, arrows move focus
+            without committing</td>
+          <td><code>components/ChoiceTiles.tsx</code></td></tr>
+        <tr><td><span class="badge id">F7</span></td>
+          <td>three equal-weight sections and three equal-weight buttons</td>
+          <td><code>TaskStep</code>: numbered tasks whose state comes from a probe or the traffic layer,
+            and one primary action per screen</td>
+          <td><code>components/TaskStep.tsx</code> · <code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F9</span></td>
+          <td>three sentences each explaining what cannot happen yet</td>
+          <td>tasks 2–4 dimmed and still numbered, with one word — <em>after step 1</em></td>
+          <td><code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F12</span></td>
+          <td>the network step reads as policy: three statements and a four-line warning before the user
+            has acted</td>
+          <td>a task — <em>Allow your iPhone to connect</em> — one line of consequence, and the button.
+            The full statement stays in the confirm dialog that already carries it</td>
+          <td><code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F17</span></td>
+          <td><em>another proxy is set</em>, and a button that silently replaces it</td>
+          <td>the address named — <em>another proxy is set on this Mac: 10.1.1.1:8080</em> — and a confirm
+            in front of the button</td>
+          <td>the shell's probe · <code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F18</span></td>
+          <td>raw <code>osascript</code> stderr as the whole message</td>
+          <td>the one common case mapped to a sentence, the tool's own text under <em>details</em></td>
+          <td>the shell · <code>Onboarding.tsx</code></td></tr>
+        <tr><td><span class="badge id">F22</span></td>
+          <td>success is silent — the first decrypted request swaps the screen for a list of one row</td>
+          <td>a dismissible banner on the list's first paint: <em>You're set up — Trawler is capturing
+            traffic from this Mac</em></td>
+          <td><code>App.tsx</code></td></tr>
+        <tr><td><span class="badge id">F27</span></td>
+          <td>two buttons, two password prompts, for the one thing most users want</td>
+          <td><em>Set up this Mac</em> — both elevated commands under one prompt; the single actions stay
+            as the manual route's secondaries</td>
+          <td>the shell · <code>Onboarding.tsx</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">The shape this builds</h2>
+
+    <div class="diagram" data-c="zones">
+      <pre class="mermaid">
+flowchart TD
+  L["lead<br/>title + purpose sentence<br/><i>no verdict here any more</i>"]
+  P["platform<br/>the user's question + ChoiceTiles × 8"]
+  S["steps<br/>TaskStep 1..n — number, title, why,<br/>observed state, what the user does"]
+  PR["probe<br/>checked 2m ago · check again<br/><i>absent off-machine</i>"]
+  D["done<br/>You're set up — …"]
+  B["back<br/>‹ show traffic"]
+  L --> P --> S --> PR --> D --> B
+  S -. "one primary action" .-> A["Set up this Mac<br/>· or ·<br/>Allow your iPhone to connect"]
+      </pre>
+      <div class="caption">The six zones of the archived mockup, in render order. Only <strong>steps</strong>
+        is unbounded; the column scrolls whole and no zone holds an inner scroller.</div>
+    </div>
+
+    <table data-c="task-sets">
+      <thead><tr><th>Platform</th><th>The tasks, numbered</th><th>Where each state comes from</th></tr></thead>
+      <tbody>
+        <tr><td><strong>this machine</strong></td>
+          <td>1 Trust Trawler's certificate · 2 Send this Mac's traffic to Trawler · 3 Open any website on
+            this Mac</td>
+          <td>the trust probe · the proxy probe · the traffic layer. One primary action —
+            <em>Set up this Mac</em> — covers 1 and 2 under one prompt</td></tr>
+        <tr><td><strong>iOS Simulator</strong></td>
+          <td>1 Trust Trawler's certificate in the Simulator · 2 Send this Mac's traffic to Trawler ·
+            3 Open any website in the Simulator</td>
+          <td>un-probeable (its own keychain) · the proxy probe · the traffic layer. Its primary action is
+            task 2's <em>Set the system proxy</em></td></tr>
+        <tr><td><strong>a phone, an emulator, another machine</strong></td>
+          <td>1 Allow your iPhone to connect · 2 install the certificate · 3 set the Wi-Fi proxy ·
+            4 Open any website on your iPhone</td>
+          <td>the reach state this app holds · then nothing this machine can read — <em>we'll confirm this
+            on your iPhone's first request</em>. Tasks 2–4 dimmed until task 1 is done</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="components">The two components W4 proposed</h2>
+
+    <p>Both are registry entries, built here because an epic that designs a component and does not build it
+      owes a drop reason at its own merge. Each ships with its TSDoc contract (DEC-16), its own test file,
+      and a specimen in the collection's mount test.</p>
+
+    <div class="cards" data-c="components">
+      <div class="card">
+        <h3><code>ChoiceTiles</code></h3>
+        <p><strong>One choice over four to eight options, every option visible.</strong> A wrapping row of
+          tiles, exactly one selected, label in and id out. No groups, no search, no popup.</p>
+        <p><strong>Why nothing existing fits:</strong> <code>Select</code> hides the choice behind a
+          trigger — which is exactly what the reading failed on. <code>SegmentedControl</code>'s
+          <code>@avoid</code> refuses more than four, and <em>Another Ubuntu machine</em> is outside its
+          width in both directions.</p>
+        <p><strong>Keyboard:</strong> one tab stop (roving tabindex) · ← → ↑ ↓ move focus without
+          selecting, no wrap · Enter or Space takes the focused tile.</p>
+      </div>
+      <div class="card">
+        <h3><code>TaskStep</code></h3>
+        <p><strong>One numbered task:</strong> its number, its title, one line of purpose, the state
+          something observed for it, and a slot for what the user does. A dimmed variant for a task whose
+          precondition is not met.</p>
+        <p><strong>Why nothing existing fits:</strong> <code>StepList</code>'s <code>@avoid</code> refuses
+          per-step state — a ban on <em>unobserved</em> claims that round 1 read as a ban on numbering.
+          <code>StepList</code> keeps its job: the manual steps inside a task, which carry no state.</p>
+        <p><strong>The contract that keeps it honest:</strong> no cursor, no progress count, and no state a
+          caller can pass without a source. The number is a reading aid; the state is a reading.</p>
+      </div>
+    </div>
+
+    <h2 id="shell">The two blockers this WU closes, with the shell</h2>
+
+    <table data-c="shell-work">
+      <thead><tr><th>Blocked-on row</th><th>What the shell gains</th><th>What the screen then says</th></tr></thead>
+      <tbody>
+        <tr><td><strong>the address of the proxy that is already set</strong> — <code>proxy_status</code>
+          answers <code>foreign</code> and nothing more, so the screen can say <em>another proxy is
+          set</em> and not which, and it is about to offer a button that replaces it</td>
+          <td><code>proxy_status</code> reports the active proxy's address alongside its verdict. The
+            classification is unchanged; what was already read is no longer thrown away</td>
+          <td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while
+            Trawler runs, and restores nothing when it quits.</em> — and a confirm in front of the
+            button (DEC-13: a replacement whose cost the user cannot see is one they did not
+            authorise)</td></tr>
+        <tr><td><strong>one elevated act for two commands</strong> — each elevated command is its own
+          <code>osascript … with administrator privileges</code>, so the one thing most users want costs
+          two password prompts in two places</td>
+          <td>one command that builds both scripts and runs them under a single elevation. The two single
+            commands stay exactly as they are, for the partial cases</td>
+          <td><em>Set up this Mac</em> · <em>one password prompt — it installs the certificate and sets
+            the proxy</em></td></tr>
+        <tr><td><strong>and, riding with them</strong> — the raw stderr of a cancelled prompt is the whole
+          message the user gets (F18)</td>
+          <td>the shell classifies its own failure: a refused or cancelled authorization is named as such,
+            the tool's text carried alongside rather than instead</td>
+          <td><em>The password prompt was cancelled. Try again, or follow the manual steps.</em> with the
+            raw text under <em>details</em></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="os-boundary">
+      <strong>The core does no OS work, and this WU does not move that line.</strong> W4's review round
+      already sent the interface naming out of the core and into the shell. Everything above is the
+      shell's: <code>ui/src-tauri/</code> only, no new <code>Command</code> in <code>src/</code>.
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+
+    <p>Observable at the WU tip by a reader who was not here. These are the epic's rows 1, 2 and 12 made
+      checkable at this level.</p>
+
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>#</th><th>After this WU</th><th>Checked by</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>The screen opens on <em>Set up capture</em> and one sentence of purpose. No
+          element above the tiles states a verdict</td><td>unit — the copy table's first row asserted
+          literally, and the lead's absence of a verdict element</td></tr>
+        <tr><td>2</td><td>The eight platforms are all visible without opening anything; the selected one is
+          the only tab stop in the group</td><td>unit — <code>ChoiceTiles</code>' own tests and the
+          screen's rendering of eight tiles</td></tr>
+        <tr><td>3</td><td>Every task carries a number and a state, and every state resolves from a probe,
+          the traffic layer, or the app's own reach state — never from what the user clicked</td>
+          <td>unit — <code>TaskStep</code> refuses a state with no source by construction; the screen's
+            three platform shapes asserted</td></tr>
+        <tr><td>4</td><td>None of the seven machine words appears in the screen's rendered text, on any of
+          the eight platforms, in any lifecycle state</td><td>unit — an absence asserted over the rendered
+          text of all eight, not a spot check</td></tr>
+        <tr><td>5</td><td><em>Set up this Mac</em> is the only primary button on this machine, and it
+          produces one password prompt</td><td>unit (the screen offers one) · unit · shell (one elevated
+          argv for both commands)</td></tr>
+        <tr><td>6</td><td>With another proxy set, the screen names its address and the button asks before
+          replacing it</td><td>unit (the sentence) · integration (no write without a yes)</td></tr>
+        <tr><td>7</td><td>A cancelled password prompt reads as a sentence, with the tool's text under a
+          disclosure</td><td>unit · shell</td></tr>
+        <tr><td>8</td><td>Off-machine before the network is allowed: tasks 2–4 are dimmed, numbered, and
+          say <em>after step 1</em> — and nothing on the screen explains what cannot happen</td>
+          <td>unit</td></tr>
+        <tr><td>9</td><td>The first decrypted request lands the user on the list with a dismissible banner
+          saying setup succeeded</td><td>integration — the seam between the machine's
+          <code>captured</code> and the list's first paint</td></tr>
+        <tr><td>10</td><td>The <code>design/v1</code> note cites W4's archived run by path and blob for
+          every rendered file the diff touches, with an <em>undesigned</em> reason for any that needed
+          none</td><td>gate check 9 · <code>cargo xtask design-scope</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="not-here">What this WU does not do</h2>
+
+    <table data-c="non-goals">
+      <thead><tr><th>Out of scope</th><th>Why, and where it goes</th></tr></thead>
+      <tbody>
+        <tr><td>the e2e rewrite</td><td>W6's, against the screen this WU leaves. Writing it here would
+          assert a screen mid-rebuild; <code>test/v2</code> records it as the epic's, per the charter's
+          additive rule</td></tr>
+        <tr><td>UC-ONBOARD's restatement, the two lexicon entries, DEC-55's index row</td><td>W6's
+          distillation. W4 already recorded why: a contract restated against a screen one WU from changing
+          is a contract written twice</td></tr>
+        <tr><td>the eight P2 findings — the glyph legend, QR codes, <em>Test now</em>, the undo collapse,
+          the column width, the dot reading the traffic</td><td>W6 writes them as backlog rows, with a
+          decision record each for the two that are new capabilities</td></tr>
+        <tr><td>the quit dialog</td><td>the epic's declared non-goal, with its own successor row</td></tr>
+        <tr><td>persisting the selected platform, or the reach opt-in, across relaunches</td><td>both
+          answered <em>no</em> in the epic's open questions; the design is honest either way</td></tr>
+        <tr><td>a trust probe beyond macOS and Windows, and attributing an arriving connection to a
+          platform</td><td>open blocked-on rows escalated to the control API. The screen is honest without
+          them and stays so</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+
+    <p>Every commit carries the unit tests for what it adds. The two levels below are what the WU owes as a
+      whole.</p>
+
+    <table data-item="test-plan" data-c="tests">
+      <thead><tr><th>Level</th><th>What it covers</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><strong>unit — the components</strong></td>
+          <td><code>ChoiceTiles</code>: one selected at a time, every option rendered, the roving tab stop,
+            arrows moving focus without committing and not wrapping, Enter and Space taking the focused
+            tile, and the click path. <code>TaskStep</code>: the number and title render, a state renders
+            where one is given and nothing where none is, the dimmed variant, and the slot</td>
+          <td><code>components/ChoiceTiles.test.tsx</code> ·
+            <code>components/TaskStep.test.tsx</code> · the collection's mount test and registry
+            oracle</td></tr>
+        <tr><td><strong>unit — the copy</strong></td>
+          <td>The copy table's rows as literal assertions, so a sentence cannot drift back to the machine's
+            vocabulary silently: the title and purpose, the question, the six task states of this machine,
+            the un-probeable promise, the primary action and its one-prompt line, the cancelled prompt, the
+            foreign-proxy sentence, the network task's single consequence line, the refusal, the arriving
+            remedy, and the end. Plus the absence of all seven machine words across all eight
+            platforms</td>
+          <td><code>Onboarding.test.tsx</code> · <code>setup.test.ts</code> ·
+            <code>verdicts.test.ts</code></td></tr>
+        <tr><td><strong>unit — the step state's source</strong></td>
+          <td>Each task's state resolves from the probe, the traffic reading or the reach state it names,
+            and from nothing else: the three platform shapes, the dimming rule off-machine, the Simulator's
+            two stores, and the one-primary-action rule on each</td>
+          <td><code>Onboarding.test.tsx</code></td></tr>
+        <tr><td><strong>unit — the shell</strong></td>
+          <td>One elevated argv carries both commands and appears once; the two single commands are
+            unchanged; a cancelled authorization is classified from the tool's own text and carries it;
+            the proxy probe reports the address it read, and reports none where it read none</td>
+          <td><code>ui/src-tauri/src/setup.rs</code></td></tr>
+        <tr><td><strong>integration</strong></td>
+          <td>The seams this WU moves, neither half observable from one side: the primary action invokes
+            the one combined command and re-probes; replacing a foreign proxy costs a confirm and a refusal
+            writes nothing; the success banner appears on the list's first paint after the machine's
+            <code>captured</code> and is dismissible; a cancelled elevated prompt puts the sentence on the
+            screen with the raw text reachable</td>
+          <td><code>App.test.tsx</code></td></tr>
+        <tr><td><strong>e2e</strong></td>
+          <td><span class="badge approval">waived here</span> — the epic owes it and W6 writes it, against
+            the screen this WU leaves. Recorded in <code>test/v2</code> as the epic's, never as absent</td>
+          <td><code>ui/e2e/specs/onboarding.spec.ts</code>, at W6</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="sequence">Order of work</h2>
+
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart LR
+  C0["0 · this plan"]
+  C1["1 · ChoiceTiles<br/>registry entry + tests"]
+  C2["2 · TaskStep<br/>registry entry + tests"]
+  C3["3 · the shell<br/>one prompt · the cancel<br/>· the proxy's address"]
+  C4["4 · the words<br/>setup.ts + verdicts.ts<br/>F3 · F4"]
+  C5["5 · the screen<br/>F1 F2 F6 F7 F9 F12 F17 F18 F27"]
+  C6["6 · the banner<br/>F22"]
+  C7["7 · the result"]
+  C0 --> C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7
+      </pre>
+      <div class="caption">The components and the shell come first because the screen mounts the one and
+        calls the other; the words come before the screen so the rewrite lands once, not twice.</div>
+    </div>
+
+    <table data-c="commits">
+      <thead><tr><th>Commit</th><th>What it lands</th><th>Its test</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1 · <code>ChoiceTiles</code></strong></td><td>the entry, its TSDoc contract, the
+          specimen</td><td>its own test file + the collection's mount and citation oracles</td></tr>
+        <tr><td><strong>2 · <code>TaskStep</code></strong></td><td>the entry, its TSDoc contract, the
+          specimen</td><td>same</td></tr>
+        <tr><td><strong>3 · the shell</strong></td><td>one elevated act for the two commands, the cancelled
+          authorization classified, the active proxy's address reported</td><td>Rust unit tests in
+          <code>setup.rs</code></td></tr>
+        <tr><td><strong>4 · the words</strong></td><td>the instruction sets and the verdict resolver
+          re-worded for a first reader, with the seven machine words out</td><td>
+          <code>setup.test.ts</code> · <code>verdicts.test.ts</code></td></tr>
+        <tr><td><strong>5 · the screen</strong></td><td><code>Onboarding.tsx</code> rebuilt on the two
+          components: lead, question, tiles, numbered tasks, one primary action, the dimming rule, the
+          network task, the foreign-proxy confirm, the cancelled prompt</td><td>
+          <code>Onboarding.test.tsx</code> · <code>App.test.tsx</code></td></tr>
+        <tr><td><strong>6 · the banner</strong></td><td>the list's first paint says setup succeeded, and
+          the banner dismisses</td><td><code>App.test.tsx</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="risks">What could go wrong, and the answer</h2>
+
+    <table data-c="risks">
+      <thead><tr><th>Risk</th><th>The answer</th></tr></thead>
+      <tbody>
+        <tr><td>The copy drifts from the copy table while the screen is being assembled — the exact failure
+          that made two designs of one screen</td><td>the table's rows are asserted literally in the unit
+          tests, written from the archived run rather than from the code. A sentence that drifts fails a
+          test that quotes the design</td></tr>
+        <tr><td><code>TaskStep</code> becomes the stepper the run banned — a caller passes it a state
+          nobody observed</td><td>the contract has no <em>done</em> prop: a state is a
+          <code>StepStatusView</code> resolved by <code>verdicts.ts</code> or it is absent. The
+          <code>@avoid</code> says so and the screen's tests assert each state's source</td></tr>
+        <tr><td>The one elevated act half-succeeds — the certificate installs and the proxy write
+          fails</td><td>the two commands are joined with <code>&amp;&amp;</code> inside one script, so the
+          failure is the script's and the probes re-read both facts afterwards. The screen's state comes
+          from the probes, never from the action's exit code</td></tr>
+        <tr><td>The foreign-proxy confirm becomes a second dialog on top of the password prompt for users
+          who have no foreign proxy</td><td>it is asked only where the probe says <code>foreign</code> —
+          the one case where something the user owns is about to be replaced</td></tr>
+        <tr><td>The screen grows while being rebuilt, and the review reads a 900-line file</td><td>the two
+          components take the tiles and the task chrome out of it, and the guides were already extracted. A
+          line count is evidence, never a target — but the direction is down</td></tr>
+        <tr><td>An <code>@avoid</code> or <code>@use</code> moved under the archived mockup since round 4
+          closed</td><td>the substrate is re-read before the components are written; a moved contract is a
+          finding for the build, not a silent divergence</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="docs">Docs this WU touches</h2>
+
+    <table data-c="docs">
+      <thead><tr><th>Doc</th><th>Tier</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>this plan</td><td>T3</td><td>added</td></tr>
+        <tr><td><code>docs/work/2026-09-20-onboard-user-reading-result.html</code></td><td>T3</td>
+          <td>added at the tip — what shipped against the ten rows above, the deviations, the review round
+            and its cost</td></tr>
+        <tr><td><a href="2026-09-17-onboarding-design-run.html">the design of record</a></td><td>T3</td>
+          <td><strong>not edited.</strong> It is archived and cited by blob. A build that amends its own
+            design is a build with no design</td></tr>
+        <tr><td>the two components' TSDoc</td><td>T4</td><td>where each contract lives, per DEC-16 — the
+          proposals retire into it and the design file is never written</td></tr>
+        <tr><td>T2 — UC-ONBOARD, the lexicon, the decisions index</td><td>—</td><td>W6's, stated as waived
+          in this WU's <code>doc/v1</code> with the reason above</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
