@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU E-ONBOARD.W5 user-reading-build -> epic/onboarding-redesign. The whole unit, both halves: the twelve P1 findings, and the window round the owner's reading returned. The first half passed six rounds bound to aeb39e3; that binding is superseded here rather than carried, because this note judges the range whole."
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+branch: wu/onboarding-redesign/user-reading-build
+base: bcddf45e56987a3e633e67b93c13903a7ab949f5
+head: 8198e3e42e47c27208c8306a183b2e87f1053f66
+diff_sha256: c3dff71bfe154148c072c9eaf09aba41c43e724e6e50754f0d14e605f83253a1
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    finders: 1161
+    verifiers: 467
+    total: 1628
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+nits:
+  - finding: "useNow is instantiated by two leaves at once, so two one-second intervals run where one clock would do"
+    waived: "Carried forward from the first half's round 1, because this note binds the code that nit is about and a recorded decision may not be silently dropped by a wider re-binding. The duplication is how the re-render scope is achieved: the tick lives in each leaf that reads the traffic layer precisely so it reaches neither the instructions nor the picker, which is the invariant the epic's expected-result row 7 asserts. The count is bounded at two, never grows with data, and nothing observable differs."
+verdict: PASS
+date: 2026-09-21
