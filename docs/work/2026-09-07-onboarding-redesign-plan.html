@@ -11,8 +11,8 @@
       <h1>E-ONBOARD — epic plan</h1>
       <p>Rebuild the onboarding screen from the design run that is already written, and make Trawler
         reachable from the platforms that screen now names.</p>
-      <div class="meta">v1 · opened 2026-09-07 · started 2026-09-19 · Trawler · T3 (docs/work/) ·
-        branch <code>epic/onboarding-redesign</code></div>
+      <div class="meta">v2 · opened 2026-09-07 · started 2026-09-19 · revised 2026-09-20 after the PO
+        review · Trawler · T3 (docs/work/) · branch <code>epic/onboarding-redesign</code></div>
     </div>
   </header>
   <main>
@@ -48,6 +48,36 @@
       The two calls pull in opposite directions on purpose: the epic is <em>narrowed</em> at the UI
       (one screen, not two) and <em>widened</em> at the core (one bind seam). It stays a screen epic with a
       single core dependency in front of it, not a core epic.
+    </div>
+
+    <div class="callout warn" data-c="po-review-moved">
+      <strong>What the PO review moved (v2, 2026-09-20).</strong> W3 merged green on every test the epic
+      wrote, and <a href="2026-09-20-onboard-po-review.html">the PO review of the built screen</a> then
+      failed it on the one test a user runs — <em>what do I do now?</em> The screen is truthful and
+      complete and reads as internal vocabulary. That is a planning miss, not a build miss: the epic's
+      expected-result table never asked a row about the user's reading, so nothing before the review could
+      have caught it. Three things change.
+      <table>
+        <tr><th>Then (v1)</th><th>Now (v2)</th></tr>
+        <tr>
+          <td>four working units — W4 closes the epic</td>
+          <td><strong>six</strong>. W4 takes the review's P0 set and re-opens the design run with an
+            end-user reading round; W5 builds the P1 rewrite from the amended run; the close is W6,
+            unchanged in content</td>
+        </tr>
+        <tr>
+          <td>the design of record closes once, at W2</td>
+          <td><strong>it re-opens at W4 and closes again.</strong> The run was reviewed as a design and never
+            read as an end user reads it, so its own review item gains that row. DEC-25's hand-off is
+            unchanged: W5 cites the amended blob</td>
+        </tr>
+        <tr>
+          <td>the epic ends with the screen the closed run designed</td>
+          <td><strong>the epic ends with a screen a first-time user can finish.</strong> Nothing about the
+            truth model moves — DEC-13, DEC-33 and DEC-55 are all kept by the review; what changes is who
+            the sentences are written for</td>
+        </tr>
+      </table>
     </div>
 
     <h2 id="intent">Intent</h2>
@@ -107,6 +137,15 @@
         <td>owed by this epic at close — the first real number the new shape has</td>
       </tr>
     </table>
+
+    <div class="callout" data-c="inherits-po">
+      <strong>And, from 2026-09-20, one more input.</strong>
+      <a href="2026-09-20-onboard-po-review.html">The PO review of the built screen</a> — 29 scenarios run
+      against the real core at tip <code>bd30dee</code>, 28 findings graded P0/P1/P2, a copy table, two
+      wireframes, and a decisions-to-revisit table that keeps DEC-13, DEC-33 and DEC-55 and revisits the
+      no-stepper ban and the verdict-leads-the-screen rule. It is W4's and W5's requirement source, and its
+      P0 rows are the ones that must land before this epic merges.
+    </div>
 
     <h2 id="use-cases">Use-case requirements</h2>
     <div data-item="use-cases">
@@ -179,6 +218,15 @@
           note, and every rendered file the build touches is accounted for</td><td>gate check 9</td></tr>
         <tr><td>10</td><td>The design flow has its first clock-and-token bill, recorded in the epic
           result</td><td>the epic result · roadmap</td></tr>
+        <tr><td>11</td><td>No sentence on the screen is false: the iOS Simulator is told about its own
+          keychain, no headline announces a state the probes contradict, and no remedy claims to name the
+          platform an undecrypted connection came from</td><td>unit · the PO review's
+          re-run</td></tr>
+        <tr><td>12</td><td>A first-time user who has never seen Trawler can finish setup for this Mac and
+          for a phone without reading the epic's vocabulary: a title, a purpose sentence, a question in
+          their words, numbered steps whose state is observed where it can be, and one obvious button per
+          screen</td><td>e2e · unit over the copy table · the amended run's reading
+          round</td></tr>
       </table>
     </div>
 
@@ -191,7 +239,7 @@
             <code>attemptRemove</code> → <code>useAction</code> nit, and the missing
             <code>closeConfirm.remove</code> seam test</td>
           <td>Owner's call at the init round. The parked run designed the setup screen only, and the W7 run
-            that covered both surfaces is written to the shape DEC-53 retired. W4 writes the backlog row, which
+            that covered both surfaces is written to the shape DEC-53 retired. W6 writes the backlog row, which
             names <code>wu/redesign-finish/onboarding-design @ 7c6e144</code> as the W7 design's only carrier —
             <strong>do not delete that branch</strong></td>
         </tr>
@@ -211,7 +259,7 @@
           <td><strong>Authorization finer than the opt-in</strong> — tokens, TLS on the control API,
             per-origin CORS policy</td>
           <td>The confirmed opt-in is this epic's authorization boundary. Anything finer is its own epic; W1's
-            DEC names the boundary and W4 records the residue as a backlog row</td>
+            DEC names the boundary and W6 records the residue as a backlog row</td>
         </tr>
         <tr>
           <td><strong>A trust probe beyond macOS and Windows</strong>, and <strong>attributing an undecrypted
@@ -244,16 +292,27 @@ DEC-55 + the bind + the address"]
 amended for the address, closed archived"]
   W3["W3 · the build
 Onboarding.tsx from the run + setup.ts + the tick"]
-  W4["W4 · close
+  PO["the PO review
+bd30dee · 29 scenarios · 28 findings"]
+  W4["W4 · truth + the reading round
+P0 fixes · the run re-opened and re-closed"]
+  W5["W5 · the user-reading build
+P1 rewrite from the amended run"]
+  W6["W6 · close
 e2e · UC-ONBOARD · lexicon · the bill"]
   W1 --> W2
   R -. "resumes from" .-> W2
   W2 -- "design -> build: cited by blob" --> W3
   W3 --> W4
+  W3 -. "reviewed by" .-> PO
+  PO -. "P0 + P1" .-> W4
+  W4 -- "design -> build: cited by blob" --> W5
+  W5 --> W6
       </pre>
-      <div class="caption">Four working units, strictly ordered. W1 exists so W2 can render an address instead
-        of an apology; W2 must close before W3 builds, because
-        <a href="../workflow.html">an added surface may only be cited</a>.</div>
+      <div class="caption">Six working units, strictly ordered. W1 exists so W2 can render an address instead
+        of an apology; W2 must close before W3 builds, and W4 must re-close the run before W5 builds from it,
+        because <a href="../workflow.html">an added surface may only be cited</a>. W4 is both halves at once —
+        a design WU and a fix set — which the workflow allows where a build finds a surface nobody read.</div>
     </div>
 
     <h2 id="wus">Working units</h2>
@@ -333,14 +392,85 @@ e2e · UC-ONBOARD · lexicon · the bill"]
       </div>
 
       <div data-wu="E-ONBOARD.W4">
-        <h3 id="w4">E-ONBOARD.W4 — close</h3>
+        <h3 id="w4">E-ONBOARD.W4 — truth, and the reading round</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">Two halves, one WU. <strong>The P0 set</strong>
+            — the nine findings the PO review says must land before the epic merges, each a commit with its
+            unit test: the iOS Simulator's trust guide corrected to its own keychain and the
+            <code>simctl</code> route, and the Simulator given the actions it was denied (F14, F15); guides
+            rendered open wherever no automatic action stands above them, so <em>set it up by hand</em> stops
+            hiding the only instructions a phone user has (F10); the address defaulted to the active
+            interface's IPv4 under a human name, the rest under <em>other addresses</em>, and a control that
+            fits its column (F11); a refused reach confirm given a sentence of its own (F13); a header chip
+            that holds for as long as this Mac is reachable, in every state including the list (F20); the lead
+            sentence reading the probes it is plainly about (F16); and the undecrypted-traffic remedy no longer
+            claiming to name a platform the app cannot know (F21). <strong>The reading round</strong> — the
+            design of record re-opened, its review item gaining one new row: an end-user reading of the mockup
+            sentence by sentence, against the review's copy table and its two wireframes. The decisions it
+            revisits are decided here and recorded: the no-stepper ban keeps its right half (no self-reported
+            ✓, ever) and drops its wrong one (order is a reading aid, not a claim), the platform axis keeps
+            its axis and loses its dropdown, and the verdict stops leading the screen. Closed
+            <code>data-status="archived"</code> again, with a blob W5 cites</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">The PO review's P0 row and its decisions-to-revisit
+            table; UC-ONBOARD's promises, which the P0 fixes change (the Simulator's route, the address
+            cardinality, the refusal's sentence, the reach chip's persistence) — W6 restates them; DEC-53's
+            six items and DEC-25's hand-off, both of which govern the re-opened run exactly as they governed
+            W2's</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">No false sentence survives on the screen:
+            the three the review named are gone, and a unit test pins each. The Simulator, the phone and the
+            emulator each render instructions a user can follow. One archived six-item run in the tree whose
+            mockup reads as a first-time user reads it, <code>verify-doc</code> green, the reading round's
+            findings on its review item, and a blob for W5. Integration covers the seams the P0 set moves —
+            the refusal's outcome and the chip's source of truth</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3 (the screen the review read) and the PO review
+            itself. The P0 half could stand alone; it rides with the reading round so the run is amended
+            against a screen whose falsehoods are already fixed</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-ONBOARD.W5">
+        <h3 id="w5">E-ONBOARD.W5 — the user-reading build</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The P1 rewrite, built from the run W4 closed
+            and cited by blob: a title and a purpose sentence a newcomer can act on, above the status rather
+            than under it (F1); the design's own zone questions replaced by the user's (F2); the internal
+            vocabulary — <em>flow</em>, <em>verdict</em>, <em>reach</em>, <em>platform</em>, <em>route</em>,
+            <em>listen on</em>, <em>decrypting</em> — off this screen, which is where the lexicon's
+            <em>flow</em> gets scoped to the list that teaches it (F3); sentences that state the user's action
+            and what they will see instead of the probes' limits, with DEC-33's honesty intact (F4); the
+            platform axis rendered as tiles rather than discovered in a dropdown (F6); numbered steps whose
+            state comes from the probes and the traffic reading, and one primary action per screen — <em>Set
+            up this Mac</em> doing both elevated commands under one prompt (F7, F27); unmet steps greyed and
+            numbered rather than refusing in three sentences (F9); the network step written as a task with its
+            warning left to the confirm dialog that already carries it (F12); another proxy's address named
+            before Trawler's button replaces it, behind a confirm (F17); a cancelled password prompt mapped to
+            a sentence with the raw text under a disclosure (F18); and a success banner on the list's first
+            paint, because the moment setup succeeds is currently silent (F22)</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">The PO review's P1 row and its copy table, row by
+            row; the wireframes in that review, which are wireframes and not mockups — the amended run owns
+            the real shape; DEC-33 and DEC-13, both kept, both re-asserted by test</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">A first-time user meeting the screen reads
+            a title, one sentence of purpose, a question they understand, and numbered steps with one obvious
+            button. Unit tests cover the copy table's rows as literal assertions and the step state's source,
+            so a sentence cannot drift back to the machine's vocabulary silently. The <code>design/v1</code>
+            note cites W4's amended run by path and blob for every rendered file the diff touches</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W4 — the closed run it cites, and the P0 fixes it
+            builds on top of</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-ONBOARD.W6">
+        <h3 id="w6">E-ONBOARD.W6 — close</h3>
         <table>
           <tr><th>What it builds</th><td data-item="wu-summary">The epic's e2e spine rewritten against the
             platform axis with a coverage map over the 8 assertions the current spec holds; UC-ONBOARD restated
             in <code>docs/use-cases/web-ui.html</code>; the run's two lexicon proposals
             (<em>arriving</em>, <em>platform</em>) landed in <code>docs/design-rules/</code>; DEC-55's index
-            row; the roadmap's E-ONBOARD row struck and its dialog successor row written; and the design flow's
-            first clock-and-token bill recorded in the epic result</td></tr>
+            row; the roadmap's E-ONBOARD row struck and its dialog successor row written; the PO review's
+            eight P2 findings written as backlog rows, with a decision record each for the two that are new
+            capabilities (the QR codes and the in-app <em>Test now</em>); and the design flow's first
+            clock-and-token bill recorded in the epic result — now covering two design rounds, W2's and
+            W4's</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E; the roadmap's standing rows for this epic, for
             the flow's missing bill, and for <code>overflow-declared</code>'s elective gap if it bit; the run's
             proposals item, which is the rulebook's reuse-or-propose feed</td></tr>
@@ -348,8 +478,8 @@ e2e · UC-ONBOARD · lexicon · the bill"]
             docs carry the new truth and the plan is archived; the design flow has a wall-clock and a token
             count for the first time, so the next cut is argued from a measurement rather than from re-edit
             cost</td></tr>
-          <tr><th>Dependencies</th><td data-item="wu-deps">W3 — the e2e drives the built screen, and the
-            distillation records what actually shipped</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W5 — the e2e drives the screen a user can
+            finish, not the one W3 built, and the distillation records what actually shipped</td></tr>
         </table>
       </div>
     </div>
@@ -400,7 +530,7 @@ e2e · UC-ONBOARD · lexicon · the bill"]
         <tr>
           <td><code>docs/decisions/dec-55-…</code> + <code>decisions-index.html</code> (T2)</td>
           <td>reach beyond loopback is an authorization decision: opt-in, confirmed, off by default, and it does
-            not widen the CORS grant. Minted in W1, indexed in W4</td>
+            not widen the CORS grant. Minted in W1, indexed in W6</td>
         </tr>
         <tr>
           <td><code>docs/design-rules/design-rules-index.html</code> — the Lexicon table (T2)</td>
@@ -479,13 +609,13 @@ e2e · UC-ONBOARD · lexicon · the bill"]
       <strong>Two workflow facts this epic must not forget.</strong>
       <table>
         <tr>
-          <td>W4's <code>architecture.html</code> edit is <strong>T1, rule-bearing</strong></td>
+          <td>W6's <code>architecture.html</code> edit is <strong>T1, rule-bearing</strong></td>
           <td>it commits through <code>cargo xtask mr commit … --as &lt;id&gt;</code> with a listed authoriser.
             The agent stages it, prints the command and stops</td>
         </tr>
         <tr>
           <td>The epic <strong>measures the flow it ran</strong></td>
-          <td>wall-clock and tokens for W2's design round, recorded in the epic result. DEC-48's discipline
+          <td>wall-clock and tokens for W2's and W4's design rounds, recorded in the epic result. DEC-48's discipline
             applied to the design flow instead of to the review — and the first number the new shape has</td>
         </tr>
       </table>

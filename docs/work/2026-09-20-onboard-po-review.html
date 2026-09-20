@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aaf7de59f34851f0dfad2ba" data-artifact="po-review" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — PO review: the onboarding setup screen, as a user meets it</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>PO review — the setup screen, as a user meets it</h1>
+      <p>The onboarding screen E-ONBOARD.W3 rebuilt was run the way a first-time user runs it: every
+        platform choice, every probe verdict, every prompt outcome and every traffic state, on the real
+        core. It is truthful and complete, and it is not usable — it is written in the design system's
+        language, not the user's.</p>
+      <div class="meta">v1 · 2026-09-20 · Trawler · T3 (docs/work/) ·
+        reviews tip <code>bd30dee</code> on <code>wu/onboarding-redesign/build</code> ·
+        input to <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> W4 and to a
+        user-reading round on <a href="2026-09-17-onboarding-design-run.html">the design of record</a> ·
+        contract under review: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="verdict">Verdict</h2>
+    <div class="callout" data-c="verdict-callout">
+      <p><strong>The screen passes every test the epic wrote for it and fails the one test a user
+        runs: "what do I do now?"</strong> Every zone is a verdict or a precondition — a statement
+        about the machine — where a user needs a task, an order and one obvious button. The
+        truthfulness rules behind it (<a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>,
+        <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>,
+        <a href="../decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a>) are right and
+        stay. What changes is who the sentences are written for.</p>
+    </div>
+    <table data-c="scorecard">
+      <tr><th>Dimension</th><th>Grade</th><th>What the run showed</th></tr>
+      <tr><td>Orientation — what is this screen, why these steps</td>
+        <td style="color:var(--warn)">✗ fail</td>
+        <td>No title, no purpose sentence. The first words a new user reads are
+          <em>nothing has reached Trawler yet</em>, in lowercase grey (TC-01)</td></tr>
+      <tr><td>Language</td>
+        <td style="color:var(--warn)">✗ fail</td>
+        <td>Fourteen sentences on the screen are internal vocabulary — verdict, reach, decrypt, flow,
+          precondition, route, listen on, platform (findings F3, F4)</td></tr>
+      <tr><td>Order and progress</td>
+        <td style="color:var(--warn)">⚠ weak</td>
+        <td>Three tasks, no numbering, no primary action; a hollow ○ glyph is the only progress cue
+          (F6, F7)</td></tr>
+      <tr><td>Setting up this Mac</td>
+        <td style="color:var(--warn)">⚠ weak</td>
+        <td>The happy path works: two small buttons, two password prompts. Nothing signposts it as
+          the thing to do first (F7, F16)</td></tr>
+      <tr><td>Setting up a phone</td>
+        <td style="color:var(--warn)">✗ fail</td>
+        <td>Raw interface names and three temporary IPv6 addresses, a security warning before any
+          action, and the only instructions the phone user has hidden behind
+          <em>set it up by hand</em> (F10, F11, F12)</td></tr>
+      <tr><td>Truthfulness</td>
+        <td style="color:var(--warn)">⚠ three false sentences</td>
+        <td>The two layers stay apart as designed, but the Simulator trust claim, <em>everything
+          below is still set up</em> and <em>and for which platform</em> are not true (F14, F16,
+          F21)</td></tr>
+      <tr><td>Feedback and closure</td>
+        <td style="color:var(--warn)">⚠ weak</td>
+        <td>Cancelling the network confirm says nothing; success replaces the screen with the list
+          and no message (F13, F22)</td></tr>
+      <tr><td>Layout</td>
+        <td style="color:var(--warn)">⚠ weak</td>
+        <td>A 370 px column in a 1440 px window; the try-it command wraps inside
+          <code>example.com</code>; the address control overflows the column (F11, F25)</td></tr>
+    </table>
+
+    <h2 id="method">How it was tested</h2>
+    <table data-c="method">
+      <tr><th>Layer</th><th>What ran</th><th>Why this way</th></tr>
+      <tr><td>Core</td>
+        <td><code>target/debug/trawler</code> at the reviewed tip, loopback, the CA in <code>ca/</code></td>
+        <td>Real flows, real tunnels, the real <code>GET /reach</code> answer for this Mac (one IPv4,
+          three IPv6, all named <code>en1</code>)</td></tr>
+      <tr><td>Screen</td>
+        <td>The Vite dev bundle in headless Chrome under a scripted Tauri shell stub: the two probes,
+          the reach confirm, install, set-proxy and the save dialog each answer per scenario;
+          <code>/reach</code> mocked for the armed scenarios</td>
+        <td>Every verdict and failure state without changing this Mac and without exposing it on the
+          LAN. Outside Tauri the app throws at render (it reads the window metadata), so the stub is
+          the only way to run the screen in a browser</td></tr>
+      <tr><td>Native</td>
+        <td><code>trawler-ui</code> debug binary against the same core, screenshotted</td>
+        <td>The real probe verdicts of this Mac, and a render check against the browser run — they
+          match pixel for pixel at 1440×800</td></tr>
+      <tr><td>Traffic</td>
+        <td>curl over plain HTTP · a Python client that does not trust the CA · curl with
+          <code>--cacert ca/trawler-ca.pem</code></td>
+        <td>The plain, tunnel-only and decrypted readings. macOS curl trusts this Mac's keychain
+          even with <code>--cacert</code>, which is why a second client was needed for the
+          untrusted case</td></tr>
+      <tr><td>Not run</td>
+        <td>The elevated actions on this Mac · the quit dialog · a physical phone · real Windows and
+          Linux hosts (simulated by user agent) · a screen-reader pass</td>
+        <td>Install and set-proxy change the machine and need the owner's password; the rest is
+          outside this review's question</td></tr>
+    </table>
+
+    <h3 id="test-matrix">Test matrix — what the user reads, per scenario</h3>
+    <table data-c="test-matrix">
+      <tr><th>TC</th><th>Scenario</th><th>What the user reads</th><th>Result</th></tr>
+      <tr><td><span class="badge id">TC-01</span></td><td>Fresh launch, this Mac, nothing set up, window 1440×800</td>
+        <td><em>nothing has reached Trawler yet · finish the steps below, then make any request ·
+          WHAT ARE YOU SETTING UP · This machine — macOS</em></td>
+        <td style="color:var(--warn)">✗ F1 F2 F7</td></tr>
+      <tr><td><span class="badge id">TC-02</span></td><td>Same, both <em>set it up by hand</em> opened</td>
+        <td>Four trust steps and one proxy command inline; the removal steps render under them by
+          default</td><td style="color:var(--warn)">⚠ F8</td></tr>
+      <tr><td><span class="badge id">TC-03</span></td><td>The platform picker opened</td>
+        <td>Eight options in a dropdown: this machine, three "another" computers, two simulators,
+          two phones</td><td style="color:var(--warn)">⚠ F6</td></tr>
+      <tr><td><span class="badge id">TC-04</span></td><td>iOS Simulator</td>
+        <td><em>not trusted on this machine yet · the Simulator uses this Mac's certificate store —
+          installing it here covers it</em> — and no install button</td>
+        <td style="color:var(--warn)">✗ F14 F15</td></tr>
+      <tr><td><span class="badge id">TC-05</span></td><td>Android emulator</td>
+        <td>All steps behind <em>set it up by hand</em>, though no automatic path exists</td>
+        <td style="color:var(--warn)">✗ F10</td></tr>
+      <tr><td><span class="badge id">TC-06</span></td><td>Another Mac / Windows PC / Ubuntu machine, network off</td>
+        <td>Three sections each saying what cannot happen yet</td>
+        <td style="color:var(--warn)">⚠ F9</td></tr>
+      <tr><td><span class="badge id">TC-07</span></td><td>iPhone or iPad, network off</td>
+        <td><em>LET THIS DEVICE REACH TRAWLER · Trawler answers on this machine only · LISTEN ON ·
+          en1 · 192.168.0.105 · en1 · 2001:8003:990e:3301:81b:… (×3)</em> then the warning
+          paragraph</td><td style="color:var(--warn)">✗ F11 F12</td></tr>
+      <tr><td><span class="badge id">TC-08</span></td><td>Minimum window 850×600</td>
+        <td>The column fits; the try-it zone sits below the fold</td><td style="color:var(--ok)">✓</td></tr>
+      <tr><td><span class="badge id">TC-09</span></td><td>Probes in flight</td>
+        <td><em>checking this machine…</em>, both verdicts <em>checking…</em>, button disabled</td>
+        <td style="color:var(--ok)">✓</td></tr>
+      <tr><td><span class="badge id">TC-10</span></td><td>Already set up: certificate trusted, proxy is Trawler's</td>
+        <td>✓ ✓ under a headline that still says <em>finish the steps below</em>; both buttons still
+          offered</td><td style="color:var(--warn)">✗ F16</td></tr>
+      <tr><td><span class="badge id">TC-11</span></td><td>The native app on this Mac (real probes: certificate trusted, proxy not set)</td>
+        <td><em>nothing is arriving now · everything below is still set up — make a request to
+          prove it</em> over a proxy step that reads <em>not set on this machine yet</em></td>
+        <td style="color:var(--warn)">✗ F16</td></tr>
+      <tr><td><span class="badge id">TC-12</span></td><td>Another proxy already set on this Mac</td>
+        <td><em>another proxy is set · point it at Trawler here, or capture from a device configured
+          to use Trawler</em>; the button below would overwrite it without warning</td>
+        <td style="color:var(--warn)">⚠ F17</td></tr>
+      <tr><td><span class="badge id">TC-13</span></td><td>Linux host</td>
+        <td>No buttons, commands inline; <em>can't check on this platform · the traffic verdict is
+          what proves it</em></td><td style="color:var(--warn)">⚠ F4</td></tr>
+      <tr><td><span class="badge id">TC-14</span></td><td>Windows host</td>
+        <td>Same shape as macOS with <code>certutil</code> and <code>reg</code> commands</td>
+        <td style="color:var(--ok)">✓</td></tr>
+      <tr><td><span class="badge id">TC-15</span></td><td>Install running</td>
+        <td>Button disabled, <em>installing — approve the system prompt…</em></td>
+        <td style="color:var(--ok)">✓</td></tr>
+      <tr><td><span class="badge id">TC-16</span></td><td>Install failed — password prompt cancelled</td>
+        <td><em>⚠ install failed · automatic install failed — the steps below do it by hand ·
+          install failed: 0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization
+          was denied since no user interaction was possible. (-60007)</em>; manual steps open</td>
+        <td style="color:var(--warn)">⚠ F18</td></tr>
+      <tr><td><span class="badge id">TC-17</span></td><td>Set proxy failed</td>
+        <td>Same shape, raw <em>User cancelled. (-128)</em></td><td style="color:var(--warn)">⚠ F18</td></tr>
+      <tr><td><span class="badge id">TC-18</span></td><td>Install then set proxy succeed</td>
+        <td><em>installed. we'll confirm it on your first flow.</em> beside <em>✓ trusted on this
+          machine</em>; then <em>proxy set. we'll confirm it on your first flow.</em></td>
+        <td style="color:var(--warn)">⚠ F19</td></tr>
+      <tr><td><span class="badge id">TC-19</span></td><td>Save certificate: cancelled · renamed in the dialog</td>
+        <td><em>nothing was saved — the save was cancelled.</em> · <em>saved as trawler-ca (1).pem —
+          the steps here name trawler-ca.pem, so use trawler-ca (1).pem instead.</em></td>
+        <td style="color:var(--ok)">✓ wordy</td></tr>
+      <tr><td><span class="badge id">TC-20</span></td><td>Allow devices — dialog open</td>
+        <td>Button disabled, spinner, <em>waiting for your answer…</em></td><td style="color:var(--ok)">✓</td></tr>
+      <tr><td><span class="badge id">TC-21</span></td><td>Allow devices — Cancel in the dialog</td>
+        <td>Screen unchanged. No sentence anywhere</td><td style="color:var(--warn)">✗ F13</td></tr>
+      <tr><td><span class="badge id">TC-22</span></td><td>Allow devices — Allow, iPhone selected</td>
+        <td><em>✓ listening on 192.168.0.105 — until Trawler quits</em>; server and port shown; the
+          certificate URL and all four phone steps behind <em>set it up by hand</em></td>
+        <td style="color:var(--warn)">✗ F10</td></tr>
+      <tr><td><span class="badge id">TC-23</span></td><td>Network allowed, then switch to This machine</td>
+        <td>No trace anywhere that this Mac is listening on the network</td>
+        <td style="color:var(--warn)">✗ F20</td></tr>
+      <tr><td><span class="badge id">TC-24</span></td><td>A plain HTTP request arrives</td>
+        <td><em>traffic is arriving over plain HTTP only · an HTTPS request is what proves
+          decryption</em></td><td style="color:var(--warn)">⚠ F4</td></tr>
+      <tr><td><span class="badge id">TC-25</span></td><td>HTTPS from a client that does not trust the certificate</td>
+        <td><em>⚠ traffic is arriving, but nothing is decrypting · the trust step below says what to
+          fix, and for which platform</em>; under trust: <em>something is routing to Trawler and none
+          of it is decrypting — the platform it comes from does not trust the certificate yet. The
+          steps below are that platform's.</em></td>
+        <td style="color:var(--warn)">✗ F21</td></tr>
+      <tr><td><span class="badge id">TC-26</span></td><td>The first decrypted HTTPS request</td>
+        <td>The screen is replaced by the flow list. Nothing says setup succeeded</td>
+        <td style="color:var(--warn)">⚠ F22</td></tr>
+      <tr><td><span class="badge id">TC-27</span></td><td>Setup reopened from the header dot while capturing</td>
+        <td><em>✓ Trawler is capturing · last flow a few seconds ago</em> at the bottom; the header
+          dot is red, titled <em>Not capturing yet</em></td><td style="color:var(--warn)">⚠ F23</td></tr>
+      <tr><td><span class="badge id">TC-28</span></td><td>30 s after the last request</td>
+        <td><em>nothing is arriving now · last flow a few seconds ago</em></td>
+        <td style="color:var(--warn)">⚠ the verdict has expired while its own timestamp says
+          seconds</td></tr>
+      <tr><td><span class="badge id">TC-29</span></td><td><em>back to flows</em></td>
+        <td>The list</td><td style="color:var(--ok)">✓</td></tr>
+    </table>
+
+    <h2 id="what-the-user-sees">What a first-time user sees</h2>
+    <div data-c="gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px">
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/01-fresh-1440x800.jpg" alt="The first screen at 1440 by 800" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-01</strong> · the first
+          screen, at the size the app opens. Two thirds of the window are empty; the column is 370 px; the
+          first sentence is a failure.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/native-02-setup-real-probes.jpg" alt="The native app on this Mac" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-11</strong> · the native
+          app on this Mac. The certificate is trusted, the proxy is not, and the headline says
+          <em>everything below is still set up</em>.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/04-ios-unarmed.jpg" alt="iPhone before the network is allowed" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-07</strong> · iPhone,
+          before anything is done. Interface names, three temporary IPv6 addresses, a control that overflows
+          the column, a security warning before any action.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/22-iphone-just-armed.jpg" alt="iPhone after the network is allowed" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-22</strong> · iPhone,
+          network allowed. The only instructions the phone user has are behind <em>set it up by
+          hand</em>.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/32-arriving-not-decrypting.jpg" alt="A device is connecting without trusting the certificate" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-25</strong> · a device is
+          connecting without trusting the certificate. The headline promises to name the platform; the app
+          cannot know it.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/16-install-failed.jpg" alt="Install failed after the password prompt was cancelled" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-16</strong> · the
+          password prompt was cancelled. The user reads an osascript error code.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/11-already-set-up-trusted-ours.jpg" alt="Both steps green under a headline that says to finish them" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-10</strong> · both steps
+          green, both buttons still offered, and the headline still says to finish the steps.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/04-ios-sim-unarmed-by-hand.jpg" alt="iOS Simulator guidance" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-04</strong> · iOS
+          Simulator: a claim about the Mac's certificate store that is not true of the Simulator, and no
+          button to act on it.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/33-after-first-decrypted-flow.jpg" alt="The list appears after the first decrypted request" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-26</strong> · the moment
+          setup succeeds: the list appears, and nothing says so.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="2026-09-20-onboard-po-review/34-setup-revisited-while-capturing.jpg" alt="Setup reopened while capturing" style="width:100%;border:1px solid var(--line);border-radius:4px">
+        <figcaption style="color:var(--muted);font-size:.9em;margin-top:6px"><strong>TC-27</strong> · setup
+          reopened while capturing: the proof sits at the bottom, the dot at the top says <em>not
+          capturing</em>.</figcaption>
+      </figure>
+    </div>
+
+    <h2 id="findings">Findings</h2>
+    <p>Severity: <span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> a defect
+      or a false sentence — fix before the epic merges ·
+      <span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> the user-facing
+      rewrite the screen needs ·
+      <span class="badge" style="color:var(--muted)">P2</span> an improvement that can follow.</p>
+
+    <h3 id="findings-language">A · Orientation and language</h3>
+    <table data-c="findings-a">
+      <tr><th>#</th><th>What the user experiences</th><th>Why it happens</th><th>Change</th></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F1</td>
+        <td>No title, no purpose. The screen opens on a lowercase grey failure verdict — <em>nothing has
+          reached Trawler yet</em> — before the user has done anything or knows what Trawler is</td>
+        <td>The design of record makes the verdict zone the screen's lead sentence (round 3 split the zone
+          by phase)</td>
+        <td>A title — <em>Set up capture</em> — and one sentence a newcomer can act on: <em>Trawler sits
+          between a device and the internet. To show its HTTPS traffic, the device must trust Trawler's
+          certificate and send its traffic to Trawler.</em> The verdict becomes status under the steps</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F2</td>
+        <td>Section labels are the design's own questions: <em>WHAT ARE YOU SETTING UP</em>, <em>WHAT HAS TO
+          BE TRUE</em>, <em>LET THIS DEVICE REACH TRAWLER</em></td>
+        <td>The zone names of the mockup were carried onto the screen as labels</td>
+        <td><em>Which device's traffic do you want to see?</em> · <em>Steps</em> · <em>1. Allow your iPhone
+          to connect</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F3</td>
+        <td>Internal vocabulary reaches the user: <em>flow</em>, <em>decrypting</em>, <em>verdict</em>,
+          <em>reach</em>, <em>route its traffic</em>, <em>listen on</em>, <em>platform</em>. <em>the first
+          decrypted flow is what ends setup</em> means nothing to someone who has not yet seen a flow</td>
+        <td>The lexicon term <em>flow</em> and the run's proposed terms (<em>arriving</em>,
+          <em>platform</em>) were written for consistency across screens, not for a first contact</td>
+        <td>On this screen: <em>request</em>, <em>website</em>, <em>device</em>, <em>certificate</em>,
+          <em>proxy</em>. <em>flow</em> is introduced by the list, after setup</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F4</td>
+        <td>Sentences describe what the app can know, not what the user should do: <em>can't check another
+          device from here</em>, <em>the traffic verdict is what proves it</em>, <em>an HTTPS request is what
+          proves decryption</em>, <em>nothing to try until Trawler is reachable and the device is pointed at
+          it</em></td>
+        <td>DEC-33's honesty rule was applied as copy: every limit of the probes is stated to the user as a
+          sentence about the probes</td>
+        <td>Honesty stays, phrasing flips to the user's action and what they will see: <em>We'll confirm
+          this when your iPhone's first request arrives</em> · <em>Open a website that starts with
+          https://</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F5</td>
+        <td>Five state glyphs — ○ ◐ ✓ ⚠ ⟳ — with no legend; ◐ for <em>can't check</em> is unguessable</td>
+        <td>StatusLine renders a glyph plus a ≤40-character fragment</td>
+        <td>Words beside every glyph in plain state language: <em>Not done · Done · Can't be checked from
+          here · Failed · Checking</em></td></tr>
+    </table>
+
+    <h3 id="findings-order">B · Order, hierarchy and progress</h3>
+    <table data-c="findings-b">
+      <tr><th>#</th><th>What the user experiences</th><th>Why it happens</th><th>Change</th></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F6</td>
+        <td>The one question is a dropdown. The phone path is invisible until it is opened; eight items mix
+          operating systems and devices (<em>Another Ubuntu machine</em> beside <em>iPhone or iPad</em>)</td>
+        <td>The run chose a single <code>Select</code> as the screen's only axis</td>
+        <td>Keep one axis; render it as five or six tiles with icons — This Mac (selected) · iPhone or iPad ·
+          Android · iOS Simulator · Android emulator · Another computer — so the choices are seen, not
+          discovered</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F7</td>
+        <td>Three tasks with no numbers, no order and no primary action; <em>install certificate</em>,
+          <em>set system proxy</em> and <em>check again</em> carry equal weight</td>
+        <td>The run banned a stepper because "nothing observes per-step progress". But the two probes and
+          the traffic verdict observe exactly these three facts on this Mac — the ban conflates
+          self-reported progress (rightly refused) with visible order</td>
+        <td>Numbered steps whose state comes from the probes and the traffic reading — honest under
+          DEC-33 — and one primary button per screen. Off-machine, where nothing is observed, the numbers
+          still give the order and the state reads <em>we'll confirm on the first request</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F8</td>
+        <td>Every open guide shows how to undo it — <em>to remove it later</em>, <em>to turn it off
+          later</em> — under the steps to do it</td>
+        <td>The guide carries its reversal inline</td>
+        <td>Undo under a collapsed <em>Undo later</em>; it is also where <em>stop routing</em> and
+          <em>stop listening</em> belong</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F9</td>
+        <td>Off-machine before the network is allowed, three sections each say what cannot happen:
+          <em>the certificate route opens once Trawler is reachable — the step above opens it</em> ·
+          <em>there is no address to point the device at yet — the reach step above makes one</em> ·
+          <em>nothing to try until Trawler is reachable…</em></td>
+        <td>Each precondition renders its own unmet state; the mockup asked for honest silence and got
+          three sentences of it</td>
+        <td>Steps 2–4 render greyed and numbered with one word — <em>after step 1</em>. One primary
+          button on the screen: step 1's</td></tr>
+    </table>
+
+    <h3 id="findings-mac">C · Setting up this Mac</h3>
+    <table data-c="findings-c">
+      <tr><th>#</th><th>What the user experiences</th><th>Why it happens</th><th>Change</th></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F16</td>
+        <td>False headlines over the probes. TC-10: ✓ ✓ under <em>finish the steps below</em>. TC-11, the
+          native app on this Mac: <em>everything below is still set up — make a request to prove it</em>
+          over a proxy step reading <em>not set on this machine yet</em></td>
+        <td><code>VERDICT.waiting</code> and <code>VERDICT.idle</code> in <code>Onboarding.tsx</code> word
+          the traffic layer without reading the probes; the two layers are kept apart even in one
+          sentence that is plainly about both</td>
+        <td>The lead reads the probes where they exist: <em>Set up on this Mac — open any website to see
+          its traffic</em> · <em>1 step left on this Mac</em>. Once both probes are green, the action
+          buttons give way to <em>Undo later</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F27</td>
+        <td>Two buttons, two password prompts, in two sections, for the one thing 90% of users want:
+          make this Mac work</td>
+        <td>Each action is its own <code>osascript … with administrator privileges</code></td>
+        <td>One primary button — <em>Set up this Mac</em> — running both commands in one elevated script,
+          one prompt. The single actions stay as secondary controls for the partial cases</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F17</td>
+        <td>With another proxy set: <em>another proxy is set · point it at Trawler here, or capture from a
+          device configured to use Trawler</em>, and a button that silently replaces the user's proxy</td>
+        <td>The remedy string names no address; <code>set_proxy</code> has no confirm</td>
+        <td><em>Another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler
+          runs and restores nothing on quit</em>, then the button — with a confirm</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F18</td>
+        <td>Raw OS errors: <em>0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization
+          was denied since no user interaction was possible. (-60007)</em>, <em>User cancelled.
+          (-128)</em></td>
+        <td>The shell surfaces the tool's stderr verbatim, by design, as the only actionable signal</td>
+        <td>Map the one common case — the prompt was cancelled or the password refused — to <em>The
+          password prompt was cancelled. Try again, or follow the manual steps.</em>; keep the raw text
+          under a <em>details</em> disclosure</td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F19</td>
+        <td>Two confirmations of one fact: <em>installed. we'll confirm it on your first flow.</em> under
+          <em>✓ trusted on this machine</em></td>
+        <td>The action note and the probe verdict are independent elements</td>
+        <td>The note collapses into the step's state once the probe confirms; <em>flow</em> leaves the
+          sentence</td></tr>
+    </table>
+
+    <h3 id="findings-device">D · Setting up a phone or another machine</h3>
+    <table data-c="findings-d">
+      <tr><th>#</th><th>What the user experiences</th><th>Why it happens</th><th>Change</th></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F10</td>
+        <td>For a phone, an emulator or another computer, the only instructions there are sit behind
+          <em>set it up by hand</em> — a label that implies an automatic alternative exists</td>
+        <td><code>collapsed={!handWorkOnly}</code> in <code>Onboarding.tsx</code>; <code>handWorkOnly</code>
+          is true only for this machine without a one-click path</td>
+        <td>Collapse a guide only where an automatic action stands above it; everywhere else the steps
+          render open and numbered</td></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F11</td>
+        <td>The address choice reads <em>en1 · 192.168.0.105 | en1 · 2001:8003:990e:3301:81b:… | en1 ·
+          … | en1 · …</em> — one interface name repeated four times, three of them temporary IPv6
+          addresses that rotate and that a phone's proxy field does not want; the four-segment control
+          overflows the 370 px column</td>
+        <td><code>GET /reach</code> enumerates every routable address; the screen renders the count it is
+          given. <code>SegmentedControl</code> has no width contract for 39-character labels</td>
+        <td>Default to the active interface's IPv4, named for a human (<em>Wi-Fi · 192.168.0.105</em> —
+          <code>networksetup -listallhardwareports</code> maps <code>en1</code> to Wi-Fi); other addresses
+          under <em>Other addresses</em>. Prefer stable IPv6 over temporary if IPv6 is offered at all</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F12</td>
+        <td>The network step reads as policy before the user has acted: <em>Trawler answers on this machine
+          only</em> · <em>Trawler will ask before it starts listening</em> · a four-line warning</td>
+        <td>DEC-55's rules are all stated on the screen, in the shape of the record</td>
+        <td><em>1. Allow your iPhone to connect</em> · one line: <em>Other devices on your Wi-Fi will be
+          able to use this proxy and see captured traffic until Trawler quits</em> · the button. The
+          full statement belongs in the confirm dialog, which already carries it</td></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F13</td>
+        <td>Cancel in the confirm dialog: the button re-enables and nothing is said (TC-21)</td>
+        <td><code>ARM_NOTE</code> has no <em>done</em> entry, because a cancelled dialog resolves like a
+          success and the screen cannot tell the two apart</td>
+        <td><code>armReach</code> resolves a distinct outcome for a refusal, and the note reads <em>Not
+          allowed — Trawler still accepts connections from this Mac only</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F20</td>
+        <td>While this Mac is listening on the network, choosing <em>This machine</em> hides that fact
+          entirely (TC-23); the list never shows it</td>
+        <td>The network precondition renders only under platforms that need it</td>
+        <td>A header chip in every state, including the list: <em>Reachable on 192.168.0.105 · stop</em>.
+          An exposure the user granted must stay visible for as long as it holds</td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F28</td>
+        <td>The certificate URL and the proxy address must be typed on the phone</td>
+        <td>The screen renders them as copyable text, which a phone cannot paste from</td>
+        <td>A QR code beside the certificate URL (and one for the proxy address) — the pattern every
+          proxy tool in this space uses</td></tr>
+    </table>
+
+    <h3 id="findings-truth">E · Sentences that are not true</h3>
+    <table data-c="findings-e">
+      <tr><th>#</th><th>What the user reads</th><th>Why it is wrong</th><th>Change</th></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F14</td>
+        <td><em>the Simulator uses this Mac's certificate store — installing it here covers it</em></td>
+        <td>The iOS Simulator keeps its own trust store. A root installed in the Mac's System keychain is
+          not trusted inside the Simulator; Apple's supported route is <code>xcrun simctl keychain booted
+          add-root-cert trawler-ca.pem</code> (Xcode 11.4+). The proxy half — the Simulator follows the
+          Mac's system proxy — is correct</td>
+        <td>Trust guide for the Simulator: save the certificate, run the <code>simctl</code> command,
+          restart the Simulator. <code>SIMULATOR_SETUP</code> in <code>setup.ts</code></td></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F15</td>
+        <td>iOS Simulator shows this Mac's probe verdicts and this Mac's routing note, and no button to
+          act on either</td>
+        <td>The actions are gated on <code>platform === "this"</code>; the Simulator is probed as this
+          machine but not actionable as it</td>
+        <td>Offer <em>set system proxy</em> wherever the platform shares this Mac's proxy; offer the
+          Simulator's own trust action once F14 lands</td></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F21</td>
+        <td><em>the trust step below says what to fix, and for which platform</em> · <em>the platform it
+          comes from does not trust the certificate yet. The steps below are that platform's.</em></td>
+        <td>The app cannot attribute a tunnel to a platform — the run's own blocked-on row says so. The
+          steps below are the platform the <em>user</em> selected, whatever is connecting</td>
+        <td><em>A device is connecting, but its HTTPS is not being decrypted yet: it does not trust
+          Trawler's certificate. Finish the certificate step on that device.</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> F16</td>
+        <td><em>everything below is still set up — make a request to prove it</em></td>
+        <td>Rendered whatever the probes say (TC-11: the proxy was not set)</td>
+        <td>See C · F16</td></tr>
+    </table>
+
+    <h3 id="findings-closure">F · Feedback, closure and layout</h3>
+    <table data-c="findings-f">
+      <tr><th>#</th><th>What the user experiences</th><th>Why it happens</th><th>Change</th></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> F22</td>
+        <td>Success is silent. The first decrypted request replaces the whole screen with a list of one
+          row (TC-26). The proven outcome the run designed — <em>Trawler is capturing</em> at the bottom
+          of the try zone — is only ever seen by reopening setup</td>
+        <td><code>App.tsx</code> dispatches <em>captured</em> on the first decrypted flow and the list
+          takes over</td>
+        <td>A dismissible banner on the list's first paint: <em>You're set up — Trawler is capturing
+          traffic from this Mac. Set up another device →</em></td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F23</td>
+        <td>Setup reopened while capturing: the header dot is red and titled <em>Not capturing yet</em>
+          over <em>✓ Trawler is capturing</em> (TC-27)</td>
+        <td><code>dotStatus</code> reads the phase, not the traffic</td>
+        <td>The dot reads the traffic verdict — the one layer that answers "capturing"</td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F24</td>
+        <td><em>make any request — or run this</em> followed by a curl command a non-terminal user
+          cannot use; "request" is undefined for them</td>
+        <td>The try zone is written for the developer who already knows curl</td>
+        <td><em>3. Open any website on this Mac.</em> first; the command second, in a full-width block; a
+          <em>Test now</em> button that fires an https request from the app through the system proxy — it
+          proves both steps at once</td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F25</td>
+        <td>A 370 px column in a 1440 px window; commands break mid-token (<em>example.co | m</em>,
+          <em>trustRoo | t</em>)</td>
+        <td><code>max-w-dialog-max</code> sizes the column for a dialog</td>
+        <td>A wider reading column for this screen, or a two-column layout at ≥1200 px: steps left,
+          commands and QR right</td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> F26</td>
+        <td>From the list, the only way back to setup is a 24 px dot with a tooltip</td>
+        <td>The dot is the designed route</td>
+        <td><em>Set up a device</em> in the list's ⋮ menu, and in the success banner</td></tr>
+    </table>
+
+    <h2 id="proposed-flow">The flow a user needs</h2>
+    <div class="diagram" data-c="proposed-flow">
+      <pre class="mermaid">
+flowchart TD
+  A["Set up capture — one sentence on what Trawler needs and why"] --> B{"Which device's traffic?"}
+  B -- "This Mac (preselected)" --> C["1 Trust the certificate · 2 Send this Mac's traffic to Trawler\none button does both · one password prompt\nstate from the probes"]
+  C --> D["3 Open any website — or Test now"]
+  B -- "iPhone · Android" --> E["1 Allow devices on your Wi-Fi to connect\nWi-Fi · 192.168.0.105 chosen for you · QR"]
+  E --> F["2 On the phone: scan the QR, install the certificate\n(the phone's own Settings path, numbered)"]
+  F --> G["3 On the phone: Wi-Fi proxy = the server and port shown"]
+  G --> H["4 Open any website on the phone"]
+  B -- "Simulator · emulator · another computer" --> I["Numbered steps for that platform, open, with the commands"]
+  D --> Z["✓ You're set up — the list opens with a banner\n'Set up another device' one click away\nheader chip while the Mac is reachable"]
+  H --> Z
+  I --> Z
+      </pre>
+      <div class="caption">One question, then numbered steps whose state is observed where it can be and
+        promised where it cannot. Nothing about the truth model changes; everything about the reading
+        order does.</div>
+    </div>
+
+    <h3 id="wireframes">Two screens, as they should read</h3>
+    <div data-c="wireframes" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:20px">
+      <div style="border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:18px 20px;line-height:1.5">
+        <div style="font-size:1.25em;font-weight:600">Set up capture</div>
+        <div style="color:var(--muted);margin-bottom:12px">Trawler sits between a device and the internet. To show its HTTPS traffic, the device must trust Trawler's certificate and send its traffic to Trawler.</div>
+        <div style="color:var(--muted);font-size:.85em;text-transform:uppercase;letter-spacing:.06em">Which device's traffic do you want to see?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px">
+          <span style="border:1px solid var(--accent);border-radius:6px;padding:6px 10px">💻 This Mac</span>
+          <span style="border:1px solid var(--line);border-radius:6px;padding:6px 10px;color:var(--muted)">📱 iPhone or iPad</span>
+          <span style="border:1px solid var(--line);border-radius:6px;padding:6px 10px;color:var(--muted)">🤖 Android</span>
+          <span style="border:1px solid var(--line);border-radius:6px;padding:6px 10px;color:var(--muted)">⌘ Simulator / emulator</span>
+          <span style="border:1px solid var(--line);border-radius:6px;padding:6px 10px;color:var(--muted)">🖥 Another computer</span>
+        </div>
+        <div style="margin:6px 0"><strong>1 · Trust Trawler's certificate</strong> <span style="color:var(--ok)">✓ Done</span><br><span style="color:var(--muted)">so HTTPS can be decrypted</span></div>
+        <div style="margin:6px 0"><strong>2 · Send this Mac's traffic to Trawler</strong> <span style="color:var(--muted)">○ Not done — system proxy is off</span></div>
+        <div style="margin:10px 0"><span style="display:inline-block;background:var(--accent);color:var(--bg);border-radius:6px;padding:8px 14px;font-weight:600">Set up this Mac</span>
+          <span style="color:var(--muted);margin-left:10px">one password prompt · <u>do it manually</u> · <u>undo later</u></span></div>
+        <div style="margin:6px 0"><strong>3 · Open any website on this Mac</strong> <span style="color:var(--muted)">○ Waiting for the first request</span><br>
+          <span style="color:var(--muted)">or <u>Test now</u> · or in Terminal:</span></div>
+        <code style="display:block;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:.85em">curl -x http://127.0.0.1:7420 https://example.com</code>
+        <div style="color:var(--muted);font-size:.85em;margin-top:10px">checked 14:33:02 · check again</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:18px 20px;line-height:1.5">
+        <div style="font-size:1.25em;font-weight:600">Set up capture <span style="float:right;font-size:.7em;color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:2px 8px">Reachable on 192.168.0.105 · stop</span></div>
+        <div style="color:var(--muted);margin-bottom:12px">iPhone or iPad — on the same Wi-Fi as this Mac.</div>
+        <div style="margin:6px 0"><strong>1 · Allow your iPhone to connect</strong> <span style="color:var(--ok)">✓ Allowed</span><br>
+          <span style="color:var(--muted)">Wi-Fi · 192.168.0.105 · other devices on this Wi-Fi can use the proxy and see captured traffic until Trawler quits · <u>other addresses</u></span></div>
+        <div style="margin:6px 0"><strong>2 · On your iPhone, install the certificate</strong> <span style="color:var(--muted)">○ We'll confirm on the first request</span></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin:4px 0 8px 14px">
+          <div style="width:72px;height:72px;border:1px solid var(--line);border-radius:4px;display:grid;place-items:center;color:var(--muted);font-size:.7em">QR</div>
+          <ol style="margin:0;padding-left:18px;color:var(--muted)">
+            <li>Scan this, or open <code>http://192.168.0.105:7421/ca.crt</code> in Safari · tap <em>Allow</em></li>
+            <li>Settings → Profile Downloaded → Install</li>
+            <li>Settings → General → About → Certificate Trust Settings → turn on <em>Trawler Proxy CA</em></li>
+          </ol>
+        </div>
+        <div style="margin:6px 0"><strong>3 · On your iPhone, set the Wi-Fi proxy</strong> <span style="color:var(--muted)">○ We'll confirm on the first request</span><br>
+          <span style="color:var(--muted)">Settings → Wi-Fi → ⓘ on your network → Configure Proxy → Manual</span></div>
+        <div style="display:flex;gap:18px;margin:4px 0 8px 14px"><span>Server <code>192.168.0.105</code></span><span>Port <code>7420</code></span></div>
+        <div style="margin:6px 0"><strong>4 · Open any website on your iPhone</strong> <span style="color:var(--muted)">○ Waiting for the first request</span></div>
+        <div style="color:var(--muted);font-size:.85em;margin-top:10px"><u>undo later</u> · <u>no browser on the phone? save the certificate file</u></div>
+      </div>
+    </div>
+    <p style="color:var(--muted)">Wireframes, not mockups: the design run owns the real shape. Every element
+      shown maps to an existing capability of the screen; only F27 (one combined action), F28 (QR) and
+      F24 (Test now) add one.</p>
+
+    <h3 id="copy">Copy — what it says now, what it should say</h3>
+    <table data-c="copy">
+      <tr><th>Now</th><th>Proposed</th></tr>
+      <tr><td><em>nothing has reached Trawler yet · finish the steps below, then make any request</em></td>
+        <td><em>Set up capture</em> + the purpose sentence; status per step, not a headline</td></tr>
+      <tr><td><em>WHAT ARE YOU SETTING UP</em></td><td><em>Which device's traffic do you want to see?</em></td></tr>
+      <tr><td><em>WHAT HAS TO BE TRUE</em></td><td><em>Steps</em> — or nothing; the numbers carry it</td></tr>
+      <tr><td><em>TRUST TRAWLER'S CERTIFICATE · ○ not trusted on this machine yet</em></td>
+        <td><em>1 · Trust Trawler's certificate — so HTTPS can be decrypted · Not done</em></td></tr>
+      <tr><td><em>ROUTE ITS TRAFFIC THROUGH TRAWLER · ○ not set on this machine yet</em></td>
+        <td><em>2 · Send this Mac's traffic to Trawler · Not done — system proxy is off</em></td></tr>
+      <tr><td><em>set it up by hand</em> (everywhere)</td>
+        <td><em>Do it manually</em> — only where an automatic button exists; elsewhere the steps are the
+          content</td></tr>
+      <tr><td><em>LET THIS DEVICE REACH TRAWLER · Trawler answers on this machine only</em></td>
+        <td><em>1 · Allow your iPhone to connect · Not yet — Trawler accepts connections from this Mac
+          only</em></td></tr>
+      <tr><td><em>let devices reach Trawler</em></td><td><em>Allow devices on my Wi-Fi to connect</em></td></tr>
+      <tr><td><em>en1 · 192.168.0.105</em></td><td><em>Wi-Fi · 192.168.0.105</em> (IPv4, chosen for the user)</td></tr>
+      <tr><td><em>◐ can't check another device from here</em></td>
+        <td><em>We'll confirm this when your iPhone's first request arrives</em></td></tr>
+      <tr><td><em>the certificate route opens once Trawler is reachable — the step above opens it</em></td>
+        <td><em>after step 1</em></td></tr>
+      <tr><td><em>traffic is arriving, but nothing is decrypting — the trust step below says what to fix,
+        and for which platform</em></td>
+        <td><em>A device is connecting, but its HTTPS is not being decrypted yet: it does not trust
+          Trawler's certificate. Finish the certificate step on that device.</em></td></tr>
+      <tr><td><em>traffic is arriving over plain HTTP only — an HTTPS request is what proves decryption</em></td>
+        <td><em>Requests are arriving over plain HTTP. Open a website that starts with https:// to
+          confirm HTTPS works.</em></td></tr>
+      <tr><td><em>make any request — or run this</em></td>
+        <td><em>3 · Open any website on this Mac — or run this in Terminal</em></td></tr>
+      <tr><td><em>installed. we'll confirm it on your first flow.</em></td><td><em>Certificate installed</em> ✓ (folds into the step state)</td></tr>
+      <tr><td><em>install failed: 0:207: execution error: … (-60007)</em></td>
+        <td><em>The password prompt was cancelled. Try again, or follow the manual steps.</em> · details ›</td></tr>
+      <tr><td><em>Trawler is capturing · last flow a few seconds ago</em></td>
+        <td><em>You're set up — Trawler is capturing traffic from this Mac</em> · <em>Show traffic</em></td></tr>
+      <tr><td><em>open any site on the device — the first decrypted flow is what ends setup</em></td>
+        <td><em>4 · Open any website on your iPhone. Trawler switches to the traffic view as soon as the
+          first request arrives.</em></td></tr>
+    </table>
+
+    <h2 id="recommendations">Recommended changes, prioritised</h2>
+    <table data-c="recommendations">
+      <tr><th>Priority</th><th>Change</th><th>Closes</th><th>Where it lands</th></tr>
+      <tr><td><span class="badge" style="color:var(--warn);border-color:var(--warn)">P0</span> before the epic merges</td>
+        <td>Correct the Simulator trust guide and offer its <code>simctl</code> route · open the guides
+          wherever no automatic action exists · IPv4-first, human-named address with the rest under
+          <em>Other addresses</em>, and a control that fits the column · a sentence for a cancelled
+          confirm · a header chip while the Mac is reachable · the lead sentence reads the probes ·
+          the arriving remedy stops naming a platform · the Simulator gets its actions</td>
+        <td>F14 F15 F10 F11 F13 F20 F16 F21</td>
+        <td><code>setup.ts</code> · <code>Onboarding.tsx</code> · <code>verdicts.ts</code> ·
+          <code>App.tsx</code> (chip) · <code>src/reach.rs</code> or the shell for interface names.
+          Each is a commit-level change with its unit test; UC-ONBOARD's restatement (W4) carries the
+          new promises</td></tr>
+      <tr><td><span class="badge" style="color:var(--accent);border-color:var(--accent)">P1</span> a user-reading design round</td>
+        <td>Title and purpose sentence · tiles for the device question · numbered steps with observed
+          state · one primary action per screen, <em>Set up this Mac</em> doing both with one prompt ·
+          the copy table above · greyed steps instead of three refusals · mapped errors · a success banner
+          on the list · the network step as a task, the warning in the dialog</td>
+        <td>F1 F2 F3 F4 F6 F7 F9 F12 F17 F18 F22 F27</td>
+        <td>Re-open <a href="2026-09-17-onboarding-design-run.html">the design run</a> with one new
+          review row: an end-user reading of the mockup, sentence by sentence, before the human gate.
+          The rules to revisit are listed below. Then a build WU under E-ONBOARD</td></tr>
+      <tr><td><span class="badge" style="color:var(--muted)">P2</span> follow-ups</td>
+        <td>Glyph legend words · undo collapsed · action notes fold into step state · the dot reads
+          traffic · <em>Test now</em> · wider column or two columns · <em>Set up a device</em> from the
+          list · QR codes · friendly interface names from the core</td>
+        <td>F5 F8 F19 F23 F24 F25 F26 F28</td>
+        <td>Backlog rows; the QR and Test-now are new capabilities and want a decision record each</td></tr>
+    </table>
+
+    <h3 id="rules-to-revisit">Design decisions to revisit — and which to keep</h3>
+    <table data-c="rules">
+      <tr><th>Decision</th><th>Where it lives</th><th>PO position</th></tr>
+      <tr><td>Not a wizard: no stepper, no numbering, because nothing observes per-step progress</td>
+        <td>design run, round 1; W3 plan row 2</td>
+        <td><strong>Revisit.</strong> Keep the half that is right — no self-reported ✓, ever. Drop the half
+          that is not: order is a reading aid, not a claim. The probes and the traffic reading observe the
+          three steps on this Mac; off-machine the numbers still tell the user what comes first</td></tr>
+      <tr><td>One <code>Select</code> as the screen's only axis</td>
+        <td>design run, round 1</td>
+        <td><strong>Keep the axis, change the control.</strong> One choice, seen as tiles rather than
+          discovered in a dropdown</td></tr>
+      <tr><td>The verdict zone leads the screen</td>
+        <td>design run, round 3</td>
+        <td><strong>Revisit.</strong> A verdict is status; a first screen needs orientation above status</td></tr>
+      <tr><td>Verdict and remedy are two elements (StatusLine's <code>@avoid</code>)</td>
+        <td>component contract</td>
+        <td><strong>Keep.</strong> Both elements must be user sentences, which is a copy rule, not a
+          component change</td></tr>
+      <tr><td>Two layers, never blended; traffic judged against a clock</td>
+        <td>DEC-33</td>
+        <td><strong>Keep.</strong> F16 is not a blend: the lead sentence may read both layers as long as
+          each fact keeps its source</td></tr>
+      <tr><td>Reach is an authorization act: off by default, one address, one confirm, dies with the process</td>
+        <td>DEC-55</td>
+        <td><strong>Keep.</strong> Add the visibility F20 asks for and the address choice F11 asks for;
+          neither changes the rules</td></tr>
+      <tr><td>The lexicon's <em>flow</em></td>
+        <td>design-rules index</td>
+        <td><strong>Scope it.</strong> Not on the setup screen; the list teaches it</td></tr>
+      <tr><td>UC-ONBOARD still describes a three-step stepper</td>
+        <td><a href="../use-cases/web-ui.html">web-ui.html</a></td>
+        <td>W4 owes the restatement; it should state the numbered, observed steps this review asks for
+          rather than the stepper-less screen as built</td></tr>
+    </table>
+
+    <h2 id="not-covered">Not covered, and how to re-run this</h2>
+    <table data-c="not-covered">
+      <tr><th>Gap</th><th>Note</th></tr>
+      <tr><td>Elevated actions on this Mac</td>
+        <td>Not run: they change the machine and need the owner's password. Their success and failure
+          states were exercised through the shell stub with the real error strings the shell produces</td></tr>
+      <tr><td>The quit dialog</td><td>Out of this epic's scope; not exercised</td></tr>
+      <tr><td>A physical phone</td>
+        <td>The armed-state screens were mocked at <code>/reach</code> so this Mac was never exposed on
+          the LAN; the phone-side steps were read, not walked</td></tr>
+      <tr><td>Re-running</td>
+        <td>Core from the tip, <code>pnpm dev</code> in <code>ui/</code>, headless Chrome via
+          <code>playwright-core</code> with an init script that provides
+          <code>window.__TAURI_INTERNALS__</code> (metadata + a scripted <code>invoke</code>), one
+          browser context per scenario, traffic from curl and an untrusting client. The driver used here
+          lives in the session scratchpad, not in the tree; a hermetic version belongs with W4's e2e
+          coverage map</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
