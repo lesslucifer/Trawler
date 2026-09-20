@@ -302,8 +302,7 @@ describe("an off-machine platform once reach is armed", () => {
     expect(within(address).getByRole("button", { name: /the proxy port/ })).toHaveTextContent("9999");
   });
 
-  it("renders the certificate URL a device can open", () => {
-    fireEvent.click(within(screen.getByTestId("precondition-trust")).getByText("set it up by hand"));
+  it("renders the certificate URL a device can open, without opening anything first", () => {
     expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
       "http://192.168.1.24:7421/ca.crt",
     );
@@ -377,7 +376,6 @@ describe("the emulator is not a device, and says so", () => {
     draw({ reach: UNARMED });
     choose("Android emulator");
     expect(zone("precondition-reach")).toBeNull();
-    fireEvent.click(within(screen.getByTestId("precondition-route")).getByText("set it up by hand"));
     expect(screen.getByTestId("precondition-route")).toHaveTextContent("10.0.2.2");
   });
 });
@@ -450,6 +448,35 @@ describe("the guide is hidden only where something else is offered first", () =>
   it("stays shut while the action is still the better route", () => {
     draw();
     expect(disclosure("trust")).not.toHaveAttribute("open");
+  });
+
+  // The rule itself, over every platform: a summary reading "set it up by hand"
+  // claims an automatic route exists. Where none is offered, the steps are the
+  // instruction and render open — which is also what numbers them.
+  it.each([
+    "This machine — macOS",
+    "iOS Simulator",
+    "Android emulator",
+    "Another Mac",
+    "Another Windows PC",
+    "Another Ubuntu machine",
+    "iPhone or iPad",
+    "Android device",
+  ])("under %s, each guide is behind a summary exactly where its action is offered", (label) => {
+    draw({ reach: ARMED });
+    choose(label);
+    const installs = screen.queryByRole("button", { name: "install certificate" }) !== null;
+    const routes = screen.queryByRole("button", { name: "set system proxy" }) !== null;
+    expect(disclosure("trust") !== null).toBe(installs);
+    expect(disclosure("route") !== null).toBe(routes);
+  });
+
+  it("gives a phone its steps as the instruction, not as a fallback", () => {
+    draw({ reach: ARMED });
+    choose("iPhone or iPad");
+    const trust = screen.getByTestId("precondition-trust");
+    expect(within(trust).queryByText("set it up by hand")).toBeNull();
+    expect(trust).toHaveTextContent("VPN & Device Management");
   });
 });
 

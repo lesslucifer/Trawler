@@ -264,6 +264,9 @@ function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }
   );
 }
 
+// A guide hides behind "set it up by hand" only where a hand is the second
+// route: with no action above it these are the only instructions there are, and
+// a summary promising an automatic alternative is a promise nothing keeps.
 function GuideView({
   guide,
   save,
@@ -669,17 +672,16 @@ export function Onboarding({
     reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
   });
 
-  const here = platform === "this";
   const autoHost = canAutoSetup(os);
   // An action that changes this machine is offered for the store it changes,
   // and only where the chosen platform reads that store: installing here does
   // nothing for a Simulator with a keychain of its own, and setting this
   // machine's proxy is exactly what the Simulator routes through.
-  const canInstallHere = probesTrust(platform) && autoHost;
-  const canRouteHere = probesRoute(platform) && autoHost;
-  // A host with no one-click path has nothing above its guide, so hiding the
-  // guide would hide the only instructions the screen has for it.
-  const handWorkOnly = here && !autoHost;
+  // One value per precondition: the automatic action it offers, or nothing. The
+  // guide below reads the same value, so "collapsed" and "there is a button"
+  // cannot drift apart.
+  const installHere = probesTrust(platform) && autoHost ? install.trigger : undefined;
+  const routeHere = probesRoute(platform) && autoHost ? setProxyAction.trigger : undefined;
 
   // The action the user just took outranks the re-read it triggers, so the line
   // says "installing…" until the command has exited, then "checking…".
@@ -734,14 +736,14 @@ export function Onboarding({
             <Precondition testId="trust" title="trust Trawler's certificate">
               <Verdict testId="trust" status={trustVerdict} stated={failure(install)} />
               <ArrivingRemedy traffic={traffic} />
-              {canInstallHere && install.trigger && (
+              {installHere && (
                 <div className="pt-2">
                   <Action
                     testId="install-ca"
                     label="install certificate"
                     action={install}
                     note={INSTALL_NOTE}
-                    onClick={install.trigger}
+                    onClick={installHere}
                     disabled={probing}
                   />
                 </div>
@@ -756,7 +758,7 @@ export function Onboarding({
                   <GuideView
                     guide={setup.trust}
                     save={onSaveCa ? saveCa : undefined}
-                    collapsed={!handWorkOnly}
+                    collapsed={installHere !== undefined}
                     defaultOpen={install.state === "failed"}
                   />
                 ) : (
@@ -773,14 +775,14 @@ export function Onboarding({
               {probesRoute(platform) && (
                 <Verdict testId="route" status={routeVerdict} stated={failure(setProxyAction)} />
               )}
-              {canRouteHere && setProxyAction.trigger && (
+              {routeHere && (
                 <div className="pt-2">
                   <Action
                     testId="set-proxy"
                     label="set system proxy"
                     action={setProxyAction}
                     note={SETPROXY_NOTE}
-                    onClick={setProxyAction.trigger}
+                    onClick={routeHere}
                     disabled={probing}
                   />
                 </div>
@@ -790,7 +792,7 @@ export function Onboarding({
                   still offered where the probe cannot say, because an action that
                   changed this host may not become irreversible when a probe
                   fails. */}
-              {canRouteHere &&
+              {routeHere &&
                 unsetProxyAction.trigger &&
                 (proxyProbe === "ours" || setProxyAction.state === "done") && (
                 <div className="pt-2">
@@ -816,7 +818,7 @@ export function Onboarding({
                 {setup?.route ? (
                   <GuideView
                     guide={setup.route}
-                    collapsed={!handWorkOnly}
+                    collapsed={routeHere !== undefined}
                     defaultOpen={setProxyAction.state === "failed"}
                   />
                 ) : (
