@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type ReachState, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
-import { NO_PROXY_READING, type ProxyReading, type TrustProbe } from "./verdicts";
+import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
@@ -20,6 +20,7 @@ import {
   Field,
   HTTP_METHODS,
   MethodLabel,
+  Notice,
   Select,
   StatusDot,
   type SelectOption,
@@ -78,8 +79,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // re-invoke (help) isn't instantly bounced back by the already-captured flow;
   // once proven, the dot and Back-to-flows drive navigation. `flows` refetches on
   // every SSE event via useFlows, so observing it is the whole live check.
+  // The moment setup succeeds used to be silent: the screen was replaced by a
+  // list of one row and nothing said the thing the user had been working
+  // towards had happened (F22). The banner says it on the list's first paint,
+  // and only for the transition that IS that moment — a launch that finds
+  // capture already working is not news.
+  const [justSetUp, setJustSetUp] = useState(false);
+
   useEffect(() => {
     if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(flows)) {
+      setJustSetUp(true);
       dispatch({ t: "captured" });
     }
   }, [state.phase, state.everProven, flows]);
@@ -260,6 +269,31 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
+  const setUpBanner = justSetUp && (
+    <div data-testid="set-up-banner">
+      <Notice
+        tone="ok"
+        action={
+          <>
+            <Button
+              onClick={() => {
+                setJustSetUp(false);
+                dispatch({ t: "re-invoke" });
+              }}
+            >
+              set up another device
+            </Button>
+            <Button frame="bare" tone="mute" onClick={() => setJustSetUp(false)}>
+              dismiss
+            </Button>
+          </>
+        }
+      >
+        {setUpOn(null)}
+      </Notice>
+    </div>
+  );
+
   // An exposure the user granted stays visible for as long as it holds — in the
   // list as much as in setup, where choosing "this machine" used to hide it
   // entirely. The chip carries the address a device is pointed at and the
@@ -370,14 +404,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         // is the rows; with a refusal standing in their place, it is the refusal
         // — the core answered that query and then stopped answering, and both
         // are true. With neither, there is nothing above to qualify and the
-        // sentence moves into the row region instead.
+        // sentence moves into the row region instead. A core that stopped
+        // answering outranks the good news: the band states one thing, and the
+        // banner is the one a user can come back to.
         notAnswering && (flows.length > 0 || refused !== null) ? (
           <NotAnswering
             trailing={flows.length > 0 ? "the rows below are the last it sent" : undefined}
             retrying={retrying}
             onRetry={retryConnection}
           />
-        ) : undefined
+        ) : (
+          setUpBanner || undefined
+        )
       }
       header={
         <>

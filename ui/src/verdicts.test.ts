@@ -101,11 +101,9 @@ describe("the proxy already set on this machine", () => {
   });
 });
 
-test("the end of setup names the device it worked for", () => {
+test("the end of setup names this machine, and claims nothing where it cannot", () => {
   expect(setUpOn("this Mac")).toBe("You're set up — Trawler is capturing traffic from this Mac");
-  expect(setUpOn("your iPhone")).toBe(
-    "You're set up — Trawler is capturing traffic from your iPhone",
-  );
+  expect(setUpOn(null)).toBe("You're set up — Trawler is capturing traffic");
 });
 
 // Task 3 is the traffic layer, judged against a clock. The complaint that

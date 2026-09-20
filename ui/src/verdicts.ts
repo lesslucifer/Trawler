@@ -168,9 +168,12 @@ export function trafficStatus(seen: Traffic, now: number): StepStatusView {
   return TRAFFIC_VERDICT[trafficReading(seen, now)];
 }
 
-// The sentence the screen ends on. It names the thing the user chose, because
-// the moment setup succeeds is the moment they find out it was THEIR device
-// that worked.
-export function setUpOn(device: string): string {
-  return `You're set up — Trawler is capturing traffic from ${device}`;
+// The sentence that ends setup, in the two forms the evidence supports. A
+// decrypted request proves Trawler is capturing; which device sent it is a
+// thing the app cannot know (the design run's open blocked-on row), so the
+// device is named only where this machine is the device — the one case where
+// the answer is the same either way.
+export function setUpOn(device: string | null): string {
+  const here = device === null ? "" : ` from ${device}`;
+  return `You're set up — Trawler is capturing traffic${here}`;
 }

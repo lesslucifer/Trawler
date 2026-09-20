@@ -296,7 +296,7 @@ function GuideView({
 
 // The outcome reads where the request that produces it is made, which is the one
 // thing DEC-13 accepts as proof that setup is over.
-function ProvenOutcome({ device, traffic }: { device: string; traffic: Traffic }) {
+function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Traffic }) {
   const now = useNow();
   if (trafficReading(traffic, now) !== "capturing") return null;
   return (
@@ -652,7 +652,10 @@ export function Onboarding({
     proxyAddr,
     reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
   });
-  const device = deviceName(platform, os);
+  // Named only where this machine is the device: a decrypted request proves
+  // capture and never says which device made it, and the one platform where
+  // those are the same answer is the one the user is sitting at.
+  const provenOn = platform === "this" ? deviceName("this", os) : null;
 
   const autoHost = canAutoSetup(os);
   // An action that changes this machine is offered for the store it changes,
@@ -850,7 +853,7 @@ export function Onboarding({
           <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
         )}
 
-        <ProvenOutcome device={device} traffic={traffic} />
+        <ProvenOutcome device={provenOn} traffic={traffic} />
 
         {state.everProven && (
           <div data-testid="back" className="px-4 pt-4">

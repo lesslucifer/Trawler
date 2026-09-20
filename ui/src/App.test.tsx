@@ -424,6 +424,65 @@ test("setting the proxy where none is set asks no second question", async () => 
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "confirm_replace_proxy")).toHaveLength(0);
 });
 
+// F22: the moment setup succeeds was silent — the screen was replaced by a
+// list of one row, and the outcome the design wrote was only ever seen by
+// reopening setup. The seam is the transition itself: the machine's captured
+// event and the list's first paint are two sides of it.
+// Setup succeeding is a live decrypted request arriving while setup is open —
+// the same transition the machine reads as `captured`.
+async function setupSucceeds() {
+  onMacHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText("which device's traffic do you want to see");
+
+  rows = [flow({ uri: "https://example.com/" })];
+  fire();
+  return api;
+}
+
+test("the list's first paint after setup says setup worked, and offers the next device", async () => {
+  await setupSucceeds();
+
+  const banner = await screen.findByTestId("set-up-banner");
+  expect(banner).toHaveTextContent("You're set up — Trawler is capturing traffic");
+  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
+
+  // It claims nothing about which device sent the request, because nothing can.
+  expect(banner).not.toHaveTextContent(/from /);
+});
+
+test("the banner dismisses, and the list keeps its rows", async () => {
+  await setupSucceeds();
+  const banner = await screen.findByTestId("set-up-banner");
+
+  fireEvent.click(within(banner).getByRole("button", { name: "dismiss" }));
+
+  await waitFor(() => expect(screen.queryByTestId("set-up-banner")).toBeNull());
+  expect(screen.getByTestId("flow-row")).toBeInTheDocument();
+});
+
+test("set up another device takes the user back to setup, and the banner goes with them", async () => {
+  await setupSucceeds();
+  const banner = await screen.findByTestId("set-up-banner");
+  fireEvent.click(within(banner).getByRole("button", { name: "set up another device" }));
+
+  expect(await screen.findByText("which device's traffic do you want to see")).toBeInTheDocument();
+  expect(screen.queryByTestId("set-up-banner")).toBeNull();
+});
+
+// A launch that finds capture already working is not news, and a core that
+// stopped answering outranks good news that has already been delivered once.
+test("a launch straight into the list says nothing — the moment it announces is a transition", async () => {
+  onMacHost();
+  const { api } = mockApi(() => [flow({ uri: "https://example.com/" })]);
+  render(<App api={api} />);
+
+  await screen.findByTestId("flow-row");
+  expect(screen.queryByTestId("set-up-banner")).toBeNull();
+});
+
 // The probes are a snapshot of this machine. Two things re-take it without an
 // action: the control above the steps, and the window coming back into focus —
 // which is when the user has just been in System Settings.

@@ -551,13 +551,15 @@ describe("the end", () => {
     );
   });
 
-  it("names the device the user chose, not the machine they are at", () => {
+  // A decrypted request proves capture and never says which device made it —
+  // the run's open blocked-on row. This machine is the one platform where the
+  // two answers cannot differ, so it is the one that gets named.
+  it("names no device where the request could have come from another", () => {
     draw({ traffic: capturing, reach: ARMED });
     pick("iPhone or iPad");
 
-    expect(zone("proven")).toHaveTextContent(
-      "You're set up — Trawler is capturing traffic from your iPhone",
-    );
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
+    expect(zone("proven")).not.toHaveTextContent(/iPhone/);
   });
 
   it("an arriving connection that will not decrypt says what to finish, naming no device", () => {
