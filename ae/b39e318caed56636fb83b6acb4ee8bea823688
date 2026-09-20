@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU E-ONBOARD.W5 -> epic/onboarding-redesign (round 6, on the tip five fixes left; the fleet ran on 4b532bd0bf, whose code bytes are identical to this tip's - the one commit between them is this WU's result doc)"
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+branch: wu/onboarding-redesign/user-reading-build
+base: bcddf45e56987a3e633e67b93c13903a7ab949f5
+head: aeb39e318caed56636fb83b6acb4ee8bea823688
+diff_sha256: df456fdc3453cae4e877a0291ec7bb073426a34549e6d431e1477b78a1b7ce7f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: session default, not pinned by the run
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 62
+    finders: 307
+    verifiers: 114
+    total: 421
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "useNow is instantiated by two leaves at once, so two one-second intervals run where one shared clock would do"
+    waived: "The per-leaf duplication is how the re-render scope is achieved: the tick lives in each leaf that reads the traffic layer precisely so it reaches neither the instructions nor the tiles, which is the invariant the epic's row 7 asserts and a test pins. The count is bounded at two, never grows with data, and nothing observable differs. Raised and verified in round 1; rounds 2 to 6 returned no efficiency candidate at all."
+verdict: PASS
+date: 2026-09-20
