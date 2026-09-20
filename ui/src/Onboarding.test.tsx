@@ -296,6 +296,27 @@ describe("this machine — three tasks, and one button that does two of them", (
   // opened it, and that latch never cleared — so once the user took it, the
   // screen went on offering to turn off a proxy that was already off, beside a
   // button offering to set it up again.
+  // Review round 5: round 4's term gated only the arm the action opened, so on
+  // the path a real user takes — the probe has already read "ours" — a
+  // succeeded reversal still waited for the next probe before the control went
+  // away. The rule is that a reversal which succeeded closes the way out
+  // whichever arm opened it.
+  it("retires the way out on the path the probe opened, without waiting for the next read", async () => {
+    const onUnsetProxy = vi.fn(async () => {});
+    draw({
+      trustProbe: "trusted",
+      proxy: { status: "ours", address: null },
+      onUnsetProxy,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() => expect(onUnsetProxy).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull(),
+    );
+  });
+
   it("retires the way out once the reversal itself has succeeded", async () => {
     const onUnsetProxy = vi.fn(async () => {});
     const props: Props = {

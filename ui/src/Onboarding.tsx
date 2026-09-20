@@ -775,11 +775,16 @@ export function Onboarding({
               it triggered — a probe that has not answered, or never will, may
               not strand a machine this app just changed. The action itself
               stays until the probes say the work is done, because what is
-              done is still theirs to say and never the click's. The latch the
-              action opens is closed by the reversal succeeding — proof enough
-              that the thing it offered to undo is undone, and the only proof
-              that does not wait on a probe. A reversal that FAILED leaves it
-              open, because the proxy it could not turn off is still set.
+              done is still theirs to say and never the click's.
+
+              Whichever of the two opened the way out — the probe reading a
+              proxy that is ours, or the action having just resolved — a
+              reversal that SUCCEEDED closes it. That is proof the thing it
+              offered to undo is undone, and the only proof that does not wait
+              on a probe: the re-read the reversal triggers lands an IPC
+              round-trip later, and until it does the old reading still says
+              ours. A reversal that FAILED leaves the way out open, because
+              the proxy it could not turn off is still set.
 
               The reversal names the half it performs. One action installs a
               certificate and sets a proxy; only the proxy can be put back, and
@@ -804,8 +809,8 @@ export function Onboarding({
                   </p>
                 </>
               )}
-              {(proxy.status === "ours" ||
-                (setUp.state === "done" && unsetProxyAction.state !== "done")) &&
+              {(proxy.status === "ours" || setUp.state === "done") &&
+                unsetProxyAction.state !== "done" &&
                 unsetProxyAction.trigger && (
                   <div className="pt-3">
                     <Action
