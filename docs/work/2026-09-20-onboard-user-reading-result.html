@@ -167,8 +167,11 @@
         <tr><td><code>f267a45</code></td><td>the moment setup succeeds says so, on the screen the user
           lands on</td></tr>
         <tr><td><code>7192c55</code></td><td>this result, as the first round read it</td></tr>
-        <tr><td><code>b3e2c36</code></td><td>the review round's fix — a reversal may not name work
-          nothing does</td></tr>
+        <tr><td><code>b3e2c36</code></td><td>round 1's fix — a reversal may not name work nothing
+          does</td></tr>
+        <tr><td><code>42e1661</code></td><td>this result, as the first round read it</td></tr>
+        <tr><td><code>c4acae7</code></td><td>round 2's fix — the banner belongs to one
+          transition</td></tr>
       </tbody>
     </table>
 
@@ -247,10 +250,22 @@
 
     <h2 id="review">The review round</h2>
 
-    <p>Three finders over the diff's code paths, four verifier agents over seven candidates, Gate 0
-      green beside them. <strong>Round 1 failed</strong>, which is the point of running it — and what it
-      caught is the epic's own class of defect, found in the WU whose whole subject is sentences that
-      are true.</p>
+    <p>Three finders over the diff's code paths each round, Gate 0 green beside them.
+      <strong>Rounds 1 and 2 both failed</strong>, which is the point of running them — and what each
+      caught is the epic's own class of defect, found in the WU whose whole subject is what the screen
+      is entitled to claim.</p>
+
+    <table data-c="rounds">
+      <thead><tr><th>Round</th><th>Fleet</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>3 finders, 7 candidates, 4 verifier agents</td><td><strong>FAIL</strong> — one
+          blocker, one nit waived, four refuted</td></tr>
+        <tr><td>2</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>FAIL</strong> — one
+          important; efficiency and altitude returned empty lists</td></tr>
+        <tr><td>3</td><td>3 finders</td><td><strong>PASS</strong> — on the tip both fixes
+          left</td></tr>
+      </tbody>
+    </table>
 
     <table data-c="review">
       <thead><tr><th>Severity</th><th>Finding</th><th>What the fix changed</th></tr></thead>
@@ -267,6 +282,15 @@
             through Trawler</em> and gains the line the truthful version needs: the certificate stays
             trusted, and the steps that remove it are in the manual route directly below — where they
             already were. Both regression tests were written before the fix</td></tr>
+        <tr><td><strong>important</strong><br>(round 2)</td>
+          <td>The success banner was retired by its own two buttons and by nothing else — so the status
+            dot, which re-opens setup without touching it, left it armed. Re-entering setup and coming
+            back out through <em>back to flows</em> re-announced a success that had not happened again:
+            exactly the <em>already working, not news</em> case the code's own comment rules out. The
+            verifier reproduced the sequence before confirming it</td>
+          <td>Entering setup retires the announcement, however the user got there — which also left the
+            banner's own re-invoke button needing no reset of its own. The regression test walks the
+            sequence and was written before the fix</td></tr>
         <tr><td>nit</td>
           <td><code>useNow</code> is instantiated by two leaves at once, so two one-second intervals run
             where one clock would do</td>
