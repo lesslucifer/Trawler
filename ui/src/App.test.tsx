@@ -411,6 +411,11 @@ test("a refused confirm arms nothing — no POST, no address, no listening", asy
     "Trawler answers on this machine only",
   );
   expect(screen.queryByTestId("device-address")).toBeNull();
+  // F13: the refusal reaches the screen as a refusal. Without it the dialog
+  // closes, the button comes back, and nothing distinguishes a no from a yes.
+  expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
+    "not allowed — Trawler still answers on this machine only",
+  );
 });
 
 test("an allowed confirm arms that address, and the screen renders what answered", async () => {
@@ -423,6 +428,7 @@ test("an allowed confirm arms that address, and the screen renders what answered
   fireEvent.click(await screen.findByRole("button", { name: "let devices reach Trawler" }));
 
   await waitFor(() => expect(armReach).toHaveBeenCalledWith("192.168.1.24"));
+  expect(screen.queryByTestId("arm-reach-status")).toBeNull();
   const address = await screen.findByTestId("device-address");
   expect(within(address).getByRole("button", { name: /the proxy host/ })).toHaveTextContent(
     "192.168.1.24",

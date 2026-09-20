@@ -162,11 +162,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   // The confirm comes first and the bind only on a yes — the shell asks,
   // because arming changes what this machine exposes (DEC-13). A dialog that
-  // cannot be shown is a question nobody answered, so nothing is armed.
+  // cannot be shown is a question nobody answered, so nothing is armed — and
+  // the refusal is returned rather than swallowed, because a screen that cannot
+  // tell a no from a yes says nothing about either.
   const armReach = async (address: string) => {
     const allowed = await invoke<boolean>("confirm_reach", { address }).catch(() => false);
-    if (!allowed) return;
+    if (!allowed) return null;
     setReach(await client.armReach(address));
+    return undefined;
   };
 
   const disarmReach = async () => {

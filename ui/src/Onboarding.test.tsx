@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Onboarding } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
@@ -348,6 +348,29 @@ describe("the address to listen on is one offer, with the rest behind it", () =>
     const others = screen.getByText("other addresses").closest("details");
     expect(within(others!).getAllByRole("button")).toHaveLength(count - 1);
     expect(within(others!).getByRole("button", { name: "if1 · 10.0.0.2" })).toBeInTheDocument();
+  });
+
+  // F13: the shell's dialog can end two ways and the screen could tell them
+  // apart in neither — a cancelled confirm resolved exactly like a success.
+  it("says what a refused confirm left unchanged", async () => {
+    draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
+    choose("iPhone or iPad");
+    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+
+    expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
+      "not allowed — Trawler still answers on this machine only",
+    );
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler answers on this machine only",
+    );
+  });
+
+  it("says nothing of its own when the confirm was allowed — the verdict does that", async () => {
+    draw({ reach: UNARMED, onArmReach: vi.fn(async () => undefined) });
+    choose("iPhone or iPad");
+    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+
+    await waitFor(() => expect(zone("arm-reach-status")).toBeNull());
   });
 
   it("arms the address the user picked, not the one that happened to be first", () => {

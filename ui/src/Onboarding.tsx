@@ -84,11 +84,13 @@ const UNSETPROXY_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't turn the proxy off — the steps below do it by hand." },
 };
 
-// Arming is the shell's dialog and then the bind. A cancelled dialog resolves
-// without arming, which is why there is no "done" note: what is listening is
-// the verdict's business, and only the verdict can tell the two apart.
+// Arming is the shell's dialog and then the bind. A yes needs no note — what is
+// listening is the verdict's business, and it says so a line above. A no does:
+// the dialog closes, the button comes back, and without this the screen says
+// exactly what it says after a success.
 const ARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "waiting for your answer…" },
+  nothing: { tone: "mute", text: "not allowed — Trawler still answers on this machine only." },
   failed: { tone: "warn", text: "couldn't start listening on that address." },
 };
 
@@ -653,7 +655,7 @@ export function Onboarding({
   onSetProxy?: () => Promise<void>;
   onUnsetProxy?: () => Promise<void>;
   onRecheck?: () => void;
-  onArmReach?: (address: string) => Promise<void>;
+  onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
 }) {
   const [platform, setPlatform] = useState<PlatformId>("this");
