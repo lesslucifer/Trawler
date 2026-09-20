@@ -166,6 +166,9 @@
         <tr><td><code>e97106c</code></td><td>the screen, and the words it reads</td></tr>
         <tr><td><code>f267a45</code></td><td>the moment setup succeeds says so, on the screen the user
           lands on</td></tr>
+        <tr><td><code>7192c55</code></td><td>this result, as the first round read it</td></tr>
+        <tr><td><code>b3e2c36</code></td><td>the review round's fix — a reversal may not name work
+          nothing does</td></tr>
       </tbody>
     </table>
 
@@ -239,6 +242,66 @@
           its status</td></tr>
         <tr><td><code>ui/src-tauri/src/lib.rs</code></td><td>the handler roster: one command added, one
           removed</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">The review round</h2>
+
+    <p>Three finders over the diff's code paths, four verifier agents over seven candidates, Gate 0
+      green beside them. <strong>Round 1 failed</strong>, which is the point of running it — and what it
+      caught is the epic's own class of defect, found in the WU whose whole subject is sentences that
+      are true.</p>
+
+    <table data-c="review">
+      <thead><tr><th>Severity</th><th>Finding</th><th>What the fix changed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>blocker</strong></td>
+          <td>The control offered once both tasks read <em>done</em> was labelled <em>undo this
+            setup</em>, and undid half of it. It invokes <code>unset_proxy</code>; nothing reverses the
+            trust-store install, because DEC-13 never offered to — the shell's handler roster has no
+            such command and the record scopes its symmetric-revert promise to the proxy alone. A user
+            clicking it was told, falsely, that Trawler's certificate was no longer trusted on their
+            machine. The accurate sentence was still sitting at the sibling call site one branch
+            away</td>
+          <td>The label was what was wrong, not a missing capability. It goes back to <em>stop routing
+            through Trawler</em> and gains the line the truthful version needs: the certificate stays
+            trusted, and the steps that remove it are in the manual route directly below — where they
+            already were. Both regression tests were written before the fix</td></tr>
+        <tr><td>nit</td>
+          <td><code>useNow</code> is instantiated by two leaves at once, so two one-second intervals run
+            where one clock would do</td>
+          <td><strong>Waived.</strong> The duplication is how the re-render scope is achieved: the tick
+            lives in each leaf that reads the traffic layer precisely so it reaches neither the
+            instructions nor the tiles, which is the invariant the epic's row 7 asserts. The count is
+            bounded at two, never grows with data, and nothing observable differs</td></tr>
+      </tbody>
+    </table>
+
+    <table data-c="refuted">
+      <thead><tr><th>Refuted</th><th>What the verifier established</th></tr></thead>
+      <tbody>
+        <tr><td><strong>blocker</strong> — after <em>set up another device</em>, a second device's
+          request never returns the user to the list</td>
+          <td>The gate is pre-existing and deliberate, explained in a comment and stated in UC-ONBOARD;
+            the way back is a tested control that this diff did not touch, and the screen's own outcome
+            confirms capture without any phase change. The technical premise holds; <em>stuck</em> does
+            not</td></tr>
+        <tr><td><strong>blocker</strong> — a probe that answers <em>unknown</em> lets the button replace
+          a proxy with no confirm</td>
+          <td>Before this diff nothing asked at all, so the change strictly narrows the gap rather than
+            widening it — and the buttons are disabled for the whole probing window, so the state is
+            settled before either can be clicked. The shell's probe cannot return <em>unknown</em> at
+            all</td></tr>
+        <tr><td>important ×2 — the network task builds its state in the view rather than in a
+          resolver</td>
+          <td>Reach is DEC-55's domain, not DEC-33's two layers, and <code>verdicts.ts</code> scopes
+            itself to those two by its own header. The state comes from a real reading of the core, and
+            the shape predates this diff — it moved from one component to another and was not
+            introduced here</td></tr>
+        <tr><td>nit — <code>useAction</code> duck-types the shell's error shape</td>
+          <td>The hook was written for this action family and says so; the type is declared in its own
+            vocabulary rather than imported, and the structural check is the only way to read an untyped
+            IPC rejection. Centralising it beats the alternatives at this size</td></tr>
       </tbody>
     </table>
 
