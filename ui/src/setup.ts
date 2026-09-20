@@ -48,17 +48,59 @@ export const PLATFORM_IDS = [
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
 
-// A step is a sentence with things in it: copyable values the user takes
-// verbatim, and the save control that produces the file the next step names.
-// Modelled as parts rather than as a string the screen pattern-matches, so a
-// command that drifts from its prose cannot silently stop being copyable.
-export type StepPart = string | { copy: string; label: string } | { save: true };
+// A step is a sentence with things in it: values the user takes verbatim, the
+// command they run, and the save control that produces the file the next step
+// names. Modelled as parts rather than as a string the screen pattern-matches,
+// so a command that drifts from its prose cannot silently stop being copyable.
+//
+// A value and a command are two parts, not one, because they are read in two
+// places: a value is typed into a field beside the sentence that names it, and
+// a command is carried to a terminal whole. The screen renders the first inline
+// and the second on a surface of its own, and neither can be mistaken for the
+// other by looking at its punctuation.
+export interface CopyPart {
+  copy: string;
+  label: string;
+  wire: string;
+}
+export interface CommandPart {
+  command: string;
+  label: string;
+}
+export type StepPart = string | CopyPart | CommandPart | { save: true };
 export type GuideStep = readonly StepPart[];
 
+export const isCommand = (part: StepPart): part is CommandPart =>
+  typeof part === "object" && "command" in part;
+
+// One platform's instructions for one task. `steps` is the route the reader
+// takes; everything else is what a numbered step must not be. A note is true of
+// this platform and is nothing to do — numbering it asks the reader to perform
+// a fact. An alternative is a second route to the same end, so putting it in
+// the sequence tells the reader to do the job twice.
 export interface Guide {
   steps: GuideStep[];
+  notes?: string[];
+  alternatives?: GuideStep[];
   undoTitle?: string;
   undo?: GuideStep[];
+}
+
+const parts = (guide: Guide | undefined, key: "steps" | "alternatives" | "undo"): GuideStep[] => [
+  ...(guide?.[key] ?? []),
+];
+
+// Where one action covers two tasks, one guide is the alternative to it: the
+// two tasks' routes in the order they are numbered, and each of their asides
+// kept as the kind of aside it was.
+export function combine(first: Guide | undefined, second: Guide | undefined): Guide {
+  return {
+    steps: [...parts(first, "steps"), ...parts(second, "steps")],
+    notes: [...(first?.notes ?? []), ...(second?.notes ?? [])],
+    alternatives: [...parts(first, "alternatives"), ...parts(second, "alternatives")],
+    undoTitle: "to undo it later",
+    undo: [...parts(first, "undo"), ...parts(second, "undo")],
+  };
 }
 
 // One numbered task of a platform's setup: what the user does, why it is worth
@@ -254,25 +296,37 @@ type OsTarget = "macos" | "windows" | "linux";
 
 const hostTarget = (os: HostOs): OsTarget => (os === "other" ? "linux" : os);
 
-const OS_TRUST: Record<OsTarget, { install: GuideStep[]; undoTitle: string; undo: GuideStep[] }> = {
+const FIREFOX_NOTE = "Firefox keeps its own store — import it there too.";
+
+interface OsTrust {
+  install: GuideStep[];
+  notes: string[];
+  alternatives?: GuideStep[];
+  undoTitle: string;
+  undo: GuideStep[];
+}
+
+const OS_TRUST: Record<OsTarget, OsTrust> = {
   macos: {
     install: [
       [
         "Run it in a terminal:",
         {
-          copy: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+          command:
+            "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
           label: "the trust command",
         },
       ],
-      ["Or double-click the file and set the Trawler CA to Always Trust."],
-      ["Firefox keeps its own store — import it there too."],
     ],
+    notes: [FIREFOX_NOTE],
+    alternatives: [["Or double-click the file and set the Trawler CA to Always Trust."]],
     undoTitle: "to remove it later",
     undo: [
       [
         "Run:",
         {
-          copy: 'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+          command:
+            'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
           label: "the removal command",
         },
       ],
@@ -283,15 +337,15 @@ const OS_TRUST: Record<OsTarget, { install: GuideStep[]; undoTitle: string; undo
     install: [
       [
         "In an elevated terminal run:",
-        { copy: "certutil -addstore -f ROOT trawler-ca.pem", label: "the trust command" },
+        { command: "certutil -addstore -f ROOT trawler-ca.pem", label: "the trust command" },
       ],
-      ["Firefox keeps its own store — import it there too."],
     ],
+    notes: [FIREFOX_NOTE],
     undoTitle: "to remove it later",
     undo: [
       [
         "In an elevated terminal run:",
-        { copy: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" },
+        { command: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" },
       ],
     ],
   },
@@ -300,29 +354,36 @@ const OS_TRUST: Record<OsTarget, { install: GuideStep[]; undoTitle: string; undo
       [
         "Run it in a terminal:",
         {
-          copy: "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+          command:
+            "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
           label: "the trust command",
         },
       ],
+    ],
+    notes: [FIREFOX_NOTE],
+    alternatives: [
       [
         "Chrome reads the NSS store instead:",
         {
-          copy: "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
+          command: "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
           label: "the NSS command",
         },
       ],
-      ["Firefox keeps its own store — import it there too."],
     ],
     undoTitle: "to remove it later",
     undo: [
       [
         "Run:",
         {
-          copy: "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+          command:
+            "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
           label: "the removal command",
         },
       ],
-      ["NSS store:", { copy: "certutil -d sql:$HOME/.pki/nssdb -D -n trawler", label: "the NSS removal" }],
+      [
+        "NSS store:",
+        { command: "certutil -d sql:$HOME/.pki/nssdb -D -n trawler", label: "the NSS removal" },
+      ],
     ],
   },
 };
@@ -355,15 +416,15 @@ const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
 // the command step is replaced in place rather than the prose being retyped.
 function reversal(t: OsTarget | "terminal"): GuideStep[] {
   const command = proxyOffSnippet(t);
-  const parts = proxyOffSteps(t).map((step) =>
-    step === command ? { copy: step, label: "the proxy-off command" } : step,
+  const said = proxyOffSteps(t).map((step) =>
+    step === command ? { command: step, label: "the proxy-off command" } : step,
   );
-  return [parts];
+  return [said];
 }
 
 function osRoute(t: OsTarget | "terminal", addr: string): Guide {
   return {
-    steps: [[ROUTE_LEAD[t], { copy: routeCommand(t, addr)!, label: "the proxy command" }]],
+    steps: [[ROUTE_LEAD[t], { command: routeCommand(t, addr)!, label: "the proxy command" }]],
     undoTitle: "to turn it off later",
     undo: reversal(t),
   };
@@ -379,7 +440,11 @@ const ANDROID_USER_CA =
   "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
 
 function downloadStep(where: string, caCertUrl: string, what: string): GuideStep {
-  return [`${where}, open`, { copy: caCertUrl, label: "the certificate URL" }, `— it downloads ${what}.`];
+  return [
+    `${where}, open`,
+    { copy: caCertUrl, label: "the certificate URL", wire: "certificate url" },
+    `— it downloads ${what}.`,
+  ];
 }
 
 // Why each task is worth doing, said once: the reason never changes with the
@@ -400,6 +465,8 @@ function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
       why: `so ${host}'s HTTPS can be decrypted`,
       guide: {
         steps: [[SAVE_CA_STEP, { save: true }], ...trust.install],
+        notes: trust.notes,
+        alternatives: trust.alternatives,
         undoTitle: trust.undoTitle,
         undo: trust.undo,
       },
@@ -434,11 +501,13 @@ function anotherMachineSetup(
               steps: [
                 [
                   `On ${device}, open`,
-                  { copy: reach.caCertUrl, label: "the certificate URL" },
+                  { copy: reach.caCertUrl, label: "the certificate URL", wire: "certificate url" },
                   `and save it as ${CA_FILENAME}.`,
                 ],
                 ...trust.install,
               ],
+              notes: trust.notes,
+              alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
               undo: trust.undo,
             },
@@ -455,6 +524,12 @@ function anotherMachineSetup(
 function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | null): PlatformSetup {
   const ios = id === "ios";
   const device = deviceName(id, os);
+  const noBrowser: GuideStep = [
+    "No browser on it?",
+    SAVE_CA_STEP,
+    { save: true },
+    "and carry the file over instead.",
+  ];
   const trust: Guide | undefined =
     reach === null
       ? undefined
@@ -464,16 +539,15 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               downloadStep(`On ${device}`, reach.caCertUrl, "the profile"),
               ["Open it: Settings → General → VPN & Device Management → install the profile."],
               ["Then turn it on: Settings → General → About → Certificate Trust Settings."],
-              ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
             ]
           : [
               downloadStep(`On ${device}`, reach.caCertUrl, "the certificate"),
               [
                 "Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
               ],
-              [ANDROID_USER_CA],
-              ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
             ],
+        notes: ios ? undefined : [ANDROID_USER_CA],
+        alternatives: [noBrowser],
       };
   const route: Guide | undefined =
     reach === null
@@ -508,13 +582,13 @@ function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
       [SAVE_CA_STEP, { save: true }],
       [
         "Push it to the emulator:",
-        { copy: "adb push trawler-ca.pem /sdcard/Download/", label: "the push command" },
+        { command: "adb push trawler-ca.pem /sdcard/Download/", label: "the push command" },
       ],
       [
         "Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
       ],
-      [ANDROID_USER_CA],
     ],
+    notes: [ANDROID_USER_CA],
     undoTitle: "to remove it later",
     undo: [
       [
@@ -527,15 +601,17 @@ function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
       ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
       [
         "Server",
-        { copy: EMULATOR_HOST, label: "the emulator's host" },
+        { copy: EMULATOR_HOST, label: "the emulator's host", wire: "proxy host" },
         "port",
-        { copy: String(port), label: "the proxy port" },
-        "— the alias every emulator resolves to the machine it runs on.",
+        { copy: String(port), label: "the proxy port", wire: "proxy port" },
       ],
+    ],
+    notes: [`${EMULATOR_HOST} is the alias every emulator resolves to the machine it runs on.`],
+    alternatives: [
       [
         "Or start it with the proxy already set:",
         {
-          copy: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
+          command: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
           label: "the emulator command",
         },
       ],
@@ -562,7 +638,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
       [
         "With the Simulator running, run:",
         {
-          copy: `xcrun simctl keychain booted add-root-cert ${CA_FILENAME}`,
+          command: `xcrun simctl keychain booted add-root-cert ${CA_FILENAME}`,
           label: "the trust command",
         },
       ],
@@ -572,7 +648,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     undo: [
       [
         "Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:",
-        { copy: "xcrun simctl keychain booted reset", label: "the keychain reset" },
+        { command: "xcrun simctl keychain booted reset", label: "the keychain reset" },
       ],
     ],
   };

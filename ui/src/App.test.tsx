@@ -23,6 +23,14 @@ vi.mock("@tauri-apps/api/window", () => ({
 const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true };
 const ONBOARDING: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
 
+const QUESTION = "which device's traffic do you want to see";
+
+// The setup screen's one question is a dropdown: open it, then take the answer.
+const pickPlatform = (label: string) => {
+  fireEvent.click(screen.getByRole("button", { name: QUESTION }));
+  fireEvent.click(screen.getByRole("option", { name: label }));
+};
+
 const PEM = "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n";
 
 function onMacHost() {
@@ -293,7 +301,8 @@ async function simulator(initial = ONBOARDING) {
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={initial} />);
-  fireEvent.click(await screen.findByRole("radio", { name: "iOS Simulator" }));
+  await screen.findByText(QUESTION);
+  pickPlatform("iOS Simulator");
   return api;
 }
 
@@ -542,8 +551,8 @@ async function offMachine(over: Partial<TrawlerApi> = {}) {
   const { api } = mockApi(() => []);
   Object.assign(api, over);
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByText("which device's traffic do you want to see");
-  fireEvent.click(screen.getByRole("radio", { name: "iPhone or iPad" }));
+  await screen.findByText(QUESTION);
+  pickPlatform("iPhone or iPad");
   return api;
 }
 
@@ -700,8 +709,8 @@ test("an address is offered under the name its owner sees, when the host can say
     ],
   }));
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByText("which device's traffic do you want to see");
-  fireEvent.click(screen.getByRole("radio", { name: "iPhone or iPad" }));
+  await screen.findByText(QUESTION);
+  pickPlatform("iPhone or iPad");
 
   await waitFor(() => expect(screen.getByTestId("listen-on")).toHaveTextContent("Wi-Fi · 192.168.1.24"));
   fireEvent.click(screen.getByText("other addresses"));
@@ -724,8 +733,8 @@ test("a shell that cannot name a device leaves the name the core reported", asyn
     ],
   }));
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByText("which device's traffic do you want to see");
-  fireEvent.click(screen.getByRole("radio", { name: "iPhone or iPad" }));
+  await screen.findByText(QUESTION);
+  pickPlatform("iPhone or iPad");
 
   await waitFor(() => expect(screen.getByTestId("listen-on")).toHaveTextContent("en1 · 192.168.1.24"));
 });

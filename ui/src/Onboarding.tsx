@@ -4,10 +4,11 @@ import { COPY, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
   Button,
-  ChoiceTiles,
+  CommandBlock,
   CopyText,
   Disclosure,
   Notice,
+  Select,
   Spinner,
   StatusLine,
   StepList,
@@ -18,7 +19,9 @@ import {
 import {
   canAutoSetup,
   CA_FILENAME,
+  combine,
   deviceName,
+  isCommand,
   needsReach,
   probesRoute,
   probesTrust,
@@ -212,33 +215,46 @@ function Action({
 
 const ZONE_LABEL = "font-ui text-chrome uppercase tracking-label text-ink-mute";
 
-function Command({ value, label }: { value: string; label: string }) {
+// A value is read inside the sentence that names it, because that sentence is
+// what says which field it goes in. A command is read somewhere else entirely,
+// so it leaves the sentence and takes a surface of its own.
+function Value({ value, label, wire }: { value: string; label: string; wire: string }) {
   return (
-    <span data-wire="shell command" className="font-mono">
+    <span data-wire={wire} className="font-mono">
       <CopyText value={value} label={label} />
     </span>
   );
 }
 
 function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
+  const said = step.filter((part) => !isCommand(part));
+  const commands = step.filter(isCommand);
   return (
-    <span className="flex flex-wrap items-center gap-chrome-gap">
-      {step.map((part, i) => {
-        if (typeof part === "string") return <span key={i}>{part}</span>;
-        if ("copy" in part) return <Command key={i} value={part.copy} label={part.label} />;
-        return save?.trigger ? (
-          <Button
-            key={i}
-            frame="bare"
-            tone="mute"
-            onClick={save.trigger}
-            disabled={save.state === "running"}
-          >
-            save…
-          </Button>
-        ) : null;
-      })}
-    </span>
+    <>
+      {said.length > 0 && (
+        <span className="flex flex-wrap items-center gap-chrome-gap">
+          {said.map((part, i) => {
+            if (typeof part === "string") return <span key={i}>{part}</span>;
+            if ("copy" in part)
+              return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
+            return save?.trigger ? (
+              <Button
+                key={i}
+                frame="bare"
+                tone="mute"
+                onClick={save.trigger}
+                disabled={save.state === "running"}
+              >
+                save…
+              </Button>
+            ) : null;
+          })}
+        </span>
+      )}
+      {commands.map((part, i) => (
+        <CommandBlock key={i} value={part.command} label={part.label} />
+      ))}
+    </>
   );
 }
 
@@ -249,47 +265,62 @@ function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }
   return (
     <StepList
       steps={steps.map((step, i) => (
-        <span key={i}>
+        <div key={i} className="flex min-w-0 flex-col gap-chrome-gap">
           <StepParts step={step} save={save} />
           {save && carriesSave(step) && <ActionNote testId="save-ca" action={save} note={SAVECA_NOTE} />}
-        </span>
+        </div>
       ))}
     />
   );
 }
 
-// A guide hides behind "do it manually" only where a hand is the second route:
-// with no action above it these are the only instructions there are, and a
-// summary promising an automatic alternative is a promise nothing keeps.
+// What a guide says it is before it is opened. Where a button does the job,
+// the guide is the other way of doing it and says so. Where there is no
+// button it is the only way, and a count is the one summary that promises no
+// automatic alternative while still saying how much work is behind it (F10).
+const MANUAL = "do it manually";
+const stepCount = (guide: Guide) =>
+  `${guide.steps.length} step${guide.steps.length === 1 ? "" : "s"}`;
+
+// One task's instructions: the route, then the three things a numbered step
+// must not be. Notes are facts about this platform and sit under the steps
+// unnumbered; a second route and the way back are each behind a summary of
+// their own, so the primary path is what the reader meets.
 function GuideView({
   guide,
   save,
-  collapsed = true,
+  summary,
   defaultOpen = false,
 }: {
   guide: Guide;
   save?: ActionHandle;
-  collapsed?: boolean;
+  summary: string;
   defaultOpen?: boolean;
 }) {
-  const body = (
-    <>
-      <GuideSteps steps={guide.steps} save={save} />
-      {guide.undo && (
-        <>
-          <p className="pt-3 font-ui text-chrome text-ink-mute">{guide.undoTitle}</p>
-          <div className="pt-2">
-            <GuideSteps steps={guide.undo} />
-          </div>
-        </>
-      )}
-    </>
-  );
-
-  if (!collapsed) return body;
+  const alternatives = guide.alternatives ?? [];
+  const undo = guide.undo ?? [];
   return (
-    <Disclosure summary="do it manually" defaultOpen={defaultOpen}>
-      {body}
+    <Disclosure summary={summary} defaultOpen={defaultOpen}>
+      <GuideSteps steps={guide.steps} save={save} />
+      {guide.notes?.map((note) => (
+        <p key={note} data-testid="guide-note" className="pt-2 font-ui text-chrome text-ink-mute">
+          {note}
+        </p>
+      ))}
+      {alternatives.length > 0 && (
+        <div className="pt-3">
+          <Disclosure summary="other ways">
+            <GuideSteps steps={alternatives} save={save} />
+          </Disclosure>
+        </div>
+      )}
+      {undo.length > 0 && (
+        <div className="pt-3">
+          <Disclosure summary={guide.undoTitle ?? "to undo it later"}>
+            <GuideSteps steps={undo} />
+          </Disclosure>
+        </div>
+      )}
     </Disclosure>
   );
 }
@@ -536,19 +567,6 @@ function TaskAside({ children }: { children: ReactNode }) {
   );
 }
 
-// Where one action covers two tasks, one disclosure covers both their guides:
-// the manual route is the alternative to the button, so it holds everything the
-// button would have done, in the order the tasks are numbered.
-const manualSteps = (setup: {
-  trust: Task;
-  route: Task;
-}): GuideStep[] => [...(setup.trust.guide?.steps ?? []), ...(setup.route.guide?.steps ?? [])];
-
-const reversalSteps = (setup: { trust: Task; route: Task }): GuideStep[] => [
-  ...(setup.trust.guide?.undo ?? []),
-  ...(setup.route.guide?.undo ?? []),
-];
-
 // A task's instructions, and the state of the task they belong to. `dim` is the
 // one thing a task with no instructions needs: it keeps its number and says
 // which step comes first, rather than explaining what cannot happen yet (F9).
@@ -558,6 +576,7 @@ function GuidedTask({
   status,
   dim,
   guide,
+  guideOpen = false,
   save,
   action,
   children,
@@ -567,6 +586,7 @@ function GuidedTask({
   status?: StepStatusView;
   dim?: boolean;
   guide?: Guide;
+  guideOpen?: boolean;
   save?: ActionHandle;
   action?: ReactNode;
   children?: ReactNode;
@@ -586,7 +606,12 @@ function GuidedTask({
           {action}
           {guide && (
             <div className={action === undefined ? "" : "pt-3"}>
-              <GuideView guide={guide} save={save} collapsed={action !== undefined} />
+              <GuideView
+                guide={guide}
+                save={save}
+                summary={action === undefined ? stepCount(guide) : MANUAL}
+                defaultOpen={guideOpen}
+              />
             </div>
           )}
         </>
@@ -691,24 +716,60 @@ export function Onboarding({
   const blocked = needsReach(platform) && !armed;
   const first = needsReach(platform) ? 1 : 0;
 
+  // Each task's own guide survives only where no single action replaces both of
+  // them; where one does, the two are merged into its alternative below.
+  const trustGuide = setUpHere === undefined ? setup.trust.guide : undefined;
+  const routeGuide = setUpHere === undefined ? setup.route.guide : undefined;
+  const routeAction =
+    setUpHere === undefined && routeHere !== undefined ? (
+      <Action
+        testId="set-proxy"
+        label="Set the system proxy"
+        action={setProxyAction}
+        note={SETPROXY_NOTE}
+        onClick={routeHere}
+        disabled={probing}
+      />
+    ) : undefined;
+
+  // One guide is open, and it is the first whose task is not done: everything
+  // above it is finished and everything below it waits on this one. A guide
+  // under a button is never the open one — the button is the route, and the
+  // steps are what a reader asks for. Nothing observes a task on another
+  // device, so off-machine the first guided task stays open until a decrypted
+  // request says the whole job is over — the one reading that settles it for
+  // every platform at once.
+  const everDecrypted = traffic.lastDecryptedAt !== null;
+  const guidesOpen = !blocked && !everDecrypted;
+  const trustGuideOpen = guidesOpen && trustGuide !== undefined && trustState.tone !== "ok";
+  const routeGuideOpen =
+    guidesOpen &&
+    !trustGuideOpen &&
+    routeGuide !== undefined &&
+    routeAction === undefined &&
+    routeState.tone !== "ok";
+
   return (
     <div className="flex h-full flex-col overflow-auto">
-      <div className="mx-auto w-full max-w-dialog-max py-6">
+      <div className="mx-auto w-full max-w-reading py-6">
         <div data-testid="lead" className="px-4">
           <p className="font-serif text-note text-ink">{TITLE}</p>
           <p className="pt-2 font-ui text-body text-ink-body">{PURPOSE}</p>
         </div>
 
-        <div data-testid="platform" className="px-4 pt-4">
+        <div
+          data-testid="platform"
+          className="flex flex-wrap items-center gap-3 px-4 pt-4"
+        >
           <p className={ZONE_LABEL}>{QUESTION}</p>
-          <div className="pt-2">
-            <ChoiceTiles
-              options={platformChoices(os)}
-              value={platform}
-              onChange={(id) => setPlatform(id as PlatformId)}
-              ariaLabel={QUESTION}
-            />
-          </div>
+          <Select
+            options={platformChoices(os)}
+            value={platform}
+            onChange={(id) => setPlatform(id as PlatformId)}
+            label={QUESTION}
+            searchable={false}
+            className="w-picker"
+          />
         </div>
 
         <div data-testid="steps" className="pt-2">
@@ -729,7 +790,8 @@ export function Onboarding({
             task={setup.trust}
             status={trustState}
             dim={blocked}
-            guide={setUpHere === undefined ? setup.trust.guide : undefined}
+            guide={trustGuide}
+            guideOpen={trustGuideOpen}
             save={onSaveCa ? saveCa : undefined}
           />
 
@@ -738,19 +800,9 @@ export function Onboarding({
             task={setup.route}
             status={routeState}
             dim={blocked}
-            guide={setUpHere === undefined ? setup.route.guide : undefined}
-            action={
-              setUpHere === undefined && routeHere !== undefined ? (
-                <Action
-                  testId="set-proxy"
-                  label="Set the system proxy"
-                  action={setProxyAction}
-                  note={SETPROXY_NOTE}
-                  onClick={routeHere}
-                  disabled={probing}
-                />
-              ) : undefined
-            }
+            guide={routeGuide}
+            guideOpen={routeGuideOpen}
+            action={routeAction}
           >
             {proxy.status === "foreign" && probesRoute(platform) && (
               <div data-testid="foreign-proxy" className="pb-2">
@@ -832,17 +884,11 @@ export function Onboarding({
                   disclosures under two tasks with no button above either would
                   promise an automatic route that is not there (F10). */}
               <div className="pt-3">
-                <Disclosure summary="do it manually">
-                  <GuideSteps steps={manualSteps(setup)} save={onSaveCa ? saveCa : undefined} />
-                  {reversalSteps(setup).length > 0 && (
-                    <>
-                      <p className="pt-3 font-ui text-chrome text-ink-mute">to undo it later</p>
-                      <div className="pt-2">
-                        <GuideSteps steps={reversalSteps(setup)} />
-                      </div>
-                    </>
-                  )}
-                </Disclosure>
+                <GuideView
+                  guide={combine(setup.trust.guide, setup.route.guide)}
+                  save={onSaveCa ? saveCa : undefined}
+                  summary={MANUAL}
+                />
               </div>
             </TaskAside>
           )}
@@ -871,9 +917,9 @@ export function Onboarding({
             {setup.tryCommand && (
               <>
                 <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
-                <p className="pt-2 font-mono" data-wire="shell command">
-                  <CopyText value={setup.tryCommand} label="the try-it command" />
-                </p>
+                <div className="pt-2">
+                  <CommandBlock value={setup.tryCommand} label="the try-it command" />
+                </div>
               </>
             )}
           </GuidedTask>

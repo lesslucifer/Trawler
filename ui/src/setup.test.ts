@@ -1,6 +1,7 @@
 import { describe, expect, it, test } from "vitest";
 import {
   canAutoSetup,
+  combine,
   confirmOn,
   deviceName,
   hostOs,
@@ -12,6 +13,7 @@ import {
   platformChoices,
   setupFor,
   splitProxyAddr,
+  type Guide,
   type GuideStep,
   type PlatformId,
   type PlatformSetup,
@@ -32,25 +34,36 @@ const ctx = (over: Partial<Parameters<typeof setupFor>[1]> = {}) => ({
   ...over,
 });
 
-const guides = (s: PlatformSetup): GuideStep[] => [
-  ...(s.trust.guide?.steps ?? []),
-  ...(s.trust.guide?.undo ?? []),
-  ...(s.route.guide?.steps ?? []),
-  ...(s.route.guide?.undo ?? []),
-];
+const both = (s: PlatformSetup): Guide[] => [s.trust.guide, s.route.guide].filter((g) => g !== undefined);
+
+// Every route a platform offers, whichever part of the guide holds it.
+const guides = (s: PlatformSetup): GuideStep[] =>
+  both(s).flatMap((g) => [...g.steps, ...(g.alternatives ?? []), ...(g.undo ?? [])]);
+
+// The numbered sequence alone — what the reader is asked to perform, in order.
+const numbered = (s: PlatformSetup): GuideStep[] => both(s).flatMap((g) => g.steps);
+
+const notes = (s: PlatformSetup): string[] => both(s).flatMap((g) => g.notes ?? []);
+
+const commands = (steps: GuideStep[]): string[] =>
+  steps.flatMap((step) => step.flatMap((p) => (typeof p === "object" && "command" in p ? [p.command] : [])));
+
+const values = (steps: GuideStep[]): string[] =>
+  steps.flatMap((step) => step.flatMap((p) => (typeof p === "object" && "copy" in p ? [p.copy] : [])));
 
 const titles = (s: PlatformSetup): string[] =>
   [s.trust, s.route, s.try].flatMap((t) => [t.title, t.why ?? ""]);
 
 const prose = (s: PlatformSetup): string =>
-  [...titles(s), s.confirmOn, s.tryCommand ?? ""]
+  [...titles(s), s.confirmOn, s.tryCommand ?? "", ...notes(s)]
     .concat(guides(s).flatMap((step) => step.map((p) => (typeof p === "string" ? p : ""))))
     .join("\n");
 
-const copies = (s: PlatformSetup): string[] =>
-  guides(s).flatMap((step) =>
-    step.flatMap((p) => (typeof p === "object" && "copy" in p ? [p.copy] : [])),
-  );
+// Every payload the user takes verbatim, whether they run it or type it in.
+const copies = (s: PlatformSetup): string[] => [
+  ...commands(guides(s)),
+  ...values(guides(s)),
+];
 
 const saves = (s: PlatformSetup): number =>
   guides(s).flatMap((step) => step.filter((p) => typeof p === "object" && "save" in p)).length;
@@ -58,6 +71,12 @@ const saves = (s: PlatformSetup): number =>
 const everything = (s: PlatformSetup): string => [prose(s), ...copies(s)].join("\n");
 
 const setup = (id: PlatformId, over = {}) => setupFor(id, ctx(over));
+
+// Every tool any platform's instructions reach for. A string opening with one
+// of them is a command whatever part it is written as, which is what lets the
+// two questions below be asked in both directions.
+const LOOKS_LIKE_COMMAND =
+  /^(sudo|certutil|adb|networksetup|reg|gsettings|unset|export|curl|emulator|xcrun)\s/;
 
 test("hostOs maps webview UA samples to the host family", () => {
   expect(hostOs(UA.mac)).toBe("macos");
@@ -299,13 +318,100 @@ describe("every copyable value is offered exactly once in the guide that introdu
   });
 
   it.each(PLATFORM_IDS)("%s writes no command as prose", (id) => {
-    const looksLikeCommand = (text: string) =>
-      /^(sudo|certutil|adb|networksetup|reg |gsettings|unset|export|curl|emulator|xcrun) /.test(text);
     for (const step of guides(setup(id))) {
       for (const part of step) {
-        if (typeof part === "string") expect(looksLikeCommand(part)).toBe(false);
+        if (typeof part === "string") expect(LOOKS_LIKE_COMMAND.test(part)).toBe(false);
       }
     }
+  });
+});
+
+// A numbered step is something the reader performs. A caveat is not, and a
+// second route to the same end is the same job twice — so each is its own kind
+// of thing, and the count under a task's summary counts only the first.
+describe("a guide's steps are the route, and everything else says what it is", () => {
+  it.each(PLATFORM_IDS)("%s carries every command as a command, never as a value", (id) => {
+    for (const value of values(guides(setup(id)))) {
+      expect(LOOKS_LIKE_COMMAND.test(value)).toBe(false);
+    }
+  });
+
+  it.each(PLATFORM_IDS)("%s writes every value it offers as a value, never as a command", (id) => {
+    for (const command of commands(guides(setup(id)))) {
+      expect(LOOKS_LIKE_COMMAND.test(command)).toBe(true);
+    }
+  });
+
+  it.each(PLATFORM_IDS)("%s's notes are nothing to do, so none of them is a step", (id) => {
+    const s = setup(id);
+    const said = numbered(s).flatMap((step) => step.filter((p) => typeof p === "string"));
+
+    for (const note of notes(s)) expect(said).not.toContain(note);
+  });
+
+  it("the browser caveats are notes — a reader cannot perform 'Firefox keeps its own store'", () => {
+    expect(notes(setup("this"))).toContain("Firefox keeps its own store — import it there too.");
+    expect(notes(setup("android"))).toContain(
+      "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
+    );
+    expect(notes(setup("android-sim")).join("\n")).toMatch(/10\.0\.2\.2 is the alias/);
+  });
+
+  it("a second way in is an alternative, not a step the reader also takes", () => {
+    const alternatives = (id: PlatformId) =>
+      [setup(id).trust.guide, setup(id).route.guide]
+        .filter((g) => g !== undefined)
+        .flatMap((g) => g.alternatives ?? []);
+
+    expect(commands(alternatives("android-sim"))).toContain(
+      "emulator -avd <name> -http-proxy http://10.0.2.2:9999",
+    );
+    expect(commands(alternatives("ubuntu"))).toContain(
+      "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
+    );
+    expect(
+      alternatives("ios").flatMap((step) => step.filter((p) => typeof p === "string")),
+    ).toContain("No browser on it?");
+    expect(saves(setup("ios"))).toBe(1);
+  });
+
+  it("what is left in the sequence is short enough to read before starting", () => {
+    expect(setup("this").trust.guide?.steps).toHaveLength(2);
+    expect(setup("this").route.guide?.steps).toHaveLength(1);
+    expect(setup("ios").trust.guide?.steps).toHaveLength(3);
+    expect(setup("android-sim").trust.guide?.steps).toHaveLength(3);
+    expect(setup("android-sim").route.guide?.steps).toHaveLength(2);
+  });
+});
+
+// One action covers two tasks, so one guide is its alternative — and the merge
+// may not turn a caveat into a step or a second route into the main one.
+describe("combine — two tasks' routes as one, each aside still its own kind", () => {
+  const merged = () => combine(setup("this").trust.guide, setup("this").route.guide);
+
+  it("takes both sequences, in the order the tasks are numbered", () => {
+    const one = merged();
+    expect(one.steps).toEqual([
+      ...(setup("this").trust.guide?.steps ?? []),
+      ...(setup("this").route.guide?.steps ?? []),
+    ]);
+  });
+
+  it("keeps notes as notes, alternatives as alternatives, and the way back as the way back", () => {
+    const one = merged();
+    expect(one.notes).toContain("Firefox keeps its own store — import it there too.");
+    expect(one.steps.flatMap((step) => step.filter((p) => typeof p === "string"))).not.toContain(
+      "Firefox keeps its own store — import it there too.",
+    );
+    expect(commands(one.alternatives ?? [])).toEqual([]);
+    expect(commands(one.undo ?? [])).toHaveLength(2);
+    expect(one.undoTitle).toBe("to undo it later");
+  });
+
+  it("a platform with no guides merges to an empty one rather than throwing", () => {
+    const empty = combine(undefined, undefined);
+    expect(empty.steps).toEqual([]);
+    expect(empty.undo).toEqual([]);
   });
 });
 

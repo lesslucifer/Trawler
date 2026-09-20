@@ -77,14 +77,26 @@ const draw = (props: Props = {}) =>
     />,
   );
 
+const QUESTION = "which device's traffic do you want to see";
+
 const zone = (id: string) => screen.queryByTestId(id);
 const task = (n: number) => screen.getByTestId(`task-${n}`);
-const pick = (label: string | RegExp) => fireEvent.click(screen.getByRole("radio", { name: label }));
+const picker = () => screen.getByRole("button", { name: QUESTION });
+const pick = (label: string | RegExp) => {
+  fireEvent.click(picker());
+  fireEvent.click(screen.getByRole("option", { name: label }));
+};
 
 // A disclosure keeps its content in the DOM and closed, so "behind a
 // disclosure" is a question about the <details> it sits in, never about
 // whether the text exists.
 const disclosing = (text: string) => screen.getByText(text).closest("details")!;
+const open = (text: string) => disclosing(text).hasAttribute("open");
+
+// A command is a block now: the copy control carries the command's name and
+// the command itself sits beside it, so the block is what holds both.
+const commandNamed = (label: string) =>
+  screen.getByRole("button", { name: label }).closest("div")!;
 
 // ── The lead: what this is, before anything about what is wrong ─────────────
 // F1. The screen used to open on a lowercase grey failure verdict, which is
@@ -114,24 +126,51 @@ describe("the screen leads with what it is", () => {
 // F6. One axis, seen rather than discovered.
 
 describe("the one question, asked in the user's words", () => {
-  it("asks which device, and shows every answer without opening anything", () => {
+  it("asks which device, and every device is an answer the control offers", () => {
     draw();
 
-    expect(zone("platform")).toHaveTextContent("which device's traffic do you want to see");
-    expect(screen.getAllByRole("radio")).toHaveLength(PLATFORM_IDS.length);
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(zone("platform")).toHaveTextContent(QUESTION);
+
+    fireEvent.click(picker());
+    expect(screen.getAllByRole("option")).toHaveLength(PLATFORM_IDS.length);
+    for (const id of PLATFORM_IDS) {
+      expect(
+        screen.getByRole("option", { name: setup.platformLabel(id, "macos") }),
+      ).toBeInTheDocument();
+    }
   });
 
-  it("starts on this machine, named for the host it detected", () => {
+  it("starts on this machine, named for the host it detected, and says so unopened", () => {
     draw({ os: "macos" });
 
-    expect(screen.getByRole("radio", { name: "This machine — macOS" })).toBeChecked();
+    expect(picker()).toHaveTextContent("This machine — macOS");
+    expect(screen.queryByRole("listbox")).toBeNull();
   });
 
-  it("asks the target question once — nothing below the tiles asks it again", () => {
+  it("the answer is taken from the list, and the control then carries it", () => {
     draw();
 
-    expect(screen.getAllByRole("radiogroup")).toHaveLength(1);
+    pick("iPhone or iPad");
+
+    expect(picker()).toHaveTextContent("iPhone or iPad");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(task(1)).toHaveTextContent("Allow your iPhone to connect");
+  });
+
+  it("holds its width whatever the answer is, so the row beside it does not move", () => {
+    draw();
+    const box = picker().parentElement!;
+
+    expect(box.className).toContain("w-picker");
+    pick("Another Ubuntu machine");
+    expect(picker().parentElement).toBe(box);
+    expect(box.className).toContain("w-picker");
+  });
+
+  it("asks the target question once — nothing below it asks again", () => {
+    draw();
+
+    expect(screen.getAllByRole("button", { name: QUESTION })).toHaveLength(1);
     expect(screen.queryByText(/what are you setting up/i)).toBeNull();
     expect(screen.queryByText(/what has to be true/i)).toBeNull();
   });
@@ -264,9 +303,8 @@ describe("this machine — three tasks, and one button that does two of them", (
       "this turns the proxy off and nothing else — the steps below remove Trawler's certificate.",
     );
     fireEvent.click(screen.getByText("do it manually"));
-    expect(screen.getByRole("button", { name: /copy the removal command/i })).toHaveTextContent(
-      "security delete-certificate",
-    );
+    fireEvent.click(screen.getByText("to undo it later"));
+    expect(commandNamed("the removal command")).toHaveTextContent("security delete-certificate");
   });
 
   // Review round 3, important: DEC-13's inherited rule is that an action which
@@ -386,12 +424,28 @@ describe("the manual route is the alternative to the button", () => {
   it("one disclosure holds what the button would have done, in task order", () => {
     draw();
 
-    const manual = screen.getByText("do it manually");
-    fireEvent.click(manual);
+    fireEvent.click(screen.getByText("do it manually"));
 
-    expect(screen.getByRole("button", { name: /copy the trust command/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /copy the proxy command/i })).toBeInTheDocument();
+    expect(commandNamed("the trust command")).toHaveTextContent("security add-trusted-cert");
+    expect(commandNamed("the proxy command")).toHaveTextContent("networksetup -setwebproxy");
     expect(screen.getAllByText("do it manually")).toHaveLength(1);
+  });
+
+  it("stays shut until it is asked for — the button is the route, these are the other one", () => {
+    draw();
+
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(false);
+  });
+
+  it("keeps both tasks' asides as the kind of aside each one was", () => {
+    draw();
+    fireEvent.click(screen.getByText("do it manually"));
+
+    expect(screen.getByTestId("guide-note")).toHaveTextContent(
+      "Firefox keeps its own store — import it there too.",
+    );
+    expect(open("Or double-click the file and set the Trawler CA to Always Trust.")).toBe(false);
+    expect(open("Or delete the Trawler Proxy CA entry in Keychain Access → System.")).toBe(false);
   });
 
   it("no task carries a guide of its own where one button covers two", () => {
@@ -510,13 +564,22 @@ describe("the iOS Simulator", () => {
     expect(within(task(2)).getByRole("button", { name: "Set the system proxy" })).toBeInTheDocument();
   });
 
-  it("renders its trust guide open — nothing automatic stands above it", () => {
+  it("renders its trust guide open under a count — nothing automatic stands above it", () => {
     simulator();
 
     expect(within(task(1)).queryByText("do it manually")).toBeNull();
-    expect(
-      within(task(1)).getByRole("button", { name: /copy the trust command/i }),
-    ).toHaveTextContent("xcrun simctl keychain booted add-root-cert");
+    expect(within(task(1)).getByText("3 steps")).toBeInTheDocument();
+    expect(open("3 steps")).toBe(true);
+    expect(commandNamed("the trust command")).toHaveTextContent(
+      "xcrun simctl keychain booted add-root-cert",
+    );
+  });
+
+  it("leaves the routing steps behind the button that does them", () => {
+    simulator();
+
+    expect(within(task(2)).getByText("do it manually")).toBeInTheDocument();
+    expect(open("do it manually")).toBe(false);
   });
 
   it("is told to open a website in it, not on it", () => {
@@ -615,11 +678,28 @@ describe("a phone, once it may connect", () => {
     expect(task(2)).not.toHaveAttribute("data-dim");
   });
 
-  it("puts its instructions in the open — a hand is the only route it has", () => {
+  it("names no automatic route it does not have — a hand is the only one it has", () => {
     armedPhone();
 
     expect(screen.queryByText("do it manually")).toBeNull();
     expect(task(2)).toHaveTextContent(/Settings → General → VPN & Device Management/);
+  });
+
+  it("opens the first task whose work is not done, and holds the next behind its count", () => {
+    armedPhone();
+
+    expect(within(task(2)).getByText("3 steps")).toBeInTheDocument();
+    expect(open("3 steps")).toBe(true);
+    expect(within(task(3)).getByText("2 steps")).toBeInTheDocument();
+    expect(open("2 steps")).toBe(false);
+  });
+
+  it("closes every guide once a decrypted request says the job is over", () => {
+    draw({ reach: ARMED, traffic: capturing });
+    pick("iPhone or iPad");
+
+    expect(open("3 steps")).toBe(false);
+    expect(open("2 steps")).toBe(false);
   });
 });
 
@@ -782,6 +862,82 @@ test("no step reports itself done — every state on the screen has a source", (
   expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first request");
   expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
   expect(document.body.textContent).not.toMatch(/done — /);
+});
+
+// ── What a command is, and where it sits ───────────────────────────────────
+// A command is carried to a terminal whole; a value is typed into the field
+// the sentence beside it names. Two readings, so two renderings.
+
+describe("a command is a block, not a phrase inside a sentence", () => {
+  it("leaves the sentence that introduces it and takes a surface of its own", () => {
+    draw();
+    fireEvent.click(screen.getByText("do it manually"));
+
+    const block = commandNamed("the trust command");
+    expect(block).toHaveTextContent("security add-trusted-cert");
+    expect(block).not.toHaveTextContent("Run it in a terminal:");
+    expect(screen.getByText("Run it in a terminal:")).toBeInTheDocument();
+    expect(block.className).toContain("bg-canvas-soft");
+  });
+
+  it("is wire data in the mono family, whole and uncut", () => {
+    draw();
+    fireEvent.click(screen.getByText("do it manually"));
+
+    const code = commandNamed("the trust command").querySelector("[data-wire]")!;
+    expect(code).toHaveAttribute("data-wire", "shell command");
+    expect(code.className).toContain("font-mono");
+    expect(code.textContent).toBe(
+      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+    );
+  });
+
+  it("the try-it command is a command too, block and all", () => {
+    draw();
+
+    const block = commandNamed("the try-it command");
+    expect(block).toHaveTextContent("curl -x http://127.0.0.1:9999 https://example.com");
+    expect(block.className).toContain("bg-canvas-soft");
+    expect(screen.getByText("or run this in a terminal")).toBeInTheDocument();
+  });
+
+  it("a value stays in the sentence that says which field it goes in", () => {
+    draw();
+    pick("Android emulator");
+
+    const host = screen.getByRole("button", { name: /copy the emulator's host/i });
+    expect(host).toHaveTextContent("10.0.2.2");
+    expect(host.closest("li")).toHaveTextContent("Server");
+    expect(host.closest("li")).toHaveTextContent("port");
+  });
+
+  it("a caveat is a line under the steps, and never one of them", () => {
+    draw();
+    pick("Android emulator");
+
+    const android =
+      "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
+    expect(screen.getAllByTestId("guide-note").map((note) => note.textContent)).toContain(android);
+    const steps = within(task(1)).getAllByRole("listitem");
+    expect(steps.map((step) => step.textContent).join(" ")).not.toContain("Apps targeting Android");
+  });
+
+  it("a second way in is behind its own summary, closed", () => {
+    draw();
+    pick("Android emulator");
+
+    expect(screen.getByText("other ways")).toBeInTheDocument();
+    expect(open("other ways")).toBe(false);
+    expect(commandNamed("the emulator command")).toHaveTextContent("emulator -avd");
+  });
+});
+
+test("the reading column answers to the window, not to a dialog", () => {
+  const { container } = draw();
+  const column = container.firstElementChild!.firstElementChild!;
+
+  expect(column.className).toContain("max-w-reading");
+  expect(column.className).not.toContain("max-w-dialog-max");
 });
 
 test("the column scrolls whole — no zone holds an inner scroller", () => {
