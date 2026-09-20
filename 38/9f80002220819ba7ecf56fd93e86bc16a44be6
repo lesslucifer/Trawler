@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 389f80002220819ba7ecf56fd93e86bc16a44be6
+base: dcf0f7a581031f3616ff570f3a3301fe2d624150
+tier: key
+signer: vuluu
+report: docs/work/2026-09-20-onboard-p0-and-reading-round-result.html
+report_sha256: 7f8a7b6af1fd1bcb1738a7022a8924188cca9f77903a6f1ca71f7b3a943af19d
+date: 2026-09-20
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECtgtb162JU3MXWXZEKj9EoUezReEFYnA4ZyYUdQPtc1PXacc2pQXS0A7
+  9ugCLeZriXYmpnfPR3wtYIXnHWF0wG
+  -----END SSH SIGNATURE-----
