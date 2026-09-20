@@ -48,11 +48,13 @@
           <td><code>Onboarding.test.tsx</code> — the invariant asserted over all eight platforms, plus a
             phone's steps read without opening anything</td></tr>
         <tr><td><strong>F11</strong></td><td><code>GET /reach</code> answers best-first: the address the
-          routing table would send from, then any other IPv4, then stable IPv6, then temporary — each
-          device named the way macOS names it. The screen offers the first and puts the rest behind
-          <em>other addresses</em></td>
-          <td><code>src/reach.rs</code> — six unit tests over the ordering and the two parsers ·
-            <code>Onboarding.test.tsx</code> — the offer, the disclosure and the pick</td></tr>
+          routing table would send from, then any other IPv4, then IPv6. The shell says what the host's
+          owner calls each device and the screen applies it; the screen offers the first address and puts
+          the rest behind <em>other addresses</em></td>
+          <td><code>src/reach.rs</code> — four unit tests over the ordering ·
+            <code>setup.rs</code> (shell) — three over the naming ·
+            <code>Onboarding.test.tsx</code> — the offer, the disclosure and the pick ·
+            <code>App.test.tsx</code> — the naming seam, and a shell that cannot answer</td></tr>
         <tr><td><strong>F13</strong></td><td>A refused confirm resolves the same <em>nothing happened</em>
           outcome a cancelled save uses, and the note says what is still true. A yes still says nothing —
           the verdict one line above does</td>
@@ -124,7 +126,21 @@
           <td>The P0 half had to make the shipped screen true — it is what a user meets until W5 lands —
             and the reading round then moved those facts into each task's state. Both are correct in
             sequence; W5 removes the lead and keeps the resolver, which is where the count comes from</td></tr>
-        <tr><td>6</td><td><strong>A gate gap found and fixed in passing.</strong> W2's close row cited no
+        <tr><td>6</td><td><strong>The interface naming left the core, at the review's insistence.</strong>
+          The plan said <code>src/reach.rs</code>; the naming now lives in the shell, and with it went the
+          temporary-IPv6 sink</td>
+          <td>The round's three importants were one root: <code>interfaces()</code> shelled out to
+            <code>networksetup</code> and <code>ifconfig</code> from the core — the mechanism this epic's
+            own W1 recorded as rejected under
+            <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> when it took
+            <code>if-addrs</code> instead, and the only exec of an OS binary anywhere in the core — and it
+            ran both subprocesses synchronously, without a timeout, inside the three async
+            <code>/reach</code> handlers. The review's own F11 row had offered both homes
+            (<em>src/reach.rs or the shell for interface names</em>); the shell is the one the project's
+            record allows. The temporary/stable IPv6 flag is the host's to print, so it goes with the
+            shell-out that read it — and the core now says in its own words why it ranks IPv6 no
+            finer</td></tr>
+        <tr><td>7</td><td><strong>A gate gap found and fixed in passing.</strong> W2's close row cited no
           contract in <code>&lt;code&gt;</code>, which <code>review·recorded</code> refuses</td>
           <td><code>verify-doc</code> skips an archived doc, and a close commit flips the status and writes
             the close row together — so the row that records the close is the one edit the checks never
@@ -149,27 +165,75 @@
           platform</td></tr>
         <tr><td><code>a00f804</code></td><td>round 4 — the run re-opened and read</td></tr>
         <tr><td><code>865cf48</code></td><td>the close — archived, and the blob W5 cites</td></tr>
+        <tr><td><code>af44c05</code></td><td>this result, as the first round read it</td></tr>
+        <tr><td><code>6fbef1e</code></td><td>the review round's fixes — one blocker, three importants,
+          three nits</td></tr>
+      </table>
+
+      <h3 id="review-round">The review round</h3>
+      <p>Three finders over the diff's code paths, five verifier judgments, Gate 0 green. Round 1
+        <strong>failed</strong>, which is the point of running it.</p>
+      <table data-c="review-findings">
+        <tr><th>Severity</th><th>Finding</th><th>What the fix changed</th></tr>
+        <tr><td><strong>blocker</strong></td><td>The header chip's <em>stop</em> passed the raw async
+          handler as <code>onClick</code>: a rejected <code>DELETE /reach</code> was an unhandled rejection
+          nobody saw, the button stayed live while the call ran, and the click left no trace — on the
+          control that ends this machine's exposure to the network. <code>Button</code>'s TSDoc states the
+          contract (fork D4), and the same action honours it one file away</td>
+          <td><code>useAction</code> moved to a module of its own so the two call sites cannot drift, and
+            the chip runs through it: disabled in flight with a line beside it, and a failure that says the
+            exposure is still there. Both regression tests were written before the fix</td></tr>
+        <tr><td><strong>important</strong></td><td><code>interfaces()</code> shelled out to
+          <code>networksetup</code> and <code>ifconfig</code> from the core — the mechanism W1 recorded as
+          rejected under DEC-13, and the only exec of an OS binary in the core. Off macOS both calls
+          degraded to silence, taking the naming and the ordering's IPv6 rule with them</td>
+          <td>The naming moved to the shell, beside the <code>networksetup</code> calls already there, and
+            the screen applies it</td></tr>
+        <tr><td><strong>important</strong></td><td>Both subprocesses ran synchronously inside the three
+          async <code>/reach</code> handlers with no <code>spawn_blocking</code>, stalling a worker thread
+          of the one runtime that also drives the proxy — rubric P2, and the shape a prior round on this
+          same file already fixed for <code>ca::load_or_create</code></td>
+          <td>Resolved by the same move: the core spawns nothing</td></tr>
+        <tr><td><strong>important</strong></td><td>Neither <code>Command::output()</code> carried a
+          timeout, and no async timeout could preempt a blocking call with no await inside it</td>
+          <td>Resolved by the same move</td></tr>
+        <tr><td>nit</td><td>The two subprocesses ran sequentially</td><td>Its subject stopped
+          existing</td></tr>
+        <tr><td>nit</td><td><code>precedence()</code> consulted the routed-from set only for IPv4, so the
+          IPv6 probe was computed and never read</td>
+          <td>The IPv6 probe is gone, and the doc comment says why ranking IPv6 by the routing table would
+            answer with the rotating address — which is what a privacy address is for</td></tr>
+        <tr><td>nit</td><td><code>stepsDetail</code> templated probe-derived words inside the screen, away
+          from its siblings</td><td>Moved to <code>verdicts.ts</code> with its own test</td></tr>
       </table>
       <table data-c="tests">
         <tr><th>Level</th><th>Added</th><th>Suite at the tip</th></tr>
-        <tr><td>unit · core</td><td><code>src/reach.rs</code> +6 — the ordering's three rules, the
-          hardware-port parser and its empty case, the temporary-address parser</td>
-          <td><strong>316</strong> Rust tests green</td></tr>
-        <tr><td>unit · front end</td><td><code>setup.test.ts</code> +4 · <code>verdicts.test.ts</code> +3 ·
+        <tr><td>unit · core</td><td><code>src/reach.rs</code> +3 — the routed-from address leads, IPv4
+          outranks IPv6, and IPv6 keeps a stable order below every IPv4. <code>ui/src-tauri</code> +3 —
+          the hardware-port parser, a listing that names nothing, and the three hosts that are never
+          asked</td>
+          <td><strong>313</strong> core + <strong>27</strong> shell tests green</td></tr>
+        <tr><td>unit · front end</td><td><code>setup.test.ts</code> +4 · <code>verdicts.test.ts</code> +4 ·
           <code>Onboarding.test.tsx</code> +11 — and three existing assertions re-pointed at the corrected
           sentences</td>
-          <td rowspan="2"><strong>1010</strong> Vitest tests green in 53 files · eslint and
+          <td rowspan="2"><strong>1015</strong> Vitest tests green in 53 files · eslint and
             <code>tsc</code> clean</td></tr>
-        <tr><td>integration</td><td><code>App.test.tsx</code> +2 — the chip in both phases with its disarm,
-          and the unarmed silence; the refusal assertion added to the existing confirm seam</td></tr>
+        <tr><td>integration</td><td><code>App.test.tsx</code> +6 — the chip in both phases with its disarm
+          and the unarmed silence; a stop that fails and one in flight (the round's blocker, written
+          first); the naming seam and a shell that cannot answer; plus the refusal assertion added to the
+          existing confirm seam</td></tr>
         <tr><td>e2e</td><td colspan="2">none, and not waived here — the epic owes one and
           <a href="2026-09-07-onboarding-redesign-plan.html#w6">W6</a> writes it against the screen W5
           leaves. <code>test/v2</code> records it as the epic's, per the charter's additive rule</td></tr>
       </table>
       <table data-c="files">
         <tr><th>Touched</th><th>What moved</th></tr>
-        <tr><td><code>src/reach.rs</code></td><td>+185 — the ordering rule, the routed-from probe, two host
-          parsers, six tests</td></tr>
+        <tr><td><code>src/reach.rs</code></td><td>the ordering rule, the routed-from probe and its tests —
+          and, after the review, nothing that asks the OS for a tool</td></tr>
+        <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>the interface naming, beside the
+          <code>networksetup</code> calls already there</td></tr>
+        <tr><td><code>ui/src/useAction.ts</code></td><td>new — the action hook both call sites now
+          share</td></tr>
         <tr><td><code>ui/src/setup.ts</code></td><td>the platform's two probe facts; the Simulator's guide
           and its routing</td></tr>
         <tr><td><code>ui/src/Onboarding.tsx</code></td><td>the per-precondition action value, the collapse
@@ -226,10 +290,12 @@
           flips the status together — which is how W2's close row shipped citing no contract. Either the
           close runs the checks before the flip, or <code>archived</code> keeps them on</td>
           <td>a workflow/xtask WU — not this epic's</td></tr>
-        <tr><td><strong>The temporary-IPv6 flag is read from the host that prints it.</strong> A host that
-          does not — every non-macOS one, today — sorts its IPv6 addresses by the rest of the rule, which
-          still keeps every IPv4 above them. An IPv6-only Linux host could still be offered a rotating
-          address first</td><td>backlog row, W6</td></tr>
+        <tr><td><strong>Nothing sinks a rotating IPv6 any more.</strong> The flag that says which of a
+          host's IPv6 addresses rotates is the host's to print, and the core may not ask it — so the
+          ordering keeps every IPv4 above every IPv6 and ranks IPv6 no finer. A dual-stack host is safe by
+          that rule alone; an IPv6-only host can still be offered a privacy address that expires under
+          whoever typed it. The shell may read the flag the way it now reads the names</td>
+          <td>backlog row, W6</td></tr>
         <tr><td><strong>The P2 set</strong> — QR codes, <em>Test now</em>, the glyph legend, the undo
           collapse and the rest — is unchanged by this WU and still W6's backlog</td>
           <td><a href="2026-09-07-onboarding-redesign-plan.html#w6">W6</a></td></tr>
