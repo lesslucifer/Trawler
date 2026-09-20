@@ -265,6 +265,10 @@
           tiles it gained a day ago</td></tr>
         <tr><td><code>0b1a475</code></td><td>the screen — one control, the window's width, and one
           guide open at a time</td></tr>
+        <tr><td><code>09c0963</code></td><td>this plan and result, as the window round read them
+          before its own review</td></tr>
+        <tr><td><code>8198e3e</code></td><td>the window round's review answer — the one-guide rule
+          over every platform, and the comment its second arm earned</td></tr>
       </tbody>
     </table>
 
@@ -314,8 +318,11 @@
             <code>Onboarding.test.tsx</code> +14 — the picker's eight options and its held width, the
             open-guide rule per platform and once a request has decrypted, a command as a block and a
             value inside its sentence, and the column's class. <s><code>ChoiceTiles.test.tsx</code>
-            −9</s>, with the entry</td>
-          <td>1108 Vitest tests green in 55 files (was 1065 in 55) · <code>eslint</code>,
+            −9</s>, with the entry. Then <strong>+25 from the round's own review</strong>: the
+            one-guide rule as an invariant over all eight platforms rather than the two the cases
+            above walk — at most one guide open, the open one the first, a guide a button already
+            answers never the open one, and none open once a request has decrypted</td>
+          <td>1133 Vitest tests green in 55 files (was 1065 in 55) · <code>eslint</code>,
             <code>tsc</code> and the closed-vocabulary rule clean · 0 live
             <code>design-allow</code> suppressions</td></tr>
         <tr><td><strong>e2e</strong></td>
@@ -364,12 +371,20 @@
       </tbody>
     </table>
 
-    <h2 id="review">The review round</h2>
+    <h2 id="review">The review rounds</h2>
 
     <p>Three finders over the diff's code paths each round, Gate 0 green beside them.
-      <strong>Rounds 1 and 2 both failed</strong>, which is the point of running them — and what each
-      caught is the epic's own class of defect, found in the WU whose whole subject is what the screen
-      is entitled to claim.</p>
+      <strong>Eight rounds in two series.</strong> Rounds 1 to 6 judged the first half and are below
+      as they were written. Rounds 7 and 8 judged the whole unit again after the window round, because
+      the note binds the range whole and a verdict bound to <code>aeb39e3</code> says nothing about
+      bytes that landed after it.</p>
+
+    <p class="kd"><strong>The two series found different things, and the difference is the
+      point.</strong> The first half's six rounds found five real defects, every one of them a
+      sentence the screen was not entitled to say. The window round's two rounds found none: it moved
+      no claim, only how much of the screen says them at once, so there was no new claim to be wrong
+      about. What the second series did produce is a test — see round 7 — which is what a round is
+      worth when it finds nothing.</p>
 
     <table data-c="rounds">
       <thead><tr><th>Round</th><th>Fleet</th><th>Verdict</th></tr></thead>
@@ -386,8 +401,68 @@
           one important (the last corner of round 3's expression), one refuted</td></tr>
         <tr><td>6</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>PASS</strong> —
           the candidate refuted; efficiency and altitude empty</td></tr>
+        <tr><td colspan="3"><strong>The owner reads the gated tip at the window.</strong> The design of
+          record re-opens for round 5, three commits land, and the review starts again over the whole
+          range</td></tr>
+        <tr><td>7</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>PASS</strong> —
+          the candidate refuted; efficiency and altitude empty. Superseded by choice, not by a
+          defect: the verifier named a coverage gap on its way past and closing it moved the
+          code</td></tr>
+        <tr><td>8</td><td>3 finders, 1 candidate, 1 verifier agent ·
+          finders 1161s, verifier 467s</td><td><strong>PASS</strong> — the candidate refuted at
+          <em>nit</em>; efficiency and altitude empty. This is the round the <code>cr/v5</code>
+          note records</td></tr>
       </tbody>
     </table>
+
+    <table data-c="window-rounds">
+      <thead><tr><th>Round</th><th>What was raised</th><th>What came of it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>7</strong> — refuted</td>
+          <td>The route task's guide never auto-opens on the Android emulator, or on the Simulator
+            where the host has no one-click path, so its numbered instructions stay collapsed under a
+            count until the user clicks — proposed as a regression from the pre-diff guide, which
+            rendered every action-less guide expanded</td>
+          <td>The verifier traced the mechanism, agreed it is exactly what happens, and refuted the
+            conclusion: collapsing the second guide <em>is</em> the change the owner asked for, stated
+            in three places — the run's round 5, the comment above the rule, and the plan's
+            requirement 14 — and the identical shape is already asserted as intended for the phone.
+            Reverting it would undo the round's purpose. It also noted the pre-diff behaviour the
+            claim called a baseline is the wall of text F10 was written about</td></tr>
+        <tr><td><strong>7</strong> — the residual, and what it cost</td>
+          <td>On its way past, the same verifier named a coverage gap: the one-guide rule is stated
+            per platform and was asserted on two of eight</td>
+          <td><strong>Closed rather than recorded.</strong> This WU's own review round 5 caught a
+            regression test that held one input still and so exercised only one arm of the expression
+            it was pinning; a rule checked on a quarter of its domain is the same shape. The invariant
+            replaces the two cases: over all eight platforms, at most one guide open, the open one the
+            first, a guide a button already answers never the open one, and none open once a request
+            has decrypted. Writing it settled a stronger fact than either agent had claimed — see the
+            row below</td></tr>
+        <tr><td><strong>8</strong> — refuted</td>
+          <td>The new invariant never drives the rule's second arm, because its helper holds the trust
+            probe at <em>untrusted</em> and no test anywhere pairs a rendered trust guide with a trust
+            state reading done — so narrowing that guard would pass the whole suite silently</td>
+          <td>Mechanically accurate and refuted on what follows from it. The branch cannot execute in
+            the shipped app: the two guides are always both present or both absent, so the route's
+            turn needs a trust task reading done while its own steps still render — and the only host
+            that renders them is one with no one-click path, where the native probe answers for no
+            store at all. Two agents traced that independently, through the platform table, the
+            host-capability flag and the Rust probe's own match arms, and reached it separately from
+            the commit that claims it. Judged <em>nit</em> at most if it were real: nothing observable
+            changes and nothing drifts, because nothing can reach it. The arm stays and the comment
+            says why, which is the disposition the code carries</td></tr>
+      </tbody>
+    </table>
+
+    <p class="kd"><strong>What the second series did not settle.</strong> The refutation in round 8
+      leaned partly on the fix commit's own message having anticipated the finding — which is an
+      author's argument, not an independent one, and is recorded here rather than relied on. What
+      carries the verdict is the trace: the altitude finder and the verifier each derived the
+      unreachability from the code alone, and the two derivations agree with each other and with the
+      comment. The day a trust probe answers on a host with no one-click path, that branch executes in
+      production for the first time and the change that ships it owes it a test — which is an
+      obligation on that change, not a debt this one is carrying.</p>
 
     <table data-c="review">
       <thead><tr><th>Severity</th><th>Finding</th><th>What the fix changed</th></tr></thead>
@@ -450,7 +525,9 @@
             bug still in</td></tr>
         <tr><td>nit</td>
           <td><code>useNow</code> is instantiated by two leaves at once, so two one-second intervals run
-            where one clock would do</td>
+            where one clock would do. <strong>Carried onto the <code>cr/v5</code> note the window
+            round wrote</strong>, because that note binds the code this nit is about and a wider
+            re-binding may not drop a recorded decision in silence</td>
           <td><strong>Waived.</strong> The duplication is how the re-render scope is achieved: the tick
             lives in each leaf that reads the traffic layer precisely so it reaches neither the
             instructions nor the tiles, which is the invariant the epic's row 7 asserts. The count is
@@ -588,6 +665,13 @@
         <tr><td>A device that cannot paste: the certificate URL, the server and the port are still typed
           by hand on a phone. The review filed QR codes as P2 and the epic keeps them there</td>
           <td>W6's backlog rows</td></tr>
+        <tr><td><strong>The open-guide rule's second arm executes in production for the first time the
+          day a trust probe answers on a host with no one-click path.</strong> The comment above it
+          says so, and the invariant test does not reach it because nothing can. The change that ships
+          such a probe owes that path its test — an obligation on that change, not a debt this one
+          carries</td>
+          <td>whichever WU lands a trust probe beyond macOS and Windows — an open blocked-on row
+            against the control API</td></tr>
       </tbody>
     </table>
 
