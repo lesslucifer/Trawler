@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "Round 5 of the design of record - the owner's reading of the built screen at 1440x800, and the three instructions it returned. The mockup's column moves to max-w-reading, its eight tiles become one mounted Select on the question's own line, and its guides split into a numbered route, the caveats under it, a second route behind other ways and the way back behind its own summary - with one guide open, the first whose task is not done. TaskStep and CommandBlock are mounted from the collection rather than drawn, which retires the mockup's own unstyled pl-9 with the drawing that carried it. The copy table gains the summaries' wording and corrects the primary action's reversal to the half it performs; the keyboard item replaces the tiles' roving tabindex with Select's whole contract and adds the nested summaries; proposals gains CommandBlock and two tokens and records ChoiceTiles as WITHDRAWN with the reason; the review item carries the three instructions, what each moved, and the contract each hit. Archived again."
+  - path: "docs/work/2026-09-20-onboard-user-reading-plan.html"
+    tier: T3
+    action: updated
+    distills: "v2. The twelve P1 findings as a build, the two components the reading round proposed, the two blocked-on rows the P1 build inherits and what the shell owes each, the test plan at both levels and the order of work - plus the window round: the owner's three instructions with where each lands, four more expected-result rows (the column's width as a share of the window, the eight answers as one control, a command as a block and a value in its sentence, and one guide open at a time), the unit level for each, and the two P2 findings that move out of the not-here table with the reason each is one line of an edit round 5 was already making."
+  - path: "docs/work/2026-09-20-onboard-user-reading-result.html"
+    tier: T3
+    action: updated
+    distills: "v2. What shipped against the plan's rows in both halves; eleven deviations - chief among them the install button reachable in no state of the screen the design renders, the end-of-setup sentence that names this machine because a decrypted request never says which device sent it, a registry component built and withdrawn inside one Working Unit, two P2 findings taken early at the owner's word, a second token the plan did not foresee, and the mockup mounting what it used to draw; the evidence; what each suite gained; the rows W6's restatement of UC-ONBOARD reads, now including the picker restated and the two contract gaps the window round fills; the one blocked-on row the build could not close; and the review rounds themselves."
+t2_waived: "UC-ONBOARD's restatement and the run's two lexicon proposals are W6's distillation items, named in the epic's distillation plan and deferred there by W4 for the reason that still holds: a contract restated against a screen the epic is still closing around is a contract written twice. This WU's distillation section is the source that restatement reads, and the window round added three rows to it. The two new components' contracts live where DEC-16 puts them - in their own TSDoc, which is the retired design file, so writing them into a T2 doc would put one fact in two tiers. The window round adds no lexicon entry and no rulebook row, which the result records as a statement rather than an omission: every word it put on screen is a summary of what is behind it and names nothing the app has a term for."
