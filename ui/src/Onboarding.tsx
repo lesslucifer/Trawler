@@ -7,7 +7,6 @@ import {
   Disclosure,
   Notice,
   Section,
-  SegmentedControl,
   Select,
   Spinner,
   StatusLine,
@@ -114,10 +113,6 @@ const SAVECA_NOTE: ActionNotes = {
   nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
-
-// SegmentedControl refuses more than four options and Select refuses fewer than
-// five; a single address is no choice at all, so the action names it instead.
-const SEGMENT_MAX = 4;
 
 function useAction(run?: () => Promise<string | null | void>) {
   const [state, setState] = useState<ActionState>("idle");
@@ -477,6 +472,14 @@ function Precondition({
   );
 }
 
+const addressLabel = (address: ReachState["interfaces"][number]) =>
+  `${address.name} · ${address.address}`;
+
+// The core answers this list best-first — the address the host routes from,
+// IPv4 before IPv6, nothing that rotates above something that does not. So one
+// address is the offer and the rest are a disclosure: a user typing a proxy
+// into a phone by hand reads one line, and the four-way control that could not
+// hold a 39-character IPv6 label is gone.
 function AddressChoice({
   addresses,
   value,
@@ -487,30 +490,32 @@ function AddressChoice({
   onChange: (address: string) => void;
 }) {
   if (addresses.length < 2) return null;
-  const options = addresses.map((i) => ({
-    value: i.address,
-    label: `${i.name} · ${i.address}`,
-  }));
+  const chosen = addresses.find((address) => address.address === value);
+  const others = addresses.filter((address) => address.address !== value);
   return (
     <>
       <p className={`pt-3 ${ZONE_LABEL}`}>listen on</p>
-      <div className="pt-2">
-        {addresses.length <= SEGMENT_MAX ? (
-          <SegmentedControl
-            options={options}
-            value={value}
-            onChange={onChange}
-            ariaLabel="address to listen on"
-          />
-        ) : (
-          <Select
-            options={options.map((o) => ({ id: o.value, label: o.label }))}
-            value={value}
-            onChange={onChange}
-            label="address to listen on"
-          />
-        )}
-      </div>
+      <p data-testid="listen-on" className="pt-2 font-ui text-body text-ink-body">
+        {chosen && addressLabel(chosen)}
+      </p>
+      {others.length > 0 && (
+        <div className="pt-2">
+          <Disclosure summary="other addresses">
+            <div className="flex flex-col items-start">
+              {others.map((address) => (
+                <Button
+                  key={address.address}
+                  frame="bare"
+                  tone="mute"
+                  onClick={() => onChange(address.address)}
+                >
+                  {addressLabel(address)}
+                </Button>
+              ))}
+            </div>
+          </Disclosure>
+        </div>
+      )}
     </>
   );
 }

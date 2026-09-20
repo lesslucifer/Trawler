@@ -317,7 +317,10 @@ describe("an off-machine platform once reach is armed", () => {
   });
 });
 
-describe("the address to listen on is a choice over what the host holds", () => {
+// F11: four choices, three of them rotating IPv6 addresses, in a control that
+// overflowed its column. The core now answers best-first, so the screen offers
+// the first one and keeps the rest where a user who wants them can find them.
+describe("the address to listen on is one offer, with the rest behind it", () => {
   const withInterfaces = (count: number) =>
     draw({
       reach: {
@@ -332,31 +335,28 @@ describe("the address to listen on is a choice over what the host holds", () => 
   it("offers no control for one address — the action names it instead", () => {
     withInterfaces(1);
     choose("iPhone or iPad");
-    expect(screen.queryByRole("radiogroup", { name: "address to listen on" })).toBeNull();
+    expect(zone("listen-on")).toBeNull();
     expect(
       screen.getByRole("button", { name: "let devices reach Trawler at 10.0.0.1" }),
     ).toBeInTheDocument();
   });
 
-  it.each([2, 4])("offers %i addresses as a segment group, all visible", (count) => {
+  it.each([2, 5])("offers the first of %i, named, and hides the others", (count) => {
     withInterfaces(count);
     choose("iPhone or iPad");
-    const group = screen.getByRole("radiogroup", { name: "address to listen on" });
-    expect(within(group).getAllByRole("radio")).toHaveLength(count);
-  });
-
-  it("offers five as a Select, which is where the segment group stops", () => {
-    withInterfaces(5);
-    choose("iPhone or iPad");
-    expect(screen.queryByRole("radiogroup", { name: "address to listen on" })).toBeNull();
-    expect(screen.getByRole("button", { name: "address to listen on" })).toBeInTheDocument();
+    expect(zone("listen-on")).toHaveTextContent("if0 · 10.0.0.1");
+    const others = screen.getByText("other addresses").closest("details");
+    expect(within(others!).getAllByRole("button")).toHaveLength(count - 1);
+    expect(within(others!).getByRole("button", { name: "if1 · 10.0.0.2" })).toBeInTheDocument();
   });
 
   it("arms the address the user picked, not the one that happened to be first", () => {
     const onArmReach = vi.fn(async () => {});
     draw({ reach: UNARMED, onArmReach });
     choose("iPhone or iPad");
-    fireEvent.click(screen.getByRole("radio", { name: "Ethernet · 10.0.4.7" }));
+    fireEvent.click(screen.getByText("other addresses"));
+    fireEvent.click(screen.getByRole("button", { name: "Ethernet · 10.0.4.7" }));
+    expect(zone("listen-on")).toHaveTextContent("Ethernet · 10.0.4.7");
     fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
     expect(onArmReach).toHaveBeenCalledWith("10.0.4.7");
   });

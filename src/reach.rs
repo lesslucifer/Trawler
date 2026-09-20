@@ -6,9 +6,11 @@
 //! connection. Nothing here is persisted: the listeners live in the process, so
 //! an opt-in cannot outlive the session that confirmed it (DEC-55).
 
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::io;
-use std::net::{IpAddr, Ipv6Addr, SocketAddr};
+use std::net::{IpAddr, Ipv6Addr, SocketAddr, UdpSocket};
+use std::process::Command;
 use std::sync::Arc;
 
 use axum::Router;
@@ -80,18 +82,122 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-/// The addresses a device elsewhere on the network could actually route to.
-/// Loopback answers only this machine and a link-local address needs a zone
-/// index nobody is going to type, so neither is offered as a choice.
+/// The addresses a device elsewhere on the network could actually route to,
+/// best first. Loopback answers only this machine and a link-local address
+/// needs a zone index nobody is going to type, so neither is offered as a
+/// choice. What is offered is ordered and named for the person who has to type
+/// one of these into a phone by hand: the kernel's order and the kernel's
+/// device names are both answers to a different question.
 pub fn interfaces() -> Vec<Interface> {
+    let ports = hardware_ports();
+    let temporary = temporary_addresses();
+    let routed = routed_from();
     let mut found: Vec<Interface> = if_addrs::get_if_addrs()
         .unwrap_or_default()
         .into_iter()
         .filter(|interface| routable(interface.ip()))
-        .map(|interface| Interface { address: interface.ip(), name: interface.name })
+        .map(|interface| Interface {
+            address: interface.ip(),
+            name: ports.get(&interface.name).cloned().unwrap_or(interface.name),
+        })
         .collect();
-    found.sort_by(|a, b| a.name.cmp(&b.name).then(a.address.cmp(&b.address)));
+    order(&mut found, &routed, &temporary);
     found
+}
+
+fn order(found: &mut [Interface], routed: &[IpAddr], temporary: &HashSet<IpAddr>) {
+    found.sort_by(|a, b| {
+        precedence(a.address, routed, temporary)
+            .cmp(&precedence(b.address, routed, temporary))
+            .then(a.name.cmp(&b.name))
+            .then(a.address.cmp(&b.address))
+    });
+}
+
+/// Lower is offered first. The address this host actually sends from leads,
+/// because it is the one a device on the same network can reach; IPv4 comes
+/// next, because a phone's proxy field takes it; and a temporary IPv6 comes
+/// last, because it rotates out from under whoever typed it.
+fn precedence(address: IpAddr, routed: &[IpAddr], temporary: &HashSet<IpAddr>) -> u8 {
+    match address {
+        IpAddr::V4(_) if routed.contains(&address) => 0,
+        IpAddr::V4(_) => 1,
+        IpAddr::V6(_) if !temporary.contains(&address) => 2,
+        IpAddr::V6(_) => 3,
+    }
+}
+
+/// Which address the routing table would send from, asked without sending
+/// anything: a connected UDP socket picks the route and binds a source, and the
+/// destinations are the documentation ranges, which route nowhere. No route,
+/// no answer - and then the rest of the ordering decides.
+fn routed_from() -> Vec<IpAddr> {
+    ["203.0.113.1:9", "[2001:db8::1]:9"]
+        .iter()
+        .filter_map(|destination| source_address(destination))
+        .collect()
+}
+
+fn source_address(destination: &str) -> Option<IpAddr> {
+    let local = if destination.starts_with('[') { "[::]:0" } else { "0.0.0.0:0" };
+    let socket = UdpSocket::bind(local).ok()?;
+    socket.connect(destination).ok()?;
+    Some(socket.local_addr().ok()?.ip())
+}
+
+/// macOS is the one host that can say what its user calls a device: `en1` is
+/// "Wi-Fi" in the same Settings pane the user will go to next. Everywhere else
+/// the device name stands, because it is the only name there is.
+fn hardware_ports() -> HashMap<String, String> {
+    Command::new("networksetup")
+        .arg("-listallhardwareports")
+        .output()
+        .ok()
+        .filter(|listing| listing.status.success())
+        .map(|listing| parse_hardware_ports(&String::from_utf8_lossy(&listing.stdout)))
+        .unwrap_or_default()
+}
+
+fn parse_hardware_ports(listing: &str) -> HashMap<String, String> {
+    let mut ports = HashMap::new();
+    let mut port: Option<&str> = None;
+    for line in listing.lines() {
+        if let Some(name) = line.strip_prefix("Hardware Port:") {
+            port = Some(name.trim());
+        } else if let Some(device) = line.strip_prefix("Device:") {
+            if let Some(name) = port.take() {
+                ports.insert(device.trim().to_owned(), name.to_owned());
+            }
+        }
+    }
+    ports
+}
+
+/// An IPv6 privacy address is replaced every day or so, which is exactly what a
+/// user must not type into a device's settings. `if_addrs` does not carry the
+/// flag; the host prints it beside the address.
+fn temporary_addresses() -> HashSet<IpAddr> {
+    Command::new("ifconfig")
+        .arg("-a")
+        .output()
+        .ok()
+        .filter(|listing| listing.status.success())
+        .map(|listing| parse_temporary(&String::from_utf8_lossy(&listing.stdout)))
+        .unwrap_or_default()
+}
+
+fn parse_temporary(listing: &str) -> HashSet<IpAddr> {
+    listing
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.trim().strip_prefix("inet6 ")?.split_whitespace();
+            let address = fields.next()?;
+            if !fields.any(|flag| flag == "temporary") {
+                return None;
+            }
+            address.split('%').next()?.parse().ok()
+        })
+        .collect()
 }
 
 fn routable(address: IpAddr) -> bool {
@@ -277,6 +383,73 @@ mod tests {
         assert!(!routable(v4(169, 254, 3, 9)));
         assert!(!routable("::1".parse().unwrap()));
         assert!(!routable("fe80::1".parse().unwrap()));
+    }
+
+    fn on(name: &str, address: &str) -> Interface {
+        Interface { name: name.to_owned(), address: address.parse().expect("address") }
+    }
+
+    fn ordered(found: &[Interface], routed: &[IpAddr], temporary: &[IpAddr]) -> Vec<String> {
+        let mut found = found.to_vec();
+        order(&mut found, routed, &temporary.iter().copied().collect());
+        found.into_iter().map(|interface| interface.address.to_string()).collect()
+    }
+
+    // The failure this ordering exists to prevent: the screen offered the first
+    // address the kernel listed, which was a rotating IPv6 on an interface named
+    // en1 - four choices deep, and wrong in a phone's proxy field.
+    #[test]
+    fn the_address_this_host_sends_from_is_offered_first() {
+        let found = [
+            on("Wi-Fi", "2001:db8::c0d"),
+            on("Thunderbolt Bridge", "10.9.9.1"),
+            on("Wi-Fi", "192.168.0.105"),
+        ];
+        let routed = ["192.168.0.105".parse().expect("address")];
+
+        assert_eq!(ordered(&found, &routed, &[]), ["192.168.0.105", "10.9.9.1", "2001:db8::c0d"]);
+    }
+
+    #[test]
+    fn a_host_with_no_route_still_offers_its_ipv4_before_its_ipv6() {
+        let found = [on("Wi-Fi", "2001:db8::1"), on("Wi-Fi", "192.168.0.105")];
+
+        assert_eq!(ordered(&found, &[], &[]), ["192.168.0.105", "2001:db8::1"]);
+    }
+
+    #[test]
+    fn a_temporary_ipv6_is_offered_below_the_stable_one_it_rotates_behind() {
+        let found = [on("Wi-Fi", "2001:db8::c0d"), on("Wi-Fi", "2001:db8::1")];
+        let temporary = ["2001:db8::c0d".parse().expect("address")];
+
+        assert_eq!(ordered(&found, &[], &temporary), ["2001:db8::1", "2001:db8::c0d"]);
+    }
+
+    #[test]
+    fn macos_names_a_device_the_way_the_pane_the_user_opens_next_names_it() {
+        let listing = "Hardware Port: Ethernet\nDevice: en0\nEthernet Address: a1:b2:c3:d4:e5:f6\n\nHardware Port: Wi-Fi\nDevice: en1\nEthernet Address: f6:e5:d4:c3:b2:a1\n\nVLAN Configurations\n===================\n";
+        let ports = parse_hardware_ports(listing);
+
+        assert_eq!(ports.get("en1").map(String::as_str), Some("Wi-Fi"));
+        assert_eq!(ports.get("en0").map(String::as_str), Some("Ethernet"));
+        assert_eq!(ports.get("bridge0"), None);
+    }
+
+    // A host that cannot say - every one that is not macOS, and a macOS that
+    // answered something else - keeps the only name it has.
+    #[test]
+    fn a_listing_that_names_nothing_renames_nothing() {
+        assert!(parse_hardware_ports("").is_empty());
+        assert!(parse_hardware_ports("eth0: flags=4163<UP,BROADCAST>\n").is_empty());
+    }
+
+    #[test]
+    fn only_the_addresses_the_host_flags_temporary_are_sunk() {
+        let listing = "en1: flags=8863<UP,BROADCAST,SMART,RUNNING>\n\tinet6 fe80::1c%en1 prefixlen 64 secured scopeid 0xc\n\tinet6 2001:db8::1 prefixlen 64 autoconf secured\n\tinet6 2001:db8::c0d prefixlen 64 autoconf temporary\n\tinet 192.168.0.105 netmask 0xffffff00 broadcast 192.168.0.255\n";
+        let temporary = parse_temporary(listing);
+
+        assert_eq!(temporary.len(), 1);
+        assert!(temporary.contains(&"2001:db8::c0d".parse::<IpAddr>().expect("address")));
     }
 
     #[test]
