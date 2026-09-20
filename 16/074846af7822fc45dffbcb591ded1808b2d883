@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-20-onboard-user-reading-plan.html"
+    tier: T3
+    action: added
+    distills: "The twelve P1 findings as a build, the two components the reading round proposed, the two blocked-on rows the P1 build inherits and what the shell owes each, the ten expected rows, the test plan at both levels and the order of work."
+  - path: "docs/work/2026-09-20-onboard-user-reading-result.html"
+    tier: T3
+    action: added
+    distills: "What shipped against those ten rows, the seven deviations — chief among them the install button reachable in no state of the screen the design renders, and the end-of-setup sentence that names this machine because a decrypted request never says which device sent it — the evidence, what each suite gained, the rows W6's restatement of UC-ONBOARD reads, and the one blocked-on row the build could not close - and the review round itself: the blocker round 1 found and the importants rounds 2 and 3 found - all three in the WU whose subject is what the screen is entitled to claim - the nit waived with its reason, and the five candidates the verifiers refuted."
+t2_waived: "UC-ONBOARD's restatement and the run's two lexicon proposals are W6's distillation items, named in the epic's distillation plan and deferred there by W4 for the reason that still holds: a contract restated against a screen the epic is still closing around is a contract written twice. This WU's distillation section is the source that restatement reads. The two new components' contracts live where DEC-16 puts them — in their own TSDoc, which is the retired design file, so writing them into a T2 doc would put one fact in two tiers."
