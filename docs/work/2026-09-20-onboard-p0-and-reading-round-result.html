@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aaf8f299f34851f0dfad2e0" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBOARD.W4 result: truth, and the reading round</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBOARD.W4 — result</h1>
+      <p>Eight false or unfollowable things left the setup screen, and the design of record re-opened,
+        was read as an end user reads it, and closed again around a shape W5 can build.</p>
+      <div class="meta">v1 · 2026-09-20 · Trawler · T3 (docs/work/) ·
+        branch <code>wu/onboarding-redesign/po-p0-and-reading-round</code> ·
+        plan <a href="2026-09-20-onboard-p0-and-reading-round-plan.html">E-ONBOARD.W4</a> ·
+        epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
+        answers <a href="2026-09-20-onboard-po-review.html">the PO review</a> ·
+        closed <a href="2026-09-17-onboarding-design-run.html">the design of record</a> at round 4</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered, both halves.</strong> The requirement asked that no sentence on the screen
+        claim something the app cannot know or point at instructions the user cannot reach, and that the
+        run re-open, be read, and close again. Nine commits: one plan, six for the eight P0 findings, two
+        for the round and its close.</p>
+      <table data-c="p0-outcome">
+        <tr><th>#</th><th>What the tip does now</th><th>Pinned by</th></tr>
+        <tr><td><strong>F14</strong></td><td>The Simulator's trust half says the store is its own and
+          gives Apple's route into it — save, <code>xcrun simctl keychain booted add-root-cert</code>,
+          restart — with the keychain reset as its reversal and what that reset costs said out loud. No
+          string in <code>ui/src/</code> claims this Mac's store covers it</td>
+          <td><code>setup.test.ts</code> — four assertions, including one that the old sentence is
+            absent</td></tr>
+        <tr><td><strong>F15</strong></td><td>A platform answers <em>per store</em>:
+          <code>probesTrust</code> is this machine alone, <code>probesRoute</code> is this machine and the
+          Simulator. The Simulator takes the routing verdict, the <em>set system proxy</em> action and the
+          host's own routing guide; its trust verdict is the un-probeable one</td>
+          <td><code>setup.test.ts</code> (the two facts, over all eight platforms) ·
+            <code>Onboarding.test.tsx</code> (three renderings)</td></tr>
+        <tr><td><strong>F10</strong></td><td>Each precondition resolves one value — the automatic action it
+          offers, or nothing — and the button and the collapse read it. A guide is behind
+          <em>set it up by hand</em> exactly where a button stands above it, and open and numbered
+          everywhere else</td>
+          <td><code>Onboarding.test.tsx</code> — the invariant asserted over all eight platforms, plus a
+            phone's steps read without opening anything</td></tr>
+        <tr><td><strong>F11</strong></td><td><code>GET /reach</code> answers best-first: the address the
+          routing table would send from, then any other IPv4, then stable IPv6, then temporary — each
+          device named the way macOS names it. The screen offers the first and puts the rest behind
+          <em>other addresses</em></td>
+          <td><code>src/reach.rs</code> — six unit tests over the ordering and the two parsers ·
+            <code>Onboarding.test.tsx</code> — the offer, the disclosure and the pick</td></tr>
+        <tr><td><strong>F13</strong></td><td>A refused confirm resolves the same <em>nothing happened</em>
+          outcome a cancelled save uses, and the note says what is still true. A yes still says nothing —
+          the verdict one line above does</td>
+          <td><code>Onboarding.test.tsx</code> (both outcomes) · <code>App.test.tsx</code> (no
+            <code>POST</code>, and the sentence)</td></tr>
+        <tr><td><strong>F20</strong></td><td>Reach is read whenever the app has a core, and the header
+          carries the address and the control that ends it — in setup and in the flow list alike</td>
+          <td><code>App.test.tsx</code> — both phases, the disarm, and the unarmed silence</td></tr>
+        <tr><td><strong>F16</strong></td><td>The lead's detail is a count resolved from the two probes, and
+          only where they both answer for the chosen platform: <em>1 step left on this machine</em>,
+          <em>open any website to see its traffic</em>, or nothing about them at all</td>
+          <td><code>verdicts.test.ts</code> (the resolver, including its refusals) ·
+            <code>Onboarding.test.tsx</code> (four renderings)</td></tr>
+        <tr><td><strong>F21</strong></td><td>The remedy names the device that is connecting and no
+          platform; the headline stops claiming to know which one it was</td>
+          <td><code>verdicts.test.ts</code> — the sentence, and that it matches no <em>platform</em> ·
+            <code>Onboarding.test.tsx</code> — neither element names one</td></tr>
+      </table>
+      <p><strong>The reading round.</strong> The run re-opened, gained a fourth review row, moved five of
+        its six items, and closed <code>data-status="archived"</code> with
+        <code>verify-doc</code> green on twelve hard rules. What it decided, on the record:</p>
+      <table data-c="decisions-outcome">
+        <tr><th>Re-opened</th><th>Settled</th></tr>
+        <tr><td>Not a wizard: no stepper, no numbering</td><td><strong>Split.</strong> No step ever reports
+          itself done — kept, and now a component's contract rather than a ban. Order is a reading aid —
+          round 1 had read <code>StepList</code>'s <code>@avoid</code> as a ban on numbering rather than as
+          a ban on unobserved claims</td></tr>
+        <tr><td>One <code>Select</code> as the only axis</td><td><strong>Axis kept, control replaced.</strong>
+          Eight tiles, every option visible. A question nobody opens is not a question</td></tr>
+        <tr><td>The verdict zone leads the screen</td><td><strong>Reversed.</strong> A title and a purpose
+          sentence lead; the verdict's facts become each task's state</td></tr>
+        <tr><td>DEC-33 · DEC-13 · DEC-55 · <code>StatusLine</code>'s <code>@avoid</code></td>
+          <td><strong>Kept, all four</strong>, and each re-asserted by a test rather than by a
+            sentence</td></tr>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <tr><th>#</th><th>Deviation</th><th>Why</th></tr>
+        <tr><td>1</td><td><strong>Eight findings, not the epic plan's nine.</strong> Foreseen by this WU's
+          plan and confirmed at the tip</td>
+          <td>F16 appears twice in the review's findings tables — once in <em>C · Setting up this Mac</em>,
+            once in <em>E · Sentences that are not true</em> as a cross-reference. The review's own P0 row
+            lists eight ids. The epic result carries the correction</td></tr>
+        <tr><td>2</td><td><strong>Six commits, not eight.</strong> F14 and F15 share one; F16 and F21 share
+          one</td>
+          <td>Each pair is one change. The Simulator's guide and the Simulator's actions are the same
+            model change — one probed flag becoming two — and splitting them would land a screen that
+            renders a corrected guide it cannot act on. F16 and F21 are two sentences in the same two
+            files, both about what the screen may claim. The plan's own order-of-work diagram had already
+            grouped them this way</td></tr>
+        <tr><td>3</td><td><strong>The reading round moved five items, not two.</strong> The plan named the
+          mockup and the review row</td>
+          <td>A design run is six items and they answer to each other: tiles and numbered tasks changed the
+            <code>keyboard</code> map, the proposals gained the two entries those shapes need, the Given
+            list's <em>no observable per-step completion</em> line turned out to be the false premise the
+            no-stepper ban was built on, and two new blockers surfaced. Leaving them stale would have
+            closed a run that contradicts its own mockup</td></tr>
+        <tr><td>4</td><td><strong>The round proposed two registry components</strong> —
+          <code>ChoiceTiles</code> and <code>TaskStep</code> — which the plan did not foresee</td>
+          <td>Neither shape exists in the collection and neither can be reached by stretching an entry:
+            <code>Select</code> hides the choice that must be seen, <code>SegmentedControl</code> refuses
+            more than four, and <code>StepList</code>'s <code>@avoid</code> refuses per-step state. Both are
+            W5's to build, and the epic's design note owes a drop reason if it does not</td></tr>
+        <tr><td>5</td><td><strong>F16's fix is superseded by the design that closed after it.</strong> The
+          lead sentence now reads the probes; the amended mockup has no lead sentence at all</td>
+          <td>The P0 half had to make the shipped screen true — it is what a user meets until W5 lands —
+            and the reading round then moved those facts into each task's state. Both are correct in
+            sequence; W5 removes the lead and keeps the resolver, which is where the count comes from</td></tr>
+        <tr><td>6</td><td><strong>A gate gap found and fixed in passing.</strong> W2's close row cited no
+          contract in <code>&lt;code&gt;</code>, which <code>review·recorded</code> refuses</td>
+          <td><code>verify-doc</code> skips an archived doc, and a close commit flips the status and writes
+            the close row together — so the row that records the close is the one edit the checks never
+            judge. Fixed here; the mechanism is a follow-up below</td></tr>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="commits">
+        <tr><th>Commit</th><th>What it landed</th></tr>
+        <tr><td><code>b3f7c87</code></td><td>the WU plan</td></tr>
+        <tr><td><code>78e559b</code></td><td>F14 + F15 — the Simulator's own keychain, and the actions it
+          shares with this Mac</td></tr>
+        <tr><td><code>945bef8</code></td><td>F10 — a guide hides only where a hand is the second
+          route</td></tr>
+        <tr><td><code>582ee5f</code></td><td>F11 — the address this host routes from, named</td></tr>
+        <tr><td><code>833b2fd</code></td><td>F13 — a refused confirm is an outcome</td></tr>
+        <tr><td><code>d2166eb</code></td><td>F20 — the header says so while this machine is
+          reachable</td></tr>
+        <tr><td><code>257cbd2</code></td><td>F16 + F21 — the lead reads the probes, the remedy names no
+          platform</td></tr>
+        <tr><td><code>a00f804</code></td><td>round 4 — the run re-opened and read</td></tr>
+        <tr><td><code>865cf48</code></td><td>the close — archived, and the blob W5 cites</td></tr>
+      </table>
+      <table data-c="tests">
+        <tr><th>Level</th><th>Added</th><th>Suite at the tip</th></tr>
+        <tr><td>unit · core</td><td><code>src/reach.rs</code> +6 — the ordering's three rules, the
+          hardware-port parser and its empty case, the temporary-address parser</td>
+          <td><strong>316</strong> Rust tests green</td></tr>
+        <tr><td>unit · front end</td><td><code>setup.test.ts</code> +4 · <code>verdicts.test.ts</code> +3 ·
+          <code>Onboarding.test.tsx</code> +11 — and three existing assertions re-pointed at the corrected
+          sentences</td>
+          <td rowspan="2"><strong>1010</strong> Vitest tests green in 53 files · eslint and
+            <code>tsc</code> clean</td></tr>
+        <tr><td>integration</td><td><code>App.test.tsx</code> +2 — the chip in both phases with its disarm,
+          and the unarmed silence; the refusal assertion added to the existing confirm seam</td></tr>
+        <tr><td>e2e</td><td colspan="2">none, and not waived here — the epic owes one and
+          <a href="2026-09-07-onboarding-redesign-plan.html#w6">W6</a> writes it against the screen W5
+          leaves. <code>test/v2</code> records it as the epic's, per the charter's additive rule</td></tr>
+      </table>
+      <table data-c="files">
+        <tr><th>Touched</th><th>What moved</th></tr>
+        <tr><td><code>src/reach.rs</code></td><td>+185 — the ordering rule, the routed-from probe, two host
+          parsers, six tests</td></tr>
+        <tr><td><code>ui/src/setup.ts</code></td><td>the platform's two probe facts; the Simulator's guide
+          and its routing</td></tr>
+        <tr><td><code>ui/src/Onboarding.tsx</code></td><td>the per-precondition action value, the collapse
+          rule, the address offer, the refusal note, the lead's detail, the remedy's detail</td></tr>
+        <tr><td><code>ui/src/verdicts.ts</code></td><td><code>stepsLeftHere</code>, and the arriving
+          remedy's sentence</td></tr>
+        <tr><td><code>ui/src/App.tsx</code></td><td>reach read in every phase; the header chip; the refusal
+          returned rather than swallowed</td></tr>
+        <tr><td><code>docs/work/2026-09-17-onboarding-design-run.html</code></td>
+          <td>+802/−400 — round 4 across five items and the close</td></tr>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p><strong>Nothing to T2 from this WU, deliberately</strong> — and this section is the source the
+        restatement reads. <a href="../use-cases/web-ui.html">UC-ONBOARD</a> still describes a three-step
+        stepper with two probes that answer for <em>this machine</em>, and
+        <a href="2026-09-07-onboarding-redesign-plan.html#w6">W6</a> restates it once W5 has built the
+        screen it will describe. Restating it here would write a contract against a screen that is one WU
+        from changing again.</p>
+      <table data-c="promises">
+        <tr><th>UC-ONBOARD says</th><th>The tip does</th></tr>
+        <tr><td>the manual steps sit behind a disclosure that auto-opens on failure; other OSes show them
+          inline</td><td>the disclosure follows the <em>action</em>, not the OS: open wherever no automatic
+          action stands above the guide, on every platform</td></tr>
+        <tr><td>steps 1 and 2 report the two probes of <em>this machine</em></td><td>two probes, two
+          stores: the Simulator reports the routing probe and never the trust probe</td></tr>
+        <tr><td>the remedy names the client that lacks the certificate</td><td>the remedy names the device
+          that is connecting, and no platform — nothing can attribute a tunnel to one</td></tr>
+        <tr><td>(nothing about an armed reach outside setup)</td><td>an armed reach is stated in the app
+          header in every phase, with the control that ends it</td></tr>
+        <tr><td>(nothing about a refused confirm)</td><td>a refused confirm says what it left
+          unchanged</td></tr>
+        <tr><td>(nothing about which address is offered)</td><td>the host's own order decides, and the
+          screen offers the first with the rest behind a disclosure</td></tr>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <tr><th>What</th><th>Who</th></tr>
+        <tr><td><strong>Build the two proposed components</strong> — <code>ChoiceTiles</code> and
+          <code>TaskStep</code> — or record the drop with a reason. The epic gate counts unbuilt component
+          designs at its own merge</td><td><a href="2026-09-07-onboarding-redesign-plan.html#w5">W5</a></td></tr>
+        <tr><td><strong>Two blockers the P1 build inherits</strong>: the probe reports <code>foreign</code>
+          without the address it found, so F17's sentence cannot name the proxy it is about to replace; and
+          the shell runs each elevated command separately, so F27's one-prompt action needs one elevated
+          script. Both are on the run's blocked-on item</td>
+          <td>W5, with the shell</td></tr>
+        <tr><td><strong>A design run's close is the one edit no predicate judges.</strong>
+          <code>verify-doc</code> skips <code>archived</code>, and the close commit writes the close row and
+          flips the status together — which is how W2's close row shipped citing no contract. Either the
+          close runs the checks before the flip, or <code>archived</code> keeps them on</td>
+          <td>a workflow/xtask WU — not this epic's</td></tr>
+        <tr><td><strong>The temporary-IPv6 flag is read from the host that prints it.</strong> A host that
+          does not — every non-macOS one, today — sorts its IPv6 addresses by the rest of the rule, which
+          still keeps every IPv4 above them. An IPv6-only Linux host could still be offered a rotating
+          address first</td><td>backlog row, W6</td></tr>
+        <tr><td><strong>The P2 set</strong> — QR codes, <em>Test now</em>, the glyph legend, the undo
+          collapse and the rest — is unchanged by this WU and still W6's backlog</td>
+          <td><a href="2026-09-07-onboarding-redesign-plan.html#w6">W6</a></td></tr>
+      </table>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
