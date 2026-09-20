@@ -78,6 +78,7 @@ const draw = (props: Props = {}) =>
   );
 
 const QUESTION = "which device's traffic do you want to see";
+const MANUAL = "do it manually";
 
 const zone = (id: string) => screen.queryByTestId(id);
 const task = (n: number) => screen.getByTestId(`task-${n}`);
@@ -929,6 +930,51 @@ describe("a command is a block, not a phrase inside a sentence", () => {
     expect(screen.getByText("other ways")).toBeInTheDocument();
     expect(open("other ways")).toBe(false);
     expect(commandNamed("the emulator command")).toHaveTextContent("emulator -avd");
+  });
+});
+
+// The rule the window round is built on, asserted as an invariant over every
+// platform rather than on the two the cases above happen to walk. This WU's own
+// review round 5 caught a regression test that held one input still and so only
+// ever exercised one arm of the expression it was pinning; a rule stated per
+// platform and checked on two of eight is the same shape.
+describe("one guide open, whatever the user picked", () => {
+  // A guide's summary is a count or the name of the other route. The summaries
+  // inside one — other ways, the way back, a failure's details — are not guides.
+  const guides = () =>
+    [...document.querySelectorAll("details")].filter((entry) => {
+      const summary = entry.querySelector("summary")?.textContent?.trim() ?? "";
+      return /^\d+ steps?$/.test(summary) || summary === MANUAL;
+    });
+  const opened = () => guides().filter((entry) => entry.hasAttribute("open"));
+
+  const atPlatform = (id: PlatformId, props: Props = {}) => {
+    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null }, ...props });
+    pick(setup.platformLabel(id, "macos"));
+  };
+
+  it.each(PLATFORM_IDS)("%s opens at most one, and it is the first", (id) => {
+    atPlatform(id);
+
+    const open = opened();
+    expect(open.length).toBeLessThanOrEqual(1);
+    if (open.length === 1) expect(open[0]).toBe(guides()[0]);
+  });
+
+  it.each(PLATFORM_IDS)("%s never opens a route a button already answers", (id) => {
+    atPlatform(id);
+
+    for (const entry of guides()) {
+      if (entry.querySelector("summary")?.textContent?.trim() === MANUAL) {
+        expect(entry).not.toHaveAttribute("open");
+      }
+    }
+  });
+
+  it.each(PLATFORM_IDS)("%s opens none once a request has decrypted", (id) => {
+    atPlatform(id, { traffic: capturing });
+
+    expect(opened()).toHaveLength(0);
   });
 });
 

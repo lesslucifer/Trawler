@@ -739,6 +739,14 @@ export function Onboarding({
   // device, so off-machine the first guided task stays open until a decrypted
   // request says the whole job is over — the one reading that settles it for
   // every platform at once.
+  //
+  // The second arm cannot fire today, and is kept because the rule is what is
+  // written here rather than what the current probes happen to allow: the two
+  // guides are always both present or both absent, so the route's turn needs a
+  // trust task that reads done while its own steps still render — and the only
+  // host that renders them is one with no one-click path, where the trust probe
+  // answers for no store at all. It goes live the day a probe does, which is an
+  // open row against the control API and not a change to this rule.
   const everDecrypted = traffic.lastDecryptedAt !== null;
   const guidesOpen = !blocked && !everDecrypted;
   const trustGuideOpen = guidesOpen && trustGuide !== undefined && trustState.tone !== "ok";
