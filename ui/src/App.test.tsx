@@ -474,6 +474,95 @@ test("an armed reach is stated in the header, in setup and in the list alike", a
   }
 });
 
+// Review round 1, blocker: the chip's control is what ends this machine's
+// exposure to the network, and a rejected DELETE left the click with no trace
+// at all — no disabled button, no sentence, an unhandled rejection in a console
+// nobody reads. Button's contract asks for both halves, which is what the
+// identical action gets one file away.
+test("a stop that fails says so, and leaves the exposure it could not end on the screen", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ARMED);
+  api.disarmReach = vi.fn(async () => {
+    throw new Error("core said no");
+  });
+  render(<App api={api} initialState={PROVEN} />);
+
+  const chip = await screen.findByTestId("reach-chip");
+  fireEvent.click(within(chip).getByRole("button", { name: "stop" }));
+
+  await waitFor(() =>
+    expect(screen.getByTestId("reach-chip")).toHaveTextContent("couldn't stop listening"),
+  );
+  expect(screen.getByTestId("reach-chip")).toHaveTextContent("reachable on 192.168.1.24");
+});
+
+test("the stop control is out of reach while its call is in flight, and says why", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ARMED);
+  let release: (state: typeof UNARMED) => void = () => {};
+  api.disarmReach = vi.fn(() => new Promise<typeof UNARMED>((resolve) => (release = resolve)));
+  render(<App api={api} initialState={PROVEN} />);
+
+  const chip = await screen.findByTestId("reach-chip");
+  fireEvent.click(within(chip).getByRole("button", { name: "stop" }));
+
+  await waitFor(() => expect(screen.getByRole("button", { name: "stop" })).toBeDisabled());
+  expect(screen.getByTestId("reach-chip")).toHaveTextContent("stopping…");
+
+  release(UNARMED);
+  await waitFor(() => expect(screen.queryByTestId("reach-chip")).toBeNull());
+});
+
+// The core answers with kernel device names because it may not ask the host
+// what its owner calls them; the shell asks, and the screen reads the answer.
+test("an address is offered under the name its owner sees, when the host can say", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "interface_names" ? { en1: "Wi-Fi" } : undefined,
+  );
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ({
+    ...UNARMED,
+    interfaces: [
+      { name: "en1", address: "192.168.1.24" },
+      { name: "en5", address: "10.0.4.7" },
+    ],
+  }));
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText("what are you setting up");
+  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+  fireEvent.click(screen.getByRole("option", { name: "iPhone or iPad" }));
+
+  await waitFor(() => expect(screen.getByTestId("listen-on")).toHaveTextContent("Wi-Fi · 192.168.1.24"));
+  fireEvent.click(screen.getByText("other addresses"));
+  // A device the host named nothing keeps the name the kernel gave it.
+  expect(screen.getByRole("button", { name: "en5 · 10.0.4.7" })).toBeInTheDocument();
+});
+
+test("a shell that cannot name a device leaves the name the core reported", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "interface_names") throw new Error("no shell here");
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ({
+    ...UNARMED,
+    interfaces: [
+      { name: "en1", address: "192.168.1.24" },
+      { name: "en5", address: "10.0.4.7" },
+    ],
+  }));
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText("what are you setting up");
+  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+  fireEvent.click(screen.getByRole("option", { name: "iPhone or iPad" }));
+
+  await waitFor(() => expect(screen.getByTestId("listen-on")).toHaveTextContent("en1 · 192.168.1.24"));
+});
+
 test("a machine nothing is listening on carries no chip at all", async () => {
   onMacHost();
   const { api } = mockApi(() => []);

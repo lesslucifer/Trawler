@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
@@ -33,6 +34,7 @@ import {
   proxyStatus,
   screenVerdict,
   trafficReading,
+  stepsDetail,
   stepsLeftHere,
   trafficStatus,
   trustStatus,
@@ -54,8 +56,6 @@ import {
 // probe reads THIS machine, so it is rendered only where the chosen platform is
 // this machine or shares its stores. Everywhere else the screen says it cannot
 // check rather than borrowing an answer about the wrong host.
-
-type ActionState = "idle" | "running" | "done" | "failed" | "nothing";
 
 // An action that resolves a string names what it produced; the note quotes that
 // name rather than the one we asked for, since the two differ whenever the user
@@ -117,31 +117,6 @@ const SAVECA_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
 
-function useAction(run?: () => Promise<string | null | void>) {
-  const [state, setState] = useState<ActionState>("idle");
-  const [error, setError] = useState<string>();
-  const [named, setNamed] = useState("");
-  const trigger =
-    run &&
-    (() => {
-      setState("running");
-      setError(undefined);
-      run().then(
-        (outcome) => {
-          if (typeof outcome === "string") setNamed(outcome);
-          setState(outcome === null ? "nothing" : "done");
-        },
-        (err: unknown) => {
-          console.error("setup action failed:", err);
-          setState("failed");
-          setError(err instanceof Error ? err.message : String(err));
-        },
-      );
-    });
-  return { state, error, named, trigger };
-}
-
-type ActionHandle = ReturnType<typeof useAction>;
 
 const TICK_MS = 1000;
 
@@ -333,17 +308,6 @@ const VERDICT: Record<
     detail: "finish the steps below, then make any request",
   },
 };
-
-// The one thing the lead may say about this machine's setup, and only where the
-// probes answer for the platform chosen: how much of it is left. Saying
-// "everything below is still set up" whatever they said was the screen's
-// loudest falsehood — and a count is DEC-33-clean, because the words stay the
-// traffic layer's and the number stays the probes'.
-function stepsDetail(left: number | null): string | null {
-  if (left === null) return null;
-  if (left === 0) return "open any website to see its traffic";
-  return `${left} step${left === 1 ? "" : "s"} left on this machine`;
-}
 
 // The screen's lead sentence, and the one element on it that a clock can change.
 function LeadVerdict({

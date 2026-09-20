@@ -168,6 +168,17 @@ export function stepsLeftHere(trust: TrustProbe, proxy: ProxyProbe): number | nu
   return Number(trust !== "trusted") + Number(proxy !== "ours");
 }
 
+// The one thing the screen's lead sentence may say about this machine's setup,
+// and only where the probes answer for the platform chosen: how much of it is
+// left. Saying "everything below is still set up" whatever they said was the
+// screen's loudest falsehood — and a count is DEC-33-clean, because the words
+// stay the traffic layer's and the number stays the probes'.
+export function stepsDetail(left: number | null): string | null {
+  if (left === null) return null;
+  if (left === 0) return "open any website to see its traffic";
+  return `${left} step${left === 1 ? "" : "s"} left on this machine`;
+}
+
 // A platform this machine cannot read the stores of. Its own glyph and its own
 // words: borrowing this host's answer for a phone is worse than no answer, and
 // saying "not trusted" about a device nobody probed would be a claim.

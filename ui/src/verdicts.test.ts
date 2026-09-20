@@ -3,6 +3,7 @@ import {
   NO_TRAFFIC,
   proxyStatus,
   RECENT_MS,
+  stepsDetail,
   stepsLeftHere,
   trafficStatus,
   trustStatus,
@@ -231,6 +232,13 @@ describe("how much of this machine is still to do", () => {
 
   test("counts a foreign proxy as a step left, because it is not routing here", () => {
     expect(stepsLeftHere("trusted", "foreign")).toBe(1);
+  });
+
+  test("words the count, and says nothing where there is no count", () => {
+    expect(stepsDetail(2)).toBe("2 steps left on this machine");
+    expect(stepsDetail(1)).toBe("1 step left on this machine");
+    expect(stepsDetail(0)).toBe("open any website to see its traffic");
+    expect(stepsDetail(null)).toBeNull();
   });
 
   test("refuses to count where a probe could not answer", () => {

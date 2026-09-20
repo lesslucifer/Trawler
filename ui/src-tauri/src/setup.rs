@@ -1,6 +1,7 @@
 // Trust boundary: the webview passes only PEM bytes; the privileged command is
 // built here from fixed per-OS templates — never from IPC input.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 
@@ -119,6 +120,47 @@ pub fn ca_trusted() -> String {
         None => "unknown",
     }
     .into()
+}
+
+// The kernel calls a device `en1`; its owner calls it Wi-Fi, in the same
+// Settings pane they are about to open. Only the host can map one to the other,
+// and only the shell may ask it — the core is kept out of shelling to the OS
+// (DEC-13, and E-ONBOARD.W1's reading of it when it took if-addrs instead).
+// A host with no answer renames nothing, which leaves the device name standing.
+#[tauri::command]
+pub fn interface_names() -> HashMap<String, String> {
+    hardware_ports(std::env::consts::OS)
+}
+
+fn hardware_ports(os: &str) -> HashMap<String, String> {
+    if os != "macos" {
+        return HashMap::new();
+    }
+    Command::new("networksetup")
+        .arg("-listallhardwareports")
+        .output()
+        .ok()
+        .filter(|listing| listing.status.success())
+        .map(|listing| parse_hardware_ports(&String::from_utf8_lossy(&listing.stdout)))
+        .unwrap_or_default()
+}
+
+// `networksetup -listallhardwareports` prints a stanza per port: the port's
+// name, then its device, then its MAC. The pairing is positional, so a stanza
+// that names a port and never names a device contributes nothing.
+fn parse_hardware_ports(listing: &str) -> HashMap<String, String> {
+    let mut ports = HashMap::new();
+    let mut port: Option<&str> = None;
+    for line in listing.lines() {
+        if let Some(name) = line.strip_prefix("Hardware Port:") {
+            port = Some(name.trim());
+        } else if let Some(device) = line.strip_prefix("Device:") {
+            if let Some(name) = port.take() {
+                ports.insert(device.trim().to_owned(), name.to_owned());
+            }
+        }
+    }
+    ports
 }
 
 const WININET_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
@@ -510,6 +552,33 @@ mod tests {
     fn install_ca_rejects_non_certificate_input() {
         let err = install_ca("BEGIN RSA PRIVATE KEY".into()).unwrap_err();
         assert!(err.contains("not a PEM certificate"));
+    }
+
+    #[test]
+    fn hardware_ports_map_a_device_to_the_name_its_owner_sees() {
+        let listing = "Hardware Port: Ethernet\nDevice: en0\nEthernet Address: a1:b2:c3:d4:e5:f6\n\n\
+                       Hardware Port: Wi-Fi\nDevice: en1\nEthernet Address: f6:e5:d4:c3:b2:a1\n\n\
+                       VLAN Configurations\n===================\n";
+        let ports = parse_hardware_ports(listing);
+
+        assert_eq!(ports.get("en1").map(String::as_str), Some("Wi-Fi"));
+        assert_eq!(ports.get("en0").map(String::as_str), Some("Ethernet"));
+        assert_eq!(ports.get("bridge0"), None);
+    }
+
+    // Every host that cannot say - each one that is not macOS, and a macOS that
+    // answered something else - renames nothing, and the device name stands.
+    #[test]
+    fn a_listing_that_names_nothing_renames_nothing() {
+        assert!(parse_hardware_ports("").is_empty());
+        assert!(parse_hardware_ports("eth0: flags=4163<UP,BROADCAST>\n").is_empty());
+        assert!(parse_hardware_ports("Hardware Port: Wi-Fi\n").is_empty());
+    }
+
+    #[test]
+    fn only_macos_is_asked_what_it_calls_its_devices() {
+        assert!(hardware_ports("linux").is_empty());
+        assert!(hardware_ports("windows").is_empty());
     }
 
     #[test]

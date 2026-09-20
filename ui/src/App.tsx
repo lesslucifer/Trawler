@@ -7,6 +7,7 @@ import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
+import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
 import { FlowList } from "./FlowList";
@@ -162,6 +163,31 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     };
   }, [client]);
 
+  // The core answers with the kernel's device names, because asking the host
+  // what its owner calls `en1` means running one of the host's own tools and
+  // the core is kept out of that (DEC-13). The shell asks; a host with no
+  // answer, and a browser with no shell, rename nothing.
+  const [portNames, setPortNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let live = true;
+    invoke<Record<string, string>>("interface_names").then(
+      (names) => live && setPortNames(names ?? {}),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const named = useMemo(
+    () => ({
+      ...reach,
+      interfaces: reach.interfaces.map((i) => ({ ...i, name: portNames[i.name] ?? i.name })),
+    }),
+    [reach, portNames],
+  );
+
   // The confirm comes first and the bind only on a yes — the shell asks,
   // because arming changes what this machine exposes (DEC-13). A dialog that
   // cannot be shown is a question nobody answered, so nothing is armed — and
@@ -218,15 +244,32 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // list as much as in setup, where choosing "this machine" used to hide it
   // entirely. The chip carries the address a device is pointed at and the
   // control that ends it, because a warning nobody can act on is decoration.
+  // The control runs through useAction for the reason Button's fork D4 states:
+  // a stop that failed must not read like a stop that worked, and the exposure
+  // it could not end is still on this machine.
+  const disarm = useAction(disarmReach);
   const reachChip = reach.armed && reach.proxy !== null && (
     <div
       data-testid="reach-chip"
       className="flex items-center gap-control-gap rounded-button border border-hairline px-chrome-x font-ui text-chrome text-ink-mute"
     >
       <span>reachable on {splitProxyAddr(reach.proxy).host}</span>
-      <Button frame="bare" tone="mute" onClick={disarmReach}>
-        stop
-      </Button>
+      {disarm.trigger && (
+        <Button
+          frame="bare"
+          tone="mute"
+          onClick={disarm.trigger}
+          disabled={disarm.state === "running"}
+        >
+          stop
+        </Button>
+      )}
+      {disarm.state === "running" && <span>stopping…</span>}
+      {disarm.state === "failed" && (
+        <span className="text-warn" title={disarm.error}>
+          couldn't stop listening
+        </span>
+      )}
     </div>
   );
 
@@ -291,7 +334,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
           onRecheck={reprobe}
-          reach={reach}
+          reach={named}
           onArmReach={armReach}
           onDisarmReach={disarmReach}
         />
