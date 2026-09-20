@@ -2,6 +2,8 @@ export { Button } from "./Button";
 export type { ButtonFrame, ButtonProps, ButtonShape, ButtonTone } from "./Button";
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
+export { ChoiceTiles } from "./ChoiceTiles";
+export type { TileOption } from "./ChoiceTiles";
 export { CopyButton } from "./CopyButton";
 export { CopyText } from "./CopyText";
 export { CutMarker } from "./CutMarker";

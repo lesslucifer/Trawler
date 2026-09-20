@@ -25,6 +25,14 @@ const SPECIMENS: Record<string, ReactElement> = {
       don't show this again
     </collection.Checkbox>
   ),
+  ChoiceTiles: (
+    <collection.ChoiceTiles
+      options={[{ id: "this", label: "This machine" }]}
+      value="this"
+      onChange={() => {}}
+      ariaLabel="which device's traffic do you want to see"
+    />
+  ),
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
   CutMarker: <collection.CutMarker shown={10} total={99} />,
