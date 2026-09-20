@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W4
+base: dcf0f7a581031f3616ff570f3a3301fe2d624150
+design_sha256: 715bd81d9ab0de4ccc452466d12690acebb282486d494069b81b8a4a57c660bf
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 993ca2e44372f8e6c06dd7e6204b605bf0706955
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The header chip an armed reach now carries is an app-shell element, and this epic's design of record is the setup screen alone - an owner's call recorded in the epic plan. It could not live on that screen anyway: F20 asks for the exposure to hold in every phase including the flow list, which the setup screen does not render. Its shape is the review's F20 row, its words are in the run's copy table, and W6's restatement is where it becomes a promise. The file's other changes render nothing new: the reach state is read in every phase rather than only in setup, armReach resolves the refusal instead of swallowing it, and the shell's interface names are applied to the addresses the core reported. The chip's control gained the in-flight and failure halves Button's contract asks for, which is the same element rendering its own states rather than a shape a design would decide."
+date: 2026-09-20
