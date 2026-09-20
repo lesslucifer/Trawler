@@ -472,6 +472,22 @@ test("set up another device takes the user back to setup, and the banner goes wi
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
+// Review round 2, important: re-entering setup and leaving it again is the
+// "already working, not news" case, and the banner announced it a second time
+// as though a fresh request had just proven something. Written before the fix.
+test("re-entering setup retires the banner — leaving again is not a second success", async () => {
+  await setupSucceeds();
+  await screen.findByTestId("set-up-banner");
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText("which device's traffic do you want to see");
+
+  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+
+  await screen.findByTestId("flow-row");
+  expect(screen.queryByTestId("set-up-banner")).toBeNull();
+});
+
 // A launch that finds capture already working is not news, and a core that
 // stopped answering outranks good news that has already been delivered once.
 test("a launch straight into the list says nothing — the moment it announces is a transition", async () => {

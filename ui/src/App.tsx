@@ -93,6 +93,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     }
   }, [state.phase, state.everProven, flows]);
 
+  // Entering setup retires the announcement, however the user got there. The
+  // banner belongs to one transition, and coming back out of setup without
+  // having proven anything new is the "already working, not news" case — the
+  // news would be a second success that did not happen.
+  useEffect(() => {
+    if (state.phase === "onboarding") setJustSetUp(false);
+  }, [state.phase]);
+
   // Which absence the list shows turns on whether the user narrowed it, so an
   // empty-but-blank field must not count as an active filter.
   const hasFilter = Object.values(filter).some((v) => (v ?? "") !== "");
@@ -275,14 +283,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         tone="ok"
         action={
           <>
-            <Button
-              onClick={() => {
-                setJustSetUp(false);
-                dispatch({ t: "re-invoke" });
-              }}
-            >
-              set up another device
-            </Button>
+            <Button onClick={() => dispatch({ t: "re-invoke" })}>set up another device</Button>
             <Button frame="bare" tone="mute" onClick={() => setJustSetUp(false)}>
               dismiss
             </Button>
