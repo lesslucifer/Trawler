@@ -124,8 +124,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         (p) => live && setTrustProbe(p),
         () => live && setTrustProbe("unknown"),
       ),
-      invoke<ProxyReading>("proxy_status", { host, port }).then(
-        (reading) => live && setProxyReading(reading),
+      invoke<ProxyReading | undefined>("proxy_status", { host, port }).then(
+        // A shell that answers with nothing has read nothing, which is what
+        // "unknown" means — and the screen may not crash on the difference.
+        (reading) => live && setProxyReading(reading ?? NO_PROXY_READING),
         () => live && setProxyReading(NO_PROXY_READING),
       ),
     ]).then(() => {
@@ -204,21 +206,39 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     setReach(await client.disarmReach());
   };
 
-  const installCa = async () => {
-    const pem = await client.caCertPem();
-    await invoke("install_ca", { pem });
-    reprobe();
-  };
-
   const saveCa = async () => {
     const pem = await client.caCertPem();
     return saveBody(new TextEncoder().encode(pem), CA_FILENAME);
   };
 
+  // A proxy this machine already has is the user's, and replacing it is the
+  // one setup action that takes something away — so it costs a confirm, the
+  // same shape DEC-13 requires of every OS-touching change. A refusal resolves
+  // "nothing happened" rather than a success, and writes nothing.
+  const replaceAllowed = async () => {
+    if (proxyReading.status !== "foreign") return true;
+    return invoke<boolean>("confirm_replace_proxy", {
+      address: proxyReading.address ?? proxyAddr,
+    }).catch(() => false);
+  };
+
   const setProxy = async () => {
+    if (!(await replaceAllowed())) return null;
     const { host, port } = splitProxyAddr(proxyAddr);
     await invoke("set_proxy", { host, port });
     reprobe();
+    return undefined;
+  };
+
+  // The one thing most users want, in one prompt: the shell runs both elevated
+  // commands under a single authorization (F27).
+  const setUpThisMachine = async () => {
+    if (!(await replaceAllowed())) return null;
+    const { host, port } = splitProxyAddr(proxyAddr);
+    const pem = await client.caCertPem();
+    await invoke("set_up_this_machine", { pem, host, port });
+    reprobe();
+    return undefined;
   };
 
   const unsetProxy = async () => {
@@ -329,7 +349,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             lastTunnelAt: lastConnectionAt,
             ever: flows.length > 0 || connections > 0,
           }}
-          onInstallCa={installCa}
+          onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}

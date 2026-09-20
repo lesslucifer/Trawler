@@ -4,59 +4,70 @@ import { COPY, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
   Button,
+  ChoiceTiles,
   CopyText,
   Disclosure,
   Notice,
-  Section,
-  Select,
   Spinner,
   StatusLine,
   StepList,
+  TaskStep,
   TimestampText,
   type NoticeTone,
 } from "./components/index";
 import {
   canAutoSetup,
   CA_FILENAME,
+  deviceName,
   needsReach,
   probesRoute,
   probesTrust,
   platformChoices,
+  reachTaskTitle,
   setupFor,
   splitProxyAddr,
   type Guide,
   type GuideStep,
   type HostOs,
   type PlatformId,
+  type Task,
 } from "./setup";
 import {
+  awaiting,
+  foreignProxyNotice,
   NO_PROXY_READING,
   NO_TRAFFIC,
   proxyStatus,
-  screenVerdict,
+  setUpOn,
   trafficReading,
-  stepsDetail,
-  stepsLeftHere,
   trafficStatus,
   trustStatus,
-  UNPROBEABLE_TRUST,
   type ProxyReading,
   type Running,
-  type ScreenVerdict,
   type StepStatusView,
   type Traffic,
   type TrustProbe,
 } from "./verdicts";
 
-// The setup surface, rebuilt from the design run of 2026-09-17. One question —
-// what are you setting up — and everything below it belongs to that answer.
-// Not a wizard: nothing observes per-step progress, so the screen draws no
-// cursor and claims no position in a sequence.
+// The setup surface, built from round 4 of the design run of 2026-09-17. It
+// leads with what this is, asks one question the user can answer, and answers
+// it with numbered tasks: what to do, why, and the state something observed.
+//
+// A number is a reading aid; a state is a reading. No task reports itself done
+// — every state comes from a probe of this machine, from the traffic layer, or
+// from the reach this app itself holds — and a task whose precondition is not
+// met is dimmed and still numbered, so the shape of the whole job is readable
+// before any of it is done.
 //
 // DEC-33's two layers stay apart, and the platform axis sharpens the rule: a
-// probe reads THIS machine, so it is rendered only where the chosen platform is
-// this machine or shares its stores. Everywhere else the screen says it cannot
-// check rather than borrowing an answer about the wrong host.
+// probe reads THIS machine, so it is read only where the chosen platform shares
+// its stores. Everywhere else the task says when it will be confirmed rather
+// than borrowing an answer about the wrong host.
+
+const TITLE = "Set up capture";
+const PURPOSE =
+  "Trawler sits between a device and the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate and send its traffic to Trawler.";
+const QUESTION = "which device's traffic do you want to see";
 
 // An action that resolves a string names what it produced; the note quotes that
 // name rather than the one we asked for, since the two differ whenever the user
@@ -68,27 +79,29 @@ interface ActionNote {
   text: string;
 }
 
-const INSTALL_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "installing — approve the system prompt…" },
-  done: { tone: "ok", text: "installed. we'll confirm it on your first flow." },
-  failed: { tone: "warn", text: "automatic install failed — the steps below do it by hand." },
+// A prompt the user dismissed is not a failure the OS gets to word: it is the
+// one outcome they chose, and the way back in is the same button or the steps
+// below it (F18). The tool's own text is still payload, and stays reachable.
+const PROMPT_CANCELLED = "The password prompt was cancelled. Try again, or follow the manual steps.";
+
+const SETUP_NOTE: ActionNotes = {
+  running: { tone: "pending", text: "setting up — approve the prompt…" },
+  failed: { tone: "warn", text: "setting up failed — the steps below do it by hand." },
 };
 
 const SETPROXY_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "setting the proxy — approve the prompt if asked…" },
-  done: { tone: "ok", text: "proxy set. we'll confirm it on your first flow." },
-  failed: { tone: "warn", text: "automatic setup failed — the steps below do it by hand." },
+  running: { tone: "pending", text: "setting the proxy — approve the prompt…" },
+  failed: { tone: "warn", text: "setting the proxy failed — the steps below do it by hand." },
 };
 
 const UNSETPROXY_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "turning the proxy off — approve the prompt if asked…" },
-  done: { tone: "ok", text: "proxy off. set it again to resume routing through Trawler." },
+  running: { tone: "pending", text: "turning the proxy off — approve the prompt…" },
   failed: { tone: "warn", text: "couldn't turn the proxy off — the steps below do it by hand." },
 };
 
 // Arming is the shell's dialog and then the bind. A yes needs no note — what is
-// listening is the verdict's business, and it says so a line above. A no does:
-// the dialog closes, the button comes back, and without this the screen says
+// listening is the task's state, and it says so a line above. A no does: the
+// dialog closes, the button comes back, and without this the screen says
 // exactly what it says after a success.
 const ARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "waiting for your answer…" },
@@ -118,13 +131,12 @@ const SAVECA_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
 
-
 const TICK_MS = 1000;
 
 // Recency is judged against a clock that keeps moving while the screen is open,
 // or a verdict true at mount would stay true forever. It lives inside each
 // component that reads a traffic verdict and nowhere above them, so a tick
-// re-renders those and not the instructions, the picker or the guides, which no
+// re-renders those and not the instructions, the tiles or the guides, which no
 // clock can change.
 function useNow(): number {
   const [now, setNow] = useState(() => Date.now());
@@ -144,14 +156,22 @@ function ActionNote({
   action: ActionHandle;
   note: ActionNotes;
 }) {
+  const refused = action.state === "failed" && action.failure?.refused === true;
   const entry = note[action.state];
   const shown = typeof entry === "function" ? entry(action.named) : entry;
-  if (!shown) return null;
+  if (!shown && !refused) return null;
   return (
     <div data-testid={`${testId}-status`} data-state={action.state} className="pt-chrome-y">
-      <Notice tone={shown.tone} detail={action.state === "failed" ? action.error : undefined}>
-        {shown.text}
-      </Notice>
+      <Notice tone={refused ? "mute" : shown!.tone}>{refused ? PROMPT_CANCELLED : shown!.text}</Notice>
+      {action.state === "failed" && action.failure !== undefined && (
+        <div className="pt-2">
+          <Disclosure summary="details">
+            <p data-wire="command output" className="font-mono text-chrome text-ink-mute">
+              {action.failure.detail}
+            </p>
+          </Disclosure>
+        </div>
+      )}
     </div>
   );
 }
@@ -238,9 +258,9 @@ function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }
   );
 }
 
-// A guide hides behind "set it up by hand" only where a hand is the second
-// route: with no action above it these are the only instructions there are, and
-// a summary promising an automatic alternative is a promise nothing keeps.
+// A guide hides behind "do it manually" only where a hand is the second route:
+// with no action above it these are the only instructions there are, and a
+// summary promising an automatic alternative is a promise nothing keeps.
 function GuideView({
   guide,
   save,
@@ -268,151 +288,56 @@ function GuideView({
 
   if (!collapsed) return body;
   return (
-    <Disclosure summary="set it up by hand" defaultOpen={defaultOpen}>
+    <Disclosure summary="do it manually" defaultOpen={defaultOpen}>
       {body}
     </Disclosure>
   );
 }
 
-const VERDICT: Record<
-  Exclude<ScreenVerdict, "capturing">,
-  { tone: NoticeTone; text: string; detail: string }
-> = {
-  checking: {
-    tone: "pending",
-    text: "checking what is already set up",
-    detail: "reading this machine's certificate store and proxy settings",
-  },
-  "just-arrived": {
-    tone: "pending",
-    text: "a connection just arrived",
-    detail: "waiting to see whether it decrypts",
-  },
-  "not-decrypting": {
-    tone: "warn",
-    text: "traffic is arriving, but nothing is decrypting",
-    detail: "the trust step below says what to fix",
-  },
-  "plain-only": {
-    tone: "mute",
-    text: "traffic is arriving over plain HTTP only",
-    detail: "an HTTPS request is what proves decryption",
-  },
-  idle: {
-    tone: "mute",
-    text: "nothing is arriving now",
-    detail: "make a request to prove it",
-  },
-  waiting: {
-    tone: "mute",
-    text: "nothing has reached Trawler yet",
-    detail: "finish the steps below, then make any request",
-  },
-};
-
-// The screen's lead sentence, and the one element on it that a clock can change.
-function LeadVerdict({
-  phase,
-  traffic,
-  stepsLeft,
-}: {
-  phase: OnbState["phase"];
-  traffic: Traffic;
-  stepsLeft: number | null;
-}) {
-  const verdict = screenVerdict(phase, traffic, useNow());
-  if (verdict === "capturing") return null;
-  const { tone, text, detail } = VERDICT[verdict];
-  const lastFlow = traffic.lastDecryptedAt ?? traffic.lastPlainAt;
-  const dated = verdict === "idle" && lastFlow !== null;
-  const counted = (verdict === "idle" || verdict === "waiting") && !dated && stepsDetail(stepsLeft);
-  return (
-    <div data-testid="lead-verdict" data-verdict={verdict}>
-      <Notice
-        tone={tone}
-        detail={
-          dated ? (
-            <span>
-              last flow <TimestampText timestamp={lastFlow} format="relative" />
-            </span>
-          ) : (
-            counted || detail
-          )
-        }
-      >
-        {text}
-      </Notice>
-    </div>
-  );
-}
-
 // The outcome reads where the request that produces it is made, which is the one
 // thing DEC-13 accepts as proof that setup is over.
-function ProvenOutcome({ phase, traffic }: { phase: OnbState["phase"]; traffic: Traffic }) {
+function ProvenOutcome({ device, traffic }: { device: string; traffic: Traffic }) {
   const now = useNow();
-  if (screenVerdict(phase, traffic, now) !== "capturing") return null;
+  if (trafficReading(traffic, now) !== "capturing") return null;
   return (
-    <div data-testid="proven" className="pt-3">
+    <div data-testid="proven" className="px-4 pt-4">
       <Notice
         tone="ok"
         detail={
           <span>
-            last flow <TimestampText timestamp={traffic.lastDecryptedAt} format="relative" />
+            last request <TimestampText timestamp={traffic.lastDecryptedAt} format="relative" />
           </span>
         }
       >
-        Trawler is capturing
+        {setUpOn(device)}
       </Notice>
     </div>
   );
 }
 
-// StatusLine renders the verdict and refuses the instruction that goes with it
-// (its @avoid: "a verdict plus an instruction is two elements — pass
-// StepStatusView.remedy to a Notice"). This is that Notice, so a short verdict
-// never costs the guidance the resolver computed for it.
-function Verdict({
-  testId,
-  status,
-  stated,
-}: {
-  testId: string;
-  status: StepStatusView;
-  // What the action's own note is already saying. A failed action's remedy IS
-  // its error, and one failure stated twice reads as two.
-  stated?: string;
-}) {
-  const remedy = status.remedy === stated ? undefined : status.remedy;
+// The last task's state is the traffic layer's, and a clock is what keeps its
+// reading honest while the screen sits open — so it is read here, in the one
+// leaf a tick may re-render, rather than above the tasks that no clock can
+// change. StatusLine renders the verdict and refuses the instruction that goes
+// with it (its @avoid), so the remedy is the Notice beside it.
+function TrafficState({ traffic }: { traffic: Traffic }) {
+  const now = useNow();
+  const status = trafficStatus(traffic, now);
   return (
     <>
       <StatusLine status={status} />
-      {remedy !== undefined && (
-        <div data-testid={`${testId}-guidance`} className="pt-2">
-          <Notice tone="mute">{remedy}</Notice>
+      {status.remedy !== undefined && (
+        <div data-testid="traffic-remedy" className="pt-2">
+          <Notice tone="mute">{status.remedy}</Notice>
         </div>
       )}
     </>
   );
 }
 
-// The remedy the arriving verdict owes: a verdict plus an instruction is two
-// elements, and the instruction belongs beside the precondition it instructs
-// rather than in the headline three zones above it. It stays mute — the verdict
-// already carries the alarm, and one failure raising two warn glyphs is two
-// alarms for one fact.
-function ArrivingRemedy({ traffic }: { traffic: Traffic }) {
-  const now = useNow();
-  if (trafficReading(traffic, now) !== "not-decrypting") return null;
-  return (
-    <div data-testid="trust-remedy" className="pt-2">
-      <Notice tone="mute">{trafficStatus(traffic, now).remedy}</Notice>
-    </div>
-  );
-}
-
-// One reading of this machine governs both probed preconditions, so one control
-// re-takes it. The time stamps the reading: a probe is a snapshot, and nothing
-// pushes when the user changes a setting elsewhere.
+// One reading of this machine governs both probed tasks, so one control re-takes
+// it. The time stamps the reading: a probe is a snapshot, and nothing pushes
+// when the user changes a setting elsewhere.
 function ProbeRow({
   probing,
   probedAt,
@@ -445,30 +370,13 @@ function ProbeRow({
   );
 }
 
-function Precondition({
-  testId,
-  title,
-  children,
-}: {
-  testId: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div data-testid={`precondition-${testId}`}>
-      <Section title={title}>{children}</Section>
-    </div>
-  );
-}
-
 const addressLabel = (address: ReachState["interfaces"][number]) =>
   `${address.name} · ${address.address}`;
 
 // The core answers this list best-first — the address the host routes from,
 // IPv4 before IPv6, nothing that rotates above something that does not. So one
 // address is the offer and the rest are a disclosure: a user typing a proxy
-// into a phone by hand reads one line, and the four-way control that could not
-// hold a 39-character IPv6 label is gone.
+// into a phone by hand reads one line.
 function AddressChoice({
   addresses,
   value,
@@ -483,7 +391,7 @@ function AddressChoice({
   const others = addresses.filter((address) => address.address !== value);
   return (
     <>
-      <p className={`pt-3 ${ZONE_LABEL}`}>listen on</p>
+      <p className={ZONE_LABEL}>address to use</p>
       <p data-testid="listen-on" className="pt-2 font-ui text-body text-ink-body">
         {chosen && addressLabel(chosen)}
       </p>
@@ -509,13 +417,21 @@ function AddressChoice({
   );
 }
 
-function ReachPrecondition({
+// The one task that changes this machine rather than the device the user picked.
+// It states one consequence and nothing more: the full statement is in the
+// confirm dialog the shell already shows, which is where a decision this size
+// belongs (DEC-55).
+function NetworkTask({
+  n,
+  title,
   reach,
   chosen,
   onChoose,
   arm,
   disarm,
 }: {
+  n: number;
+  title: string;
   reach: ReachState;
   chosen: string | undefined;
   onChoose: (address: string) => void;
@@ -525,37 +441,44 @@ function ReachPrecondition({
   if (reach.armed && reach.proxy !== null) {
     const { host } = splitProxyAddr(reach.proxy);
     return (
-      <Precondition testId="reach" title="let this device reach Trawler">
-        <StatusLine
-          status={{ glyph: "✓", tone: "ok", short: `listening on ${host} — until Trawler quits` }}
-        />
+      <TaskStep
+        n={n}
+        title={title}
+        status={{
+          glyph: "✓",
+          tone: "ok",
+          short: `allowed — listening on ${host} until Trawler quits`,
+        }}
+      >
         {disarm.trigger && (
-          <div className="pt-2">
-            <Action
-              testId="disarm-reach"
-              label="stop listening"
-              action={disarm}
-              note={DISARM_NOTE}
-              onClick={disarm.trigger}
-              frame="bare"
-            />
-          </div>
+          <Action
+            testId="disarm-reach"
+            label="stop listening"
+            action={disarm}
+            note={DISARM_NOTE}
+            onClick={disarm.trigger}
+            frame="bare"
+          />
         )}
-      </Precondition>
+      </TaskStep>
     );
   }
 
   return (
-    <Precondition testId="reach" title="let this device reach Trawler">
-      <StatusLine
-        status={{ glyph: "○", tone: "muted", short: "Trawler answers on this machine only" }}
-      />
+    <TaskStep
+      n={n}
+      title={title}
+      why="Trawler answers on this machine only until you do"
+      status={{
+        glyph: "○",
+        tone: "muted",
+        short: "not done — Trawler answers on this machine only",
+      }}
+    >
       {chosen === undefined ? (
-        <div className="pt-2">
-          <Notice tone="mute">
-            this machine holds no network address a second device could reach it at
-          </Notice>
-        </div>
+        <Notice tone="mute">
+          this machine holds no network address a second device could reach it at
+        </Notice>
       ) : (
         <>
           <AddressChoice addresses={reach.interfaces} value={chosen} onChange={onChoose} />
@@ -563,35 +486,27 @@ function ReachPrecondition({
             <div className="pt-3">
               <Action
                 testId="arm-reach"
-                label={
-                  reach.interfaces.length === 1
-                    ? `let devices reach Trawler at ${chosen}`
-                    : "let devices reach Trawler"
-                }
+                label="Allow devices on my Wi-Fi to connect"
                 action={arm}
                 note={ARM_NOTE}
                 onClick={arm.trigger}
               />
             </div>
           )}
-          <div className="pt-3">
-            <Notice
-              tone="mute"
-              detail="Anything on that network will be able to route through the proxy and to read the flows Trawler has captured. Trawler stops listening when you turn this off, and whenever it quits."
-            >
-              Trawler will ask before it starts listening
-            </Notice>
-          </div>
+          <p className="pt-2 font-ui text-chrome text-ink-mute">
+            other devices on your Wi-Fi will be able to use this proxy and see captured traffic
+            until Trawler quits
+          </p>
         </>
       )}
-    </Precondition>
+    </TaskStep>
   );
 }
 
 function ServerAndPort({ proxy }: { proxy: string }) {
   const { host, port } = splitProxyAddr(proxy);
   return (
-    <div data-testid="device-address" className="flex gap-4 pt-2">
+    <div data-testid="device-address" className="flex gap-4">
       <div>
         <p className={ZONE_LABEL}>server</p>
         <p className="pt-2 font-mono" data-wire="proxy host">
@@ -608,6 +523,78 @@ function ServerAndPort({ proxy }: { proxy: string }) {
   );
 }
 
+// What belongs to the tasks above it rather than to any one of them — the
+// action that does two of them at once, and the reversal that undoes them.
+// It takes the task body's own left edge and leaves the number column empty,
+// because a number here would read as a task nobody has to do.
+function TaskAside({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex gap-3 px-4 pt-3">
+      <span aria-hidden="true" className="w-step-marker shrink-0" />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+// Where one action covers two tasks, one disclosure covers both their guides:
+// the manual route is the alternative to the button, so it holds everything the
+// button would have done, in the order the tasks are numbered.
+const manualSteps = (setup: {
+  trust: Task;
+  route: Task;
+}): GuideStep[] => [...(setup.trust.guide?.steps ?? []), ...(setup.route.guide?.steps ?? [])];
+
+const reversalSteps = (setup: { trust: Task; route: Task }): GuideStep[] => [
+  ...(setup.trust.guide?.undo ?? []),
+  ...(setup.route.guide?.undo ?? []),
+];
+
+// A task's instructions, and the state of the task they belong to. `dim` is the
+// one thing a task with no instructions needs: it keeps its number and says
+// which step comes first, rather than explaining what cannot happen yet (F9).
+function GuidedTask({
+  n,
+  task,
+  status,
+  dim,
+  guide,
+  save,
+  action,
+  children,
+}: {
+  n: number;
+  task: Task;
+  status?: StepStatusView;
+  dim?: boolean;
+  guide?: Guide;
+  save?: ActionHandle;
+  action?: ReactNode;
+  children?: ReactNode;
+}) {
+  const body = guide !== undefined || action !== undefined || children !== undefined;
+  return (
+    <TaskStep
+      n={n}
+      title={task.title}
+      why={dim ? "after step 1" : task.why}
+      status={dim ? undefined : status}
+      dim={dim}
+    >
+      {!dim && body && (
+        <>
+          {children}
+          {action}
+          {guide && (
+            <div className={action === undefined ? "" : "pt-3"}>
+              <GuideView guide={guide} save={save} collapsed={action !== undefined} />
+            </div>
+          )}
+        </>
+      )}
+    </TaskStep>
+  );
+}
+
 export function Onboarding({
   state,
   dispatch,
@@ -619,7 +606,7 @@ export function Onboarding({
   probedAt = null,
   traffic = NO_TRAFFIC,
   reach = UNREACHABLE,
-  onInstallCa,
+  onSetUpThisMachine,
   onSaveCa,
   onSetProxy,
   onUnsetProxy,
@@ -637,19 +624,18 @@ export function Onboarding({
   probedAt?: number | null;
   traffic?: Traffic;
   reach?: ReachState;
-  onInstallCa?: () => Promise<void>;
+  onSetUpThisMachine?: () => Promise<null | void>;
   onSaveCa?: () => Promise<string | null>;
-  onSetProxy?: () => Promise<void>;
+  onSetProxy?: () => Promise<null | void>;
   onUnsetProxy?: () => Promise<void>;
   onRecheck?: () => void;
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
 }) {
-  const proxyProbe = proxy.status;
   const [platform, setPlatform] = useState<PlatformId>("this");
   const [listenOn, setListenOn] = useState<string | null>(null);
 
-  const install = useAction(onInstallCa);
+  const setUp = useAction(onSetUpThisMachine);
   const saveCa = useAction(onSaveCa);
   const setProxyAction = useAction(onSetProxy);
   const unsetProxyAction = useAction(onUnsetProxy);
@@ -666,193 +652,205 @@ export function Onboarding({
     proxyAddr,
     reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
   });
+  const device = deviceName(platform, os);
 
   const autoHost = canAutoSetup(os);
   // An action that changes this machine is offered for the store it changes,
   // and only where the chosen platform reads that store: installing here does
   // nothing for a Simulator with a keychain of its own, and setting this
   // machine's proxy is exactly what the Simulator routes through.
-  // One value per precondition: the automatic action it offers, or nothing. The
-  // guide below reads the same value, so "collapsed" and "there is a button"
-  // cannot drift apart.
-  const installHere = probesTrust(platform) && autoHost ? install.trigger : undefined;
+  const trustHere = probesTrust(platform) && autoHost;
   const routeHere = probesRoute(platform) && autoHost ? setProxyAction.trigger : undefined;
+  // One prompt for the one thing most users want, and only where both halves of
+  // it are this machine's to change (F27). Where only one half is — the
+  // Simulator's proxy — that half stays the primary action on its own, and the
+  // certificate half of this machine's setup has no button of its own at all:
+  // what the one action replaced stays reachable in the manual route below it.
+  const setUpHere = trustHere && routeHere ? setUp.trigger : undefined;
 
-  // The action the user just took outranks the re-read it triggers, so the line
-  // says "installing…" until the command has exited, then "checking…".
-  const running = (action: ActionHandle, r: Running): Running =>
-    action.state === "running" ? r : probing ? "checking" : null;
-  const failure = (action: ActionHandle) => (action.state === "failed" ? action.error : undefined);
+  // The action the user just took outranks the re-read it triggers, and the one
+  // combined action outranks both halves it is running.
+  const busy = (own: ActionHandle, r: Running): Running =>
+    setUp.state === "running" || own.state === "running" ? r : probing ? "checking" : null;
 
-  const trustVerdict = probesTrust(platform)
-    ? trustStatus(trustProbe, running(install, "installing"), failure(install))
-    : UNPROBEABLE_TRUST;
-  const routeVerdict = proxyStatus(
-    proxyProbe,
-    running(setProxyAction, "setting"),
-    failure(setProxyAction),
-  );
+  const trustState = probesTrust(platform)
+    ? trustStatus(trustProbe, busy(setUp, "installing"), setup.confirmOn)
+    : awaiting(setup.confirmOn);
+  const routeState = probesRoute(platform)
+    ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
+        device: deviceName("this", os),
+        confirmOn: setup.confirmOn,
+      })
+    : awaiting(setup.confirmOn);
+
+  // Off-machine, every task after the network one needs an address that does
+  // not exist yet — so they keep their numbers and say which step comes first.
+  const blocked = needsReach(platform) && !armed;
+  const first = needsReach(platform) ? 1 : 0;
 
   return (
     <div className="flex h-full flex-col overflow-auto">
       <div className="mx-auto w-full max-w-dialog-max py-6">
-        <div className="px-4">
-          <LeadVerdict
-            phase={state.phase}
-            traffic={traffic}
-            stepsLeft={
-              probesTrust(platform) && probesRoute(platform)
-                ? stepsLeftHere(trustProbe, proxyProbe)
-                : null
-            }
-          />
+        <div data-testid="lead" className="px-4">
+          <p className="font-serif text-note text-ink">{TITLE}</p>
+          <p className="pt-2 font-ui text-body text-ink-body">{PURPOSE}</p>
         </div>
 
         <div data-testid="platform" className="px-4 pt-4">
-          <p className={ZONE_LABEL}>what are you setting up</p>
+          <p className={ZONE_LABEL}>{QUESTION}</p>
           <div className="pt-2">
-            <Select
+            <ChoiceTiles
               options={platformChoices(os)}
               value={platform}
               onChange={(id) => setPlatform(id as PlatformId)}
-              label="platform"
+              ariaLabel={QUESTION}
             />
           </div>
+        </div>
+
+        <div data-testid="steps" className="pt-2">
+          {needsReach(platform) && (
+            <NetworkTask
+              n={1}
+              title={reachTaskTitle(platform, os)}
+              reach={reach}
+              chosen={chosen}
+              onChoose={setListenOn}
+              arm={arm}
+              disarm={disarm}
+            />
+          )}
+
+          <GuidedTask
+            n={first + 1}
+            task={setup.trust}
+            status={trustState}
+            dim={blocked}
+            guide={setUpHere === undefined ? setup.trust.guide : undefined}
+            save={onSaveCa ? saveCa : undefined}
+          />
+
+          <GuidedTask
+            n={first + 2}
+            task={setup.route}
+            status={routeState}
+            dim={blocked}
+            guide={setUpHere === undefined ? setup.route.guide : undefined}
+            action={
+              setUpHere === undefined && routeHere !== undefined ? (
+                <Action
+                  testId="set-proxy"
+                  label="Set the system proxy"
+                  action={setProxyAction}
+                  note={SETPROXY_NOTE}
+                  onClick={routeHere}
+                  disabled={probing}
+                />
+              ) : undefined
+            }
+          >
+            {proxy.status === "foreign" && probesRoute(platform) && (
+              <div data-testid="foreign-proxy" className="pb-2">
+                <Notice tone="mute">
+                  {foreignProxyNotice(deviceName("this", os), proxy.address)}
+                </Notice>
+              </div>
+            )}
+            {needsReach(platform) && armed && reach.proxy !== null && (
+              <ServerAndPort proxy={reach.proxy} />
+            )}
+          </GuidedTask>
+
+          {/* One primary action per screen, and the two single ones stay inside
+              the manual route it replaced. It sits under the tasks it covers
+              because it is both of them, and under the reversal rule DEC-13
+              inherited: an undo is offered once the setup here is ours to undo,
+              and still offered where a probe cannot say. */}
+          {setUpHere !== undefined && (
+            <TaskAside>
+              {proxy.status === "ours" && trustProbe === "trusted" ? (
+                unsetProxyAction.trigger && (
+                  <Action
+                    testId="unset-proxy"
+                    label="undo this setup"
+                    action={unsetProxyAction}
+                    note={UNSETPROXY_NOTE}
+                    onClick={unsetProxyAction.trigger}
+                    frame="bare"
+                  />
+                )
+              ) : (
+                <>
+                  <Action
+                    testId="set-up"
+                    label={`Set up ${deviceName("this", os)}`}
+                    action={setUp}
+                    note={SETUP_NOTE}
+                    onClick={setUpHere}
+                    disabled={probing}
+                  />
+                  <p className="pt-2 font-ui text-chrome text-ink-mute">
+                    one password prompt — it installs the certificate and sets the proxy
+                  </p>
+                </>
+              )}
+              {/* One action, one manual alternative: what the button does in
+                  one prompt, the steps do in two tasks' worth of commands. Two
+                  disclosures under two tasks with no button above either would
+                  promise an automatic route that is not there (F10). */}
+              <div className="pt-3">
+                <Disclosure summary="do it manually">
+                  <GuideSteps steps={manualSteps(setup)} save={onSaveCa ? saveCa : undefined} />
+                  {reversalSteps(setup).length > 0 && (
+                    <>
+                      <p className="pt-3 font-ui text-chrome text-ink-mute">to undo it later</p>
+                      <div className="pt-2">
+                        <GuideSteps steps={reversalSteps(setup)} />
+                      </div>
+                    </>
+                  )}
+                </Disclosure>
+              </div>
+            </TaskAside>
+          )}
+
+          {/* The reversal for the Simulator, whose primary action is the proxy
+              alone: an action that changed this host may not become
+              irreversible because a probe stopped answering. */}
+          {setUpHere === undefined &&
+            routeHere !== undefined &&
+            unsetProxyAction.trigger &&
+            (proxy.status === "ours" || setProxyAction.state === "done") && (
+              <TaskAside>
+                <Action
+                  testId="unset-proxy"
+                  label="stop routing through Trawler"
+                  action={unsetProxyAction}
+                  note={UNSETPROXY_NOTE}
+                  onClick={unsetProxyAction.trigger}
+                  frame="bare"
+                />
+              </TaskAside>
+            )}
+
+          <GuidedTask n={first + 3} task={setup.try} dim={blocked}>
+            <TrafficState traffic={traffic} />
+            {setup.tryCommand && (
+              <>
+                <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
+                <p className="pt-2 font-mono" data-wire="shell command">
+                  <CopyText value={setup.tryCommand} label="the try-it command" />
+                </p>
+              </>
+            )}
+          </GuidedTask>
         </div>
 
         {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
           <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
         )}
 
-        <div data-testid="preconditions" className="pt-3">
-          <Section variant="band" title="what has to be true">
-            {needsReach(platform) && (
-              <ReachPrecondition
-                reach={reach}
-                chosen={chosen}
-                onChoose={setListenOn}
-                arm={arm}
-                disarm={disarm}
-              />
-            )}
-
-            <Precondition testId="trust" title="trust Trawler's certificate">
-              <Verdict testId="trust" status={trustVerdict} stated={failure(install)} />
-              <ArrivingRemedy traffic={traffic} />
-              {installHere && (
-                <div className="pt-2">
-                  <Action
-                    testId="install-ca"
-                    label="install certificate"
-                    action={install}
-                    note={INSTALL_NOTE}
-                    onClick={installHere}
-                    disabled={probing}
-                  />
-                </div>
-              )}
-              {setup?.trustNote && (
-                <div className="pt-2">
-                  <Notice tone="mute">{setup.trustNote}</Notice>
-                </div>
-              )}
-              <div className="pt-3">
-                {setup?.trust ? (
-                  <GuideView
-                    guide={setup.trust}
-                    save={onSaveCa ? saveCa : undefined}
-                    collapsed={installHere !== undefined}
-                    defaultOpen={install.state === "failed"}
-                  />
-                ) : (
-                  setup === null && (
-                    <Notice tone="mute">
-                      the certificate route opens once Trawler is reachable — the step above opens it
-                    </Notice>
-                  )
-                )}
-              </div>
-            </Precondition>
-
-            <Precondition testId="route" title="route its traffic through Trawler">
-              {probesRoute(platform) && (
-                <Verdict testId="route" status={routeVerdict} stated={failure(setProxyAction)} />
-              )}
-              {routeHere && (
-                <div className="pt-2">
-                  <Action
-                    testId="set-proxy"
-                    label="set system proxy"
-                    action={setProxyAction}
-                    note={SETPROXY_NOTE}
-                    onClick={routeHere}
-                    disabled={probing}
-                  />
-                </div>
-              )}
-              {/* DEC-13's inherited assertion, both halves: the reversal is
-                  offered only once a proxy here is ours to turn off — and it is
-                  still offered where the probe cannot say, because an action that
-                  changed this host may not become irreversible when a probe
-                  fails. */}
-              {routeHere &&
-                unsetProxyAction.trigger &&
-                (proxyProbe === "ours" || setProxyAction.state === "done") && (
-                <div className="pt-2">
-                  <Action
-                    testId="unset-proxy"
-                    label="stop routing through Trawler"
-                    action={unsetProxyAction}
-                    note={UNSETPROXY_NOTE}
-                    onClick={unsetProxyAction.trigger}
-                    frame="bare"
-                  />
-                </div>
-                )}
-              {setup?.routeNote && (
-                <div className="pt-2">
-                  <Notice tone="mute">{setup.routeNote}</Notice>
-                </div>
-              )}
-              {needsReach(platform) && armed && reach.proxy !== null && (
-                <ServerAndPort proxy={reach.proxy} />
-              )}
-              <div className="pt-3">
-                {setup?.route ? (
-                  <GuideView
-                    guide={setup.route}
-                    collapsed={routeHere !== undefined}
-                    defaultOpen={setProxyAction.state === "failed"}
-                  />
-                ) : (
-                  setup === null && (
-                    <Notice tone="mute">
-                      there is no address to point the device at yet — the reach step above makes one
-                    </Notice>
-                  )
-                )}
-              </div>
-            </Precondition>
-          </Section>
-        </div>
-
-        <div data-testid="try" className="px-4 pt-4">
-          {setup === null ? (
-            <Notice tone="mute">
-              nothing to try until Trawler is reachable and the device is pointed at it
-            </Notice>
-          ) : setup.tryCommand ? (
-            <>
-              <p className="font-ui text-chrome text-ink-mute">{setup.tryIt}</p>
-              <p className="pt-2 font-mono" data-wire="shell command">
-                <CopyText value={setup.tryCommand} label="the try-it command" />
-              </p>
-            </>
-          ) : (
-            <Notice tone="mute">{setup.tryIt}</Notice>
-          )}
-          <ProvenOutcome phase={state.phase} traffic={traffic} />
-        </div>
+        <ProvenOutcome device={device} traffic={traffic} />
 
         {state.everProven && (
           <div data-testid="back" className="px-4 pt-4">

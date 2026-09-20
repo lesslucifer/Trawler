@@ -61,19 +61,34 @@ export interface Guide {
   undo?: GuideStep[];
 }
 
-// What one platform's preconditions say. A missing guide is a precondition with
-// nothing for the user to do — the note above it is the whole instruction.
+// One numbered task of a platform's setup: what the user does, why it is worth
+// doing, anything true about this platform they need before doing it, and the
+// instructions. A task with no guide is one whose instructions do not exist yet
+// — the device has nothing to point at until the network task is done — and it
+// renders dimmed rather than explaining what cannot happen.
+export interface Task {
+  title: string;
+  why?: string;
+  note?: string;
+  guide?: Guide;
+}
+
+// What one platform's tasks say. The words are the platform's, not the
+// screen's: a user who answered "iPhone or iPad" is told about their iPhone in
+// every line below, and never about a target, a platform or a route.
 export interface PlatformSetup {
-  trust?: Guide;
-  trustNote?: string;
-  route?: Guide;
-  routeNote?: string;
-  tryIt: string;
+  trust: Task;
+  route: Task;
+  try: Task;
   tryCommand?: string;
+  // The un-probeable state, worded as the promise it is: nothing here can read
+  // that device's stores, and the first request it makes is what settles it.
+  confirmOn: string;
 }
 
 // The addresses an off-machine platform's instructions are built from. Null
-// until the user arms reach, which is why `setupFor` can refuse to answer.
+// until the user arms reach, which is why those platforms' tasks can be
+// title-only.
 export interface ReachAddresses {
   proxy: string;
   caCertUrl: string;
@@ -87,6 +102,14 @@ export interface SetupContext {
 
 interface PlatformFacts {
   label: string;
+  // What every sentence below the tiles calls this thing. "This machine" is the
+  // one member whose name the host decides, because a Mac user reading "this
+  // machine" is reading about a machine and a Mac user reading "this Mac" is
+  // reading about theirs.
+  device: string | null;
+  // The phrase after "Open any website": you open one ON a phone and IN a
+  // simulator, and the difference is the whole reason this is data.
+  openWhere: string | null;
   // The two probes read THIS machine, and a platform may share one of its
   // stores without sharing the other: the iOS Simulator follows this Mac's
   // system proxy and keeps a certificate store of its own. Two facts, never
@@ -98,15 +121,102 @@ interface PlatformFacts {
 }
 
 const PLATFORMS: Record<PlatformId, PlatformFacts> = {
-  this: { label: "This machine", probesTrust: true, probesRoute: true, needsReach: false },
-  mac: { label: "Another Mac", probesTrust: false, probesRoute: false, needsReach: true },
-  windows: { label: "Another Windows PC", probesTrust: false, probesRoute: false, needsReach: true },
-  ubuntu: { label: "Another Ubuntu machine", probesTrust: false, probesRoute: false, needsReach: true },
-  "ios-sim": { label: "iOS Simulator", probesTrust: false, probesRoute: true, needsReach: false },
-  "android-sim": { label: "Android emulator", probesTrust: false, probesRoute: false, needsReach: false },
-  ios: { label: "iPhone or iPad", probesTrust: false, probesRoute: false, needsReach: true },
-  android: { label: "Android device", probesTrust: false, probesRoute: false, needsReach: true },
+  this: {
+    label: "This machine",
+    device: null,
+    openWhere: null,
+    probesTrust: true,
+    probesRoute: true,
+    needsReach: false,
+  },
+  mac: {
+    label: "Another Mac",
+    device: "that Mac",
+    openWhere: "on that Mac",
+    probesTrust: false,
+    probesRoute: false,
+    needsReach: true,
+  },
+  windows: {
+    label: "Another Windows PC",
+    device: "that PC",
+    openWhere: "on that PC",
+    probesTrust: false,
+    probesRoute: false,
+    needsReach: true,
+  },
+  ubuntu: {
+    label: "Another Ubuntu machine",
+    device: "that machine",
+    openWhere: "on that machine",
+    probesTrust: false,
+    probesRoute: false,
+    needsReach: true,
+  },
+  "ios-sim": {
+    label: "iOS Simulator",
+    device: "the Simulator",
+    openWhere: "in the Simulator",
+    probesTrust: false,
+    probesRoute: true,
+    needsReach: false,
+  },
+  "android-sim": {
+    label: "Android emulator",
+    device: "the emulator",
+    openWhere: "in the emulator",
+    probesTrust: false,
+    probesRoute: false,
+    needsReach: false,
+  },
+  ios: {
+    label: "iPhone or iPad",
+    device: "your iPhone",
+    openWhere: "on your iPhone",
+    probesTrust: false,
+    probesRoute: false,
+    needsReach: true,
+  },
+  android: {
+    label: "Android device",
+    device: "your Android device",
+    openWhere: "on your Android device",
+    probesTrust: false,
+    probesRoute: false,
+    needsReach: true,
+  },
 };
+
+// The host names itself, so "Set up this Mac" and "Open any website on this
+// Mac" say what the user is looking at rather than what the code calls it.
+const HOST_NOUN: Record<HostOs, string> = {
+  macos: "this Mac",
+  windows: "this PC",
+  linux: "this machine",
+  other: "this machine",
+};
+
+export function deviceName(id: PlatformId, os: HostOs): string {
+  return PLATFORMS[id].device ?? HOST_NOUN[os];
+}
+
+function openWhere(id: PlatformId, os: HostOs): string {
+  return PLATFORMS[id].openWhere ?? `on ${HOST_NOUN[os]}`;
+}
+
+// A task nobody can read the state of says when it WILL be settled, in the
+// words it will be settled by (F4). The screen never renders a verdict about a
+// machine it did not read.
+export function confirmOn(id: PlatformId, os: HostOs): string {
+  return `we'll confirm this on ${deviceName(id, os)}'s first request`;
+}
+
+// The network task's title, needed before any instruction exists: it is the
+// task that makes the rest possible, so it is titled whether or not the rest
+// can be written yet.
+export function reachTaskTitle(id: PlatformId, os: HostOs): string {
+  return `Allow ${deviceName(id, os)} to connect`;
+}
 
 const OS_NAME: Record<HostOs, string | null> = {
   macos: "macOS",
@@ -273,118 +383,172 @@ function downloadStep(where: string, caCertUrl: string, what: string): GuideStep
   return [`${where}, open`, { copy: caCertUrl, label: "the certificate URL" }, `— it downloads ${what}.`];
 }
 
+// Why each task is worth doing, said once: the reason never changes with the
+// platform, only the thing it is said about.
+const PROVES_IT = "the first decrypted request is what proves setup works";
+
+function tryTask(id: PlatformId, os: HostOs): Task {
+  return { title: `Open any website ${openWhere(id, os)}`, why: PROVES_IT };
+}
+
 function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
   const target = hostTarget(os);
   const trust = OS_TRUST[target];
+  const host = HOST_NOUN[os];
   return {
     trust: {
-      steps: [[SAVE_CA_STEP, { save: true }], ...trust.install],
-      undoTitle: trust.undoTitle,
-      undo: trust.undo,
+      title: "Trust Trawler's certificate",
+      why: `so ${host}'s HTTPS can be decrypted`,
+      guide: {
+        steps: [[SAVE_CA_STEP, { save: true }], ...trust.install],
+        undoTitle: trust.undoTitle,
+        undo: trust.undo,
+      },
     },
-    route: osRoute(os === "other" ? "terminal" : target, proxyAddr),
-    tryIt: "make any request — or run this",
+    route: {
+      title: `Send ${host}'s traffic to Trawler`,
+      why: "its system proxy points at Trawler while Trawler runs",
+      guide: osRoute(os === "other" ? "terminal" : target, proxyAddr),
+    },
+    try: tryTask("this", os),
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
+    confirmOn: confirmOn("this", os),
   };
 }
 
-function anotherMachineSetup(target: OsTarget, reach: ReachAddresses): PlatformSetup {
+function anotherMachineSetup(
+  id: PlatformId,
+  os: HostOs,
+  target: OsTarget,
+  reach: ReachAddresses | null,
+): PlatformSetup {
   const trust = OS_TRUST[target];
+  const device = deviceName(id, os);
   return {
     trust: {
-      steps: [
-        [
-          "On that machine, open",
-          { copy: reach.caCertUrl, label: "the certificate URL" },
-          `and save it as ${CA_FILENAME}.`,
-        ],
-        ...trust.install,
-      ],
-      undoTitle: trust.undoTitle,
-      undo: trust.undo,
+      title: `On ${device}, install Trawler's certificate`,
+      why: `so ${device}'s HTTPS can be decrypted`,
+      guide:
+        reach === null
+          ? undefined
+          : {
+              steps: [
+                [
+                  `On ${device}, open`,
+                  { copy: reach.caCertUrl, label: "the certificate URL" },
+                  `and save it as ${CA_FILENAME}.`,
+                ],
+                ...trust.install,
+              ],
+              undoTitle: trust.undoTitle,
+              undo: trust.undo,
+            },
     },
-    route: osRoute(target, reach.proxy),
-    tryIt: "open any site on that machine — the first decrypted flow is what ends setup",
+    route: {
+      title: `On ${device}, send its traffic to Trawler`,
+      guide: reach === null ? undefined : osRoute(target, reach.proxy),
+    },
+    try: tryTask(id, os),
+    confirmOn: confirmOn(id, os),
   };
 }
 
-function deviceSetup(id: "ios" | "android", reach: ReachAddresses): PlatformSetup {
+function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | null): PlatformSetup {
   const ios = id === "ios";
+  const device = deviceName(id, os);
+  const trust: Guide | undefined =
+    reach === null
+      ? undefined
+      : {
+        steps: ios
+          ? [
+              downloadStep(`On ${device}`, reach.caCertUrl, "the profile"),
+              ["Open it: Settings → General → VPN & Device Management → install the profile."],
+              ["Then turn it on: Settings → General → About → Certificate Trust Settings."],
+              ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
+            ]
+          : [
+              downloadStep(`On ${device}`, reach.caCertUrl, "the certificate"),
+              [
+                "Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
+              ],
+              [ANDROID_USER_CA],
+              ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
+            ],
+      };
+  const route: Guide | undefined =
+    reach === null
+      ? undefined
+      : {
+        steps: ios
+          ? [
+              ["Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual."],
+              ["Put the server and port above into it, and save."],
+            ]
+          : [
+              ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
+              ["Put the server and port above into it, and save."],
+            ],
+        undoTitle: DEVICE_PROXY_UNDO,
+        undo: ios
+          ? [["Settings → Wi-Fi → the network → Configure Proxy → Off."]]
+          : [["Wi-Fi → the network → Proxy → None."]],
+      };
   return {
-    trust: {
-      steps: ios
-        ? [
-            downloadStep("On the device", reach.caCertUrl, "the profile"),
-            ["Open it: Settings → General → VPN & Device Management → install the profile."],
-            ["Then turn it on: Settings → General → About → Certificate Trust Settings."],
-            ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
-          ]
-        : [
-            downloadStep("On the device", reach.caCertUrl, "the certificate"),
-            ["Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate."],
-            [ANDROID_USER_CA],
-            ["No browser on it?", SAVE_CA_STEP, { save: true }, "and carry the file over instead."],
-          ],
-    },
-    route: {
-      steps: ios
-        ? [
-            ["On the device: Settings → Wi-Fi → the network it is on → Configure Proxy → Manual."],
-            ["Put the server and port above into it, and save."],
-          ]
-        : [
-            ["On the device: Settings → Wi-Fi → the network it is on → Proxy → Manual."],
-            ["Put the server and port above into it, and save."],
-          ],
-      undoTitle: DEVICE_PROXY_UNDO,
-      undo: ios
-        ? [["Settings → Wi-Fi → the network → Configure Proxy → Off."]]
-        : [["Wi-Fi → the network → Proxy → None."]],
-    },
-    tryIt: "open any site on the device — the first decrypted flow is what ends setup",
+    trust: { title: `On ${device}, install the certificate`, guide: trust },
+    route: { title: `On ${device}, set the Wi-Fi proxy`, guide: route },
+    try: tryTask(id, os),
+    confirmOn: confirmOn(id, os),
   };
 }
 
-function emulatorSetup(proxyAddr: string): PlatformSetup {
+function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
   const { port } = splitProxyAddr(proxyAddr);
+  const trust: Guide = {
+    steps: [
+      [SAVE_CA_STEP, { save: true }],
+      [
+        "Push it to the emulator:",
+        { copy: "adb push trawler-ca.pem /sdcard/Download/", label: "the push command" },
+      ],
+      [
+        "Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
+      ],
+      [ANDROID_USER_CA],
+    ],
+    undoTitle: "to remove it later",
+    undo: [
+      [
+        "Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA.",
+      ],
+    ],
+  };
+  const route: Guide = {
+    steps: [
+      ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
+      [
+        "Server",
+        { copy: EMULATOR_HOST, label: "the emulator's host" },
+        "port",
+        { copy: String(port), label: "the proxy port" },
+        "— the alias every emulator resolves to the machine it runs on.",
+      ],
+      [
+        "Or start it with the proxy already set:",
+        {
+          copy: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
+          label: "the emulator command",
+        },
+      ],
+    ],
+    undoTitle: DEVICE_PROXY_UNDO,
+    undo: [["Wi-Fi → the network → Proxy → None."]],
+  };
   return {
-    trust: {
-      steps: [
-        [SAVE_CA_STEP, { save: true }],
-        [
-          "Push it to the emulator:",
-          { copy: "adb push trawler-ca.pem /sdcard/Download/", label: "the push command" },
-        ],
-        ["Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate."],
-        [ANDROID_USER_CA],
-      ],
-      undoTitle: "to remove it later",
-      undo: [
-        ["Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA."],
-      ],
-    },
-    route: {
-      steps: [
-        ["In the emulator: Settings → Wi-Fi → the network it is on → Proxy → Manual."],
-        [
-          "Server",
-          { copy: EMULATOR_HOST, label: "the emulator's host" },
-          "port",
-          { copy: String(port), label: "the proxy port" },
-          "— the alias every emulator resolves to the machine it runs on.",
-        ],
-        [
-          "Or start it with the proxy already set:",
-          {
-            copy: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
-            label: "the emulator command",
-          },
-        ],
-      ],
-      undoTitle: DEVICE_PROXY_UNDO,
-      undo: [["Wi-Fi → the network → Proxy → None."]],
-    },
-    tryIt: "open any site in the emulator — the first decrypted flow is what ends setup",
+    trust: { title: "In the emulator, install the certificate", guide: trust },
+    route: { title: "In the emulator, set the Wi-Fi proxy", guide: route },
+    try: tryTask("android-sim", os),
+    confirmOn: confirmOn("android-sim", os),
   };
 }
 
@@ -392,54 +556,65 @@ function emulatorSetup(proxyAddr: string): PlatformSetup {
 // the host's own routing guide is its routing guide; its trust store is its
 // own, and Apple's supported way in is simctl against the booted device.
 function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+  const host = HOST_NOUN[os];
+  const trust: Guide = {
+    steps: [
+      [SAVE_CA_STEP, { save: true }],
+      [
+        "With the Simulator running, run:",
+        {
+          copy: `xcrun simctl keychain booted add-root-cert ${CA_FILENAME}`,
+          label: "the trust command",
+        },
+      ],
+      ["Restart the Simulator so apps pick the new root up."],
+    ],
+    undoTitle: "to remove it later",
+    undo: [
+      [
+        "Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:",
+        { copy: "xcrun simctl keychain booted reset", label: "the keychain reset" },
+      ],
+    ],
+  };
   return {
-    trustNote: "the Simulator keeps its own certificate store — this Mac's does not cover it",
     trust: {
-      steps: [
-        [SAVE_CA_STEP, { save: true }],
-        [
-          "With the Simulator running, run:",
-          {
-            copy: `xcrun simctl keychain booted add-root-cert ${CA_FILENAME}`,
-            label: "the trust command",
-          },
-        ],
-        ["Restart the Simulator so apps pick the new root up."],
-      ],
-      undoTitle: "to remove it later",
-      undo: [
-        [
-          "Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:",
-          { copy: "xcrun simctl keychain booted reset", label: "the keychain reset" },
-        ],
-      ],
+      title: "Trust Trawler's certificate in the Simulator",
+      why: `the Simulator keeps its own certificate store — ${host}'s does not cover it`,
+      guide: trust,
     },
-    routeNote: "the Simulator uses this Mac's system proxy — setting it here covers it",
-    route: osRoute(os === "other" ? "terminal" : hostTarget(os), proxyAddr),
-    tryIt: "open any site in the Simulator",
+    route: {
+      title: `Send ${host}'s traffic to Trawler`,
+      why: `the Simulator follows ${host}'s system proxy`,
+      guide: osRoute(os === "other" ? "terminal" : hostTarget(os), proxyAddr),
+    },
+    try: tryTask("ios-sim", os),
+    confirmOn: confirmOn("ios-sim", os),
   };
 }
 
-// Null is the honest answer for a platform whose every instruction needs an
-// address that does not exist yet: there are no steps to show, and inventing
-// one is what the reach precondition exists to prevent.
-export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup | null {
-  if (needsReach(id) && ctx.reach === null) return null;
+// Every platform always has its tasks, because the shape of the whole job is
+// what a first-time user reads before doing any of it. What a platform without
+// a reachable address does NOT have is instructions: those need an address
+// that does not exist yet, and inventing one is what the network task exists to
+// prevent. A task with no guide renders dimmed under its number.
+export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
+  const reach = needsReach(id) ? ctx.reach : null;
   switch (id) {
     case "this":
       return localSetup(ctx.os, ctx.proxyAddr);
     case "mac":
-      return anotherMachineSetup("macos", ctx.reach!);
+      return anotherMachineSetup(id, ctx.os, "macos", reach);
     case "windows":
-      return anotherMachineSetup("windows", ctx.reach!);
+      return anotherMachineSetup(id, ctx.os, "windows", reach);
     case "ubuntu":
-      return anotherMachineSetup("linux", ctx.reach!);
+      return anotherMachineSetup(id, ctx.os, "linux", reach);
     case "ios-sim":
       return simulatorSetup(ctx.os, ctx.proxyAddr);
     case "android-sim":
-      return emulatorSetup(ctx.proxyAddr);
+      return emulatorSetup(ctx.os, ctx.proxyAddr);
     case "ios":
     case "android":
-      return deviceSetup(id, ctx.reach!);
+      return deviceSetup(id, ctx.os, reach);
   }
 }

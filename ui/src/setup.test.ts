@@ -1,7 +1,10 @@
 import { describe, expect, it, test } from "vitest";
 import {
   canAutoSetup,
+  confirmOn,
+  deviceName,
   hostOs,
+  reachTaskTitle,
   needsReach,
   probesRoute,
   probesTrust,
@@ -30,14 +33,17 @@ const ctx = (over: Partial<Parameters<typeof setupFor>[1]> = {}) => ({
 });
 
 const guides = (s: PlatformSetup): GuideStep[] => [
-  ...(s.trust?.steps ?? []),
-  ...(s.trust?.undo ?? []),
-  ...(s.route?.steps ?? []),
-  ...(s.route?.undo ?? []),
+  ...(s.trust.guide?.steps ?? []),
+  ...(s.trust.guide?.undo ?? []),
+  ...(s.route.guide?.steps ?? []),
+  ...(s.route.guide?.undo ?? []),
 ];
 
+const titles = (s: PlatformSetup): string[] =>
+  [s.trust, s.route, s.try].flatMap((t) => [t.title, t.why ?? ""]);
+
 const prose = (s: PlatformSetup): string =>
-  [s.trustNote ?? "", s.routeNote ?? "", s.tryIt, s.tryCommand ?? ""]
+  [...titles(s), s.confirmOn, s.tryCommand ?? ""]
     .concat(guides(s).flatMap((step) => step.map((p) => (typeof p === "string" ? p : ""))))
     .join("\n");
 
@@ -51,11 +57,7 @@ const saves = (s: PlatformSetup): number =>
 
 const everything = (s: PlatformSetup): string => [prose(s), ...copies(s)].join("\n");
 
-const setup = (id: PlatformId, over = {}) => {
-  const s = setupFor(id, ctx(over));
-  if (s === null) throw new Error(`${id} refused its instructions`);
-  return s;
-};
+const setup = (id: PlatformId, over = {}) => setupFor(id, ctx(over));
 
 test("hostOs maps webview UA samples to the host family", () => {
   expect(hostOs(UA.mac)).toBe("macos");
@@ -126,19 +128,28 @@ test("the five platforms that are somewhere else are the ones that need reach", 
   expect(PLATFORM_IDS.filter(needsReach)).toEqual(["mac", "windows", "ubuntu", "ios", "android"]);
 });
 
+// A platform whose instructions need an address keeps its tasks and loses its
+// guides: the shape of the job is readable before any of it can be done, and
+// nothing is invented to fill the gap.
 describe("a platform that needs reach has no instructions until it exists", () => {
-  it.each(PLATFORM_IDS.filter(needsReach))("%s offers nothing while reach is unarmed", (id) => {
-    expect(setupFor(id, ctx({ reach: null }))).toBeNull();
+  it.each(PLATFORM_IDS.filter(needsReach))("%s offers no steps while reach is unarmed", (id) => {
+    const s = setupFor(id, ctx({ reach: null }));
+
+    expect(s.trust.guide).toBeUndefined();
+    expect(s.route.guide).toBeUndefined();
+    expect(s.trust.title).not.toBe("");
+    expect(s.try.title).not.toBe("");
   });
 
   it.each(PLATFORM_IDS.filter((id) => !needsReach(id)))("%s answers without reach", (id) => {
-    expect(setupFor(id, ctx({ reach: null }))).not.toBeNull();
+    expect(setupFor(id, ctx({ reach: null })).trust.guide).toBeDefined();
   });
 });
 
 describe("every platform's instructions are its own", () => {
-  it.each(PLATFORM_IDS)("%s says what to try", (id) => {
-    expect(setup(id).tryIt).not.toBe("");
+  it.each(PLATFORM_IDS)("%s says where to open a website, and why it settles setup", (id) => {
+    expect(setup(id).try.title).toMatch(/^Open any website /);
+    expect(setup(id).try.why).toBe("the first decrypted request is what proves setup works");
   });
 
   it("only this machine offers a command to run here", () => {
@@ -244,8 +255,8 @@ describe("this machine is instructed for the host it is running on", () => {
   it("every route offers its reversal", () => {
     for (const os of ["macos", "windows", "linux", "other"] as const) {
       const s = setup("this", { os });
-      expect(s.trust?.undo?.length).toBeGreaterThan(0);
-      expect(s.route?.undo?.length).toBeGreaterThan(0);
+      expect(s.trust.guide?.undo?.length).toBeGreaterThan(0);
+      expect(s.route.guide?.undo?.length).toBeGreaterThan(0);
     }
   });
 });
@@ -256,7 +267,7 @@ describe("this machine is instructed for the host it is running on", () => {
 describe("the Simulator is trusted through its own keychain and routed through this Mac's", () => {
   it("says the store is its own, and gives Apple's route into it", () => {
     const s = setup("ios-sim");
-    expect(s.trustNote).toMatch(/keeps its own certificate store/);
+    expect(s.trust.why).toMatch(/keeps its own certificate store/);
     expect(everything(s)).not.toMatch(/this Mac's certificate store/);
     expect(copies(s)).toContain("xcrun simctl keychain booted add-root-cert trawler-ca.pem");
     expect(saves(s)).toBe(1);
@@ -270,7 +281,7 @@ describe("the Simulator is trusted through its own keychain and routed through t
 
   it("routes through the host's own guide, because the proxy it follows is the host's", () => {
     const s = setup("ios-sim");
-    expect(s.routeNote).toMatch(/this Mac's system proxy/);
+    expect(s.route.why).toMatch(/this Mac's system proxy/);
     expect(copies(s)).toContain(copies(setup("this")).find((c) => c.startsWith("networksetup")));
   });
 
@@ -310,4 +321,70 @@ test("the save control appears where the file is carried, and once", () => {
   for (const id of ["mac", "windows", "ubuntu"] as const) {
     expect(saves(setup(id))).toBe(0);
   }
+});
+
+
+// F2 / F3 / F4. Every line below the tiles names the thing the user picked, in
+// the words they picked it with — and a task nobody can read the state of says
+// when it WILL be settled rather than what the app cannot do.
+describe("the words each platform is spoken about in", () => {
+  const NAMES: [PlatformId, string][] = [
+    ["mac", "that Mac"],
+    ["windows", "that PC"],
+    ["ubuntu", "that machine"],
+    ["ios-sim", "the Simulator"],
+    ["android-sim", "the emulator"],
+    ["ios", "your iPhone"],
+    ["android", "your Android device"],
+  ];
+
+  it.each(NAMES)("%s is called %s", (id, device) => {
+    expect(deviceName(id, "macos")).toBe(device);
+  });
+
+  it("this machine is called what its host calls it", () => {
+    expect(deviceName("this", "macos")).toBe("this Mac");
+    expect(deviceName("this", "windows")).toBe("this PC");
+    expect(deviceName("this", "linux")).toBe("this machine");
+    expect(deviceName("this", "other")).toBe("this machine");
+  });
+
+  it.each(PLATFORM_IDS)("%s promises when an unreadable state will be settled", (id) => {
+    expect(confirmOn(id, "macos")).toBe(
+      `we'll confirm this on ${deviceName(id, "macos")}'s first request`,
+    );
+  });
+
+  it.each(PLATFORM_IDS.filter(needsReach))("%s's network task is titled for the device", (id) => {
+    expect(reachTaskTitle(id, "macos")).toBe(`Allow ${deviceName(id, "macos")} to connect`);
+  });
+
+  it("a website is opened ON a machine and IN a simulator", () => {
+    expect(setup("this").try.title).toBe("Open any website on this Mac");
+    expect(setup("ios").try.title).toBe("Open any website on your iPhone");
+    expect(setup("ios-sim").try.title).toBe("Open any website in the Simulator");
+    expect(setup("android-sim").try.title).toBe("Open any website in the emulator");
+  });
+
+  it.each(PLATFORM_IDS)("%s titles its tasks by what the user does, never by a zone", (id) => {
+    const s = setup(id);
+
+    for (const title of [s.trust.title, s.route.title, s.try.title]) {
+      expect(title).toMatch(/^[A-Z]/);
+      expect(title).not.toMatch(/what has to be true|precondition|target|platform/i);
+    }
+  });
+
+  // The list is where "flow" is taught; this screen is read before the word
+  // means anything, and the same holds for the machine's other words for
+  // itself. The screen asserts the rendering; this asserts the source.
+  it.each(PLATFORM_IDS)("%s's own strings carry none of the machine's words", (id) => {
+    const text = [everything(setup(id)), confirmOn(id, "macos"), reachTaskTitle(id, "macos")].join(
+      "\n",
+    );
+
+    for (const word of [/\bflows?\b/i, /\bverdict\b/i, /\breach\b/i, /\bplatform\b/i, /listen on/i]) {
+      expect(text).not.toMatch(word);
+    }
+  });
 });

@@ -109,16 +109,6 @@ fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
 
 const NO_INSTALL_DETAIL: &str = "install failed — the OS reported no detail; use the steps below";
 
-#[tauri::command]
-pub fn install_ca(pem: String) -> Result<(), SetupError> {
-    let os = std::env::consts::OS;
-    let cert = staged_cert(&pem)?;
-    let inner = install_command(os, &cert).ok_or_else(|| {
-        setup_error("no automatic install on this system — follow the guided steps")
-    })?;
-    run_elevated(&elevated_argv(os, &inner), NO_INSTALL_DETAIL)
-}
-
 // Trawler's CA is issued with this CN; the store dumps below are matched on it,
 // the same key W2's removal steps use.
 const CA_COMMON_NAME: &str = "Trawler Proxy CA";
@@ -661,8 +651,9 @@ mod tests {
     }
 
     #[test]
-    fn install_ca_rejects_non_certificate_input() {
-        let err = install_ca("BEGIN RSA PRIVATE KEY".into()).unwrap_err();
+    fn setting_up_rejects_non_certificate_input() {
+        let err =
+            set_up_this_machine("BEGIN RSA PRIVATE KEY".into(), "127.0.0.1".into(), 7420).unwrap_err();
         assert!(err.detail.contains("not a PEM certificate"));
         assert!(!err.refused);
     }

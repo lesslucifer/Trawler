@@ -9,7 +9,6 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
-            setup::install_ca,
             setup::ca_trusted,
             setup::set_proxy,
             setup::set_up_this_machine,

@@ -1,5 +1,3 @@
-import type { Phase } from "./onboardingMachine";
-
 // DEC-33's two layers of truth, resolved. THIS MACHINE: two read-only probes,
 // re-read on demand — does this host trust the CA, does its system proxy point
 // at Trawler. TRAFFIC: what has reached the proxy, timestamped. A verdict never
@@ -59,53 +57,60 @@ export const TUNNEL_GRACE_MS = 3_000;
 
 export type Running = "installing" | "setting" | "checking" | null;
 
-const IN_FLIGHT: Record<Exclude<Running, null>, string> = {
-  installing: "installing…",
-  setting: "setting the proxy…",
-  checking: "checking…",
-};
-
-const inFlight = (running: Exclude<Running, null>): StepStatusView => ({
+// A reading in progress says which reading, because "checking…" over three
+// tasks tells the user nothing about any of them. A write in progress says
+// what it is waiting for, which is the user.
+const SETTING_UP: StepStatusView = {
   glyph: "⟳",
   tone: "muted",
-  short: IN_FLIGHT[running],
+  short: "setting up — approve the prompt…",
+};
+
+const reading = (what: string): StepStatusView => ({ glyph: "⟳", tone: "muted", short: what });
+
+// A task about something nothing here can read. Not a verdict about that
+// device — nobody looked at it — but the promise that its first request is
+// what will settle this.
+export const awaiting = (confirmOn: string): StepStatusView => ({
+  glyph: "◐",
+  tone: "muted",
+  short: confirmOn,
 });
 
-export function trustStatus(probe: TrustProbe, running: Running, error?: string): StepStatusView {
-  if (running) return inFlight(running);
-  // The probe's positive wins over a stale action error: the CA is trusted
-  // whatever the last click did.
-  if (probe === "trusted") return { glyph: "✓", tone: "ok", short: "trusted on this machine" };
-  if (error) return { glyph: "⚠", tone: "warn", short: "install failed", remedy: error };
-  if (probe === "unknown")
-    return {
-      glyph: "◐",
-      tone: "muted",
-      short: "can't check on this platform",
-      remedy: "the traffic verdict is what proves it",
-    };
-  return { glyph: "○", tone: "muted", short: "not trusted on this machine yet" };
+export function trustStatus(
+  probe: TrustProbe,
+  running: Running,
+  confirmOn: string,
+): StepStatusView {
+  if (running === "checking") return reading("reading the certificate store…");
+  if (running) return SETTING_UP;
+  if (probe === "trusted") return { glyph: "✓", tone: "ok", short: "done — installed and trusted" };
+  if (probe === "unknown") return awaiting(confirmOn);
+  return { glyph: "○", tone: "muted", short: "not done — the certificate isn't trusted" };
 }
 
-export function proxyStatus(probe: ProxyProbe, running: Running, error?: string): StepStatusView {
-  if (running) return inFlight(running);
-  if (probe === "ours") return { glyph: "✓", tone: "ok", short: "system proxy is set to Trawler" };
-  if (error) return { glyph: "⚠", tone: "warn", short: "couldn't set the proxy", remedy: error };
+export function proxyStatus(
+  probe: ProxyProbe,
+  running: Running,
+  words: { device: string; confirmOn: string },
+): StepStatusView {
+  if (running === "checking") return reading("reading the proxy settings…");
+  if (running) return SETTING_UP;
+  if (probe === "ours")
+    return { glyph: "✓", tone: "ok", short: `done — ${words.device} routes through Trawler` };
+  if (probe === "unknown") return awaiting(words.confirmOn);
   if (probe === "foreign")
-    return {
-      glyph: "○",
-      tone: "muted",
-      short: "another proxy is set",
-      remedy: "point it at Trawler here, or capture from a device configured to use Trawler",
-    };
-  if (probe === "unknown")
-    return {
-      glyph: "◐",
-      tone: "muted",
-      short: "can't check on this platform",
-      remedy: "the traffic verdict is what proves it",
-    };
-  return { glyph: "○", tone: "muted", short: "not set on this machine yet" };
+    return { glyph: "○", tone: "muted", short: "not done — another proxy is set" };
+  return { glyph: "○", tone: "muted", short: "not done — the system proxy is off" };
+}
+
+// What a user is owed before a button replaces something they set: which proxy
+// it is, and that Trawler does not put it back. The address is the shell's to
+// report; where it could not read one the sentence says what it knows and no
+// more, and the confirm dialog carries the rest either way.
+export function foreignProxyNotice(device: string, address: string | null): string {
+  const named = address === null ? "" : `: ${address}`;
+  return `another proxy is set on ${device}${named}. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.`;
 }
 
 // What the wire says, as one name. The words each reading carries are two
@@ -153,49 +158,19 @@ const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
     glyph: "◐",
     tone: "muted",
     short: "arriving — plain HTTP only",
-    remedy: "an HTTPS request is what proves decryption",
+    remedy: "open a website whose address starts with https://",
   },
-  idle: { glyph: "○", tone: "muted", short: "idle — nothing arriving now" },
-  waiting: { glyph: "○", tone: "muted", short: "waiting for your first request" },
+  idle: { glyph: "○", tone: "muted", short: "nothing arriving right now" },
+  waiting: { glyph: "○", tone: "muted", short: "waiting for the first request" },
 };
 
 export function trafficStatus(seen: Traffic, now: number): StepStatusView {
   return TRAFFIC_VERDICT[trafficReading(seen, now)];
 }
 
-// The screen's lead sentence. Capture proven is the one reading it does not
-// render: the outcome belongs beside the request that produced it.
-export type ScreenVerdict = "checking" | TrafficReading;
-
-export function screenVerdict(phase: Phase, seen: Traffic, now: number): ScreenVerdict {
-  return phase === "checking" ? "checking" : trafficReading(seen, now);
+// The sentence the screen ends on. It names the thing the user chose, because
+// the moment setup succeeds is the moment they find out it was THEIR device
+// that worked.
+export function setUpOn(device: string): string {
+  return `You're set up — Trawler is capturing traffic from ${device}`;
 }
-
-// How much of this machine's own setup is still undone, as a count the lead
-// sentence can state. Null is "this machine cannot say" — a probe that came back
-// unknown, or a platform whose stores these probes do not read — and a lead that
-// cannot see the steps does not get to grade them.
-export function stepsLeftHere(trust: TrustProbe, proxy: ProxyProbe): number | null {
-  if (trust === "unknown" || proxy === "unknown") return null;
-  return Number(trust !== "trusted") + Number(proxy !== "ours");
-}
-
-// The one thing the screen's lead sentence may say about this machine's setup,
-// and only where the probes answer for the platform chosen: how much of it is
-// left. Saying "everything below is still set up" whatever they said was the
-// screen's loudest falsehood — and a count is DEC-33-clean, because the words
-// stay the traffic layer's and the number stays the probes'.
-export function stepsDetail(left: number | null): string | null {
-  if (left === null) return null;
-  if (left === 0) return "open any website to see its traffic";
-  return `${left} step${left === 1 ? "" : "s"} left on this machine`;
-}
-
-// A platform this machine cannot read the stores of. Its own glyph and its own
-// words: borrowing this host's answer for a phone is worse than no answer, and
-// saying "not trusted" about a device nobody probed would be a claim.
-export const UNPROBEABLE_TRUST: StepStatusView = {
-  glyph: "◐",
-  tone: "muted",
-  short: "can't check another device from here",
-};
