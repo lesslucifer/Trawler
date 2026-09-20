@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W4
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-20-onboard-p0-and-reading-round-plan.html"
+    tier: T3
+    action: added
+    distills: "The WU's requirement, the eight P0 findings with what each one renders at the tip, the three decisions the reading round settles, the test plan at both levels, and the count correction — eight findings, not the epic plan's nine."
+  - path: "docs/work/2026-09-20-onboard-p0-and-reading-round-result.html"
+    tier: T3
+    action: added
+    distills: "What shipped per finding and what pins it, the round's four settled decisions, six deviations — chief among them that F16's fix is superseded by the design that closed after it, and that a design run's close is the one edit no predicate judges — the evidence, the UC-ONBOARD promises W6's restatement must read, and five follow-ups."
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: amended
+    distills: "The design of record, re-opened for round 4 and closed archived again. The mockup is rebuilt around the reading order — title and purpose, eight tiles, numbered tasks whose state comes only from a probe or the traffic layer, one primary action, guides open where nothing automatic stands above them — and carries every sentence in a copy table so the build cites one artifact. Given, keyboard, proposals and blocked-on moved with it: the not-given line narrowed (per-step completion was never absent on this machine), trustProbe rescoped to this machine alone, ChoiceTiles and TaskStep proposed, the lexicon's flow scoped off this screen, and two new blockers — the foreign proxy's address and one elevated act for two commands."
+t2_waived: "UC-ONBOARD's restatement is W6's, per the epic's distillation plan, and this WU's result is the source it reads: four of its promises changed here and two more have no promise yet. Restating them at this tip would write a contract against a screen W5 is about to rewrite — one fact in two tiers, and the wrong fact in both. The run's two lexicon proposals and the new flow-scoping proposal land in docs/design-rules/ at W6 for the same reason."
