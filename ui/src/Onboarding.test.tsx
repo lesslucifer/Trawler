@@ -238,16 +238,54 @@ describe("this machine — three tasks, and one button that does two of them", (
     expect(screen.queryByRole("button", { name: "Set up this Mac" })).toBeNull();
   });
 
-  it("says the certificate stays trusted, and where the steps to remove it are", () => {
+  it("says what the reversal leaves behind, and where the steps for it are", () => {
     draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
 
     expect(screen.getByTestId("steps")).toHaveTextContent(
-      "Trawler's certificate stays trusted on this Mac — the steps below remove it.",
+      "this turns the proxy off and nothing else — the steps below remove Trawler's certificate.",
     );
     fireEvent.click(screen.getByText("do it manually"));
     expect(screen.getByRole("button", { name: /copy the removal command/i })).toHaveTextContent(
       "security delete-certificate",
     );
+  });
+
+  // Review round 3, important: DEC-13's inherited rule is that an action which
+  // changed this host may not become irreversible because a probe has not
+  // answered yet. The reversal read the probes alone, so the window between a
+  // successful run and the re-read it triggers had no way out — and a probe
+  // that never answers had none at all.
+  it("offers the way out as soon as the action resolved, before any probe confirms it", async () => {
+    draw({
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "stop routing through Trawler" }),
+      ).toBeInTheDocument(),
+    );
+    // And it does not claim the tasks are done — that is still the probes' word.
+    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first request");
+  });
+
+  it("keeps offering the action until the probes say the work is done", async () => {
+    draw({
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeInTheDocument();
   });
 });
 

@@ -69,7 +69,6 @@ export interface Guide {
 export interface Task {
   title: string;
   why?: string;
-  note?: string;
   guide?: Guide;
 }
 

@@ -766,37 +766,26 @@ export function Onboarding({
 
           {/* One primary action per screen, and the two single ones stay inside
               the manual route it replaced. It sits under the tasks it covers
-              because it is both of them, and under the reversal rule DEC-13
-              inherited: an undo is offered once the setup here is ours to undo,
-              and still offered where a probe cannot say.
+              because it is both of them.
+
+              The action and its reversal are two controls, not two halves of
+              one: DEC-13's inherited rule is that work which changed this host
+              stays reversible from the moment it ran, so the way out appears
+              as soon as the action resolved and does not wait for the re-read
+              it triggered — a probe that has not answered, or never will, may
+              not strand a machine this app just changed. The action itself
+              stays until the probes say the work is done, because what is
+              done is still theirs to say and never the click's.
 
               The reversal names the half it performs. One action installs a
               certificate and sets a proxy; only the proxy can be put back, and
               DEC-13 never offered to untrust a store — so the control says
-              what it does, and the line beside it says what stays and where
-              the steps for it are. A button that claimed to undo the trust
-              would be answering, falsely, a question about what this machine
-              trusts. */}
+              what it does, and the line beside it says where the steps for the
+              rest are. A button that claimed to undo the trust would be
+              answering, falsely, a question about what this machine trusts. */}
           {setUpHere !== undefined && (
             <TaskAside>
-              {proxy.status === "ours" && trustProbe === "trusted" ? (
-                unsetProxyAction.trigger && (
-                  <>
-                    <Action
-                      testId="unset-proxy"
-                      label="stop routing through Trawler"
-                      action={unsetProxyAction}
-                      note={UNSETPROXY_NOTE}
-                      onClick={unsetProxyAction.trigger}
-                      frame="bare"
-                    />
-                    <p className="pt-2 font-ui text-chrome text-ink-mute">
-                      Trawler's certificate stays trusted on {deviceName("this", os)} — the steps
-                      below remove it.
-                    </p>
-                  </>
-                )
-              ) : (
+              {!(proxy.status === "ours" && trustProbe === "trusted") && (
                 <>
                   <Action
                     testId="set-up"
@@ -810,6 +799,22 @@ export function Onboarding({
                     one password prompt — it installs the certificate and sets the proxy
                   </p>
                 </>
+              )}
+              {(proxy.status === "ours" || setUp.state === "done") && unsetProxyAction.trigger && (
+                <div className="pt-3">
+                  <Action
+                    testId="unset-proxy"
+                    label="stop routing through Trawler"
+                    action={unsetProxyAction}
+                    note={UNSETPROXY_NOTE}
+                    onClick={unsetProxyAction.trigger}
+                    frame="bare"
+                  />
+                  <p className="pt-2 font-ui text-chrome text-ink-mute">
+                    this turns the proxy off and nothing else — the steps below remove Trawler's
+                    certificate.
+                  </p>
+                </div>
               )}
               {/* One action, one manual alternative: what the button does in
                   one prompt, the steps do in two tasks' worth of commands. Two
