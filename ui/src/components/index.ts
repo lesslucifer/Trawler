@@ -33,6 +33,7 @@ export { StatusDot } from "./StatusDot";
 export { StatusLine } from "./StatusLine";
 export { StatusPill } from "./StatusPill";
 export { StepList } from "./StepList";
+export { TaskStep } from "./TaskStep";
 export { TextRenderer } from "./TextRenderer";
 export { TimestampText } from "./TimestampText";
 export { TonedText } from "./TonedText";
