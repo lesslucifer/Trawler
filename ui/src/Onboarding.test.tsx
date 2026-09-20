@@ -226,11 +226,28 @@ describe("this machine — three tasks, and one button that does two of them", (
     expect(task(2)).toHaveTextContent("Send this PC's traffic to Trawler");
   });
 
-  it("once both are done, the action becomes the way to undo them", () => {
+  // Review round 1, blocker: the button offered once both are done was labelled
+  // "undo this setup", and undid half of it — nothing reverses a trust-store
+  // install, and DEC-13 never offered to. A control may not name work it does
+  // not do, least of all work about what this machine trusts.
+  it("once both are done, the action offers the half it can actually reverse", () => {
     draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
 
-    expect(screen.getByRole("button", { name: "undo this setup" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /undo this setup/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Set up this Mac" })).toBeNull();
+  });
+
+  it("says the certificate stays trusted, and where the steps to remove it are", () => {
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
+
+    expect(screen.getByTestId("steps")).toHaveTextContent(
+      "Trawler's certificate stays trusted on this Mac — the steps below remove it.",
+    );
+    fireEvent.click(screen.getByText("do it manually"));
+    expect(screen.getByRole("button", { name: /copy the removal command/i })).toHaveTextContent(
+      "security delete-certificate",
+    );
   });
 });
 
