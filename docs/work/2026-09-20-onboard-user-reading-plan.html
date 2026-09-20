@@ -44,7 +44,49 @@
     <p data-item="requirement">The twelve P1 findings, each a change to what the screen says or how it is shaped. The design of
       record already resolved every one of them into a mockup and a copy table; this WU is the build of
       that resolution, and the copy table is <strong>cited, never re-written</strong> — a screen whose copy
-      is derived a second time is a screen with two designs.</p>
+      is derived a second time is a screen with two designs.
+      <strong>Added at round 5 (v2):</strong> and then the screen it builds is read running, at the
+      size the app opens, and the three things that reading returns are built from the same run
+      amended — the column answers to the window, the question is one control again, and a task says
+      less at once.</p>
+
+    <p class="kd"><strong>v2 — what the window added.</strong> W5's first tip was gated and
+      handed back for review. The owner ran it at 1440×800 and returned three instructions, none of
+      them about what the screen claims and all of them about how much of it there is. They are the
+      design of record's round 5, and this WU builds that round rather than opening a seventh: the
+      design and its build are one Working Unit, which the flow permits where a build finds a surface
+      nobody read — here, a surface nobody had read at its real size. Two of the three were already on
+      the PO review's P2 list (<strong>F25</strong>, the column; <strong>F8</strong>, the undo steps),
+      deferred to W6; they land here because the owner asked for them and because the tokens and the
+      component they need are the ones round 5 proposed.</p>
+
+    <table data-c="round5">
+      <thead><tr><th>What the owner said</th><th>What this WU builds</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>"the UI width is limited, it should be relative to window size"</td>
+          <td>a reading column at <code>max-w-reading</code> — 60% of the window under an 880px ceiling
+            — so it grows with the window instead of holding a dialog's 384px inside it. The ceiling is
+            where a line of prose stops being comfortable and where the longest trust command still
+            renders on one line inside a task's indented body</td>
+          <td><code>tailwind.config.js</code> · <code>Onboarding.tsx</code></td></tr>
+        <tr><td>"We have 8 platform options to select so a multi-button selection is not a good idea,
+          please use a dropdown"</td>
+          <td><code>Select</code> as the axis again, on the question's own line, with a trigger sized to
+            the longest label so it never resizes with the answer. <code>ChoiceTiles</code> is withdrawn
+            and deleted — built and removed inside one Working Unit, before it ever merged</td>
+          <td><code>Onboarding.tsx</code> · <code>components/Select.tsx</code> ·
+            <code>components/ChoiceTiles.tsx</code>, deleted</td></tr>
+        <tr><td>"the instruction texts is too verbose … different background to isolate the command
+          instruction part &amp; make it collapsible or similar smartly"</td>
+          <td>four moves. A command leaves the sentence for a <code>CommandBlock</code> on
+            <code>canvas-soft</code>. A caveat stops being a numbered step and becomes a line under
+            them. A second route goes behind <em>other ways</em>. The way back goes behind its own
+            summary instead of rendering under the steps to do it. The guide itself is behind a summary
+            that counts it, open on the first task whose work is not done and shut on the rest</td>
+          <td><code>components/CommandBlock.tsx</code> · <code>setup.ts</code> ·
+            <code>Onboarding.tsx</code></td></tr>
+      </tbody>
+    </table>
 
     <table data-item="maps-to" data-c="p1-set">
       <thead><tr><th>#</th><th>What the user meets now</th><th>What this WU builds</th><th>Where</th></tr></thead>
@@ -256,9 +298,24 @@ flowchart TD
         <tr><td>9</td><td>The first decrypted request lands the user on the list with a dismissible banner
           saying setup succeeded</td><td>integration — the seam between the machine's
           <code>captured</code> and the list's first paint</td></tr>
-        <tr><td>10</td><td>The <code>design/v1</code> note cites W4's archived run by path and blob for
+        <tr><td>10</td><td>The <code>design/v1</code> note cites the archived run by path and blob for
           every rendered file the diff touches, with an <em>undesigned</em> reason for any that needed
-          none</td><td>gate check 9 · <code>cargo xtask design-scope</code></td></tr>
+          none — re-pinned at round 5, because a build that amends its own design re-pins the
+          citation</td><td>gate check 9 · <code>cargo xtask design-scope</code></td></tr>
+        <tr><td>11</td><td>The column's width is a share of the window under a ceiling, and no screen
+          in the app carries an inline magnitude for it</td><td>unit — the class on the column ·
+          <code>design/vocabulary</code>, which reds anything the closed scale cannot emit</td></tr>
+        <tr><td>12</td><td>The eight answers are one control carrying the current one unopened, and
+          choosing another takes one tab stop and one Enter — <code>Select</code>'s contract,
+          unchanged</td><td>unit — the option list, the trigger's answer, the fixed width</td></tr>
+        <tr><td>13</td><td>A command renders on a surface of its own with one copy control, and a value
+          stays inside the sentence naming the field it goes in. No value opens with a tool's name and
+          every command does</td><td>unit — asserted in both directions over all eight
+          platforms</td></tr>
+        <tr><td>14</td><td>Exactly one guide is open: the first task whose work is not done. A caveat is
+          never a numbered step, a second route is behind <em>other ways</em>, and the way back is
+          behind its own summary</td><td>unit — the open rule per platform, and the three kinds of
+          aside asserted apart from the sequence</td></tr>
       </tbody>
     </table>
 
@@ -273,9 +330,13 @@ flowchart TD
         <tr><td>UC-ONBOARD's restatement, the two lexicon entries, DEC-55's index row</td><td>W6's
           distillation. W4 already recorded why: a contract restated against a screen one WU from changing
           is a contract written twice</td></tr>
-        <tr><td>the eight P2 findings — the glyph legend, QR codes, <em>Test now</em>, the undo collapse,
-          the column width, the dot reading the traffic</td><td>W6 writes them as backlog rows, with a
-          decision record each for the two that are new capabilities</td></tr>
+        <tr><td>six of the eight P2 findings — the glyph legend, QR codes, <em>Test now</em>, the dot
+          reading the traffic, <em>Set up a device</em> in the list menu, the action notes folding into
+          the step state</td><td>W6 writes them as backlog rows, with a decision record each for the two
+          that are new capabilities. <strong>Round 5 takes the other two early</strong> —
+          <strong>F25</strong>'s column and <strong>F8</strong>'s undo collapse — because the owner asked
+          for them at the window and because each is one line of the edit round 5 was already
+          making</td></tr>
         <tr><td>the quit dialog</td><td>the epic's declared non-goal, with its own successor row</td></tr>
         <tr><td>persisting the selected platform, or the reach opt-in, across relaunches</td><td>both
           answered <em>no</em> in the epic's open questions; the design is honest either way</td></tr>
@@ -294,13 +355,25 @@ flowchart TD
       <thead><tr><th>Level</th><th>What it covers</th><th>Where</th></tr></thead>
       <tbody>
         <tr><td><strong>unit — the components</strong></td>
-          <td><code>ChoiceTiles</code>: one selected at a time, every option rendered, the roving tab stop,
-            arrows moving focus without committing and not wrapping, Enter and Space taking the focused
-            tile, and the click path. <code>TaskStep</code>: the number and title render, a state renders
-            where one is given and nothing where none is, the dimmed variant, and the slot</td>
-          <td><code>components/ChoiceTiles.test.tsx</code> ·
-            <code>components/TaskStep.test.tsx</code> · the collection's mount test and registry
+          <td><code>TaskStep</code>: the number and title render, a state renders where one is given and
+            nothing where none is, the dimmed variant, and the slot. <strong>Round 5:</strong>
+            <code>CommandBlock</code> — the command verbatim and uncut, its <code>data-wire</code> and
+            mono family, the surface that sets it apart, and one copy control in the icon form its
+            adjacency licenses. <code>Select</code> gains the two lines of its widened contract: the
+            trigger fills the component's box, and with no width from the host it is the box it always
+            was. <s><code>ChoiceTiles</code> and its nine tests</s> leave with the entry</td>
+          <td><code>components/TaskStep.test.tsx</code> ·
+            <code>components/CommandBlock.test.tsx</code> ·
+            <code>components/Select.test.tsx</code> · the collection's mount test and registry
             oracle</td></tr>
+        <tr><td><strong>unit — how much is said at once (round 5)</strong></td>
+          <td>Exactly one guide open and which one, per platform and once a request has decrypted; the
+            count in a summary where the steps are the only route and <em>do it manually</em> where a
+            button is the first; a caveat rendered under the steps and absent from the sequence; a second
+            route behind <em>other ways</em>, closed; the way back behind its own summary, closed. And
+            the command/value split asserted in both directions over all eight platforms — no value opens
+            with a tool's name, every command does</td>
+          <td><code>Onboarding.test.tsx</code> · <code>setup.test.ts</code></td></tr>
         <tr><td><strong>unit — the copy</strong></td>
           <td>The copy table's rows as literal assertions, so a sentence cannot drift back to the machine's
             vocabulary silently: the title and purpose, the question, the six task states of this machine,

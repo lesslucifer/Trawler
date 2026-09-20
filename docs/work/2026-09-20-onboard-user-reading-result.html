@@ -10,23 +10,36 @@
     <div class="inner">
       <h1>E-ONBOARD.W5 — result</h1>
       <p>Twelve findings, two new registry entries and three things the OS boundary owed — and a setup
-        screen whose every sentence is written for the person reading it for the first time.</p>
-      <div class="meta">v1 · 2026-09-20 · Trawler · T3 (docs/work/) ·
+        screen whose every sentence is written for the person reading it for the first time. Then the
+        owner ran that screen at the size the app opens, and a second half: the window, one control,
+        and a task that says less at once.</p>
+      <div class="meta">v2 · 2026-09-20 · Trawler · T3 (docs/work/) ·
         branch <code>wu/onboarding-redesign/user-reading-build</code> ·
         plan <a href="2026-09-20-onboard-user-reading-plan.html">E-ONBOARD.W5</a> ·
         epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
-        built from <a href="2026-09-17-onboarding-design-run.html">the design of record</a> (round 4) ·
-        answers <a href="2026-09-20-onboard-po-review.html">the PO review</a>'s P1 row</div>
+        built from <a href="2026-09-17-onboarding-design-run.html">the design of record</a> (rounds 4
+        and 5) ·
+        answers <a href="2026-09-20-onboard-po-review.html">the PO review</a>'s P1 row, and two of
+        its P2s</div>
     </div>
   </header>
   <main>
 
     <h2 id="outcome">Outcome</h2>
 
-    <p data-item="outcome"><strong>Delivered.</strong> The requirement asked for the screen round 4
-      designed — cited, never re-derived — so that a first-time user can finish setup without reading the
-      epic's vocabulary. Six commits: one plan, two registry entries, one for the shell, one for the
-      screen and the words it renders, one for the moment setup succeeds.</p>
+    <p data-item="outcome"><strong>Delivered, in two halves.</strong> The requirement asked for the
+      screen round 4 designed — cited, never re-derived — so that a first-time user can finish setup
+      without reading the epic's vocabulary. Six commits: one plan, two registry entries, one for the
+      shell, one for the screen and the words it renders, one for the moment setup succeeds. That tip
+      was gated, handed back, and <strong>run by the owner at 1440×800</strong> — which returned three
+      instructions, none about what the screen claims and all about how much of it there is. They are
+      the design of record's round 5, built here rather than deferred, and they are the second half
+      below.</p>
+
+    <p class="kd"><strong>Two things are called round 5 in this document.</strong> The
+      <em>design of record's round 5</em> is the owner's reading at the window, written up on the run.
+      <em>Review round 5</em> is the fifth pass of the code-review fleet over the first half. They are
+      unrelated, and each section below says which it means.</p>
 
     <table data-c="what-the-tip-does">
       <thead><tr><th>#</th><th>What the tip does now</th><th>Pinned by</th></tr></thead>
@@ -93,6 +106,30 @@
             <code>osascript … with administrator privileges</code>, joined with <code>&amp;&amp;</code></td>
           <td><code>setup.rs</code> — one elevation in the argv, on macOS and on Windows ·
             <code>App.test.tsx</code> — the one command, and no <code>set_proxy</code> beside it</td></tr>
+        <tr><td><span class="badge id">the window</span></td>
+          <td>The column is <code>max-w-reading</code> — 60% of the window under an 880px ceiling. At
+            the size the app opens it is 864px where it was 384</td>
+          <td><code>Onboarding.test.tsx</code> — the class on the column, and the absence of the
+            dialog's · <code>design/vocabulary</code>, which reds anything the closed scale cannot
+            emit</td></tr>
+        <tr><td><span class="badge id">the control</span></td>
+          <td>One <code>Select</code> on the question's own line, carrying the answer unopened and
+            holding its width whatever the answer is. <code>ChoiceTiles</code> is gone from the
+            tree</td>
+          <td><code>Onboarding.test.tsx</code> — the eight options, the answer on the trigger, the
+            width held across a change of answer · <code>Select.test.tsx</code> — the two lines of the
+            widened contract · the collection's barrel and registry oracles, which refuse the name
+            outright once the file is gone</td></tr>
+        <tr><td><span class="badge id">the verbosity</span></td>
+          <td>A command is a block on <code>canvas-soft</code> with one copy control. A caveat is a
+            line under the steps. A second route is behind <em>other ways</em>. The way back is behind
+            its own summary. The guide itself is behind a summary that counts it, open on the first
+            task whose work is not done. The Android emulator's certificate task went from eleven lines
+            of column to four and a summary</td>
+          <td><code>CommandBlock.test.tsx</code> — 7 tests · <code>setup.test.ts</code> — the three
+            kinds of aside kept apart, and the command/value split asserted in both directions over all
+            eight platforms · <code>Onboarding.test.tsx</code> — the open rule per platform and once a
+            request has decrypted</td></tr>
       </tbody>
     </table>
 
@@ -101,6 +138,44 @@
     <table data-item="deviations" data-c="deviations">
       <thead><tr><th>#</th><th>Deviation</th><th>Why</th></tr></thead>
       <tbody>
+        <tr><td>8</td><td><strong>A component was built and withdrawn inside one Working
+          Unit.</strong> <code>ChoiceTiles</code> shipped in commit <code>1f19131</code> and left in
+          <code>a773945</code>, three commits and one owner reading apart</td>
+          <td>The entry answered round 4's reading honestly and the built screen answered back: eight
+            tiles with labels as long as <em>Another Ubuntu machine</em> take four rows of column
+            before the first task. Withdrawing costs nothing downstream because nothing downstream
+            exists — the unit never merged, so no note cites the entry, no design file retires into
+            it, and <code>components·unbuilt</code> has nothing to resolve. The alternative was to keep
+            a registry entry with no tenant, which is the vocabulary rot DEC-25's drop record exists to
+            refuse. The run records it as <strong>withdrawn</strong>, not dropped, and says which
+            round proposed it and which withdrew it</td></tr>
+        <tr><td>9</td><td><strong>Two P2 findings landed here instead of as W6 backlog
+          rows.</strong> <span class="badge id">F25</span>'s column width and
+          <span class="badge id">F8</span>'s collapsed undo steps</td>
+          <td>Both are what the owner asked for at the window, and each is one line of an edit round 5
+            was making anyway: F25 is the token the run proposed, applied at the one call site that
+            needs it, and F8 is the same disclosure the verbosity instruction puts around
+            <em>other ways</em>. Deferring them would have written two backlog rows describing work
+            already done. The other six P2s are untouched and stay W6's</td></tr>
+        <tr><td>10</td><td><strong>Two tokens, where the plan's round-5 section named
+          one.</strong> <code>maxWidth.reading</code> was foreseen; <code>spacing.picker</code> was
+          not</td>
+          <td>The second was found in the build. Returning to <code>Select</code> re-exposed what its
+            own <code>min-w-control-min</code> (132px) cannot carry: every platform label is wider, so
+            the trigger resizes with the answer and moves the question beside it. No member of the
+            closed scale fits either — <code>field-lg</code> is 160px and
+            <em>Another Ubuntu machine</em> needs ~165 — so the relationship had to be named. It is on
+            the run's proposals with its reason, which is where a token the vocabulary lacked
+            belongs</td></tr>
+        <tr><td>11</td><td><strong>The mockup now mounts <code>TaskStep</code> and
+          <code>CommandBlock</code> rather than drawing them.</strong> Round 4 drew both proposals
+          screen-owned, as the flow asks of a component that does not exist yet</td>
+          <td>Both exist now, in this unit. DEC-26 is explicit that a hand-drawn component in correct
+            utilities is still a fork no class check can see, so leaving the drawings in place would
+            have kept two renderings of one contract in one repository. Mounting them also retired
+            deviation 7 at its source: the mockup's own <code>pl-9</code>, which rendered unstyled, is
+            gone with the drawing that carried it, and the aside now repeats the marker column exactly
+            as the built one does</td></tr>
         <tr><td>1</td><td><strong>Six commits, not the plan's seven.</strong> The words and the screen
           landed as one</td>
           <td>They are one change. <code>setup.ts</code> and <code>verdicts.ts</code> hold the sentences
@@ -179,8 +254,17 @@
         <tr><td><code>7166f1e</code></td><td>round 4's fix — the latch the action opens is closed by
           the reversal succeeding</td></tr>
         <tr><td><code>4af1260</code></td><td>this result, as the first four rounds read it</td></tr>
-        <tr><td><code>48aa0a3</code></td><td>round 5's fix — a reversal that succeeded closes the way
-          out, whichever arm opened it</td></tr>
+        <tr><td><code>48aa0a3</code></td><td>review round 5's fix — a reversal that succeeded closes
+          the way out, whichever arm opened it</td></tr>
+        <tr><td><code>aeb39e3</code></td><td>this result, as all six review rounds read it — the first
+          half's gated tip, handed to the owner</td></tr>
+        <tr><td colspan="2"><strong>The owner runs it at 1440×800 and returns three
+          instructions.</strong> The design of record re-opens for round 5</td></tr>
+        <tr><td><code>494b148</code></td><td>the run's round 5, and the two tokens it proposes</td></tr>
+        <tr><td><code>a773945</code></td><td>the collection gains a command surface, and loses the
+          tiles it gained a day ago</td></tr>
+        <tr><td><code>0b1a475</code></td><td>the screen — one control, the window's width, and one
+          guide open at a time</td></tr>
       </tbody>
     </table>
 
@@ -219,6 +303,21 @@
             confirm in all three of its cases; and the success banner's transition, dismissal, re-entry
             and silence on a launch</td>
           <td>70 integration tests green</td></tr>
+        <tr><td><strong>unit · the window round</strong></td>
+          <td><code>CommandBlock.test.tsx</code> +7 — the command verbatim and uncut, its
+            <code>data-wire</code> and mono family, the surface, the icon-form copy and the single
+            control. <code>Select.test.tsx</code> +2 — the trigger fills the host's box, and with no
+            width from the host it is the box it always was. <code>setup.test.ts</code> +30 — the
+            command/value split asserted in both directions over all eight platforms, the three kinds
+            of aside kept out of the numbered sequence, the caveats named, and <code>combine</code>
+            merging two tasks' routes without turning an aside into a step.
+            <code>Onboarding.test.tsx</code> +14 — the picker's eight options and its held width, the
+            open-guide rule per platform and once a request has decrypted, a command as a block and a
+            value inside its sentence, and the column's class. <s><code>ChoiceTiles.test.tsx</code>
+            −9</s>, with the entry</td>
+          <td>1108 Vitest tests green in 55 files (was 1065 in 55) · <code>eslint</code>,
+            <code>tsc</code> and the closed-vocabulary rule clean · 0 live
+            <code>design-allow</code> suppressions</td></tr>
         <tr><td><strong>e2e</strong></td>
           <td><span class="badge approval">waived here</span> — the epic owes it and
             <a href="2026-09-07-onboarding-redesign-plan.html#w6">W6</a> writes it against this screen.
@@ -230,8 +329,14 @@
     <table data-c="touched">
       <thead><tr><th>Touched</th><th>What moved</th></tr></thead>
       <tbody>
-        <tr><td><code>ui/src/components/ChoiceTiles.tsx</code></td><td>new — the visible one-of-N the
-          collection lacked</td></tr>
+        <tr><td><s><code>ui/src/components/ChoiceTiles.tsx</code></s></td><td>new, then gone — the
+          visible one-of-N round 4 wanted, withdrawn at the window</td></tr>
+        <tr><td><code>ui/src/components/CommandBlock.tsx</code></td><td>new — a command on a surface
+          of its own, which nothing in the collection could do</td></tr>
+        <tr><td><code>ui/src/components/Select.tsx</code></td><td>the trigger fills the component's
+          box, so a host can size it once and stop the control moving the row beside it</td></tr>
+        <tr><td><code>ui/tailwind.config.js</code></td><td>two members: the reading column's width,
+          and the one-choice trigger's</td></tr>
         <tr><td><code>ui/src/components/TaskStep.tsx</code></td><td>new — the observed task, and the
           contract that keeps its number honest</td></tr>
         <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>the combined elevated act, the failure
@@ -240,12 +345,14 @@
           the dialog the first one built</td></tr>
         <tr><td><code>ui/src/setup.ts</code></td><td>organised by platform as before, and now by the
           platform's own words: the device it is called, where a website is opened on it, and its three
-          tasks</td></tr>
+          tasks. Round 5 splits a guide's parts by what each one is — a command, a value, a caveat, a
+          second route, the way back — so the screen can render each as the kind of thing it is</td></tr>
         <tr><td><code>ui/src/verdicts.ts</code></td><td>the states re-worded for their reader, the
           foreign-proxy sentence, the end of setup — and the lead's three resolvers gone with the
           lead</td></tr>
-        <tr><td><code>ui/src/Onboarding.tsx</code></td><td>rebuilt on the two entries: lead, question,
-          tiles, numbered tasks, one action, one manual route</td></tr>
+        <tr><td><code>ui/src/Onboarding.tsx</code></td><td>rebuilt: lead, question, numbered tasks,
+          one action, one manual route — then the window's column, the question's one control, and the
+          rule that opens one guide at a time</td></tr>
         <tr><td><code>ui/src/useAction.ts</code></td><td>a failure is two facts now — whether the user
           refused, and what the tool said</td></tr>
         <tr><td><code>ui/src/App.tsx</code></td><td>the combined command, the replacement confirm, the
@@ -438,6 +545,15 @@
         <tr><td>the certificate install is a one-click action on macOS and Windows</td><td>it is, inside
           the combined action — there is no install-only button, and no
           <code>install_ca</code> command behind one</td></tr>
+        <tr><td>the target is chosen from a picker <em>(unchanged, after all)</em></td><td>one
+          <code>Select</code> again — the axis never moved, and the control returned to where round 1
+          put it. What round 4's tiles proved is on the run's review item, not in the contract</td></tr>
+        <tr><td>(nothing about how much of a platform's instructions are on screen at once)</td>
+          <td>one guide open, the first whose task is not done; a command on a surface of its own; a
+            caveat under the steps rather than numbered among them; a second route and the way back
+            each behind a summary of its own</td></tr>
+        <tr><td>(nothing about the screen's width)</td><td>the column answers to the window — a share
+          of it under a ceiling — rather than to a dialog</td></tr>
       </tbody>
     </table>
 
@@ -449,8 +565,15 @@
         <tr><td>The two lexicon proposals — <em>arriving</em> and <em>platform</em> — and the scoping the
           round added: <em>flow</em> keeps its entry and gains the screen it may not appear on. This WU
           is what makes the scoping true in code</td><td>W6's distillation</td></tr>
-        <tr><td>UC-ONBOARD restated, DEC-55 indexed, the roadmap's rows struck and the P2 set written as
-          backlog rows</td><td>W6</td></tr>
+        <tr><td>UC-ONBOARD restated, DEC-55 indexed, the roadmap's rows struck, and <strong>six</strong>
+          of the eight P2 findings written as backlog rows — <span class="badge id">F25</span>'s column
+          and <span class="badge id">F8</span>'s collapsed undo landed here instead, at the owner's
+          word</td><td>W6</td></tr>
+        <tr><td><strong>The rulebook's lexicon gains nothing from round 5, and that is a
+          statement.</strong> The window round proposed one component and two tokens and no vocabulary:
+          every word it put on screen — <em>3 steps</em>, <em>other ways</em>, <em>do it manually</em> —
+          is a summary of what is behind it and names nothing the app has a term for</td>
+          <td>nothing owed; recorded so W6's distillation does not go looking</td></tr>
         <tr><td>The e2e spine, against this screen, with a coverage map over the 8 assertions the
           current spec holds</td><td>W6</td></tr>
         <tr><td><strong>One blocked-on row is still open, and the build could not close it:</strong> no
