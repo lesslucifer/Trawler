@@ -271,6 +271,22 @@ describe("Select", () => {
     expect(onChange).toHaveBeenCalledWith("chrome");
   });
 
+  // A trigger that shrink-wraps its label moves everything beside it on every
+  // pick. It fills the component's own box instead, so a host whose labels vary
+  // in length sizes the box once and the control stops jittering.
+  it("the trigger fills the component's box, so a host can size it", () => {
+    const { view } = setup({ className: "w-picker" });
+
+    expect(view.container.firstElementChild!.className).toContain("w-picker");
+    expect(trigger().className).toContain("w-full");
+  });
+
+  it("with no width from the host it is still the same box it always was", () => {
+    setup();
+
+    expect(trigger().className).toContain("min-w-control-min");
+  });
+
   // The reconcile above must not fight the filter: narrowing the list resets the
   // highlight to the first match on purpose, so keying it on the filtered list
   // instead of on options silently reverts that.
