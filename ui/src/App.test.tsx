@@ -453,6 +453,37 @@ test("stop listening takes the exposure away without asking again", async () => 
   );
 });
 
+// F20: choosing "this machine" hid the exposure entirely, and the flow list -
+// where a user spends the rest of the session - never showed it at all.
+test("an armed reach is stated in the header, in setup and in the list alike", async () => {
+  for (const phase of [ONBOARDING, PROVEN]) {
+    onMacHost();
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => ARMED);
+    const disarmReach = vi.fn(async () => UNARMED);
+    api.disarmReach = disarmReach;
+    const view = render(<App api={api} initialState={phase} />);
+
+    const chip = await screen.findByTestId("reach-chip");
+    expect(chip).toHaveTextContent("reachable on 192.168.1.24");
+
+    fireEvent.click(within(chip).getByRole("button", { name: "stop" }));
+    await waitFor(() => expect(disarmReach).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByTestId("reach-chip")).toBeNull());
+    view.unmount();
+  }
+});
+
+test("a machine nothing is listening on carries no chip at all", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => UNARMED);
+  render(<App api={api} initialState={PROVEN} />);
+
+  await waitFor(() => expect(api.reach).toHaveBeenCalledOnce());
+  expect(screen.queryByTestId("reach-chip")).toBeNull();
+});
+
 test("a core that will not say leaves the screen saying Trawler answers here only", async () => {
   await offMachine({
     reach: async () => {
