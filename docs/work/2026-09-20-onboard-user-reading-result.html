@@ -175,6 +175,9 @@
         <tr><td><code>e0db1c9</code></td><td>this result, as the first two rounds read it</td></tr>
         <tr><td><code>e507e0c</code></td><td>round 3's fix — work that changed this host stays
           reversible from the moment it ran</td></tr>
+        <tr><td><code>1607484</code></td><td>this result, as the first three rounds read it</td></tr>
+        <tr><td><code>7166f1e</code></td><td>round 4's fix — the latch the action opens is closed by
+          the reversal succeeding</td></tr>
       </tbody>
     </table>
 
@@ -267,7 +270,9 @@
           important; efficiency and altitude returned empty lists</td></tr>
         <tr><td>3</td><td>3 finders, 1 candidate, 1 verifier agent</td><td><strong>FAIL</strong> — one
           important; efficiency and altitude empty again</td></tr>
-        <tr><td>4</td><td>3 finders</td><td><strong>PASS</strong> — on the tip all three fixes
+        <tr><td>4</td><td>3 finders, 2 candidates, 1 verifier agent</td><td><strong>FAIL</strong> —
+          one important (a consequence of round 3's own fix), one refuted as pre-existing</td></tr>
+        <tr><td>5</td><td>3 finders</td><td><strong>PASS</strong> — on the tip all four fixes
           left</td></tr>
       </tbody>
     </table>
@@ -308,6 +313,18 @@
             the work is done. Its line also drops the claim it was making about the certificate's
             current state and says what the button does instead. Both regression tests were written
             before the fix</td></tr>
+        <tr><td><strong>important</strong><br>(round 4)</td>
+          <td>Round 3's own fix, one step on. The way out was kept alive by the action that opened it
+            and that latch never cleared, so once the user took it and the probes confirmed the proxy
+            was no longer ours, the screen went on offering to turn off a proxy that was already off —
+            beside the button offering to set it up again. Two contradictory primary actions at
+            once</td>
+          <td>A successful reversal is proof that what the latch was holding open is done, and the
+            only proof that does not wait on a probe — so it closes it. A reversal that failed leaves
+            it open, because the proxy it could not turn off is still set. Round 3's half is
+            untouched. The first regression test had to drive one mounted screen through the whole
+            sequence: written as two renders it passed against the bug, because a fresh mount carries
+            no latch</td></tr>
         <tr><td>nit</td>
           <td><code>useNow</code> is instantiated by two leaves at once, so two one-second intervals run
             where one clock would do</td>
@@ -339,6 +356,11 @@
             itself to those two by its own header. The state comes from a real reading of the core, and
             the shape predates this diff — it moved from one component to another and was not
             introduced here</td></tr>
+        <tr><td>important — the Simulator's own reversal carries the same non-resetting latch</td>
+          <td>Pre-existing: the identical condition sits at BASE, and this diff narrows rather than
+            widens it — the case it used to cover for this machine now has a block of its own. Left
+            where it is, with a follow-up row below rather than a silent fix inside a WU that owes
+            neither</td></tr>
         <tr><td>nit — <code>useAction</code> duck-types the shell's error shape</td>
           <td>The hook was written for this action family and says so; the type is declared in its own
             vocabulary rather than imported, and the structural check is the only way to read an untyped
@@ -393,6 +415,11 @@
           traffic reading attributes a connection to a device. It is why the end-of-setup sentence names
           this machine and nothing else, and why a phone's tasks promise a confirmation rather than
           reporting one</td><td>the control API — the run's own row, unchanged</td></tr>
+        <tr><td><strong>The Simulator's reversal keeps the latch this WU closed on its sibling.</strong>
+          Once its proxy action has ever resolved, the control stays visible after the proxy is off.
+          It predates this epic and round 4 refused to report it for that reason; the fix is one
+          condition, and it should not travel inside a WU whose diff neither introduced nor worsened
+          it</td><td>a backlog row, W6</td></tr>
         <tr><td>A device that cannot paste: the certificate URL, the server and the port are still typed
           by hand on a phone. The review filed QR codes as P2 and the epic keeps them there</td>
           <td>W6's backlog rows</td></tr>
