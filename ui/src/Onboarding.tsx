@@ -775,7 +775,11 @@ export function Onboarding({
               it triggered — a probe that has not answered, or never will, may
               not strand a machine this app just changed. The action itself
               stays until the probes say the work is done, because what is
-              done is still theirs to say and never the click's.
+              done is still theirs to say and never the click's. The latch the
+              action opens is closed by the reversal succeeding — proof enough
+              that the thing it offered to undo is undone, and the only proof
+              that does not wait on a probe. A reversal that FAILED leaves it
+              open, because the proxy it could not turn off is still set.
 
               The reversal names the half it performs. One action installs a
               certificate and sets a proxy; only the proxy can be put back, and
@@ -800,22 +804,24 @@ export function Onboarding({
                   </p>
                 </>
               )}
-              {(proxy.status === "ours" || setUp.state === "done") && unsetProxyAction.trigger && (
-                <div className="pt-3">
-                  <Action
-                    testId="unset-proxy"
-                    label="stop routing through Trawler"
-                    action={unsetProxyAction}
-                    note={UNSETPROXY_NOTE}
-                    onClick={unsetProxyAction.trigger}
-                    frame="bare"
-                  />
-                  <p className="pt-2 font-ui text-chrome text-ink-mute">
-                    this turns the proxy off and nothing else — the steps below remove Trawler's
-                    certificate.
-                  </p>
-                </div>
-              )}
+              {(proxy.status === "ours" ||
+                (setUp.state === "done" && unsetProxyAction.state !== "done")) &&
+                unsetProxyAction.trigger && (
+                  <div className="pt-3">
+                    <Action
+                      testId="unset-proxy"
+                      label="stop routing through Trawler"
+                      action={unsetProxyAction}
+                      note={UNSETPROXY_NOTE}
+                      onClick={unsetProxyAction.trigger}
+                      frame="bare"
+                    />
+                    <p className="pt-2 font-ui text-chrome text-ink-mute">
+                      this turns the proxy off and nothing else — the steps below remove Trawler's
+                      certificate.
+                    </p>
+                  </div>
+                )}
               {/* One action, one manual alternative: what the button does in
                   one prompt, the steps do in two tasks' worth of commands. Two
                   disclosures under two tasks with no button above either would

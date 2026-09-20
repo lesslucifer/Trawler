@@ -40,7 +40,26 @@ const ago = (ms: number): number => Date.now() - ms;
 const capturing: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
 const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000) };
 
-const draw = (props: Partial<Parameters<typeof Onboarding>[0]> = {}) =>
+type Props = Partial<Parameters<typeof Onboarding>[0]>;
+
+const screenAt = (props: Props) => (
+  <Onboarding
+    state={onboarding}
+    dispatch={vi.fn()}
+    os="macos"
+    proxyAddr={ADDR}
+    onRecheck={vi.fn()}
+    onSetUpThisMachine={vi.fn(async () => {})}
+    onSaveCa={vi.fn(async () => null)}
+    onSetProxy={vi.fn(async () => {})}
+    onUnsetProxy={vi.fn(async () => {})}
+    onArmReach={vi.fn(async () => {})}
+    onDisarmReach={vi.fn(async () => {})}
+    {...props}
+  />
+);
+
+const draw = (props: Props = {}) =>
   render(
     <Onboarding
       state={onboarding}
@@ -271,6 +290,56 @@ describe("this machine — three tasks, and one button that does two of them", (
     );
     // And it does not claim the tasks are done — that is still the probes' word.
     expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first request");
+  });
+
+  // Review round 4, important: the way out was kept alive by the action that
+  // opened it, and that latch never cleared — so once the user took it, the
+  // screen went on offering to turn off a proxy that was already off, beside a
+  // button offering to set it up again.
+  it("retires the way out once the reversal itself has succeeded", async () => {
+    const onUnsetProxy = vi.fn(async () => {});
+    const props: Props = {
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+      onUnsetProxy,
+    };
+    const { rerender } = draw(props);
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+    await waitFor(() => expect(onUnsetProxy).toHaveBeenCalledOnce());
+
+    // The probe catches up: the proxy this app set is no longer set.
+    rerender(screenAt({ ...props, proxy: { status: "none", address: null } }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull(),
+    );
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeInTheDocument();
+  });
+
+  it("keeps the way out while a reversal that failed leaves the proxy set", async () => {
+    draw({
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+      onUnsetProxy: vi.fn(() => Promise.reject({ refused: false, detail: "no services" })),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() => expect(screen.getByText(/couldn't turn the proxy off/)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
   });
 
   it("keeps offering the action until the probes say the work is done", async () => {
