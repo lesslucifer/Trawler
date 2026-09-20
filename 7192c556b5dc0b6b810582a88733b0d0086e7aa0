@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+base: bcddf45e56987a3e633e67b93c13903a7ab949f5
+design_sha256: 16fc37fe1967c185a3d85b676e7bd27e3adde62bf3dc85eccb68bab9ceb98450
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 993ca2e44372f8e6c06dd7e6204b605bf0706955
+    built: [ui/src/components/ChoiceTiles.tsx, ui/src/components/TaskStep.tsx, ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The shell's wiring plus one zone the run does not reach. The wiring: the combined elevated command, the confirm in front of a proxy replacement, and a probe answer coerced rather than trusted - all passed straight through to the screen, whose rendering of them is designed in the run cited above. The zone: the success banner is the list's first paint, and the archived run designs the setup screen only - its own copy table names the sentence and the PO review names the surface, which is the whole of what this renders."
+date: 2026-09-20
