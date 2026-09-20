@@ -178,6 +178,9 @@
         <tr><td><code>1607484</code></td><td>this result, as the first three rounds read it</td></tr>
         <tr><td><code>7166f1e</code></td><td>round 4's fix — the latch the action opens is closed by
           the reversal succeeding</td></tr>
+        <tr><td><code>4af1260</code></td><td>this result, as the first four rounds read it</td></tr>
+        <tr><td><code>48aa0a3</code></td><td>round 5's fix — a reversal that succeeded closes the way
+          out, whichever arm opened it</td></tr>
       </tbody>
     </table>
 
@@ -272,7 +275,9 @@
           important; efficiency and altitude empty again</td></tr>
         <tr><td>4</td><td>3 finders, 2 candidates, 1 verifier agent</td><td><strong>FAIL</strong> —
           one important (a consequence of round 3's own fix), one refuted as pre-existing</td></tr>
-        <tr><td>5</td><td>3 finders</td><td><strong>PASS</strong> — on the tip all four fixes
+        <tr><td>5</td><td>3 finders, 2 candidates, 1 verifier agent</td><td><strong>FAIL</strong> —
+          one important (the last corner of round 3's expression), one refuted</td></tr>
+        <tr><td>6</td><td>3 finders</td><td><strong>PASS</strong> — on the tip all five fixes
           left</td></tr>
       </tbody>
     </table>
@@ -325,6 +330,17 @@
             untouched. The first regression test had to drive one mounted screen through the whole
             sequence: written as two renders it passed against the bug, because a fresh mount carries
             no latch</td></tr>
+        <tr><td><strong>important</strong><br>(round 5)</td>
+          <td>The last corner of the same expression. Round 4's term gated only the arm the action
+            opened, so on the path a real user takes — the probe has already read a proxy that is
+            ours — a succeeded reversal left the control live until the next probe landed, an IPC
+            round-trip later. The comment one screen up said that proof was the one that does not
+            wait on a probe; the code still waited here. The verifier reproduced it, and handed back
+            the complete rule enumerated over its three inputs</td>
+          <td>The term gates the whole disjunction. The regression test drives the <em>ours</em> path
+            the shipped one never reached: it held the probe at <em>unknown</em> throughout, so the
+            arm round 4 fixed was the only one it exercised — a test that would have passed with the
+            bug still in</td></tr>
         <tr><td>nit</td>
           <td><code>useNow</code> is instantiated by two leaves at once, so two one-second intervals run
             where one clock would do</td>
@@ -361,6 +377,15 @@
             widens it — the case it used to cover for this machine now has a block of its own. Left
             where it is, with a follow-up row below rather than a silent fix inside a WU that owes
             neither</td></tr>
+        <tr><td>important — the reversal's visibility rule belongs in a named resolver in
+          <code>verdicts.ts</code>, and the Simulator's drift proves it</td>
+          <td><code>TaskStep</code>'s contract governs the state a task <em>displays</em>, not a
+            control's visibility; <code>verdicts.ts</code> resolves what to show, not whether to show
+            it; and every other such gate in the file is stated inline. The drift it cites is the
+            pre-existing twin round 4 already filed as W6's, so the argument re-litigates a
+            disposition the process made deliberately. Five rounds on one control is evidence the
+            logic was fragile, not that it sat at the wrong layer — and the rule that fixed it is one
+            expression</td></tr>
         <tr><td>nit — <code>useAction</code> duck-types the shell's error shape</td>
           <td>The hook was written for this action family and says so; the type is declared in its own
             vocabulary rather than imported, and the structural check is the only way to read an untyped
