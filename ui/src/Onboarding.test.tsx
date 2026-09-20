@@ -110,7 +110,7 @@ describe("the probe row answers only where a probe can", () => {
     expect(screen.getByRole("button", { name: "check again" })).toBeInTheDocument();
   });
 
-  it("is there for the Simulator, which shares this Mac's stores", () => {
+  it("is there for the Simulator, whose routing this machine's probe does read", () => {
     draw({ probedAt: ago(60_000) });
     choose("iOS Simulator");
     expect(zone("probe")).toBeInTheDocument();
@@ -167,12 +167,15 @@ describe("the one-click actions belong to this machine alone", () => {
     expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
   });
 
-  it.each(["iPhone or iPad", "iOS Simulator", "Another Mac"])("offers neither under %s", (platform) => {
-    draw();
-    choose(platform);
-    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
-  });
+  it.each(["iPhone or iPad", "Another Mac", "Android emulator"])(
+    "offers neither under %s",
+    (platform) => {
+      draw();
+      choose(platform);
+      expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
+    },
+  );
 
   it("offers neither on a host with no one-click path", () => {
     draw({ os: "linux" });
@@ -197,6 +200,35 @@ describe("the one-click actions belong to this machine alone", () => {
     expect(
       await screen.findByRole("button", { name: "stop routing through Trawler" }),
     ).toBeInTheDocument();
+  });
+});
+
+// F15: the Simulator was probed as this machine and actionable as nothing. It
+// shares one of this Mac's two stores, and the screen now answers per store.
+describe("the Simulator acts through what it shares, and only through that", () => {
+  beforeEach(() => {
+    draw({ trustProbe: "trusted", proxyProbe: "none" });
+    choose("iOS Simulator");
+  });
+
+  it("offers the proxy this Mac sets, because the Simulator routes through it", () => {
+    expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
+    expect(screen.getByTestId("precondition-route")).toHaveTextContent(
+      "not set on this machine yet",
+    );
+  });
+
+  it("offers no certificate install, and never reads this Mac's answer as the Simulator's", () => {
+    const trust = screen.getByTestId("precondition-trust");
+    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
+    expect(trust).not.toHaveTextContent("trusted on this machine");
+    expect(trust).toHaveTextContent("keeps its own certificate store");
+  });
+
+  it("gives it the trust route it can follow", () => {
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
+      "xcrun simctl keychain booted add-root-cert",
+    );
   });
 });
 

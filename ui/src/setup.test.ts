@@ -2,8 +2,9 @@ import { describe, expect, it, test } from "vitest";
 import {
   canAutoSetup,
   hostOs,
-  isProbed,
   needsReach,
+  probesRoute,
+  probesTrust,
   PLATFORM_IDS,
   platformChoices,
   setupFor,
@@ -111,9 +112,14 @@ test("every other platform is named for what the user is holding, not for an OS"
 });
 
 // DEC-33's layer rule applied to the axis: a probe reads this machine, so it may
-// only answer for a platform that IS this machine or shares its stores.
-test("the probes answer for this machine and the Simulator that shares its stores, and nothing else", () => {
-  expect(PLATFORM_IDS.filter(isProbed)).toEqual(["this", "ios-sim"]);
+// only answer for a platform that reads the same store. The two probes read two
+// stores, and the Simulator shares exactly one of them.
+test("this machine's certificate store answers for this machine alone", () => {
+  expect(PLATFORM_IDS.filter(probesTrust)).toEqual(["this"]);
+});
+
+test("this machine's system proxy answers for it and for the Simulator that follows it", () => {
+  expect(PLATFORM_IDS.filter(probesRoute)).toEqual(["this", "ios-sim"]);
 });
 
 test("the five platforms that are somewhere else are the ones that need reach", () => {
@@ -244,12 +250,32 @@ describe("this machine is instructed for the host it is running on", () => {
   });
 });
 
-describe("the Simulator borrows this Mac's answer and says so", () => {
-  it("names the host store and the host proxy rather than repeating their steps", () => {
+// The Simulator keeps its own trust store and follows this Mac's system proxy.
+// Saying the host's certificate store covers it is the one sentence on this
+// screen that sent a user to a step that cannot work.
+describe("the Simulator is trusted through its own keychain and routed through this Mac's", () => {
+  it("says the store is its own, and gives Apple's route into it", () => {
     const s = setup("ios-sim");
-    expect(s.trustNote).toMatch(/this Mac's certificate store/);
+    expect(s.trustNote).toMatch(/keeps its own certificate store/);
+    expect(everything(s)).not.toMatch(/this Mac's certificate store/);
+    expect(copies(s)).toContain("xcrun simctl keychain booted add-root-cert trawler-ca.pem");
+    expect(saves(s)).toBe(1);
+  });
+
+  it("reverses that trust, and says what the reversal costs", () => {
+    const s = setup("ios-sim");
+    expect(copies(s)).toContain("xcrun simctl keychain booted reset");
+    expect(prose(s)).toMatch(/clears everything in it/);
+  });
+
+  it("routes through the host's own guide, because the proxy it follows is the host's", () => {
+    const s = setup("ios-sim");
     expect(s.routeNote).toMatch(/this Mac's system proxy/);
-    expect(s.route).toBeUndefined();
+    expect(copies(s)).toContain(copies(setup("this")).find((c) => c.startsWith("networksetup")));
+  });
+
+  it("carries no trust step of this machine's, whose store it does not read", () => {
+    expect(everything(setup("ios-sim"))).not.toMatch(/security add-trusted-cert/);
   });
 });
 
@@ -263,7 +289,7 @@ describe("every copyable value is offered exactly once in the guide that introdu
 
   it.each(PLATFORM_IDS)("%s writes no command as prose", (id) => {
     const looksLikeCommand = (text: string) =>
-      /^(sudo|certutil|adb|networksetup|reg |gsettings|unset|export|curl|emulator) /.test(text);
+      /^(sudo|certutil|adb|networksetup|reg |gsettings|unset|export|curl|emulator|xcrun) /.test(text);
     for (const step of guides(setup(id))) {
       for (const part of step) {
         if (typeof part === "string") expect(looksLikeCommand(part)).toBe(false);
@@ -280,7 +306,8 @@ test("the save control appears where the file is carried, and once", () => {
   expect(saves(setup("android-sim"))).toBe(1);
   expect(saves(setup("ios"))).toBe(1);
   expect(saves(setup("android"))).toBe(1);
-  for (const id of ["mac", "windows", "ubuntu", "ios-sim"] as const) {
+  expect(saves(setup("ios-sim"))).toBe(1);
+  for (const id of ["mac", "windows", "ubuntu"] as const) {
     expect(saves(setup(id))).toBe(0);
   }
 });

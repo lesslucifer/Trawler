@@ -18,8 +18,9 @@ import {
 import {
   canAutoSetup,
   CA_FILENAME,
-  isProbed,
   needsReach,
+  probesRoute,
+  probesTrust,
   platformChoices,
   setupFor,
   splitProxyAddr,
@@ -668,12 +669,17 @@ export function Onboarding({
     reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
   });
 
-  const probed = isProbed(platform);
   const here = platform === "this";
-  const oneClick = here && canAutoSetup(os);
+  const autoHost = canAutoSetup(os);
+  // An action that changes this machine is offered for the store it changes,
+  // and only where the chosen platform reads that store: installing here does
+  // nothing for a Simulator with a keychain of its own, and setting this
+  // machine's proxy is exactly what the Simulator routes through.
+  const canInstallHere = probesTrust(platform) && autoHost;
+  const canRouteHere = probesRoute(platform) && autoHost;
   // A host with no one-click path has nothing above its guide, so hiding the
   // guide would hide the only instructions the screen has for it.
-  const handWorkOnly = here && !oneClick;
+  const handWorkOnly = here && !autoHost;
 
   // The action the user just took outranks the re-read it triggers, so the line
   // says "installing…" until the command has exited, then "checking…".
@@ -681,7 +687,7 @@ export function Onboarding({
     action.state === "running" ? r : probing ? "checking" : null;
   const failure = (action: ActionHandle) => (action.state === "failed" ? action.error : undefined);
 
-  const trustVerdict = probed
+  const trustVerdict = probesTrust(platform)
     ? trustStatus(trustProbe, running(install, "installing"), failure(install))
     : UNPROBEABLE_TRUST;
   const routeVerdict = proxyStatus(
@@ -709,7 +715,7 @@ export function Onboarding({
           </div>
         </div>
 
-        {probed && onRecheck && (
+        {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
           <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
         )}
 
@@ -728,7 +734,7 @@ export function Onboarding({
             <Precondition testId="trust" title="trust Trawler's certificate">
               <Verdict testId="trust" status={trustVerdict} stated={failure(install)} />
               <ArrivingRemedy traffic={traffic} />
-              {oneClick && install.trigger && (
+              {canInstallHere && install.trigger && (
                 <div className="pt-2">
                   <Action
                     testId="install-ca"
@@ -764,10 +770,10 @@ export function Onboarding({
             </Precondition>
 
             <Precondition testId="route" title="route its traffic through Trawler">
-              {probed && (
+              {probesRoute(platform) && (
                 <Verdict testId="route" status={routeVerdict} stated={failure(setProxyAction)} />
               )}
-              {oneClick && setProxyAction.trigger && (
+              {canRouteHere && setProxyAction.trigger && (
                 <div className="pt-2">
                   <Action
                     testId="set-proxy"
@@ -784,7 +790,7 @@ export function Onboarding({
                   still offered where the probe cannot say, because an action that
                   changed this host may not become irreversible when a probe
                   fails. */}
-              {oneClick &&
+              {canRouteHere &&
                 unsetProxyAction.trigger &&
                 (proxyProbe === "ours" || setProxyAction.state === "done") && (
                 <div className="pt-2">
