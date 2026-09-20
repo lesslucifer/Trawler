@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU E-ONBOARD.W4 -> epic/onboarding-redesign (round 2, on the fixed tip)"
+epic: E-ONBOARD
+wu: E-ONBOARD.W4
+branch: wu/onboarding-redesign/po-p0-and-reading-round
+base: dcf0f7a581031f3616ff570f3a3301fe2d624150
+head: 389f80002220819ba7ecf56fd93e86bc16a44be6
+diff_sha256: 77cba8ecc1ce7a3c3fe3d99e48bb5f865284c159ef9fdb4aa43cf414ebbc1222
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 0
+  stage_seconds:
+    finders: 1024
+    total: 1900
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+verdict: PASS
+date: 2026-09-20
+refuted:
+  - finding: "routed_from()'s UdpSocket bind/connect/local_addr are blocking syscalls on a runtime thread, reintroducing in kind what round 1's fix removed."
+    why: "Measured at ~36us against the ~73us of the get_if_addrs() call beside it, which predates this WU and no round has flagged. A connected SOCK_DGRAM socket transmits nothing and resolves nothing - connect() is a routing-table lookup, and the destination is TEST-NET-3 - so it cannot wait on anything. /reach has three callers, all user-initiated, none in a loop. The rubric scopes efficiency to hot paths and P2 to work that stalls a context."
+  - finding: "The lead verdict renders a probe-derived step count inside the traffic layer's verdict node, which DEC-33 says the traffic layer can never say."
+    why: "DEC-33 forbids a verdict being derived from the other layer's evidence - trustStatus and proxyStatus take no traffic input, and screenVerdict takes no probe input. Neither is violated: the traffic layer alone decides which verdict and which sentence render, the probe count only substitutes into the detail slot, and it is suppressed to silence wherever a probe answered unknown or the platform is not this machine. The layers are adjacent, not blended, and the suppression is unit-tested at both boundaries."
+  - finding: "Interface's doc comment promises a friendly name the core no longer resolves after the round-1 fix."
+    why: "Pre-existing and not worsened: the struct and its comment are byte-identical at base and at this tip, and no commit in the range touched them. The diff moved in the other direction - interfaces() gained an explicit statement, two lines below, that kernel names are left as they are because only the shell may ask the host, which is signal the base had none of."
