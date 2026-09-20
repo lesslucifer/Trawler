@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: bd30dee374d3248a5c98db860d176ec42f675ffe
+base: 714e261436b30b65998705d1831dcfb691425947
+tier: key
+signer: vuluu
+report: docs/work/2026-09-19-onboard-build-result.html
+report_sha256: cceb1ebf4ae53497205af232686e207a9843d9183899e2baacec36f00dc6cf40
+date: 2026-09-20
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAerB/59GjV0TC6IMGJMbGVuQE8jkha6zVRU9xyffb3gDShn277SUmuGB
+  +M+B78aRuuH+pJ8YW/rsNmd/pNsz4C
+  -----END SSH SIGNATURE-----
