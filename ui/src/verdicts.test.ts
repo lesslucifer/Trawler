@@ -3,6 +3,7 @@ import {
   NO_TRAFFIC,
   proxyStatus,
   RECENT_MS,
+  stepsLeftHere,
   trafficStatus,
   trustStatus,
   TUNNEL_GRACE_MS,
@@ -95,8 +96,12 @@ describe("trafficStatus reads recency, never history", () => {
     const v = at({ lastTunnelAt: ago(TUNNEL_GRACE_MS) });
     expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "arriving but not decrypting" });
     expect(v.remedy).toBe(
-      "something is routing to Trawler and none of it is decrypting — the platform it comes from does not trust the certificate yet. The steps below are that platform's.",
+      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
     );
+    // F21: the app cannot attribute a tunnel to a platform - the design run's
+    // own blocked-on row says so - and the screen's platform choice is the
+    // user's answer to a different question.
+    expect(v.remedy).not.toMatch(/platform/);
   });
 
   it("a tunnel answered by a decrypted flow is capturing", () => {
@@ -171,7 +176,7 @@ describe("the short form every verdict carries", () => {
       "traffic · tunnel unanswered",
       trafficStatus(seen({ lastTunnelAt: NOW - TUNNEL_GRACE_MS }), NOW),
       "arriving but not decrypting",
-      "something is routing to Trawler and none of it is decrypting — the platform it comes from does not trust the certificate yet. The steps below are that platform's.",
+      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
     ],
     [
       "traffic · plain only",
@@ -209,5 +214,28 @@ describe("the short form every verdict carries", () => {
     expect(foreign.short).toBe("another proxy is set");
     expect(foreign.short).not.toMatch(/point it at Trawler/);
     expect(foreign.remedy).toMatch(/^point it at Trawler here/);
+  });
+});
+
+// --- What the lead sentence may say about this machine (E-ONBOARD.W4, F16) ---
+// The headline used to state "everything below is still set up" whatever the
+// probes said. It may state how much is left, and only where the probes answer.
+
+describe("how much of this machine is still to do", () => {
+  test("counts the two probes that are not green yet", () => {
+    expect(stepsLeftHere("untrusted", "none")).toBe(2);
+    expect(stepsLeftHere("trusted", "none")).toBe(1);
+    expect(stepsLeftHere("untrusted", "ours")).toBe(1);
+    expect(stepsLeftHere("trusted", "ours")).toBe(0);
+  });
+
+  test("counts a foreign proxy as a step left, because it is not routing here", () => {
+    expect(stepsLeftHere("trusted", "foreign")).toBe(1);
+  });
+
+  test("refuses to count where a probe could not answer", () => {
+    expect(stepsLeftHere("unknown", "ours")).toBeNull();
+    expect(stepsLeftHere("trusted", "unknown")).toBeNull();
+    expect(stepsLeftHere("unknown", "unknown")).toBeNull();
   });
 });

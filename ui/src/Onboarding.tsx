@@ -33,6 +33,7 @@ import {
   proxyStatus,
   screenVerdict,
   trafficReading,
+  stepsLeftHere,
   trafficStatus,
   trustStatus,
   UNPROBEABLE_TRUST,
@@ -314,7 +315,7 @@ const VERDICT: Record<
   "not-decrypting": {
     tone: "warn",
     text: "traffic is arriving, but nothing is decrypting",
-    detail: "the trust step below says what to fix, and for which platform",
+    detail: "the trust step below says what to fix",
   },
   "plain-only": {
     tone: "mute",
@@ -324,7 +325,7 @@ const VERDICT: Record<
   idle: {
     tone: "mute",
     text: "nothing is arriving now",
-    detail: "everything below is still set up — make a request to prove it",
+    detail: "make a request to prove it",
   },
   waiting: {
     tone: "mute",
@@ -333,23 +334,44 @@ const VERDICT: Record<
   },
 };
 
+// The one thing the lead may say about this machine's setup, and only where the
+// probes answer for the platform chosen: how much of it is left. Saying
+// "everything below is still set up" whatever they said was the screen's
+// loudest falsehood — and a count is DEC-33-clean, because the words stay the
+// traffic layer's and the number stays the probes'.
+function stepsDetail(left: number | null): string | null {
+  if (left === null) return null;
+  if (left === 0) return "open any website to see its traffic";
+  return `${left} step${left === 1 ? "" : "s"} left on this machine`;
+}
+
 // The screen's lead sentence, and the one element on it that a clock can change.
-function LeadVerdict({ phase, traffic }: { phase: OnbState["phase"]; traffic: Traffic }) {
+function LeadVerdict({
+  phase,
+  traffic,
+  stepsLeft,
+}: {
+  phase: OnbState["phase"];
+  traffic: Traffic;
+  stepsLeft: number | null;
+}) {
   const verdict = screenVerdict(phase, traffic, useNow());
   if (verdict === "capturing") return null;
   const { tone, text, detail } = VERDICT[verdict];
   const lastFlow = traffic.lastDecryptedAt ?? traffic.lastPlainAt;
+  const dated = verdict === "idle" && lastFlow !== null;
+  const counted = (verdict === "idle" || verdict === "waiting") && !dated && stepsDetail(stepsLeft);
   return (
     <div data-testid="lead-verdict" data-verdict={verdict}>
       <Notice
         tone={tone}
         detail={
-          verdict === "idle" && lastFlow !== null ? (
+          dated ? (
             <span>
               last flow <TimestampText timestamp={lastFlow} format="relative" />
             </span>
           ) : (
-            detail
+            counted || detail
           )
         }
       >
@@ -709,7 +731,15 @@ export function Onboarding({
     <div className="flex h-full flex-col overflow-auto">
       <div className="mx-auto w-full max-w-dialog-max py-6">
         <div className="px-4">
-          <LeadVerdict phase={state.phase} traffic={traffic} />
+          <LeadVerdict
+            phase={state.phase}
+            traffic={traffic}
+            stepsLeft={
+              probesTrust(platform) && probesRoute(platform)
+                ? stepsLeftHere(trustProbe, proxyProbe)
+                : null
+            }
+          />
         </div>
 
         <div data-testid="platform" className="px-4 pt-4">

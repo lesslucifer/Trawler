@@ -131,8 +131,11 @@ const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
     glyph: "⚠",
     tone: "warn",
     short: "arriving but not decrypting",
+    // Nothing here knows which platform a tunnel came from — the app cannot
+    // attribute one — so the remedy names the device that is connecting and
+    // leaves the screen's own platform choice out of it.
     remedy:
-      "something is routing to Trawler and none of it is decrypting — the platform it comes from does not trust the certificate yet. The steps below are that platform's.",
+      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
   },
   "plain-only": {
     glyph: "◐",
@@ -154,6 +157,15 @@ export type ScreenVerdict = "checking" | TrafficReading;
 
 export function screenVerdict(phase: Phase, seen: Traffic, now: number): ScreenVerdict {
   return phase === "checking" ? "checking" : trafficReading(seen, now);
+}
+
+// How much of this machine's own setup is still undone, as a count the lead
+// sentence can state. Null is "this machine cannot say" — a probe that came back
+// unknown, or a platform whose stores these probes do not read — and a lead that
+// cannot see the steps does not get to grade them.
+export function stepsLeftHere(trust: TrustProbe, proxy: ProxyProbe): number | null {
+  if (trust === "unknown" || proxy === "unknown") return null;
+  return Number(trust !== "trusted") + Number(proxy !== "ours");
 }
 
 // A platform this machine cannot read the stores of. Its own glyph and its own

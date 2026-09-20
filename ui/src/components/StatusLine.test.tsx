@@ -90,7 +90,7 @@ describe("StatusLine", () => {
     const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0 }, 10_000);
     render(<StatusLine status={status} />);
 
-    expect(status.remedy).toMatch(/does not trust the certificate yet/);
+    expect(status.remedy).toMatch(/does not trust Trawler's certificate yet/);
     expect(screen.queryByText(status.remedy!)).not.toBeInTheDocument();
   });
 

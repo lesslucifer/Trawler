@@ -434,7 +434,45 @@ describe("the lead verdict, and the outcome that leaves it", () => {
   it("names the arriving failure and sends the reader to the step that fixes it", () => {
     draw({ traffic: arriving });
     expect(zone("lead-verdict")).toHaveTextContent("traffic is arriving, but nothing is decrypting");
-    expect(zone("trust-remedy")).toHaveTextContent("does not trust the certificate yet");
+    expect(zone("trust-remedy")).toHaveTextContent("does not trust Trawler's certificate yet");
+  });
+
+  // F21: neither the headline nor the remedy may say which platform the traffic
+  // came from — nothing in the app can attribute a tunnel to one.
+  it("claims no platform for traffic it cannot attribute", () => {
+    draw({ traffic: arriving });
+    expect(zone("lead-verdict")).not.toHaveTextContent(/platform/);
+    expect(zone("trust-remedy")).not.toHaveTextContent(/platform/);
+  });
+
+  // F16: "everything below is still set up" was rendered whatever the probes
+  // said — over a machine whose proxy was not set, in the review's TC-11.
+  it("reads the probes rather than assuring the user the steps are done", () => {
+    draw({ traffic: { ...NO_TRAFFIC, ever: true }, trustProbe: "trusted", proxyProbe: "none" });
+    expect(zone("lead-verdict")).toHaveTextContent("nothing is arriving now");
+    expect(zone("lead-verdict")).toHaveTextContent("1 step left on this machine");
+    expect(zone("lead-verdict")).not.toHaveTextContent("still set up");
+  });
+
+  it("counts both steps while both are undone, and stops counting when none are", () => {
+    draw({ trustProbe: "untrusted", proxyProbe: "none" });
+    expect(zone("lead-verdict")).toHaveTextContent("2 steps left on this machine");
+
+    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    expect(screen.getAllByTestId("lead-verdict")[1]).toHaveTextContent(
+      "open any website to see its traffic",
+    );
+  });
+
+  it("says nothing about a step whose probe could not answer", () => {
+    draw({ trustProbe: "unknown", proxyProbe: "ours" });
+    expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left/);
+  });
+
+  it("says nothing about this machine's steps under a platform that is not it", () => {
+    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    choose("iPhone or iPad");
+    expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left|open any website/);
   });
 
   it("renders the remedy beside the precondition it instructs, not in the headline", () => {

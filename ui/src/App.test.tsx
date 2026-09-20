@@ -324,7 +324,7 @@ test("a connection event leads the screen, and warns once no flow answers it", a
     { timeout: 3_000 },
   );
   expect(screen.getByTestId("lead-verdict")).toHaveAttribute("data-verdict", "not-decrypting");
-  expect(screen.getByTestId("trust-remedy")).toHaveTextContent("does not trust the certificate yet");
+  expect(screen.getByTestId("trust-remedy")).toHaveTextContent("does not trust Trawler's certificate yet");
   // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
