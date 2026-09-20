@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Onboarding } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
@@ -110,7 +110,7 @@ describe("the probe row answers only where a probe can", () => {
     expect(screen.getByRole("button", { name: "check again" })).toBeInTheDocument();
   });
 
-  it("is there for the Simulator, which shares this Mac's stores", () => {
+  it("is there for the Simulator, whose routing this machine's probe does read", () => {
     draw({ probedAt: ago(60_000) });
     choose("iOS Simulator");
     expect(zone("probe")).toBeInTheDocument();
@@ -167,12 +167,15 @@ describe("the one-click actions belong to this machine alone", () => {
     expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
   });
 
-  it.each(["iPhone or iPad", "iOS Simulator", "Another Mac"])("offers neither under %s", (platform) => {
-    draw();
-    choose(platform);
-    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
-  });
+  it.each(["iPhone or iPad", "Another Mac", "Android emulator"])(
+    "offers neither under %s",
+    (platform) => {
+      draw();
+      choose(platform);
+      expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
+    },
+  );
 
   it("offers neither on a host with no one-click path", () => {
     draw({ os: "linux" });
@@ -197,6 +200,35 @@ describe("the one-click actions belong to this machine alone", () => {
     expect(
       await screen.findByRole("button", { name: "stop routing through Trawler" }),
     ).toBeInTheDocument();
+  });
+});
+
+// F15: the Simulator was probed as this machine and actionable as nothing. It
+// shares one of this Mac's two stores, and the screen now answers per store.
+describe("the Simulator acts through what it shares, and only through that", () => {
+  beforeEach(() => {
+    draw({ trustProbe: "trusted", proxyProbe: "none" });
+    choose("iOS Simulator");
+  });
+
+  it("offers the proxy this Mac sets, because the Simulator routes through it", () => {
+    expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
+    expect(screen.getByTestId("precondition-route")).toHaveTextContent(
+      "not set on this machine yet",
+    );
+  });
+
+  it("offers no certificate install, and never reads this Mac's answer as the Simulator's", () => {
+    const trust = screen.getByTestId("precondition-trust");
+    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
+    expect(trust).not.toHaveTextContent("trusted on this machine");
+    expect(trust).toHaveTextContent("keeps its own certificate store");
+  });
+
+  it("gives it the trust route it can follow", () => {
+    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
+      "xcrun simctl keychain booted add-root-cert",
+    );
   });
 });
 
@@ -270,8 +302,7 @@ describe("an off-machine platform once reach is armed", () => {
     expect(within(address).getByRole("button", { name: /the proxy port/ })).toHaveTextContent("9999");
   });
 
-  it("renders the certificate URL a device can open", () => {
-    fireEvent.click(within(screen.getByTestId("precondition-trust")).getByText("set it up by hand"));
+  it("renders the certificate URL a device can open, without opening anything first", () => {
     expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
       "http://192.168.1.24:7421/ca.crt",
     );
@@ -286,7 +317,10 @@ describe("an off-machine platform once reach is armed", () => {
   });
 });
 
-describe("the address to listen on is a choice over what the host holds", () => {
+// F11: four choices, three of them rotating IPv6 addresses, in a control that
+// overflowed its column. The core now answers best-first, so the screen offers
+// the first one and keeps the rest where a user who wants them can find them.
+describe("the address to listen on is one offer, with the rest behind it", () => {
   const withInterfaces = (count: number) =>
     draw({
       reach: {
@@ -301,31 +335,51 @@ describe("the address to listen on is a choice over what the host holds", () => 
   it("offers no control for one address — the action names it instead", () => {
     withInterfaces(1);
     choose("iPhone or iPad");
-    expect(screen.queryByRole("radiogroup", { name: "address to listen on" })).toBeNull();
+    expect(zone("listen-on")).toBeNull();
     expect(
       screen.getByRole("button", { name: "let devices reach Trawler at 10.0.0.1" }),
     ).toBeInTheDocument();
   });
 
-  it.each([2, 4])("offers %i addresses as a segment group, all visible", (count) => {
+  it.each([2, 5])("offers the first of %i, named, and hides the others", (count) => {
     withInterfaces(count);
     choose("iPhone or iPad");
-    const group = screen.getByRole("radiogroup", { name: "address to listen on" });
-    expect(within(group).getAllByRole("radio")).toHaveLength(count);
+    expect(zone("listen-on")).toHaveTextContent("if0 · 10.0.0.1");
+    const others = screen.getByText("other addresses").closest("details");
+    expect(within(others!).getAllByRole("button")).toHaveLength(count - 1);
+    expect(within(others!).getByRole("button", { name: "if1 · 10.0.0.2" })).toBeInTheDocument();
   });
 
-  it("offers five as a Select, which is where the segment group stops", () => {
-    withInterfaces(5);
+  // F13: the shell's dialog can end two ways and the screen could tell them
+  // apart in neither — a cancelled confirm resolved exactly like a success.
+  it("says what a refused confirm left unchanged", async () => {
+    draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
     choose("iPhone or iPad");
-    expect(screen.queryByRole("radiogroup", { name: "address to listen on" })).toBeNull();
-    expect(screen.getByRole("button", { name: "address to listen on" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+
+    expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
+      "not allowed — Trawler still answers on this machine only",
+    );
+    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
+      "Trawler answers on this machine only",
+    );
+  });
+
+  it("says nothing of its own when the confirm was allowed — the verdict does that", async () => {
+    draw({ reach: UNARMED, onArmReach: vi.fn(async () => undefined) });
+    choose("iPhone or iPad");
+    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+
+    await waitFor(() => expect(zone("arm-reach-status")).toBeNull());
   });
 
   it("arms the address the user picked, not the one that happened to be first", () => {
     const onArmReach = vi.fn(async () => {});
     draw({ reach: UNARMED, onArmReach });
     choose("iPhone or iPad");
-    fireEvent.click(screen.getByRole("radio", { name: "Ethernet · 10.0.4.7" }));
+    fireEvent.click(screen.getByText("other addresses"));
+    fireEvent.click(screen.getByRole("button", { name: "Ethernet · 10.0.4.7" }));
+    expect(zone("listen-on")).toHaveTextContent("Ethernet · 10.0.4.7");
     fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
     expect(onArmReach).toHaveBeenCalledWith("10.0.4.7");
   });
@@ -345,7 +399,6 @@ describe("the emulator is not a device, and says so", () => {
     draw({ reach: UNARMED });
     choose("Android emulator");
     expect(zone("precondition-reach")).toBeNull();
-    fireEvent.click(within(screen.getByTestId("precondition-route")).getByText("set it up by hand"));
     expect(screen.getByTestId("precondition-route")).toHaveTextContent("10.0.2.2");
   });
 });
@@ -381,7 +434,45 @@ describe("the lead verdict, and the outcome that leaves it", () => {
   it("names the arriving failure and sends the reader to the step that fixes it", () => {
     draw({ traffic: arriving });
     expect(zone("lead-verdict")).toHaveTextContent("traffic is arriving, but nothing is decrypting");
-    expect(zone("trust-remedy")).toHaveTextContent("does not trust the certificate yet");
+    expect(zone("trust-remedy")).toHaveTextContent("does not trust Trawler's certificate yet");
+  });
+
+  // F21: neither the headline nor the remedy may say which platform the traffic
+  // came from — nothing in the app can attribute a tunnel to one.
+  it("claims no platform for traffic it cannot attribute", () => {
+    draw({ traffic: arriving });
+    expect(zone("lead-verdict")).not.toHaveTextContent(/platform/);
+    expect(zone("trust-remedy")).not.toHaveTextContent(/platform/);
+  });
+
+  // F16: "everything below is still set up" was rendered whatever the probes
+  // said — over a machine whose proxy was not set, in the review's TC-11.
+  it("reads the probes rather than assuring the user the steps are done", () => {
+    draw({ traffic: { ...NO_TRAFFIC, ever: true }, trustProbe: "trusted", proxyProbe: "none" });
+    expect(zone("lead-verdict")).toHaveTextContent("nothing is arriving now");
+    expect(zone("lead-verdict")).toHaveTextContent("1 step left on this machine");
+    expect(zone("lead-verdict")).not.toHaveTextContent("still set up");
+  });
+
+  it("counts both steps while both are undone, and stops counting when none are", () => {
+    draw({ trustProbe: "untrusted", proxyProbe: "none" });
+    expect(zone("lead-verdict")).toHaveTextContent("2 steps left on this machine");
+
+    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    expect(screen.getAllByTestId("lead-verdict")[1]).toHaveTextContent(
+      "open any website to see its traffic",
+    );
+  });
+
+  it("says nothing about a step whose probe could not answer", () => {
+    draw({ trustProbe: "unknown", proxyProbe: "ours" });
+    expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left/);
+  });
+
+  it("says nothing about this machine's steps under a platform that is not it", () => {
+    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    choose("iPhone or iPad");
+    expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left|open any website/);
   });
 
   it("renders the remedy beside the precondition it instructs, not in the headline", () => {
@@ -418,6 +509,35 @@ describe("the guide is hidden only where something else is offered first", () =>
   it("stays shut while the action is still the better route", () => {
     draw();
     expect(disclosure("trust")).not.toHaveAttribute("open");
+  });
+
+  // The rule itself, over every platform: a summary reading "set it up by hand"
+  // claims an automatic route exists. Where none is offered, the steps are the
+  // instruction and render open — which is also what numbers them.
+  it.each([
+    "This machine — macOS",
+    "iOS Simulator",
+    "Android emulator",
+    "Another Mac",
+    "Another Windows PC",
+    "Another Ubuntu machine",
+    "iPhone or iPad",
+    "Android device",
+  ])("under %s, each guide is behind a summary exactly where its action is offered", (label) => {
+    draw({ reach: ARMED });
+    choose(label);
+    const installs = screen.queryByRole("button", { name: "install certificate" }) !== null;
+    const routes = screen.queryByRole("button", { name: "set system proxy" }) !== null;
+    expect(disclosure("trust") !== null).toBe(installs);
+    expect(disclosure("route") !== null).toBe(routes);
+  });
+
+  it("gives a phone its steps as the instruction, not as a fallback", () => {
+    draw({ reach: ARMED });
+    choose("iPhone or iPad");
+    const trust = screen.getByTestId("precondition-trust");
+    expect(within(trust).queryByText("set it up by hand")).toBeNull();
+    expect(trust).toHaveTextContent("VPN & Device Management");
   });
 });
 

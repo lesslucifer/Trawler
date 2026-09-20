@@ -324,7 +324,7 @@ test("a connection event leads the screen, and warns once no flow answers it", a
     { timeout: 3_000 },
   );
   expect(screen.getByTestId("lead-verdict")).toHaveAttribute("data-verdict", "not-decrypting");
-  expect(screen.getByTestId("trust-remedy")).toHaveTextContent("does not trust the certificate yet");
+  expect(screen.getByTestId("trust-remedy")).toHaveTextContent("does not trust Trawler's certificate yet");
   // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
@@ -411,6 +411,11 @@ test("a refused confirm arms nothing — no POST, no address, no listening", asy
     "Trawler answers on this machine only",
   );
   expect(screen.queryByTestId("device-address")).toBeNull();
+  // F13: the refusal reaches the screen as a refusal. Without it the dialog
+  // closes, the button comes back, and nothing distinguishes a no from a yes.
+  expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
+    "not allowed — Trawler still answers on this machine only",
+  );
 });
 
 test("an allowed confirm arms that address, and the screen renders what answered", async () => {
@@ -423,6 +428,7 @@ test("an allowed confirm arms that address, and the screen renders what answered
   fireEvent.click(await screen.findByRole("button", { name: "let devices reach Trawler" }));
 
   await waitFor(() => expect(armReach).toHaveBeenCalledWith("192.168.1.24"));
+  expect(screen.queryByTestId("arm-reach-status")).toBeNull();
   const address = await screen.findByTestId("device-address");
   expect(within(address).getByRole("button", { name: /the proxy host/ })).toHaveTextContent(
     "192.168.1.24",
@@ -445,6 +451,126 @@ test("stop listening takes the exposure away without asking again", async () => 
       "Trawler answers on this machine only",
     ),
   );
+});
+
+// F20: choosing "this machine" hid the exposure entirely, and the flow list -
+// where a user spends the rest of the session - never showed it at all.
+test("an armed reach is stated in the header, in setup and in the list alike", async () => {
+  for (const phase of [ONBOARDING, PROVEN]) {
+    onMacHost();
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => ARMED);
+    const disarmReach = vi.fn(async () => UNARMED);
+    api.disarmReach = disarmReach;
+    const view = render(<App api={api} initialState={phase} />);
+
+    const chip = await screen.findByTestId("reach-chip");
+    expect(chip).toHaveTextContent("reachable on 192.168.1.24");
+
+    fireEvent.click(within(chip).getByRole("button", { name: "stop" }));
+    await waitFor(() => expect(disarmReach).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByTestId("reach-chip")).toBeNull());
+    view.unmount();
+  }
+});
+
+// Review round 1, blocker: the chip's control is what ends this machine's
+// exposure to the network, and a rejected DELETE left the click with no trace
+// at all — no disabled button, no sentence, an unhandled rejection in a console
+// nobody reads. Button's contract asks for both halves, which is what the
+// identical action gets one file away.
+test("a stop that fails says so, and leaves the exposure it could not end on the screen", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ARMED);
+  api.disarmReach = vi.fn(async () => {
+    throw new Error("core said no");
+  });
+  render(<App api={api} initialState={PROVEN} />);
+
+  const chip = await screen.findByTestId("reach-chip");
+  fireEvent.click(within(chip).getByRole("button", { name: "stop" }));
+
+  await waitFor(() =>
+    expect(screen.getByTestId("reach-chip")).toHaveTextContent("couldn't stop listening"),
+  );
+  expect(screen.getByTestId("reach-chip")).toHaveTextContent("reachable on 192.168.1.24");
+});
+
+test("the stop control is out of reach while its call is in flight, and says why", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ARMED);
+  let release: (state: typeof UNARMED) => void = () => {};
+  api.disarmReach = vi.fn(() => new Promise<typeof UNARMED>((resolve) => (release = resolve)));
+  render(<App api={api} initialState={PROVEN} />);
+
+  const chip = await screen.findByTestId("reach-chip");
+  fireEvent.click(within(chip).getByRole("button", { name: "stop" }));
+
+  await waitFor(() => expect(screen.getByRole("button", { name: "stop" })).toBeDisabled());
+  expect(screen.getByTestId("reach-chip")).toHaveTextContent("stopping…");
+
+  release(UNARMED);
+  await waitFor(() => expect(screen.queryByTestId("reach-chip")).toBeNull());
+});
+
+// The core answers with kernel device names because it may not ask the host
+// what its owner calls them; the shell asks, and the screen reads the answer.
+test("an address is offered under the name its owner sees, when the host can say", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "interface_names" ? { en1: "Wi-Fi" } : undefined,
+  );
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ({
+    ...UNARMED,
+    interfaces: [
+      { name: "en1", address: "192.168.1.24" },
+      { name: "en5", address: "10.0.4.7" },
+    ],
+  }));
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText("what are you setting up");
+  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+  fireEvent.click(screen.getByRole("option", { name: "iPhone or iPad" }));
+
+  await waitFor(() => expect(screen.getByTestId("listen-on")).toHaveTextContent("Wi-Fi · 192.168.1.24"));
+  fireEvent.click(screen.getByText("other addresses"));
+  // A device the host named nothing keeps the name the kernel gave it.
+  expect(screen.getByRole("button", { name: "en5 · 10.0.4.7" })).toBeInTheDocument();
+});
+
+test("a shell that cannot name a device leaves the name the core reported", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "interface_names") throw new Error("no shell here");
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => ({
+    ...UNARMED,
+    interfaces: [
+      { name: "en1", address: "192.168.1.24" },
+      { name: "en5", address: "10.0.4.7" },
+    ],
+  }));
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText("what are you setting up");
+  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+  fireEvent.click(screen.getByRole("option", { name: "iPhone or iPad" }));
+
+  await waitFor(() => expect(screen.getByTestId("listen-on")).toHaveTextContent("en1 · 192.168.1.24"));
+});
+
+test("a machine nothing is listening on carries no chip at all", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  api.reach = vi.fn(async () => UNARMED);
+  render(<App api={api} initialState={PROVEN} />);
+
+  await waitFor(() => expect(api.reach).toHaveBeenCalledOnce());
+  expect(screen.queryByTestId("reach-chip")).toBeNull();
 });
 
 test("a core that will not say leaves the screen saying Trawler answers here only", async () => {

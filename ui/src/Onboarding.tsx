@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
@@ -7,7 +8,6 @@ import {
   Disclosure,
   Notice,
   Section,
-  SegmentedControl,
   Select,
   Spinner,
   StatusLine,
@@ -18,8 +18,9 @@ import {
 import {
   canAutoSetup,
   CA_FILENAME,
-  isProbed,
   needsReach,
+  probesRoute,
+  probesTrust,
   platformChoices,
   setupFor,
   splitProxyAddr,
@@ -33,6 +34,8 @@ import {
   proxyStatus,
   screenVerdict,
   trafficReading,
+  stepsDetail,
+  stepsLeftHere,
   trafficStatus,
   trustStatus,
   UNPROBEABLE_TRUST,
@@ -53,8 +56,6 @@ import {
 // probe reads THIS machine, so it is rendered only where the chosen platform is
 // this machine or shares its stores. Everywhere else the screen says it cannot
 // check rather than borrowing an answer about the wrong host.
-
-type ActionState = "idle" | "running" | "done" | "failed" | "nothing";
 
 // An action that resolves a string names what it produced; the note quotes that
 // name rather than the one we asked for, since the two differ whenever the user
@@ -84,11 +85,13 @@ const UNSETPROXY_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't turn the proxy off — the steps below do it by hand." },
 };
 
-// Arming is the shell's dialog and then the bind. A cancelled dialog resolves
-// without arming, which is why there is no "done" note: what is listening is
-// the verdict's business, and only the verdict can tell the two apart.
+// Arming is the shell's dialog and then the bind. A yes needs no note — what is
+// listening is the verdict's business, and it says so a line above. A no does:
+// the dialog closes, the button comes back, and without this the screen says
+// exactly what it says after a success.
 const ARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "waiting for your answer…" },
+  nothing: { tone: "mute", text: "not allowed — Trawler still answers on this machine only." },
   failed: { tone: "warn", text: "couldn't start listening on that address." },
 };
 
@@ -114,35 +117,6 @@ const SAVECA_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
 
-// SegmentedControl refuses more than four options and Select refuses fewer than
-// five; a single address is no choice at all, so the action names it instead.
-const SEGMENT_MAX = 4;
-
-function useAction(run?: () => Promise<string | null | void>) {
-  const [state, setState] = useState<ActionState>("idle");
-  const [error, setError] = useState<string>();
-  const [named, setNamed] = useState("");
-  const trigger =
-    run &&
-    (() => {
-      setState("running");
-      setError(undefined);
-      run().then(
-        (outcome) => {
-          if (typeof outcome === "string") setNamed(outcome);
-          setState(outcome === null ? "nothing" : "done");
-        },
-        (err: unknown) => {
-          console.error("setup action failed:", err);
-          setState("failed");
-          setError(err instanceof Error ? err.message : String(err));
-        },
-      );
-    });
-  return { state, error, named, trigger };
-}
-
-type ActionHandle = ReturnType<typeof useAction>;
 
 const TICK_MS = 1000;
 
@@ -263,6 +237,9 @@ function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }
   );
 }
 
+// A guide hides behind "set it up by hand" only where a hand is the second
+// route: with no action above it these are the only instructions there are, and
+// a summary promising an automatic alternative is a promise nothing keeps.
 function GuideView({
   guide,
   save,
@@ -313,7 +290,7 @@ const VERDICT: Record<
   "not-decrypting": {
     tone: "warn",
     text: "traffic is arriving, but nothing is decrypting",
-    detail: "the trust step below says what to fix, and for which platform",
+    detail: "the trust step below says what to fix",
   },
   "plain-only": {
     tone: "mute",
@@ -323,7 +300,7 @@ const VERDICT: Record<
   idle: {
     tone: "mute",
     text: "nothing is arriving now",
-    detail: "everything below is still set up — make a request to prove it",
+    detail: "make a request to prove it",
   },
   waiting: {
     tone: "mute",
@@ -333,22 +310,32 @@ const VERDICT: Record<
 };
 
 // The screen's lead sentence, and the one element on it that a clock can change.
-function LeadVerdict({ phase, traffic }: { phase: OnbState["phase"]; traffic: Traffic }) {
+function LeadVerdict({
+  phase,
+  traffic,
+  stepsLeft,
+}: {
+  phase: OnbState["phase"];
+  traffic: Traffic;
+  stepsLeft: number | null;
+}) {
   const verdict = screenVerdict(phase, traffic, useNow());
   if (verdict === "capturing") return null;
   const { tone, text, detail } = VERDICT[verdict];
   const lastFlow = traffic.lastDecryptedAt ?? traffic.lastPlainAt;
+  const dated = verdict === "idle" && lastFlow !== null;
+  const counted = (verdict === "idle" || verdict === "waiting") && !dated && stepsDetail(stepsLeft);
   return (
     <div data-testid="lead-verdict" data-verdict={verdict}>
       <Notice
         tone={tone}
         detail={
-          verdict === "idle" && lastFlow !== null ? (
+          dated ? (
             <span>
               last flow <TimestampText timestamp={lastFlow} format="relative" />
             </span>
           ) : (
-            detail
+            counted || detail
           )
         }
       >
@@ -473,6 +460,14 @@ function Precondition({
   );
 }
 
+const addressLabel = (address: ReachState["interfaces"][number]) =>
+  `${address.name} · ${address.address}`;
+
+// The core answers this list best-first — the address the host routes from,
+// IPv4 before IPv6, nothing that rotates above something that does not. So one
+// address is the offer and the rest are a disclosure: a user typing a proxy
+// into a phone by hand reads one line, and the four-way control that could not
+// hold a 39-character IPv6 label is gone.
 function AddressChoice({
   addresses,
   value,
@@ -483,30 +478,32 @@ function AddressChoice({
   onChange: (address: string) => void;
 }) {
   if (addresses.length < 2) return null;
-  const options = addresses.map((i) => ({
-    value: i.address,
-    label: `${i.name} · ${i.address}`,
-  }));
+  const chosen = addresses.find((address) => address.address === value);
+  const others = addresses.filter((address) => address.address !== value);
   return (
     <>
       <p className={`pt-3 ${ZONE_LABEL}`}>listen on</p>
-      <div className="pt-2">
-        {addresses.length <= SEGMENT_MAX ? (
-          <SegmentedControl
-            options={options}
-            value={value}
-            onChange={onChange}
-            ariaLabel="address to listen on"
-          />
-        ) : (
-          <Select
-            options={options.map((o) => ({ id: o.value, label: o.label }))}
-            value={value}
-            onChange={onChange}
-            label="address to listen on"
-          />
-        )}
-      </div>
+      <p data-testid="listen-on" className="pt-2 font-ui text-body text-ink-body">
+        {chosen && addressLabel(chosen)}
+      </p>
+      {others.length > 0 && (
+        <div className="pt-2">
+          <Disclosure summary="other addresses">
+            <div className="flex flex-col items-start">
+              {others.map((address) => (
+                <Button
+                  key={address.address}
+                  frame="bare"
+                  tone="mute"
+                  onClick={() => onChange(address.address)}
+                >
+                  {addressLabel(address)}
+                </Button>
+              ))}
+            </div>
+          </Disclosure>
+        </div>
+      )}
     </>
   );
 }
@@ -644,7 +641,7 @@ export function Onboarding({
   onSetProxy?: () => Promise<void>;
   onUnsetProxy?: () => Promise<void>;
   onRecheck?: () => void;
-  onArmReach?: (address: string) => Promise<void>;
+  onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
 }) {
   const [platform, setPlatform] = useState<PlatformId>("this");
@@ -668,12 +665,16 @@ export function Onboarding({
     reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
   });
 
-  const probed = isProbed(platform);
-  const here = platform === "this";
-  const oneClick = here && canAutoSetup(os);
-  // A host with no one-click path has nothing above its guide, so hiding the
-  // guide would hide the only instructions the screen has for it.
-  const handWorkOnly = here && !oneClick;
+  const autoHost = canAutoSetup(os);
+  // An action that changes this machine is offered for the store it changes,
+  // and only where the chosen platform reads that store: installing here does
+  // nothing for a Simulator with a keychain of its own, and setting this
+  // machine's proxy is exactly what the Simulator routes through.
+  // One value per precondition: the automatic action it offers, or nothing. The
+  // guide below reads the same value, so "collapsed" and "there is a button"
+  // cannot drift apart.
+  const installHere = probesTrust(platform) && autoHost ? install.trigger : undefined;
+  const routeHere = probesRoute(platform) && autoHost ? setProxyAction.trigger : undefined;
 
   // The action the user just took outranks the re-read it triggers, so the line
   // says "installing…" until the command has exited, then "checking…".
@@ -681,7 +682,7 @@ export function Onboarding({
     action.state === "running" ? r : probing ? "checking" : null;
   const failure = (action: ActionHandle) => (action.state === "failed" ? action.error : undefined);
 
-  const trustVerdict = probed
+  const trustVerdict = probesTrust(platform)
     ? trustStatus(trustProbe, running(install, "installing"), failure(install))
     : UNPROBEABLE_TRUST;
   const routeVerdict = proxyStatus(
@@ -694,7 +695,15 @@ export function Onboarding({
     <div className="flex h-full flex-col overflow-auto">
       <div className="mx-auto w-full max-w-dialog-max py-6">
         <div className="px-4">
-          <LeadVerdict phase={state.phase} traffic={traffic} />
+          <LeadVerdict
+            phase={state.phase}
+            traffic={traffic}
+            stepsLeft={
+              probesTrust(platform) && probesRoute(platform)
+                ? stepsLeftHere(trustProbe, proxyProbe)
+                : null
+            }
+          />
         </div>
 
         <div data-testid="platform" className="px-4 pt-4">
@@ -709,7 +718,7 @@ export function Onboarding({
           </div>
         </div>
 
-        {probed && onRecheck && (
+        {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
           <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
         )}
 
@@ -728,14 +737,14 @@ export function Onboarding({
             <Precondition testId="trust" title="trust Trawler's certificate">
               <Verdict testId="trust" status={trustVerdict} stated={failure(install)} />
               <ArrivingRemedy traffic={traffic} />
-              {oneClick && install.trigger && (
+              {installHere && (
                 <div className="pt-2">
                   <Action
                     testId="install-ca"
                     label="install certificate"
                     action={install}
                     note={INSTALL_NOTE}
-                    onClick={install.trigger}
+                    onClick={installHere}
                     disabled={probing}
                   />
                 </div>
@@ -750,7 +759,7 @@ export function Onboarding({
                   <GuideView
                     guide={setup.trust}
                     save={onSaveCa ? saveCa : undefined}
-                    collapsed={!handWorkOnly}
+                    collapsed={installHere !== undefined}
                     defaultOpen={install.state === "failed"}
                   />
                 ) : (
@@ -764,17 +773,17 @@ export function Onboarding({
             </Precondition>
 
             <Precondition testId="route" title="route its traffic through Trawler">
-              {probed && (
+              {probesRoute(platform) && (
                 <Verdict testId="route" status={routeVerdict} stated={failure(setProxyAction)} />
               )}
-              {oneClick && setProxyAction.trigger && (
+              {routeHere && (
                 <div className="pt-2">
                   <Action
                     testId="set-proxy"
                     label="set system proxy"
                     action={setProxyAction}
                     note={SETPROXY_NOTE}
-                    onClick={setProxyAction.trigger}
+                    onClick={routeHere}
                     disabled={probing}
                   />
                 </div>
@@ -784,7 +793,7 @@ export function Onboarding({
                   still offered where the probe cannot say, because an action that
                   changed this host may not become irreversible when a probe
                   fails. */}
-              {oneClick &&
+              {routeHere &&
                 unsetProxyAction.trigger &&
                 (proxyProbe === "ours" || setProxyAction.state === "done") && (
                 <div className="pt-2">
@@ -810,7 +819,7 @@ export function Onboarding({
                 {setup?.route ? (
                   <GuideView
                     guide={setup.route}
-                    collapsed={!handWorkOnly}
+                    collapsed={routeHere !== undefined}
                     defaultOpen={setProxyAction.state === "failed"}
                   />
                 ) : (

@@ -14,6 +14,7 @@ pub fn run() {
             setup::set_proxy,
             setup::unset_proxy,
             setup::proxy_status,
+            setup::interface_names,
             setup::notice_dismissed,
             setup::dismiss_notice,
             reach::confirm_reach

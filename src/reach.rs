@@ -8,7 +8,7 @@
 
 use std::fmt;
 use std::io;
-use std::net::{IpAddr, Ipv6Addr, SocketAddr};
+use std::net::{IpAddr, Ipv6Addr, SocketAddr, UdpSocket};
 use std::sync::Arc;
 
 use axum::Router;
@@ -80,18 +80,62 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-/// The addresses a device elsewhere on the network could actually route to.
-/// Loopback answers only this machine and a link-local address needs a zone
-/// index nobody is going to type, so neither is offered as a choice.
+/// The addresses a device elsewhere on the network could actually route to,
+/// best first. Loopback answers only this machine and a link-local address
+/// needs a zone index nobody is going to type, so neither is offered as a
+/// choice. What is offered is ordered for the person who has to type one of
+/// these into a phone by hand, because the kernel's order answers a different
+/// question. The kernel's device *names* are left as they are: what a user
+/// calls `en1` is something only the host can say and only the shell may ask
+/// (DEC-13), so the screen renames them where it can.
 pub fn interfaces() -> Vec<Interface> {
+    let routed = routed_from();
     let mut found: Vec<Interface> = if_addrs::get_if_addrs()
         .unwrap_or_default()
         .into_iter()
         .filter(|interface| routable(interface.ip()))
         .map(|interface| Interface { address: interface.ip(), name: interface.name })
         .collect();
-    found.sort_by(|a, b| a.name.cmp(&b.name).then(a.address.cmp(&b.address)));
+    order(&mut found, routed);
     found
+}
+
+fn order(found: &mut [Interface], routed: Option<IpAddr>) {
+    found.sort_by(|a, b| {
+        precedence(a.address, routed)
+            .cmp(&precedence(b.address, routed))
+            .then(a.name.cmp(&b.name))
+            .then(a.address.cmp(&b.address))
+    });
+}
+
+/// Lower is offered first: the address this host actually sends from, then any
+/// other IPv4 because a phone's proxy field takes one, then IPv6.
+///
+/// IPv6 is ranked by nothing finer, and that is deliberate. The two addresses a
+/// dual-stack host holds are a stable one and a rotating privacy address, and
+/// which is which is a flag `if_addrs` does not carry and this crate may not
+/// shell out to read (DEC-13). Ranking by the routing table would answer with
+/// the rotating one, since that is exactly what a privacy address is for - so
+/// an IPv6-only host is offered a stable order it did not choose rather than a
+/// preference this crate cannot honestly compute.
+fn precedence(address: IpAddr, routed: Option<IpAddr>) -> u8 {
+    match address {
+        IpAddr::V4(_) if Some(address) == routed => 0,
+        IpAddr::V4(_) => 1,
+        IpAddr::V6(_) => 2,
+    }
+}
+
+/// Which address the routing table would send from, asked without sending
+/// anything and without asking the OS for a tool: a connected UDP socket picks
+/// the route and binds a source, and the destination is TEST-NET-3, which
+/// routes nowhere. No route, no answer - and then the rest of the ordering
+/// decides.
+fn routed_from() -> Option<IpAddr> {
+    let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("203.0.113.1:9").ok()?;
+    Some(socket.local_addr().ok()?.ip())
 }
 
 fn routable(address: IpAddr) -> bool {
@@ -277,6 +321,55 @@ mod tests {
         assert!(!routable(v4(169, 254, 3, 9)));
         assert!(!routable("::1".parse().unwrap()));
         assert!(!routable("fe80::1".parse().unwrap()));
+    }
+
+    fn on(name: &str, address: &str) -> Interface {
+        Interface { name: name.to_owned(), address: address.parse().expect("address") }
+    }
+
+    fn ordered(found: &[Interface], routed: Option<&str>) -> Vec<String> {
+        let mut found = found.to_vec();
+        order(&mut found, routed.map(|address| address.parse().expect("address")));
+        found.into_iter().map(|interface| interface.address.to_string()).collect()
+    }
+
+    // The failure this ordering exists to prevent: the screen offered the first
+    // address the kernel listed, which was a rotating IPv6 on an interface named
+    // en1 - four choices deep, and wrong in a phone's proxy field.
+    #[test]
+    fn the_address_this_host_sends_from_is_offered_first() {
+        let found = [
+            on("Wi-Fi", "2001:db8::c0d"),
+            on("Thunderbolt Bridge", "10.9.9.1"),
+            on("Wi-Fi", "192.168.0.105"),
+        ];
+        assert_eq!(
+            ordered(&found, Some("192.168.0.105")),
+            ["192.168.0.105", "10.9.9.1", "2001:db8::c0d"]
+        );
+    }
+
+    #[test]
+    fn a_host_with_no_route_still_offers_its_ipv4_before_its_ipv6() {
+        let found = [on("Wi-Fi", "2001:db8::1"), on("Wi-Fi", "192.168.0.105")];
+
+        assert_eq!(ordered(&found, None), ["192.168.0.105", "2001:db8::1"]);
+    }
+
+    // Two IPv6 addresses cannot be told apart from inside this crate - the flag
+    // that says which one rotates is the host's to print, and DEC-13 keeps this
+    // crate from asking it - so what is asserted is the order they do have:
+    // stable, and below every IPv4.
+    #[test]
+    fn ipv6_is_offered_below_every_ipv4_and_in_a_stable_order() {
+        let found = [
+            on("Wi-Fi", "2001:db8::c0d"),
+            on("Wi-Fi", "2001:db8::1"),
+            on("Thunderbolt Bridge", "10.9.9.1"),
+        ];
+
+        assert_eq!(ordered(&found, None), ["10.9.9.1", "2001:db8::1", "2001:db8::c0d"]);
+        assert_eq!(ordered(&found, None), ordered(&found, None));
     }
 
     #[test]

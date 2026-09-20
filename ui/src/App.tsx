@@ -7,6 +7,7 @@ import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
+import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
 import { FlowList } from "./FlowList";
@@ -15,6 +16,7 @@ import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
+  Button,
   Field,
   HTTP_METHODS,
   MethodLabel,
@@ -143,13 +145,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, [state.phase, reprobe]);
 
   // Reach is a fact about this process, never a stored preference (DEC-55): it
-  // is read when setup opens and re-read from whatever the core answers to the
-  // two calls that change it. A read that fails leaves the screen saying Trawler
-  // answers here only, which is the honest reading of a core that will not say.
+  // is read once the app has a core and re-read from whatever the core answers
+  // to the two calls that change it. A read that fails leaves the screen saying
+  // Trawler answers here only, which is the honest reading of a core that will
+  // not say. It is read in every phase because an exposure this machine is
+  // under is not a fact about the setup screen.
   const [reach, setReach] = useState<ReachState>(UNREACHABLE);
 
   useEffect(() => {
-    if (state.phase !== "onboarding") return;
     let live = true;
     client.reach().then(
       (r) => live && setReach(r),
@@ -158,15 +161,43 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return () => {
       live = false;
     };
-  }, [client, state.phase]);
+  }, [client]);
+
+  // The core answers with the kernel's device names, because asking the host
+  // what its owner calls `en1` means running one of the host's own tools and
+  // the core is kept out of that (DEC-13). The shell asks; a host with no
+  // answer, and a browser with no shell, rename nothing.
+  const [portNames, setPortNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let live = true;
+    invoke<Record<string, string>>("interface_names").then(
+      (names) => live && setPortNames(names ?? {}),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const named = useMemo(
+    () => ({
+      ...reach,
+      interfaces: reach.interfaces.map((i) => ({ ...i, name: portNames[i.name] ?? i.name })),
+    }),
+    [reach, portNames],
+  );
 
   // The confirm comes first and the bind only on a yes — the shell asks,
   // because arming changes what this machine exposes (DEC-13). A dialog that
-  // cannot be shown is a question nobody answered, so nothing is armed.
+  // cannot be shown is a question nobody answered, so nothing is armed — and
+  // the refusal is returned rather than swallowed, because a screen that cannot
+  // tell a no from a yes says nothing about either.
   const armReach = async (address: string) => {
     const allowed = await invoke<boolean>("confirm_reach", { address }).catch(() => false);
-    if (!allowed) return;
+    if (!allowed) return null;
     setReach(await client.armReach(address));
+    return undefined;
   };
 
   const disarmReach = async () => {
@@ -209,6 +240,39 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
+  // An exposure the user granted stays visible for as long as it holds — in the
+  // list as much as in setup, where choosing "this machine" used to hide it
+  // entirely. The chip carries the address a device is pointed at and the
+  // control that ends it, because a warning nobody can act on is decoration.
+  // The control runs through useAction for the reason Button's fork D4 states:
+  // a stop that failed must not read like a stop that worked, and the exposure
+  // it could not end is still on this machine.
+  const disarm = useAction(disarmReach);
+  const reachChip = reach.armed && reach.proxy !== null && (
+    <div
+      data-testid="reach-chip"
+      className="flex items-center gap-control-gap rounded-button border border-hairline px-chrome-x font-ui text-chrome text-ink-mute"
+    >
+      <span>reachable on {splitProxyAddr(reach.proxy).host}</span>
+      {disarm.trigger && (
+        <Button
+          frame="bare"
+          tone="mute"
+          onClick={disarm.trigger}
+          disabled={disarm.state === "running"}
+        >
+          stop
+        </Button>
+      )}
+      {disarm.state === "running" && <span>stopping…</span>}
+      {disarm.state === "failed" && (
+        <span className="text-warn" title={disarm.error}>
+          couldn't stop listening
+        </span>
+      )}
+    </div>
+  );
+
   // The connection has one owner, written by both things that observe it — a
   // listing that did not arrive, and the stream going down — so the band and the
   // row region can never disagree about it. The pane's own failed fetch is a
@@ -246,6 +310,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           <>
             {dot}
             <h1 className="font-serif text-title italic">Trawler</h1>
+            {reachChip}
           </>
         }
       >
@@ -269,7 +334,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
           onRecheck={reprobe}
-          reach={reach}
+          reach={named}
           onArmReach={armReach}
           onDisarmReach={disarmReach}
         />
@@ -298,6 +363,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         <>
           {dot}
           <h1 className="mr-2 font-serif text-title italic">Trawler</h1>
+          {reachChip}
           <Field
             aria-label="filter"
             placeholder="filter — free text"

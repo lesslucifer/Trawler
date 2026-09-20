@@ -87,23 +87,25 @@ export interface SetupContext {
 
 interface PlatformFacts {
   label: string;
-  // Do this machine's two probes answer for this platform? Only where the
-  // platform IS this machine or shares its stores — a probe of the wrong
-  // machine is worse than no probe.
-  probed: boolean;
+  // The two probes read THIS machine, and a platform may share one of its
+  // stores without sharing the other: the iOS Simulator follows this Mac's
+  // system proxy and keeps a certificate store of its own. Two facts, never
+  // one — borrowing an answer about the wrong store is worse than no answer.
+  probesTrust: boolean;
+  probesRoute: boolean;
   // Do this platform's instructions need an address beyond loopback?
   needsReach: boolean;
 }
 
 const PLATFORMS: Record<PlatformId, PlatformFacts> = {
-  this: { label: "This machine", probed: true, needsReach: false },
-  mac: { label: "Another Mac", probed: false, needsReach: true },
-  windows: { label: "Another Windows PC", probed: false, needsReach: true },
-  ubuntu: { label: "Another Ubuntu machine", probed: false, needsReach: true },
-  "ios-sim": { label: "iOS Simulator", probed: true, needsReach: false },
-  "android-sim": { label: "Android emulator", probed: false, needsReach: false },
-  ios: { label: "iPhone or iPad", probed: false, needsReach: true },
-  android: { label: "Android device", probed: false, needsReach: true },
+  this: { label: "This machine", probesTrust: true, probesRoute: true, needsReach: false },
+  mac: { label: "Another Mac", probesTrust: false, probesRoute: false, needsReach: true },
+  windows: { label: "Another Windows PC", probesTrust: false, probesRoute: false, needsReach: true },
+  ubuntu: { label: "Another Ubuntu machine", probesTrust: false, probesRoute: false, needsReach: true },
+  "ios-sim": { label: "iOS Simulator", probesTrust: false, probesRoute: true, needsReach: false },
+  "android-sim": { label: "Android emulator", probesTrust: false, probesRoute: false, needsReach: false },
+  ios: { label: "iPhone or iPad", probesTrust: false, probesRoute: false, needsReach: true },
+  android: { label: "Android device", probesTrust: false, probesRoute: false, needsReach: true },
 };
 
 const OS_NAME: Record<HostOs, string | null> = {
@@ -124,8 +126,12 @@ export function platformChoices(os: HostOs): { id: PlatformId; label: string }[]
   return PLATFORM_IDS.map((id) => ({ id, label: platformLabel(id, os) }));
 }
 
-export function isProbed(id: PlatformId): boolean {
-  return PLATFORMS[id].probed;
+export function probesTrust(id: PlatformId): boolean {
+  return PLATFORMS[id].probesTrust;
+}
+
+export function probesRoute(id: PlatformId): boolean {
+  return PLATFORMS[id].probesRoute;
 }
 
 export function needsReach(id: PlatformId): boolean {
@@ -382,12 +388,37 @@ function emulatorSetup(proxyAddr: string): PlatformSetup {
   };
 }
 
-const SIMULATOR_SETUP: PlatformSetup = {
-  trustNote: "the Simulator uses this Mac's certificate store — installing it here covers it",
-  trust: { steps: [["Restart the Simulator if it was running when the certificate went in."]] },
-  routeNote: "the Simulator uses this Mac's system proxy — setting it here covers it",
-  tryIt: "open any site in the Simulator",
-};
+// Two stores, two answers. The Simulator follows this Mac's system proxy, so
+// the host's own routing guide is its routing guide; its trust store is its
+// own, and Apple's supported way in is simctl against the booted device.
+function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+  return {
+    trustNote: "the Simulator keeps its own certificate store — this Mac's does not cover it",
+    trust: {
+      steps: [
+        [SAVE_CA_STEP, { save: true }],
+        [
+          "With the Simulator running, run:",
+          {
+            copy: `xcrun simctl keychain booted add-root-cert ${CA_FILENAME}`,
+            label: "the trust command",
+          },
+        ],
+        ["Restart the Simulator so apps pick the new root up."],
+      ],
+      undoTitle: "to remove it later",
+      undo: [
+        [
+          "Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:",
+          { copy: "xcrun simctl keychain booted reset", label: "the keychain reset" },
+        ],
+      ],
+    },
+    routeNote: "the Simulator uses this Mac's system proxy — setting it here covers it",
+    route: osRoute(os === "other" ? "terminal" : hostTarget(os), proxyAddr),
+    tryIt: "open any site in the Simulator",
+  };
+}
 
 // Null is the honest answer for a platform whose every instruction needs an
 // address that does not exist yet: there are no steps to show, and inventing
@@ -404,7 +435,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup | nul
     case "ubuntu":
       return anotherMachineSetup("linux", ctx.reach!);
     case "ios-sim":
-      return SIMULATOR_SETUP;
+      return simulatorSetup(ctx.os, ctx.proxyAddr);
     case "android-sim":
       return emulatorSetup(ctx.proxyAddr);
     case "ios":
