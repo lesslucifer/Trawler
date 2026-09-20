@@ -22,10 +22,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 // never leave the string it arrives as.
 fn core_address_script(address: Option<&str>) -> Option<String> {
     let address = address.map(str::trim).filter(|a| !a.is_empty())?;
-    Some(format!(
-        "window.__TRAWLER_API__ = {};",
-        serde_json::Value::from(address)
-    ))
+    Some(format!("window.__TRAWLER_API__ = {};", serde_json::Value::from(address)))
 }
 
 #[cfg(test)]

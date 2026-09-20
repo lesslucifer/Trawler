@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type ReachState, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
-import type { ProxyProbe, TrustProbe } from "./verdicts";
+import { NO_PROXY_READING, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
@@ -108,7 +108,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // and whenever the window regains focus, and the reading carries its time.
   // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
-  const [proxyProbe, setProxyProbe] = useState<ProxyProbe>("unknown");
+  const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
   const [probeNonce, setProbeNonce] = useState(0);
@@ -124,9 +124,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         (p) => live && setTrustProbe(p),
         () => live && setTrustProbe("unknown"),
       ),
-      invoke<ProxyProbe>("proxy_status", { host, port }).then(
-        (p) => live && setProxyProbe(p),
-        () => live && setProxyProbe("unknown"),
+      invoke<ProxyReading>("proxy_status", { host, port }).then(
+        (reading) => live && setProxyReading(reading),
+        () => live && setProxyReading(NO_PROXY_READING),
       ),
     ]).then(() => {
       if (!live) return;
@@ -321,7 +321,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           os={hostOs()}
           proxyAddr={proxyAddr}
           trustProbe={trustProbe}
-          proxyProbe={proxyProbe}
+          proxy={proxyReading}
           probing={probing}
           probedAt={probedAt}
           traffic={{

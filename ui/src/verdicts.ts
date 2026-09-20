@@ -9,6 +9,18 @@ import type { Phase } from "./onboardingMachine";
 
 export type TrustProbe = "trusted" | "untrusted" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
+
+// What the shell read of this machine's system proxy: the classification, and
+// the address it classified. The address exists so the screen can name the
+// proxy it is about to replace instead of asking the user to take its word for
+// it; it is null wherever nothing is set, and wherever the probe could not read.
+export interface ProxyReading {
+  status: ProxyProbe;
+  address: string | null;
+}
+
+export const NO_PROXY_READING: ProxyReading = { status: "unknown", address: null };
+
 export type StepTone = "ok" | "warn" | "muted";
 
 // `short` is the ≤40-char fragment StatusLine renders — a verdict, not a

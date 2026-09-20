@@ -21,14 +21,18 @@ fn confirm_message(address: &str) -> String {
     )
 }
 
-#[tauri::command]
-pub async fn confirm_reach(app: tauri::AppHandle, address: String) -> Result<bool, String> {
+async fn ask(
+    app: tauri::AppHandle,
+    title: &str,
+    message: String,
+    confirm: &str,
+) -> Result<bool, String> {
     let (answered, answer) = std::sync::mpsc::channel();
     app.dialog()
-        .message(confirm_message(&address))
-        .title(TITLE)
+        .message(message)
+        .title(title)
         .kind(MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::OkCancelCustom(ALLOW.into(), CANCEL.into()))
+        .buttons(MessageDialogButtons::OkCancelCustom(confirm.into(), CANCEL.into()))
         .show(move |allowed| {
             let _ = answered.send(allowed);
         });
@@ -38,9 +42,34 @@ pub async fn confirm_reach(app: tauri::AppHandle, address: String) -> Result<boo
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn confirm_reach(app: tauri::AppHandle, address: String) -> Result<bool, String> {
+    ask(app, TITLE, confirm_message(&address), ALLOW).await
+}
+
+// The second thing on this machine Trawler replaces rather than adds to, and so
+// the second ask it owes (DEC-13). The screen names the proxy it found one line
+// above the button; this names what replacing it costs — that the one already
+// set does not come back, which is the part a user cannot see from the button.
+const REPLACE_TITLE: &str = "Replace the proxy this machine uses?";
+const REPLACE: &str = "Replace";
+
+fn replace_message(address: &str) -> String {
+    format!(
+        "Another proxy is set on this machine: {address}.\n\n\
+         Trawler will replace it for as long as Trawler runs. When Trawler quits it turns the \
+         proxy off — it does not put {address} back, and you would set that one again yourself."
+    )
+}
+
+#[tauri::command]
+pub async fn confirm_replace_proxy(app: tauri::AppHandle, address: String) -> Result<bool, String> {
+    ask(app, REPLACE_TITLE, replace_message(&address), REPLACE).await
+}
+
 #[cfg(test)]
 mod tests {
-    use super::confirm_message;
+    use super::{confirm_message, replace_message};
 
     #[test]
     fn the_ask_names_the_address_it_is_about() {
@@ -60,5 +89,19 @@ mod tests {
     #[test]
     fn the_ask_says_the_exposure_ends_with_the_session() {
         assert!(confirm_message("10.0.0.5").contains("whenever it quits"));
+    }
+
+    #[test]
+    fn the_replacement_ask_names_the_proxy_it_is_about_to_replace() {
+        assert!(replace_message("10.1.1.1:8080").contains("10.1.1.1:8080"));
+    }
+
+    // The cost the button cannot show: the proxy that was there does not come
+    // back, so a user who says yes has to know they are the one who restores it.
+    #[test]
+    fn the_replacement_ask_says_the_old_proxy_is_not_restored() {
+        let message = replace_message("10.1.1.1:8080");
+        assert!(message.contains("does not put 10.1.1.1:8080 back"), "{message}");
+        assert!(message.contains("turns the proxy off"), "{message}");
     }
 }

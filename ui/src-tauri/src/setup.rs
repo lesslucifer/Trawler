@@ -25,16 +25,21 @@ fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
     Some(argv)
 }
 
+fn quoted(argv: &[String]) -> String {
+    argv.iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(" ")
+}
+
+fn elevated_script(script: &str) -> Vec<String> {
+    vec![
+        "osascript".into(),
+        "-e".into(),
+        format!("do shell script \"{script}\" with administrator privileges"),
+    ]
+}
+
 fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     match os {
-        "macos" => {
-            let script = argv.iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(" ");
-            vec![
-                "osascript".into(),
-                "-e".into(),
-                format!("do shell script \"{script}\" with administrator privileges"),
-            ]
-        }
+        "macos" => elevated_script(&quoted(argv)),
         "windows" => {
             let args = argv[1..].iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(",");
             vec![
@@ -51,33 +56,67 @@ fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     }
 }
 
-#[tauri::command]
-pub fn install_ca(pem: String) -> Result<(), String> {
-    if !pem.contains("-----BEGIN CERTIFICATE-----") {
-        return Err("not a PEM certificate".into());
-    }
-    let os = std::env::consts::OS;
-    let cert = std::env::temp_dir().join("trawler-ca.pem");
-    let inner = install_command(os, &cert)
-        .ok_or("no automatic install on this system — follow the guided steps")?;
-    std::fs::write(&cert, &pem).map_err(|e| e.to_string())?;
-    let argv = elevated_argv(os, &inner);
-    let out = Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| e.to_string())?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        Err(failure_message(&String::from_utf8_lossy(&out.stderr)))
+// Why an elevated command did not run, split into the one fact the screen words
+// for itself and the tool's own text. The OS installer's stderr is still the
+// only actionable signal on a real failure, so it travels whole — but a prompt
+// the user dismissed is not a failure to report in the OS's words, and `refused`
+// is what lets the screen say so (F18).
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
+pub struct SetupError {
+    refused: bool,
+    detail: String,
+}
+
+// macOS reports a dismissed authorization dialog as `User cancelled. (-128)` and
+// one it could not show at all as `(-60007)`; Windows' UAC refusal comes back as
+// "The operation was canceled by the user". All three are the same fact: nothing
+// on this machine changed, and the manual route is still there.
+fn refused_prompt(stderr: &str) -> bool {
+    let text = stderr.to_ascii_lowercase();
+    text.contains("-128") || text.contains("-60007") || text.contains("cancel")
+}
+
+fn command_failed(stderr: &str, no_detail: &str) -> SetupError {
+    let detail = stderr.trim();
+    SetupError {
+        refused: refused_prompt(detail),
+        detail: if detail.is_empty() { no_detail.to_string() } else { detail.to_string() },
     }
 }
 
-// The OS installer's own stderr is the only actionable signal on failure (e.g.
-// macOS "authorization was denied since no user interaction was possible") — a
-// bare exit code tells the user nothing, so surface the tool's message verbatim.
-fn failure_message(stderr: &str) -> String {
-    match stderr.trim() {
-        "" => "install failed — the OS reported no detail; use the steps below".into(),
-        detail => format!("install failed: {detail}"),
+fn setup_error(detail: impl Into<String>) -> SetupError {
+    SetupError { refused: false, detail: detail.into() }
+}
+
+fn run_elevated(argv: &[String], no_detail: &str) -> Result<(), SetupError> {
+    let out =
+        Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| setup_error(e.to_string()))?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(command_failed(&String::from_utf8_lossy(&out.stderr), no_detail))
     }
+}
+
+fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
+    if !pem.contains("-----BEGIN CERTIFICATE-----") {
+        return Err(setup_error("not a PEM certificate"));
+    }
+    let cert = std::env::temp_dir().join("trawler-ca.pem");
+    std::fs::write(&cert, pem).map_err(|e| setup_error(e.to_string()))?;
+    Ok(cert)
+}
+
+const NO_INSTALL_DETAIL: &str = "install failed — the OS reported no detail; use the steps below";
+
+#[tauri::command]
+pub fn install_ca(pem: String) -> Result<(), SetupError> {
+    let os = std::env::consts::OS;
+    let cert = staged_cert(&pem)?;
+    let inner = install_command(os, &cert).ok_or_else(|| {
+        setup_error("no automatic install on this system — follow the guided steps")
+    })?;
+    run_elevated(&elevated_argv(os, &inner), NO_INSTALL_DETAIL)
 }
 
 // Trawler's CA is issued with this CN; the store dumps below are matched on it,
@@ -177,6 +216,20 @@ fn parse_services(list: &str) -> Vec<String> {
         .collect()
 }
 
+fn macos_proxy_script(services: &[String], host: &str, port: u16) -> String {
+    services
+        .iter()
+        .flat_map(|svc| {
+            let svc = shell_quote(svc);
+            [
+                format!("networksetup -setwebproxy {svc} {host} {port}"),
+                format!("networksetup -setsecurewebproxy {svc} {host} {port}"),
+            ]
+        })
+        .collect::<Vec<_>>()
+        .join(" && ")
+}
+
 fn set_proxy_commands(
     os: &str,
     services: &[String],
@@ -184,24 +237,7 @@ fn set_proxy_commands(
     port: u16,
 ) -> Option<Vec<Vec<String>>> {
     match os {
-        "macos" => {
-            let script = services
-                .iter()
-                .flat_map(|svc| {
-                    let svc = shell_quote(svc);
-                    [
-                        format!("networksetup -setwebproxy {svc} {host} {port}"),
-                        format!("networksetup -setsecurewebproxy {svc} {host} {port}"),
-                    ]
-                })
-                .collect::<Vec<_>>()
-                .join(" && ");
-            Some(vec![vec![
-                "osascript".into(),
-                "-e".into(),
-                format!("do shell script \"{script}\" with administrator privileges"),
-            ]])
-        }
+        "macos" => Some(vec![elevated_script(&macos_proxy_script(services, host, port))]),
         "windows" => Some(vec![
             reg_add("ProxyServer", "REG_SZ", &format!("{host}:{port}")),
             reg_add("ProxyEnable", "REG_DWORD", "1"),
@@ -227,11 +263,7 @@ fn unset_proxy_commands(os: &str, services: &[String]) -> Option<Vec<Vec<String>
                 })
                 .collect::<Vec<_>>()
                 .join(" && ");
-            Some(vec![vec![
-                "osascript".into(),
-                "-e".into(),
-                format!("do shell script \"{script}\" with administrator privileges"),
-            ]])
+            Some(vec![elevated_script(&script)])
         }
         "windows" => {
             Some(vec![reg_add("ProxyEnable", "REG_DWORD", "0"), internet_set_option_refresh()])
@@ -275,54 +307,102 @@ fn valid_host(host: &str) -> bool {
     !host.is_empty() && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
 }
 
-fn macos_services() -> Result<Vec<String>, String> {
+fn macos_services() -> Result<Vec<String>, SetupError> {
     let out = Command::new("networksetup")
         .arg("-listallnetworkservices")
         .output()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| setup_error(e.to_string()))?;
     let services = parse_services(&String::from_utf8_lossy(&out.stdout));
     if services.is_empty() {
-        return Err("no network services to configure".into());
+        return Err(setup_error("no network services to configure"));
     }
     Ok(services)
 }
 
-fn run_all(commands: Vec<Vec<String>>, verb: &str) -> Result<(), String> {
+fn services_to_configure(os: &str) -> Result<Vec<String>, SetupError> {
+    if os == "macos" {
+        macos_services()
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+fn run_all(commands: Vec<Vec<String>>, no_detail: &str) -> Result<(), SetupError> {
     for argv in commands {
-        let out = Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| e.to_string())?;
-        if !out.status.success() {
-            let detail = String::from_utf8_lossy(&out.stderr);
-            return Err(match detail.trim() {
-                "" => format!("couldn't {verb} the proxy — no detail; use the steps below"),
-                d => format!("couldn't {verb} the proxy: {d}"),
-            });
-        }
+        run_elevated(&argv, no_detail)?;
     }
     Ok(())
 }
 
-#[tauri::command]
-pub fn set_proxy(host: String, port: u16) -> Result<(), String> {
-    if !valid_host(&host) {
-        return Err("invalid proxy host".into());
+fn checked_address(host: &str, port: u16) -> Result<(), SetupError> {
+    if !valid_host(host) {
+        return Err(setup_error("invalid proxy host"));
     }
     if port == 0 {
-        return Err("invalid proxy port".into());
+        return Err(setup_error("invalid proxy port"));
     }
+    Ok(())
+}
+
+const NO_PROXY_AUTO: &str = "no automatic proxy setup on this system — follow the guided steps";
+
+#[tauri::command]
+pub fn set_proxy(host: String, port: u16) -> Result<(), SetupError> {
+    checked_address(&host, port)?;
     let os = std::env::consts::OS;
-    let services = if os == "macos" { macos_services()? } else { Vec::new() };
-    let commands = set_proxy_commands(os, &services, &host, port)
-        .ok_or("no automatic proxy setup on this system — follow the guided steps")?;
-    run_all(commands, "set")
+    let services = services_to_configure(os)?;
+    let commands =
+        set_proxy_commands(os, &services, &host, port).ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
+    run_all(commands, "couldn't set the proxy — no detail; use the steps below")
 }
 
 #[tauri::command]
-pub fn unset_proxy() -> Result<(), String> {
+pub fn unset_proxy() -> Result<(), SetupError> {
     let os = std::env::consts::OS;
-    let services = if os == "macos" { macos_services()? } else { Vec::new() };
-    let commands = unset_proxy_commands(os, &services)
-        .ok_or("no automatic proxy setup on this system — follow the guided steps")?;
-    run_all(commands, "turn off")
+    let services = services_to_configure(os)?;
+    let commands = unset_proxy_commands(os, &services).ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
+    run_all(commands, "couldn't turn the proxy off — no detail; use the steps below")
+}
+
+// The one thing most users want, and the one prompt it is worth: on macOS the
+// trust write and the proxy write go inside a single `do shell script … with
+// administrator privileges`, joined so that a refused trust never leaves the
+// machine routing through a proxy it does not trust. On Windows only the store
+// write is elevated — the proxy lives under HKCU — so one UAC prompt is already
+// the whole cost and the commands run in sequence (F27).
+fn set_up_commands(
+    os: &str,
+    cert: &Path,
+    services: &[String],
+    host: &str,
+    port: u16,
+) -> Option<Vec<Vec<String>>> {
+    let install = install_command(os, cert)?;
+    match os {
+        "macos" => {
+            let script =
+                format!("{} && {}", quoted(&install), macos_proxy_script(services, host, port));
+            Some(vec![elevated_script(&script)])
+        }
+        "windows" => {
+            let mut commands = vec![elevated_argv(os, &install)];
+            commands.extend(set_proxy_commands(os, services, host, port)?);
+            Some(commands)
+        }
+        _ => None,
+    }
+}
+
+#[tauri::command]
+pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), SetupError> {
+    checked_address(&host, port)?;
+    let os = std::env::consts::OS;
+    let cert = staged_cert(&pem)?;
+    let services = services_to_configure(os)?;
+    let commands = set_up_commands(os, &cert, &services, &host, port).ok_or_else(|| {
+        setup_error("no automatic setup on this system — follow the guided steps")
+    })?;
+    run_all(commands, NO_INSTALL_DETAIL)
 }
 
 // The actual system proxy state, classified against Trawler's own address — the
@@ -419,11 +499,26 @@ fn active_system_proxy(os: &str) -> Option<(String, u16)> {
     }
 }
 
-// The quit-time confirm in App.tsx calls this with Trawler's configured address to
-// decide which of the three quit paths to take. Read-only, no elevation.
+// One read, both readers. The quit-time confirm calls this with Trawler's
+// configured address to decide which of the three quit paths to take; the setup
+// screen needs the same reading plus the address it found, because a button
+// that replaces a proxy the user set may not hide which one (F17). Read-only,
+// no elevation, and the address is None wherever nothing is set or this build
+// cannot read the host's settings.
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
+pub struct ProxyReading {
+    status: &'static str,
+    address: Option<String>,
+}
+
+fn read_proxy(active: Option<(String, u16)>, host: &str, port: u16) -> ProxyReading {
+    let address = active.as_ref().map(|(h, p)| format!("{h}:{p}"));
+    ProxyReading { status: classify(active, host, port).as_str(), address }
+}
+
 #[tauri::command]
-pub fn proxy_status(host: String, port: u16) -> String {
-    classify(active_system_proxy(std::env::consts::OS), &host, port).as_str().into()
+pub fn proxy_status(host: String, port: u16) -> ProxyReading {
+    read_proxy(active_system_proxy(std::env::consts::OS), &host, port)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -536,27 +631,46 @@ mod tests {
     }
 
     #[test]
-    fn failure_message_surfaces_the_os_installer_stderr() {
-        let msg = failure_message(
-            "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (1)\n",
+    fn a_real_failure_carries_the_os_installers_own_stderr_and_is_not_a_refusal() {
+        let err = command_failed(
+            "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied because of an unknown error. (1)\n",
+            NO_INSTALL_DETAIL,
         );
-        assert!(msg.contains("authorization was denied"));
+        assert!(!err.refused);
+        assert!(err.detail.contains("authorization was denied"));
     }
 
     #[test]
-    fn failure_message_falls_back_when_stderr_is_empty() {
-        assert!(failure_message("   ").contains("use the steps below"));
+    fn a_failure_with_no_stderr_falls_back_to_the_route_that_still_works() {
+        assert!(command_failed("   ", NO_INSTALL_DETAIL).detail.contains("use the steps below"));
+    }
+
+    // The three ways the OS says "you were asked and nothing happened". Each
+    // one buys the screen a sentence of its own instead of the tool's text.
+    #[test]
+    fn a_dismissed_or_unshowable_prompt_is_a_refusal_in_every_wording_the_os_uses() {
+        for stderr in [
+            "0:36: execution error: User cancelled. (-128)",
+            "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)",
+            "Start-Process : The operation was canceled by the user.",
+        ] {
+            let err = command_failed(stderr, NO_INSTALL_DETAIL);
+            assert!(err.refused, "{stderr}");
+            assert_eq!(err.detail, stderr, "the tool's own text travels whole");
+        }
     }
 
     #[test]
     fn install_ca_rejects_non_certificate_input() {
         let err = install_ca("BEGIN RSA PRIVATE KEY".into()).unwrap_err();
-        assert!(err.contains("not a PEM certificate"));
+        assert!(err.detail.contains("not a PEM certificate"));
+        assert!(!err.refused);
     }
 
     #[test]
     fn hardware_ports_map_a_device_to_the_name_its_owner_sees() {
-        let listing = "Hardware Port: Ethernet\nDevice: en0\nEthernet Address: a1:b2:c3:d4:e5:f6\n\n\
+        let listing =
+            "Hardware Port: Ethernet\nDevice: en0\nEthernet Address: a1:b2:c3:d4:e5:f6\n\n\
                        Hardware Port: Wi-Fi\nDevice: en1\nEthernet Address: f6:e5:d4:c3:b2:a1\n\n\
                        VLAN Configurations\n===================\n";
         let ports = parse_hardware_ports(listing);
@@ -634,7 +748,79 @@ mod tests {
 
     #[test]
     fn set_proxy_rejects_port_zero() {
-        assert!(set_proxy("127.0.0.1".into(), 0).unwrap_err().contains("port"));
+        assert!(set_proxy("127.0.0.1".into(), 0).unwrap_err().detail.contains("port"));
+    }
+
+    // F27: one prompt, not two. The trust write and the proxy write share a
+    // single elevation, and the `&&` is what keeps a refused trust from leaving
+    // the machine routing through a proxy it does not trust.
+    #[test]
+    fn macos_sets_up_the_whole_machine_under_one_elevation() {
+        let svcs = ["Wi-Fi".into()];
+        let cmds = set_up_commands("macos", &cert(), &svcs, "127.0.0.1", 7420).unwrap();
+
+        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds[0][0], "osascript");
+        let script = &cmds[0][2];
+        assert_eq!(script.matches("with administrator privileges").count(), 1);
+        assert!(script.contains("'security' 'add-trusted-cert'"));
+        assert!(script.contains("'/tmp/trawler-ca.pem'"));
+        assert!(script.contains("networksetup -setwebproxy 'Wi-Fi' 127.0.0.1 7420"));
+        assert!(script.contains("networksetup -setsecurewebproxy 'Wi-Fi' 127.0.0.1 7420"));
+        assert!(script.contains("' && networksetup"), "the proxy write follows the trust write");
+    }
+
+    // On Windows the proxy lives under HKCU and needs no elevation at all, so
+    // one UAC prompt — the store write's — is already the whole cost.
+    #[test]
+    fn windows_sets_up_the_whole_machine_with_one_uac_prompt() {
+        let cmds = set_up_commands("windows", &cert(), &[], "127.0.0.1", 7420).unwrap();
+
+        let elevated: Vec<_> =
+            cmds.iter().filter(|c| c.iter().any(|a| a.contains("RunAs"))).collect();
+        assert_eq!(elevated.len(), 1);
+        assert!(elevated[0].iter().any(|a| a.contains("certutil")));
+        assert_eq!(cmds[1], reg_add("ProxyServer", "REG_SZ", "127.0.0.1:7420"));
+    }
+
+    #[test]
+    fn a_system_with_no_automatic_install_has_no_combined_act_either() {
+        assert_eq!(set_up_commands("linux", &cert(), &[], "127.0.0.1", 7420), None);
+    }
+
+    // The two single commands are the manual route's secondaries and did not
+    // move: whatever the combined act does, these still do exactly one thing.
+    #[test]
+    fn the_single_commands_are_unchanged_by_the_combined_one() {
+        let svcs = ["Wi-Fi".into()];
+        let proxy_only = set_proxy_commands("macos", &svcs, "127.0.0.1", 7420).unwrap();
+        assert_eq!(proxy_only.len(), 1);
+        assert!(!proxy_only[0][2].contains("security"));
+
+        let install_only = elevated_argv("macos", &install_command("macos", &cert()).unwrap());
+        assert!(!install_only[2].contains("networksetup"));
+    }
+
+    // F17: the screen names the proxy it is about to replace, so the reading
+    // that classifies it has to carry the address it already read.
+    #[test]
+    fn the_reading_carries_the_address_it_classified() {
+        let foreign = read_proxy(Some(("10.1.1.1".into(), 8080)), "127.0.0.1", 7420);
+        assert_eq!(
+            foreign,
+            ProxyReading { status: "foreign", address: Some("10.1.1.1:8080".into()) }
+        );
+
+        let ours = read_proxy(Some(("127.0.0.1".into(), 7420)), "127.0.0.1", 7420);
+        assert_eq!(ours, ProxyReading { status: "ours", address: Some("127.0.0.1:7420".into()) });
+    }
+
+    #[test]
+    fn a_machine_with_no_proxy_reports_no_address_to_name() {
+        assert_eq!(
+            read_proxy(None, "127.0.0.1", 7420),
+            ProxyReading { status: "none", address: None }
+        );
     }
 
     #[test]

@@ -147,7 +147,7 @@ describe("the un-probeable verdicts carry their own words", () => {
   });
 
   it("renders no routing verdict off-machine rather than this machine's", () => {
-    draw({ proxyProbe: "ours" });
+    draw({ proxy: { status: "ours", address: null } });
     choose("Android device");
     expect(screen.getByTestId("precondition-route")).not.toHaveTextContent(
       "system proxy is set to Trawler",
@@ -185,17 +185,17 @@ describe("the one-click actions belong to this machine alone", () => {
 
   // DEC-13's inherited assertion: never offer to undo something we did not do.
   it("offers stop routing only once a proxy here is ours", () => {
-    draw({ proxyProbe: "none" });
+    draw({ proxy: { status: "none", address: null } });
     expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
 
-    draw({ proxyProbe: "ours" });
+    draw({ proxy: { status: "ours", address: null } });
     expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
   });
 
   // The other half of the same rule: an action that changed this host stays
   // reversible even where the probe that would confirm it cannot answer.
   it("offers stop routing after setting the proxy, whatever the probe can say", async () => {
-    draw({ proxyProbe: "unknown", onSetProxy: vi.fn(async () => {}) });
+    draw({ proxy: { status: "unknown", address: null }, onSetProxy: vi.fn(async () => {}) });
     fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
     expect(
       await screen.findByRole("button", { name: "stop routing through Trawler" }),
@@ -207,7 +207,7 @@ describe("the one-click actions belong to this machine alone", () => {
 // shares one of this Mac's two stores, and the screen now answers per store.
 describe("the Simulator acts through what it shares, and only through that", () => {
   beforeEach(() => {
-    draw({ trustProbe: "trusted", proxyProbe: "none" });
+    draw({ trustProbe: "trusted", proxy: { status: "none", address: null } });
     choose("iOS Simulator");
   });
 
@@ -448,29 +448,29 @@ describe("the lead verdict, and the outcome that leaves it", () => {
   // F16: "everything below is still set up" was rendered whatever the probes
   // said — over a machine whose proxy was not set, in the review's TC-11.
   it("reads the probes rather than assuring the user the steps are done", () => {
-    draw({ traffic: { ...NO_TRAFFIC, ever: true }, trustProbe: "trusted", proxyProbe: "none" });
+    draw({ traffic: { ...NO_TRAFFIC, ever: true }, trustProbe: "trusted", proxy: { status: "none", address: null } });
     expect(zone("lead-verdict")).toHaveTextContent("nothing is arriving now");
     expect(zone("lead-verdict")).toHaveTextContent("1 step left on this machine");
     expect(zone("lead-verdict")).not.toHaveTextContent("still set up");
   });
 
   it("counts both steps while both are undone, and stops counting when none are", () => {
-    draw({ trustProbe: "untrusted", proxyProbe: "none" });
+    draw({ trustProbe: "untrusted", proxy: { status: "none", address: null } });
     expect(zone("lead-verdict")).toHaveTextContent("2 steps left on this machine");
 
-    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
     expect(screen.getAllByTestId("lead-verdict")[1]).toHaveTextContent(
       "open any website to see its traffic",
     );
   });
 
   it("says nothing about a step whose probe could not answer", () => {
-    draw({ trustProbe: "unknown", proxyProbe: "ours" });
+    draw({ trustProbe: "unknown", proxy: { status: "ours", address: null } });
     expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left/);
   });
 
   it("says nothing about this machine's steps under a platform that is not it", () => {
-    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
     choose("iPhone or iPad");
     expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left|open any website/);
   });
@@ -560,7 +560,7 @@ describe("a verdict that implies an instruction renders both", () => {
   });
 
   it("names the conflict a foreign proxy is, and what to do about it", () => {
-    draw({ proxyProbe: "foreign" });
+    draw({ proxy: { status: "foreign", address: null } });
     expect(screen.getByTestId("route-guidance")).toHaveTextContent(/point it at Trawler here/);
   });
 
@@ -574,7 +574,7 @@ describe("a verdict that implies an instruction renders both", () => {
   });
 
   it("says nothing extra where the verdict is the whole answer", () => {
-    draw({ trustProbe: "trusted", proxyProbe: "ours" });
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
     expect(zone("trust-guidance")).toBeNull();
     expect(zone("route-guidance")).toBeNull();
   });

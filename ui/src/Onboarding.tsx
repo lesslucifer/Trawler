@@ -30,6 +30,7 @@ import {
   type PlatformId,
 } from "./setup";
 import {
+  NO_PROXY_READING,
   NO_TRAFFIC,
   proxyStatus,
   screenVerdict,
@@ -39,7 +40,7 @@ import {
   trafficStatus,
   trustStatus,
   UNPROBEABLE_TRUST,
-  type ProxyProbe,
+  type ProxyReading,
   type Running,
   type ScreenVerdict,
   type StepStatusView,
@@ -613,7 +614,7 @@ export function Onboarding({
   os = "other",
   proxyAddr = "127.0.0.1:7420",
   trustProbe = "unknown",
-  proxyProbe = "unknown",
+  proxy = NO_PROXY_READING,
   probing = false,
   probedAt = null,
   traffic = NO_TRAFFIC,
@@ -631,7 +632,7 @@ export function Onboarding({
   os?: HostOs;
   proxyAddr?: string;
   trustProbe?: TrustProbe;
-  proxyProbe?: ProxyProbe;
+  proxy?: ProxyReading;
   probing?: boolean;
   probedAt?: number | null;
   traffic?: Traffic;
@@ -644,6 +645,7 @@ export function Onboarding({
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
 }) {
+  const proxyProbe = proxy.status;
   const [platform, setPlatform] = useState<PlatformId>("this");
   const [listenOn, setListenOn] = useState<string | null>(null);
 
