@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU E-ONBOARD.W4 -> epic/onboarding-redesign"
+epic: E-ONBOARD
+wu: E-ONBOARD.W4
+branch: wu/onboarding-redesign/po-p0-and-reading-round
+base: dcf0f7a581031f3616ff570f3a3301fe2d624150
+head: af44c05ed07e2f76a63bacc08fb731e069c983cb
+diff_sha256: a9bec39ac02763ef99303c47953e1dd73a73c33f10aeb92fdd4ead445ba4ce10
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 3
+  stage_seconds:
+    finders: 897
+    total: 1400
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency:  { found: 3, verified: 3 }
+    altitude:    { found: 3, verified: 2 }
+findings: { found: 7, verified: 5, waived: 0 }
+verdict: FAIL
+date: 2026-09-20
+blockers:
+  - finding: "ui/src/App.tsx:227 - the header chip's stop control passes the raw async disarmReach as onClick, so a rejected DELETE /reach is an unhandled promise rejection the user never sees, the button stays live while the call is in flight, and the click leaves no trace. Button's TSDoc states the contract it breaks (fork D4 - both halves or neither), the same function is wired through useAction one file away, and CaptureControls hand-rolls the same discipline in this very header. Silent loss on the control that ends this machine's exposure to the network."
+importants:
+  - finding: "src/reach.rs:151-187 - hardware_ports() and temporary_addresses() shell out to networksetup and ifconfig from the core, which is the mechanism this epic's own W1 result recorded as rejected under DEC-13's rationale when it added if-addrs instead. src/reach.rs becomes the only core module that execs an OS binary, while ui/src-tauri/src/setup.rs already runs networksetup for exactly this kind of work - and off macOS both calls degrade to silence, taking the naming and the temporary-IPv6 sink with them."
+  - finding: "src/reach.rs:91-93 - interfaces() runs both subprocess calls synchronously, and the three async /reach handlers call it with no spawn_blocking, so every GET/POST/DELETE stalls a worker thread of the one runtime that also drives the MITM proxy. Rubric P2, and the same shape a prior round on this same file already found and fixed for ca::load_or_create."
+  - finding: "src/reach.rs:151-187 - neither Command::output() carries a timeout, and no async timeout could preempt them because the blocking call sits inside one poll with no await, so a wedged networksetup pins a runtime thread for an unbounded time rather than degrading."
+nits:
+  - finding: "src/reach.rs:92-93 - the two subprocess calls have no data dependency and run sequentially, costing ~22ms where the slower alone is ~19ms."
+    waived: "Its subject stops existing: the blocker-and-importants fix removes both calls from the core. Recorded so the next round is not read as having missed it."
+  - finding: "src/reach.rs:121-128 - precedence() consults `routed` only for IPv4, so the IPv6 half of routed_from() is computed and never read; on an IPv6-only host the ordering falls back to name and address."
+    waived: "Carried into the fix round rather than patched here - the same change decides what the core may know about IPv6 at all once the host-specific half moves to the shell."
+  - finding: "ui/src/Onboarding.tsx - stepsDetail templates probe-derived words inside the screen, where every sibling word-template (trustStatus, proxyStatus, TRAFFIC_VERDICT) lives in verdicts.ts."
+    waived: "Carried into the fix round. Real placement drift, and cheap to correct with the rest."
