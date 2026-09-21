@@ -3,6 +3,8 @@ import { render, screen } from "@testing-library/react";
 import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
 import { StatusLine } from "./StatusLine";
 
+const CONFIRM_ON = "we'll confirm this on this Mac's first request";
+
 const glyphClass = (status: StepStatusView) => {
   const { container } = render(<StatusLine status={status} />);
   return container.querySelector("span[aria-hidden] > span")?.className ?? "";
@@ -78,12 +80,12 @@ describe("StatusLine", () => {
     expect(rendered.className).toContain("font-ui");
   });
 
-  it("renders short, never the full sentence — the call site does not shorten", () => {
-    const status = trustStatus("unknown", null);
+  it("renders short, never the remedy — the call site does not shorten either", () => {
+    const status = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: 9_000 }, 10_000);
     render(<StatusLine status={status} />);
 
-    expect(screen.getByText("can't check on this platform")).toBeInTheDocument();
-    expect(screen.queryByText(/the traffic verdict is what proves it/)).not.toBeInTheDocument();
+    expect(screen.getByText("arriving — plain HTTP only")).toBeInTheDocument();
+    expect(screen.queryByText(/starts with https/)).not.toBeInTheDocument();
   });
 
   it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
@@ -108,18 +110,18 @@ describe("StatusLine", () => {
   // The precedence is the contract this component renders, and the reason it is
   // T2. Driven through the real resolvers so a re-ranking in either place reds.
   describe("the resolved verdict it is handed", () => {
-    it("shows an authoritative positive over a stale action error", () => {
-      render(<StatusLine status={trustStatus("trusted", null, "install exploded")} />);
+    it("shows an authoritative positive as the resolved verdict it is", () => {
+      render(<StatusLine status={trustStatus("trusted", null, CONFIRM_ON)} />);
 
       expect(screen.getByText("✓")).toBeInTheDocument();
-      expect(screen.queryByText(/install exploded/)).not.toBeInTheDocument();
+      expect(screen.getByText("done — installed and trusted")).toBeInTheDocument();
     });
 
-    it("shows a running action over every settled verdict, error included", () => {
-      render(<StatusLine status={trustStatus("untrusted", "installing", "boom")} />);
+    it("shows a running action over every settled verdict", () => {
+      render(<StatusLine status={trustStatus("trusted", "installing", CONFIRM_ON)} />);
 
       expect(screen.getByTestId("status-line-spinner")).toBeInTheDocument();
-      expect(screen.getByText("installing…")).toBeInTheDocument();
+      expect(screen.getByText("setting up — approve the prompt…")).toBeInTheDocument();
     });
 
     it("shows a decrypted flow arriving now as the ok verdict of the traffic layer", () => {
@@ -130,11 +132,15 @@ describe("StatusLine", () => {
       expect(glyphClass(status)).toContain("text-ok");
     });
 
-    it("shows the error when nothing positive outranks it", () => {
-      render(<StatusLine status={proxyStatus("unknown", null, "port busy")} />);
+    it("shows the can't-determine glyph where nothing read the state at all", () => {
+      render(
+        <StatusLine
+          status={proxyStatus("unknown", null, { device: "this Mac", confirmOn: CONFIRM_ON })}
+        />,
+      );
 
-      expect(screen.getByText("couldn't set the proxy")).toBeInTheDocument();
-      expect(screen.getByText("⚠")).toBeInTheDocument();
+      expect(screen.getByText(CONFIRM_ON)).toBeInTheDocument();
+      expect(screen.getByText("◐")).toBeInTheDocument();
     });
   });
 

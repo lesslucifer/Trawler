@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type ReachState, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
-import type { ProxyProbe, TrustProbe } from "./verdicts";
+import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
@@ -20,6 +20,7 @@ import {
   Field,
   HTTP_METHODS,
   MethodLabel,
+  Notice,
   Select,
   StatusDot,
   type SelectOption,
@@ -78,11 +79,27 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // re-invoke (help) isn't instantly bounced back by the already-captured flow;
   // once proven, the dot and Back-to-flows drive navigation. `flows` refetches on
   // every SSE event via useFlows, so observing it is the whole live check.
+  // The moment setup succeeds used to be silent: the screen was replaced by a
+  // list of one row and nothing said the thing the user had been working
+  // towards had happened (F22). The banner says it on the list's first paint,
+  // and only for the transition that IS that moment — a launch that finds
+  // capture already working is not news.
+  const [justSetUp, setJustSetUp] = useState(false);
+
   useEffect(() => {
     if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(flows)) {
+      setJustSetUp(true);
       dispatch({ t: "captured" });
     }
   }, [state.phase, state.everProven, flows]);
+
+  // Entering setup retires the announcement, however the user got there. The
+  // banner belongs to one transition, and coming back out of setup without
+  // having proven anything new is the "already working, not news" case — the
+  // news would be a second success that did not happen.
+  useEffect(() => {
+    if (state.phase === "onboarding") setJustSetUp(false);
+  }, [state.phase]);
 
   // Which absence the list shows turns on whether the user narrowed it, so an
   // empty-but-blank field must not count as an active filter.
@@ -108,7 +125,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // and whenever the window regains focus, and the reading carries its time.
   // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
-  const [proxyProbe, setProxyProbe] = useState<ProxyProbe>("unknown");
+  const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
   const [probeNonce, setProbeNonce] = useState(0);
@@ -124,9 +141,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         (p) => live && setTrustProbe(p),
         () => live && setTrustProbe("unknown"),
       ),
-      invoke<ProxyProbe>("proxy_status", { host, port }).then(
-        (p) => live && setProxyProbe(p),
-        () => live && setProxyProbe("unknown"),
+      invoke<ProxyReading | undefined>("proxy_status", { host, port }).then(
+        // A shell that answers with nothing has read nothing, which is what
+        // "unknown" means — and the screen may not crash on the difference.
+        (reading) => live && setProxyReading(reading ?? NO_PROXY_READING),
+        () => live && setProxyReading(NO_PROXY_READING),
       ),
     ]).then(() => {
       if (!live) return;
@@ -204,21 +223,39 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     setReach(await client.disarmReach());
   };
 
-  const installCa = async () => {
-    const pem = await client.caCertPem();
-    await invoke("install_ca", { pem });
-    reprobe();
-  };
-
   const saveCa = async () => {
     const pem = await client.caCertPem();
     return saveBody(new TextEncoder().encode(pem), CA_FILENAME);
   };
 
+  // A proxy this machine already has is the user's, and replacing it is the
+  // one setup action that takes something away — so it costs a confirm, the
+  // same shape DEC-13 requires of every OS-touching change. A refusal resolves
+  // "nothing happened" rather than a success, and writes nothing.
+  const replaceAllowed = async () => {
+    if (proxyReading.status !== "foreign") return true;
+    return invoke<boolean>("confirm_replace_proxy", {
+      address: proxyReading.address ?? proxyAddr,
+    }).catch(() => false);
+  };
+
   const setProxy = async () => {
+    if (!(await replaceAllowed())) return null;
     const { host, port } = splitProxyAddr(proxyAddr);
     await invoke("set_proxy", { host, port });
     reprobe();
+    return undefined;
+  };
+
+  // The one thing most users want, in one prompt: the shell runs both elevated
+  // commands under a single authorization (F27).
+  const setUpThisMachine = async () => {
+    if (!(await replaceAllowed())) return null;
+    const { host, port } = splitProxyAddr(proxyAddr);
+    const pem = await client.caCertPem();
+    await invoke("set_up_this_machine", { pem, host, port });
+    reprobe();
+    return undefined;
   };
 
   const unsetProxy = async () => {
@@ -239,6 +276,24 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   );
 
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
+
+  const setUpBanner = justSetUp && (
+    <div data-testid="set-up-banner">
+      <Notice
+        tone="ok"
+        action={
+          <>
+            <Button onClick={() => dispatch({ t: "re-invoke" })}>set up another device</Button>
+            <Button frame="bare" tone="mute" onClick={() => setJustSetUp(false)}>
+              dismiss
+            </Button>
+          </>
+        }
+      >
+        {setUpOn(null)}
+      </Notice>
+    </div>
+  );
 
   // An exposure the user granted stays visible for as long as it holds — in the
   // list as much as in setup, where choosing "this machine" used to hide it
@@ -321,7 +376,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           os={hostOs()}
           proxyAddr={proxyAddr}
           trustProbe={trustProbe}
-          proxyProbe={proxyProbe}
+          proxy={proxyReading}
           probing={probing}
           probedAt={probedAt}
           traffic={{
@@ -329,7 +384,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             lastTunnelAt: lastConnectionAt,
             ever: flows.length > 0 || connections > 0,
           }}
-          onInstallCa={installCa}
+          onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
@@ -350,14 +405,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         // is the rows; with a refusal standing in their place, it is the refusal
         // — the core answered that query and then stopped answering, and both
         // are true. With neither, there is nothing above to qualify and the
-        // sentence moves into the row region instead.
+        // sentence moves into the row region instead. A core that stopped
+        // answering outranks the good news: the band states one thing, and the
+        // banner is the one a user can come back to.
         notAnswering && (flows.length > 0 || refused !== null) ? (
           <NotAnswering
             trailing={flows.length > 0 ? "the rows below are the last it sent" : undefined}
             retrying={retrying}
             onRetry={retryConnection}
           />
-        ) : undefined
+        ) : (
+          setUpBanner || undefined
+        )
       }
       header={
         <>

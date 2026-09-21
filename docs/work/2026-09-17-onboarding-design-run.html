@@ -23,7 +23,7 @@
     .a-mock p,.a-mock li{color:inherit}
     /* mockup assembly only — zoning and state visibility. every magnitude the
        design owns is a token utility on the element itself. */
-    .a-mock{display:block}
+    .a-mock{display:flex;flex-direction:column}
     .a-zone{display:block}
     /* lifecycle states */
     .a-st-proven,.a-st-checking,.a-st-tunnel,.a-st-installing{display:none}
@@ -74,7 +74,23 @@
         had been reviewed as a design and never read as an end user reads it, so round 4 adds exactly
         that reading, decides the three of its own rules the reading re-opened, and closes the run
         again for <a href="2026-09-07-onboarding-redesign-plan.html#w5">W5</a> to build.</p>
+      <p><strong>Read again, at the window.</strong> W5 built round 4's screen and the
+        owner read it running, at 1440×800. Three things the reading round had not looked at came back:
+        the column is a dialog's width in a window two and a half times wider, eight tiles are a
+        wall where the question needs one control, and a task's instructions are longer on the screen
+        than the job they describe. Round 5 answers those three and nothing else — no sentence
+        about what is true changes, and the truth model is untouched. It reverses round 4's own tiles
+        call, which is the second time this run has reversed itself on the reviewer's word and the
+        first time on evidence from the built screen at its real size.</p>
+      <p><strong>Read again, at the rhythm.</strong> Round 5's column shipped and the owner read
+        it with the window given to it: <em>now it's full window, please add some gap</em>. What the
+        width exposed was a rhythm rather than a width. A task separates its title, its reason and its
+        state by 8px, and 16px was all that separated one task from the next — at a dialog's width the
+        eye had the column edge to group by, and at the window's it had nothing, so three tasks read as
+        one list of nine lines. Round 6 gives the rhythm to the column and takes it off the zones. It
+        changes no sentence, no state, no control and no route.</p>
       <div class="meta">Design run · opened 2026-09-17 · resumed 2026-09-19 · read as a user 2026-09-20 ·
+        read at the window 2026-09-20 ·
         Trawler · T3 (docs/work/) ·
         <strong>E-ONBOARD.W2</strong> · branch <code>wu/onboarding-redesign/design-of-record</code> ·
         epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
@@ -82,7 +98,10 @@
         <code>ui/src/Onboarding.tsx</code> read for <strong>capabilities only</strong> ·
         round 1 rebuilt the screen around a single platform choice · round 2 gave that choice an
         address to print · <strong>round 4 (E-ONBOARD.W4)</strong> made the result readable —
-        branch <code>wu/onboarding-redesign/po-p0-and-reading-round</code></div>
+        branch <code>wu/onboarding-redesign/po-p0-and-reading-round</code> ·
+        <strong>round 5 (E-ONBOARD.W5)</strong> gave it the window and cut what it says at once ·
+        <strong>round 6 (E-ONBOARD.W5)</strong> gave the column the rhythm that width exposed —
+        branch <code>wu/onboarding-redesign/user-reading-build</code></div>
     </div>
   </header>
 
@@ -233,7 +252,7 @@
       or from the traffic layer, never from what the user clicked.</p>
     <div data-item="mockup">
       <div class="app">
-        <div class="a-mock mx-auto max-w-dialog-max bg-canvas py-6 font-ui text-body text-ink-body" id="mock">
+        <div class="a-mock mx-auto max-w-reading gap-6 bg-canvas py-8 font-ui text-body text-ink-body" id="mock">
 
           <div class="a-zone px-4" data-zone="lead">
             <p class="font-serif text-note text-ink">Set up capture</p>
@@ -242,14 +261,14 @@
               and send its traffic to Trawler.</p>
           </div>
 
-          <div class="a-zone px-4 pt-4" data-zone="platform">
+          <div class="a-zone flex flex-wrap items-center gap-3 px-4" data-zone="platform">
             <p class="font-ui text-chrome uppercase tracking-label text-ink-mute">which device's traffic do you want to see</p>
-            <div class="a-pf-machine pt-2" id="m-tiles-machine"></div>
-            <div class="a-pf-sim pt-2" id="m-tiles-sim"></div>
-            <div class="a-pf-off pt-2" id="m-tiles-off"></div>
+            <div class="a-pf-machine" id="m-picker-machine"></div>
+            <div class="a-pf-sim" id="m-picker-sim"></div>
+            <div class="a-pf-off" id="m-picker-off"></div>
           </div>
 
-          <div class="a-zone pt-2" data-zone="steps">
+          <div class="a-zone" data-zone="steps">
             <div class="a-pf-machine" id="m-steps-machine"></div>
             <div class="a-pf-sim" id="m-steps-sim"></div>
             <div class="a-pf-off">
@@ -258,25 +277,39 @@
             </div>
           </div>
 
-          <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4 pt-3" data-zone="probe">
+          <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4" data-zone="probe">
             <div class="a-st-rest" id="m-probe-rest"></div>
             <div class="a-st-checking" id="m-probe-checking"></div>
             <div id="m-probe-again"></div>
           </div>
 
-          <div class="a-zone a-st-proven px-4 pt-4" data-zone="done" id="m-done"></div>
+          <div class="a-zone a-st-proven px-4" data-zone="done" id="m-done"></div>
 
-          <div class="a-zone a-st-proven px-4 pt-4" data-zone="back" id="m-back"></div>
+          <div class="a-zone a-st-proven px-4" data-zone="back" id="m-back"></div>
 
         </div>
       </div>
       <p>overflow: <strong>lead</strong>, <strong>platform</strong>, <strong>probe</strong>,
         <strong>done</strong> and <strong>back</strong> are bounded by their content — two sentences, one
-        row of tiles that wraps rather than scrolls, one chrome row, one outcome and one button.
+        question and the control that answers it, one chrome row, one outcome and one button. The
+        picker's own popup caps itself at ~7 rows and scrolls inside, which is Select's contract and
+        not this screen's; it overlays and never lengthens the column.
         <strong>steps</strong> is the one unbounded zone: a task's body holds a StepList that grows with
         the platform it renders, and neither StepList nor Disclosure may cap or scroll its own content.
         Its cap is therefore the page — the column scrolls whole, the window owns it, and no zone here
         holds an inner scroller.</p>
+      <p class="kd"><strong>The column is the window's, not a dialog's.</strong> It takes
+        60% of the window up to a ceiling of 880px — <code>max-w-reading</code> — so it grows with the
+        window instead of sitting at a dialog's width inside it, and stops where a line of prose stops
+        being comfortable to read. The ceiling is also where the longest trust command still renders on
+        one line inside a task's indented body, which is the widest thing the screen ever has to show.</p>
+      <p class="kd"><strong>The column owns the rhythm, and owns all of it.</strong> A task
+        separates its own parts — title, reason, state, body — by 8px. The column separates its zones by
+        24 and the task list adds 16 to the 16 a task already carries, so one task stands 32 from the
+        next: four times the distance inside it, which is what makes three tasks read as three. The rule
+        is the column's alone. A zone that brings a top padding of its own is a second spacing rule
+        nothing reconciles with the first, and at a dialog's width that was invisible because the column
+        edge did the grouping instead.</p>
       <p class="kd"><strong>A number is a reading aid; a state is a reading.</strong> Every task carries
         its number and a state, and the state has exactly two possible sources: a <em>probe</em> of this
         machine, or the <em>traffic</em> layer. A task about a device nobody can probe says so in the
@@ -284,13 +317,29 @@
         arrives</em> — and never renders a ✓ the user clicked into existence. A task whose precondition
         is not met yet is dimmed and still numbered, so the shape of the whole job is readable before any
         of it is done.</p>
+      <p class="kd"><strong>One guide is open, and it is the first unfinished one.</strong> A
+        task's instructions sit behind a summary that counts them — <em>3 steps</em> — and the first
+        task whose work is not done has its own open. Everything above it is finished and everything
+        below waits on it, so the reader meets one route at a time instead of every route at once. A
+        count promises no automatic alternative, which is what <em>set it up by hand</em> did wrong
+        (F10); where a button really is the first route, the summary is <em>do it manually</em> and
+        starts closed. Nothing observes a task on another device, so off-machine the first guided task
+        stays open until a decrypted request says the job is over.</p>
+      <p class="kd"><strong>A command is a block; a value stays in its sentence.</strong> A
+        command is carried to a terminal whole, so it leaves the prose and takes a surface of its own
+        with the copy control in its corner. A value — a server, a port, a certificate URL — is typed
+        into the field the sentence beside it names, so it stays inside that sentence. What is neither
+        is neither: a fact about the platform is a line under the steps rather than one of them, and a
+        second way in sits behind <em>other ways</em>, because a numbered step the reader cannot
+        perform and a route they need not take both read as work.</p>
       <p class="kd"><strong>The address is an offer, not a menu.</strong> The core answers
         <code>GET /reach</code> best-first — the address this host would route from, IPv4 before IPv6,
         never a temporary IPv6 above a stable one — and names each device the way its owner does
         (<em>Wi-Fi · 192.168.1.24</em>). The task renders that first address as a line and the rest inside
         <em>other addresses</em>. Round 2's cardinality rule is retired with the control it governed: no
-        segment group, no <code>Select</code>, and nothing that has to fit four 39-character labels across
-        one column.</p>
+        segment group, and nothing that has to fit four 39-character labels across one column. Round 5's
+        return to <code>Select</code> for the platform question does not revive it: this is one line of
+        one address, and the picker above is a different question with a different control.</p>
       <button class="statebtn" data-state-toggle="mock" data-state-class="p-sim"
               data-label-off="▶ platform: iOS Simulator" data-label-on="◀ back to this machine">▶ platform: iOS Simulator</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="p-off"
@@ -306,8 +355,8 @@
       <button class="statebtn" data-state-toggle="mock" data-state-class="proven"
               data-label-off="▶ show capturing" data-label-on="◀ hide capturing">▶ show capturing</button>
       <script type="text/babel">
-        const { React, createRoot, Notice, Section, StatusLine, Button,
-                StepList, CopyText, Disclosure, Spinner, TimestampText } = window.Trawler;
+        const { React, createRoot, Notice, Section, StatusLine, Button, CommandBlock,
+                StepList, CopyText, Disclosure, Select, Spinner, TaskStep, TimestampText } = window.Trawler;
 
         const mount = (id, node) => {
           const host = document.getElementById(id);
@@ -316,9 +365,12 @@
         const noop = () => {};
         const MINUTES_AGO = Date.now() - 2 * 60 * 1000;
 
-        const command = (value, label) => (
-          <span data-wire="shell command" className="font-mono">
-            <CopyText value={value} label={label} />
+        /* A value is read inside the sentence that names the field it goes in;
+           a command is carried somewhere else, so it leaves the sentence and
+           takes a surface of its own. */
+        const copyable = (v, label, wire) => (
+          <span data-wire={wire} className="font-mono">
+            <CopyText value={v} label={label} />
           </span>
         );
 
@@ -337,66 +389,75 @@
           { id: "android", label: "Android device" },
         ];
 
-        /* PROPOSED — ChoiceTiles: one choice, every option visible at once.
-           Rendered screen-owned here because the collection does not ship it;
-           the delta is on proposals. */
-        const ChoiceTiles = ({ value }) => (
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="platform">
-            {PLATFORMS.map((option) => (
-              <span key={option.id} role="radio" aria-checked={option.id === value}
-                    className={`cursor-pointer rounded-button border px-chrome-x py-control-y font-ui text-control ${
-                      option.id === value ? "border-ink-mute text-ink" : "border-hairline text-ink-mute"}`}>
-                {option.label}
-              </span>
-            ))}
-          </div>
+        const QUESTION = "which device's traffic do you want to see";
+
+        /* Round 5 puts the eight answers back inside one control. The question
+           and its answer are one line, the column below starts where the eye
+           already is, and the trigger holds a fixed width so the row does not
+           move when the answer changes. */
+        const picker = (chosen) => (
+          <Select options={PLATFORMS} value={chosen} onChange={noop} label={QUESTION}
+                  searchable={false} className="w-picker" />
         );
 
-        /* PROPOSED — TaskStep: one numbered task, its purpose line, the state
-           something observed for it, and a slot for what the user does. The
-           number is the reading order; the state is never the user's word for
-           it. Rendered screen-owned here for the same reason as the tiles. */
-        const TaskStep = ({ n, title, why, status, dim, children }) => (
-          <div className={`flex gap-3 px-4 pt-4 ${dim ? "opacity-disabled" : ""}`}>
-            <span className="shrink-0 font-ui text-body tabular-nums text-ink-mute">{n}</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-ui text-body text-ink">{title}</p>
-              {why && <p className="pt-1 font-ui text-chrome text-ink-mute">{why}</p>}
-              {status && <div className="pt-2"><StatusLine status={status} /></div>}
-              {children && <div className="pt-2">{children}</div>}
-            </div>
-          </div>
-        );
+        /* PROPOSED — CommandBlock, mounted: W5 builds it in the same unit that
+           re-opened this run, so the specimen here is the shipped component
+           rather than a drawing of one. TaskStep, which round 4 proposed and
+           drew, is mounted for the same reason. */
+        const command = (value, label) => <CommandBlock value={value} label={label} />;
 
-        /* A guide is the instruction where nothing automatic stands above it,
-           and a fallback where something does — so the disclosure is the
-           caller's decision, never the guide's. */
-        const Guide = ({ steps, undoTitle, undo }) => (
+        /* A guide is what one task asks of the reader and nothing else. The
+           numbered route is the whole of the sequence; a fact about this
+           platform is a line under it, and a second way in and the way back are
+           each behind a summary of their own. */
+        const Guide = ({ steps, notes, alternatives, undoTitle, undo }) => (
           <>
             <StepList steps={steps} />
-            {undo && <>
-              <p className="pt-3 font-ui text-chrome text-ink-mute">{undoTitle}</p>
-              <div className="pt-2"><StepList steps={undo} /></div>
-            </>}
+            {(notes ?? []).map((note) => (
+              <p key={note} className="pt-2 font-ui text-chrome text-ink-mute">{note}</p>
+            ))}
+            {alternatives && <div className="pt-3">
+              <Disclosure summary="other ways"><StepList steps={alternatives} /></Disclosure>
+            </div>}
+            {undo && <div className="pt-3">
+              <Disclosure summary={undoTitle}><StepList steps={undo} /></Disclosure>
+            </div>}
           </>
+        );
+
+        /* What a guide says it is before it is opened. A count where the steps
+           are the only route — it promises no automatic alternative and still
+           says how much work is behind it; the other route's name where a
+           button is the first one. One guide is open: the first whose task is
+           not done. */
+        const Steps = ({ n, open, children }) => (
+          <Disclosure summary={`${n} step${n === 1 ? "" : "s"}`} defaultOpen={open}>{children}</Disclosure>
         );
         const ByHand = ({ children }) => (
           <Disclosure summary="do it manually">{children}</Disclosure>
+        );
+
+        /* What belongs to the tasks above it rather than to any one of them. It
+           takes the task body's own left edge by repeating the marker column,
+           because a number here would read as a task nobody has to do. */
+        const Aside = ({ children }) => (
+          <div className="flex gap-3 px-4 pt-3">
+            <span aria-hidden="true" className="w-step-marker shrink-0" />
+            <div className="min-w-0 flex-1">{children}</div>
+          </div>
         );
 
         const state = (cls, node) => <div className={cls} key={cls}>{node}</div>;
         const line = (cls, status) => state(cls, <StatusLine status={status} />);
 
         const saveStep = <>Save Trawler's certificate as trawler-ca.pem <Button frame="bare" tone="mute" onClick={noop}>save…</Button></>;
-        const certUrl = (
-          <span data-wire="certificate url" className="font-mono">
-            <CopyText value="http://192.168.1.24:7421/ca.crt" label="the certificate URL" />
-          </span>
-        );
+        const certUrl = copyable("http://192.168.1.24:7421/ca.crt", "the certificate URL", "certificate url");
+        const FIREFOX = "Firefox keeps its own store — import it there too.";
+        const MAC_ROUTE_CMD = "networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420";
 
-        mount("m-tiles-machine", <ChoiceTiles value="this" />);
-        mount("m-tiles-sim", <ChoiceTiles value="ios-sim" />);
-        mount("m-tiles-off", <ChoiceTiles value="ios" />);
+        mount("m-picker-machine", picker("this"));
+        mount("m-picker-sim", picker("ios-sim"));
+        mount("m-picker-off", picker("ios"));
 
         /* ---- this machine: two tasks the probes read, one the traffic does --- */
         const MAC_TRUST = [
@@ -423,10 +484,11 @@
 
         mount("m-steps-machine",
           <Section variant="band" title="">
-            <TaskStep n="1" title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted" status={null}>
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted">
               {MAC_TRUST}
             </TaskStep>
-            <TaskStep n="2" title="Send this Mac's traffic to Trawler" why="its system proxy points at Trawler while Trawler runs" status={null}>
+            <TaskStep n={2} title="Send this Mac's traffic to Trawler" why="its system proxy points at Trawler while Trawler runs">
               {MAC_ROUTE}
               <div className="a-st-tunnel pt-2">
                 <Notice tone="mute">
@@ -435,12 +497,13 @@
                 </Notice>
               </div>
             </TaskStep>
-            <div className="px-4 pt-3 pl-9">
+            <Aside>
               <div className="a-st-rest"><Button onClick={noop}>Set up this Mac</Button></div>
               <div className="a-st-checking"><Button onClick={noop} disabled>Set up this Mac</Button></div>
               <div className="a-st-installing"><Button onClick={noop} disabled>Set up this Mac</Button></div>
-              <div className="a-st-proven"><Button frame="bare" tone="mute" onClick={noop}>undo this setup</Button></div>
+              <div className="a-st-proven"><Button frame="bare" tone="mute" onClick={noop}>stop routing through Trawler</Button></div>
               <p className="a-st-rest pt-2 font-ui text-chrome text-ink-mute">one password prompt — it installs the certificate and sets the proxy</p>
+              <p className="a-st-proven pt-2 font-ui text-chrome text-ink-mute">this turns the proxy off and nothing else — the steps below remove Trawler's certificate.</p>
               <div className="a-st-installing pt-2">
                 <Notice tone="mute">The password prompt was cancelled. Try again, or follow the manual steps.</Notice>
                 <div className="pt-2">
@@ -454,20 +517,22 @@
                   <Guide
                     steps={[
                       saveStep,
-                      <>Trust it: {command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem", "the trust command")}</>,
-                      <>Route this Mac through it — this sets the Wi-Fi service; change the name for Ethernet: {command("networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420", "the proxy command")}</>,
-                      "Firefox keeps its own certificate store — import it there too.",
+                      <>Run it in a terminal:{command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem", "the trust command")}</>,
+                      <>Run — this sets the Wi-Fi service; change the name for Ethernet:{command(MAC_ROUTE_CMD, "the proxy command")}</>,
                     ]}
+                    notes={[FIREFOX]}
+                    alternatives={["Or double-click the file and set the Trawler CA to Always Trust."]}
                     undoTitle="to undo it later"
                     undo={[
-                      <>Remove the certificate: {command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
-                      <>Turn the proxy off, keeping the saved address: {command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the proxy-off command")}</>,
+                      <>Run:{command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
+                      "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
+                      <>Turn it off per enabled service (keeps the saved address):{command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the proxy-off command")}</>,
                     ]}
                   />
                 </ByHand>
               </div>
-            </div>
-            <TaskStep n="3" title="Open any website on this Mac" why="the first decrypted request is what proves setup works" status={null}>
+            </Aside>
+            <TaskStep n={3} title="Open any website on this Mac" why="the first decrypted request is what proves setup works">
               {MAC_TRY}
               <div className="a-st-tunnel pt-2">
                 <Notice tone="mute">
@@ -476,51 +541,55 @@
                 </Notice>
               </div>
               <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
-              <p className="pt-2 font-mono" data-wire="shell command">
-                <CopyText value="curl -x http://127.0.0.1:7420 https://example.com" label="the try-it command" />
-              </p>
+              <div className="pt-2">{command("curl -x http://127.0.0.1:7420 https://example.com", "the try-it command")}</div>
             </TaskStep>
+            </div>
           </Section>);
 
         /* ---- the Simulator: its own keychain, this Mac's proxy ------------- */
         mount("m-steps-sim",
           <Section variant="band" title="">
-            <TaskStep n="1" title="Trust Trawler's certificate in the Simulator"
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="Trust Trawler's certificate in the Simulator"
                       why="the Simulator keeps its own certificate store — this Mac's does not cover it"
                       status={{ glyph: "◐", tone: "muted", short: "we'll confirm this on the Simulator's first request" }}>
-              <Guide
-                steps={[
-                  saveStep,
-                  <>With the Simulator running: {command("xcrun simctl keychain booted add-root-cert trawler-ca.pem", "the trust command")}</>,
-                  "Restart the Simulator so apps pick the new root up.",
-                ]}
-                undoTitle="to undo it later"
-                undo={[<>Reset that Simulator's keychain — this clears everything in it, not only Trawler's root: {command("xcrun simctl keychain booted reset", "the keychain reset")}</>]}
-              />
+              <Steps n={3} open>
+                <Guide
+                  steps={[
+                    saveStep,
+                    <>With the Simulator running, run:{command("xcrun simctl keychain booted add-root-cert trawler-ca.pem", "the trust command")}</>,
+                    "Restart the Simulator so apps pick the new root up.",
+                  ]}
+                  undoTitle="to remove it later"
+                  undo={[<>Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:{command("xcrun simctl keychain booted reset", "the keychain reset")}</>]}
+                />
+              </Steps>
             </TaskStep>
-            <TaskStep n="2" title="Send this Mac's traffic to Trawler"
+            <TaskStep n={2} title="Send this Mac's traffic to Trawler"
                       why="the Simulator follows this Mac's system proxy"
                       status={{ glyph: "○", tone: "muted", short: "not done — the system proxy is off" }}>
               <Button onClick={noop}>Set the system proxy</Button>
-              <div className="pt-2">
+              <div className="pt-3">
                 <ByHand>
                   <Guide
-                    steps={[<>Run — this sets the Wi-Fi service; change the name for Ethernet: {command("networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420", "the proxy command")}</>]}
+                    steps={[<>Run — this sets the Wi-Fi service; change the name for Ethernet:{command(MAC_ROUTE_CMD, "the proxy command")}</>]}
                     undoTitle="to turn it off later"
-                    undo={[<>Turns it off per enabled service, keeping the saved address: {command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the proxy-off command")}</>]}
+                    undo={[<>Turn it off per enabled service (keeps the saved address):{command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the proxy-off command")}</>]}
                   />
                 </ByHand>
               </div>
             </TaskStep>
-            <TaskStep n="3" title="Open any website in the Simulator"
+            <TaskStep n={3} title="Open any website in the Simulator"
                       why="the first decrypted request is what proves setup works"
                       status={{ glyph: "○", tone: "muted", short: "waiting for the first request" }} />
+            </div>
           </Section>);
 
         /* ---- a phone: one task that changes this machine, three that do not - */
         const phoneTasks = (armed) => (
           <Section variant="band" title="">
-            <TaskStep n="1" title="Allow your iPhone to connect"
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="Allow your iPhone to connect"
                       why={armed ? undefined : "Trawler answers on this machine only until you do"}
                       status={armed
                         ? { glyph: "✓", tone: "ok", short: "allowed — listening on 192.168.1.24 until Trawler quits" }
@@ -529,7 +598,7 @@
                 <Button frame="bare" tone="mute" onClick={noop}>stop listening</Button>
               ) : (
                 <>
-                  <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">listen on</p>
+                  <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">address to use</p>
                   <p className="pt-2 font-ui text-body text-ink-body">Wi-Fi · 192.168.1.24</p>
                   <div className="pt-2"><Disclosure summary="other addresses">
                     <Button frame="bare" tone="mute" onClick={noop}>Ethernet · 10.0.4.7</Button>
@@ -539,55 +608,56 @@
                 </>
               )}
             </TaskStep>
-            <TaskStep n="2" title="On your iPhone, install the certificate" dim={!armed}
+            <TaskStep n={2} title="On your iPhone, install the certificate" dim={!armed}
                       why={armed ? undefined : "after step 1"}
-                      status={armed ? { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" } : null}>
+                      status={armed ? { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" } : undefined}>
               {armed && (
-                <Guide
-                  steps={[
-                    <>In Safari, open {certUrl} and tap Allow.</>,
-                    "Settings → Profile Downloaded → Install.",
-                    "Settings → General → About → Certificate Trust Settings → turn on Trawler Proxy CA.",
-                    <>No browser on it? {saveStep} and carry the file over instead.</>,
-                  ]}
-                />
+                <Steps n={3} open>
+                  <Guide
+                    steps={[
+                      <>On your iPhone, open {certUrl} — it downloads the profile.</>,
+                      "Open it: Settings → General → VPN & Device Management → install the profile.",
+                      "Then turn it on: Settings → General → About → Certificate Trust Settings.",
+                    ]}
+                    alternatives={[<>No browser on it? {saveStep} and carry the file over instead.</>]}
+                  />
+                </Steps>
               )}
             </TaskStep>
-            <TaskStep n="3" title="On your iPhone, set the Wi-Fi proxy" dim={!armed}
+            <TaskStep n={3} title="On your iPhone, set the Wi-Fi proxy" dim={!armed}
                       why={armed ? undefined : "after step 1"}
-                      status={armed ? { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" } : null}>
+                      status={armed ? { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" } : undefined}>
               {armed && (
                 <>
                   <div className="flex gap-4">
                     <div>
                       <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">server</p>
-                      <p className="pt-2 font-mono" data-wire="proxy host">
-                        <CopyText value="192.168.1.24" label="the proxy host" />
-                      </p>
+                      <p className="pt-2">{copyable("192.168.1.24", "the proxy host", "proxy host")}</p>
                     </div>
                     <div>
                       <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">port</p>
-                      <p className="pt-2 font-mono" data-wire="proxy port">
-                        <CopyText value="7420" label="the proxy port" />
-                      </p>
+                      <p className="pt-2">{copyable("7420", "the proxy port", "proxy port")}</p>
                     </div>
                   </div>
                   <div className="pt-3">
-                    <Guide
-                      steps={[
-                        "Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual.",
-                        "Put the server and port above into it, and save.",
-                      ]}
-                      undoTitle="to turn it off later"
-                      undo={["Settings → Wi-Fi → the network → Configure Proxy → Off."]}
-                    />
+                    <Steps n={2}>
+                      <Guide
+                        steps={[
+                          "Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual.",
+                          "Put the server and port above into it, and save.",
+                        ]}
+                        undoTitle="to turn it off later"
+                        undo={["Settings → Wi-Fi → the network → Configure Proxy → Off."]}
+                      />
+                    </Steps>
                   </div>
                 </>
               )}
             </TaskStep>
-            <TaskStep n="4" title="Open any website on your iPhone" dim={!armed}
+            <TaskStep n={4} title="Open any website on your iPhone" dim={!armed}
                       why={armed ? "the first decrypted request is what proves setup works" : "after step 1"}
-                      status={armed ? { glyph: "○", tone: "muted", short: "waiting for the first request" } : null} />
+                      status={armed ? { glyph: "○", tone: "muted", short: "waiting for the first request" } : undefined} />
+            </div>
           </Section>
         );
         mount("m-steps-off-unreached", phoneTasks(false));
@@ -605,7 +675,7 @@
           <Button frame="bare" tone="mute" onClick={noop}>check again</Button>);
 
         mount("m-done",
-          <Notice tone="ok" detail={<span>last flow <TimestampText timestamp={MINUTES_AGO} format="relative" /></span>}>
+          <Notice tone="ok" detail={<span>last request <TimestampText timestamp={MINUTES_AGO} format="relative" /></span>}>
             You're set up — Trawler is capturing traffic from this Mac
           </Notice>);
         mount("m-back",
@@ -619,7 +689,10 @@
         values a device's proxy settings want, <span class="font-mono" data-wire="proxy host">192.168.1.24</span>
         and <span class="font-mono" data-wire="proxy port">7420</span>. The raw text of a failed elevated command
         is payload too and stays under <em>details</em>, unwrapped and unedited. Nothing else on this screen is
-        wire data: every other line is chrome, and reads in the UI family.</p>
+        wire data: every other line is chrome, and reads in the UI family. Round 5 moves where a
+        command renders, never what it is: a <code>CommandBlock</code> carries the same
+        <code>data-wire="shell command"</code> on the same mono text, wrapping at any character, with
+        the copy control beside it instead of on it.</p>
       <p class="kd"><strong>The sentences, in full.</strong> The build cites this table rather than
         re-writing it: a screen whose copy is derived a second time is a screen with two designs.</p>
       <table data-c="copy-table">
@@ -627,8 +700,9 @@
         <tr><td>title · purpose</td><td><em>Set up capture</em> · <em>Trawler sits between a device and
           the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate
           and send its traffic to Trawler.</em></td></tr>
-        <tr><td>the question</td><td><em>which device's traffic do you want to see</em> — the eight
-          tiles, this machine selected and named for the detected host</td></tr>
+        <tr><td>the question</td><td><em>which device's traffic do you want to see</em> — the
+          question and the control that answers it on one line, this machine selected and named for
+          the detected host, and the other seven inside the control</td></tr>
         <tr><td>task states · this machine</td><td><em>done — installed and trusted</em> ·
           <em>not done — the system proxy is off</em> · <em>done — this Mac routes through Trawler</em> ·
           <em>waiting for the first request</em> · <em>arriving but not decrypting</em> ·
@@ -637,8 +711,16 @@
           request</em> — the un-probeable case, worded as the promise it is rather than as a verdict
           about a machine nobody read</td></tr>
         <tr><td>the primary action</td><td><em>Set up this Mac</em> · <em>one password prompt — it
-          installs the certificate and sets the proxy</em> · <em>undo this setup</em> once both are
-          done</td></tr>
+          installs the certificate and sets the proxy</em> · <em>stop routing through Trawler</em> once
+          the work is done, with <em>this turns the proxy off and nothing else — the steps below remove
+          Trawler's certificate.</em> beneath it. The reversal names the half it performs: one action
+          installs a certificate and sets a proxy, and only the proxy can be put back
+          (DEC-13)</td></tr>
+        <tr><td>a task's instructions</td><td><em>3 steps</em> where the steps are the only route, open
+          on the first task whose work is not done and shut on the rest · <em>do it manually</em> where a
+          button is the first route, always shut · <em>other ways</em> for a second route · the task's own
+          <em>to remove it later</em> / <em>to turn it off later</em> for the way back, and
+          <em>to undo it later</em> where one action's two tasks are merged into one guide</td></tr>
         <tr><td>a cancelled prompt</td><td><em>The password prompt was cancelled. Try again, or follow
           the manual steps.</em> with the tool's own text under <em>details</em></td></tr>
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting
@@ -649,7 +731,11 @@
           be able to use this proxy and see captured traffic until Trawler quits</em>. The full statement
           stays in the confirm dialog that already carries it (DEC-55)</td></tr>
         <tr><td>a refused confirm</td><td><em>not allowed — Trawler still answers on this machine
-          only.</em></td></tr>
+          only.</em> · a declined <em>replacement</em> is the same kind of answer and was missing its
+          sentence: <em>nothing changed — the other proxy is still the one in use, and the certificate
+          was not installed.</em> for the combined action, and the first clause alone for the
+          Simulator's proxy action. Mute, not warn — the user declined, and a decline is not the OS
+          refusing</td></tr>
         <tr><td>undecrypted traffic</td><td><em>something is connecting and none of it is decrypting —
           the device it comes from does not trust Trawler's certificate yet. Finish the certificate step
           on that device.</em> No platform is named, because none can be known</td></tr>
@@ -666,24 +752,34 @@
     <table data-item="keyboard" data-c="keyboard-table">
       <thead><tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr></thead>
       <tbody>
-        <tr><td>click a platform tile</td><td>platform</td><td>Tab reaches the group once — only the selected tile is
-          tabbable (roving tabindex) · ← / → / ↑ / ↓ move focus without selecting, no wrap · Enter or Space takes the
-          focused tile. <strong>Round 4:</strong> this replaces the Select's trigger, popup, type-to-filter and Esc
-          path — nothing opens, so nothing has to close, and the eight options are reachable in one tab stop instead
-          of behind one</td></tr>
+        <tr><td>click the device picker, then an option in it</td><td>platform</td><td>Tab reaches the
+          trigger · Enter, Space, ↑ or ↓ opens the popup on the current answer · ↑ / ↓ move within it without
+          selecting, no wrap · Enter takes the moved-to option · typing narrows the list (the search row is off, so
+          the list filters without one) · Esc closes it unchanged and Tab closes it and moves on; closing always
+          returns focus to the trigger. All of it is <code>Select</code>'s own contract, unchanged.
+          <strong>Round 5:</strong> this replaces round 4's roving tile group — one tab stop either way, and the
+          eight answers stop taking four rows of the column to say</td></tr>
         <tr><td>click <em>check again</em></td><td>probe</td><td>Tab to it · Enter or Space — activate the focused element</td></tr>
-        <tr><td>click <em>Set up this Mac</em>, <em>Set the system proxy</em> or <em>undo this setup</em></td>
+        <tr><td>click <em>Set up this Mac</em>, <em>Set the system proxy</em> or <em>stop routing through
+          Trawler</em></td>
           <td>steps</td><td>Tab to it · Enter or Space. A disabled action is out of the tab order, so the in-flight
           window cannot be re-fired by keyboard either. <strong>Round 4:</strong> one primary action per screen is one
           tab stop where there were two, and what it replaced stays reachable inside the manual disclosure</td></tr>
         <tr><td>click <em>save…</em> inside a guide's first step</td><td>steps</td><td>Tab to it · Enter or Space; the host's save dialog takes focus from there</td></tr>
-        <tr><td>click <em>do it manually</em>, <em>other addresses</em> or <em>details</em> to disclose</td>
+        <tr><td>click <em>3 steps</em>, <em>do it manually</em>, <em>other ways</em>, <em>to undo it
+          later</em>, <em>other addresses</em> or <em>details</em> to disclose</td>
           <td>steps</td><td>Tab to the summary · Enter or Space toggles; focus never moves on toggle (Disclosure's
-          <code>@states</code>). <strong>Round 4:</strong> a guide with nothing automatic above it is not behind a
-          summary at all, so its steps sit in the tab order directly — nothing has to be opened to reach the only
-          instructions a phone user has</td></tr>
-        <tr><td>click a command to copy it whole</td><td>steps</td><td>Tab to it · Enter or Space copies, and the confirm reads at the value</td></tr>
-        <tr><td>drag-select part of a command</td><td>steps</td><td>native selection + ⌘C — never intercepted (CopyText's selection guard)</td></tr>
+          <code>@states</code>). <strong>Round 5:</strong> a guide with nothing automatic above it is behind a
+          summary that counts it and is already open on the first unfinished task, so its steps are still in the tab
+          order with nothing to open — and every later task's steps are one tab stop and one Enter away instead of
+          all of them being in the order at once. A nested summary is reached by tabbing past the steps above
+          it</td></tr>
+        <tr><td>click the copy control in a command block</td><td>steps</td><td>Tab to it · Enter or Space
+          copies, and the glyph confirms in place for ~2 s (CopyButton's icon form). <strong>Round 5:</strong> the
+          command itself is no longer the control, so tabbing no longer lands on the text — it lands on the one
+          affordance beside it</td></tr>
+        <tr><td>drag-select part of a command</td><td>steps</td><td>native selection + ⌘C — never intercepted; the
+          block's text is ordinary selectable mono, and nothing is bound over it</td></tr>
         <tr><td>click an address under <em>other addresses</em></td><td>steps</td><td>Tab to the summary, Enter or
           Space opens it, Tab reaches an address · Enter or Space takes it. Taking one commits nothing else: the offer
           above changes, and arming is still its own button. <strong>Round 4:</strong> this replaces round 2's segment
@@ -733,18 +829,47 @@
             drawing one component's anatomy, in every screen that ever needs a pending zone</td>
           <td>registry · <code>ui/src/components/Notice.tsx</code></td></tr>
         <tr><td>component</td>
-          <td><code>ChoiceTiles</code> — one choice over four to eight options, <strong>every option
-            visible</strong>: a wrapping row of tiles, exactly one selected, arrow keys moving focus without
-            committing, Enter or Space taking the focused one. Label in, id out; no groups, no search, no
-            popup</td>
-          <td><code>Select</code> holds this choice inside its <code>@use</code> and hides it behind a trigger,
-            which is precisely what the reading failed on: a first-time user never opened it, so the screen's one
-            question read as a setting rather than as the question. <code>SegmentedControl</code> is the visible
-            one-of-N control and its <code>@avoid</code> refuses more than four — eight platforms, with labels as
-            long as <em>Another Ubuntu machine</em>, are outside it in both directions. Neither entry stretches
-            without breaking the contract that makes it predictable, so the screen's primary axis gets its own
-            entry</td>
-          <td>registry · <code>ui/src/components/ChoiceTiles.tsx</code></td></tr>
+          <td><strong>WITHDRAWN — round 5.</strong> <s><code>ChoiceTiles</code> — one choice over four to eight
+            options, every option visible: a wrapping row of tiles.</s> Built by W5 and withdrawn in the same
+            Working Unit, before it ever merged</td>
+          <td>The entry answered round 4's reading, and the built screen at 1440×800 answered back: eight tiles
+            with labels as long as <em>Another Ubuntu machine</em> take four rows of a column the reader has to
+            get past before the first task, and the option they want is never the one under their eye. Seeing the
+            alternatives is worth a row, not four. <code>Select</code>'s <code>@use</code> already holds this
+            choice by cardinality — one choice, eight options, a target picker, no groups — and what round 4
+            blamed it for was the label above it, not the popup below: the question now reads as a question and
+            sits on the control's own line. The tiles' one real gain, an axis the reader can see without opening
+            anything, is kept by the trigger, which carries the answer unopened.
+            <strong>Withdrawn, not dropped:</strong> nothing in the tree ever depended on it, so the entry, its
+            tests and its barrel line leave together and the registry gains no unused vocabulary</td>
+          <td>registry — <s><code>ui/src/components/ChoiceTiles.tsx</code></s>, deleted in W5</td></tr>
+        <tr><td>component</td>
+          <td><code>CommandBlock</code> — one command to run, on a surface of its own: canvas-soft at a hairline
+            border, the command verbatim in mono wrapping at any character, and CopyButton's icon form in the
+            corner. Value in and label in; nothing executes, and a block holds exactly one command</td>
+          <td><code>CopyText</code> is what a command is rendered as today, and its <code>@use</code> is right
+            about what it is for — <em>a displayed value the user grabs whole</em>, inside the sentence that names
+            it. That is the wrong reading for a command: a value is typed into the field the sentence names, and a
+            command is carried to a terminal, so leaving it inline makes a step's prose and its payload one run of
+            text with no edge between them. Nothing in the collection sets a payload apart —
+            <code>SourceSurface</code> is the body pane and its <code>@avoid</code> refuses anything with no
+            grammar to navigate, <code>Notice</code> is a sentence about a zone, and <code>StepList</code>'s
+            <code>@avoid</code> explicitly refuses adding a copy affordance of its own. The quit dialog renders
+            the same commands and is its second tenant the day it is next opened</td>
+          <td>registry · <code>ui/src/components/CommandBlock.tsx</code></td></tr>
+        <tr><td>tokens</td>
+          <td><code>maxWidth.reading</code> = <code>min(60%, 880px)</code> — the reading column, sized by the
+            window rather than by a dialog · <code>spacing.picker</code> = <code>208px</code> — the one-choice
+            trigger, sized to the longest label the app offers so the control never resizes with the
+            selection</td>
+          <td>The column shipped at <code>max-w-dialog-max</code> (384px) in a window the app opens at 1440,
+            which is the shape F25 recorded and the owner read back. No member of the scale is a
+            window-relative width, so the relationship has to be named rather than picked. The trigger's own
+            <code>min-w-control-min</code> (132px) is below every platform label, so the control jitters between
+            132 and ~180 as the answer changes — and <code>field-lg</code> (160px) is still short of
+            <em>Another Ubuntu machine</em>. Both are relationships the closed scale cannot express with a
+            member it already has</td>
+          <td>tokens · <code>ui/tailwind.config.js</code></td></tr>
         <tr><td>component</td>
           <td><code>TaskStep</code> — one numbered task: its number, its title, one line of purpose, the state
             something <em>observed</em> for it, and a slot for what the user does. A dimmed variant for a task
@@ -766,7 +891,15 @@
             itself — <em>verdict</em>, <em>reach</em>, <em>platform</em>, <em>route</em>, <em>decrypting</em>. A
             vocabulary that fixes meaning and not audience drifts in exactly this direction</td>
           <td>rulebook · <code>docs/design-rules/</code> lexicon table</td></tr>
-        <tr><td colspan="4"><strong>No token or key binding was proposed, and no component beyond the extension above.</strong>
+        <tr><td colspan="4"><strong>Round 5 proposes one component and two tokens, and withdraws one
+          entry.</strong> <code>CommandBlock</code> is mounted in the mockup above rather than drawn, because W5
+          builds it in the same Working Unit that re-opened this run — and <code>TaskStep</code>, which round 4
+          drew screen-owned, is mounted now for the same reason. What is left drawn is the assembly alone.
+          <code>ChoiceTiles</code> is withdrawn with the round that proposed it: the entry was built, read at the
+          window and removed in one unit, so nothing downstream ever saw it and the registry keeps no vocabulary
+          nobody uses. Round 5 proposed no key binding — the picker's whole key path is
+          <code>Select</code>'s, unchanged, and the guides' summaries are <code>Disclosure</code>'s.
+          <strong>Earlier rounds.</strong> No token or key binding was proposed, and no component beyond the extension above.
           Round 1: twelve placements resolved to nine registry entries and zero local elements — including the
           disclosure this screen's predecessor had to build local, which is now <code>Disclosure</code> (T1) and
           mounted here unchanged. The single platform Select lands inside <code>Select</code>'s <code>@use</code>
@@ -777,8 +910,9 @@
           cardinality rule under the mockup is how the address control stays inside two contracts instead of
           stretching one, which is the only thing round 2 could plausibly have proposed and did not.
           <strong>Round 4 proposes two entries and retires that rule with the control it governed.</strong> Both
-          are rendered screen-owned in the mockup above, the way round 3 rendered <code>Notice tone="pending"</code>
-          before it landed, and both are <a href="2026-09-07-onboarding-redesign-plan.html#w5">W5</a>'s to build —
+          were rendered screen-owned in the mockup at that round, the way round 3 rendered
+          <code>Notice tone="pending"</code> before it landed, and both were
+          <a href="2026-09-07-onboarding-redesign-plan.html#w5">W5</a>'s to build —
           an epic that designs a component and does not build it says so in its own receipt. Round 4 proposed no
           token and no key binding: the tiles' arrow-key contract is the one the segment group already carried, and
           every magnitude in the mockup is a token utility.</td></tr>
@@ -1022,6 +1156,102 @@
             — a run that re-opens closes by the same gate it closed by the first time. What re-opened it was
             not a predicate: no check on this doc could have failed on a screen a user cannot read, which is
             why the reading is a review row and not a rule</td></tr>
+        <tr><td><strong>Round 5 — read at the window.</strong> "the flow looks right but
+          the UI width is limited, it should be relative to window size"</td>
+          <td><strong>mockup</strong> — the column moves from <code>max-w-dialog-max</code> to
+            <code>max-w-reading</code>, a share of the window under a ceiling, and the overflow line gains the
+            paragraph that says which number is which and why the ceiling is where it is.
+            <strong>proposals</strong> — <code>maxWidth.reading</code>, a token, because no member of the closed
+            scale is a window-relative width</td>
+          <td><a href="../design-rules/design-rules-index.html"><code>spacing-scale</code></a> — a width is legal
+            only as a member of a declared scale, so a relationship the scale cannot express is a proposal and
+            never an inline magnitude. The reading itself is taste: the PO review had filed the narrow column as
+            <strong>F25</strong>, a P2 the epic deferred, and the owner reading the built screen at 1440×800 is
+            what moved it</td></tr>
+        <tr><td><strong>Round 5</strong> — "We have 8 platform options to select so a multi-button
+          selection is not a good idea, please use a dropdown"</td>
+          <td><strong>mockup</strong> — the tiles become one <code>Select</code>, mounted, on the question's own
+            line, with a fixed trigger width. <strong>proposals</strong> — <code>ChoiceTiles</code> withdrawn and
+            deleted in the same unit that built it; <code>spacing.picker</code> proposed, because the trigger's own
+            minimum is below every label this question offers. <strong>keyboard</strong> — the picker's row is
+            <code>Select</code>'s whole contract again, and the tiles' roving-tabindex row goes with them.
+            <strong>copy</strong> — the question's row says one control rather than eight tiles.
+            <strong>Not moved:</strong> the axis itself, the eight members, the order they are in, and every
+            sentence below the question</td>
+          <td><code>Select</code>'s <code>@use</code> — one choice, five or more options, a target picker — which
+            is where round 1 put this choice and where it now returns. This reverses round 4's own call, and the
+            reason it can be reversed without re-opening the finding is that <strong>F6</strong>'s complaint was
+            that the question read as a setting: that was the label above the control, and the control and its
+            question now share a line. Taste, on evidence from the built screen at its real size</td></tr>
+        <tr><td><strong>Round 5</strong> — "the instruction texts is too verbose to the screen, we need to
+          have different background to isolate the command instruction part &amp; make it collapsible or similar
+          smartly to reduce the verbosity of the instruction and help users to follow easily"</td>
+          <td><strong>mockup</strong> — four moves, all of them <code>Disclosure</code>'s or a token surface's.
+            A command leaves the sentence for a <code>CommandBlock</code> on <code>canvas-soft</code>; a caveat
+            stops being a numbered step and becomes a line under them; a second route goes behind <em>other
+            ways</em>; the way back goes behind its own <em>to remove it later</em> summary instead of rendering
+            under the steps to do it. The guide itself is behind a summary that counts it, open on the first task
+            whose work is not done and shut on the rest. <strong>proposals</strong> — <code>CommandBlock</code>.
+            <strong>keyboard</strong> — the copy row moves from the command's text to the control beside it, and
+            the disclosure row gains the count and the nested summaries. <strong>copy</strong> — a row for what
+            each summary says</td>
+          <td><a href="../decisions/dec-17-closed-vocabulary.html"><code>DEC-17</code></a> — the isolating
+            background is <code>canvas-soft</code> at a hairline border, not a new surface;
+            <code>StepList</code>'s <code>@avoid</code>, which refuses a copy affordance of its own and is why
+            the block is a component rather than a step decoration; <code>Disclosure</code>'s fork D4 — it always
+            discloses and the host owns the branch, which is what makes the count and the open-first rule the
+            screen's to decide. And <strong>F8</strong>, the P2 the PO review filed for the undo steps, which
+            this answers early because it is the same edit. <strong>F10</strong> is the constraint the answer had
+            to respect: a summary may not promise an automatic route that does not exist, which is why the count
+            is a count and not <em>set it up by hand</em></td></tr>
+        <tr><td><strong>Round 5, close</strong> — the three readings above are the reviewer's word, and
+          each is a change to how much the screen says at once rather than to what any sentence claims. No
+          verdict, no state, no promise and no source moved; <a href="../decisions/dec-33-two-layers-and-a-clock.html"><code>DEC-33</code></a>,
+          <a href="../decisions/dec-13-onboarding-capabilities.html"><code>DEC-13</code></a> and
+          <a href="../decisions/dec-55-reach-is-an-authorization-decision.html"><code>DEC-55</code></a> are
+          untouched, and the copy table's sentences are the same sentences</td>
+          <td><strong>nothing further</strong>. The run closes a third time: six items filled,
+            <code>verify-doc</code> green on twelve hard rules, then <code>data-status="archived"</code>. The
+            blob this commit leaves is what W5's <code>design/v1</code> note re-cites, because a build that
+            amends its own design re-pins the citation on the same tip</td>
+          <td><a href="../decisions/dec-25-design-build-handoff.html"><code>DEC-25</code></a> — the blob pin is
+            what makes an amendment countable, so a run amended inside the build WU re-enters the hand-off on the
+            merge that lands it. Round 5 is that case by construction: the design and its build are one Working
+            Unit, which the flow permits where a build finds a surface nobody read — here, read at a size nobody
+            had</td></tr>
+        <tr><td><strong>Round 6 — read at the rhythm.</strong> "Now it's full window, please add
+          some gap"</td>
+          <td><strong>mockup</strong> — the column becomes a flex column carrying <code>gap-6</code> and
+            <code>py-8</code>; every zone drops the <code>pt-</code> it brought; the mounted task list gains
+            <code>gap-4</code>, which lands on top of the 16 a <code>TaskStep</code> already carries.
+            <strong>Not moved:</strong> the column's width rule, the zones and their order, every sentence,
+            every state and its source, and <code>TaskStep</code>'s own contract — the task keeps its 8px
+            and the screen buys the distance around it</td>
+          <td><a href="../design-rules/design-rules-index.html"><code>spacing-scale</code></a> — separation is
+            a relationship, and 24, 32 and 16 are already members of the declared ladder, so round 6 proposes
+            no token at all. The reading is taste, and it is the first one this run took that only a
+            <em>closed</em> earlier round could produce: the wall was not visible until the column round
+            removed the edge that had been doing the grouping</td></tr>
+        <tr><td><strong>Round 6, from the review rather than the reader.</strong> The rhythm
+          round's own code review found a sentence this table never had: declining the
+          replace-a-proxy confirm left the screen identical to one nobody had clicked</td>
+          <td><strong>copy</strong> — the refused-confirm row gains the declined replacement, in both
+            the lengths the two actions need. Nothing else moves; no mockup zone changes, because the
+            sentence renders in a slot the mock already draws</td>
+          <td>The table is the screen's sentences and the build cites it rather than deriving them a
+            second time, so a sentence the build had to add is a sentence this table was missing —
+            the citation would otherwise be false in the one direction nobody checks. It is
+            <code>ARM_NOTE</code>'s rule, already two rows up: a refused confirm says what is still
+            true</td></tr>
+        <tr><td><strong>Round 6, close</strong> — one instruction, answered in the column and nowhere
+          else</td>
+          <td><strong>nothing further</strong>. The run closes a fourth time, by the same gate: six items
+            filled, <code>verify-doc</code> green on twelve hard rules, then <code>data-status="archived"</code>.
+            The blob re-pins W5's <code>design/v1</code> citation again</td>
+          <td><a href="../decisions/dec-26-the-mockup-mounts.html"><code>DEC-26</code></a> — the
+            mockup mounts and never draws, so a rhythm the build changed has to be a change to the mount's own
+            assembly rather than a number written beside it. That is why the gap lands on the mounted list and
+            not in this page's stylesheet, where the magnitude would have been unreadable to the build</td></tr>
       </tbody>
     </table>
 

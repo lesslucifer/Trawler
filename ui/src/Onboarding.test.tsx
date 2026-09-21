@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { Onboarding } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
+import { PLATFORM_IDS, type PlatformId } from "./setup";
 import { NO_TRAFFIC, RECENT_MS, type Traffic } from "./verdicts";
 import type { ReachState } from "./api";
 
@@ -39,7 +40,26 @@ const ago = (ms: number): number => Date.now() - ms;
 const capturing: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
 const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000) };
 
-const draw = (props: Partial<Parameters<typeof Onboarding>[0]> = {}) =>
+type Props = Partial<Parameters<typeof Onboarding>[0]>;
+
+const screenAt = (props: Props) => (
+  <Onboarding
+    state={onboarding}
+    dispatch={vi.fn()}
+    os="macos"
+    proxyAddr={ADDR}
+    onRecheck={vi.fn()}
+    onSetUpThisMachine={vi.fn(async () => {})}
+    onSaveCa={vi.fn(async () => null)}
+    onSetProxy={vi.fn(async () => {})}
+    onUnsetProxy={vi.fn(async () => {})}
+    onArmReach={vi.fn(async () => {})}
+    onDisarmReach={vi.fn(async () => {})}
+    {...props}
+  />
+);
+
+const draw = (props: Props = {}) =>
   render(
     <Onboarding
       state={onboarding}
@@ -47,7 +67,7 @@ const draw = (props: Partial<Parameters<typeof Onboarding>[0]> = {}) =>
       os="macos"
       proxyAddr={ADDR}
       onRecheck={vi.fn()}
-      onInstallCa={vi.fn(async () => {})}
+      onSetUpThisMachine={vi.fn(async () => {})}
       onSaveCa={vi.fn(async () => null)}
       onSetProxy={vi.fn(async () => {})}
       onUnsetProxy={vi.fn(async () => {})}
@@ -57,566 +77,772 @@ const draw = (props: Partial<Parameters<typeof Onboarding>[0]> = {}) =>
     />,
   );
 
-// The screen's one axis. Choosing is what every zone below reads, so the tests
-// choose the way a user does rather than by prop.
-const choose = (label: string) => {
-  fireEvent.click(screen.getByRole("button", { name: "platform" }));
+const QUESTION = "which device's traffic do you want to see";
+const MANUAL = "do it manually";
+
+const zone = (id: string) => screen.queryByTestId(id);
+const task = (n: number) => screen.getByTestId(`task-${n}`);
+const picker = () => screen.getByRole("button", { name: QUESTION });
+const pick = (label: string | RegExp) => {
+  fireEvent.click(picker());
   fireEvent.click(screen.getByRole("option", { name: label }));
 };
 
-const zone = (name: string) => screen.queryByTestId(name);
-const disclosure = (precondition: string) =>
-  screen.getByTestId(`precondition-${precondition}`).querySelector("details");
+// A disclosure keeps its content in the DOM and closed, so "behind a
+// disclosure" is a question about the <details> it sits in, never about
+// whether the text exists.
+const disclosing = (text: string) => screen.getByText(text).closest("details")!;
+const open = (text: string) => disclosing(text).hasAttribute("open");
 
-afterEach(() => vi.clearAllMocks());
+// A command is a block now: the copy control carries the command's name and
+// the command itself sits beside it, so the block is what holds both.
+const commandNamed = (label: string) =>
+  screen.getByRole("button", { name: label }).closest("div")!;
 
-describe("the screen's one axis", () => {
-  it("offers the eight platforms in one Select and asks the question once", () => {
+// ── The lead: what this is, before anything about what is wrong ─────────────
+// F1. The screen used to open on a lowercase grey failure verdict, which is
+// the one thing a first-time user cannot act on.
+
+describe("the screen leads with what it is", () => {
+  it("opens on a title and a sentence of purpose", () => {
     draw();
-    fireEvent.click(screen.getByRole("button", { name: "platform" }));
-    expect(screen.getAllByRole("option")).toHaveLength(8);
-    expect(screen.getByText("what are you setting up")).toBeInTheDocument();
-  });
 
-  it("has no second target picker anywhere below it", () => {
-    draw();
-    expect(screen.queryByRole("button", { name: /trust target|proxy target/ })).toBeNull();
-    expect(screen.queryByText(/steps for/)).toBeNull();
-  });
-
-  it("selects this machine by default, named for the detected host", () => {
-    draw();
-    expect(screen.getByRole("button", { name: "platform" })).toHaveTextContent(
-      "This machine — macOS",
+    const lead = zone("lead")!;
+    expect(within(lead).getByText("Set up capture")).toBeInTheDocument();
+    expect(lead).toHaveTextContent(
+      "Trawler sits between a device and the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate and send its traffic to Trawler.",
     );
   });
 
-  // A stepper needs per-step progress, which nothing observes; the axis is a
-  // selection, never a position in a sequence.
-  it("draws no stepper: no numbering, and no control that moves a cursor", () => {
-    const dispatch = vi.fn();
-    const { container } = draw({ dispatch });
-    expect(container.textContent).not.toMatch(/\b1 · |\b2 · |\b3 · /);
-    expect(container.querySelector("[data-testid^='step-']")).toBeNull();
-    for (const button of screen.getAllByRole("button")) fireEvent.click(button);
-    expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ t: "goto" }));
+  it("states no verdict above the question — the facts belong to the tasks", () => {
+    draw({ traffic: NO_TRAFFIC });
+
+    expect(zone("lead-verdict")).toBeNull();
+    expect(zone("lead")).not.toHaveTextContent(/nothing has reached Trawler/i);
+    expect(screen.queryByText(/waiting for the first request/)).not.toBeNull();
   });
 });
 
-describe("the probe row answers only where a probe can", () => {
-  it("is there for this machine", () => {
-    draw({ probedAt: ago(60_000) });
-    expect(zone("probe")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "check again" })).toBeInTheDocument();
-  });
+// ── The question, and the eight answers to it ───────────────────────────────
+// F6. One axis, seen rather than discovered.
 
-  it("is there for the Simulator, whose routing this machine's probe does read", () => {
-    draw({ probedAt: ago(60_000) });
-    choose("iOS Simulator");
-    expect(zone("probe")).toBeInTheDocument();
-  });
-
-  it.each(["iPhone or iPad", "Another Windows PC", "Android emulator"])(
-    "is absent under %s, because there is nothing here it could read",
-    (platform) => {
-      draw({ probedAt: ago(60_000) });
-      choose(platform);
-      expect(zone("probe")).toBeNull();
-    },
-  );
-
-  it("says what it is doing while it reads, and dates the reading after", () => {
-    const { rerender } = draw({ probing: true });
-    expect(zone("probe")).toHaveTextContent("checking this machine…");
-    expect(screen.getByRole("button", { name: "check again" })).toBeDisabled();
-
-    rerender(
-      <Onboarding state={onboarding} dispatch={vi.fn()} probing={false} probedAt={ago(60_000)} onRecheck={vi.fn()} />,
-    );
-    expect(zone("probe")).toHaveTextContent(/checked/);
-  });
-});
-
-describe("the un-probeable verdicts carry their own words", () => {
-  it("never borrows this machine's trust answer for another device", () => {
-    draw({ trustProbe: "trusted" });
-    choose("iPhone or iPad");
-    const trust = screen.getByTestId("precondition-trust");
-    expect(trust).toHaveTextContent("can't check another device from here");
-    expect(trust).not.toHaveTextContent("trusted on this machine");
-  });
-
-  it("renders no routing verdict off-machine rather than this machine's", () => {
-    draw({ proxyProbe: "ours" });
-    choose("Android device");
-    expect(screen.getByTestId("precondition-route")).not.toHaveTextContent(
-      "system proxy is set to Trawler",
-    );
-  });
-
-  it("says can't-check on this platform where the probe itself came back unknown", () => {
-    draw({ trustProbe: "unknown" });
-    expect(screen.getByTestId("precondition-trust")).toHaveTextContent("can't check on this platform");
-  });
-});
-
-describe("the one-click actions belong to this machine alone", () => {
-  it("offers install and set-proxy here", () => {
+describe("the one question, asked in the user's words", () => {
+  it("asks which device, and every device is an answer the control offers", () => {
     draw();
-    expect(screen.getByRole("button", { name: "install certificate" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
+
+    expect(zone("platform")).toHaveTextContent(QUESTION);
+
+    fireEvent.click(picker());
+    expect(screen.getAllByRole("option")).toHaveLength(PLATFORM_IDS.length);
+    for (const id of PLATFORM_IDS) {
+      expect(
+        screen.getByRole("option", { name: setup.platformLabel(id, "macos") }),
+      ).toBeInTheDocument();
+    }
   });
 
-  it.each(["iPhone or iPad", "Another Mac", "Android emulator"])(
-    "offers neither under %s",
-    (platform) => {
-      draw();
-      choose(platform);
-      expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-      expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
-    },
-  );
+  it("starts on this machine, named for the host it detected, and says so unopened", () => {
+    draw({ os: "macos" });
 
-  it("offers neither on a host with no one-click path", () => {
-    draw({ os: "linux" });
-    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "set system proxy" })).toBeNull();
+    expect(picker()).toHaveTextContent("This machine — macOS");
+    expect(screen.queryByRole("listbox")).toBeNull();
   });
 
-  // DEC-13's inherited assertion: never offer to undo something we did not do.
-  it("offers stop routing only once a proxy here is ours", () => {
-    draw({ proxyProbe: "none" });
-    expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
+  it("the answer is taken from the list, and the control then carries it", () => {
+    draw();
 
-    draw({ proxyProbe: "ours" });
+    pick("iPhone or iPad");
+
+    expect(picker()).toHaveTextContent("iPhone or iPad");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(task(1)).toHaveTextContent("Allow your iPhone to connect");
+  });
+
+  it("holds its width whatever the answer is, so the row beside it does not move", () => {
+    draw();
+    const box = picker().parentElement!;
+
+    expect(box.className).toContain("w-picker");
+    pick("Another Ubuntu machine");
+    expect(picker().parentElement).toBe(box);
+    expect(box.className).toContain("w-picker");
+  });
+
+  it("asks the target question once — nothing below it asks again", () => {
+    draw();
+
+    expect(screen.getAllByRole("button", { name: QUESTION })).toHaveLength(1);
+    expect(screen.queryByText(/what are you setting up/i)).toBeNull();
+    expect(screen.queryByText(/what has to be true/i)).toBeNull();
+  });
+});
+
+// ── The vocabulary, asserted as an absence ──────────────────────────────────
+// F3. The list is where "flow" is taught; this screen is read before the word
+// means anything. The check is over every platform and every lifecycle state,
+// because a word that only appears on the Android path is still on the screen.
+
+describe("the machine's words for itself are not on this screen", () => {
+  const MACHINE_WORDS = [
+    /\bflows?\b/i,
+    /\bverdict\b/i,
+    /\breach\b/i,
+    /\bplatform\b/i,
+    /\broute its\b/i,
+    /listen on/i,
+    /\bdecrypting\b/i,
+  ];
+
+  // "arriving but not decrypting" is the traffic layer's own wording, kept by
+  // the design: it describes what the user's device is doing, not what the app
+  // calls it. Everything else must be absent.
+  const rendered = () => document.body.textContent ?? "";
+
+  it.each(PLATFORM_IDS)("%s renders none of them", (id) => {
+    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null } });
+    pick(setup.platformLabel(id as PlatformId, "macos"));
+
+    for (const word of MACHINE_WORDS) {
+      if (word.source.includes("decrypting")) continue;
+      expect(rendered()).not.toMatch(word);
+    }
+  });
+
+  it("does not say 'flow' even where the traffic layer has one to report", () => {
+    draw({ traffic: capturing, trustProbe: "trusted", proxy: { status: "ours", address: null } });
+
+    expect(rendered()).not.toMatch(/\bflows?\b/i);
+  });
+});
+
+// ── This machine: three numbered tasks, one primary action ──────────────────
+
+describe("this machine — three tasks, and one button that does two of them", () => {
+  it("numbers the tasks and titles them by what the user does", () => {
+    draw();
+
+    expect(task(1)).toHaveTextContent("Trust Trawler's certificate");
+    expect(task(2)).toHaveTextContent("Send this Mac's traffic to Trawler");
+    expect(task(3)).toHaveTextContent("Open any website on this Mac");
+  });
+
+  it("each task's state is the probe's answer or the traffic layer's", () => {
+    draw({
+      trustProbe: "trusted",
+      proxy: { status: "none", address: null },
+      traffic: NO_TRAFFIC,
+    });
+
+    expect(task(1)).toHaveTextContent("done — installed and trusted");
+    expect(task(2)).toHaveTextContent("not done — the system proxy is off");
+    expect(task(3)).toHaveTextContent("waiting for the first request");
+  });
+
+  it("a set proxy reads as this Mac routing through Trawler", () => {
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: "127.0.0.1:9999" } });
+
+    expect(task(2)).toHaveTextContent("done — this Mac routes through Trawler");
+  });
+
+  it("offers one primary action, and says what the one prompt does", () => {
+    draw();
+
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeInTheDocument();
+    expect(screen.getByText("one password prompt — it installs the certificate and sets the proxy"))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Install the certificate" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
+  });
+
+  it("the one action runs the one command", async () => {
+    const onSetUpThisMachine = vi.fn(async () => {});
+    draw({ onSetUpThisMachine });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(onSetUpThisMachine).toHaveBeenCalledOnce());
+  });
+
+  it("while it runs, both tasks it covers say so and the button is out of reach", async () => {
+    let release = () => {};
+    const onSetUpThisMachine = vi.fn(
+      () => new Promise<void>((resolve) => (release = resolve)),
+    );
+    draw({ onSetUpThisMachine, trustProbe: "untrusted", proxy: { status: "none", address: null } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(task(1)).toHaveTextContent("setting up — approve the prompt…"));
+    expect(task(2)).toHaveTextContent("setting up — approve the prompt…");
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeDisabled();
+    await act(async () => release());
+  });
+
+  it("names the host it is on — a PC is not a Mac", () => {
+    draw({ os: "windows" });
+
+    expect(screen.getByRole("button", { name: "Set up this PC" })).toBeInTheDocument();
+    expect(task(2)).toHaveTextContent("Send this PC's traffic to Trawler");
+  });
+
+  // Review round 1, blocker: the button offered once both are done was labelled
+  // "undo this setup", and undid half of it — nothing reverses a trust-store
+  // install, and DEC-13 never offered to. A control may not name work it does
+  // not do, least of all work about what this machine trusts.
+  it("once both are done, the action offers the half it can actually reverse", () => {
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
+
+    expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /undo this setup/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set up this Mac" })).toBeNull();
+  });
+
+  it("says what the reversal leaves behind, and where the steps for it are", () => {
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
+
+    expect(screen.getByTestId("steps")).toHaveTextContent(
+      "this turns the proxy off and nothing else — the steps below remove Trawler's certificate.",
+    );
+    fireEvent.click(screen.getByText("do it manually"));
+    fireEvent.click(screen.getByText("to undo it later"));
+    expect(commandNamed("the removal command")).toHaveTextContent("security delete-certificate");
+  });
+
+  // Review round 3, important: DEC-13's inherited rule is that an action which
+  // changed this host may not become irreversible because a probe has not
+  // answered yet. The reversal read the probes alone, so the window between a
+  // successful run and the re-read it triggers had no way out — and a probe
+  // that never answers had none at all.
+  it("offers the way out as soon as the action resolved, before any probe confirms it", async () => {
+    draw({
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "stop routing through Trawler" }),
+      ).toBeInTheDocument(),
+    );
+    // And it does not claim the tasks are done — that is still the probes' word.
+    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first request");
+  });
+
+  // Review round 4, important: the way out was kept alive by the action that
+  // opened it, and that latch never cleared — so once the user took it, the
+  // screen went on offering to turn off a proxy that was already off, beside a
+  // button offering to set it up again.
+  // Review round 5: round 4's term gated only the arm the action opened, so on
+  // the path a real user takes — the probe has already read "ours" — a
+  // succeeded reversal still waited for the next probe before the control went
+  // away. The rule is that a reversal which succeeded closes the way out
+  // whichever arm opened it.
+  it("retires the way out on the path the probe opened, without waiting for the next read", async () => {
+    const onUnsetProxy = vi.fn(async () => {});
+    draw({
+      trustProbe: "trusted",
+      proxy: { status: "ours", address: null },
+      onUnsetProxy,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() => expect(onUnsetProxy).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull(),
+    );
+  });
+
+  it("retires the way out once the reversal itself has succeeded", async () => {
+    const onUnsetProxy = vi.fn(async () => {});
+    const props: Props = {
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+      onUnsetProxy,
+    };
+    const { rerender } = draw(props);
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+    await waitFor(() => expect(onUnsetProxy).toHaveBeenCalledOnce());
+
+    // The probe catches up: the proxy this app set is no longer set.
+    rerender(screenAt({ ...props, proxy: { status: "none", address: null } }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull(),
+    );
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeInTheDocument();
+  });
+
+  it("keeps the way out while a reversal that failed leaves the proxy set", async () => {
+    draw({
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+      onUnsetProxy: vi.fn(() => Promise.reject({ refused: false, detail: "no services" })),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() => expect(screen.getByText(/couldn't turn the proxy off/)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
   });
 
-  // The other half of the same rule: an action that changed this host stays
-  // reversible even where the probe that would confirm it cannot answer.
-  it("offers stop routing after setting the proxy, whatever the probe can say", async () => {
-    draw({ proxyProbe: "unknown", onSetProxy: vi.fn(async () => {}) });
-    fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
-    expect(
-      await screen.findByRole("button", { name: "stop routing through Trawler" }),
-    ).toBeInTheDocument();
+  it("keeps offering the action until the probes say the work is done", async () => {
+    draw({
+      trustProbe: "unknown",
+      proxy: { status: "unknown", address: null },
+      onSetUpThisMachine: vi.fn(async () => {}),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeInTheDocument();
   });
 });
 
-// F15: the Simulator was probed as this machine and actionable as nothing. It
-// shares one of this Mac's two stores, and the screen now answers per store.
-describe("the Simulator acts through what it shares, and only through that", () => {
-  beforeEach(() => {
-    draw({ trustProbe: "trusted", proxyProbe: "none" });
-    choose("iOS Simulator");
+// ── The manual route ────────────────────────────────────────────────────────
+// F10's rule, applied to the shape F27 created: one action, one alternative.
+
+describe("the manual route is the alternative to the button", () => {
+  it("one disclosure holds what the button would have done, in task order", () => {
+    draw();
+
+    fireEvent.click(screen.getByText("do it manually"));
+
+    expect(commandNamed("the trust command")).toHaveTextContent("security add-trusted-cert");
+    expect(commandNamed("the proxy command")).toHaveTextContent("networksetup -setwebproxy");
+    expect(screen.getAllByText("do it manually")).toHaveLength(1);
   });
 
-  it("offers the proxy this Mac sets, because the Simulator routes through it", () => {
-    expect(screen.getByRole("button", { name: "set system proxy" })).toBeInTheDocument();
-    expect(screen.getByTestId("precondition-route")).toHaveTextContent(
-      "not set on this machine yet",
+  it("stays shut until it is asked for — the button is the route, these are the other one", () => {
+    draw();
+
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(false);
+  });
+
+  it("keeps both tasks' asides as the kind of aside each one was", () => {
+    draw();
+    fireEvent.click(screen.getByText("do it manually"));
+
+    expect(screen.getByTestId("guide-note")).toHaveTextContent(
+      "Firefox keeps its own store — import it there too.",
+    );
+    expect(open("Or double-click the file and set the Trawler CA to Always Trust.")).toBe(false);
+    expect(open("Or delete the Trawler Proxy CA entry in Keychain Access → System.")).toBe(false);
+  });
+
+  it("no task carries a guide of its own where one button covers two", () => {
+    draw();
+
+    expect(within(task(1)).queryByText("do it manually")).toBeNull();
+    expect(within(task(2)).queryByText("do it manually")).toBeNull();
+  });
+});
+
+// ── A refused prompt ────────────────────────────────────────────────────────
+// F18. The one common failure is the one the user caused, and it is not the
+// OS's sentence to write.
+
+describe("a password prompt the user dismissed", () => {
+  const cancelled = {
+    refused: true,
+    detail: "0:36: execution error: User cancelled. (-128)",
+  };
+
+  it("reads as a sentence, with the tool's own text one click away", async () => {
+    draw({ onSetUpThisMachine: vi.fn(() => Promise.reject(cancelled)) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("The password prompt was cancelled. Try again, or follow the manual steps."),
+      ).toBeInTheDocument(),
+    );
+    expect(disclosing(cancelled.detail)).not.toHaveAttribute("open");
+
+    fireEvent.click(screen.getByText("details"));
+    expect(disclosing(cancelled.detail)).toHaveAttribute("open");
+  });
+
+  it("a real failure keeps its own sentence and its own text", async () => {
+    draw({
+      onSetUpThisMachine: vi.fn(() =>
+        Promise.reject({ refused: false, detail: "no network services to configure" }),
+      ),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/setting up failed/)).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByText("details"));
+    expect(screen.getByText("no network services to configure")).toBeInTheDocument();
+  });
+
+  it("leaves the task states to the probes — an action never reports them", async () => {
+    draw({
+      trustProbe: "untrusted",
+      proxy: { status: "none", address: null },
+      onSetUpThisMachine: vi.fn(() => Promise.reject(cancelled)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByText(/password prompt was cancelled/)).toBeInTheDocument());
+    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+    expect(task(2)).toHaveTextContent("not done — the system proxy is off");
+  });
+});
+
+// ── Another proxy ───────────────────────────────────────────────────────────
+// F17. The button is about to take something away, and the user is owed its name.
+
+describe("a proxy that is already set", () => {
+  it("is named, with what replacing it costs", () => {
+    draw({ proxy: { status: "foreign", address: "10.1.1.1:8080" } });
+
+    expect(zone("foreign-proxy")).toHaveTextContent(
+      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
     );
   });
 
-  it("offers no certificate install, and never reads this Mac's answer as the Simulator's", () => {
-    const trust = screen.getByTestId("precondition-trust");
-    expect(screen.queryByRole("button", { name: "install certificate" })).toBeNull();
-    expect(trust).not.toHaveTextContent("trusted on this machine");
-    expect(trust).toHaveTextContent("keeps its own certificate store");
+  it("drops the address where the probe could not read one, and claims nothing", () => {
+    draw({ proxy: { status: "foreign", address: null } });
+
+    expect(zone("foreign-proxy")).toHaveTextContent(
+      "another proxy is set on this Mac. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+    );
   });
 
-  it("gives it the trust route it can follow", () => {
-    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
+  it("says nothing of the sort where nothing is set", () => {
+    draw({ proxy: { status: "none", address: null } });
+
+    expect(zone("foreign-proxy")).toBeNull();
+  });
+});
+
+// ── The iOS Simulator: two stores, two answers ──────────────────────────────
+
+describe("the iOS Simulator", () => {
+  const simulator = () => {
+    draw({ trustProbe: "trusted", proxy: { status: "none", address: null } });
+    pick("iOS Simulator");
+  };
+
+  it("takes its trust task's state from nobody, and says when it will know", () => {
+    simulator();
+
+    expect(task(1)).toHaveTextContent("Trust Trawler's certificate in the Simulator");
+    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first request");
+    expect(task(1)).not.toHaveTextContent("done — installed and trusted");
+  });
+
+  it("takes its routing task's state from this Mac, which it follows", () => {
+    simulator();
+
+    expect(task(2)).toHaveTextContent("Send this Mac's traffic to Trawler");
+    expect(task(2)).toHaveTextContent("not done — the system proxy is off");
+    expect(within(task(2)).getByRole("button", { name: "Set the system proxy" })).toBeInTheDocument();
+  });
+
+  it("renders its trust guide open under a count — nothing automatic stands above it", () => {
+    simulator();
+
+    expect(within(task(1)).queryByText("do it manually")).toBeNull();
+    expect(within(task(1)).getByText("3 steps")).toBeInTheDocument();
+    expect(open("3 steps")).toBe(true);
+    expect(commandNamed("the trust command")).toHaveTextContent(
       "xcrun simctl keychain booted add-root-cert",
     );
   });
+
+  it("leaves the routing steps behind the button that does them", () => {
+    simulator();
+
+    expect(within(task(2)).getByText("do it manually")).toBeInTheDocument();
+    expect(open("do it manually")).toBe(false);
+  });
+
+  it("is told to open a website in it, not on it", () => {
+    simulator();
+
+    expect(task(3)).toHaveTextContent("Open any website in the Simulator");
+  });
 });
 
-describe("an off-machine platform with nothing to point at", () => {
-  beforeEach(() => {
-    draw({ reach: UNARMED });
-    choose("iPhone or iPad");
+// ── A phone: one task that changes this machine, three that do not ──────────
+
+describe("a phone, before the network is allowed", () => {
+  const phone = (reach: ReachState = UNARMED) => {
+    draw({ reach });
+    pick("iPhone or iPad");
+  };
+
+  it("leads with the one task that is this machine's to do", () => {
+    phone();
+
+    expect(task(1)).toHaveTextContent("Allow your iPhone to connect");
+    expect(task(1)).toHaveTextContent("not done — Trawler answers on this machine only");
   });
 
-  it("states the precondition that cannot be met, in its own zone", () => {
-    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
-      "Trawler answers on this machine only",
+  it("states one consequence, and leaves the rest to the confirm dialog", () => {
+    phone();
+
+    expect(task(1)).toHaveTextContent(
+      "other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits",
     );
+    expect(task(1)).not.toHaveTextContent(/Trawler will ask before/);
+    expect(task(1)).not.toHaveTextContent(/Anything on that network/);
   });
 
-  it("offers the action that meets it, and says the ask comes first", () => {
-    expect(screen.getByRole("button", { name: "let devices reach Trawler" })).toBeInTheDocument();
-    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
-      "Trawler will ask before it starts listening",
-    );
-  });
+  it("dims the rest and numbers them, rather than explaining what cannot happen", () => {
+    phone();
 
-  it("offers no step that cannot work", () => {
-    expect(screen.queryByRole("group", { name: "set it up by hand" })).toBeNull();
-    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
-      "the certificate route opens once Trawler is reachable",
-    );
-    expect(screen.getByTestId("precondition-route")).toHaveTextContent(
-      "there is no address to point the device at yet",
-    );
-  });
-
-  // The addresses on offer are the choice; an address in an instruction would
-  // be a promise that a socket is listening there, which is the lie the whole
-  // reach seam exists to prevent.
-  it("prints no address to point the device at — not a loopback one, not a plausible one", () => {
-    for (const precondition of ["trust", "route"]) {
-      const text = screen.getByTestId(`precondition-${precondition}`).textContent ?? "";
-      expect(text).not.toContain("127.0.0.1");
-      expect(text).not.toContain("192.168.1.24");
+    for (const n of [2, 3, 4]) {
+      expect(task(n)).toHaveAttribute("data-dim");
+      expect(task(n)).toHaveTextContent("after step 1");
     }
-    expect(zone("device-address")).toBeNull();
+    expect(screen.queryByText(/the certificate route opens once/)).toBeNull();
+    expect(screen.queryByText(/there is no address to point the device at yet/)).toBeNull();
+    expect(screen.queryByText(/nothing to try until/)).toBeNull();
   });
 
-  it("says there is nothing to try yet", () => {
-    expect(zone("try")).toHaveTextContent("nothing to try until Trawler is reachable");
-  });
+  it("offers one button on the screen: step 1's", () => {
+    phone();
 
-  it("does not offer to stop something it never started", () => {
-    expect(screen.queryByRole("button", { name: "stop listening" })).toBeNull();
-  });
-});
-
-describe("an off-machine platform once reach is armed", () => {
-  beforeEach(() => {
-    draw({ reach: ARMED });
-    choose("iPhone or iPad");
-  });
-
-  it("says where it is listening, and for how long", () => {
-    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
-      "listening on 192.168.1.24 — until Trawler quits",
-    );
-  });
-
-  it("renders the server and the port the device's settings want, as values to take", () => {
-    const address = screen.getByTestId("device-address");
-    expect(within(address).getByRole("button", { name: /the proxy host/ })).toHaveTextContent(
-      "192.168.1.24",
-    );
-    expect(within(address).getByRole("button", { name: /the proxy port/ })).toHaveTextContent("9999");
-  });
-
-  it("renders the certificate URL a device can open, without opening anything first", () => {
-    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(
-      "http://192.168.1.24:7421/ca.crt",
-    );
-  });
-
-  it("offers the reversal it now owes", () => {
-    expect(screen.getByRole("button", { name: "stop listening" })).toBeInTheDocument();
-  });
-
-  it("says what to try on the device", () => {
-    expect(zone("try")).toHaveTextContent("open any site on the device");
-  });
-});
-
-// F11: four choices, three of them rotating IPv6 addresses, in a control that
-// overflowed its column. The core now answers best-first, so the screen offers
-// the first one and keeps the rest where a user who wants them can find them.
-describe("the address to listen on is one offer, with the rest behind it", () => {
-  const withInterfaces = (count: number) =>
-    draw({
-      reach: {
-        ...UNARMED,
-        interfaces: Array.from({ length: count }, (_, i) => ({
-          name: `if${i}`,
-          address: `10.0.0.${i + 1}`,
-        })),
-      },
-    });
-
-  it("offers no control for one address — the action names it instead", () => {
-    withInterfaces(1);
-    choose("iPhone or iPad");
-    expect(zone("listen-on")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "let devices reach Trawler at 10.0.0.1" }),
+      screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Set up/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
   });
 
-  it.each([2, 5])("offers the first of %i, named, and hides the others", (count) => {
-    withInterfaces(count);
-    choose("iPhone or iPad");
-    expect(zone("listen-on")).toHaveTextContent("if0 · 10.0.0.1");
-    const others = screen.getByText("other addresses").closest("details");
-    expect(within(others!).getAllByRole("button")).toHaveLength(count - 1);
-    expect(within(others!).getByRole("button", { name: "if1 · 10.0.0.2" })).toBeInTheDocument();
+  it("reads nothing off this machine's probes — there is nothing here to read", () => {
+    draw({ reach: UNARMED, trustProbe: "trusted", proxy: { status: "ours", address: null } });
+    pick("iPhone or iPad");
+
+    expect(zone("probe")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/installed and trusted/);
+  });
+});
+
+describe("a phone, once it may connect", () => {
+  const armedPhone = () => {
+    draw({ reach: ARMED });
+    pick("iPhone or iPad");
+  };
+
+  it("says what is listening and offers the way to stop", () => {
+    armedPhone();
+
+    expect(task(1)).toHaveTextContent("allowed — listening on 192.168.1.24 until Trawler quits");
+    expect(within(task(1)).getByRole("button", { name: "stop listening" })).toBeInTheDocument();
   });
 
-  // F13: the shell's dialog can end two ways and the screen could tell them
-  // apart in neither — a cancelled confirm resolved exactly like a success.
-  it("says what a refused confirm left unchanged", async () => {
-    draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
-    choose("iPhone or iPad");
-    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+  it("renders the certificate route the phone opens, and the address it points at", () => {
+    armedPhone();
 
-    expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
-      "not allowed — Trawler still answers on this machine only",
-    );
-    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
-      "Trawler answers on this machine only",
-    );
+    expect(
+      screen.getByRole("button", { name: /copy the certificate URL/i }),
+    ).toHaveTextContent("http://192.168.1.24:7421/ca.crt");
+    expect(within(zone("device-address")!).getByRole("button", { name: /copy the proxy host/i }))
+      .toHaveTextContent("192.168.1.24");
+    expect(within(zone("device-address")!).getByRole("button", { name: /copy the proxy port/i }))
+      .toHaveTextContent("9999");
   });
 
-  it("says nothing of its own when the confirm was allowed — the verdict does that", async () => {
-    draw({ reach: UNARMED, onArmReach: vi.fn(async () => undefined) });
-    choose("iPhone or iPad");
-    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
+  it("promises to confirm on the phone's own first request, and claims nothing now", () => {
+    armedPhone();
 
-    await waitFor(() => expect(zone("arm-reach-status")).toBeNull());
+    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first request");
+    expect(task(3)).toHaveTextContent("we'll confirm this on your iPhone's first request");
+    expect(task(2)).not.toHaveAttribute("data-dim");
   });
 
-  it("arms the address the user picked, not the one that happened to be first", () => {
+  it("names no automatic route it does not have — a hand is the only one it has", () => {
+    armedPhone();
+
+    expect(screen.queryByText("do it manually")).toBeNull();
+    expect(task(2)).toHaveTextContent(/Settings → General → VPN & Device Management/);
+  });
+
+  it("opens the first task whose work is not done, and holds the next behind its count", () => {
+    armedPhone();
+
+    expect(within(task(2)).getByText("3 steps")).toBeInTheDocument();
+    expect(open("3 steps")).toBe(true);
+    expect(within(task(3)).getByText("2 steps")).toBeInTheDocument();
+    expect(open("2 steps")).toBe(false);
+  });
+
+  it("closes every guide once a decrypted request says the job is over", () => {
+    draw({ reach: ARMED, traffic: capturing });
+    pick("iPhone or iPad");
+
+    expect(open("3 steps")).toBe(false);
+    expect(open("2 steps")).toBe(false);
+  });
+});
+
+// ── The address the device is pointed at ────────────────────────────────────
+
+describe("the address is an offer, not a menu", () => {
+  it("offers the first and puts the rest behind a disclosure", () => {
+    draw({ reach: UNARMED });
+    pick("iPhone or iPad");
+
+    expect(zone("listen-on")).toHaveTextContent("Wi-Fi · 192.168.1.24");
+    expect(disclosing("Ethernet · 10.0.4.7")).not.toHaveAttribute("open");
+
+    fireEvent.click(screen.getByText("other addresses"));
+    expect(disclosing("Ethernet · 10.0.4.7")).toHaveAttribute("open");
+  });
+
+  it("taking another one commits nothing but the offer", () => {
     const onArmReach = vi.fn(async () => {});
     draw({ reach: UNARMED, onArmReach });
-    choose("iPhone or iPad");
+    pick("iPhone or iPad");
+
     fireEvent.click(screen.getByText("other addresses"));
     fireEvent.click(screen.getByRole("button", { name: "Ethernet · 10.0.4.7" }));
+
     expect(zone("listen-on")).toHaveTextContent("Ethernet · 10.0.4.7");
-    fireEvent.click(screen.getByRole("button", { name: "let devices reach Trawler" }));
-    expect(onArmReach).toHaveBeenCalledWith("10.0.4.7");
+    expect(onArmReach).not.toHaveBeenCalled();
   });
 
-  it("says so when the host holds no address to offer, and offers no action", () => {
-    withInterfaces(0);
-    choose("iPhone or iPad");
-    expect(screen.getByTestId("precondition-reach")).toHaveTextContent(
-      "this machine holds no network address",
-    );
-    expect(screen.queryByRole("button", { name: /let devices reach Trawler/ })).toBeNull();
-  });
-});
+  it("arms the address it is offering", async () => {
+    const onArmReach = vi.fn(async () => {});
+    draw({ reach: UNARMED, onArmReach });
+    pick("iPhone or iPad");
 
-describe("the emulator is not a device, and says so", () => {
-  it("needs no reach: it renders its steps with reach unarmed", () => {
-    draw({ reach: UNARMED });
-    choose("Android emulator");
-    expect(zone("precondition-reach")).toBeNull();
-    expect(screen.getByTestId("precondition-route")).toHaveTextContent("10.0.2.2");
-  });
-});
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
 
-describe("the lead verdict, and the outcome that leaves it", () => {
-  it("leads with a pending sentence while the launch check runs", () => {
-    draw({ state: { ...onboarding, phase: "checking" } });
-    expect(zone("lead-verdict")).toHaveTextContent("checking what is already set up");
-    expect(screen.getAllByTestId("spinner").length).toBeGreaterThan(0);
+    await waitFor(() => expect(onArmReach).toHaveBeenCalledWith("192.168.1.24"));
   });
 
-  // The screen may not state two contradictory readings of one fact. While the
-  // launch check runs, a flow the stream already delivered must not let the try
-  // zone announce capture under a headline that says it is still checking.
-  it("never announces capture under a headline that is still checking", () => {
-    draw({
-      state: { ...onboarding, phase: "checking" },
-      traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000), ever: true },
-    });
+  it("a refused confirm says what is still true", async () => {
+    draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
+    pick("iPhone or iPad");
 
-    expect(zone("lead-verdict")).toHaveTextContent("checking what is already set up");
-    expect(zone("proven")).toBeNull();
-  });
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
 
-  it("separates nothing-ever from nothing-now", () => {
-    draw({ traffic: NO_TRAFFIC });
-    expect(zone("lead-verdict")).toHaveTextContent("nothing has reached Trawler yet");
-
-    draw({ traffic: { ...NO_TRAFFIC, ever: true } });
-    expect(screen.getAllByTestId("lead-verdict")[1]).toHaveTextContent("nothing is arriving now");
-  });
-
-  it("names the arriving failure and sends the reader to the step that fixes it", () => {
-    draw({ traffic: arriving });
-    expect(zone("lead-verdict")).toHaveTextContent("traffic is arriving, but nothing is decrypting");
-    expect(zone("trust-remedy")).toHaveTextContent("does not trust Trawler's certificate yet");
-  });
-
-  // F21: neither the headline nor the remedy may say which platform the traffic
-  // came from — nothing in the app can attribute a tunnel to one.
-  it("claims no platform for traffic it cannot attribute", () => {
-    draw({ traffic: arriving });
-    expect(zone("lead-verdict")).not.toHaveTextContent(/platform/);
-    expect(zone("trust-remedy")).not.toHaveTextContent(/platform/);
-  });
-
-  // F16: "everything below is still set up" was rendered whatever the probes
-  // said — over a machine whose proxy was not set, in the review's TC-11.
-  it("reads the probes rather than assuring the user the steps are done", () => {
-    draw({ traffic: { ...NO_TRAFFIC, ever: true }, trustProbe: "trusted", proxyProbe: "none" });
-    expect(zone("lead-verdict")).toHaveTextContent("nothing is arriving now");
-    expect(zone("lead-verdict")).toHaveTextContent("1 step left on this machine");
-    expect(zone("lead-verdict")).not.toHaveTextContent("still set up");
-  });
-
-  it("counts both steps while both are undone, and stops counting when none are", () => {
-    draw({ trustProbe: "untrusted", proxyProbe: "none" });
-    expect(zone("lead-verdict")).toHaveTextContent("2 steps left on this machine");
-
-    draw({ trustProbe: "trusted", proxyProbe: "ours" });
-    expect(screen.getAllByTestId("lead-verdict")[1]).toHaveTextContent(
-      "open any website to see its traffic",
+    await waitFor(() =>
+      expect(
+        screen.getByText("not allowed — Trawler still answers on this machine only."),
+      ).toBeInTheDocument(),
     );
   });
 
-  it("says nothing about a step whose probe could not answer", () => {
-    draw({ trustProbe: "unknown", proxyProbe: "ours" });
-    expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left/);
-  });
+  it("a machine with no address to offer says so instead of offering one", () => {
+    draw({ reach: { ...UNARMED, interfaces: [] } });
+    pick("iPhone or iPad");
 
-  it("says nothing about this machine's steps under a platform that is not it", () => {
-    draw({ trustProbe: "trusted", proxyProbe: "ours" });
-    choose("iPhone or iPad");
-    expect(zone("lead-verdict")).not.toHaveTextContent(/steps? left|open any website/);
+    expect(task(1)).toHaveTextContent(
+      "this machine holds no network address a second device could reach it at",
+    );
+    expect(screen.queryByRole("button", { name: /Allow devices/ })).toBeNull();
   });
+});
 
-  it("renders the remedy beside the precondition it instructs, not in the headline", () => {
-    draw({ traffic: arriving });
-    expect(screen.getByTestId("precondition-trust")).toContainElement(screen.getByTestId("trust-remedy"));
-  });
+// ── The end of setup ────────────────────────────────────────────────────────
+// F22's other half: the moment it succeeds is said out loud, here and on the
+// list the user lands on.
 
-  it("puts the proven outcome under the request that made it, and clears the headline", () => {
+describe("the end", () => {
+  it("says setup worked, and names the device it worked for", () => {
     draw({ traffic: capturing });
-    expect(zone("lead-verdict")).toBeNull();
-    expect(zone("try")).toContainElement(screen.getByTestId("proven"));
-    expect(zone("proven")).toHaveTextContent("Trawler is capturing");
-  });
-});
 
-// UC-ONBOARD's promises about the manual route, re-checked against the tree
-// rather than trusted from the run's audit: the guide is a fallback where an
-// action leads, and the whole instruction where none does.
-describe("the guide is hidden only where something else is offered first", () => {
-  it("renders inline on a host with no one-click path", () => {
-    draw({ os: "linux" });
-    expect(screen.getByTestId("precondition-trust")).toHaveTextContent(/update-ca-certificates/);
-    expect(within(screen.getByTestId("precondition-trust")).queryByText("set it up by hand")).toBeNull();
-  });
-
-  it("opens itself when the action it backs up fails", async () => {
-    draw({ onInstallCa: vi.fn(async () => Promise.reject(new Error("declined"))) });
-    fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
-
-    await screen.findByText(/the steps below do it by hand/);
-    expect(disclosure("trust")).toHaveAttribute("open");
-  });
-
-  it("stays shut while the action is still the better route", () => {
-    draw();
-    expect(disclosure("trust")).not.toHaveAttribute("open");
-  });
-
-  // The rule itself, over every platform: a summary reading "set it up by hand"
-  // claims an automatic route exists. Where none is offered, the steps are the
-  // instruction and render open — which is also what numbers them.
-  it.each([
-    "This machine — macOS",
-    "iOS Simulator",
-    "Android emulator",
-    "Another Mac",
-    "Another Windows PC",
-    "Another Ubuntu machine",
-    "iPhone or iPad",
-    "Android device",
-  ])("under %s, each guide is behind a summary exactly where its action is offered", (label) => {
-    draw({ reach: ARMED });
-    choose(label);
-    const installs = screen.queryByRole("button", { name: "install certificate" }) !== null;
-    const routes = screen.queryByRole("button", { name: "set system proxy" }) !== null;
-    expect(disclosure("trust") !== null).toBe(installs);
-    expect(disclosure("route") !== null).toBe(routes);
-  });
-
-  it("gives a phone its steps as the instruction, not as a fallback", () => {
-    draw({ reach: ARMED });
-    choose("iPhone or iPad");
-    const trust = screen.getByTestId("precondition-trust");
-    expect(within(trust).queryByText("set it up by hand")).toBeNull();
-    expect(trust).toHaveTextContent("VPN & Device Management");
-  });
-});
-
-// An idle verdict that drops the date is the one that started DEC-33: the user
-// cannot tell "set up, quiet now" from "never worked" without it.
-test("idle dates the last flow rather than repeating the setup advice", () => {
-  draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: ago(RECENT_MS * 4), ever: true } });
-  expect(zone("lead-verdict")).toHaveTextContent(/last flow/);
-});
-
-// StatusLine renders the verdict and refuses its instruction, so the screen owes
-// the second element. UC-ONBOARD: "the verdict and what to do about it are two
-// elements, so a short verdict never costs the instruction".
-describe("a verdict that implies an instruction renders both", () => {
-  it("points an un-probeable platform at the answer that will settle it", () => {
-    draw({ trustProbe: "unknown" });
-    expect(screen.getByTestId("trust-guidance")).toHaveTextContent(
-      "the traffic verdict is what proves it",
+    expect(zone("proven")).toHaveTextContent(
+      "You're set up — Trawler is capturing traffic from this Mac",
     );
   });
 
-  it("names the conflict a foreign proxy is, and what to do about it", () => {
-    draw({ proxyProbe: "foreign" });
-    expect(screen.getByTestId("route-guidance")).toHaveTextContent(/point it at Trawler here/);
+  // A decrypted request proves capture and never says which device made it —
+  // the run's open blocked-on row. This machine is the one platform where the
+  // two answers cannot differ, so it is the one that gets named.
+  it("names no device where the request could have come from another", () => {
+    draw({ traffic: capturing, reach: ARMED });
+    pick("iPhone or iPad");
+
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
+    expect(zone("proven")).not.toHaveTextContent(/iPhone/);
   });
 
-  it("states a failure once, not twice", async () => {
-    draw({ onInstallCa: vi.fn(async () => Promise.reject(new Error("user declined"))) });
-    fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
+  it("an arriving connection that will not decrypt says what to finish, naming no device", () => {
+    draw({ traffic: arriving });
 
-    await screen.findByText(/the steps below do it by hand/);
-    expect(screen.getByTestId("install-ca-status")).toHaveTextContent("user declined");
-    expect(zone("trust-guidance")).toBeNull();
+    expect(zone("traffic-remedy")).toHaveTextContent(
+      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
+    );
+    expect(zone("traffic-remedy")).not.toHaveTextContent(/iPhone|Simulator|Android/);
   });
 
-  it("says nothing extra where the verdict is the whole answer", () => {
-    draw({ trustProbe: "trusted", proxyProbe: "ours" });
-    expect(zone("trust-guidance")).toBeNull();
-    expect(zone("route-guidance")).toBeNull();
-  });
-});
-
-// The certificate's name is one fact, and the save confirmation judges the file
-// that landed against the name the steps beside it run on. A second copy of that
-// name would decide this message against steps built from the other one.
-test("a renamed save is confirmed against the name the steps here actually use", async () => {
-  draw({ onSaveCa: vi.fn(async () => "/tmp/my-ca.pem") });
-  fireEvent.click(within(screen.getByTestId("precondition-trust")).getByText("set it up by hand"));
-  fireEvent.click(screen.getByRole("button", { name: "save…" }));
-
-  const note = await screen.findByTestId("save-ca-status");
-  expect(note).toHaveTextContent("saved as my-ca.pem");
-  expect(note).toHaveTextContent(`the steps here name ${setup.CA_FILENAME}`);
-  expect(screen.getByTestId("precondition-trust")).toHaveTextContent(setup.SAVE_CA_STEP);
-});
-
-describe("the way out", () => {
-  it("is absent until capture has been proven at least once", () => {
-    draw();
-    expect(screen.queryByRole("button", { name: COPY.back })).toBeNull();
-  });
-
-  it("stays open once it has, even with a precondition regressed", () => {
+  it("the way back exists once capture has been proven, and not before", () => {
     const dispatch = vi.fn();
-    draw({ state: { ...onboarding, everProven: true }, trustProbe: "untrusted", dispatch });
-    fireEvent.click(screen.getByRole("button", { name: COPY.back }));
+    draw({ state: { ...onboarding, everProven: true }, dispatch });
+
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(COPY.back) }));
     expect(dispatch).toHaveBeenCalledWith({ t: "exit" });
   });
 });
 
-// E-REDESIGN's nit: the one-second tick re-rendered the whole step list, where
-// only the traffic verdict depends on it. `setupFor` is the work the
-// preconditions zone does on every render of the screen, so a tick that leaves
-// it uncalled is a tick that re-rendered the verdict and nothing else.
-describe("the clock reaches the traffic verdict and nothing else", () => {
+// ── The probe row ───────────────────────────────────────────────────────────
+
+describe("one reading of this machine, re-taken by one control", () => {
+  it("is offered where a probe answers for the chosen device", () => {
+    draw({ probedAt: ago(60_000) });
+
+    expect(zone("probe")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "check again" })).toBeInTheDocument();
+  });
+
+  it("is absent where nothing here could be re-read", () => {
+    draw({ reach: ARMED });
+    pick("Android device");
+
+    expect(zone("probe")).toBeNull();
+  });
+
+  it("re-reads on demand", () => {
+    const onRecheck = vi.fn();
+    draw({ onRecheck });
+
+    fireEvent.click(screen.getByRole("button", { name: "check again" }));
+    expect(onRecheck).toHaveBeenCalledOnce();
+  });
+});
+
+// ── The shape of the whole ──────────────────────────────────────────────────
+
+// E-REDESIGN's nit: the one-second tick re-rendered the whole task list, where
+// only the traffic reading depends on it. `setupFor` is the work the task list
+// does on every render of the screen, so a tick that leaves it uncalled is a
+// tick that re-rendered the traffic reading and nothing else.
+describe("the clock reaches the traffic reading and nothing else", () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
   afterEach(() => vi.useRealTimers());
 
-  it("updates the verdict without re-running the instructions", () => {
+  it("updates the reading without re-running the instructions", () => {
     const resolved = vi.mocked(setup.setupFor);
     draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now(), ever: true } });
     expect(zone("proven")).toBeInTheDocument();
@@ -625,9 +851,197 @@ describe("the clock reaches the traffic verdict and nothing else", () => {
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
 
     expect(zone("proven")).toBeNull();
-    expect(zone("lead-verdict")).toHaveTextContent("nothing is arriving now");
+    expect(task(3)).toHaveTextContent("nothing arriving right now");
     expect(resolved).not.toHaveBeenCalled();
   });
+});
+
+test("no step reports itself done — every state on the screen has a source", () => {
+  draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null }, os: "linux" });
+
+  // Nothing read either store on this host, so neither task may claim one was.
+  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first request");
+  expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
+  expect(document.body.textContent).not.toMatch(/done — /);
+});
+
+// ── What a command is, and where it sits ───────────────────────────────────
+// A command is carried to a terminal whole; a value is typed into the field
+// the sentence beside it names. Two readings, so two renderings.
+
+describe("a command is a block, not a phrase inside a sentence", () => {
+  it("leaves the sentence that introduces it and takes a surface of its own", () => {
+    draw();
+    fireEvent.click(screen.getByText("do it manually"));
+
+    const block = commandNamed("the trust command");
+    expect(block).toHaveTextContent("security add-trusted-cert");
+    expect(block).not.toHaveTextContent("Run it in a terminal:");
+    expect(screen.getByText("Run it in a terminal:")).toBeInTheDocument();
+    expect(block.className).toContain("bg-canvas-soft");
+  });
+
+  it("is wire data in the mono family, whole and uncut", () => {
+    draw();
+    fireEvent.click(screen.getByText("do it manually"));
+
+    const code = commandNamed("the trust command").querySelector("[data-wire]")!;
+    expect(code).toHaveAttribute("data-wire", "shell command");
+    expect(code.className).toContain("font-mono");
+    expect(code.textContent).toBe(
+      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+    );
+  });
+
+  it("the try-it command is a command too, block and all", () => {
+    draw();
+
+    const block = commandNamed("the try-it command");
+    expect(block).toHaveTextContent("curl -x http://127.0.0.1:9999 https://example.com");
+    expect(block.className).toContain("bg-canvas-soft");
+    expect(screen.getByText("or run this in a terminal")).toBeInTheDocument();
+  });
+
+  it("a value stays in the sentence that says which field it goes in", () => {
+    draw();
+    pick("Android emulator");
+
+    const host = screen.getByRole("button", { name: /copy the emulator's host/i });
+    expect(host).toHaveTextContent("10.0.2.2");
+    expect(host.closest("li")).toHaveTextContent("Server");
+    expect(host.closest("li")).toHaveTextContent("port");
+  });
+
+  it("a caveat is a line under the steps, and never one of them", () => {
+    draw();
+    pick("Android emulator");
+
+    const android =
+      "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
+    expect(screen.getAllByTestId("guide-note").map((note) => note.textContent)).toContain(android);
+    const steps = within(task(1)).getAllByRole("listitem");
+    expect(steps.map((step) => step.textContent).join(" ")).not.toContain("Apps targeting Android");
+  });
+
+  it("a second way in is behind its own summary, closed", () => {
+    draw();
+    pick("Android emulator");
+
+    expect(screen.getByText("other ways")).toBeInTheDocument();
+    expect(open("other ways")).toBe(false);
+    expect(commandNamed("the emulator command")).toHaveTextContent("emulator -avd");
+  });
+});
+
+// The rule the window round is built on, asserted as an invariant over every
+// platform rather than on the two the cases above happen to walk. This WU's own
+// review round 5 caught a regression test that held one input still and so only
+// ever exercised one arm of the expression it was pinning; a rule stated per
+// platform and checked on two of eight is the same shape.
+describe("one guide open, whatever the user picked", () => {
+  // A guide's summary is a count or the name of the other route. The summaries
+  // inside one — other ways, the way back, a failure's details — are not guides.
+  const guides = () =>
+    [...document.querySelectorAll("details")].filter((entry) => {
+      const summary = entry.querySelector("summary")?.textContent?.trim() ?? "";
+      return /^\d+ steps?$/.test(summary) || summary === MANUAL;
+    });
+  const opened = () => guides().filter((entry) => entry.hasAttribute("open"));
+
+  const atPlatform = (id: PlatformId, props: Props = {}) => {
+    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null }, ...props });
+    pick(setup.platformLabel(id, "macos"));
+  };
+
+  it.each(PLATFORM_IDS)("%s opens at most one, and it is the first", (id) => {
+    atPlatform(id);
+
+    const open = opened();
+    expect(open.length).toBeLessThanOrEqual(1);
+    if (open.length === 1) expect(open[0]).toBe(guides()[0]);
+  });
+
+  it.each(PLATFORM_IDS)("%s never opens a route a button already answers", (id) => {
+    atPlatform(id);
+
+    for (const entry of guides()) {
+      if (entry.querySelector("summary")?.textContent?.trim() === MANUAL) {
+        expect(entry).not.toHaveAttribute("open");
+      }
+    }
+  });
+
+  it.each(PLATFORM_IDS)("%s opens none once a request has decrypted", (id) => {
+    atPlatform(id, { traffic: capturing });
+
+    expect(opened()).toHaveLength(0);
+  });
+});
+
+test("the reading column answers to the window, not to a dialog", () => {
+  const { container } = draw();
+  const column = container.firstElementChild!.firstElementChild!;
+
+  expect(column.className).toContain("max-w-reading");
+  expect(column.className).not.toContain("max-w-dialog-max");
+});
+
+describe("an action that changed nothing says so", () => {
+  // The decline of the replace-a-foreign-proxy confirm resolves null rather than
+  // rejecting, so the action lands in "nothing" and not "failed". Without a note
+  // for that state the button re-enables with the same label and the screen is
+  // byte-identical to one that was never clicked - the exact outcome ARM_NOTE's
+  // own comment rules out for the reach confirm.
+  const DECLINED_BOTH =
+    "nothing changed — the other proxy is still the one in use, and the certificate was not installed.";
+  const DECLINED_PROXY = "nothing changed — the other proxy is still the one in use.";
+
+  it("the combined action names both halves it did not do", async () => {
+    draw({ onSetUpThisMachine: vi.fn(async () => null) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByText(DECLINED_BOTH)).toBeInTheDocument());
+  });
+
+  it("the Simulator's proxy action names the one half it has", async () => {
+    draw({ onSetProxy: vi.fn(async () => null) });
+    pick("iOS Simulator");
+
+    fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+
+    await waitFor(() => expect(screen.getByText(DECLINED_PROXY)).toBeInTheDocument());
+  });
+
+  it("neither reads as a failure — a decline is not the OS refusing", async () => {
+    draw({ onSetUpThisMachine: vi.fn(async () => null) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "nothing"),
+    );
+    expect(screen.queryByText(/setting up failed/)).toBeNull();
+    expect(screen.queryByRole("group", { name: "details" })).toBeNull();
+  });
+});
+
+test("a task is set apart from its neighbours by more than its own parts are", () => {
+  const { container } = draw();
+  const column = container.firstElementChild!.firstElementChild!;
+
+  // A task separates its title, its reason and its state by 8px. Before the
+  // column carried a rhythm of its own, 16px was all that separated one task
+  // from the next — so three tasks read as one list of nine lines. The column
+  // spaces its zones and the zone spaces its tasks, and both sit above 8px.
+  expect(column.className).toContain("gap-6");
+  expect(screen.getByTestId("steps").className).toContain("gap-4");
+
+  // and the rhythm is the column's alone: a zone that brings a top padding of
+  // its own is a second spacing rule nothing reconciles with the first.
+  for (const zone of [...column.children]) {
+    expect(zone.className).not.toMatch(/\bpt-/);
+  }
 });
 
 test("the column scrolls whole — no zone holds an inner scroller", () => {

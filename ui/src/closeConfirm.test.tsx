@@ -11,7 +11,7 @@ function fakeDeps(status: "ours" | "foreign" | "none", noticeDismissed = false) 
   let closeHandler: (e: { preventDefault: () => void }) => void = () => {};
   const destroy = vi.fn(async () => {});
   const invoke = vi.fn(async (cmd: string) => {
-    if (cmd === "proxy_status") return status;
+    if (cmd === "proxy_status") return { status, address: null };
     if (cmd === "notice_dismissed") return noticeDismissed;
     return undefined;
   });
@@ -125,7 +125,7 @@ test("Cancel dismisses the prompt and does not quit", async () => {
 test("a revert that fails does not quit — it surfaces, and quit stays a click away", async () => {
   const f = fakeDeps("ours");
   f.invoke.mockImplementation(async (cmd: string) => {
-    if (cmd === "proxy_status") return "ours";
+    if (cmd === "proxy_status") return { status: "ours", address: null };
     throw new Error("elevation declined");
   });
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
