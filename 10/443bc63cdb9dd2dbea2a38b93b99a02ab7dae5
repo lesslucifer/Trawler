@@ -1,0 +1,40 @@
+schema: doc/v1
+epic: E-ONBOARD
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "The epic's one T1 edit and the only shape change it made - committed by the owner at 3a06943 under Reviewed-By: key vuluu, because it is rule-bearing. The servers paragraph no longer states loopback as a flat fact: both servers bind loopback BY DEFAULT and a user may add a second pair on one named interface, an authorization act costing one explicit confirm, off by default and dead with the process - with the reason the loopback pair is never displaced. The CORS guardrail row is restated against the new boundary: it was justified by 'adding no exposure beyond the bind address', which DEC-55 retires because the bind is now the user's to widen, and what bounds exposure instead is the confirm - the grant does not widen with the bind. The row now states what arming exposes (the proxy and the whole control API, captured flows included) rather than implying it. The run-the-core row gains one clause: reach is off until something arms it."
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "The epic's residue, written rather than implied. E-ONBOARD's row STRUCK with what the six WUs did and - the part a strike usually loses - what did not travel with it. The design flow's clock-and-token bill row FILLED from W2's measured round, with W4's recorded as unmeasured rather than estimated, which is itself the process finding. overflow-declared's elective gap updated with evidence rather than closure. The WebdriverIO row widened from one silent harness failure to two. ADDED: the quit dialog as its own successor row naming its only carrier branch and commit; the six untaken P2 findings, each named with what it asks for; the iOS Simulator's proxy-reversal latch with why W5 refused it twice; and the attribution row - no traffic reading says which device a connection came from - with the two shipped sentences that are weaker for it."
+  - path: "docs/decisions/dec-55-reach-is-an-authorization-decision.html"
+    tier: T2
+    action: added
+    distills: "The epic's load-bearing decision, landed at W1 before the screen that needed it. Trawler may bind one named interface beside loopback so a second device can reach the proxy and fetch the CA - and that is an authorization act, not a setting: one explicit confirm, one named address the user chose, no persistence, and it dies with the process. The loopback pair is never displaced, because the app's own client may not lose its route to a disarm. States what arming exposes - the proxy and the whole control API, captured flows included - and that anything finer is deliberately absent and its own epic. This is what lets five of the eight platforms stop apologising and print an address that works."
+  - path: "docs/decisions/dec-56-the-app-may-prove-capture-itself.html"
+    tier: T2
+    action: added
+    distills: "The PO review's F24 as a capability rather than a button. The app MAY fire one HTTPS request through the system proxy to prove setup, on an explicit click and never on its own - it proves the certificate and the proxy at once, because a request it makes can only be decrypted if both are in place. Five rules a build owes, the load-bearing one being that the button produces evidence and never a state, so the task's reading stays the traffic layer's and DEC-33's no-self-reported-tick rule survives. No confirm, with the reason: unlike the trust store and the system proxy, one outbound request changes nothing about this host. Marked proposed, not built."
+  - path: "docs/decisions/dec-57-a-device-that-cannot-paste.html"
+    tier: T2
+    action: added
+    distills: "The PO review's F28 as a capability. DEC-55 gave the five off-machine platforms something to point at; what it could not give them is a way to get it there, because the clipboard does not cross to a phone - so a host, a port and a certificate URL are typed by hand, and one wrong character fails exactly like an untrusted certificate. A value that must cross to a device this machine cannot reach may be rendered as a scannable code BESIDE the value, never instead of it. Generated locally from a vendored dependency and never from a hosted renderer, because that would hand the user's own network address to a third party and make an offline app need the internet to finish setup. Marked proposed, not built."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "Three rows routed - DEC-55 active, DEC-56 and DEC-57 badged proposed rather than active, because neither is built and an index that cannot tell those apart is an index that lies about what the code does. Each carries its decision, its rules, its rejected alternatives and the finding it came from."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "The Lexicon gains the two words the design run proposed and one scoping clause, which is the whole of what this epic owed the rulebook. arriving - a connection Trawler received and could not decrypt - exists because the traffic layer can observe a tunnel before any flow does, so the screen needed a word for traffic that is real, is here, and has produced nothing to read. platform - the one thing a run of setup is for - deliberately spans kinds the app treats alike, so its Never column is device, target, OS and environment. And flow gains the scoping W5 made true in code: it is the capture's word and the setup screen may not use it, because a user who has captured nothing has no referent for it."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's one-line scope, which described guided onboarding with two-truths per-step status, now describes what the screen is: setting up capture for this machine or another device, the platform as the only axis, reach as an opt-in one confirm buys and the process ends, a task's state from a probe or the traffic layer or the reach this app holds and never from a click, and only a decrypted flow revealing the list. Version bumped."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD RESTATED AGAINST THE TIP - the contract the epic actually shipped. The old section described a three-step guided setup (Trust the CA, Set the proxy, Make a request) which the screen has not been since W3. What replaces it: the platform axis as the screen's only axis; a table of eight platforms against what each may promise, because what the screen may say is decided by what it can observe and not by what would be convenient; reach as its own block (DEC-55, the loopback pair never touched, dimmed dependants rather than steps that cannot work, the CORS grant not widening); the two layers with the probes and the traffic reading kept strictly apart; four acts tabled with what each costs and what it says afterwards; and a table of how much is on screen at once. THE NO-NARROWING STATEMENT IS EXPLICIT AND NEAR THE TOP, because that is the failure mode a shortening restatement has: a what the rebuild kept table carries five guarantees with the mechanism for each, so nothing was dropped by being left out. The flow diagram is redrawn from the platform question down, and the provenance callout adds GET/POST/DELETE /reach and re-points Pinned by at the rewritten spine by journey name."
