@@ -11,12 +11,13 @@
       <h1>Use Cases — UI surfaces</h1>
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
-      UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD),
-      the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
+      UC-5 inspect), plus the native app's setup screen for capturing this machine or another device
+      (UC-ONBOARD), the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
       capture (UC-7).</p>
-      <div class="meta">v11 · 2026-09-09 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v12 · 2026-09-21 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
-      UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
+      UC-ONBOARD by <span class="badge id">E-UISETUP</span>, rebuilt on the platform axis with
+      reach beyond loopback by <span class="badge id">E-ONBOARD</span> ·
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
       UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
@@ -352,104 +353,198 @@
       <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
     </div>
 
-    <h2 id="uc-onboard">UC-ONBOARD — Onboard a fresh machine to the first captured flow</h2>
+    <h2 id="uc-onboard">UC-ONBOARD — Set up capture, for this machine or another device</h2>
     <div data-c="uc-onboard-contract">
-      <p>On a machine that can't yet decrypt HTTPS, the native app opens a three-step guided setup — Trust
-      the CA · Set the proxy · Make a request — instead of the flow list. Its rule
-      (<span class="badge id">E-UISETUP</span>): <strong>do the work for the user in the common case, tell
-      the truth in every case, and prove success only by real capture.</strong></p>
-      <ul>
-        <li><strong>Least manual work.</strong> On macOS/Windows each step offers one native action
-        (install the CA, set the system proxy — both elevation-gated); the per-OS manual steps sit behind a
-        "Set it up manually" disclosure that auto-opens if the action fails. Other OSes show the manual steps
-        inline. Instructions are always plain text, never markup.</li>
-        <li><strong>Two layers of status, never blended</strong> (never the stepper cursor — a step is never ✓
-        just because you clicked past it; <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>).
-        <ul>
-          <li><em>This machine</em> — steps 1 and 2 report the two read-only probes and nothing else: does
-          <em>this machine</em> trust the CA, does its system proxy point at Trawler. Their verdicts say "on
-          this machine" and mean it; traffic, however much of it, never turns them green.</li>
-          <li><em>Traffic</em> — step 3 reports what is reaching Trawler <em>now</em>, from timestamps: a
-          decrypted flow inside the last 30 s reads <em>capturing traffic</em>; a tunnel no flow answered
-          reads <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
-          certificate; plain HTTP only is its own verdict; traffic seen earlier but nothing recent reads
-          <em>idle — nothing arriving now</em>, and the open step dates the last flow. An old flow can only
-          ever produce <em>idle</em>.</li>
-        </ul>
-        When a probe can't conclude (an un-probeable OS) the wording says so and points at step 3, where the
-        traffic answer will show — it never shows a false "not set up". A phone that trusts the certificate and
-        points here reads as two true facts side by side: "not trusted on this machine" and "capturing traffic".</li>
-        <li><strong>A tunnel is observable before decryption.</strong> An HTTPS attempt from a client that
-        doesn't trust the CA fails its TLS handshake and produces <em>no flow</em> — so the core counts the
-        tunnel itself: <code>GET /stats</code> returns a monotonic <code>connections</code> tally and a
-        <code>connection</code> SSE event fires. The live event is stamped and feeds step 3's verdict; the
-        tally carries no time and can only distinguish <em>idle</em> from <em>waiting for your first
-        request</em>. The verdict and what to do about it are two elements, so a short verdict never costs the
-        instruction.</li>
-        <li><strong>Only a decrypted flow reveals the list.</strong> A probe-green step or a bare connection
-        never ends onboarding — the payoff (the last step → flow list) fires solely on the first <code>https://</code>
-        flow (a decrypted request the MITM rewrote to absolute form). The last step shows a concrete
-        prove-it: open any site, or run a copyable <code>curl -x http://&lt;addr&gt; https://example.com</code>
-        with the real proxy address. Capture, once proven, latches (the status dot re-invokes setup on demand;
-        "Back to flows" returns).</li>
-        <li><strong>The certificate is saved from the step that names it</strong>
-        (E-REDESIGN.W10). Every manual route's first step names <code>trawler-ca.pem</code>, so that step
-        produces the file: a <strong>↓</strong> ends the sentence, fetches <code>/ca.crt</code> and writes it
-        through the OS save dialog (native) or a download (browser), under exactly the name the following
-        steps run against, with the outcome stated beneath the sentence inside the same step. The save reports what actually happened rather than assuming it: a failure says so,
-        a <em>cancelled</em> dialog says nothing was saved (it resolves exactly like a write), and a save the
-        user <em>renamed</em> — the offered name is only the dialog's default — is confirmed under the name
-        that landed, with the mismatch against the steps below named outright.</li>
-        <li><strong>A probe reading is a dated snapshot, re-taken on demand</strong> (E-REDESIGN.W10).
-        Nothing pushes when the user changes the trust store or the system proxy outside Trawler, so a green
-        verdict outlives its truth until something re-reads the machine. One row above the steps reads
-        <em>checked at HH:MM:SS · check again</em>; the control re-runs both probes, and so does the window
-        regaining focus — the moment the user is most likely to have just changed a setting. While a re-read
-        runs the control is disabled and both probed steps show the in-flight verdict; the answer that comes
-        back replaces the stale one, green or not.</li>
-        <li><strong>A copied command says whether it copied</strong> (E-REDESIGN.W10). Both commands — the
-        prove-it and the per-OS proxy snippet — are the copy target themselves, confirming at the value; a
-        clipboard write the browser refuses says <em>copy failed</em> rather than doing nothing visible.</li>
-        <li><strong>Quitting with a proxy still set asks first, and can fix it</strong> (E-REDESIGN.W10).
-        Where a proxy is set on this machine — Trawler's or another's, since turning the OS proxy off does
-        not depend on whose address is set — the dialog offers to turn it off, and a failed attempt says so
-        and opens the manual steps instead of quitting onto a dead proxy. Where nothing is set locally but a
-        remote device may still route here, it is a notice with a durable "don't show this again". Esc, the
-        backdrop and ✕ all cancel the quit.</li>
-      </ul>
+      <p>With nothing decrypted yet, the native app opens <strong>Set up capture</strong> instead of the
+      flow list. The user names <em>which device's traffic they want to see</em> — and that answer is the
+      screen's only axis: every instruction, every task and every state below it belongs to that platform.
+      Its rule (<span class="badge id">E-UISETUP</span>, rebuilt by <span class="badge id">E-ONBOARD</span>):
+      <strong>do the work for the user in the common case, tell the truth in every case, and prove success
+      only by real capture.</strong></p>
+      <p><strong>No promise narrowed in the rebuild.</strong> The probes still answer for this machine and
+      nothing else; a decrypted flow is still the only thing that reveals the list; the certificate save
+      still reports what actually happened; the quit dialog is untouched.
+      <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>'s two layers and
+      <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>'s one-confirm-per-host-change
+      rule are both kept, and both are re-asserted by test. What changed is who the sentences are written
+      for.</p>
+    </div>
+
+    <div data-c="uc-onboard-platforms">
+      <p><strong>Eight platforms, three capabilities.</strong> What the screen may promise is decided by
+      what it can observe about that platform — never by what would be convenient to say.</p>
+      <table>
+        <tr><th>Platform</th><th>Probed?</th><th>Needs reach?</th><th>What it may promise</th></tr>
+        <tr><td>This machine</td><td>trust + proxy</td><td>no</td>
+          <td>a read state for both tasks, and a decrypted request names <em>this machine</em> by
+            name</td></tr>
+        <tr><td>iOS Simulator</td><td>proxy only</td><td>no</td>
+          <td>it routes through this machine's proxy, but keeps a trust store of its own — so the
+            certificate is installed with <code>simctl</code> and the trust half is never claimed from the
+            host's keychain</td></tr>
+        <tr><td>Android emulator</td><td>neither</td><td>no</td><td>instructions only; no state this app
+          can read</td></tr>
+        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>neither</td><td>yes</td>
+          <td>nothing about that machine. The tasks say what <em>will</em> settle them, in the words they
+            will be settled by</td></tr>
+        <tr><td>iPhone or iPad · Android device</td><td>neither</td><td>yes</td>
+          <td>as above — and the traffic layer cannot say which device a decrypted request came from, so
+            the end of setup promises a confirmation rather than reporting one</td></tr>
+      </table>
+    </div>
+
+    <div class="callout" data-c="uc-onboard-reach">
+      <p><strong>Reach beyond loopback is an authorization act, not a setting</strong>
+      (<a href="../decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a>). Trawler binds
+      loopback only until the user allows one named interface, through one explicit confirm the shell
+      raises; the loopback pair is never touched, arming <em>adds</em> a second proxy and control API, and
+      nothing is persisted — the exposure dies with the process that confirmed it. For the five platforms
+      that need it, this is task 1, and until it is done the tasks that depend on it are dimmed rather than
+      given steps that cannot work. The CORS grant does not widen with the bind; the opt-in is this
+      contract's whole authorization boundary.</p>
+    </div>
+
+    <div data-c="uc-onboard-layers">
+      <p><strong>Two layers of status, never blended, and never a stepper cursor</strong> — a task is never
+      ✓ because the user clicked past it (<a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>).
+      A task's number is a reading order; its state is a reading something took.</p>
+      <table>
+        <tr><th>Layer</th><th>Answers for</th><th>Readings</th></tr>
+        <tr><td><strong>The probes</strong> — a dated snapshot, re-taken on demand</td>
+          <td>this machine only: does it trust the CA, does its system proxy point at Trawler</td>
+          <td>trusted / not trusted / can't be checked from here. Traffic, however much of it, never turns
+            them green</td></tr>
+        <tr><td><strong>The traffic layer</strong> — judged against a clock, from timestamps</td>
+          <td>the wire, now</td>
+          <td>a decrypted flow inside the window reads <em>capturing</em>; a tunnel no flow answered reads
+            <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
+            certificate; plain HTTP only is its own reading; traffic seen earlier but nothing recent reads
+            <em>idle</em>. An old flow can only ever produce idle</td></tr>
+      </table>
+      <p>Where a probe can't conclude, the wording says so and points at the traffic task — never a false
+      "not set up". A phone that trusts the certificate and points here reads as two true facts side by
+      side: not trusted on this machine, and capturing traffic.</p>
+    </div>
+
+    <div data-c="uc-onboard-acts">
+      <p><strong>One act on this machine, one password prompt.</strong> Where the host can do the work
+      (macOS, Windows), installing the certificate and setting the system proxy are a single elevated
+      action — one prompt, not two — and the two single commands survive as the manual route beneath it.
+      There is no install-only button and no command behind one. A refused authorization is the user's own
+      outcome, worded as one, with the tool's text under a disclosure; a real failure keeps the OS's words
+      and opens the manual route.</p>
+      <table>
+        <tr><th>Act</th><th>What it costs</th><th>What it says afterwards</th></tr>
+        <tr><td>Set up this machine</td><td>one confirm (the OS elevation prompt)</td>
+          <td>the probes say whether it is done — the click never does</td></tr>
+        <tr><td>Replace a proxy this machine already has</td>
+          <td>a second confirm naming the proxy it is about to replace</td>
+          <td>the ask states the old proxy does not come back. A refusal writes nothing and says which
+            halves it did not do</td></tr>
+        <tr><td>Allow devices on this network to connect</td><td>a confirm naming the address, stating that
+          captured traffic becomes readable and that the exposure ends when Trawler quits</td>
+          <td>the task reads <em>listening on &lt;host&gt; until Trawler quits</em>, and a chip in the
+            header holds it for as long as it holds</td></tr>
+        <tr><td>Stop routing through Trawler</td><td>none — reversing is not a new exposure</td>
+          <td>it names the half it performs: the proxy goes off, and the certificate's removal is in the
+            steps below. Nothing claims to untrust a store</td></tr>
+      </table>
+    </div>
+
+    <div data-c="uc-onboard-reading">
+      <p><strong>How much is on screen at once.</strong> A first-time user reads a title, one sentence of
+      purpose, a question in their own words, and numbered tasks with one obvious button.</p>
+      <table>
+        <tr><th>Rule</th><th>Why</th></tr>
+        <tr><td>At most one guide open — the first whose task is not done, and none once a request has
+          decrypted</td><td>four disclosures three levels deep is what the rebuild replaced</td></tr>
+        <tr><td>A command sits on a surface of its own, verbatim and never truncated; a value a user types
+          into a field stays inside the sentence naming that field</td><td>they are read in two different
+          places, and a cut command is a broken command</td></tr>
+        <tr><td>A caveat sits under the steps, not numbered among them; a second route and the way back
+          each sit behind a summary of their own</td><td>numbering a fact asks the reader to perform
+          it</td></tr>
+        <tr><td>The column answers to the window — a share of it under a ceiling</td><td>it is a screen,
+          not a dialog</td></tr>
+      </table>
     </div>
 
     <div class="diagram" data-c="uc-onboard-flow">
       <pre class="mermaid">
 flowchart TD
-  E["Enter setup (no decrypted flow yet)"] --> PR["Probe this machine: CA trusted? proxy set?"]
-  PR --> ST["Steps 1–2: this machine's verdicts, stamped 'checked at'"]
+  Q{"Which device's traffic?"}
+  Q -- "this machine · Simulator · emulator" --> H["tasks for this host"]
+  Q -- "another computer · a phone" --> R{"reach armed?"}
+  R -- "no" --> D["task 1 asks for it once;
+the rest are dimmed, not given steps that fail"]
+  R -- "yes" --> A["a host, a port and a certificate URL to type"]
+  H --> PR["probe this machine: CA trusted? proxy set?"]
+  PR --> ST["the probed tasks' states, stamped 'checked at'"]
   ST -. "check again · window focus" .-> PR
-  E --> W["Watch traffic: flow started_at + live connection events"]
-  W --> C{"What arrived in the last 30 s?"}
-  C -- "a decrypted https flow" --> OK["Step 3: capturing traffic → reveal the flow list"]
-  C -- "a tunnel no flow answered" --> TR["Step 3: arriving but not decrypting — the client lacks the CA"]
-  C -- "plain http only" --> PL["Step 3: arriving — plain HTTP only"]
-  C -- "nothing recent" --> ID["Step 3: idle, or waiting — last flow dated"]
+  H --> W["watch traffic: flow timestamps + live connection events"]
+  A --> W
+  D --> W
+  W --> C{"what arrived recently?"}
+  C -- "a decrypted https flow" --> OK["capturing → reveal the list,
+which says so and offers the next device"]
+  C -- "a tunnel no flow answered" --> TR["arriving but not decrypting —
+the client lacks the certificate"]
+  C -- "plain http only" --> PL["arriving — plain HTTP only"]
+  C -- "nothing recent" --> ID["idle, or waiting for the first request"]
       </pre>
-      <div class="caption">Two layers. The probes answer for this machine and are re-read on demand; the traffic verdict answers for the wire, judged against a clock. Neither borrows from the other. The list reveal is decrypted-flow-only.</div>
+      <div class="caption">The platform answer governs everything below it. The probes answer for this
+        machine and are re-read on demand; the traffic reading answers for the wire, against a clock.
+        Neither borrows from the other, and only a decrypted flow ends setup.</div>
+    </div>
+
+    <div data-c="uc-onboard-kept">
+      <p><strong>What the rebuild kept, unchanged.</strong></p>
+      <table>
+        <tr><th>Guarantee</th><th>Still true because</th></tr>
+        <tr><td>Only a decrypted flow reveals the list</td><td>a probe-green task and a bare connection
+          both refuse to end setup. The payoff fires solely on the first <code>https://</code> flow the
+          MITM rewrote to absolute form, and capture latches once proven</td></tr>
+        <tr><td>The certificate is saved from the step that names it</td><td>every manual route's first
+          step names <code>trawler-ca.pem</code> and produces the file, reporting what actually happened: a
+          failure says so, a cancelled dialog says nothing was saved, and a save the user renamed is
+          confirmed under the name that landed with the mismatch named outright</td></tr>
+        <tr><td>A probe reading is a dated snapshot, re-taken on demand</td><td>nothing pushes when the user
+          changes a setting outside Trawler, so one row above the tasks dates the reading and re-runs both
+          probes; so does the window regaining focus. While a re-read runs the control is disabled and both
+          probed tasks show the in-flight state</td></tr>
+        <tr><td>A copied command says whether it copied</td><td>the copy affordance confirms at the value,
+          and a clipboard write the browser refuses says so rather than doing nothing visible</td></tr>
+        <tr><td>Quitting with a proxy still set asks first, and can fix it</td><td>unchanged by this epic:
+          the dialog offers to turn it off, a failed attempt says so and opens the manual steps, a remote
+          device that may still route here is a notice with a durable dismissal, and Esc, the backdrop and
+          ✕ all cancel the quit</td></tr>
+      </table>
     </div>
 
     <div class="callout" data-c="uc-onboard-provenance">
-      <p>New API surface (consumed by onboarding, usable by any client): <code>GET /stats</code> →
+      <p>API surface consumed by setup, usable by any client: <code>GET /stats</code> →
       <code>{ connections }</code> and the <code>connection</code> SSE event (<code>{ authority }</code>) on
-      the existing <code>/stream</code>. The connection tally is a monotonic counter in the store, bumped
-      when the proxy opens a <code>CONNECT</code> tunnel — kept outside the flow ring so eviction never
-      touches it. The two local probes (CA-in-trust-store, system-proxy-address) live in the Tauri app, not
-      the core; they read the real machine so they are not hermetically testable (the status <em>derivation</em>
-      they feed is fully unit-tested). This deliberately supersedes two earlier "prove by capture only"
-      stances (no trust-store inspection / no OS self-test): the probe covers the 90% for instant honest
-      feedback; capture is the sole thing that reveals the list, and — as of E-REDESIGN.W10 — the sole
-      input to step 3, where it is judged by recency rather than by having ever happened.
-      Pinned by <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed
-      handshake bumps <code>/stats</code> + emits <code>connection</code>, records no flow), the status
-      derivation + probe-parser unit tests, and the UC-ONBOARD e2e spine. Why these reversals were approved:
+      the existing <code>/stream</code>; and <code>GET/POST/DELETE /reach</code>, which reports the
+      interfaces a second device could use and arms or disarms one. The connection tally is a monotonic
+      counter in the store, bumped when the proxy opens a <code>CONNECT</code> tunnel — kept outside the
+      flow ring so eviction never touches it. The two local probes (CA-in-trust-store,
+      system-proxy-address) live in the Tauri app, not the core; they read the real machine so they are not
+      hermetically testable (the state <em>derivation</em> they feed is fully unit-tested), and the same
+      boundary is why the shell, never the core, raises every confirm.</p>
+      <p>This deliberately supersedes two earlier "prove by capture only" stances (no trust-store
+      inspection / no OS self-test): the probe covers the common case for instant honest feedback; capture
+      is the sole thing that reveals the list, and the sole input to the traffic reading, where it is judged
+      by recency rather than by having ever happened. Why these reversals were approved:
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>.</p>
+      <p><strong>Pinned by</strong>
+      <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed handshake
+      bumps <code>/stats</code> + emits <code>connection</code>, records no flow); the reach seam's
+      integration tests over ephemeral ports; the state-derivation and probe-parser unit tests; and the
+      UC-ONBOARD e2e spine's two journeys — <em>this machine</em> through to a decrypted flow and the list's
+      first paint, and <em>an off-machine platform</em> before it, which asserts that an unmet precondition
+      is stated once and dims what depends on it. Arming reach is driven at integration rather than e2e: it
+      opens a native dialog no WebDriver can reach, and stubbing that confirm would prove the act by
+      removing the authorization DEC-55 requires.</p>
     </div>
 
     <h2 id="uc-6">UC-6 — Take the capture out as a HAR file, and bring one back</h2>

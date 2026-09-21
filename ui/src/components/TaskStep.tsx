@@ -39,7 +39,7 @@ export function TaskStep({
         <p className="font-ui text-body text-ink">{title}</p>
         {why !== undefined && <p className="pt-chrome-tight font-ui text-chrome text-ink-mute">{why}</p>}
         {status !== undefined && (
-          <div className="pt-2">
+          <div data-testid={`task-${n}-state`} className="pt-2">
             <StatusLine status={status} />
           </div>
         )}

@@ -39,6 +39,23 @@ describe("TaskStep", () => {
     expect(container.textContent).toBe("3Open any website on this Mac");
   });
 
+  // The e2e reads a task's state through this hook, so its presence is the
+  // contract and its absence where nothing was observed is the same contract.
+  it("names the state's own element after the task it belongs to, and omits it with the state", () => {
+    const { rerender } = render(
+      <TaskStep
+        n={2}
+        title="Send this Mac's traffic to Trawler"
+        status={{ glyph: "○", tone: "muted", short: "not done — the system proxy is off" }}
+      />,
+    );
+
+    expect(screen.getByTestId("task-2-state")).toHaveTextContent("not done — the system proxy is off");
+
+    rerender(<TaskStep n={2} title="Send this Mac's traffic to Trawler" />);
+    expect(screen.queryByTestId("task-2-state")).toBeNull();
+  });
+
   it("dims a task whose precondition is not met, and keeps its number", () => {
     render(<TaskStep n={2} title="On your iPhone, install the certificate" why="after step 1" dim />);
 
