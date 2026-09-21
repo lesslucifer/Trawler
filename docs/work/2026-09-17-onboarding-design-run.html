@@ -23,7 +23,7 @@
     .a-mock p,.a-mock li{color:inherit}
     /* mockup assembly only — zoning and state visibility. every magnitude the
        design owns is a token utility on the element itself. */
-    .a-mock{display:block}
+    .a-mock{display:flex;flex-direction:column}
     .a-zone{display:block}
     /* lifecycle states */
     .a-st-proven,.a-st-checking,.a-st-tunnel,.a-st-installing{display:none}
@@ -82,6 +82,13 @@
         about what is true changes, and the truth model is untouched. It reverses round 4's own tiles
         call, which is the second time this run has reversed itself on the reviewer's word and the
         first time on evidence from the built screen at its real size.</p>
+      <p><strong>Read again, at the rhythm.</strong> Round 5's column shipped and the owner read
+        it with the window given to it: <em>now it's full window, please add some gap</em>. What the
+        width exposed was a rhythm rather than a width. A task separates its title, its reason and its
+        state by 8px, and 16px was all that separated one task from the next — at a dialog's width the
+        eye had the column edge to group by, and at the window's it had nothing, so three tasks read as
+        one list of nine lines. Round 6 gives the rhythm to the column and takes it off the zones. It
+        changes no sentence, no state, no control and no route.</p>
       <div class="meta">Design run · opened 2026-09-17 · resumed 2026-09-19 · read as a user 2026-09-20 ·
         read at the window 2026-09-20 ·
         Trawler · T3 (docs/work/) ·
@@ -92,7 +99,8 @@
         round 1 rebuilt the screen around a single platform choice · round 2 gave that choice an
         address to print · <strong>round 4 (E-ONBOARD.W4)</strong> made the result readable —
         branch <code>wu/onboarding-redesign/po-p0-and-reading-round</code> ·
-        <strong>round 5 (E-ONBOARD.W5)</strong> gave it the window and cut what it says at once —
+        <strong>round 5 (E-ONBOARD.W5)</strong> gave it the window and cut what it says at once ·
+        <strong>round 6 (E-ONBOARD.W5)</strong> gave the column the rhythm that width exposed —
         branch <code>wu/onboarding-redesign/user-reading-build</code></div>
     </div>
   </header>
@@ -244,7 +252,7 @@
       or from the traffic layer, never from what the user clicked.</p>
     <div data-item="mockup">
       <div class="app">
-        <div class="a-mock mx-auto max-w-reading bg-canvas py-6 font-ui text-body text-ink-body" id="mock">
+        <div class="a-mock mx-auto max-w-reading gap-6 bg-canvas py-8 font-ui text-body text-ink-body" id="mock">
 
           <div class="a-zone px-4" data-zone="lead">
             <p class="font-serif text-note text-ink">Set up capture</p>
@@ -253,14 +261,14 @@
               and send its traffic to Trawler.</p>
           </div>
 
-          <div class="a-zone flex flex-wrap items-center gap-3 px-4 pt-4" data-zone="platform">
+          <div class="a-zone flex flex-wrap items-center gap-3 px-4" data-zone="platform">
             <p class="font-ui text-chrome uppercase tracking-label text-ink-mute">which device's traffic do you want to see</p>
             <div class="a-pf-machine" id="m-picker-machine"></div>
             <div class="a-pf-sim" id="m-picker-sim"></div>
             <div class="a-pf-off" id="m-picker-off"></div>
           </div>
 
-          <div class="a-zone pt-2" data-zone="steps">
+          <div class="a-zone" data-zone="steps">
             <div class="a-pf-machine" id="m-steps-machine"></div>
             <div class="a-pf-sim" id="m-steps-sim"></div>
             <div class="a-pf-off">
@@ -269,15 +277,15 @@
             </div>
           </div>
 
-          <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4 pt-3" data-zone="probe">
+          <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4" data-zone="probe">
             <div class="a-st-rest" id="m-probe-rest"></div>
             <div class="a-st-checking" id="m-probe-checking"></div>
             <div id="m-probe-again"></div>
           </div>
 
-          <div class="a-zone a-st-proven px-4 pt-4" data-zone="done" id="m-done"></div>
+          <div class="a-zone a-st-proven px-4" data-zone="done" id="m-done"></div>
 
-          <div class="a-zone a-st-proven px-4 pt-4" data-zone="back" id="m-back"></div>
+          <div class="a-zone a-st-proven px-4" data-zone="back" id="m-back"></div>
 
         </div>
       </div>
@@ -295,6 +303,13 @@
         window instead of sitting at a dialog's width inside it, and stops where a line of prose stops
         being comfortable to read. The ceiling is also where the longest trust command still renders on
         one line inside a task's indented body, which is the widest thing the screen ever has to show.</p>
+      <p class="kd"><strong>The column owns the rhythm, and owns all of it.</strong> A task
+        separates its own parts — title, reason, state, body — by 8px. The column separates its zones by
+        24 and the task list adds 16 to the 16 a task already carries, so one task stands 32 from the
+        next: four times the distance inside it, which is what makes three tasks read as three. The rule
+        is the column's alone. A zone that brings a top padding of its own is a second spacing rule
+        nothing reconciles with the first, and at a dialog's width that was invisible because the column
+        edge did the grouping instead.</p>
       <p class="kd"><strong>A number is a reading aid; a state is a reading.</strong> Every task carries
         its number and a state, and the state has exactly two possible sources: a <em>probe</em> of this
         machine, or the <em>traffic</em> layer. A task about a device nobody can probe says so in the
@@ -469,6 +484,7 @@
 
         mount("m-steps-machine",
           <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
             <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted">
               {MAC_TRUST}
             </TaskStep>
@@ -527,11 +543,13 @@
               <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
               <div className="pt-2">{command("curl -x http://127.0.0.1:7420 https://example.com", "the try-it command")}</div>
             </TaskStep>
+            </div>
           </Section>);
 
         /* ---- the Simulator: its own keychain, this Mac's proxy ------------- */
         mount("m-steps-sim",
           <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
             <TaskStep n={1} title="Trust Trawler's certificate in the Simulator"
                       why="the Simulator keeps its own certificate store — this Mac's does not cover it"
                       status={{ glyph: "◐", tone: "muted", short: "we'll confirm this on the Simulator's first request" }}>
@@ -564,11 +582,13 @@
             <TaskStep n={3} title="Open any website in the Simulator"
                       why="the first decrypted request is what proves setup works"
                       status={{ glyph: "○", tone: "muted", short: "waiting for the first request" }} />
+            </div>
           </Section>);
 
         /* ---- a phone: one task that changes this machine, three that do not - */
         const phoneTasks = (armed) => (
           <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
             <TaskStep n={1} title="Allow your iPhone to connect"
                       why={armed ? undefined : "Trawler answers on this machine only until you do"}
                       status={armed
@@ -637,6 +657,7 @@
             <TaskStep n={4} title="Open any website on your iPhone" dim={!armed}
                       why={armed ? "the first decrypted request is what proves setup works" : "after step 1"}
                       status={armed ? { glyph: "○", tone: "muted", short: "waiting for the first request" } : undefined} />
+            </div>
           </Section>
         );
         mount("m-steps-off-unreached", phoneTasks(false));
@@ -1194,6 +1215,28 @@
             merge that lands it. Round 5 is that case by construction: the design and its build are one Working
             Unit, which the flow permits where a build finds a surface nobody read — here, read at a size nobody
             had</td></tr>
+        <tr><td><strong>Round 6 — read at the rhythm.</strong> "Now it's full window, please add
+          some gap"</td>
+          <td><strong>mockup</strong> — the column becomes a flex column carrying <code>gap-6</code> and
+            <code>py-8</code>; every zone drops the <code>pt-</code> it brought; the mounted task list gains
+            <code>gap-4</code>, which lands on top of the 16 a <code>TaskStep</code> already carries.
+            <strong>Not moved:</strong> the column's width rule, the zones and their order, every sentence,
+            every state and its source, and <code>TaskStep</code>'s own contract — the task keeps its 8px
+            and the screen buys the distance around it</td>
+          <td><a href="../design-rules/design-rules-index.html"><code>spacing-scale</code></a> — separation is
+            a relationship, and 24, 32 and 16 are already members of the declared ladder, so round 6 proposes
+            no token at all. The reading is taste, and it is the first one this run took that only a
+            <em>closed</em> earlier round could produce: the wall was not visible until the column round
+            removed the edge that had been doing the grouping</td></tr>
+        <tr><td><strong>Round 6, close</strong> — one instruction, answered in the column and nowhere
+          else</td>
+          <td><strong>nothing further</strong>. The run closes a fourth time, by the same gate: six items
+            filled, <code>verify-doc</code> green on twelve hard rules, then <code>data-status="archived"</code>.
+            The blob re-pins W5's <code>design/v1</code> citation again</td>
+          <td><a href="../decisions/dec-26-the-mockup-mounts.html"><code>DEC-26</code></a> — the
+            mockup mounts and never draws, so a rhythm the build changed has to be a change to the mount's own
+            assembly rather than a number written beside it. That is why the gap lands on the mounted list and
+            not in this page's stylesheet, where the magnitude would have been unreadable to the build</td></tr>
       </tbody>
     </table>
 
