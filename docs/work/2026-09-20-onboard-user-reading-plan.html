@@ -10,12 +10,13 @@
     <div class="inner">
       <h1>E-ONBOARD.W5 — the user-reading build</h1>
       <p>The screen a first-time user can finish: a title, one sentence of purpose, a question in their
-        words, eight tiles they can see, numbered tasks whose state something observed, and one obvious
-        button.</p>
-      <div class="meta">v1 · 2026-09-20 · Trawler · T3 (docs/work/) ·
+        words, one control that answers it, numbered tasks whose state something observed, and one
+        obvious button — at the width of the window it opens in.</p>
+      <div class="meta">v3 · 2026-09-20, amended 2026-09-21 · Trawler · T3 (docs/work/) · · Trawler · T3 (docs/work/) ·
         branch <code>wu/onboarding-redesign/user-reading-build</code> ·
         epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
-        builds <a href="2026-09-17-onboarding-design-run.html">the design of record</a> (round 4, archived) ·
+        builds <a href="2026-09-17-onboarding-design-run.html">the design of record</a>
+        (rounds 4–6, archived) ·
         answers <a href="2026-09-20-onboard-po-review.html">the PO review</a>'s P1 row ·
         follows <a href="2026-09-20-onboard-p0-and-reading-round-plan.html">W4</a></div>
     </div>
@@ -48,7 +49,9 @@
       <strong>Added at round 5 (v2):</strong> and then the screen it builds is read running, at the
       size the app opens, and the three things that reading returns are built from the same run
       amended — the column answers to the window, the question is one control again, and a task says
-      less at once.</p>
+      less at once. <strong>Added at round 6 (v3):</strong> and the column that reading widened is
+      read again in a full window, where the rhythm it never needed at a dialog's width turns out to
+      be the thing that makes three tasks read as three.</p>
 
     <p class="kd"><strong>v2 — what the window added.</strong> W5's first tip was gated and
       handed back for review. The owner ran it at 1440×800 and returned three instructions, none of
@@ -85,6 +88,13 @@
             that counts it, open on the first task whose work is not done and shut on the rest</td>
           <td><code>components/CommandBlock.tsx</code> · <code>setup.ts</code> ·
             <code>Onboarding.tsx</code></td></tr>
+        <tr><td><strong>Round 6.</strong> "Now it's full window, please add some gap"</td>
+          <td>the column takes the rhythm and the zones give it up: it spaces its zones by 24 and its
+            task list adds 16 to the 16 a task already carries, so one task stands 32 from the next
+            against the 8 inside it. No zone keeps a top padding of its own, because two spacing rules
+            in one column is what read as a wall. No token is proposed — every magnitude is already on
+            the declared ladder</td>
+          <td><code>Onboarding.tsx</code> · the run's mockup</td></tr>
       </tbody>
     </table>
 
@@ -316,6 +326,10 @@ flowchart TD
           never a numbered step, a second route is behind <em>other ways</em>, and the way back is
           behind its own summary</td><td>unit — the open rule per platform, and the three kinds of
           aside asserted apart from the sequence</td></tr>
+        <tr><td>15</td><td>The separation between two tasks is larger than the separation inside one,
+          and the column is the only thing that sets it — no zone carries a top padding of its
+          own</td><td>unit — the column's gap, the task list's gap, and the absence of a
+          <code>pt-</code> on every zone the column holds</td></tr>
       </tbody>
     </table>
 

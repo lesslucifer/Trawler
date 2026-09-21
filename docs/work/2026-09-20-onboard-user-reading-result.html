@@ -12,13 +12,14 @@
       <p>Twelve findings, two new registry entries and three things the OS boundary owed — and a setup
         screen whose every sentence is written for the person reading it for the first time. Then the
         owner ran that screen at the size the app opens, and a second half: the window, one control,
-        and a task that says less at once.</p>
-      <div class="meta">v2 · 2026-09-20 · Trawler · T3 (docs/work/) ·
+        and a task that says less at once. Then a third reading, of the window the second one gave
+        it.</p>
+      <div class="meta">v3 · 2026-09-20, amended 2026-09-21 · Trawler · T3 (docs/work/) ·
         branch <code>wu/onboarding-redesign/user-reading-build</code> ·
         plan <a href="2026-09-20-onboard-user-reading-plan.html">E-ONBOARD.W5</a> ·
         epic <a href="2026-09-07-onboarding-redesign-plan.html">E-ONBOARD</a> ·
-        built from <a href="2026-09-17-onboarding-design-run.html">the design of record</a> (rounds 4
-        and 5) ·
+        built from <a href="2026-09-17-onboarding-design-run.html">the design of record</a>
+        (rounds 4, 5 and 6) ·
         answers <a href="2026-09-20-onboard-po-review.html">the PO review</a>'s P1 row, and two of
         its P2s</div>
     </div>
@@ -34,7 +35,9 @@
       was gated, handed back, and <strong>run by the owner at 1440×800</strong> — which returned three
       instructions, none about what the screen claims and all about how much of it there is. They are
       the design of record's round 5, built here rather than deferred, and they are the second half
-      below.</p>
+      below. That half was gated too, and read again in a full window, which returned one more
+      instruction — <em>now it's full window, please add some gap</em>. It is the run's round 6 and
+      the third half: two commits, no token, no sentence changed.</p>
 
     <p class="kd"><strong>Two things are called round 5 in this document.</strong> The
       <em>design of record's round 5</em> is the owner's reading at the window, written up on the run.
@@ -130,6 +133,15 @@
             kinds of aside kept apart, and the command/value split asserted in both directions over all
             eight platforms · <code>Onboarding.test.tsx</code> — the open rule per platform and once a
             request has decrypted</td></tr>
+        <tr><td><span class="badge id">the rhythm</span></td>
+          <td>The column keeps the rhythm and its zones give it up: 8px inside a task, 24 between the
+            column's zones, 32 between one task and the next. Four times the distance inside a task is
+            what makes three tasks read as three, which they stopped doing the moment the column took
+            the window and lost the edge that had been grouping them. <code>TaskStep</code> is
+            untouched — the distance around a task is bought by the screen that arranges tasks</td>
+          <td><code>Onboarding.test.tsx</code> — the column's gap, the task list's gap, and the absence
+            of a <code>pt-</code> on every zone the column holds, which is the clause that would
+            regress</td></tr>
       </tbody>
     </table>
 
@@ -176,6 +188,17 @@
             deviation 7 at its source: the mockup's own <code>pl-9</code>, which rendered unstyled, is
             gone with the drawing that carried it, and the aside now repeats the marker column exactly
             as the built one does</td></tr>
+        <tr><td>12</td><td><strong>The design of record was amended twice inside one build
+          WU.</strong> Round 5 re-opened it at the window and round 6 re-opened it again at the
+          rhythm, both on this branch, both archived again before the tip moved</td>
+          <td>The flow permits a build to amend its own design where it finds a surface nobody read,
+            and re-pins the citation on the same tip (DEC-25). Round 6 is the narrower case: the
+            surface <em>had</em> been read — by round 5, three commits earlier — and reading it again
+            at the size round 5 gave it is what produced the finding. That is a property of the
+            change, not an oversight in the reading: a rhythm that a 384px column hides cannot be
+            found before the column is 864. The cost is that this WU carries three design blobs in
+            its history and one in its note; the alternative was a W6 row describing a gap the owner
+            had already asked for</td></tr>
         <tr><td>1</td><td><strong>Six commits, not the plan's seven.</strong> The words and the screen
           landed as one</td>
           <td>They are one change. <code>setup.ts</code> and <code>verdicts.ts</code> hold the sentences
@@ -269,6 +292,15 @@
           before its own review</td></tr>
         <tr><td><code>8198e3e</code></td><td>the window round's review answer — the one-guide rule
           over every platform, and the comment its second arm earned</td></tr>
+        <tr><td><code>b36cb69</code></td><td>this result — the window round's two review rounds, and
+          the fact they settled</td></tr>
+        <tr><td><code>c31952f</code></td><td>this result — two suite counts that were wrong, counted
+          this time</td></tr>
+        <tr><td colspan="2"><strong>The owner runs it in a full window and returns one
+          instruction.</strong> The design of record re-opens for round 6</td></tr>
+        <tr><td><code>c869a83</code></td><td>the run's round 6 — the column owns the rhythm</td></tr>
+        <tr><td><code>b508b3b</code></td><td>the screen — one rhythm, and the column is the one that
+          keeps it</td></tr>
       </tbody>
     </table>
 
@@ -331,6 +363,16 @@
             answers never the open one, and none open once a request has decrypted</td>
           <td>1133 Vitest tests green in 55 files (was 1065 in 55) · <code>eslint</code>,
             <code>tsc</code> and the closed-vocabulary rule clean · 0 live
+            <code>design-allow</code> suppressions</td></tr>
+        <tr><td><strong>unit · the rhythm round</strong></td>
+          <td><code>Onboarding.test.tsx</code> +1 — the one assertion the change can regress into:
+            the column carries a gap, the task list carries a gap, and no zone the column holds
+            carries a <code>pt-</code>. It asserts the rule and not the pixels, because jsdom
+            computes no layout and a test that read one back would be reading the class it was given.
+            Nothing else in the suite moved: the rhythm changes no sentence, no state and no
+            control, which is why 1133 of these 1134 are the same tests passing unchanged</td>
+          <td>1134 Vitest tests green in 55 files · 36 shell · 754 core, untouched ·
+            <code>eslint</code>, <code>tsc</code> and the closed-vocabulary rule clean · 0 live
             <code>design-allow</code> suppressions</td></tr>
         <tr><td><strong>e2e</strong></td>
           <td><span class="badge approval">waived here</span> — the epic owes it and
