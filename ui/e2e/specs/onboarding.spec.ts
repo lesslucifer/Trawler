@@ -24,7 +24,7 @@ const picker = () => $(`[aria-label="${QUESTION}"][aria-haspopup="listbox"]`);
 // fails to match.
 async function choosePlatform(label: string) {
   await picker().click();
-  await $(`li[role="option"][aria-label="${label}"]`).click();
+  await $(`[role="option"][aria-label="${label}"]`).click();
   await browser.waitUntil(async () => !(await $('[role="listbox"]').isExisting()), {
     timeout: 5_000,
     timeoutMsg: `the picker stayed open after choosing ${label}`,

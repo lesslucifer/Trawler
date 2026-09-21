@@ -5,8 +5,9 @@ allowBuilds:
 
 # @wdio/tauri-service 1.2.0 imports installMockSyncOverride from
 # @wdio/native-utils, which only exists from 2.5.0 — its own range resolves to
-# 2.4.0 and the service then fails to initialise before any spec runs. pnpm 10+
-# reads overrides here; the `pnpm` field in package.json is ignored, which is
-# how this pin silently stopped applying.
+# 2.4.0 and the service then fails to initialise before any spec runs.
+# Overrides are read from this file since pnpm 10.6; pnpm 11 stopped reading the
+# `pnpm` field in package.json, where this pin used to live, which is how it
+# silently stopped applying.
 overrides:
   "@wdio/native-utils": "2.5.0"
