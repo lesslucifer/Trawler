@@ -986,6 +986,46 @@ test("the reading column answers to the window, not to a dialog", () => {
   expect(column.className).not.toContain("max-w-dialog-max");
 });
 
+describe("an action that changed nothing says so", () => {
+  // The decline of the replace-a-foreign-proxy confirm resolves null rather than
+  // rejecting, so the action lands in "nothing" and not "failed". Without a note
+  // for that state the button re-enables with the same label and the screen is
+  // byte-identical to one that was never clicked - the exact outcome ARM_NOTE's
+  // own comment rules out for the reach confirm.
+  const DECLINED_BOTH =
+    "nothing changed — the other proxy is still the one in use, and the certificate was not installed.";
+  const DECLINED_PROXY = "nothing changed — the other proxy is still the one in use.";
+
+  it("the combined action names both halves it did not do", async () => {
+    draw({ onSetUpThisMachine: vi.fn(async () => null) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByText(DECLINED_BOTH)).toBeInTheDocument());
+  });
+
+  it("the Simulator's proxy action names the one half it has", async () => {
+    draw({ onSetProxy: vi.fn(async () => null) });
+    pick("iOS Simulator");
+
+    fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+
+    await waitFor(() => expect(screen.getByText(DECLINED_PROXY)).toBeInTheDocument());
+  });
+
+  it("neither reads as a failure — a decline is not the OS refusing", async () => {
+    draw({ onSetUpThisMachine: vi.fn(async () => null) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "nothing"),
+    );
+    expect(screen.queryByText(/setting up failed/)).toBeNull();
+    expect(screen.queryByRole("group", { name: "details" })).toBeNull();
+  });
+});
+
 test("a task is set apart from its neighbours by more than its own parts are", () => {
   const { container } = draw();
   const column = container.firstElementChild!.firstElementChild!;

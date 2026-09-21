@@ -87,13 +87,23 @@ interface ActionNote {
 // below it (F18). The tool's own text is still payload, and stays reachable.
 const PROMPT_CANCELLED = "The password prompt was cancelled. Try again, or follow the manual steps.";
 
+// Declining the replace-a-foreign-proxy confirm resolves nothing rather than
+// rejecting, so it is not a failure and may not be worded as one — but it is
+// still an act, and an act that leaves the screen identical to one nobody
+// performed is the outcome ARM_NOTE exists to refuse. Each names the halves it
+// did not do, because the combined action has two and the proxy one has one.
 const SETUP_NOTE: ActionNotes = {
   running: { tone: "pending", text: "setting up — approve the prompt…" },
+  nothing: {
+    tone: "mute",
+    text: "nothing changed — the other proxy is still the one in use, and the certificate was not installed.",
+  },
   failed: { tone: "warn", text: "setting up failed — the steps below do it by hand." },
 };
 
 const SETPROXY_NOTE: ActionNotes = {
   running: { tone: "pending", text: "setting the proxy — approve the prompt…" },
+  nothing: { tone: "mute", text: "nothing changed — the other proxy is still the one in use." },
   failed: { tone: "warn", text: "setting the proxy failed — the steps below do it by hand." },
 };
 
