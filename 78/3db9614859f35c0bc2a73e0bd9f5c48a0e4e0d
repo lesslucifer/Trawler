@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU E-ONBOARD.W5 user-reading-build -> epic/onboarding-redesign. The whole unit, all three halves: the twelve P1 findings, the window round, and the rhythm round. The earlier bindings to aeb39e3 and c31952f are superseded rather than carried, because this note judges the range whole. The fleet ran on 14c91f6c55; the one commit between is this WU's own run and result docs, so the code bytes this note binds are byte-identical and the hash below is the same one round 10 measured."
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+branch: wu/onboarding-redesign/user-reading-build
+base: bcddf45e56987a3e633e67b93c13903a7ab949f5
+head: 783db9614859f35c0bc2a73e0bd9f5c48a0e4e0d
+diff_sha256: 2a1028a72f3e25a1c1a18a0102b003828b852aaf575bbfeeba6f6f706e522b8c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 0
+  stage_seconds:
+    finders: 1404
+    verifiers: 521
+    total: 1925
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+nits:
+  - finding: "useNow is instantiated by two leaves at once, so two one-second intervals run where one clock would do"
+    waived: "Carried forward from the first half's round 1, because this note binds the code that nit is about and a recorded decision may not be silently dropped by a wider re-binding. The duplication is how the re-render scope is achieved: the tick lives in each leaf that reads the traffic layer precisely so it reaches neither the instructions nor the picker, which is the invariant the epic's expected-result row 7 asserts. The count is bounded at two, never grows with data, and nothing observable differs."
+verdict: PASS
+date: 2026-09-21
