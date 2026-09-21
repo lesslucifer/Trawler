@@ -430,10 +430,10 @@
     <h2 id="review">The review rounds</h2>
 
     <p>Three finders over the diff's code paths each round, Gate 0 green beside them.
-      <strong>Nine rounds in three series.</strong> Rounds 1 to 6 judged the first half and are
+      <strong>Ten rounds in three series.</strong> Rounds 1 to 6 judged the first half and are
       below as they were written. Rounds 7 and 8 judged the whole unit again after the window round,
-      and round 9 again after the rhythm round, because the note binds the range whole and a verdict
-      bound to an earlier tip says nothing about bytes that landed after it.</p>
+      and rounds 9 and 10 again after the rhythm round, because the note binds the range whole and a
+      verdict bound to an earlier tip says nothing about bytes that landed after it.</p>
 
     <p class="kd"><strong>Round 9 is the answer to a fair question about re-reviewing.</strong> The
       rhythm round changed a container's spacing and one test, and re-running the fleet over the whole
@@ -484,6 +484,9 @@
           finders 945s, verifiers 747s</td><td><strong>FAIL</strong> — one <em>important</em>
           verified and fixed; the blocker refuted and one important refuted as pre-existing.
           Efficiency and altitude empty for the third series running</td></tr>
+        <tr><td>10</td><td>3 finders, 2 candidates (both important), 2 verifier agents ·
+          finders 1404s, verifiers 521s</td><td><strong>PASS</strong> — both refuted; efficiency
+          and altitude empty again. This is the round the <code>cr/v5</code> note records</td></tr>
       </tbody>
     </table>
 
@@ -575,8 +578,40 @@
             round 4 reached independently and for the same reason. The rubric's exclusions say a
             pre-existing issue the diff neither introduces nor worsens is never reported, so it is
             refuted <em>for this review's scope</em> and not as a non-problem</td></tr>
+        <tr><td><strong>10</strong> — <em>important</em>, refuted</td>
+          <td><code>Disclosure</code> takes <code>open={defaultOpen}</code>, which React re-applies
+            whenever the value flips — and the open-guide rule recomputes that value from the live
+            probe tone every render. So a <em>check again</em> that turns the certificate trusted
+            would slam shut the guide the user had opened, and force the next one open</td>
+          <td>Refuted on reachability, and the chain was read back by hand rather than taken from the
+            trace. <code>canAutoSetup</code> is macOS and Windows only; <code>probesTrust: true</code>
+            appears exactly once in the platform table, on <em>this machine</em>; and
+            <code>trustStatus</code> returns tone <em>ok</em> only for a <code>trusted</code> probe,
+            which <code>ca_trusted</code> never reports off macOS and Windows. Wherever the trust
+            guide renders at all, its tone cannot be <em>ok</em>. That is the same unreachability
+            rounds 7 and 8 derived, reached a third time from a different direction — and the
+            reactive recompute the claim reads as a React footgun is the mechanism that closes every
+            guide once a request decrypts, which is the rule as written</td></tr>
+        <tr><td><strong>10</strong> — <em>important</em>, refuted</td>
+          <td>Round 9's Simulator latch again, with a new argument: this diff also deleted
+            <code>UNSETPROXY_NOTE</code>'s <em>done</em> entry, so where BASE at least said
+            <em>proxy off</em> after a successful reversal, HEAD says nothing — which would make the
+            diff a worsening rather than a pre-existing issue, and defeat the exclusion that settled
+            it last round</td>
+          <td>The fact is true and the framing is not. All three action notes lost <em>done</em>
+            together in <code>e97106c</code>, and the one that kept it — <code>SAVECA_NOTE</code> —
+            kept it because it names a filename no status line carries. The claim's causal story is
+            also wrong: the guard it says the note was traded for landed two commits later and never
+            touched the note. The persistent half stays a W6 row</td></tr>
       </tbody>
     </table>
+
+    <p class="kd"><strong>What the last two rounds settled between them.</strong> Round 9's finding
+      and round 10's second refutation are one rule read from both sides, and the rule is worth
+      keeping: an action note carries the outcomes no task status line can report. <em>done</em> is
+      the status line's, so stripping it from three notes at once was right. <em>nothing</em> is
+      nobody's — a state that did not change moves no status line anywhere on the screen — so its
+      absence was a silence, and that is the one round 9 had to fix.</p>
 
     <table data-c="review">
       <thead><tr><th>Severity</th><th>Finding</th><th>What the fix changed</th></tr></thead>
