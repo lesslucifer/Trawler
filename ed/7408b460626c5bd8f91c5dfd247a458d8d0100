@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "Rounds 5 and 6 of the design of record. Round 5 is the owner's reading of the built screen at 1440x800 and the three instructions it returned - the column at max-w-reading, the eight tiles as one mounted Select on the question's own line, and the guides split into a numbered route, the caveats under it, a second route behind other ways and the way back behind its own summary, with one guide open. TaskStep and CommandBlock are mounted rather than drawn, which retired the mockup's unstyled pl-9 with the drawing that carried it. ROUND 6 is the owner's reading of that column in a full window: the rhythm the width exposed. The mock becomes a flex column carrying gap-6 and py-8, every zone gives up its pt-, and the mounted task list gains gap-4 - so 8 inside a task, 24 between zones, 32 between tasks. It proposes no token, because every magnitude is already on the declared ladder, and it puts the gap on the mount rather than in the page's stylesheet, where the build could never read it (DEC-26). The review item carries both readings, what each moved and the contract each hit. Archived again."
+  - path: "docs/work/2026-09-20-onboard-user-reading-plan.html"
+    tier: T3
+    action: updated
+    distills: "v3. The twelve P1 findings as a build, the two components the reading round proposed, the two blocked-on rows and what the shell owes each, the test plan at both levels and the order of work - plus the window round's three instructions with where each lands and four expected-result rows, the two P2s that moved out of the not-here table, and now the rhythm round: the owner's one instruction, what it moves, and a fifteenth expected result - the separation between two tasks is larger than the separation inside one, and the column is the only thing that sets it."
+  - path: "docs/work/2026-09-20-onboard-user-reading-result.html"
+    tier: T3
+    action: updated
+    distills: "v3. What shipped against the plan's rows in three halves; twelve deviations - chief among them the install button reachable in no state of the screen the design renders, the end-of-setup sentence that names this machine because a decrypted request never says which device sent it, a registry component built and withdrawn inside one Working Unit, two P2 findings taken early at the owner's word, a second token the plan did not foresee, the mockup mounting what it used to draw, and a design of record amended TWICE inside one build WU with the reason that is not an oversight - a rhythm a 384px column hides cannot be found before the column is 864. Plus the evidence, what each suite gained, the rows W6's restatement of UC-ONBOARD reads, the one blocked-on row the build could not close, and the review rounds themselves."
+t2_waived: "UC-ONBOARD's restatement and the run's two lexicon proposals are W6's distillation items, named in the epic's distillation plan and deferred there by W4 for the reason that still holds: a contract restated against a screen the epic is still closing around is a contract written twice. This WU's distillation section is the source that restatement reads, and the window round added three rows to it. The two new components' contracts live where DEC-16 puts them - in their own TSDoc, which is the retired design file, so writing them into a T2 doc would put one fact in two tiers. The window round adds no lexicon entry and no rulebook row, which the result records as a statement rather than an omission: every word it put on screen is a summary of what is behind it and names nothing the app has a term for."
