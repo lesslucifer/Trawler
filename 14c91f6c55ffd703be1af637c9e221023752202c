@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+base: bcddf45e56987a3e633e67b93c13903a7ab949f5
+design_sha256: 2b9fa9ac5e1ad2f7ab0b345667a9a002c1f7a606ae7b61d813dc53a39402c580
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: a83f51385d5a0ce9c1eac32a9eefe0af660c1dbb
+    built: [ui/src/components/CommandBlock.tsx, ui/src/components/TaskStep.tsx, ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The shell's wiring plus one zone the run does not reach. The wiring: the combined elevated command, the confirm in front of a proxy replacement, and a probe answer coerced rather than trusted - all passed straight through to the screen, whose rendering of them is designed in the run cited above. The zone: the success banner is the list's first paint, and the archived run designs the setup screen only - its own copy table names the sentence and the PO review names the surface, which is the whole of what this renders. Neither round 5 nor round 6 touched this file, and review round 9's fix is in the screen rather than here: what App resolves is unchanged, and what the screen says about it is what was missing."
+  - path: ui/src/components/Select.tsx
+    why: "One line of an existing component's own box, made because the run needs it and not because the run designed it. The trigger gains w-full so a host can size the component; with no width from the host the rendering is byte-identical to what it was, which is why nothing about Select's anatomy moved and its @anatomy gains a clause rather than a rewrite. The run's round 5 mounts Select at the picker width and proposes the token for it, so the decision is on the record - but Select is a registry entry whose contract lives in its own TSDoc (DEC-16), and a screen run does not design a component it reuses. Round 6 did not touch this file: the rhythm it adds is the column's, and a component never buys the distance around itself."
+date: 2026-09-21
