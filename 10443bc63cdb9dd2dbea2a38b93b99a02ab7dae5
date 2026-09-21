@@ -1,0 +1,21 @@
+schema: design/v1
+epic: E-ONBOARD
+base: 71ae8a984d57d857e4d3dc050a4e262dfc71c5d1
+design_sha256: 5aade052cec1a6d7e9ae0d70be72277425af48bb7d7b2cae74f5292954f4c75f
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 4e022b9cb993635e94b6a95caac45b191df4652d
+    built: [ui/src/Onboarding.tsx, ui/src/components/TaskStep.tsx, ui/src/components/CommandBlock.tsx, ui/src/components/Notice.tsx]
+accounting: "THE EPIC'S HAND-OFF, END TO END. design-scope lists no artifact at this tip and that is the close working, not an omission: the run was restored into the tree at W2 from E-SIMPDF's park, closed there, re-opened and re-closed at W4, amended twice inside W5, and archived out of the tree by this epic's own closing commit - added and retired inside one range, so the endpoint diff carries no artifact while every WU seam that carried it was judged on it in turn. The path is cited at its last state reachable from the tip per DEC-28; blob 4e022b9 is byte-identical at 783db96 (W5's final amendment) and at 45aa538 (the last commit holding the file), so the pin names one state and not a moving target. THE TWO ADDED SURFACES ARE CITED, NEVER DECLARED - there is no reason that excuses an added surface, and neither took one: TaskStep and CommandBlock are both the run's, built at W5 from the amended mockup and carrying their contracts in their own TSDoc, which is what DEC-16 makes of a retired design file. Onboarding.tsx is the screen the run designs and is cited with them; Notice.tsx was built from the run at W3. A third entry, ChoiceTiles, was built at W5 and withdrawn in the same WU when the eight tiles became one picker again - it renders nothing at the tip, is absent from the endpoint diff, and is recorded here because an epic that built a component and took it back should say so rather than leave a reader to infer it from silence. Every rendered file the range touches is therefore cited or declared, and none is both."
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The shell, across four WUs, and it renders no zone the run designs. What it gained is wiring passed straight through to the screen - the reach seam (read /reach on entering setup, invoke the shell's confirm, arm only on a yes), the combined elevated command, the confirm in front of a proxy replacement, and a probe answer coerced rather than trusted - plus two things that are the shell's by DEC-13, which keeps host-reading out of the core and therefore puts every confirm here. The two zones App renders of its own are outside the run's declared subject, which is the setup screen alone: the armed-reach header chip, which F20 asks to hold in every phase including the flow list the setup screen does not render, and the success banner, which is the list's first paint. Both are an owner's call recorded in the epic plan, with their shape in the PO review's rows and their words in the run's copy table."
+  - path: ui/src/components/Select.tsx
+    why: "One line of an existing registry component's own box: the trigger gains w-full so a host can size it. With no width from the host the rendering is byte-identical, so nothing in Select's anatomy moved and its TSDoc gains a clause rather than a rewrite. The run's round 5 mounts Select at the picker width and proposes the token for it, so the decision is on the record - but Select's contract lives in its own TSDoc per DEC-16, and a screen run does not design a component it reuses."
+  - path: ui/src/components/StatusLine.tsx
+    why: "A type-only import followed its module - StepStatusView and StepTone now come from ui/src/verdicts.ts, which the epic extracted so the verdict vocabulary sits behind a boundary of its own. Nothing StatusLine renders changed."
+  - path: ui/src/ProxyCloseDialog.tsx
+    why: "An import line followed its module: the quit dialog's proxy-client vocabulary moved to ui/src/proxyTargets.ts so setup.ts could be organised by platform. The dialog's markup, copy and behaviour are byte-identical, and the quit dialog is this epic's declared non-goal - it keeps its own carrier branch and a roadmap row of its own."
+date: 2026-09-21
