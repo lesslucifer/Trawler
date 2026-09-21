@@ -100,7 +100,7 @@ flowchart LR
     <table data-c="lexicon-table">
       <thead><tr><th>Term</th><th>Means</th><th>Never</th></tr></thead>
       <tbody>
-        <tr><td><strong>flow</strong></td><td>one captured request/response exchange</td><td>transaction · call · entry</td></tr>
+        <tr><td><strong>flow</strong></td><td>one captured request/response exchange. <strong>Scoped by <span class="badge id">E-ONBOARD</span>:</strong> it is the capture's word, and the setup screen may not use it — a user who has not captured anything yet has no referent for it, so that screen says <em>request</em> and names what arrived</td><td>transaction · call · entry · and, on the setup screen, <em>flow</em> itself</td></tr>
         <tr><td><strong>request / response</strong></td><td>the two legs of a flow, spelled out in labels</td><td>req / res in user-facing text</td></tr>
         <tr><td><strong>copy</strong></td><td>put on the clipboard, verbatim</td><td>grab · export · save</td></tr>
         <tr><td><strong>export</strong></td><td>write the capture out as a HAR file</td><td>copy · save · download</td></tr>
@@ -111,6 +111,8 @@ flowchart LR
         <tr><td><strong>no longer captured</strong></td><td>the capture ring moved past this flow. Not a fault</td><td>expired · deleted · gone · none</td></tr>
         <tr><td><strong>first flow</strong></td><td>the proven-decrypted milestone</td><td>verify · test · done · working</td></tr>
         <tr><td><strong>not answering</strong></td><td>a request to the control API that never came back. Said of the API, never of the proxy: capture health and transport health are different facts (<span class="badge id">E-RFINISH</span>)</td><td>offline · disconnected · down · unreachable · error</td></tr>
+        <tr><td><strong>arriving</strong></td><td>a connection Trawler received and could not decrypt. The traffic layer can observe a tunnel before any flow exists, so this is the word for traffic that is real, is here, and has produced nothing to read — the honest middle between silence and capture (<span class="badge id">E-ONBOARD</span>)</td><td>connected · incoming · pending · blocked · failed — none of which is true of a tunnel that opened</td></tr>
+        <tr><td><strong>platform</strong></td><td>the one thing a run of setup is for — this machine, another computer, a simulator, a phone. It is the setup screen's only axis, and it deliberately spans kinds the app treats alike (<span class="badge id">E-ONBOARD</span>)</td><td>device · target · OS · environment — each names one kind and excludes the others</td></tr>
       </tbody>
     </table>
 
