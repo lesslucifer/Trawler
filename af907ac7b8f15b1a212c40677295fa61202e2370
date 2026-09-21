@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-ONBOARD
+wu: E-ONBOARD.W6
+base: 4cb5be16119b9aa5383b3e64c279aafbb23f404f
+design_sha256: 82d16543fc4ee523695959070f0f06554250bd38bf4ca6cccbe63617eeec195f
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/components/TaskStep.tsx
+    why: "One attribute on an element the component already rendered, and nothing a design could have decided. The wrapper around the StatusLine gained data-testid=task-<n>-state so the rewritten e2e can read a task state the way the retired spine read step-*-status; the div, its pt-2 and the StatusLine inside it are byte-identical otherwise. Nothing in the anatomy moved - not the marker column, the title, the purpose line, the state or the slot - and no state, tier, use or avoid clause changed, so the TSDoc gains nothing and a design run would have had no decision to make. The precedent is the component itself: TaskStep already carried data-testid=task-<n> on its root before this WU, added by the same build that designed it, so a test hook on this component is an established part of how it is read and not a new kind of thing. This WU opened no design run and closed none: the epic's design of record was closed at W4 and amended twice inside W5, and W6 is its close - an e2e spine and the distillation, neither of which designs a surface.
+date: 2026-09-21
