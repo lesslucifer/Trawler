@@ -331,7 +331,7 @@ function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Tr
   const now = useNow();
   if (trafficReading(traffic, now) !== "capturing") return null;
   return (
-    <div data-testid="proven" className="px-4 pt-4">
+    <div data-testid="proven" className="px-4">
       <Notice
         tone="ok"
         detail={
@@ -381,7 +381,7 @@ function ProbeRow({
   return (
     <div
       data-testid="probe"
-      className="flex items-center justify-end gap-chrome-gap px-4 pt-3 font-ui text-control text-ink-mute"
+      className="flex items-center justify-end gap-chrome-gap px-4 font-ui text-control text-ink-mute"
     >
       {probing ? (
         <span className="flex items-center gap-chrome-gap">
@@ -759,16 +759,13 @@ export function Onboarding({
 
   return (
     <div className="flex h-full flex-col overflow-auto">
-      <div className="mx-auto w-full max-w-reading py-6">
+      <div className="mx-auto flex w-full max-w-reading flex-col gap-6 py-8">
         <div data-testid="lead" className="px-4">
           <p className="font-serif text-note text-ink">{TITLE}</p>
           <p className="pt-2 font-ui text-body text-ink-body">{PURPOSE}</p>
         </div>
 
-        <div
-          data-testid="platform"
-          className="flex flex-wrap items-center gap-3 px-4 pt-4"
-        >
+        <div data-testid="platform" className="flex flex-wrap items-center gap-3 px-4">
           <p className={ZONE_LABEL}>{QUESTION}</p>
           <Select
             options={platformChoices(os)}
@@ -780,7 +777,7 @@ export function Onboarding({
           />
         </div>
 
-        <div data-testid="steps" className="pt-2">
+        <div data-testid="steps" className="flex flex-col gap-4">
           {needsReach(platform) && (
             <NetworkTask
               n={1}
@@ -940,7 +937,7 @@ export function Onboarding({
         <ProvenOutcome device={provenOn} traffic={traffic} />
 
         {state.everProven && (
-          <div data-testid="back" className="px-4 pt-4">
+          <div data-testid="back" className="px-4">
             <Button onClick={() => dispatch({ t: "exit" })} frame="bare" tone="mute">
               <span aria-hidden="true">‹ </span>
               {COPY.back}

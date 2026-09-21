@@ -986,6 +986,24 @@ test("the reading column answers to the window, not to a dialog", () => {
   expect(column.className).not.toContain("max-w-dialog-max");
 });
 
+test("a task is set apart from its neighbours by more than its own parts are", () => {
+  const { container } = draw();
+  const column = container.firstElementChild!.firstElementChild!;
+
+  // A task separates its title, its reason and its state by 8px. Before the
+  // column carried a rhythm of its own, 16px was all that separated one task
+  // from the next — so three tasks read as one list of nine lines. The column
+  // spaces its zones and the zone spaces its tasks, and both sit above 8px.
+  expect(column.className).toContain("gap-6");
+  expect(screen.getByTestId("steps").className).toContain("gap-4");
+
+  // and the rhythm is the column's alone: a zone that brings a top padding of
+  // its own is a second spacing rule nothing reconciles with the first.
+  for (const zone of [...column.children]) {
+    expect(zone.className).not.toMatch(/\bpt-/);
+  }
+});
+
 test("the column scrolls whole — no zone holds an inner scroller", () => {
   const { container } = draw();
   const scrollers = container.querySelectorAll("[class*='overflow-auto'],[class*='overflow-y-auto']");
