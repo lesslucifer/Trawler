@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU E-ONBOARD.W6 close -> epic/onboarding-redesign. The epic's closing unit: the e2e spine rewritten on the platform axis, one wait made content-based in the sibling spec, one test hook on TaskStep with its unit test, and a pnpm override relocated so it applies again. Everything else in the range is documents and is not this run's subject. THREE ROUNDS ran over this unit; this note binds the third, which judged these bytes. Rounds 1 and 2 bound earlier tips (3a06943, f205746) and are superseded rather than carried, because each of their verified nits was fixed and the fix is inside the range this note binds - recorded below under nits: rather than dropped. Across the three rounds the fleet raised 25 candidates and verified 3, all nits, all fixed; no blocker and no important survived verification in any round."
+epic: E-ONBOARD
+wu: E-ONBOARD.W6
+branch: wu/onboarding-redesign/close
+base: 4cb5be16119b9aa5383b3e64c279aafbb23f404f
+head: af907ac7b8f15b1a212c40677295fa61202e2370
+diff_sha256: d77d14ece431af94ec3293e72b85b7942090f924d13dddbe686df98903983400
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 5
+  stage_seconds:
+    gate0: 30
+    finders: 764
+    verifiers: 266
+    total: 1060
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+nits:
+  - finding: "The platform-option selector pinned the option's element as `li`, which Select's TSDoc does not promise and its sibling spec already matches without a tag"
+    fixed: "Round 1. The `li` prefix is gone from choosePlatform; the selector is [role=\"option\"][aria-label=...], matching flows.spec.ts's existing form, so a div-with-a-role refactor inside Select would break neither spec. role=\"option\" is written in exactly one place in the tree, so the match set did not widen - round 2's efficiency finder re-checked that and round 3's correctness finder re-confirmed the selector is unambiguous."
+  - finding: "The pnpm-workspace.yaml comment named one version boundary where there are two, and got the load-bearing one wrong - it read as though pnpm 10 had stopped reading the `pnpm` field in package.json"
+    fixed: "Round 1 rewrote it to name 10.6 and 11. Round 2 then found that replacement wrong too: the real boundary for reading overrides from this file is 10.5.1, established behaviourally by running eight published tarballs against two fixtures rather than by grepping symbols - 10.5.0 has the machinery but an empty overrides synthesized from package.json clobbers the workspace value, and 10.5.1 adds the guard. See the next entry for how that was settled."
+  - finding: "The corrected version boundary was itself wrong, and the comment had now stated the same fact wrongly twice"
+    fixed: "Round 2. The comment no longer names a version at all. Its job is to say why the pin lives in this file, and the load-bearing half - that package.json's `pnpm` field is no longer read - is something pnpm prints at every install, verified by round 3 to appear on fresh, repeat, --frozen-lockfile, --silent and --reporter=append-only runs. The minor version decides nothing here (nothing in the tree pins a pnpm version), cannot be checked from inside the repo, and had been got wrong twice; round 3's verifier judged re-adding a qualifier a regression rather than an improvement, and the residue is already a roadmap row naming the WU that owns a guard."
+verdict: PASS
+date: 2026-09-21
