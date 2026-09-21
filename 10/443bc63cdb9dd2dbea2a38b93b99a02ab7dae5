@@ -1,0 +1,28 @@
+schema: cr/v5
+scope: "Epic E-ONBOARD -> main. The whole epic's code as one range: reach in the core (src/reach.rs, src/config.rs, src/ca.rs, src/lib.rs, src/api/*), the setup screen and the modules the epic extracted behind it (ui/src/setup.ts, verdicts.ts, proxyTargets.ts, onboardingMachine.ts, Onboarding.tsx, App.tsx, five registry components), the rewritten e2e spine (ui/e2e/), and the one gate-tool change the epic was forced into (xtask/src/mr.rs). ONE ROUND. Each WU was reviewed on its own diff as it landed - five cr/v5 PASS notes across 11 rounds - and this round re-judges the epic as a single range against main, which is the scope no WU review had: the seams between them. The archive commit at the tip changes no code path, so the binding below is the same code the WU reviews judged, re-read whole. No verifier stage ran, because the finders returned no candidates to refute - verifier_model is therefore absent as a reading nobody took, not as a model that judged nothing."
+epic: E-ONBOARD
+branch: epic/onboarding-redesign
+base: 71ae8a984d57d857e4d3dc050a4e262dfc71c5d1
+head: 10443bc63cdb9dd2dbea2a38b93b99a02ab7dae5
+diff_sha256: 9a701b094fe282aa8a0c6d1b85b21b8528daf355e47034b975ed3c2e6147aace
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    finders: 483
+    verifiers: 0
+    total: 518
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+refuted: "No candidate was returned, so nothing reached a verifier - but the finders each traced leads to ground and ruled them out, which is worth recording because a later reader should not read an empty round as a shallow one. CORRECTNESS ruled out four: reach binding to a loopback alias when the API is driven directly rather than through the UI's filtered interface list (DEC-55 states that boundary itself - a local script may drive the API directly, and always could); Controller::listen_on reading the configured port rather than the resolved one, which diverges only under an ephemeral :0 primary port and still self-reports the resolved address; Armed::stop() awaiting rather than aborting the proxy task, so a disarm can block on an open exchange - explicit, commented, and asserted by a_draining_disarm_never_blocks_a_reader_of_the_state; and App.tsx's mount-only read of /reach, which is scoped by its own comment and consistent with reach being process-local. It also traced every interleaving of concurrent arm/arm, arm/disarm and refused-arm through the mutex, and confirmed the critical section is the bind-and-swap alone with the drain outside it. EFFICIENCY confirmed the getifaddrs syscall behind /reach is fetched once per mount and never polled, and that nothing was added to the proxy hot path (src/recorder.rs and src/store.rs are untouched by this range). ALTITUDE confirmed the core takes on no host-reading work DEC-13 keeps out of it - interface names come from if_addrs and a connect-less UDP probe, never from shelling out - that the private key never leaves the Controller, that setup.ts imports no traffic type so DEC-33's two layers stay unblended (grepped to zero hits), and that the five registry components carry no onboarding- or reach-specific knowledge."
+verdict: PASS
+date: 2026-09-21
