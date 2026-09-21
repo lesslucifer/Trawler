@@ -301,6 +301,8 @@
         <tr><td><code>c869a83</code></td><td>the run's round 6 — the column owns the rhythm</td></tr>
         <tr><td><code>b508b3b</code></td><td>the screen — one rhythm, and the column is the one that
           keeps it</td></tr>
+        <tr><td><code>0685ad9</code></td><td>review round 9's fix — an act that changed nothing has
+          to say so</td></tr>
       </tbody>
     </table>
 
@@ -370,8 +372,13 @@
             carries a <code>pt-</code>. It asserts the rule and not the pixels, because jsdom
             computes no layout and a test that read one back would be reading the class it was given.
             Nothing else in the suite moved: the rhythm changes no sentence, no state and no
-            control, which is why 1133 of these 1134 are the same tests passing unchanged</td>
-          <td>1134 Vitest tests green in 55 files · 36 shell · 754 core, untouched ·
+            control, which is why 1133 of these 1134 are the same tests passing unchanged. Then
+            <strong>+3 from the round's own review</strong>, on a defect in the first half's code
+            that eight earlier rounds over the same bytes had not raised: a declined replacement
+            names the halves it did not do, the Simulator's proxy action names the one half it has,
+            and neither reads as a failure — the third is the one that keeps the fix honest rather
+            than merely present</td>
+          <td>1137 Vitest tests green in 55 files · 36 shell · 754 core, untouched ·
             <code>eslint</code>, <code>tsc</code> and the closed-vocabulary rule clean · 0 live
             <code>design-allow</code> suppressions</td></tr>
         <tr><td><strong>e2e</strong></td>
@@ -423,10 +430,19 @@
     <h2 id="review">The review rounds</h2>
 
     <p>Three finders over the diff's code paths each round, Gate 0 green beside them.
-      <strong>Eight rounds in two series.</strong> Rounds 1 to 6 judged the first half and are below
-      as they were written. Rounds 7 and 8 judged the whole unit again after the window round, because
-      the note binds the range whole and a verdict bound to <code>aeb39e3</code> says nothing about
-      bytes that landed after it.</p>
+      <strong>Nine rounds in three series.</strong> Rounds 1 to 6 judged the first half and are
+      below as they were written. Rounds 7 and 8 judged the whole unit again after the window round,
+      and round 9 again after the rhythm round, because the note binds the range whole and a verdict
+      bound to an earlier tip says nothing about bytes that landed after it.</p>
+
+    <p class="kd"><strong>Round 9 is the answer to a fair question about re-reviewing.</strong> The
+      rhythm round changed a container's spacing and one test, and re-running the fleet over the whole
+      range for it looks like ceremony. It found a real <em>important</em> in the first half's code —
+      a reachable action state with no note — that eight previous rounds over the same bytes had not
+      raised. The re-review is not ceremony because the note binds the range and not the commit; what
+      round 9 demonstrates is the weaker and more useful fact that a fleet's coverage of a fixed diff
+      is not monotone, and the rounds a moved tip buys are not wasted on the bytes that did not
+      move.</p>
 
     <p class="kd"><strong>The two series found different things, and the difference is the
       point.</strong> The first half's six rounds found five real defects, every one of them a
@@ -459,8 +475,15 @@
           code</td></tr>
         <tr><td>8</td><td>3 finders, 1 candidate, 1 verifier agent ·
           finders 1161s, verifier 467s</td><td><strong>PASS</strong> — the candidate refuted at
-          <em>nit</em>; efficiency and altitude empty. This is the round the <code>cr/v5</code>
-          note records</td></tr>
+          <em>nit</em>; efficiency and altitude empty</td></tr>
+        <tr><td colspan="3"><strong>The owner reads the gated tip in a full window.</strong> The
+          design of record re-opens for round 6, two commits land, and the review starts again over
+          the whole range</td></tr>
+        <tr><td>9</td><td>3 finders, 3 candidates (1 blocker, 2 important), 2 verifier agents — the
+          blocker unbatched, the two importants batched on one region ·
+          finders 945s, verifiers 747s</td><td><strong>FAIL</strong> — one <em>important</em>
+          verified and fixed; the blocker refuted and one important refuted as pre-existing.
+          Efficiency and altitude empty for the third series running</td></tr>
       </tbody>
     </table>
 
@@ -512,6 +535,48 @@
       comment. The day a trust probe answers on a host with no one-click path, that branch executes in
       production for the first time and the change that ships it owes it a test — which is an
       obligation on that change, not a debt this one is carrying.</p>
+
+    <table data-c="rhythm-rounds">
+      <thead><tr><th>Round</th><th>What was raised</th><th>What came of it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>9</strong> — <em>blocker</em>, refuted</td>
+          <td><code>closeConfirm.ts</code> destructures <code>proxy_status</code>'s result unguarded,
+            where <code>App.tsx</code> guards the same call with <code>?? NO_PROXY_READING</code>
+            three lines away — so a shell answering with nothing throws inside the close handler
+            before <code>preventDefault()</code>, and the window closes without the quit dialog</td>
+          <td>Both halves of the claim fail against the code. <code>proxy_status</code> returns
+            <code>ProxyReading</code> — a plain infallible struct with a non-optional
+            <code>status</code>, not an <code>Option</code> and not a <code>Result</code> — so the
+            premise has no path. And the consequence is inverted: in the installed Tauri wrapper
+            <code>destroy()</code> runs <em>after</em> <code>await handler(evt)</code>, so a throwing
+            handler leaves the window open rather than closing it. Both were read back independently
+            before the refutation was accepted, because a blocker's refutation is the one that costs
+            most to get wrong</td></tr>
+        <tr><td><strong>9</strong> — <em>important</em>, REAL</td>
+          <td>Declining the replace-a-foreign-proxy confirm resolves <code>null</code>, which
+            <code>useAction</code> lands as <em>nothing</em> rather than <em>failed</em> — and neither
+            <code>SETUP_NOTE</code> nor <code>SETPROXY_NOTE</code> had an entry for that state, so
+            <code>ActionNote</code> rendered nothing at all and the button re-enabled with the same
+            label</td>
+          <td><strong>Fixed.</strong> It is the outcome <code>ARM_NOTE</code>'s own comment refuses
+            three declarations above, and the reach action has carried both the note and its
+            regression test since W1. The confirm that makes the state reachable landed in this WU's
+            <code>e97106c</code>, which is what makes it this WU's to close rather than a backlog
+            row. Each note names the halves it did not do; both are <em>mute</em>, because a decline
+            is not the OS refusing. Three tests, written failing first — the third pins the state as
+            <em>nothing</em> and keeps the failure wording and the tool-output disclosure away</td></tr>
+        <tr><td><strong>9</strong> — <em>important</em>, refuted</td>
+          <td>The Simulator's reversal gates without the <code>unsetProxyAction.state !== "done"</code>
+            term its sibling gained in rounds 3 to 5, so its <em>stop routing through Trawler</em>
+            latches on forever once the proxy has been set once</td>
+          <td>Real, and out of scope: the identical condition sits at BASE, this diff narrows rather
+            than widens it, and none of the three fix commits that built the guard touched the
+            Simulator's block. It is already this document's own follow-up row, filed to W6 — which
+            round 4 reached independently and for the same reason. The rubric's exclusions say a
+            pre-existing issue the diff neither introduces nor worsens is never reported, so it is
+            refuted <em>for this review's scope</em> and not as a non-problem</td></tr>
+      </tbody>
+    </table>
 
     <table data-c="review">
       <thead><tr><th>Severity</th><th>Finding</th><th>What the fix changed</th></tr></thead>
