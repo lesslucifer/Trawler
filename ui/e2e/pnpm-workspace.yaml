@@ -2,3 +2,11 @@ allowBuilds:
   esbuild: true
   edgedriver: true
   geckodriver: true
+
+# @wdio/tauri-service 1.2.0 imports installMockSyncOverride from
+# @wdio/native-utils, which only exists from 2.5.0 — its own range resolves to
+# 2.4.0 and the service then fails to initialise before any spec runs. pnpm 10+
+# reads overrides here; the `pnpm` field in package.json is ignored, which is
+# how this pin silently stopped applying.
+overrides:
+  "@wdio/native-utils": "2.5.0"
