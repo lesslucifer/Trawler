@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab0d8de9f34851f0dfad363">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-56: the app may prove capture with a request of its own</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-56 — the app may prove capture with a request of its own</h1>
+      <p>The last task of setup asks the user to produce traffic. Today it asks them to open a website
+        or run a <code>curl</code> command. A user who does neither has no way forward — so the app may
+        fire one request through the system proxy itself, and that is a capability decision, not a
+        button.</p>
+      <div class="meta">v1 · 2026-09-21 · Trawler · T2 decision · minted by
+        <strong>E-ONBOARD.W6</strong> from the PO review's <strong>F24</strong> ·
+        relates to <a href="dec-13-onboarding-capabilities.html">DEC-13</a>,
+        <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> ·
+        UC-ONBOARD · <strong>proposed — not built</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <p>Setup ends on evidence, never on assertion: only a decrypted flow reveals the list
+      (<a href="dec-13-onboarding-capabilities.html">DEC-13</a>). The user therefore has to make one
+      request happen. The screen offers two routes — open any website, or run the copyable
+      <code>curl -x …</code> — and the PO review found that the second is written for someone who
+      already knows what <code>curl</code> is, while the first silently assumes the browser on this
+      machine uses the system proxy.</p>
+    <p>An in-app <em>Test now</em> closes that gap in the strongest possible way: it proves the
+      certificate and the proxy <strong>at once</strong>, because a request the app makes through the
+      system proxy can only be decrypted if both are in place. But it makes Trawler a client of its own
+      proxy, and that is a new thing for this app to be.</p>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The app <em>may</em> fire one HTTPS request through the system proxy
+        to prove setup, on the user's explicit click and never on its own. The request is the user's
+        act, and the screen still reports only what the traffic layer observed — the button produces
+        evidence, it never produces a verdict. It costs no confirm: unlike the trust store and the
+        system proxy, one outbound request changes nothing about this host.</p>
+    </div>
+
+    <h2 id="rules">The rules a build owes</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The button produces traffic; it never produces a state. The task's reading stays
+        the traffic layer's, judged against its clock</td><td><a href="dec-33-two-layers-and-a-clock.html">DEC-33</a>
+        — a ✓ the user clicked into existence is the one thing this screen has never done</td></tr>
+      <tr><td>2</td><td>It goes to a destination the user can see in the sentence, and one Trawler does
+        not own</td><td>a request to an address the app chose in secret is a fact the user cannot check,
+        and the whole screen is built on checkable facts</td></tr>
+      <tr><td>3</td><td>It is not run automatically, on mount, on a timer, or as part of the set-up
+        action</td><td>an app that reaches the network because it was opened is doing something its user
+        did not ask for. It is also what would make this a privacy question rather than a
+        convenience</td></tr>
+      <tr><td>4</td><td>A request that fails says what failed, in the user's words, and leaves the
+        manual routes standing</td><td>the failure is informative — a refused connection through the
+        proxy is itself a reading — but it is never the app blaming the user</td></tr>
+      <tr><td>5</td><td>The two manual routes stay. The button is a third, not a
+        replacement</td><td>a developer who wants the <code>curl</code> is the audience the screen
+        started with, and the epic's rebuild never removed a route</td></tr>
+    </table>
+
+    <h2 id="scope">What this does not decide</h2>
+    <table data-c="scope">
+      <tr><th>Not decided here</th><th>Left to</th></tr>
+      <tr><td>Which destination the request goes to, and whether it is configurable</td><td>the build.
+        Rule 2 constrains it: visible in the sentence, not owned by Trawler</td></tr>
+      <tr><td>Whether the request is made by the core or by the shell</td><td>the build. Either satisfies
+        the rules; the shell is the natural home because the system proxy is the host's and
+        <a href="dec-13-onboarding-capabilities.html">DEC-13</a> keeps host-reading out of the
+        core</td></tr>
+      <tr><td>Whether an off-machine platform gets one too</td><td>nothing here can prove a phone's
+        setup from this machine — a request this app makes travels through this host. The button is the
+        host platforms', and the record says so rather than leaving it to be discovered</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Fire the request automatically once the proxy is set</td><td>it would end setup without the
+        user having done anything, which makes the proof the app's rather than the user's — and it is an
+        unrequested network call on launch</td></tr>
+      <tr><td>Let the button mark the task done on a 2xx</td><td>that is a click becoming a ✓. The
+        request's own result is not the evidence; the flow the core decrypted is</td></tr>
+      <tr><td>Drop the <code>curl</code> command once the button exists</td><td>the command is the route
+        for someone proving it from a shell, or on a machine where the app's own request would not be
+        representative</td></tr>
+      <tr><td>Word it as <em>Test</em></td><td>the screen has no term for a test, and the closed
+        vocabulary (<a href="dec-17-closed-vocabulary.html">DEC-17</a>) refuses a word introduced for one
+        control. It says what it does: it makes a request</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

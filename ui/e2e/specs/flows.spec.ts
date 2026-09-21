@@ -501,8 +501,17 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
     // No user act follows this — the dropped stream is what the shell notices.
     await fetch(`${ports.control}/kill`).catch(() => {});
 
+    // The band is one slot with a precedence rule, not a slot this statement
+    // owns: a core that stopped answering outranks the good news, and the good
+    // news may already be sitting there (the set-up banner survives until the
+    // user dismisses it, and nothing in this suite does). So the wait is for the
+    // band to SAY this, never merely to exist — existence is satisfied by the
+    // banner and would read it instead.
     const band = await $('[data-testid="band"]');
-    await band.waitForExist({ timeout: 30_000 });
+    await browser.waitUntil(async () => (await band.getText()).includes("trawler is not answering"), {
+      timeout: 30_000,
+      timeoutMsg: "the band never stated that the core stopped answering",
+    });
 
     const stated = await band.getText();
     expect(stated).toContain("trawler is not answering");

@@ -78,6 +78,11 @@ export default {
       "field-sm": "80px",
       field: "128px",
       "field-lg": "160px",
+      // The one-choice trigger, sized to the longest label the app offers a
+      // reader ("Another Ubuntu machine") so the control never resizes with the
+      // selection. A picker that changes width on every pick moves the row
+      // beside it, which is the jitter Select's own min-width was reaching for.
+      picker: "208px",
       "pane-narrow": "208px",
       "pane-label": "256px",
       pane: "520px",
@@ -196,6 +201,11 @@ export default {
       min: "min-content",
       max: "max-content",
       fit: "fit-content",
+      // A reading column that answers to the window instead of to a dialog.
+      // The share is what makes it grow; the ceiling is where a line of prose
+      // stops being comfortable to read and is set so the longest trust command
+      // still renders on one line inside a task's indented body.
+      reading: "min(60%, 880px)",
     }),
     // Below: the scales that carry no magnitude the rulebook governs, declared
     // anyway because an undeclared scale inherits Tailwind's whole ladder and

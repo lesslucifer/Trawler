@@ -14,10 +14,5 @@
     "@wdio/tauri-service": "^1.2.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "@wdio/native-utils": "2.5.0"
-    }
   }
 }

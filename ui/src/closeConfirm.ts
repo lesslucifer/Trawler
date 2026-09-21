@@ -40,7 +40,7 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     deps
       .getWindow()
       .onCloseRequested(async (e) => {
-        const status = await deps.invoke<string>("proxy_status", { host, port });
+        const { status } = await deps.invoke<{ status: string }>("proxy_status", { host, port });
         if (status === "ours" || status === "foreign") {
           e.preventDefault();
           setMode(status);

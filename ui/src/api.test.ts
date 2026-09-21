@@ -309,3 +309,68 @@ test("listFlows parses the provenance mark off a summary", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => rows }));
   expect((await createApi("http://x").listFlows({}))[0].source).toBe("imported");
 });
+
+const UNREACHABLE = { armed: false, proxy: null, api: null, ca_cert_url: null, interfaces: [] };
+
+test("reach reads the current state and the interfaces on offer", async () => {
+  const state = {
+    ...UNREACHABLE,
+    interfaces: [{ name: "en0", address: "192.168.1.20" }],
+  };
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const result = await createApi("http://x").reach();
+
+  expect(fetchMock).toHaveBeenCalledWith("http://x/reach");
+  expect(result.armed).toBe(false);
+  expect(result.proxy).toBeNull();
+  expect(result.interfaces[0].address).toBe("192.168.1.20");
+});
+
+test("armReach posts the chosen address and returns what actually bound", async () => {
+  const armed = {
+    armed: true,
+    proxy: "192.168.1.20:7420",
+    api: "192.168.1.20:7421",
+    ca_cert_url: "http://192.168.1.20:7421/ca.crt",
+    interfaces: [{ name: "en0", address: "192.168.1.20" }],
+  };
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => armed });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const result = await createApi("http://x").armReach("192.168.1.20");
+
+  expect(fetchMock).toHaveBeenCalledWith("http://x/reach", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ address: "192.168.1.20" }),
+  });
+  expect(result.ca_cert_url).toBe("http://192.168.1.20:7421/ca.crt");
+});
+
+test("a refused arm throws the server's own sentence, for the person who confirmed", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => "could not listen on 192.0.2.1:7420: Can't assign requested address",
+    }),
+  );
+
+  await expect(createApi("http://x").armReach("192.0.2.1")).rejects.toThrow(
+    "could not listen on 192.0.2.1:7420: Can't assign requested address",
+  );
+});
+
+test("disarmReach deletes and reports this machine only", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => UNREACHABLE });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const result = await createApi("http://x").disarmReach();
+
+  expect(fetchMock).toHaveBeenCalledWith("http://x/reach", { method: "DELETE" });
+  expect(result.armed).toBe(false);
+  expect(result.api).toBeNull();
+});

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab0d8df9f34851f0dfad365">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-57: a device that cannot paste is handed a code, not a string</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-57 — a device that cannot paste is handed a code, not a string</h1>
+      <p>Setting up a phone means typing a host, a port and a certificate URL from one screen into
+        another. The clipboard does not cross that gap. Rendering those values as a scannable code is
+        the remedy — and it is a new dependency and a new surface, so it is a decision rather than a
+        widget.</p>
+      <div class="meta">v1 · 2026-09-21 · Trawler · T2 decision · minted by
+        <strong>E-ONBOARD.W6</strong> from the PO review's <strong>F28</strong> ·
+        relates to <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a>,
+        <a href="dec-16-design-file-retirement.html">DEC-16</a> ·
+        UC-ONBOARD · <strong>proposed — not built</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <p><a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a> gave the five off-machine
+      platforms something to point at. What it could not give them is a way to get it there: the screen
+      renders the host, the port and the certificate URL as copyable text, and a phone cannot paste from
+      this machine's clipboard. Three values, typed by hand, on a keyboard the user is holding in the
+      other hand — and one of them is a URL with a port in it, where a single wrong character produces a
+      failure that looks exactly like an untrusted certificate.</p>
+    <p>Every proxy tool in this space answers this with a scannable code, and that is the shape the PO
+      review asked for. It is not a styling choice: it adds a rendering dependency the app does not have,
+      and it puts a new kind of element on the one screen the epic rebuilt for legibility.</p>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> Where a value must cross to a device this machine cannot reach, the
+        screen may render it as a scannable code <em>beside</em> the value — never instead of it. The
+        code is an additional route for the same fact, so a reader who prefers to type still can, and a
+        reader whose camera fails is never stuck.</p>
+    </div>
+
+    <h2 id="rules">The rules a build owes</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The code never replaces the value. The typed route stays, in the sentence that
+        names the field it goes in</td><td>a code is unreadable to a human, so a screen that shows only
+        the code has made a fact uncheckable — and this screen's whole argument is that its facts are
+        checkable</td></tr>
+      <tr><td>2</td><td>A code is rendered only for a value that must cross to another device, and only
+        where reach is armed</td><td>before arming there is no address, and on this machine there is
+        nothing to cross. A code for a value the reader can copy is decoration</td></tr>
+      <tr><td>3</td><td>It is generated locally, from a dependency vendored like every other — never
+        fetched from a code-rendering service</td><td>the certificate URL names this machine's address
+        on the user's own network. Handing it to a third party to draw is an exposure the user did not
+        confirm, and it would make an offline app need the internet to finish setup</td></tr>
+      <tr><td>4</td><td>It is a registry component with its own contract, per
+        <a href="dec-16-design-file-retirement.html">DEC-16</a></td><td>it is a new visual primitive,
+        and the one thing the epic's design flow exists to prevent is a new primitive appearing inside
+        one screen's build with no contract anyone else can reuse</td></tr>
+      <tr><td>5</td><td>What the code encodes is exactly the value beside it, and nothing
+        more</td><td>a code that encoded a bundle — proxy plus certificate plus a flag — would be a
+        fourth thing on screen whose contents the reader cannot inspect</td></tr>
+    </table>
+
+    <h2 id="scope">What this does not decide</h2>
+    <table data-c="scope">
+      <tr><th>Not decided here</th><th>Left to</th></tr>
+      <tr><td>Which library renders the code</td><td>the build, under rule 3: local, vendored, no network
+        call</td></tr>
+      <tr><td>Whether the proxy address gets one as well as the certificate URL</td><td>the build. The
+        review asked for both; rule 2 permits both, and the reading round that designs it decides whether
+        two codes on one screen is one too many</td></tr>
+      <tr><td>Whether an Apple-style configuration profile would be better than a
+        code</td><td>out of scope and deliberately so: a profile is an OS-specific installer, which is a
+        larger capability than rendering a value the screen already shows</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Leave it as typed text, and shorten the values instead</td><td>the port and the URL cannot
+        be shortened without lying about them, and the review's finding is about the act of typing, not
+        the length</td></tr>
+      <tr><td>Replace the text with the code</td><td>rule 1. It trades one unreachable route for
+        another</td></tr>
+      <tr><td>Render the code through a hosted image service</td><td>rule 3. It leaks the user's local
+        address to a third party and breaks an offline setup</td></tr>
+      <tr><td>Build it inline in the setup screen without a registry entry</td><td>rule 4, and
+        <a href="dec-16-design-file-retirement.html">DEC-16</a>. E-ONBOARD.W5 already built two
+        components this way and put both in the registry, which is the precedent</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

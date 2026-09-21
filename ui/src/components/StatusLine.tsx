@@ -1,4 +1,4 @@
-import type { StepStatusView, StepTone } from "../setup";
+import type { StepStatusView, StepTone } from "../verdicts";
 import { TonedText } from "./TonedText";
 
 const IN_FLIGHT_GLYPH = "⟳";

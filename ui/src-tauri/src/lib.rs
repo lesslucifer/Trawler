@@ -1,3 +1,4 @@
+mod reach;
 mod setup;
 
 #[cfg(feature = "e2e")]
@@ -8,13 +9,16 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
-            setup::install_ca,
             setup::ca_trusted,
             setup::set_proxy,
+            setup::set_up_this_machine,
             setup::unset_proxy,
             setup::proxy_status,
+            setup::interface_names,
             setup::notice_dismissed,
-            setup::dismiss_notice
+            setup::dismiss_notice,
+            reach::confirm_reach,
+            reach::confirm_replace_proxy
         ]);
     #[cfg(feature = "e2e")]
     let builder = builder

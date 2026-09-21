@@ -1,4 +1,4 @@
-import type { TrawlerApi } from "./api";
+import { UNREACHABLE, type TrawlerApi } from "./api";
 
 // Test support: a whole TrawlerApi whose every method answers emptily, so a test
 // overrides only the calls it is about. Without it each suite spells out the
@@ -16,6 +16,9 @@ export function apiStub(over: Partial<TrawlerApi> = {}): TrawlerApi {
       throw new Error("getFlow is not stubbed for this test");
     },
     getBody: async () => ({ bytes: new Uint8Array(), contentType: null }),
+    reach: async () => UNREACHABLE,
+    armReach: async () => UNREACHABLE,
+    disarmReach: async () => UNREACHABLE,
     stream: () => () => {},
     ...over,
   };

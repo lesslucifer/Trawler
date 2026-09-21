@@ -25,6 +25,7 @@ const SPECIMENS: Record<string, ReactElement> = {
       don't show this again
     </collection.Checkbox>
   ),
+  CommandBlock: <collection.CommandBlock value="certutil -addstore -f ROOT trawler-ca.pem" label="the trust command" />,
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
   CutMarker: <collection.CutMarker shown={10} total={99} />,
@@ -67,6 +68,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   ),
   StatusPill: <collection.StatusPill status={200} />,
   StepList: <collection.StepList steps={["download the certificate"]} />,
+  TaskStep: <collection.TaskStep n={1} title="Trust Trawler's certificate" />,
   TextRenderer: <collection.TextRenderer text="plain" />,
   TimestampText: <collection.TimestampText timestamp="2026-07-27T10:00:00Z" />,
   TonedText: <collection.TonedText tone="ok">ok</collection.TonedText>,
