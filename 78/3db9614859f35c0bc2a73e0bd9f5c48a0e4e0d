@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-ONBOARD
+wu: E-ONBOARD.W5
+base: bcddf45e56987a3e633e67b93c13903a7ab949f5
+tip: 783db9614859f35c0bc2a73e0bd9f5c48a0e4e0d
+diff_sha256: dece4922f7f70ff57344594da5c600eb84de37f07b8327ad4b8827543e3a9ec6
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-21
