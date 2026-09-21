@@ -681,6 +681,35 @@
             bundling a token or TLS, restarting the core to arm</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-56-the-app-may-prove-capture-itself.html"><code>dec-56-the-app-may-prove-capture-itself.html</code></a></td>
+          <td><span class="badge id">DEC-56</span></td>
+          <td><strong>The app may fire one HTTPS request through the system proxy to prove setup, on the
+            user's explicit click and never on its own.</strong> It proves the certificate and the proxy at
+            once, because a request it makes can only be decrypted if both are in place — but it produces
+            <em>evidence</em>, never a verdict: the task's reading stays the traffic layer's (DEC-33), and a
+            click still never becomes a ✓. No confirm, because one outbound request changes nothing about
+            this host; no automatic run, because an app that reaches the network for being opened is doing
+            what nobody asked. The two manual routes stay. Rejected: firing it automatically once the proxy
+            is set, marking the task done on a 2xx, dropping the <code>curl</code> route, calling it
+            <em>Test</em>. Proposed by the PO review's F24, not built</td>
+          <td><span class="badge approval">proposed</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-57-a-device-that-cannot-paste.html"><code>dec-57-a-device-that-cannot-paste.html</code></a></td>
+          <td><span class="badge id">DEC-57</span></td>
+          <td><strong>A value that must cross to a device this machine cannot reach may be rendered as a
+            scannable code beside the value — never instead of it.</strong> The clipboard does not cross
+            that gap, so a phone's host, port and certificate URL are typed by hand today, and one wrong
+            character in a URL fails exactly like an untrusted certificate. The code is an additional route
+            to the same fact: the typed value stays, it is rendered only where reach is armed and only for
+            a value that must travel, it is generated locally from a vendored dependency — never a hosted
+            service, which would leak the user's own network address and break an offline setup — and it is
+            a registry component with its own contract (DEC-16). Rejected: replacing the text with the
+            code, shortening the values, a hosted renderer, building it inline with no contract. Proposed
+            by the PO review's F28, not built</td>
+          <td><span class="badge approval">proposed</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
