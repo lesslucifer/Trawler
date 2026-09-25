@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-REPLAY
+wu: E-REPLAY.W3
+branch: wu/replay/composer
+changes:
+  - path: "docs/decisions/dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html"
+    tier: T2
+    action: added
+    distills: "why Field gains multiline, verbatim and readOnly under one contract, why the edited mark is the screen's in words, and why a malformed value gets no red border (DEC-16 step 1 for Field)"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-58 and DEC-59 rows"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-8's app half (the composer: the draft, the marks, the body stand-ins, what is sent, the outcome, the one draft kept), UC-5's replay entry, UC-4's new request act and the sent mark"
+  - path: "docs/work/2026-09-25-replay-w3-composer-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's requirement, the draft's seven rules from the run, the commit plan, expected results and the test plan; archived at the epic gate"
