@@ -2,7 +2,7 @@ schema: design/v1
 epic: E-REPLAY
 wu: E-REPLAY.W3
 base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
-design_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+design_sha256: 94dc9a8f43aefc9b797596ea2a70ad2f4fa4fefa68921d21e2d6314f6b16ed12
 verdict: PASS
 artifacts: []
 implements:
