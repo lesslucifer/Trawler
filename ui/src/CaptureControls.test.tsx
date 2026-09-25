@@ -202,6 +202,11 @@ test("import opens with focus in the textarea and the file picker before the act
   // Multi-line and mono, because a browser-copied command is both.
   expect(paste.tagName).toBe("TEXTAREA");
   expect(paste.className).toContain("font-mono");
+  // Field's own multi-line box, not a second hand-made one beside it (DEC-59).
+  for (const shared of ["min-h-control", "rounded-button", "border-hairline", "px-control-x", "py-control-y", "text-control"]) {
+    expect(paste.className).toContain(shared);
+  }
+  expect(paste.className).toContain("h-field-sm");
 
   const words = [...screen.getByTestId("import-ask-panel").querySelectorAll("button")].map(
     (b) => b.textContent,

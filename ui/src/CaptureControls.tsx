@@ -3,7 +3,7 @@ import type { Filter, TrawlerApi } from "./api";
 import { openFile, saveBody, type ChosenFile } from "./body";
 import { CaptureMenu, type CaptureAct } from "./CaptureMenu";
 import { ModalShell } from "./ModalShell";
-import { Button, Checkbox, IconButton, Notice, Spinner, TonedText } from "./components/index";
+import { Button, Checkbox, Field, IconButton, Notice, Spinner, TonedText } from "./components/index";
 import { dismissNotice, noticeDismissed, NOTICE_KEY } from "./noticePreference";
 
 export const CAPTURE_COPY = {
@@ -263,7 +263,7 @@ function ImportDialog({
   // honest is that a dismissed ask stops listening to it: its answer must not
   // reach back and close whatever the user opened next.
   const listening = useRef(true);
-  const paste = useRef<HTMLTextAreaElement>(null);
+  const paste = useRef<HTMLSpanElement>(null);
   // Armed in the body, not just at the declaration: StrictMode mounts, unmounts
   // and remounts, so a cleanup-only effect disarms the ref for the whole life of
   // an ask that was never dismissed — and every import then answers into a
@@ -305,7 +305,7 @@ function ImportDialog({
     // through the import, so it is where focus goes before the buttons die; the
     // picker's own dialog never holds focus, so the button the user pressed
     // still has it. Same hazard ProxyCloseDialog hands to its exit.
-    paste.current?.focus();
+    paste.current?.querySelector("textarea")?.focus();
     setImporting(true);
     onBusy(true);
     try {
@@ -326,21 +326,22 @@ function ImportDialog({
 
   return (
     <ModalShell title={CAPTURE_COPY.importName} onCancel={dismiss} testId="import-ask" dismissLabel="close">
-      <textarea
-        ref={paste}
-        data-opener="true"
-        data-wire="curl-command"
-        aria-label={CAPTURE_COPY.pasteLabel}
-        placeholder={CAPTURE_COPY.pastePlaceholder}
-        value={command}
-        // Read-only rather than disabled: this is the ask's opener, so it holds
-        // focus, and disabling it blurs to <body> — outside the dialog, where
-        // ModalShell's Esc handler never sees the key and the one exit from a
-        // slow import is gone.
-        readOnly={importing}
-        onChange={(e) => setCommand(e.target.value)}
-        className="h-field-sm w-full resize-none rounded-button border border-hairline bg-canvas px-chrome-x py-2 font-mono text-control leading-normal text-ink-body placeholder:text-ink-mute read-only:opacity-disabled focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus"
-      />
+      <span ref={paste} data-opener="true" data-wire="curl-command" className="block">
+        <Field
+          multiline
+          verbatim
+          aria-label={CAPTURE_COPY.pasteLabel}
+          placeholder={CAPTURE_COPY.pastePlaceholder}
+          value={command}
+          // Read-only rather than disabled: this is the ask's opener, so it holds
+          // focus, and disabling it blurs to <body> — outside the dialog, where
+          // ModalShell's Esc handler never sees the key and the one exit from a
+          // slow import is gone.
+          readOnly={importing}
+          onChange={(e) => setCommand(e.target.value)}
+          className="h-field-sm w-full"
+        />
+      </span>
       {importing && (
         <div data-testid="import-running">
           <Notice>
