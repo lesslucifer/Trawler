@@ -1451,3 +1451,184 @@ test("a core that goes silent after refusing a query states both, hiding neither
   expect(screen.getByTestId("empty")).toHaveTextContent("4xz is not a status");
   // And the band makes no claim about rows that are not there.
   expect(band).not.toHaveTextContent("the rows below are the last it sent");});
+
+// E-REPLAY.W3 — the composer against the send doors, through the scripted client.
+// The stub answers the way the core does: a send lands a sent flow in the store
+// and answers it; the list only moves when the bus says so.
+function replayWorld() {
+  const b64 = (text: string) => btoa(text);
+  const views: Record<string, FlowView> = {
+    f1: {
+      ...flow({ id: "f1", method: "POST", uri: "https://a.test/users", status: 201 }),
+      request_http_version: "HTTP/1.1",
+      response_http_version: "HTTP/1.1",
+      request_headers: [
+        { name: "Host", value: "a.test" },
+        { name: "Authorization", value: "Bearer OLD" },
+        { name: "Content-Length", value: "12" },
+      ],
+      response_headers: [],
+      request_body: { state: "captured", size: 12, data_base64: b64('{"name":"a"}') },
+      response_body: { state: "empty" },
+    },
+    f2: {
+      ...flow({ id: "f2", uri: "https://b.test/", started_at: "2026-07-12T10:00:01Z" }),
+      request_http_version: "HTTP/1.1",
+      response_http_version: "HTTP/1.1",
+      request_headers: [{ name: "Authorization", value: "Bearer TWO" }],
+      response_headers: [],
+      request_body: { state: "empty" },
+      response_body: { state: "empty" },
+    },
+  };
+  let rows: FlowSummary[] = [views.f1, views.f2].map(({ id, started_at, duration_ms, method, uri, status, source, seed }) =>
+    flow({ id, started_at, duration_ms, method, uri, status, source, seed }),
+  );
+  const world = mockApi(() => rows);
+  const land = (seed: string | null, method: string, uri: string): FlowView => {
+    const id = `sent-${rows.length}`;
+    const view: FlowView = { ...views[seed ?? "f2"], id, seed, source: "sent", method, uri, status: 200, duration_ms: 142 };
+    views[id] = view;
+    rows = [...rows, flow({ id, method, uri, status: 200, source: "sent", seed, started_at: "2026-07-12T10:00:02Z" })];
+    return view;
+  };
+  world.api.getFlow = vi.fn(async (id: string) => views[id]);
+  world.api.replay = vi.fn(async (id: string, fields) => land(id, fields.method ?? views[id].method, fields.url ?? views[id].uri));
+  world.api.send = vi.fn(async (fields) => land(null, fields.method ?? "GET", fields.url ?? ""));
+  return world;
+}
+
+const rowOf = async (index: number) => (await screen.findAllByTestId("flow-row"))[index];
+
+async function replayFirst() {
+  fireEvent.click(await rowOf(0));
+  fireEvent.click(await screen.findByRole("button", { name: "replay" }));
+  return screen.findByTestId("composer");
+}
+
+test("replay with one edit sends exactly that edit, and the result lands as a sent flow", async () => {
+  const { api, fire } = replayWorld();
+  render(<App api={api} initialState={PROVEN} />);
+
+  await replayFirst();
+  expect(screen.getByRole("textbox", { name: "url" })).toHaveFocus();
+  fireEvent.change(screen.getByRole("textbox", { name: "Authorization value" }), { target: { value: "Bearer NEW" } });
+  fireEvent.click(screen.getByRole("button", { name: "send" }));
+
+  await within(screen.getByTestId("send-zone")).findByRole("button", { name: "open the new flow" });
+  // The Host row goes by omission and the core-owned Content-Length never
+  // entered the draft: the list sent is exactly what the core should send.
+  expect(api.replay).toHaveBeenCalledWith("f1", { headers: [{ name: "Authorization", value: "Bearer NEW" }] });
+  expect(screen.getByTestId("send-zone")).toHaveTextContent("142 ms");
+
+  await fire();
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(3));
+  expect(within(screen.getAllByTestId("flow-row")[2]).getByLabelText("sent")).toHaveTextContent("↗");
+
+  fireEvent.click(screen.getByRole("button", { name: "open the new flow" }));
+  await waitFor(() => expect(api.getFlow).toHaveBeenLastCalledWith("sent-2"));
+  expect(await screen.findByTestId("detail")).toBeInTheDocument();
+});
+
+test("the draft survives looking away, the door that made it reopens it, and another flow replaces it", async () => {
+  const { api } = replayWorld();
+  render(<App api={api} initialState={PROVEN} />);
+
+  await replayFirst();
+  fireEvent.change(screen.getByRole("textbox", { name: "Authorization value" }), { target: { value: "Bearer NEW" } });
+
+  fireEvent.click(await rowOf(1));
+  await screen.findByTestId("detail");
+  expect(screen.queryByTestId("composer")).toBeNull();
+
+  await replayFirst();
+  expect(screen.getByRole("textbox", { name: "Authorization value" })).toHaveValue("Bearer NEW");
+
+  fireEvent.click(await rowOf(1));
+  fireEvent.click(await screen.findByRole("button", { name: "replay" }));
+  await screen.findByTestId("composer");
+  expect(screen.getByRole("textbox", { name: "url" })).toHaveValue("https://b.test/");
+  expect(screen.getByRole("textbox", { name: "Authorization value" })).toHaveValue("Bearer TWO");
+});
+
+test("× on a seeded draft returns to the seed's inspector, and the draft is kept", async () => {
+  const { api } = replayWorld();
+  render(<App api={api} initialState={PROVEN} />);
+
+  await replayFirst();
+  fireEvent.change(screen.getByRole("textbox", { name: "url" }), { target: { value: "https://c.test/" } });
+  fireEvent.click(screen.getByRole("button", { name: "back to the flow" }));
+
+  const detail = await screen.findByTestId("detail");
+  expect(detail).toHaveTextContent("https://a.test/users");
+  fireEvent.click(within(detail).getByRole("button", { name: "replay" }));
+  expect(await screen.findByRole("textbox", { name: "url" })).toHaveValue("https://c.test/");
+});
+
+test("a request from scratch reaches the compose door, and the draft stays editable after its send", async () => {
+  const { api } = replayWorld();
+  render(<App api={api} initialState={PROVEN} />);
+  await rowOf(0);
+
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.trigger }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "new request" }));
+  await screen.findByTestId("composer");
+  const send = screen.getByRole("button", { name: "send" });
+  expect(send).toBeDisabled();
+  expect(screen.getByTestId("send-zone")).toHaveTextContent("a request needs a URL");
+
+  fireEvent.change(screen.getByRole("textbox", { name: "url" }), { target: { value: "https://c.test/ping" } });
+  fireEvent.click(send);
+
+  await within(screen.getByTestId("send-zone")).findByRole("button", { name: "open the new flow" });
+  expect(api.send).toHaveBeenCalledWith({ method: "GET", url: "https://c.test/ping" });
+  expect(api.replay).not.toHaveBeenCalled();
+  const url = screen.getByRole("textbox", { name: "url" });
+  expect(url).toBeEnabled();
+  fireEvent.change(url, { target: { value: "https://c.test/pong" } });
+  expect(url).toHaveValue("https://c.test/pong");
+
+  fireEvent.click(screen.getByRole("button", { name: "close" }));
+  await waitFor(() => expect(screen.queryByTestId("composer")).toBeNull());
+  expect(screen.queryByTestId("detail")).toBeNull();
+});
+
+test.each([
+  ["a refusal the core would not attempt", "the seed's request body was not captured (too_large); give a body to replace it"],
+  ["a send that got no reply", "send failed: client error (Connect): tcp connect error: Connection refused (os error 61)"],
+])("%s is shown verbatim beside send, and the list does not move", async (_, sentence) => {
+  const { api, fire } = replayWorld();
+  api.replay = vi.fn(async () => {
+    throw new Error(sentence);
+  });
+  render(<App api={api} initialState={PROVEN} />);
+
+  await replayFirst();
+  fireEvent.click(screen.getByRole("button", { name: "send" }));
+
+  const failed = await screen.findByTestId("send-failed");
+  expect(failed).toHaveTextContent(`⚠${sentence}`);
+  expect(within(screen.getByTestId("send-zone")).queryByLabelText(/^\d{3}\b/)).toBeNull();
+  expect(screen.getByRole("button", { name: "send" })).toBeEnabled();
+  await fire();
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(2);
+});
+
+test("a reply that lands after its draft was replaced never speaks for the new one", async () => {
+  const { api } = replayWorld();
+  let answer: (view: FlowView) => void = () => {};
+  api.replay = vi.fn(() => new Promise<FlowView>((resolve) => (answer = resolve)));
+  render(<App api={api} initialState={PROVEN} />);
+
+  await replayFirst();
+  fireEvent.click(screen.getByRole("button", { name: "send" }));
+  expect(screen.getByTestId("send-zone")).toHaveTextContent("sending…");
+
+  fireEvent.click(await rowOf(1));
+  fireEvent.click(await screen.findByRole("button", { name: "replay" }));
+  await screen.findByTestId("composer");
+  await act(async () => answer({ ...(await api.getFlow("f1")), id: "late", status: 500 }));
+
+  expect(screen.getByTestId("send-zone")).toHaveTextContent("not sent yet");
+  expect(screen.getByRole("button", { name: "send" })).toBeEnabled();
+});

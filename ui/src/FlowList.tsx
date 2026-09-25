@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { defaultProxyAddr, type FlowSummary } from "./api";
+import { defaultProxyAddr, type FlowSource, type FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { NotAnswering } from "./NotAnswering";
 import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
@@ -90,18 +90,17 @@ function Absence({
   );
 }
 
-// The mark wears the door's own face — the same ↑ the import control puts in the
-// row — and its box is reserved whether or not it is drawn, so every timestamp
-// shares one left edge. Not a column and not a component: one conditional
-// character with an accessible name, in one cell of one screen.
-function ImportMark({ imported }: { imported: boolean }) {
+// The mark wears the door's own face — ↑ is the import control's, ↗ is new
+// request's — and its box is reserved whether or not it is drawn, so every
+// timestamp shares one left edge. Not a column and not a component: one
+// conditional character with an accessible name, in one cell of one screen.
+const SOURCE_MARK: Partial<Record<FlowSource, string>> = { imported: "↑", sent: "↗" };
+
+function SourceMark({ source }: { source: FlowSource }) {
+  const mark = SOURCE_MARK[source];
   return (
-    <span
-      aria-label={imported ? "imported" : undefined}
-      title={imported ? "imported" : undefined}
-      className="inline-block w-4 text-ink-mute"
-    >
-      {imported ? "↑" : ""}
+    <span aria-label={mark && source} title={mark && source} className="inline-block w-4 text-ink-mute">
+      {mark ?? ""}
     </span>
   );
 }
@@ -225,7 +224,7 @@ export function FlowList({
                 }}
               >
                 <span data-wire="started_at">
-                  <ImportMark imported={flow.source === "imported"} />
+                  <SourceMark source={flow.source} />
                   <TimestampText timestamp={flow.started_at} />
                 </span>
                 <span data-wire="method">

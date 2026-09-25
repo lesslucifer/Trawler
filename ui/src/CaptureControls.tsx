@@ -11,6 +11,7 @@ export const CAPTURE_COPY = {
   exportAct: "export as har…",
   importAct: "import…",
   importName: "import a curl command or a har file",
+  newRequestAct: "new request",
   clearAct: "clear",
   clearPreference: "don't show this again",
   exporting: "exporting…",
@@ -25,11 +26,12 @@ export const CAPTURE_COPY = {
 } as const;
 
 // Each act wears the face the app already spends on its direction: ↓ is
-// IconButton's save, ↑ is the mark FlowList prints on an imported row, and ⌫ is
-// the clear shortcut's erase face.
+// IconButton's save, ↑ and ↗ are the marks FlowList prints on an imported and a
+// sent row, and ⌫ is the clear shortcut's erase face.
 export const CAPTURE_GLYPH = {
   export: "↓",
   import: "↑",
+  sent: "↗",
   clear: "⌫",
 } as const;
 
@@ -45,11 +47,13 @@ export function CaptureControls({
   filter,
   count,
   onCleared,
+  onNewRequest,
 }: {
   api: TrawlerApi;
   filter: Filter;
   count: number;
   onCleared: () => void;
+  onNewRequest?: () => void;
 }) {
   // Two flags rather than one slot naming the running transfer: export and
   // import start and finish independently, so a single slot lets whichever
@@ -122,6 +126,9 @@ export function CaptureControls({
       busy: importing,
       run: () => setAsking("import"),
     },
+    ...(onNewRequest
+      ? [{ id: "new-request", label: CAPTURE_COPY.newRequestAct, glyph: CAPTURE_GLYPH.sent, run: onNewRequest }]
+      : []),
   ];
 
   return (

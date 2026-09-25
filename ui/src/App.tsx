@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { createApi, defaultProxyAddr, UNREACHABLE, type ReachState, type TrawlerApi } from "./api";
+import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
 import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
+import { useDraft } from "./useDraft";
 import { useProxyCloseConfirm } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
 import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
+import { Composer } from "./Composer";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
@@ -41,6 +43,10 @@ const METHOD_OPTIONS: SelectOption[] = [
   })),
 ];
 
+// The detail pane shows one flow's inspector or the composer, in place of each
+// other (epic decision 7): the list stays beside it, where a sent row lands.
+type Pane = { kind: "inspector"; id: string } | { kind: "composer" } | null;
+
 function hostOptions(hosts: string[]): SelectOption[] {
   return [{ id: ANY, label: "any host" }, ...hosts.map((h) => ({ id: h, label: h }))];
 }
@@ -55,9 +61,20 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // it caused.
   const [clearedEmpty, setClearedEmpty] = useState(false);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pane, setPane] = useState<Pane>(null);
+  const inspected = pane?.kind === "inspector" ? pane.id : null;
   const [retryNonce, setRetryNonce] = useState(0);
-  const { flow: detail, failed: detailFailed } = useFlowDetail(client, selectedId, retryNonce);
+  const { flow: detail, failed: detailFailed } = useFlowDetail(client, inspected, retryNonce);
+  const { kept, open: openDraft, edit, send } = useDraft(client);
+  const inspect = useCallback((id: string) => setPane({ kind: "inspector", id }), []);
+  const compose = (seed: FlowView | null) => {
+    openDraft(seed);
+    setPane({ kind: "composer" });
+  };
+  const leaveComposer = useCallback(() => {
+    const seedId = kept?.draft.seed?.id;
+    setPane(seedId ? { kind: "inspector", id: seedId } : null);
+  }, [kept]);
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
@@ -464,26 +481,37 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             filter={filter}
             count={flows.length}
             onCleared={() => setClearedEmpty(true)}
+            onNewRequest={() => compose(null)}
           />
         </>
       }
       detail={
-        selectedId == null ? undefined : (
+        pane?.kind === "composer" && kept ? (
+          <Composer
+            draft={kept.draft}
+            outcome={kept.outcome}
+            onEdit={edit}
+            onSend={() => void send()}
+            onClose={leaveComposer}
+            onOpenFlow={inspect}
+          />
+        ) : inspected != null ? (
           <FlowDetail
-            key={selectedId}
+            key={inspected}
             api={client}
             flow={detail}
             failed={detailFailed}
-            onClose={() => setSelectedId(null)}
+            onClose={() => setPane(null)}
+            onReplay={detail ? () => compose(detail) : undefined}
           />
-        )
+        ) : undefined
       }
     >
       {closeDialog}
       <FlowList
         flows={flows}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
+        selectedId={inspected ?? (pane?.kind === "composer" ? kept?.draft.seed?.id : null)}
+        onSelect={inspect}
         filtered={hasFilter}
         cleared={clearedEmpty}
         silent={silent}
