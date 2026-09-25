@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab5e7a39f34851f0dfad469" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REPLAY.W1 result: the sender</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REPLAY.W1 result — Trawler sends a request, and what came back is a flow</h1>
+      <p>Delivered as planned: two doors, one sender on the proxy's connector, and <code>source: sent</code> with a seed link. Seven calls went beyond the plan, two of them forced by the review, each listed below.</p>
+      <div class="meta">v1 · 2026-09-25 · Trawler · T3 WU result · <span class="badge id">E-REPLAY.W1</span> · branch <code>wu/replay/sender</code> · <a href="2026-09-25-replay-w1-sender-plan.html">WU plan</a> · <a href="2026-09-23-replay-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <thead><tr><th>#</th><th>Planned observable</th><th>Result</th><th>Asserted by</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>an edited header reaches the wire, and the answer is a new sent flow</td><td><span class="badge auto">delivered</span></td><td><code>a_replay_with_an_edited_header_reaches_the_wire_and_lands_as_a_sent_flow</code></td></tr>
+        <tr><td>2</td><td><code>{}</code> resends the seed. <code>Host</code> and <code>Content-Length</code> follow an edit, and a typed <code>Host</code> goes as typed</td><td><span class="badge auto">delivered</span></td><td><code>an_empty_replay_resends_the_seed_and_an_edit_carries_its_own_host_and_length</code></td></tr>
+        <tr><td>3</td><td>compose with a method and a URL. Without either, a <code>400</code> naming it</td><td><span class="badge auto">delivered</span></td><td><code>a_request_from_scratch_needs_a_method_and_a_url_and_nothing_else</code></td></tr>
+        <tr><td>4</td><td><code>source: sent</code> and <code>seed</code> on both projections, and <code>?source=sent</code> selects exactly those</td><td><span class="badge auto">delivered</span></td><td><code>a_sent_flow_carries_its_mark_on_both_projections_and_is_selectable_by_it</code></td></tr>
+        <tr><td>5</td><td>an uncaptured seed body is a <code>422</code> naming it, and an override sends</td><td><span class="badge auto">delivered</span></td><td><code>a_seed_body_never_captured_is_refused_by_name_until_one_is_given</code></td></tr>
+        <tr><td>6</td><td>a closed port is a <code>502</code> with the reason and no new row. A silent upstream is a <code>504</code></td><td><span class="badge auto">delivered</span></td><td><code>a_send_that_reaches_nobody_…</code> · <code>an_upstream_that_never_answers_…</code></td></tr>
+        <tr><td>7</td><td>HTTPS verified as the proxy verifies (trusted reached, untrusted <code>502</code>), and h2 recorded</td><td><span class="badge auto">delivered</span></td><td><code>an_https_upstream_is_verified_as_the_proxy_verifies_one_and_h2_is_recorded</code></td></tr>
+        <tr><td>8</td><td>an evicted seed is a <code>404</code>, an over-cap reply is <code>too_large</code>, and the send is announced on <code>/stream</code></td><td><span class="badge auto">delivered</span></td><td><code>a_sent_flow_lives_by_the_rings_rules_…</code> · <code>a_sent_flow_is_announced_on_the_stream_as_it_lands</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Difference from the plan</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>Cookie</code> headers are joined, a rule beyond epic decision 5 (the plan flagged it in advance)</td>
+          <td>the proxy's own normalization (hudsucker <code>normalize_request</code>) does it. An h2 seed may split cookies, and an HTTP/1.1 upstream takes one</td></tr>
+        <tr><td>the response body gets its own 30 s deadline after the head. A stall lands the flow with a <code>read_error</code> body</td>
+          <td>decision 4 bounds only the wait for the head. Without a second bound, a reply that stalls mid-body would hold the send open indefinitely. A head arrived, so the exchange happened and the flow is owed</td></tr>
+        <tr><td><code>tests/api.rs</code>'s summary-row key lock gains <code>seed</code></td>
+          <td>the lock exists so that no field joins the row by accident. This one joins by design (epic expected result 3), so the lock is updated rather than bypassed</td></tr>
+        <tr><td>the recorder's <code>version_str</code> / <code>headers_to_vec</code> moved to <code>flow.rs</code> as <code>version_token</code> / <code>header_list</code>, with their tests</td>
+          <td>the sender needs the same spellings. A second copy could drift, and the sender importing from the recorder would couple the two producers</td></tr>
+        <tr><td>a URL carrying <code>user:pass@</code> is refused (<code>400</code>, or <code>422</code> on a seed), and the core's <code>Host</code> is the URL's host and port. <em>Found by the review</em></td>
+          <td>the first review round reproduced <code>Host: user:pass@…</code> on the wire. Credentials in a URL are neither a <code>Host</code> nor an <code>Authorization</code> header, so the doors refuse them rather than drop them or invent a header from them</td></tr>
+        <tr><td>the sent request body is recorded through <code>capture::capture</code>, not a local classifier. <em>Found by the review</em></td>
+          <td>the plan named the capture cap as the rule. A second implementation of it could drift, so the proxy's own function now holds both producers' bodies</td></tr>
+        <tr><td>the <code>504</code> integration test waits 1 s, not the shipped 30 s</td>
+          <td>it drives <code>test_support::api_router_with_sender</code> with <code>Sender::with_deadline</code>, a test-only seam (<code>cfg(test-utils)</code>). The shipped deadline stays a constant, as decision 4 ruled</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <thead><tr><th>Kind</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>commits on <code>wu/replay/sender</code></td><td><code>98fc02e</code> plan · <code>0bb0063</code> code and tests · <code>c82bb95</code> T2 distillation · <code>353c46a</code> this report · <code>ebf4c14</code> review fixes · the review round's doc edits</td></tr>
+        <tr><td>integration (11)</td><td><code>tests/replay.rs</code>, real <code>serve()</code> over ephemeral ports, with a loopback echo origin, h1 / h2 / untrusted TLS origins and a closed port. Seeds are captured through the proxy. Plus the <code>replay__a_sent_flow_view_shape_is_locked</code> snapshot. Stable over repeated runs</td></tr>
+        <tr><td>unit (new and changed)</td><td><code>src/sender.rs</code> (header rules, a <code>Host</code> without credentials, cause chain, a finished send, a stalled body, a silent upstream) · <code>src/api/send.rs</code> (the merge and every refusal, credentials included) · <code>src/flow.rs</code> · <code>src/api/view.rs</code> · <code>src/store.rs</code> · <code>src/api/mod.rs</code> (the routes)</td></tr>
+        <tr><td>review</td><td>round 1 FAIL on <code>353c46a</code>: three findings confirmed. Userinfo and the duplicate classifier are fixed in <code>ebf4c14</code>, each with its regression test written first. The dropped response remainder is waived: draining it reads an unbounded body to save one handshake, and the code states that. Round 2 PASS on <code>5d6ed9e</code>: the <code>read_error</code> for a stalled body was refuted as a defect (DEC-58 rules it), and its missing test, a nit, is added. Round 3 binds the final tip</td></tr>
+        <tr><td>regression</td><td><code>cargo xtask gate0</code> green: fmt, clippy pedantic, and the whole suite, including <code>e2e_capture</code>, <code>e2e_h2</code> and <code>e2e_export</code> unchanged</td></tr>
+        <tr><td>e2e</td><td>waived, as the plan states: the journeys are W4's <code>replay.spec.ts</code> through the composer</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <thead><tr><th>Doc</th><th>What it now carries</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../use-cases/web-ui.html#uc-8">use-cases/web-ui.html</a> (T2)</td><td>UC-8's API half. The listing's <code>source</code> row widens to three values and the <code>seed</code> link</td></tr>
+        <tr><td><a href="../decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html">DEC-58</a> (T2, new)</td><td><code>sent</code> over <code>replayed</code> · the dangling seed · no flow for a failure · the header rules · 400 vs 422 · the reach argument</td></tr>
+        <tr><td>index rows (UC-8, DEC-58) · <code>architecture.html</code></td><td>not yet: W4, per the epic's distillation plan</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <thead><tr><th>For</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>W2 · W3: the composer's draft</td>
+          <td><strong>The composer always sends a whole header list, so the API treats every row, the seed's
+          <code>Host</code> included, as typed.</strong> If the user changes the URL's host and leaves a
+          seeded <code>Host</code> row, the stale <code>Host</code> goes out. The draft module has to drop
+          or re-derive an unedited seed <code>Host</code> row when the URL's authority changes, or the run
+          has to show that row as following the URL</td></tr>
+        <tr><td>W3</td><td><code>api.ts</code>'s <code>FlowSource</code> is still <code>"captured" | "imported"</code>. Until W3, a sent row renders in the app with no mark</td></tr>
+        <tr><td>W2's Given list</td><td>a body override is text (<code>body</code>) or bytes (<code>body_base64</code>). axum's 2 MB limit applies to a pasted override, never to a seed body sent unedited. Refusals are plain text, 400 vs 422 as DEC-58 states</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

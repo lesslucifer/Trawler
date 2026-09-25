@@ -303,8 +303,8 @@ impl Store {
         self.announce_evictions(evicted);
     }
 
-    /// A whole batch of flows from outside the proxy, landed as one ring
-    /// operation. Batched rather than looped over `insert` so a concurrent
+    /// A whole batch of flows from outside the proxy — a file's, or the one
+    /// exchange the sender just finished — landed as one ring operation. Batched rather than looped over `insert` so a concurrent
     /// capture cannot interleave into the middle of the batch — the imported
     /// flows stay a contiguous slice of the ring, which is what makes an
     /// imported capture's order the order the file had.
@@ -544,6 +544,7 @@ mod tests {
             FlowBuilder::new().uri("http://file/").method("GET").build().imported(),
             FlowBuilder::new().uri("http://file/post").method("POST").build().imported(),
         ]);
+        s.import(vec![FlowBuilder::new().uri("http://sent/").method("POST").build().sent(None)]);
 
         let by_source = |source| {
             uris(&s.list(&FlowFilter { source: Some(source), ..FlowFilter::default() }))
@@ -553,6 +554,7 @@ mod tests {
         };
         assert_eq!(by_source(FlowSource::Captured), vec!["http://live/"]);
         assert_eq!(by_source(FlowSource::Imported), vec!["http://file/post", "http://file/"]);
+        assert_eq!(by_source(FlowSource::Sent), vec!["http://sent/"]);
 
         let composed = s.list(&FlowFilter {
             source: Some(FlowSource::Imported),

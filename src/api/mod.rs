@@ -2,6 +2,7 @@ pub mod curl;
 mod decode;
 pub mod har;
 pub mod routes;
+pub mod send;
 pub mod view;
 
 use std::sync::Arc;
@@ -12,20 +13,23 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{middleware, Router};
 
+use crate::sender::Sender;
 use crate::store::Store;
 use routes::AppState;
 
 /// Build the control API: the embedded UI shell, filtered listing, a HAR 1.2
 /// export of it and the import that reads one back (or a pasted `curl`
-/// command, under `?format=curl`), a connection tally
+/// command, under `?format=curl`), the two send doors (a replay of a flow, and
+/// a request from scratch), a connection tally
 /// (`/stats`), full-flow detail, raw or decoded bodies, a live SSE stream, the
 /// reach control (`/reach`), and the CA download.
 pub fn router(
     store: Arc<Store>,
     ca_cert_pem: Arc<String>,
     reach: Arc<crate::reach::Controller>,
+    sender: Sender,
 ) -> Router {
-    router_from(AppState { store, ca_cert_pem, reach })
+    router_from(AppState { store, ca_cert_pem, reach, sender })
 }
 
 /// The same router from a state that already exists — how an armed reach
@@ -34,7 +38,10 @@ pub fn router(
 pub fn router_from(state: AppState) -> Router {
     Router::new()
         .route("/", get(routes::ui_page))
-        .route("/flows", get(routes::list_flows).delete(routes::clear_flows))
+        .route(
+            "/flows",
+            get(routes::list_flows).post(routes::send_flow).delete(routes::clear_flows),
+        )
         .route("/flows/export", get(routes::export_har))
         .route(
             "/flows/import",
@@ -45,6 +52,7 @@ pub fn router_from(state: AppState) -> Router {
         )
         .route("/stats", get(routes::stats))
         .route("/flows/{id}", get(routes::get_flow).delete(routes::delete_flow))
+        .route("/flows/{id}/replay", post(routes::replay_flow))
         .route("/flows/{id}/request/body", get(routes::request_body))
         .route("/flows/{id}/response/body", get(routes::response_body))
         .route("/stream", get(routes::stream))
@@ -233,6 +241,28 @@ mod tests {
                 Request::builder().method("DELETE").uri(path).body(Body::empty()).expect("request");
             let response = router.clone().oneshot(request).await.expect("response");
             assert_eq!(response.status(), expected, "DELETE {path}");
+        }
+    }
+
+    // Both send doors answer only POST, and a refused send reaches the handler
+    // rather than a 405 — a method landing on the wrong path regresses silently.
+    #[tokio::test]
+    async fn the_send_doors_are_post_routes_that_refuse_before_sending() {
+        let router = crate::test_support::api_router(Arc::new(Store::new(1024, 8)), "PEM");
+        for (method, path, expected) in [
+            ("POST", "/flows", StatusCode::BAD_REQUEST),
+            ("POST", "/flows/not-a-uuid/replay", StatusCode::BAD_REQUEST),
+            ("POST", "/flows/00000000-0000-0000-0000-000000000000/replay", StatusCode::NOT_FOUND),
+            (
+                "GET",
+                "/flows/00000000-0000-0000-0000-000000000000/replay",
+                StatusCode::METHOD_NOT_ALLOWED,
+            ),
+        ] {
+            let request =
+                Request::builder().method(method).uri(path).body(Body::empty()).expect("request");
+            let response = router.clone().oneshot(request).await.expect("response");
+            assert_eq!(response.status(), expected, "{method} {path}");
         }
     }
 
