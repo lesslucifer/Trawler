@@ -342,6 +342,37 @@ mod tests {
         assert!(flow.duration_ms.is_some());
     }
 
+    // A head arrived, so the exchange happened and the flow is owed; only the
+    // body it never finished is marked as not captured (DEC-58).
+    #[tokio::test]
+    async fn a_reply_whose_body_stalls_still_lands_with_its_body_marked_unread() {
+        use tokio::io::AsyncWriteExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let (mut connection, _) = listener.accept().await.unwrap();
+            let mut request = [0u8; 1024];
+            let _ = tokio::io::AsyncReadExt::read(&mut connection, &mut request).await;
+            connection
+                .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 10\r\n\r\nabc")
+                .await
+                .unwrap();
+            std::future::pending::<()>().await;
+        });
+
+        let flow = Sender::new(&[], 1024)
+            .with_deadline(Duration::from_millis(200))
+            .send(outgoing(&format!("http://127.0.0.1:{port}/"), &[], b""), None)
+            .await
+            .expect("a head arrived, so the send is answered");
+        let response = flow.response.expect("the response head");
+        assert_eq!(response.status, 200);
+        assert!(matches!(
+            response.body,
+            BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }
+        ));
+    }
+
     #[tokio::test]
     async fn a_silent_upstream_is_no_response_and_no_flow() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
