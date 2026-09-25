@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Use-Cases Index</h1>
       <p>Routing table for use-case records (T2 · what). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v4 · 2026-09-21 · Trawler</div>
+      <div class="meta">v5 · 2026-09-25 · Trawler</div>
     </div>
   </header>
   <main>
@@ -65,6 +65,12 @@
           <td><a href="web-ui.html#uc-7"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-7</span></td>
           <td>Clearing the capture: <code>DELETE /flows</code> removes what the listing filters select — the same filter, no third implementation — and <code>DELETE /flows/{id}</code> removes one, 404 when it is not there. Every live subscriber learns of it as one <code>cleared</code> event for the batch, distinct from the ring's own eviction. A cleared store is empty, not restarted: the connection tally and the running proxy are untouched</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="web-ui.html#uc-8"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-8</span></td>
+          <td>Sending a request again, edited or from scratch: <code>POST /flows/{id}/replay</code> merges overrides onto a seed (an absent field is the seed's own value) and <code>POST /flows</code> takes a whole request, through one sender that verifies TLS as the proxy does. The exchange lands as an ordinary flow marked <code>sent</code>, naming its seed, and selectable by that mark. A seed body never captured is refused rather than sent empty, and a send that got no reply lands no flow (<a href="../decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html">DEC-58</a>). The app's composer takes the detail pane: one draft, only the edited row marks itself, and the outcome lands under the send button</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

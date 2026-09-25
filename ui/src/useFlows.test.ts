@@ -97,6 +97,7 @@ function summary(id: string, uri: string): FlowSummary {
     uri,
     status: 200,
     source: "captured",
+    seed: null,
     request_body_state: "empty",
     response_body_state: "empty",
   };

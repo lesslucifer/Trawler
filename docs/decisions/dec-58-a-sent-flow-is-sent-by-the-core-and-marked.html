@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab5e7329f34851f0dfad45f">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-58: a sent flow is sent by the core, and marked</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-58 — a sent flow is sent by the core's own client, and marked</h1>
+      <p>Trawler can send a request itself. The exchange lands as an ordinary flow with a third
+        provenance, <code>sent</code>, and a link to the flow it came from. An exchange that never
+        happened lands nothing.</p>
+      <div class="meta">v1 · 2026-09-25 · Trawler · T2 decision · minted by
+        <strong>E-REPLAY.W1</strong> ·
+        extends <a href="dec-38-imported-flows-are-marked.html">DEC-38</a> ·
+        re-argues <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a> ·
+        <a href="../use-cases/web-ui.html#uc-8">UC-8</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <p>DEC-38 made an imported flow "inspectable, never executable" and left firing one at a server
+      to "a different capability with its own decision". This is that decision. Until now the core
+      had one outbound path, the proxy, and every flow either passed through it or came out of a file.</p>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The core sends through a <code>Sender</code> of its own, which
+        connects through the proxy's <code>upstream_connector</code>. Two doors reach it:
+        <code>POST /flows/{id}/replay</code> (a seed plus overrides) and <code>POST /flows</code>
+        (a request from scratch). The call answers once a reply exists, and only then does the flow
+        land, marked <code>source: sent</code> with <code>seed</code> naming its origin or
+        <code>null</code>.</p>
+    </div>
+
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  P["proxy · Recorder"] -->|"source = captured"| R["the ring"]
+  F["a .har file · a curl paste"] -->|"source = imported"| R
+  S["Sender
+the proxy's connector · the capture cap"] -->|"source = sent
+seed = id | null"| R
+  S -. "transport failure · no reply in 30 s" .-> N["an answer with a reason
+nothing lands"]
+      </pre>
+      <div class="caption">Hình 1 — a third producer of flows, under the same ring rules. The failure edge never reaches the ring.</div>
+    </div>
+
+    <h2 id="rules">What it rules</h2>
+    <table data-c="rules">
+      <thead><tr><th>Ruling</th><th>Why this way</th><th>Rejected</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong><code>sent</code>, not <code>replayed</code></strong></td>
+          <td>a composed request replays nothing, so <code>replayed</code> would be false for every
+            flow the compose door makes. <code>sent</code> is true of both doors: Trawler's own
+            client made this exchange</td>
+          <td><code>replayed</code> · two values (<code>replayed</code> / <code>composed</code>),
+            which split one mechanism into two filters</td>
+        </tr>
+        <tr>
+          <td><strong>A seed link, dangling by design</strong></td>
+          <td>the link records where the request came from. The ring may evict the seed, and the
+            sent flow keeps naming an id that now 404s. Keeping the seed alive would let a replay
+            pin memory the ring exists to bound</td>
+          <td>clearing the link on eviction, which rewrites a recorded fact · pinning the seed</td>
+        </tr>
+        <tr>
+          <td><strong>No flow for an exchange that never happened</strong></td>
+          <td>a flow asserts that an exchange happened. Refused, unresolvable, TLS rejected, or no
+            reply head within 30 s: the caller gets <code>502</code> / <code>504</code> with the
+            reason in words, and the ring is untouched. A reply whose body stalls is still an
+            exchange, so it lands with a <code>read_error</code> body</td>
+          <td>a pending row inserted at send time, which either stays pending forever or has to be
+            deleted, and makes the list describe traffic that did not occur</td>
+        </tr>
+        <tr>
+          <td><strong>Verified exactly as the proxy verifies</strong></td>
+          <td>the sender is built on the same <code>upstream_connector</code> function (webpki roots plus
+            <code>upstream_extra_root_pems</code>, ALPN h2 / http/1.1), so the two outbound paths
+            cannot come to trust different upstreams</td>
+          <td>an insecure-TLS toggle, per-send CAs, client certificates. Loosening verification needs
+            its own decision</td>
+        </tr>
+        <tr>
+          <td><strong>Not through the proxy port</strong></td>
+          <td>a request looped through <code>:7420</code> would land as <code>captured</code>, with
+            no seed and no id to hand the caller</td>
+          <td>sending via the proxy</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="headers">The header rules, and why they are rules</h2>
+    <table data-c="header-rules">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>Content-Length</code> is the body's</td>
+          <td>the most common edit is the body, and a stale length cuts it short on the wire</td></tr>
+        <tr><td><code>Host</code> is the URL's host and port unless the caller typed one</td>
+          <td>a changed URL with the seed's <code>Host</code> routes to the wrong site. The seed's own
+            <code>Host</code> is not "typed". Only one in a header list the caller gave is. A URL's
+            <code>user:pass@</code> is neither a <code>Host</code> nor an <code>Authorization</code> header,
+            so the doors refuse it rather than drop it or turn it into one</td></tr>
+        <tr><td>connection headers are the client's</td>
+          <td>HTTP/2 refuses <code>Connection</code>, <code>Keep-Alive</code>,
+            <code>Proxy-Connection</code>, <code>Transfer-Encoding</code>, <code>Upgrade</code> and
+            <code>TE</code> outright, and a seed captured through the proxy routinely carries one</td></tr>
+        <tr><td>several <code>Cookie</code> headers join into one</td>
+          <td>the proxy's own normalization. An h2 seed may split cookies and an HTTP/1.1 server takes one</td></tr>
+      </tbody>
+    </table>
+    <p>Everything else goes as given, in order, duplicates kept. A given header list replaces the
+      seed's whole rather than patching it, because the composer always holds the full edited list.
+      A patch language would be a second syntax to learn and to test.</p>
+
+    <h2 id="refusals">400 and 422 mean different things</h2>
+    <table data-c="refusals">
+      <thead><tr><th>Status</th><th>Means</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><code>400</code></td><td>the caller's request is malformed</td>
+          <td><code>url must be absolute http(s)</code> · <code>method is required</code> · an unknown
+            field, refused rather than ignored, because a typo'd <code>header</code> would silently
+            send the seed's headers</td></tr>
+        <tr><td><code>422</code></td><td>the request is well-formed, but the seed lacks what must be supplied</td>
+          <td><code>the seed's request body was not captured (too_large); give a body to replace it</code>.
+            A missing body is never sent as an empty one, the principle UC-6 holds for export and import</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="reach">Reach: why the doors add no exposure</h2>
+    <div class="callout warn" data-c="reach">
+      <p>When reach is armed (DEC-55), a device on that network can call the send doors and make
+        Trawler issue a request, for example to <code>http://192.168.1.1/admin</code>. The same device
+        could already do exactly that through the proxy reach opens:
+        <code>curl -x 192.168.1.5:7420 http://192.168.1.1/admin</code>. The send doors reach the same
+        upstreams, with the same verification, from the same host. They add no reach the armed proxy
+        does not already grant, so they take no gate of their own. A <code>403</code> on the reach
+        address would guard a door whose neighbour is open. What DEC-55's confirm buys is still the
+        whole boundary.</p>
+    </div>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences">
+      <thead><tr><th>Consequence</th><th>Where it binds</th></tr></thead>
+      <tbody>
+        <tr><td><code>FlowSource</code> has three members. <code>?source=sent</code> works on the listing, the export and the clear with no change to any of them</td>
+          <td><code>src/flow.rs</code> · <code>src/api/view.rs</code></td></tr>
+        <tr><td>the core has an outbound path that is not the proxy. <code>architecture.html</code> says so at E-REPLAY's close</td>
+          <td><code>src/sender.rs</code></td></tr>
+        <tr><td>a sent flow exports to HAR like any flow, and comes back <code>imported</code>: HAR carries no provenance (DEC-37)</td>
+          <td><code>src/api/har.rs</code>, unchanged</td></tr>
+        <tr><td>the 30 s deadline is a constant, not a setting. Nothing asks for another value yet</td>
+          <td><code>sender::RESPONSE_DEADLINE</code></td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

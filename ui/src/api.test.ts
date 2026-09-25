@@ -36,6 +36,7 @@ test("listFlows fetches /flows with the filter and parses typed rows", async () 
       uri: "http://x/",
       status: 200,
       source: "captured",
+      seed: null,
       request_body_state: "empty",
       response_body_state: "empty",
     },
@@ -302,6 +303,7 @@ test("listFlows parses the provenance mark off a summary", async () => {
       uri: "http://x/",
       status: null,
       source: "imported",
+      seed: null,
       request_body_state: "captured",
       response_body_state: null,
     },
@@ -374,3 +376,56 @@ test("disarmReach deletes and reports this machine only", async () => {
   expect(result.armed).toBe(false);
   expect(result.api).toBeNull();
 });
+
+test("replay posts the overrides as JSON to the seed's door and answers the new flow", async () => {
+  const flow = { id: "new-1", source: "sent", seed: "seed/1" };
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => flow });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const fields = { headers: [{ name: "Authorization", value: "Bearer NEW" }] };
+  const result = await createApi("http://x").replay("seed/1", fields);
+
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe("http://x/flows/seed%2F1/replay");
+  expect(init.method).toBe("POST");
+  expect(init.headers).toEqual({ "content-type": "application/json" });
+  expect(JSON.parse(init.body)).toEqual(fields);
+  expect(result).toBe(flow);
+});
+
+test("an unchanged replay posts {} — the seed as it was", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await createApi("http://x").replay("s", {});
+
+  expect(fetchMock.mock.calls[0][1].body).toBe("{}");
+});
+
+test("send posts a request from scratch to /flows", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: "n" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await createApi("http://x").send({ method: "GET", url: "https://a.test/" });
+
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toBe("http://x/flows");
+  expect(init.method).toBe("POST");
+  expect(JSON.parse(init.body)).toEqual({ method: "GET", url: "https://a.test/" });
+});
+
+test.each([
+  [400, "url must be absolute http(s)"],
+  [422, "the seed's request body was not captured (too_large); give a body to replace it"],
+  [502, "send failed: tcp connect error: Connection refused (os error 61)"],
+  [504, "no response within 30 s"],
+])("a %i from either send door throws the core's sentence unwrapped", async (status, sentence) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status, text: async () => `${sentence}\n` }));
+
+  await expect(createApi("http://x").replay("s", {})).rejects.toThrow(new RegExp(`^${literal(sentence)}$`));
+  await expect(createApi("http://x").send({})).rejects.toThrow(new RegExp(`^${literal(sentence)}$`));
+});
+
+function literal(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

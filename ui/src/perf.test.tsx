@@ -31,6 +31,7 @@ const flow = (i: number, host: string): FlowSummary => ({
   uri: `https://${host}/v2/resource/${i}?page=${i % 7}`,
   status: 200,
   source: "captured",
+  seed: null,
   request_body_state: "empty",
   response_body_state: "captured",
 });
@@ -172,6 +173,7 @@ describe("the body pane's size report", () => {
       uri: "https://api.example.com/big.txt",
       status: 200,
       source: "captured",
+      seed: null,
       request_http_version: "HTTP/1.1",
       response_http_version: "HTTP/1.1",
       request_headers: [],

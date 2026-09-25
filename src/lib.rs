@@ -13,6 +13,7 @@ pub mod event;
 pub mod flow;
 pub mod reach;
 pub mod recorder;
+pub mod sender;
 pub mod store;
 
 use std::net::SocketAddr;
@@ -120,7 +121,13 @@ pub async fn serve(config: Config) -> Result<RunningServer, Box<dyn std::error::
         Arc::clone(&store),
         ca_material.pems.clone(),
     ));
-    let app = api::router(Arc::clone(&store), Arc::new(ca_material.pems.cert), Arc::clone(&reach));
+    let sender = sender::Sender::new(&config.upstream_extra_root_pems, config.body_cap);
+    let app = api::router(
+        Arc::clone(&store),
+        Arc::new(ca_material.pems.cert),
+        Arc::clone(&reach),
+        sender,
+    );
     // A config that boots armed is how a headless core reaches a device without
     // a UI to confirm at; the arming a user does goes through the control API.
     if let Some(address) = config.reach.address() {

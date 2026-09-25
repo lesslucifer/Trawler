@@ -12,6 +12,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
     uri: "http://example.com/a/b?x=1",
     status: 200,
     source: "captured",
+    seed: null,
     request_body_state: "empty",
     response_body_state: "captured",
     ...over,
@@ -366,3 +367,23 @@ test("rows on screen leave the empty region absent whatever the failure", () => 
   render(<FlowList flows={three} silent />);
   expect(screen.queryByTestId("empty")).toBeNull();
   expect(screen.getAllByTestId("flow-row")).toHaveLength(3);});
+
+test("a sent row carries ↗ in the same reserved box, named sent", () => {
+  const { container } = render(<FlowList flows={[flow({ id: "s", source: "sent", seed: "c" })]} />);
+  const mark = screen.getByLabelText("sent");
+  expect(mark).toHaveTextContent("↗");
+  expect(mark.className).toContain("text-ink-mute");
+  expect(mark.className).toContain("w-4");
+  expect(container.querySelector('[data-wire="started_at"]')?.firstElementChild).toBe(mark);
+  expect(screen.queryByLabelText("imported")).toBeNull();
+});
+
+test("each provenance wears its own face, and a captured row wears none", () => {
+  render(
+    <FlowList
+      flows={[flow({ id: "c", source: "captured" }), flow({ id: "i", source: "imported" }), flow({ id: "s", source: "sent" })]}
+    />,
+  );
+  const faces = screen.getAllByTestId("flow-row").map((row) => row.querySelector('[data-wire="started_at"]')?.firstElementChild?.textContent);
+  expect(faces).toEqual(["", "↑", "↗"]);
+});

@@ -70,9 +70,45 @@ fn e2e(dir: &Path) -> Result<(i32, String), String> {
     ];
     pnpm(dir, &build_args, &[])?;
     let e2e_dir = dir.join("e2e");
+    let tally = e2e_dir.join(RUN_TALLY);
+    let _ = std::fs::remove_file(&tally);
     pnpm(&e2e_dir, &["install"], &[])?;
     pnpm(&e2e_dir, &["test"], &[])?;
-    Ok((0, "ui e2e complete".to_string()))
+    let verdict = judge_run_tally(std::fs::read_to_string(&tally).ok().as_deref());
+    let _ = std::fs::remove_file(&tally);
+    verdict.map(|summary| (0, summary))
+}
+
+// wdio has exited green having run nothing: a service that fails to initialise
+// before any spec starts is logged, not counted. So the launcher writes what it
+// counted, and a run is green only when every configured spec file passed.
+const RUN_TALLY: &str = ".run-tally.json";
+
+#[derive(serde::Deserialize)]
+struct RunTally {
+    specs: u64,
+    passed: u64,
+    failed: u64,
+}
+
+fn judge_run_tally(raw: Option<&str>) -> Result<String, String> {
+    let raw = raw
+        .ok_or(format!("the e2e run left no ui/e2e/{RUN_TALLY}, so nothing says it ran a spec"))?;
+    let tally: RunTally = serde_yaml::from_str(raw)
+        .map_err(|e| format!("ui/e2e/{RUN_TALLY} is not a run tally: {e}"))?;
+    if tally.specs == 0 {
+        return Err("the e2e run is configured with no spec file".to_string());
+    }
+    if tally.failed > 0 {
+        return Err(format!("{} of {} spec files failed", tally.failed, tally.specs));
+    }
+    if tally.passed < tally.specs {
+        return Err(format!(
+            "only {} of {} spec files passed, so the rest never ran",
+            tally.passed, tally.specs
+        ));
+    }
+    Ok(format!("ui e2e complete - {} of {} spec files passed", tally.passed, tally.specs))
 }
 
 fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
@@ -92,8 +128,127 @@ fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::run;
+    use super::{judge_run_tally, run};
     use std::path::Path;
+
+    fn tally(specs: u64, passed: u64, failed: u64) -> String {
+        format!(
+            r#"{{"specs":{specs},"finished":{},"passed":{passed},"failed":{failed}}}"#,
+            passed + failed
+        )
+    }
+
+    #[test]
+    fn a_run_is_green_only_when_every_spec_file_passed() {
+        assert_eq!(
+            judge_run_tally(Some(&tally(4, 4, 0))).unwrap(),
+            "ui e2e complete - 4 of 4 spec files passed"
+        );
+    }
+
+    #[test]
+    fn a_run_that_left_no_tally_is_red() {
+        assert!(judge_run_tally(None).unwrap_err().contains("no ui/e2e/.run-tally.json"));
+    }
+
+    #[test]
+    fn a_tally_that_does_not_parse_is_red() {
+        assert!(judge_run_tally(Some("{\"specs\":")).unwrap_err().contains("is not a run tally"));
+    }
+
+    #[test]
+    fn a_run_configured_with_no_spec_is_red() {
+        assert!(judge_run_tally(Some(&tally(0, 0, 0))).unwrap_err().contains("no spec file"));
+    }
+
+    #[test]
+    fn a_failed_spec_file_is_red() {
+        assert_eq!(judge_run_tally(Some(&tally(4, 3, 1))).unwrap_err(), "1 of 4 spec files failed");
+    }
+
+    #[test]
+    fn a_run_that_passed_fewer_spec_files_than_configured_is_red() {
+        assert_eq!(
+            judge_run_tally(Some(&tally(4, 0, 0))).unwrap_err(),
+            "only 0 of 4 spec files passed, so the rest never ran"
+        );
+    }
+
+    // In the embedded WebKit provider `*=` never matches and never errors, so a
+    // spec using it fails against a screen that renders correctly.
+    fn partial_text_selector_lines(source: &str) -> Vec<usize> {
+        source
+            .lines()
+            .enumerate()
+            .filter(|(_, line)| line.contains("*="))
+            .map(|(at, _)| at + 1)
+            .collect()
+    }
+
+    #[test]
+    fn the_partial_text_detector_names_the_line() {
+        let spec = "const a = $(\"button=send\");\nconst b = $(\"span*=sending\");\n";
+        assert_eq!(partial_text_selector_lines(spec), vec![2]);
+    }
+
+    #[test]
+    fn no_e2e_spec_selects_by_partial_text() {
+        let specs = crate::repo_root().expect("repo root").join("ui/e2e/specs");
+        for entry in std::fs::read_dir(&specs).expect("ui/e2e/specs") {
+            let path = entry.expect("spec entry").path();
+            let source = std::fs::read_to_string(&path).expect("spec source");
+            let lines = partial_text_selector_lines(&source);
+            assert!(lines.is_empty(), "{} uses *= on lines {lines:?}", path.display());
+        }
+    }
+
+    // pnpm 10+ ignores the `pnpm` field and says so only as an install warning,
+    // so a pin placed there stops applying without turning anything red.
+    fn carries_a_pnpm_field(package_json: &str) -> bool {
+        let parsed: serde_yaml::Value = serde_yaml::from_str(package_json).expect("valid json");
+        parsed.get("pnpm").is_some()
+    }
+
+    #[test]
+    fn the_pnpm_field_detector_reads_the_top_level_key() {
+        assert!(carries_a_pnpm_field(r#"{"name":"a","pnpm":{"overrides":{}}}"#));
+        assert!(!carries_a_pnpm_field(r#"{"name":"a","scripts":{"pnpm":"x"}}"#));
+    }
+
+    #[test]
+    fn no_tracked_package_json_carries_a_pnpm_field() {
+        let repo = crate::repo_root().expect("repo root");
+        let listed = std::process::Command::new("git")
+            .args(["ls-files", "*package.json"])
+            .current_dir(&repo)
+            .output()
+            .expect("git ls-files");
+        let listed = String::from_utf8(listed.stdout).expect("utf-8 paths");
+        assert!(
+            listed.lines().count() >= 2,
+            "expected ui/ and ui/e2e/ package.json, got {listed:?}"
+        );
+        for path in listed.lines() {
+            let source = std::fs::read_to_string(repo.join(path)).expect("package.json");
+            assert!(
+                !carries_a_pnpm_field(&source),
+                "{path} carries a pnpm field, which pnpm ignores"
+            );
+        }
+    }
+
+    #[test]
+    fn the_e2e_workspace_keeps_the_native_utils_pin() {
+        let repo = crate::repo_root().expect("repo root");
+        let workspace = std::fs::read_to_string(repo.join("ui/e2e/pnpm-workspace.yaml"))
+            .expect("ui/e2e/pnpm-workspace.yaml");
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&workspace).expect("valid yaml");
+        assert_eq!(
+            parsed["overrides"]["@wdio/native-utils"].as_str(),
+            Some("2.5.0"),
+            "@wdio/tauri-service fails to initialise below @wdio/native-utils 2.5.0"
+        );
+    }
 
     #[test]
     fn unknown_ui_subcommand_is_usage_error() {

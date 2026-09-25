@@ -12,16 +12,16 @@
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
       UC-5 inspect), plus the native app's setup screen for capturing this machine or another device
-      (UC-ONBOARD), the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
-      capture (UC-7).</p>
-      <div class="meta">v12 · 2026-09-21 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      (UC-ONBOARD), the HAR round trip — taking a capture out and bringing one back (UC-6) — clearing the
+      capture (UC-7), and sending a request again, edited or from scratch (UC-8).</p>
+      <div class="meta">v14 · 2026-09-25 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span>, rebuilt on the platform axis with
       reach beyond loopback by <span class="badge id">E-ONBOARD</span> ·
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
       UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
-      + UC-7 by <span class="badge id">E-EXPORT</span></div>    </div>
+      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span></div>    </div>
   </header>
   <main>
 
@@ -156,9 +156,9 @@
       starting one moves nothing else in the row. A turning ring joins the in-flight line, and a second
       one turns inside the menu in place of the running act's own face: reopening the menu mid-transfer
       is the one way to ask why an act is withheld, so the answer is there and not only in the header.</p>
-      <p>Each act wears a face, and none of the three is minted for the menu: <code>↓</code> is the save
-      glyph the app already spends on writing something out, <code>↑</code> is the very mark an imported
-      row carries in the list below, and <code>⌫</code> is the erase the third act is. The box holding
+      <p>Each act wears a face, and none of them is minted for the menu: <code>↓</code> is the save
+      glyph the app already spends on writing something out, <code>↑</code> and <code>↗</code> are the very
+      marks an imported and a sent row carry in the list below, and <code>⌫</code> is the erase the clear act is. The box holding
       them is drawn whether or not it is filled, so every label hangs off one left edge, and none of the
       faces reaches the accessible name — the label is what the act is called.</p>
       <table data-c="uc-4-acts">
@@ -180,6 +180,10 @@
         command <em>read-only</em> rather than disabled: that target is what the ask opened focused on,
         and disabling it would drop focus to <code>&lt;body&gt;</code>, outside the dialog, taking Esc
         with it. A slow import keeps its one keyboard exit.</td></tr>
+        <tr><td><strong>new request</strong></td>
+        <td>The composer, in the detail pane, with a draft from scratch
+        (<a href="#uc-8-composer">UC-8</a>). A kept draft from scratch reopens with its edits; a kept draft
+        seeded from a flow is replaced.</td></tr>
         <tr><td><strong>clear</strong></td>
         <td>The header's <code>⌫</code> shortcut is named for the live filtered count. By default it opens a
         modal ask titled with that count, whose initial focus is on the answer that does nothing — the act
@@ -192,7 +196,8 @@
       <p>Two things the list itself gained. An <strong>imported row carries a <code>↑</code> mark</strong>
       in its time cell, with its own accessible name, so a capture someone handed you is tellable from
       live traffic without a column of its own
-      (<a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a>). And a
+      (<a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a>). A <strong>sent row carries
+      <code>↗</code></strong>, named <em>sent</em>, in the same reserved box (UC-8). And a
       <strong>cleared list gets a third absence of its own</strong> — "capture cleared", with the same
       remedy the never-captured one gives, because after a clear the remedy genuinely is the same and the
       heading is what says which nothing this is.</p>
@@ -233,13 +238,14 @@
             <td>an envelope: at most <em>n</em> rows plus the <code>next_cursor</code> that continues the walk, <code>null</code> once the walk reaches the oldest row the ring still holds</td>
           </tr>
           <tr>
-            <td><code>GET /flows?source=captured</code> · <code>?source=imported</code></td>
+            <td><code>GET /flows?source=captured</code> · <code>?source=imported</code> · <code>?source=sent</code></td>
             <td>only that provenance. Every row carries its <code>source</code>, because the ring
-            now holds flows the proxy never saw (<a href="#uc-6">UC-6</a>) and a listing that
-            mixes a live capture with a colleague's file has to say which is which</td>
+            now holds flows the proxy never saw (<a href="#uc-6">UC-6</a>, <a href="#uc-8">UC-8</a>) and a listing that
+            mixes a live capture with a colleague's file, or with requests Trawler sent itself, has to say which is which.
+            Every row also carries <code>seed</code>: the flow a sent one was replayed from, <code>null</code> otherwise</td>
           </tr>
           <tr>
-            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is neither</td>
+            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is none of the three</td>
             <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
           </tr>
         </tbody>
@@ -299,6 +305,9 @@
         about 168 characters of a 900-character cookie instead of about 108.</li>
         <li><strong>Esc dismisses the panel</strong>, as does ✕, and focus returns to the list that opened
         it, so a keyboard user lands back on the row they came from.</li>
+        <li><strong><em>replay</em> sits in the flow line beside copy-as-curl</strong>: both send this
+        request again, one elsewhere and one here. It turns the pane into the composer with a draft seeded
+        from this flow (<a href="#uc-8-composer">UC-8</a>), and the list stays beside it.</li>
         <li><strong>Bodies render by content type</strong> over
         <code>GET /flows/{id}/{leg}/body</code>: JSON and XML/HTML as their pretty-printed source
         in a navigable, foldable surface, <code>image/*</code> as the image over a transparency
@@ -806,6 +815,125 @@ the client lacks the certificate"]
       arbitrary sequences of inserts, imports, evictions and removals. Why the mutating methods
       widened the CORS grant without reversing the read-only reasoning behind it:
       <a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a>.</p>
+    </div>
+
+    <h2 id="uc-8">UC-8 — Send a request again, edited or from scratch</h2>
+    <div data-c="uc-8-contract">
+      <p>A developer who sees what their client sent can ask what would happen had it sent something
+      else, and the answer is captured like everything else. Trawler sends the request itself, and the
+      exchange lands as an <strong>ordinary flow</strong> marked <strong><code>source: "sent"</code></strong>:
+      the same ring and eviction, the same <code>GET /flows/{id}</code> and body endpoints, announced on
+      <code>/stream</code> as <code>request</code> then <code>response</code>, and selectable by
+      <code>?source=sent</code>. Replay and compose use one sender, so the only difference is where the
+      starting values come from.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /flows/{id}/replay</code> + <code>{ "method"?, "url"?, "headers"?, "body"? | "body_base64"? }</code>, or no body at all</td>
+            <td><code>201</code>, <code>Location: /flows/&lt;new&gt;</code>, and the new flow, with
+            <code>seed</code> naming <code>{id}</code>. <strong>An absent field is the seed's own value</strong>.
+            A given <code>headers</code> list replaces the seed's list whole. <code>body</code> is text,
+            <code>body_base64</code> is bytes, and <code>""</code> is an empty body</td>
+          </tr>
+          <tr>
+            <td><code>POST /flows</code> + <code>{ "method", "url", "headers"?, "body"? | "body_base64"? }</code></td>
+            <td>the same <code>201</code>, with <code>seed: null</code></td>
+          </tr>
+          <tr>
+            <td>a malformed request: not JSON, an unknown field, a missing <code>method</code> or <code>url</code>,
+            a URL that is not absolute <code>http(s)</code> or that carries <code>user:pass@</code> (credentials
+            travel as an <code>Authorization</code> header, never inside the URL), a method that is not a token, a header the wire cannot
+            carry, <code>body</code> and <code>body_base64</code> both</td>
+            <td><code>400</code> with a one-sentence reason naming the field, and nothing sent</td>
+          </tr>
+          <tr>
+            <td>a replay of a seed that cannot be sent as it stands: its request body was never captured
+            (streamed, too large, read error), or its URL is not absolute or carries credentials, and the caller gave none</td>
+            <td><code>422</code> naming the absence (<code>the seed's request body was not captured (too_large); give a body to replace it</code>).
+            <strong>A missing body is never sent as an empty one.</strong> A seed the ring no longer holds is a <code>404</code></td>
+          </tr>
+          <tr>
+            <td>the upstream refused, could not be resolved, failed TLS verification, or sent no reply head within 30 s</td>
+            <td><code>502</code> / <code>504</code> with the reason in words, and <strong>no flow lands</strong>:
+            a flow asserts that an exchange happened, and none did</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Three consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>The call answers when the reply exists.</strong> The flow lands complete, never as a
+        pending row. It carries the versions actually negotiated (<code>HTTP/2.0</code> against an h2
+        upstream), and its bodies obey the capture cap: an over-cap reply is <code>not_captured / too_large</code>.
+        TLS is verified exactly as the proxy verifies an upstream.</li>
+        <li><strong>Some headers follow the request, not the list.</strong> <code>Content-Length</code> is
+        the body's. <code>Host</code> follows the URL unless the caller wrote one: a seed's own
+        <code>Host</code> is not the caller's. Connection headers are the client's to set, and several
+        <code>Cookie</code> headers are joined, as the proxy does.</li>
+        <li><strong>The seed link can dangle.</strong> Once the ring evicts the seed, its id 404s while
+        the sent flow still names it. The link records where the request came from, not a flow the ring
+        keeps alive.</li>
+      </ul>
+    </div>
+
+    <h3 id="uc-8-composer">The app's composer</h3>
+    <div data-c="uc-8-composer-contract">
+      <p>The composer takes the detail pane in place of the inspector, and the list stays beside it, so a
+      sent row lands in view (<span class="badge id">E-REPLAY.W3</span>). It is opened by <em>replay</em> in
+      the inspector (UC-5) or <em>new request</em> in the capture menu (UC-4). Three zones: the identity (method,
+      URL, where the draft came from), the request (headers, then the body), and the send zone pinned at the
+      bottom.</p>
+      <table data-c="uc-8-composer">
+        <thead><tr><th>A user does</th><th>What they get</th></tr></thead>
+        <tbody>
+          <tr><td>opens a draft from a flow</td>
+            <td>every field filled from it, headers in wire order. The rows the core rewrites
+            (<code>Content-Length</code>, the connection headers) are left out, and one line names each that the
+            flow carried and why. The <code>Host</code> row shows the URL's host, reads <em>follows the URL</em>,
+            and is sent only once someone types in it, whatever they type. It has no remove, because the core
+            sends the URL's host whenever the draft names none. A row added or renamed to a header the core rewrites
+            says so in its mark slot and is not sent</td></tr>
+          <tr><td>edits a header, adds one, removes one</td>
+            <td>only that row marks itself, in words: <em>edited</em> with <em>revert</em>, or <em>added</em>.
+            A removed row is counted in the heading (<em>Headers · 3 · 1 removed</em>). A draft from scratch marks
+            nothing. No field turns red: a malformed value is the core's to refuse, verbatim</td></tr>
+          <tr><td>opens a flow whose body the composer cannot show</td>
+            <td>the inspector's own sentence for a streamed, too-large or unread body, and
+            <em>binary body, 3.2 KiB — sent as captured</em> for bytes that are not text. The field still takes
+            typing, and what is typed is sent instead</td></tr>
+          <tr><td>sends</td>
+            <td>only what differs from the flow reaches <code>POST /flows/{id}/replay</code>: an untouched body
+            goes as captured, byte for byte. A draft from scratch reaches <code>POST /flows</code>, and cannot be sent
+            without a URL. Send is disabled with <em>sending…</em> beside it for the whole wait</td></tr>
+          <tr><td>reads the outcome</td>
+            <td>under the button that sent it: the status pill, the duration, and <em>open the new flow</em>. A send
+            that got no reply, or that the core refused, is one ⚠ line with the core's sentence and no pill.
+            Focus returns to <em>send</em></td></tr>
+          <tr><td>looks away and comes back</td>
+            <td>one draft is kept until another replaces it or the app quits. <em>replay</em> on the flow it came
+            from, or <em>new request</em> over a draft from scratch, reopens it with its edits. Anything else
+            starts a new one. <em>start over</em> returns the draft to where it started. × or Esc returns to the
+            flow's inspector, or closes the pane</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" data-c="uc-8-provenance">
+      <p>API half delivered by <span class="badge id">E-REPLAY.W1</span>
+      (<code>src/sender.rs</code>, <code>src/api/send.rs</code>). The contract is proven over real
+      sockets in <code>tests/replay.rs</code>, every wire claim asserted on what the origin received,
+      and the sent flow's shape is snapshot-locked. The composer is delivered by
+      <span class="badge id">E-REPLAY.W3</span> (<code>ui/src/Composer.tsx</code>, <code>ui/src/draft.ts</code>),
+      built from the replay composer's design run. Its rules are unit-tested in <code>draft.test.ts</code>, and
+      the screen is tested against the API contract through the stub client in <code>App.test.tsx</code>.
+      End to end, <code>ui/e2e/specs/replay.spec.ts</code> drives the real window through three journeys
+      (<span class="badge id">E-REPLAY.W4</span>): <em>replay with one edit</em>, the edited header read back from
+      what the origin received; <em>compose from scratch</em>, the draft still editable after its send; and
+      <em>a send that fails</em>, ⚠ with no pill and no new row.
+      <code>Field</code>'s multi-line form and why the edited mark is not a <code>Field</code> state:
+      <a href="../decisions/dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html">DEC-59</a>. Why the core sends through its own client, why it is <code>sent</code> and not
+      <code>replayed</code>, why a failure lands nothing, and why the doors add no exposure beyond an
+      armed proxy: <a href="../decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html">DEC-58</a>.</p>
     </div>
 
   </main>

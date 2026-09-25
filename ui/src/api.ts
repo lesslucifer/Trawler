@@ -2,7 +2,7 @@
 // is configurable — never a hardcoded port in component code. Dev/preview/tests
 // inject it; the released app exposes it as configuration.
 
-export type FlowSource = "captured" | "imported";
+export type FlowSource = "captured" | "imported" | "sent";
 
 export interface FlowSummary {
   id: string;
@@ -12,6 +12,7 @@ export interface FlowSummary {
   uri: string;
   status: number | null;
   source: FlowSource;
+  seed: string | null;
   request_body_state: string;
   response_body_state: string | null;
 }
@@ -36,6 +37,7 @@ export interface FlowView {
   uri: string;
   status: number | null;
   source: FlowSource;
+  seed: string | null;
   request_http_version: string;
   response_http_version: string | null;
   request_headers: HeaderView[];
@@ -45,6 +47,15 @@ export interface FlowView {
 }
 
 export type Leg = "request" | "response";
+
+// What the two send doors take. On a replay an absent field is the seed's own
+// value; from scratch, method and url are required and the core says so.
+export interface SendFields {
+  method?: string;
+  url?: string;
+  headers?: HeaderView[];
+  body?: string;
+}
 
 export interface BodyFetch {
   bytes: Uint8Array;
@@ -184,6 +195,8 @@ export interface TrawlerApi {
   // (DEC-55): the shell's confirm comes first, and nothing here is persisted.
   armReach(address: string): Promise<ReachState>;
   disarmReach(): Promise<ReachState>;
+  replay(id: string, fields: SendFields): Promise<FlowView>;
+  send(fields: SendFields): Promise<FlowView>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -281,6 +294,12 @@ export function createApi(baseUrl?: string): TrawlerApi {
       if (!res.ok) throw new Error(await refusal(res));
       return (await res.json()) as ReachState;
     },
+    async replay(id, fields) {
+      return sent(await fetch(`${base()}/flows/${encodeURIComponent(id)}/replay`, jsonPost(fields)));
+    },
+    async send(fields) {
+      return sent(await fetch(`${base()}/flows`, jsonPost(fields)));
+    },
     stream({ onEvent, onConnection, onDown, onUp }) {
       const source = new EventSource(`${base()}/stream`);
       // `connection` is deliberately absent here: a bare tunnel never becomes a
@@ -305,6 +324,18 @@ export function createApi(baseUrl?: string): TrawlerApi {
 async function refusal(res: Response): Promise<string> {
   const reason = (await res.text()).trim();
   return reason || `the server refused with ${res.status} and gave no reason`;
+}
+
+function jsonPost(fields: SendFields): RequestInit {
+  return { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(fields) };
+}
+
+// A send that got no reply is a refusal with the core's sentence (502 · 504),
+// exactly like one the core would not attempt (400 · 404 · 422): the screen
+// shows either verbatim beside the button that sent it.
+async function sent(res: Response): Promise<FlowView> {
+  if (!res.ok) throw new Error(await refusal(res));
+  return (await res.json()) as FlowView;
 }
 
 async function imported(res: Response): Promise<number> {

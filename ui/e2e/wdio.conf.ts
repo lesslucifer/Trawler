@@ -15,6 +15,10 @@ const APP_BINARY = resolve(here, "../src-tauri/target/release/trawler-ui");
 // core's ports cross to the spec via this file — never a shared variable.
 export const PORTS_FILE = resolve(here, ".core-ports.json");
 
+// `cargo xtask ui e2e` reads this after wdio exits and is red unless every spec
+// file passed: a service that fails before any spec starts leaves wdio green.
+const RUN_TALLY = resolve(here, ".run-tally.json");
+
 // The app reads its core's address from this variable at window creation, before
 // its first script runs (`e2e_core_address` in the shell). The launcher spawns
 // the app, so exporting it here is what puts it in the app's environment — and it
@@ -34,6 +38,21 @@ const NOTICE_MARKERS = [
 function clearNoticeMarkers() {
   for (const marker of NOTICE_MARKERS) rmSync(marker, { force: true });
 }
+
+// One core for the whole run, specs sequential (maxInstances 1) — so a captured
+// flow persists across specs. Onboarding's "fresh launch shows onboarding" is only
+// true before any flow exists, so it MUST run first. The flows spec MUST run last:
+// its closing pair kills the core to prove the shell states a silence, and the
+// harness exits the process rather than draining it, so nothing can follow. The
+// capture and replay specs sit between them — each leaves the capture empty, which
+// the flows spec refills from its own hits. Order is explicit, not
+// alphabetical-by-accident.
+const SPECS = [
+  "./specs/onboarding.spec.ts",
+  "./specs/capture.spec.ts",
+  "./specs/replay.spec.ts",
+  "./specs/flows.spec.ts",
+];
 
 let harness: ChildProcessWithoutNullStreams | undefined;
 
@@ -58,14 +77,7 @@ function startCore(): Promise<void> {
 
 export const config: WebdriverIO.Config = {
   runner: "local",
-  // One core for the whole run, specs sequential (maxInstances 1) — so a captured
-  // flow persists across specs. Onboarding's "fresh launch shows onboarding" is only
-  // true before any flow exists, so it MUST run first. The flows spec MUST run last:
-  // its closing pair kills the core to prove the shell states a silence, and the
-  // harness exits the process rather than draining it, so nothing can follow. The
-  // capture spec sits between them — it empties the capture, which the flows spec
-  // refills from its own hits. Order is explicit, not alphabetical-by-accident.
-  specs: ["./specs/onboarding.spec.ts", "./specs/capture.spec.ts", "./specs/flows.spec.ts"],
+  specs: SPECS,
   maxInstances: 1,
 
   services: [["@wdio/tauri-service", { driverProvider: "embedded" }]],
@@ -90,7 +102,16 @@ export const config: WebdriverIO.Config = {
     clearNoticeMarkers();
     await startCore();
   },
-  onComplete: async () => {
+  onComplete: async (_exitCode, _config, _capabilities, results) => {
+    writeFileSync(
+      RUN_TALLY,
+      JSON.stringify({
+        specs: SPECS.length,
+        finished: results.finished,
+        passed: results.passed,
+        failed: results.failed,
+      }),
+    );
     try {
       const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8"));
       await fetch(`${ports.control}/stop`).catch(() => {});

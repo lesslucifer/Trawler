@@ -27,6 +27,7 @@ pub(super) fn source_token(source: FlowSource) -> &'static str {
     match source {
         FlowSource::Captured => "captured",
         FlowSource::Imported => "imported",
+        FlowSource::Sent => "sent",
     }
 }
 
@@ -34,6 +35,7 @@ pub(super) fn parse_source(value: &str) -> Option<FlowSource> {
     match value {
         "captured" => Some(FlowSource::Captured),
         "imported" => Some(FlowSource::Imported),
+        "sent" => Some(FlowSource::Sent),
         _ => None,
     }
 }
@@ -90,6 +92,7 @@ impl From<&BodyRec> for BodyView {
 pub struct FlowView {
     pub id: String,
     pub source: &'static str,
+    pub seed: Option<String>,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -108,6 +111,7 @@ impl From<&Flow> for FlowView {
         Self {
             id: flow.id.to_string(),
             source: source_token(flow.source),
+            seed: flow.seed.map(|id| id.to_string()),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -133,6 +137,7 @@ impl From<&Flow> for FlowView {
 pub struct FlowSummary {
     pub id: String,
     pub source: &'static str,
+    pub seed: Option<String>,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -147,6 +152,7 @@ impl From<&Flow> for FlowSummary {
         Self {
             id: flow.id.to_string(),
             source: source_token(flow.source),
+            seed: flow.seed.map(|id| id.to_string()),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -316,7 +322,7 @@ mod tests {
     // token cannot be spelled one way out and another way in.
     #[test]
     fn source_tokens_round_trip_through_their_wire_spelling() {
-        for source in [FlowSource::Captured, FlowSource::Imported] {
+        for source in [FlowSource::Captured, FlowSource::Imported, FlowSource::Sent] {
             assert_eq!(super::parse_source(super::source_token(source)), Some(source));
         }
         assert_eq!(super::parse_source("Captured"), None);
@@ -330,9 +336,26 @@ mod tests {
     fn both_projections_carry_the_provenance_mark() {
         let captured_flow = FlowBuilder::new().status(200).build();
         let imported = FlowBuilder::new().status(200).build().imported();
-        for (flow, expected) in [(&captured_flow, "captured"), (&imported, "imported")] {
+        let sent = FlowBuilder::new().status(200).build().sent(None);
+        for (flow, expected) in
+            [(&captured_flow, "captured"), (&imported, "imported"), (&sent, "sent")]
+        {
             assert_eq!(serde_json::to_value(FlowView::from(flow)).unwrap()["source"], expected);
             assert_eq!(serde_json::to_value(FlowSummary::from(flow)).unwrap()["source"], expected);
+        }
+    }
+
+    // The link is on the row as well as the detail, and a flow that has none
+    // says so with a null rather than a missing key, so every row has one shape.
+    #[test]
+    fn both_projections_name_the_seed_or_null() {
+        let seed = FlowBuilder::new().status(200).build();
+        let replayed = FlowBuilder::new().status(200).build().sent(Some(seed.id));
+        for (flow, expected) in
+            [(&replayed, serde_json::json!(seed.id.to_string())), (&seed, serde_json::Value::Null)]
+        {
+            assert_eq!(serde_json::to_value(FlowView::from(flow)).unwrap()["seed"], expected);
+            assert_eq!(serde_json::to_value(FlowSummary::from(flow)).unwrap()["seed"], expected);
         }
     }
 

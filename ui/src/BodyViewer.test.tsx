@@ -15,6 +15,7 @@ function flow(over: Partial<FlowView> = {}): FlowView {
     uri: "http://example.com/",
     status: 200,
     source: "captured",
+    seed: null,
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/1.1",
     request_headers: [],

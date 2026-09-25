@@ -417,6 +417,7 @@ async fn the_unparameterised_listing_keeps_its_pre_paging_shape() {
             "method",
             "request_body_state",
             "response_body_state",
+            "seed",
             "source",
             "started_at",
             "status",
@@ -1349,7 +1350,7 @@ async fn a_clear_selects_by_provenance_like_every_other_endpoint() {
 
     let (status, value) = delete(&r, "/flows?source=nonsense").await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "a clear must never guess what it removes");
-    assert_eq!(value, "source must be captured or imported");
+    assert_eq!(value, "source must be captured, imported or sent");
     assert_eq!(json(&r, "/flows").await.1.as_array().unwrap().len(), 2);
 
     let (_, result) = delete(&r, "/flows?source=imported").await;

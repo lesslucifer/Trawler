@@ -1,0 +1,54 @@
+---
+source: tests/replay.rs
+expression: view
+---
+{
+  "duration_ms": "<duration>",
+  "id": "<id>",
+  "method": "POST",
+  "request_body": {
+    "data_base64": "aGk=",
+    "size": 2,
+    "state": "captured"
+  },
+  "request_headers": [
+    {
+      "name": "x-trace",
+      "value": "1"
+    },
+    {
+      "name": "content-length",
+      "value": "2"
+    },
+    {
+      "name": "host",
+      "value": "127.0.0.1:<port>"
+    }
+  ],
+  "request_http_version": "HTTP/1.1",
+  "response_body": {
+    "data_base64": "Zml4ZWQ=",
+    "size": 5,
+    "state": "captured"
+  },
+  "response_headers": [
+    {
+      "name": "content-type",
+      "value": "text/plain"
+    },
+    {
+      "name": "content-length",
+      "value": "5"
+    },
+    {
+      "name": "date",
+      "value": "<date>"
+    }
+  ],
+  "response_http_version": "HTTP/1.1",
+  "seed": null,
+  "source": "sent",
+  "started_at": "<started>",
+  "status": 200,
+  "uri": "http://127.0.0.1:<port>/fixed"
+}

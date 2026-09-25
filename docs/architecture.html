@@ -17,7 +17,7 @@
 
     <h2 id="overview">What this is</h2>
     <div class="callout" data-c="overview-callout">
-      <p>Trawler is an <strong>API-first, inspect-only MITM debugging proxy</strong>. A single process runs two servers: a <strong>capture proxy</strong> that intercepts HTTP(S) traffic, and a <strong>control API</strong> that exposes the captured flows over REST + SSE. Any interface — a native app, a browser, <code>curl</code> — is a <em>client</em> of that API, never a compile-time part of the core.</p>
+      <p>Trawler is an <strong>API-first, inspect-only MITM debugging proxy</strong>. A single process runs two servers: a <strong>capture proxy</strong> that intercepts HTTP(S) traffic, and a <strong>control API</strong> that exposes the captured flows over REST + SSE. Any interface — a native app, a browser, <code>curl</code> — is a <em>client</em> of that API, never a compile-time part of the core. The core can also <strong>send</strong> a request itself, edited from a captured flow or written from scratch, and what comes back lands as a flow like any other.</p>
     </div>
 
     <h2 id="layout">Layout &amp; conventions</h2>
@@ -28,7 +28,7 @@ flowchart TD
     subgraph core["core workspace — the library crate + its launcher"]
       bin["thin binary — installs logging, calls the composition root"]
       lib["composition root — wires config + CA + store + proxy + API, owns lifecycle"]
-      mods["domain &amp; capability modules<br/><i>one file per concept: config · domain model · events · capture · store · proxy handler · CA</i>"]
+      mods["domain &amp; capability modules<br/><i>one file per concept: config · domain model · events · capture · store · proxy handler · sender · CA</i>"]
       api["control-API package<br/><i>router · route handlers · read-only view projections · body decoding</i>"]
       tests["integration &amp; e2e tests<br/><i>one file per bounded contract / full flow</i>"]
       bin --> lib --> mods
@@ -52,7 +52,7 @@ flowchart TD
       <tbody>
         <tr><td>Core library</td><td>All capture + storage + serving logic</td><td>Library crate so the core is embeddable and unit-testable without a process; the binary is a launcher only.</td></tr>
         <tr><td>Composition root</td><td>Wires the parts, owns start/stop</td><td>One place builds the graph and runs the lifecycle; everything below it is decoupled and independently testable.</td></tr>
-        <tr><td>Domain / capability modules</td><td>The model and each capability</td><td>One file per concept (configuration, the flow domain model, lifecycle events, body capture, the store, the proxy handler, the CA). Add a concept → add a module.</td></tr>
+        <tr><td>Domain / capability modules</td><td>The model and each capability</td><td>One file per concept (configuration, the flow domain model, lifecycle events, body capture, the store, the proxy handler, the outbound sender, the CA). Add a concept → add a module.</td></tr>
         <tr><td>Control-API package</td><td>The REST + SSE surface</td><td>Router + handlers kept apart from read-only view projections and from body decoding, so the wire shape, the transport, and the transforms each have one home.</td></tr>
         <tr><td>Tests</td><td>Contract + full-flow coverage</td><td>Integration and e2e tests live outside the library, one file per bounded contract or end-to-end flow (per the <a href="testing-strategy.html">testing standard</a>).</td></tr>
         <tr><td>Dev tooling (<code>xtask</code>)</td><td>Build/test/gate automation</td><td>A cargo-invoked task crate: front-end build/dev/e2e drivers, the DoD gate, and the doc/notes machinery.</td></tr>
@@ -61,11 +61,12 @@ flowchart TD
     </table>
 
     <h2 id="runtime">Runtime wiring</h2>
-    <p>One async runtime hosts both servers: the <strong>capture proxy</strong> on one port, the <strong>control API</strong> on another. They bind loopback by default, and a user may <em>add</em> a second pair on one named interface address so another device can reach them — an authorization act costing one explicit confirm, off by default and dead with the process (<a href="decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a>). The loopback pair is never displaced, so the app's own client cannot lose its connection to a disarm. The proxy handler is the only bridge between the two servers, and it only ever <em>writes</em> — it holds no reference to any client.</p>
+    <p>One async runtime hosts both servers: the <strong>capture proxy</strong> on one port, the <strong>control API</strong> on another. They bind loopback by default, and a user may <em>add</em> a second pair on one named interface address so another device can reach them — an authorization act costing one explicit confirm, off by default and dead with the process (<a href="decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a>). The loopback pair is never displaced, so the app's own client cannot lose its connection to a disarm. Two paths reach upstream servers and write what they exchange into the store: the proxy handler, for traffic it intercepts, and the <strong>sender</strong>, the core's own outbound client, for a request the control API asks it to send. Neither holds a reference to any client.</p>
     <div class="diagram" data-c="runtime-diagram">
       <pre class="mermaid">
 flowchart LR
     client(["client apps"]) &lt;--&gt; proxy["capture proxy (MITM)"]
+    proxy &lt;--&gt; upstream(["upstream servers"])
     ca["CA material"] --> proxy
     proxy -- "record request / response" --> store[("Store")]
     store -- "lifecycle event" --> bus{{"broadcast bus"}}
@@ -73,8 +74,11 @@ flowchart LR
     store -- "read / query" --> rest["control API — REST"]
     sse --> clients["UI · browser · curl"]
     rest --> clients
+    rest -- "send" --> sender["sender (outbound client)"]
+    sender &lt;--&gt; upstream
+    sender -- "record the exchange" --> store
       </pre>
-      <div class="caption">The capture path knows nothing about clients. The <strong>Store</strong> is the single source of truth: it owns the broadcast bus and emits a lifecycle event on every write, eviction and clear. The control API is a subscriber and reader; it also <em>ingests</em> and <em>removes</em> — HAR import inserts flows the proxy never saw, marked as imported, through the same ring rules, and a clear takes out what the listing selects — but it never rewrites or reinterprets what the capture path recorded.</div>
+      <div class="caption">The capture path knows nothing about clients. The <strong>Store</strong> is the single source of truth: it owns the broadcast bus and emits a lifecycle event on every write, eviction and clear. The control API is a subscriber and reader; it also <em>ingests</em> and <em>removes</em> — HAR import inserts flows the proxy never saw, marked as imported, through the same ring rules, and a clear takes out what the listing selects — and it <em>sends</em> — a replayed or composed request goes out through the sender, verified as the proxy verifies an upstream, and lands as a flow marked sent once a reply exists — but it never rewrites or reinterprets what the capture path recorded.</div>
     </div>
 
     <h2 id="lifecycle">Request / response lifecycle</h2>
@@ -125,6 +129,7 @@ sequenceDiagram
         <tr><td>View-side decoding</td><td>Capture stores raw bytes faithfully; decoding (content-encoding reversal, charset→UTF-8, JSON/XML pretty-print) is an opt-in read transform (<code>?decode=1</code>), isolated in one place.</td></tr>
         <tr><td>Control endpoints on the API port</td><td>Everything a client needs — including the CA certificate download — is served off the API port, not the forward-proxy port.</td></tr>
         <tr><td>Open CORS, bounded by the confirm rather than by the bind</td><td>The API carries an open CORS grant so an out-of-process webview client can reach it, widened to the methods its mutating routes need (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a> for the grant, <a href="decisions/dec-38-imported-flows-are-marked.html#cors">DEC-38</a> for the widening). It was once justified by "adding no exposure beyond the bind address"; <a href="decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a> retires that sentence, because the bind is now the user's to widen. <strong>The grant does not widen with it</strong> — what bounds exposure is the confirm: reach is off by default, arms one named address (never the unspecified one), and is not persisted. Arming exposes the proxy <em>and</em> the whole control API, captured flows included, on that address; the confirm says so. Anything finer — a token, TLS, a per-origin policy — is deliberately not here, and is its own epic.</td></tr>
+        <tr><td>The core sends through its own client, not the proxy</td><td>A sent request goes out through the sender rather than looping back through the proxy port, where it would land as captured with no link to its seed and no id for the caller. The sender shares the proxy's upstream TLS trust and body cap, answers only once a reply exists, and lands no flow for an exchange that never happened (<a href="decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html">DEC-58</a>).</td></tr>
         <tr><td>UI out of process</td><td>The native app is a separate project and a network client only, so a headless core build stays GUI-free (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
       </tbody>
     </table>

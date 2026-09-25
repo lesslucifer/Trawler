@@ -202,6 +202,11 @@ test("import opens with focus in the textarea and the file picker before the act
   // Multi-line and mono, because a browser-copied command is both.
   expect(paste.tagName).toBe("TEXTAREA");
   expect(paste.className).toContain("font-mono");
+  // Field's own multi-line box, not a second hand-made one beside it (DEC-59).
+  for (const shared of ["min-h-control", "rounded-button", "border-hairline", "px-control-x", "py-control-y", "text-control"]) {
+    expect(paste.className).toContain(shared);
+  }
+  expect(paste.className).toContain("h-field-sm");
 
   const words = [...screen.getByTestId("import-ask-panel").querySelectorAll("button")].map(
     (b) => b.textContent,
@@ -715,4 +720,20 @@ test("a clear that fails after the ask was cancelled still says so in the header
 
   await act(async () => refuse?.(new Error("the core went away")));
   expect(screen.getByTestId("clear-failed")).toHaveTextContent("the core went away");
+});
+
+test("new request follows import… in the menu, wears ↗, and opens a draft", () => {
+  const onNewRequest = vi.fn();
+  render(<CaptureControls api={apiStub()} filter={{}} count={6} onCleared={() => {}} onNewRequest={onNewRequest} />);
+  fireEvent.click(trigger());
+
+  const items = screen.getAllByRole("menuitem");
+  expect(items.map((i) => i.getAttribute("aria-label"))).toEqual([
+    CAPTURE_COPY.exportAct,
+    CAPTURE_COPY.importName,
+    CAPTURE_COPY.newRequestAct,
+  ]);
+  expect(items[2].textContent).toBe(`${CAPTURE_GLYPH.sent}${CAPTURE_COPY.newRequestAct}`);
+  fireEvent.click(items[2]);
+  expect(onNewRequest).toHaveBeenCalledOnce();
 });

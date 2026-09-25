@@ -710,6 +710,31 @@
             by the PO review's F28, not built</td>
           <td><span class="badge approval">proposed</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html"><code>dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html</code></a></td>
+          <td><span class="badge id">DEC-58</span></td>
+          <td><strong>Trawler sends a request through a client of its own, on the proxy's connector, and the
+            exchange lands as an ordinary flow marked <code>source: sent</code> with a <code>seed</code> link.</strong>
+            Two doors: <code>POST /flows/{id}/replay</code> (a seed plus overrides) and <code>POST /flows</code>
+            (from scratch). The call answers once a reply exists. A transport failure or no reply within 30 s
+            lands nothing and answers <code>502</code> / <code>504</code> with the reason in words.
+            <code>Content-Length</code> is the body's, <code>Host</code> follows the URL unless typed, connection
+            headers are the client's. The doors add no exposure beyond an armed proxy (DEC-55). Rejected:
+            <code>replayed</code>, a pending row at send time, sending through <code>:7420</code>, an insecure-TLS toggle</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html"><code>dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html</code></a></td>
+          <td><span class="badge id">DEC-59</span></td>
+          <td><strong><code>Field</code> gains <code>multiline</code> (a textarea in the same box, its height the
+            caller's), <code>verbatim</code> (the mono family for a value sent as typed) and <code>readOnly</code>
+            (focusable while the act it feeds runs), and still judges nothing.</strong> Whether a value was
+            edited is a comparison, so the screen draws it in words beside the box. DEC-19 leaves no colour
+            for edited or invalid. The import dialog's hand-made textarea moves onto it. Rejected: a separate
+            <code>TextArea</code>, an edited or invalid state, a tinted border, a font override through
+            <code>className</code></td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
