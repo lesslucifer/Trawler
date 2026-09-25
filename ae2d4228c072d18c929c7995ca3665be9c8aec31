@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-REPLAY
+wu: E-REPLAY.W3
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+design_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-09-25-replay-composer-design-run.html
+    blob: 9d4cff1b733dfbc6520602560532f537ef92b671
+    built: [ui/src/Composer.tsx, ui/src/App.tsx, ui/src/FlowDetail.tsx, ui/src/CaptureControls.tsx, ui/src/FlowList.tsx, ui/src/components/Field.tsx]
+date: 2026-09-25
