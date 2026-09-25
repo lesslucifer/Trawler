@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: b38d7d6fef2164e8adfc4f3d671d28386e8ed853
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+tier: key
+signer: vuluu
+report: docs/work/2026-09-25-replay-w3-composer-result.html
+report_sha256: 11877a91c441a5e4a31a308d1c93a3737ceceba9901ae0f0a962a9ab16f83eed
+date: 2026-09-25
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBPVxZgzLEkOUP9WDb3LXw4TGgqgRwt231s0CuVfJC2iLDhrm0rW0PwVM
+  Dk61+j2UNR/iIXvL3qQTVXb3muFRkL
+  -----END SSH SIGNATURE-----
