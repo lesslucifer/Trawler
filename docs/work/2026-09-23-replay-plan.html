@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab33f2c9f34851f0dfad402" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REPLAY epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REPLAY — epic plan</h1>
+      <p>Send a request again, edited or written from scratch, and see what happens. The result lands as a
+        new flow, and the app gets a composer to drive it.</p>
+      <div class="meta">v2 · opened 2026-09-23 · open questions answered by the owner 2026-09-25 · Trawler · T3 (docs/work/) · branch <code>epic/replay</code>
+        · WU branches <code>wu/replay/&lt;slug&gt;</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">Trawler shows a developer what their client sent, but it cannot answer the
+      question that usually comes next: <em>what if it had sent something else?</em> Today the only way to
+      find out is to copy the request as curl, edit it in a terminal and send it outside Trawler, where the
+      answer is never captured. This epic adds that capability to the core first. Two <code>POST</code>
+      endpoints are added: one re-sends a captured flow with any of its method, URL, headers or body
+      overridden, and one sends a request written from scratch. Each result lands in the ring as an ordinary
+      flow, marked with where it came from. The native app then gets the composer that design run #7 already
+      drew: seed a draft from a flow, change one thing, send it, and read the outcome under the button that
+      sent it. It is the roadmap's wave-3 functional epic. The differentiators in wave 4 (E-LLM, E-MCP,
+      E-OAS) need this send machinery, and building it here means it is built once.</p>
+
+    <h2 id="inherits">What this epic inherits</h2>
+    <table data-c="inherits">
+      <tr><th>Inherited</th><th>Where it is</th><th>State, and what it means here</th></tr>
+      <tr>
+        <td><strong>Design run #7, the replay composer.</strong> A three-zone screen: identity (method · URL),
+          the request (headers, then body), and send plus outcome pinned at the bottom. It marks edits per
+          row, gives three sentences for a body that was not captured, and disables send while a request is
+          in flight</td>
+        <td>archived: <code>git show 015f4f3:docs/work/2026-09-02-dflow-run-7-replay-composer.html</code></td>
+        <td>closed green in the <strong>pre-DEC-53 eleven-item shape</strong> (Frame · Layout · Elements ·
+          Interaction · Tune · receipt). <code>verify-doc</code> refuses that shape by name, so the run is
+          <strong>re-authored</strong> in the six-item shape, not restored (W2). Its layout, Tune calls and
+          interaction deltas are the design input; its stations are not</td>
+      </tr>
+      <tr>
+        <td><strong>The run's one proposal, <code>Field</code></strong>: a text input, single-line and
+          multi-line, with seven states</td>
+        <td><code>ui/src/components/Field.tsx</code> ·
+          <a href="../decisions/dec-30-the-three-gap-components.html">DEC-30</a></td>
+        <td><strong>overtaken.</strong> E-REDESIGN.W2 built <code>Field</code> two days after the run, and
+          built it <em>single-line</em>, with <em>no edited and no invalid state</em>, because
+          <a href="../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> leaves no token for one. So
+          the proposal becomes an extension of an existing entry (multi-line), and the edited mark has to
+          live somewhere other than <code>Field</code></td>
+      </tr>
+      <tr>
+        <td><strong>The run's three blocked-on rows</strong></td>
+        <td>the run's blocked-on item · the roadmap's E-REPLAY row</td>
+        <td>(1) the replay API contract, answered by W1 · (2) whether an edited draft survives leaving the
+          composer, answered: one draft kept for the session (decision 8) · (3) <code>Field</code>'s own design file, moot because
+          <code>Field</code> exists and the multi-line form is a declared delta instead</td>
+      </tr>
+      <tr>
+        <td><strong>The send machinery, half-built</strong>: an HTTPS connector that verifies against webpki
+          plus <code>upstream_extra_root_pems</code>, hyper-util's <code>Client</code>,
+          <code>capture::capture</code> for body caps, and <code>Store::insert</code> /
+          <code>set_response</code> with their SSE events</td>
+        <td><code>src/lib.rs</code> (<code>upstream_connector</code>) · <code>src/capture.rs</code> ·
+          <code>src/store.rs</code></td>
+        <td>a sender can be built from existing parts. What is missing is a third provenance value, a link to
+          the seed, and a client and <code>body_cap</code> in <code>AppState</code></td>
+      </tr>
+      <tr>
+        <td><strong>A closed provenance enum that anticipated this</strong>:
+          <code>FlowSource { Captured, Imported }</code></td>
+        <td><code>src/flow.rs</code> · <code>src/api/view.rs</code> ·
+          <a href="../decisions/dec-38-imported-flows-are-marked.html">DEC-38</a></td>
+        <td>DEC-38 names "a replayed flow" as the deliberate third member of the closed enum. This epic adds
+          it</td>
+      </tr>
+      <tr>
+        <td><strong>Roadmap row: two ways the e2e harness fails silently</strong></td>
+        <td><a href="../backlog/roadmap.html">roadmap</a>, deferred backlog</td>
+        <td>addressed to "whichever WU next opens the e2e harness". W4 opens it for a new origin route and a
+          new spec, so W4 carries the guard</td>
+      </tr>
+    </table>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <p>One new use case, <strong>UC-8</strong>, and one amended one, <strong>UC-5</strong>. Contract level:</p>
+      <table>
+        <tr><th>UC</th><th>Change</th><th>Contract after this epic</th></tr>
+        <tr>
+          <td><strong>UC-8</strong> <span class="badge id">new</span></td>
+          <td>replay a flow</td>
+          <td>any flow in the ring can be sent again, with its method, URL, headers or body overridden. An
+            absent override means the seed's own value. The answer is the new flow. A seed whose body was never
+            captured (streamed, too large, read error) is <strong>refused, naming which absence</strong>,
+            unless the caller supplies a body. A missing body is never sent as an empty one, which is the
+            principle UC-6 already holds for export and import</td>
+        </tr>
+        <tr>
+          <td><strong>UC-8</strong></td>
+          <td>compose a request</td>
+          <td>a request written from scratch (method and URL required; headers and body optional) is sent the
+            same way and lands the same way. Replay and compose use one sender, so the only difference is
+            where the starting values come from</td>
+        </tr>
+        <tr>
+          <td><strong>UC-8</strong></td>
+          <td>the result is a flow</td>
+          <td>the sent exchange is an ordinary flow: same ring, same eviction, same detail and body endpoints,
+            announced on <code>/stream</code>. It is marked <code>source: "sent"</code> and names its
+            <code>seed</code> when it had one. It is selectable by <code>?source=sent</code>. Its versions are
+            the ones actually negotiated (UC-2), and its bodies obey the capture cap like captured traffic</td>
+        </tr>
+        <tr>
+          <td><strong>UC-8</strong></td>
+          <td>a send that fails</td>
+          <td>a transport failure (refused, unresolvable, TLS rejected, timed out) is an answer with the reason
+            in words, and <strong>no flow lands</strong>. A flow asserts that an exchange happened, and none
+            did</td>
+        </tr>
+        <tr>
+          <td><strong>UC-8</strong></td>
+          <td>the app's composer</td>
+          <td>a draft is seeded from the flow open in the inspector, or started empty. Every field is editable
+            on one surface. An edited header row marks itself and its neighbours do not. Send is one act,
+            disabled while in flight with the wait named beside it. The outcome (status, duration, the new
+            flow) lands beside the send button. The draft survives its own send</td>
+        </tr>
+        <tr>
+          <td><strong>UC-5</strong> <span class="badge id">amended</span></td>
+          <td>the inspector gains an entry</td>
+          <td>the inspector opens a replay draft seeded from the flow it shows. Nothing it does today changes</td>
+        </tr>
+        <tr>
+          <td><strong>UC-4 · UC-6</strong></td>
+          <td>unchanged in contract</td>
+          <td>the list marks a sent flow the way it marks an imported one, and the <code>?source=</code> set
+            the listing and the export accept widens by one value. Neither use case gains or loses a promise</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="contract">The contract</h2>
+    <div class="diagram" data-c="contract-sequence">
+      <pre class="mermaid">
+sequenceDiagram
+  participant C as client (app · curl · agent)
+  participant A as control API :7421
+  participant S as sender
+  participant U as upstream
+  participant R as ring + /stream
+  C->>A: POST /flows/{id}/replay { method?, url?, headers?, body? }
+  A->>A: seed + overrides → request (uncaptured seed body, no override → 422)
+  A->>S: send
+  S->>U: request (ALPN: h2 or http/1.1, verified TLS)
+  alt response
+    U-->>S: status · headers · body
+    S->>R: insert(flow, source = sent, seed = id) · capped like capture
+    R-->>C: SSE request + response
+    A-->>C: 201 FlowView
+  else transport failure
+    S-->>A: reason
+    A-->>C: 502 / 504 plain-text reason · nothing inserted
+  end
+      </pre>
+      <div class="caption">One sender, two doors: <code>POST /flows/{id}/replay</code> merges overrides onto a
+        seed, and <code>POST /flows</code> takes a whole request. Error bodies are plain text, the API's
+        existing shape. Every detail is decided on the decisions list below; W1 builds it and writes it into
+        DEC-58.</div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>Each row is checkable at the epic tip by a reader who was not here.</p>
+      <table>
+        <tr><th>#</th><th>After this epic</th><th>Checked by</th></tr>
+        <tr><td>1</td><td><code>curl -X POST :7421/flows/&lt;id&gt;/replay -d '{"headers":[…]}'</code> sends
+          the edited request to the real upstream, and answers with a new flow whose request carries the edited
+          header and whose response is what came back</td><td>integration</td></tr>
+        <tr><td>2</td><td><code>POST /flows</code> with only a method and a URL sends a request and lands a
+          flow. Without either one it is a 400 naming the missing field</td><td>integration</td></tr>
+        <tr><td>3</td><td>a sent flow reads <code>source: "sent"</code> and names its seed on both API
+          projections, <code>?source=sent</code> selects exactly the sent flows, and an unknown value is still
+          refused</td><td>integration · unit</td></tr>
+        <tr><td>4</td><td>replaying a flow whose request body was not captured, with no body override, is a
+          422 naming the absence. With a body override it sends that body</td><td>integration</td></tr>
+        <tr><td>5</td><td>sending to a closed local port answers with the reason and adds nothing to the
+          ring. The listing's count is unchanged</td><td>integration · e2e</td></tr>
+        <tr><td>6</td><td>an HTTPS upstream is verified exactly as the proxy verifies one, and an h2 upstream
+          records <code>HTTP/2.0</code> on the sent flow</td><td>integration</td></tr>
+        <tr><td>7</td><td>in the app: open a flow → replay → change one header value → only that row marks
+          edited → send → send disables and "sending…" shows → the status, the duration and the new flow land
+          in the send zone → the list shows the new row with the sent mark</td><td>e2e · unit</td></tr>
+        <tr><td>8</td><td>a new request with an empty URL cannot be sent. With a URL it sends, and the draft
+          stays editable after the send</td><td>e2e · unit</td></tr>
+        <tr><td>9</td><td>a failed send shows a ⚠ verdict with the reason and <strong>no</strong> status
+          pill</td><td>e2e · unit</td></tr>
+        <tr><td>10</td><td>a seed with an uncaptured body shows one of three sentences in the body slot, and
+          the slot still accepts typing</td><td>unit</td></tr>
+        <tr><td>11</td><td><code>Field</code> has a multi-line form under one contract. Its TSDoc says so, and
+          it gains no invalid state and no colour</td><td>unit · the registry</td></tr>
+        <tr><td>12</td><td>the composer was built from a closed six-item run, cited by blob on the build's
+          <code>design/v1</code> note, and every rendered file the build touches is accounted
+          for</td><td>gate check 9</td></tr>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <table>
+        <tr><th>Out of scope</th><th>Why, and where it goes</th></tr>
+        <tr>
+          <td><strong>Saved requests, collections, environments, variables, auth helpers, scripting,
+            request sequences, response assertions, diffing two responses</strong></td>
+          <td>run #7's Not-given list and non-goals, kept whole. Each is a product of its own, and the ring
+            plus the list is the send history</td>
+        </tr>
+        <tr>
+          <td><strong>A draft that survives a relaunch</strong></td>
+          <td>that is persistence, which is E-PERSIST's. Whether a draft survives <em>leaving the
+            composer</em> within one session is this epic's question (open questions)</td>
+        </tr>
+        <tr>
+          <td><strong>An insecure-TLS toggle, client certificates, a custom CA per send</strong></td>
+          <td>the sender verifies exactly as the proxy does. Loosening that is its own decision, and nothing
+            in the Given list asks for it</td>
+        </tr>
+        <tr>
+          <td><strong>Sending through the proxy port, or rules applying to a sent request</strong></td>
+          <td>a request looped back through <code>:7420</code> would land as <code>captured</code>, with no
+            link to its seed and no id for the caller. Rules are E-RULE's, and they decide for themselves
+            whether a sent request passes through them</td>
+        </tr>
+        <tr>
+          <td><strong>WebSocket, HTTP/3, a streamed request body, bulk or repeated sends</strong></td>
+          <td>E-WS · the deferred QUIC row · none is in the Given list. Sending one request N times is a load
+            tool, not a debugger</td>
+        </tr>
+        <tr>
+          <td><strong>A curl box inside the composer</strong></td>
+          <td>already reachable with no new code: paste curl into import (UC-6, DEC-39), then replay the
+            imported flow. A shortcut, if one is wanted, is a later design round</td>
+        </tr>
+        <tr>
+          <td><strong>A composer in the embedded web shell (UC-3)</strong></td>
+          <td>the web shell is the second client and is retiring at native parity (DEC-12). The API serves
+            it, and it gets no screen</td>
+        </tr>
+        <tr>
+          <td><strong>The 1132 px row-grid defect</strong> (roadmap)</td>
+          <td>the sent mark takes the place <code>ImportMark</code> already holds and does not open
+            <code>FlowList</code>'s grid. If the build finds it must, the row folds in and this line moves</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart TD
+  R7["design run #7
+015f4f3 · eleven-item shape · archived"]
+  W1["W1 · the sender
+DEC-58 · two doors · source = sent"]
+  W2["W2 · the design of record
+run #7 re-authored in six items, closed"]
+  W3["W3 · the build
+Field multi-line · the composer · the entry · the mark"]
+  W4["W4 · close
+e2e · UC-8 whole · lexicon · T1 · the bill"]
+  W1 --> W2
+  R7 -. "design input" .-> W2
+  W2 -- "design → build: cited by blob" --> W3
+  W3 --> W4
+      </pre>
+      <div class="caption">Four working units, strictly ordered. W1 comes first so that W2's Given list is
+        read off a contract that exists, not one that is promised. A mockup may not render an outcome no
+        endpoint returns. W2 must close before W3 builds from it (DEC-25).</div>
+    </div>
+
+    <h2 id="wus">Working units</h2>
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-REPLAY.W1">
+        <h3 id="w1">E-REPLAY.W1 — the sender: Trawler sends a request and records what came back</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A decision record, <strong>DEC-58</strong>,
+            ruling that a sent flow is sent by the core's own client and marked. It covers: the third
+            <code>FlowSource</code> value and why it is <code>sent</code> rather than <code>replayed</code>;
+            the <code>seed</code> link; why a transport failure lands no flow; and why the doors add no
+            exposure beyond the reach proxy DEC-55 already arms. Then the code: a sender module built on
+            <code>upstream_connector</code> and <code>capture::capture</code>, threaded into
+            <code>AppState</code> (the router's callers in <code>test_support</code> and <code>reach.rs</code>
+            follow); <code>POST /flows/{id}/replay</code> and <code>POST /flows</code>;
+            <code>FlowSource::Sent</code> and <code>seed</code> on <code>Flow</code>, both views, the source
+            tokens and <code>?source=</code>; the header rules the open questions settle. UC-8's API half is
+            written into <code>docs/use-cases/web-ui.html</code> in this WU</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-8 (replay · compose · the result is a flow · a
+            send that fails); run #7's first blocked-on row; DEC-38's closed enum, extended deliberately;
+            DEC-55's reach boundary, re-argued rather than assumed</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Expected-result rows 1–6 pass. Unit tests
+            cover the override merge (absent field = seed's value), the header rules, the uncaptured-body
+            refusal and the source-token round trip. <code>tests/replay.rs</code> covers the contract end to
+            end over ephemeral ports: a local HTTP origin and a TLS one that echo what reached them, so the
+            assertion is on the wire and not on the flow. It also covers an h2 origin, a closed port, an
+            evicted seed (404), an over-cap response recorded as not captured, and the SSE announcement. No
+            test touches the public network</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">none — the first WU</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-REPLAY.W2">
+        <h3 id="w2">E-REPLAY.W2 — the design of record: the composer, in the six-item shape, closed</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">Run #7 <strong>re-authored</strong> under
+            <a href="../design-flow.html">the design flow</a> as one mockup doc in <code>docs/work/</code>,
+            with a freshly minted htmldoc id and the six items. <strong>Given</strong>: read off W1's
+            shipped contract and the app's real inputs (the seed from <code>useFlowDetail</code>, the two new
+            <code>api.ts</code> calls), every row answered. <strong>Mockup</strong>: mounts the real registry
+            (<code>Field</code>, <code>MethodLabel</code>, <code>Section</code>, <code>Button</code>,
+            <code>IconButton</code>, <code>Notice</code>, <code>StatusLine</code>, <code>StatusPill</code>,
+            <code>DurationText</code>), and toggles across seeded · edited · sending · sent · failed ·
+            uncaptured body · from scratch, with run #7's four Tune calls already applied.
+            <strong>Keyboard</strong>: one path per pointer act. <strong>Proposals</strong>:
+            <code>Field</code>'s multi-line delta, and where the edited mark lives (a screen-owned row mark,
+            because <code>Field</code> judges nothing and DEC-19 has no token for it).
+            <strong>Blocked-on</strong>: rows 1 and 3 closed with where they went. <strong>Review</strong>:
+            the owner's round on the mockup. Where the composer lives (decision 7) and how long a draft lasts
+            (decision 8) are already decided, so the round checks that the mockup renders them.
+            Then green, <code>data-status="archived"</code>, and a <code>design/v1</code> note</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-8's composer row and UC-5's entry;
+            <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a> (six
+            items, three-step close); <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> (the
+            hand-off is a pointer); run #7's second and third blocked-on rows</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">One archived six-item run in the tree whose
+            mockup renders every state above from mounted components. <code>verify-doc</code> is green, the
+            review item records the owner's calls and the contract each hit, and there is a blob W3 can cite.
+            <code>6·run-closed</code> passes at this merge. The run's Given list has no row that W1 did not
+            ship</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the contract the Given list reads and the
+            outcome the mockup renders</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-REPLAY.W3">
+        <h3 id="w3">E-REPLAY.W3 — the build: the composer, its entry, and the mark</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">First commit: <code>Field</code> gains its
+            multi-line form under the same box (DEC-18) and the same "judges none of it" contract, with its
+            TSDoc amended and the fork recorded as a decision (step ① of DEC-16, since decisions are
+            append-only). Then the composer: a new screen file, plus a pure <code>draft</code> module
+            (seed → draft, per-row edited against the seed, draft → request body, send gated on a URL) so the
+            diff logic is tested without React. <code>api.ts</code> gains <code>replay</code> and
+            <code>send</code>, and <code>FlowSource</code> gains <code>"sent"</code>. <code>App</code>'s pane
+            state becomes a small discriminated union (inspector | composer) instead of
+            <code>selectedId</code> alone. <code>FlowDetail</code>'s header gets the replay control, the
+            capture menu gets "new request", and <code>FlowList</code> gets the sent mark beside
+            <code>ImportMark</code>. UC-8's app half and UC-5's amendment are written in this WU</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-8's composer row; UC-5's entry; W2's closed run,
+            cited by path and blob; DEC-30's <code>Field</code>, extended rather than forked</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Expected-result rows 7–12 hold under unit
+            test: <code>draft</code>'s merge and mark rules; <code>Field</code> multi-line (same box, no new
+            state); the composer's states (send disabled and "sending…" together or not at all; a failure
+            renders no <code>StatusPill</code>; three sentences for three absences; focus returns to send, and
+            removing a header moves focus to the next row). Integration covers the composer against the API
+            contract through the stub client, including the plain-text refusals shown verbatim. The
+            <code>design/v1</code> note cites W2's run for every rendered file the diff touches, or gives an
+            <code>undesigned</code> reason</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W2 (the closed run it cites), and through it W1
+            (the calls it makes)</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-REPLAY.W4">
+        <h3 id="w4">E-REPLAY.W4 — close</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The e2e: <code>replay.spec.ts</code>, placed
+            between <code>capture.spec.ts</code> and <code>flows.spec.ts</code> in the explicit spec order.
+            The harness origin gains an echo route, so a spec can prove the edited header reached the wire. The
+            roadmap's silent-harness guard lands here, because this WU opens the harness. Distillation: UC-8
+            restated whole against what shipped and indexed; DEC-58 and W3's <code>Field</code> record
+            indexed; lexicon rows for <em>seed</em>, <em>draft</em> and <em>sent</em> in
+            <code>docs/design-rules/</code>; the roadmap's E-REPLAY row struck and any residue written;
+            <code>architecture.html</code>'s T1 edit (the core now has an outbound path of its own, beside the
+            proxy); and the design round's clock-and-token bill recorded in the epic result</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E; the roadmap's E-REPLAY row and its
+            e2e-harness row; the design flow's standing request for a measured round</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">e2e green over the three journeys below; a
+            broken harness fails red instead of passing silently; the T2 docs carry UC-8 as it shipped; the
+            plan and reports archived; the T1 edit staged with its <code>mr commit</code> command printed for
+            the owner</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3 — the e2e drives the shipped composer, and the
+            distillation records what actually shipped</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="e2e">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p><code>ui/e2e/specs/replay.spec.ts</code>, new. It drives the real app against the harness's local
+        TLS origin and the in-process core, over ephemeral ports and never the public network. Every
+        assertion goes through a <code>data-testid</code> or a component's own <code>aria-label</code>
+        contract, never WebdriverIO's <code>*=</code> (the roadmap's harness row).</p>
+      <table>
+        <tr><th>Journey</th><th>Spine</th><th>Proves</th></tr>
+        <tr>
+          <td><strong>replay with one edit</strong></td>
+          <td>a request to the origin's echo route through the proxy → open it → replay → change one header
+            value → only that row is marked → send → send disabled and "sending…" → the status pill, the
+            duration and the new flow land → the list gains a row with the sent mark → open it: the echoed body
+            carries the edited value</td>
+          <td>UC-8 end to end: the edit reached the wire, and the result is a flow</td>
+        </tr>
+        <tr>
+          <td><strong>compose from scratch</strong></td>
+          <td>new request → send is disabled with the URL empty → type the origin's URL → send → the outcome
+            lands → the draft is still there and editable</td>
+          <td>the second door, and the draft surviving its own send</td>
+        </tr>
+        <tr>
+          <td><strong>a send that fails</strong></td>
+          <td>compose to a closed local port → ⚠ with the reason → no status pill → the list's row count is
+            unchanged</td>
+          <td>no flow for an exchange that never happened</td>
+        </tr>
+      </table>
+      <p><strong>No waiver.</strong> TLS verification, h2 negotiation and the uncaptured-body refusal are
+        asserted at W1's integration level, where they can be asserted exactly. Driving them through a window
+        would prove nothing more and cost a build cycle each.</p>
+    </div>
+
+    <h2 id="distillation">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <tr><th>Absorbs this epic's truth</th><th>What lands there</th><th>When</th></tr>
+        <tr>
+          <td><code>docs/use-cases/web-ui.html</code> + <code>use-cases-index.html</code> (T2)</td>
+          <td>UC-8, new, beside UC-6 (the same API-plus-app precedent); UC-5's entry; the <code>?source=</code>
+            set widened in UC-4/UC-6's wording, with no promise changed</td>
+          <td>API half W1 · app half W3 · restated whole and indexed W4</td>
+        </tr>
+        <tr>
+          <td><code>docs/decisions/dec-58-…</code> (T2)</td>
+          <td>a sent flow is sent by the core and marked: the third source, the seed link, no flow for a
+            failure, and the reach argument</td>
+          <td>W1 · indexed W4</td>
+        </tr>
+        <tr>
+          <td><code>docs/decisions/dec-59-…</code> (T2)</td>
+          <td><code>Field</code>'s multi-line fork, and why the edited mark is not a <code>Field</code>
+            state (DEC-19, DEC-30). The TSDoc carries the contract and the record carries the why</td>
+          <td>W3 · indexed W4</td>
+        </tr>
+        <tr>
+          <td><code>docs/design-rules/design-rules-index.html</code>, the Lexicon (T2)</td>
+          <td><em>seed</em>, <em>draft</em> and <em>sent</em>, or whatever words W2's review settles on</td>
+          <td>W4</td>
+        </tr>
+        <tr>
+          <td><code>docs/architecture.html</code> (T1, only because the shape changed)</td>
+          <td>the core gains an outbound path that is not the proxy. <strong>Rule-bearing</strong>: staged and
+            committed through <code>cargo xtask mr commit … --as &lt;id&gt;</code> by the owner, never by the
+            agent</td>
+          <td>W4</td>
+        </tr>
+        <tr>
+          <td><code>docs/backlog/roadmap.html</code> (T2)</td>
+          <td>the E-REPLAY row struck; the e2e-harness row closed or narrowed; residue rows for anything
+            deferred; the design round's bill</td>
+          <td>W4</td>
+        </tr>
+        <tr>
+          <td>Registry TSDoc (DEC-16)</td>
+          <td><code>Field</code>'s TSDoc amended in place. No design file is written, so none is retired and
+            <code>components·unbuilt</code> has nothing to resolve</td>
+          <td>W3</td>
+        </tr>
+        <tr>
+          <td><code>docs/.archive/</code> (DEC-3)</td>
+          <td>this plan, the WU plans and results, the closed run and the epic result leave the tree at the
+            epic gate. Their citations become plain text marked archived</td>
+          <td>W4</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="open">Decisions (were open questions)</h2>
+    <div data-item="open-questions">
+      <p><strong>No question is left open.</strong> On 2026-09-25 the owner accepted the recommendation on eight of
+        them (#4 confirmed 30 s) and asked for #3 to be explained. #3 was W1's call, so its recommendation
+        stands, and its example is rewritten below as a timeline. Each row keeps its example, because the example is what
+        W1 and W2 build against. The running case: flow <code>42</code> is a captured
+        <code>POST https://a.test/users</code> with body <code>{"name":"a"}</code>.</p>
+      <table>
+        <tr><th>#</th><th>The question, plainly</th><th>Example: what actually happens</th><th>Decision, and the
+          alternative it beat</th></tr>
+        <tr>
+          <td>1</td>
+          <td><strong>What does a call to Trawler look like?</strong> The endpoint and its JSON body
+            <br><span class="badge auto">decided</span> <span class="badge id">W1</span></td>
+          <td>Replay 42 with new headers:
+<pre><code>POST /flows/42/replay
+{ "headers": [
+    {"name":"Authorization","value":"Bearer NEW"},
+    {"name":"Content-Type","value":"application/json"} ] }</code></pre>
+            Method, URL and body come from 42, and these two headers are the <em>whole</em> header list sent.
+            Compose from scratch:
+<pre><code>POST /flows
+{ "method":"GET", "url":"https://a.test/users" }</code></pre></td>
+          <td><strong>Decided:</strong> the two endpoints above. A given <code>headers</code> list replaces the
+            seed's list whole, because the composer always has the full edited list to send.
+            <br><strong>Alternative:</strong> a patch language
+            (<code>{"set":{…},"remove":["Cookie"]}</code>). It is shorter for curl users, but it is a second
+            syntax to learn and test</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>What label does the new flow carry?</strong> The <code>source</code> value in the API
+            and the list
+            <br><span class="badge auto">decided</span> <span class="badge id">W1 · DEC-58</span></td>
+          <td>Replay 42 and you get flow 43: <code>{"id":43, "source":"sent", "seed":42}</code>. Compose from
+            scratch and you get flow 44: <code>{"id":44, "source":"sent", "seed":null}</code>. Later 42 is
+            evicted from the ring: <code>GET /flows/42</code> is a 404 while 43 still says
+            <code>seed: 42</code></td>
+          <td><strong>Decided:</strong> <code>sent</code>, meaning Trawler itself sent it (the other two are
+            <code>captured</code>, which the proxy saw, and <code>imported</code>, which a file carried). A
+            dangling seed id is stated, not prevented.
+            <br><strong>Alternative:</strong> <code>replayed</code>. But flow 44 is a replay of nothing, so the
+            label would be false for every composed request</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Does the call return at once, or when the server has answered?</strong>
+            <br><span class="badge auto">decided</span> <span class="badge id">W1</span></td>
+          <td>You press <em>send</em> in the app. The app asks Trawler to send the request, Trawler sends it
+            to <code>a.test</code>, and <code>a.test</code> takes 3 s to reply. The question is only
+            <em>when Trawler answers the app</em>:
+            <table>
+              <tr><th>moment</th><th>A · decided: answer when the server has replied</th><th>B · answer at
+                once</th></tr>
+              <tr><td>0 s, send pressed</td><td>composer: "sending…" · list: unchanged</td><td>Trawler says "it
+                is flow 43" · list: row 43 appears, with no status yet</td></tr>
+              <tr><td>3 s, <code>a.test</code> replies <code>200</code></td><td>Trawler hands the app the
+                finished flow 43 · composer: <code>200 · 3.0 s</code> · list: row 43 appears, complete</td>
+                <td>row 43 fills in <code>200</code> · the app must watch for that to happen</td></tr>
+              <tr><td>if <code>a.test</code> is down</td><td>composer: ⚠ connection refused · list:
+                unchanged, because nothing was exchanged</td><td>row 43 is already in the list and describes a
+                request that never got a reply, so it stays pending forever or has to be deleted</td></tr>
+            </table></td>
+          <td><strong>Decided:</strong> A. Trawler answers once a reply exists, and only then adds the flow to
+            the list. The waiting is shown in the composer as "sending…".
+            <br><strong>Alternative:</strong> B. The list would show the request the instant it leaves, at the
+            cost of rows describing exchanges that never happened</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>How long do we wait for a server that never answers?</strong>
+            <br><span class="badge auto">decided</span> <span class="badge id">W1</span></td>
+          <td>Compose to a server that accepts the connection and then says nothing. After 30 s the call returns
+            <code>504 no response within 30 s</code>, and the composer shows ⚠ with that sentence and re-enables
+            send. With no timeout, send would stay disabled until the app quits</td>
+          <td><strong>Decided:</strong> 30 s until the response starts (owner: "yes, 30s"). The body read is limited by the same
+            capture cap the proxy uses.
+            <br><strong>Alternative:</strong> a configurable timeout now. Nothing asks for one yet, so it can be
+            added later</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>Which headers does Trawler fix up, rather than send as typed?</strong>
+            <br><span class="badge auto">decided</span> <span class="badge id">W1</span></td>
+          <td>Flow 42 carried <code>Host: a.test</code> and <code>Content-Length: 12</code>. The user changes
+            the URL to <code>https://b.test/users</code> and the body to <code>{"name":"alice"}</code> (16
+            bytes). <strong>Decided:</strong> the request goes out with <code>Host: b.test</code> and
+            <code>Content-Length: 16</code>. <strong>Sent verbatim instead:</strong> <code>b.test</code>
+            receives <code>Host: a.test</code> and may route to the wrong site, and <code>Content-Length:
+            12</code> cuts the body to <code>{"name":"ali</code></td>
+          <td><strong>Decided:</strong> <code>Content-Length</code> is always recomputed. <code>Host</code>
+            follows the URL unless the user typed a <code>Host</code> header themselves. Connection-level headers
+            (<code>Connection</code>, <code>Transfer-Encoding</code>) are the client's to set.
+            <br><strong>Alternative:</strong> send every header exactly as given. That is honest to the letter,
+            and it breaks the most common edit, a changed URL or body</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>When reach is on, can another device on the network use the send endpoints?</strong>
+            <br><span class="badge auto">decided</span> <span class="badge id">built in W1</span></td>
+          <td>Reach is armed on <code>192.168.1.5</code>. A phone on the same Wi-Fi calls <code>POST
+            http://192.168.1.5:7421/flows</code> with <code>"url":"http://192.168.1.1/admin"</code>, and Trawler
+            sends it. That phone could already do the same today through the proxy reach opens:
+            <code>curl -x 192.168.1.5:7420 http://192.168.1.1/admin</code></td>
+          <td><strong>Decided:</strong> yes, with no extra gate. The endpoints add nothing the armed proxy does
+            not already allow, and DEC-58 writes that argument down.
+            <br><strong>Alternative:</strong> refuse the send endpoints with <code>403</code> on the reach
+            address. It is safer-looking, but it guards a door whose neighbour is open</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>Where does the composer open on screen?</strong>
+            <br><span class="badge auto">decided</span> <span class="badge id">W2 renders it</span></td>
+          <td>The list is on the left and the inspector on the right shows flow 42. The user clicks
+            <em>replay</em>. <strong>Decided:</strong> the right-hand pane turns into the composer, filled from
+            42, and the list stays visible. After send, row 43 appears in the list while the user watches, and
+            <em>back</em> returns to 42's inspector. <strong>Modal:</strong> a dialog covers the list, so row 43
+            lands where nobody can see it</td>
+          <td><strong>Decided:</strong> in the detail pane, in place of the inspector, which fits DEC-36's
+            520 px pane.
+            <br><strong>Alternative:</strong> a modal, which gives more room and hides the list the result
+            lands in</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>Are the user's edits kept if they look away?</strong>
+            <br><span class="badge auto">decided</span> <span class="badge id">W2 renders it</span></td>
+          <td>The user edits the <code>Authorization</code> header in 42's draft, clicks flow 50 in the list to
+            check something, then goes back. <strong>Decided:</strong> the edited header is still there. Clicking
+            <em>replay</em> on flow 50 starts a new draft and replaces the old one. Quitting the app loses it</td>
+          <td><strong>Decided:</strong> one draft, kept until a new one replaces it or the app quits. It is held
+            in the app, not the core.
+            <br><strong>Alternative:</strong> the draft is discarded the moment the composer closes. That is
+            simpler, and one mis-click loses the edits</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>How does the text box get a multi-line form?</strong> <code>Field</code> is one line
+            today
+            <br><span class="badge auto">decided</span> <span class="badge id">W2 proposes · W3 builds</span></td>
+          <td>The body is several lines of JSON. <strong>Decided:</strong>
+            <code>&lt;Field multiline …/&gt;</code>, with the same border, padding and states as the one-line
+            box, and the import dialog's hand-made <code>&lt;textarea&gt;</code> moves onto it too. The
+            <em>edited</em> mark is drawn by the composer's header row, not the box. A mistyped URL such as
+            <code>htp:/x</code> gets no red border: on send, the core answers <code>400 url must be absolute
+            http(s)</code>, shown in the send zone</td>
+          <td><strong>Decided:</strong> one component with a <code>multiline</code> option. It gains no edited
+            and no invalid state, because DEC-19 has no colour for either.
+            <br><strong>Alternative:</strong> a separate <code>TextArea</code> entry. That makes two boxes that
+            must be kept identical, which is the drift DEC-30 was written to end</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="callout warn" data-c="workflow-notes">
+      <strong>Workflow facts this epic must not forget.</strong>
+      <table>
+        <tr>
+          <td>W4's <code>architecture.html</code> edit is <strong>T1, rule-bearing</strong></td>
+          <td>it commits through <code>cargo xtask mr commit … --as &lt;id&gt;</code> with a listed
+            authoriser. The agent stages it, prints the command and stops</td>
+        </tr>
+        <tr>
+          <td><code>mr confirm</code> at every WU and the epic tip</td>
+          <td>manual. The agent prints the full command with <code>--as</code> and <code>--report</code>, and
+            never runs it</td>
+        </tr>
+        <tr>
+          <td>W2 <strong>measures the round it runs</strong></td>
+          <td>wall-clock and tokens for the design round, recorded for the epic result, so the six-item flow is
+            argued from measurements rather than re-edit cost</td>
+        </tr>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
