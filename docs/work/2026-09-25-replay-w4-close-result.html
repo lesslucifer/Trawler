@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab627f49f34851f0dfad50d" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REPLAY.W4 result: the close</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REPLAY.W4 result — the e2e, the guard, and the distillation</h1>
+      <p>The real window replays a request, and the origin receives the edit. The harness can no longer pass by running nothing. The docs carry the epic as it shipped. The review passed in one round.</p>
+      <div class="meta">v1 · 2026-09-25 · Trawler · T3 WU result · <span class="badge id">E-REPLAY.W4</span> · branch <code>wu/replay/close</code> · code at <code>b794418</code> · <a href="2026-09-25-replay-w4-close-plan.html">WU plan</a> · <a href="2026-09-23-replay-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>Delivered against the requirement and all seven expected rows.</p>
+      <table data-c="outcome">
+        <thead><tr><th>#</th><th>Expected</th><th>At the tip</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>replay with one edit, through the real window</td><td>yes. Only <code>x-probe</code> reads edited, send disables with <em>sending…</em> through the origin's 2 s pause, the pill and duration land, the top row wears <em>sent</em>, and the new flow's body is the origin's echo: <code>"x-probe":"edited"</code></td></tr>
+          <tr><td>2</td><td>compose from scratch</td><td>yes. Send is disabled with the URL empty, the echo URL sends, and the URL still takes typing afterwards</td></tr>
+          <tr><td>3</td><td>a send that fails</td><td>yes. A closed local port gives ⚠ and the core's <em>connection refused</em> sentence, with nothing named by a number in the send zone and the row count unchanged</td></tr>
+          <tr><td>4</td><td>the flows spec still runs last and green</td><td>yes. The replay spec leaves the capture empty</td></tr>
+          <tr><td>5</td><td>the guard</td><td>yes. The tally judge, and the refusals of <code>*=</code>, a <code>pnpm</code> field and a missing override, each tested red</td></tr>
+          <tr><td>6</td><td>UC-8 indexed, the Lexicon, the roadmap</td><td>yes</td></tr>
+          <tr><td>7</td><td>the T1 edit staged, with its command printed</td><td>yes. The owner committed it at <code>377dbb0</code> under <code>Reviewed-By: key vuluu</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>Plan said</th><th>What shipped</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>five commits</td><td>seven: the two older specs' stale selectors got a commit of their own, and the harness's new lines were reformatted</td><td>the first e2e run since W3 was red in <code>capture.spec.ts</code> and <code>flows.spec.ts</code>. W3 moved the paste box into <code>Field</code>'s span and put <em>replay</em> before <em>copy as curl</em>, and its e2e was waived to this WU. The product was right. The two selectors now reach what it renders, and the assertions are unchanged</td></tr>
+        <tr><td>commit order: guard, e2e, T2, T1</td><td>guard, T2, e2e, T1</td><td>the T2 docs were settled while the Tauri build ran</td></tr>
+        <tr><td>the harness only gains routes</td><td>the harness file's existing lines stay off-format</td><td>the harness is a crate outside the workspace, so the fmt hook never reads it, and it was already off-format. Only this WU's own lines were brought to rustfmt's shape</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>What</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>commits</td><td><code>e9c9ae5</code> plan · <code>61cc9dd</code> the guard · <code>3b55c1b</code> T2 · <code>de21d00</code> the stale selectors · <code>2202d03</code> the e2e · <code>b794418</code> fmt · <code>377dbb0</code> T1, the owner's</td></tr>
+        <tr><td>unit</td><td><code>xtask/src/ui.rs</code>: six tally cases, two detector fixtures, three repository checks</td></tr>
+        <tr><td>integration</td><td>waived on <code>test/v2</code>: no new bounded contract</td></tr>
+        <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> green: <em>ui e2e complete - 4 of 4 spec files passed</em>, 43 tests (onboarding 8 · capture 3 · replay 6 · flows 26)</td></tr>
+        <tr><td>Gate 0</td><td>green at <code>377dbb0</code>: fmt, clippy <code>-D warnings</code>, the whole suite</td></tr>
+        <tr><td>review</td><td>one round, <strong>PASS</strong>. Three finders (correctness, efficiency, altitude) raised no candidate, so no verifier ran. Correctness checked the tally against the installed <code>@wdio/cli</code>: <code>onComplete</code> runs from a <code>finally</code> with zeroed results when nothing spawned, so the silent case writes a tally that reads red. 517 s end to end</td></tr>
+        <tr><td>design</td><td>none owed: <code>design-scope</code> names no artifact, and no <code>ui/src/</code> file is touched</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Doc</th><th>What it now carries</th></tr></thead>
+      <tbody>
+        <tr><td><code>docs/use-cases/use-cases-index.html</code> (T2)</td><td>UC-8 indexed as it shipped</td></tr>
+        <tr><td><code>docs/use-cases/web-ui.html</code> (T2)</td><td>UC-8 re-read against the tip and found whole. Its provenance names the three e2e journeys</td></tr>
+        <tr><td><code>docs/design-rules/design-rules-index.html</code> (T2)</td><td>the Lexicon's <em>draft</em>, <em>sent</em> and <em>replay</em></td></tr>
+        <tr><td><code>docs/backlog/roadmap.html</code> (T2)</td><td>E-REPLAY struck · the silent-harness row struck as guarded · two residue rows · the design flow's second measured round</td></tr>
+        <tr><td><code>docs/architecture.html</code> (T1)</td><td>the sender beside the proxy: the core's own outbound path, and why it does not loop through the proxy port</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>For</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>epic close</td><td>archive the plan, the four WU plans and results, and the design run. Write the epic result with the design round's bill</td></tr>
+        <tr><td>whoever next opens the harness</td><td>a failed spec file stops <code>ui e2e</code> at <em>pnpm test failed</em> before the tally names which files failed. The run is red either way, and wdio's own output names them</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
