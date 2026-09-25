@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8b1feda56a462a52fa13978170f9b87a2cab2884
+base: f293d3b5c7f8e9d13981d562ef6038257a2e11ce
+tier: key
+signer: vuluu
+report: docs/work/2026-09-25-replay-w1-sender-result.html
+report_sha256: 02e24923f0c00891afc6f6707061154a850290d42277479f036616f061072f67
+date: 2026-09-25
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB1cc12O609mmJbkmdY+baYLwyEpu3eHzd7FzezfKps6mpMrDOFpJ7Pck
+  BYeuoaIgwRXBbxv/tQfQnemLpYktsH
+  -----END SSH SIGNATURE-----
