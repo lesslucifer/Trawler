@@ -79,8 +79,9 @@ impl Sender {
     pub async fn send(&self, outgoing: Outgoing, seed: Option<FlowId>) -> Result<Flow, SendError> {
         let started_at = SystemTime::now();
         let start = Instant::now();
-        let sent_body = held(outgoing.body.clone(), self.body_cap);
+        let body = Body::from(Full::new(outgoing.body.clone()));
         let request = wire_request(outgoing);
+        let (sent_body, _) = capture::capture(request.headers(), body, self.body_cap).await;
         let sent = RequestRec {
             method: request.method().as_str().to_owned(),
             uri: request.uri().to_string(),
@@ -96,6 +97,10 @@ impl Sender {
 
         let (parts, body) = response.into_parts();
         let captured = capture::capture(&parts.headers, Body::from(body), self.body_cap);
+        // The unread rest of an over-cap or streaming body is dropped, which
+        // costs the connection its place in the pool. Draining it instead would
+        // read an unbounded body to save one handshake, and an event stream
+        // never ends.
         let body = match tokio::time::timeout(self.deadline, captured).await {
             Ok((body, _unread)) => body,
             Err(_) => BodyRec::NotCaptured { reason: NotCapturedReason::ReadError },
@@ -116,8 +121,8 @@ impl Sender {
 }
 
 /// The header rules. A length is the body's, never the list's, because a stale
-/// one truncates an edited body. `Host` follows the URL unless the caller typed
-/// one, and is written explicitly so the recorded request is the wire's on both
+/// one truncates an edited body. `Host` is the URL's host and port unless the
+/// caller typed one, and is written explicitly so the recorded request is the wire's on both
 /// protocols (on h2 it equals `:authority`). Cookies join into one header, as
 /// the proxy's own normalization does, because an h2 seed may split them and an
 /// HTTP/1.1 server takes one. The version is left at HTTP/1.1 for the
@@ -132,10 +137,8 @@ fn wire_request(outgoing: Outgoing) -> Request<Full<Bytes>> {
         headers.insert(header::CONTENT_LENGTH, HeaderValue::from(body.len()));
     }
     if !headers.contains_key(header::HOST) {
-        if let Some(authority) =
-            uri.authority().and_then(|a| HeaderValue::from_str(a.as_str()).ok())
-        {
-            headers.insert(header::HOST, authority);
+        if let Some(host) = host_of(&uri) {
+            headers.insert(header::HOST, host);
         }
     }
     join_cookies(&mut headers);
@@ -147,6 +150,16 @@ fn wire_request(outgoing: Outgoing) -> Request<Full<Bytes>> {
     request
 }
 
+/// The authority without any `user:pass@` it may carry.
+fn host_of(uri: &Uri) -> Option<HeaderValue> {
+    let host = uri.host()?;
+    let host = match uri.port_u16() {
+        Some(port) => format!("{host}:{port}"),
+        None => host.to_owned(),
+    };
+    HeaderValue::from_str(&host).ok()
+}
+
 fn join_cookies(headers: &mut HeaderMap) {
     let cookies: Vec<&[u8]> =
         headers.get_all(header::COOKIE).iter().map(HeaderValue::as_bytes).collect();
@@ -155,16 +168,6 @@ fn join_cookies(headers: &mut HeaderMap) {
     }
     if let Ok(joined) = HeaderValue::from_bytes(&cookies.join(&b"; "[..])) {
         headers.insert(header::COOKIE, joined);
-    }
-}
-
-/// What a sent body is recorded as. The cap bounds what the ring holds, never
-/// what goes out.
-fn held(bytes: Bytes, cap: usize) -> BodyRec {
-    match bytes.len() {
-        0 => BodyRec::Empty,
-        size if size <= cap => BodyRec::Captured { bytes, size },
-        actual => BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual } },
     }
 }
 
@@ -230,6 +233,15 @@ mod tests {
     }
 
     #[test]
+    fn host_never_carries_the_urls_credentials() {
+        let request = wire_request(outgoing("http://user:pass@b.test:8080/users", &[], b""));
+        assert_eq!(values(&request, "host"), vec!["b.test:8080"]);
+
+        let bare = wire_request(outgoing("http://user@[::1]/", &[], b""));
+        assert_eq!(values(&bare, "host"), vec!["[::1]"]);
+    }
+
+    #[test]
     fn the_connection_owns_its_own_headers() {
         let listed: Vec<(&str, &str)> =
             CONNECTION_HEADERS.iter().map(|name| (*name, "x")).collect();
@@ -259,16 +271,6 @@ mod tests {
         assert_eq!(values(&request, "authorization"), vec!["Bearer NEW"]);
         assert_eq!(values(&request, "x-dup"), vec!["one", "two"]);
         assert_eq!(request.version(), http::Version::HTTP_11);
-    }
-
-    #[test]
-    fn a_sent_body_is_held_under_the_cap_and_sent_whatever_its_size() {
-        assert!(matches!(held(Bytes::new(), 4), BodyRec::Empty));
-        assert!(matches!(held(Bytes::from_static(b"abcd"), 4), BodyRec::Captured { size: 4, .. }));
-        assert!(matches!(
-            held(Bytes::from_static(b"abcde"), 4),
-            BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual: 5 } }
-        ));
     }
 
     #[derive(Debug)]

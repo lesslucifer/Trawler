@@ -289,6 +289,10 @@ async fn a_request_from_scratch_needs_a_method_and_a_url_and_nothing_else() {
         (json!({ "url": h.origin("/echo") }), "method is required"),
         (json!({ "method": "GET" }), "url is required"),
         (json!({ "method": "GET", "url": "htp:/x" }), "url must be absolute http(s)"),
+        (
+            json!({ "method": "GET", "url": format!("http://user:pass@127.0.0.1:{}/echo", h.port) }),
+            "url must not carry credentials; give an Authorization header instead",
+        ),
     ] {
         let refused = h.post("/flows", &body.to_string()).await;
         assert_eq!(refused.status, StatusCode::BAD_REQUEST, "{body}");
@@ -433,6 +437,14 @@ async fn a_sent_flow_lives_by_the_rings_rules_like_any_other() {
     let body = &over_cap.json()["response_body"];
     assert_eq!(body["state"], "not_captured");
     assert_eq!(body["reason"], "too_large");
+
+    let big_body = json!({ "method": "POST", "url": h.origin("/fixed"), "body": "z".repeat(64) });
+    let held = h.post("/flows", &big_body.to_string()).await;
+    assert_eq!(held.status, StatusCode::CREATED, "{}", held.text);
+    let request_body = &held.json()["request_body"];
+    assert_eq!(request_body["state"], "not_captured", "sent whole, held under the cap");
+    assert_eq!(request_body["reason"], "too_large");
+    assert_eq!(request_body["actual"], 64);
 
     let seed = h.captured_seed(h.proxy.get(h.origin("/echo"))).await;
     let removed = h.api.delete(h.api_url(&format!("/flows/{seed}"))).send().await.unwrap();

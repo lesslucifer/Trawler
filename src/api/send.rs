@@ -80,10 +80,12 @@ pub fn from_seed(seed: &Flow, fields: RequestFields) -> Result<Outgoing, Refusal
     };
     let uri = match fields.url {
         Some(url) => parse_url(&url)?,
-        None => absolute_http(&seed.request.uri).ok_or_else(|| {
-            Refusal::SeedLacks(
-                "the seed's url is not absolute http(s); give a url to replace it".into(),
-            )
+        None => web_uri(&seed.request.uri).map_err(|fault| {
+            let fault = match fault {
+                UrlFault::NotAbsolute => "is not absolute http(s)",
+                UrlFault::Credentials => "carries credentials",
+            };
+            Refusal::SeedLacks(format!("the seed's url {fault}; give a url to replace it"))
         })?,
     };
     let headers = match fields.headers {
@@ -166,14 +168,33 @@ fn parse_method(method: &str) -> Result<Method, Refusal> {
 }
 
 fn parse_url(url: &str) -> Result<Uri, Refusal> {
-    absolute_http(url).ok_or_else(|| malformed("url must be absolute http(s)"))
+    web_uri(url).map_err(|fault| match fault {
+        UrlFault::NotAbsolute => malformed("url must be absolute http(s)"),
+        UrlFault::Credentials => {
+            malformed("url must not carry credentials; give an Authorization header instead")
+        }
+    })
 }
 
-fn absolute_http(url: &str) -> Option<Uri> {
-    let uri = url.parse::<Uri>().ok()?;
-    let scheme = uri.scheme_str()?;
-    let web = scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https");
-    (web && uri.authority().is_some()).then_some(uri)
+enum UrlFault {
+    NotAbsolute,
+    Credentials,
+}
+
+/// A URL's `user:pass@` is neither a `Host` nor an `Authorization` header, so
+/// it is refused rather than silently dropped or turned into one.
+fn web_uri(url: &str) -> Result<Uri, UrlFault> {
+    let uri = url.parse::<Uri>().map_err(|_| UrlFault::NotAbsolute)?;
+    let web = uri
+        .scheme_str()
+        .is_some_and(|s| s.eq_ignore_ascii_case("http") || s.eq_ignore_ascii_case("https"));
+    let Some(authority) = uri.authority().filter(|_| web) else {
+        return Err(UrlFault::NotAbsolute);
+    };
+    if authority.as_str().contains('@') {
+        return Err(UrlFault::Credentials);
+    }
+    Ok(uri)
 }
 
 #[cfg(test)]
@@ -301,6 +322,24 @@ mod tests {
             ))
         );
         assert!(from_seed(&seed, fields(r#"{"url":"http://b.test/"}"#)).is_ok());
+    }
+
+    // A URL's user:pass@ is neither a Host nor an Authorization header, so it
+    // is refused rather than silently dropped or turned into one.
+    #[test]
+    fn a_url_carrying_credentials_is_refused_in_favour_of_a_header() {
+        assert_eq!(
+            from_scratch(fields(r#"{"method":"GET","url":"http://user:pass@a.test/"}"#)).err(),
+            Some(malformed("url must not carry credentials; give an Authorization header instead"))
+        );
+        let seed = FlowBuilder::new().uri("http://user:pass@a.test/").build();
+        assert_eq!(
+            from_seed(&seed, fields("{}")).err(),
+            Some(Refusal::SeedLacks(
+                "the seed's url carries credentials; give a url to replace it".into()
+            ))
+        );
+        assert!(from_seed(&seed, fields(r#"{"url":"http://a.test/"}"#)).is_ok());
     }
 
     #[test]
