@@ -166,11 +166,21 @@ impl Default for FlowBuilder {
 /// not a certificate: arming this router's reach fails rather than listening,
 /// which is the right answer for a test that never meant to.
 pub fn api_router(store: std::sync::Arc<crate::Store>, ca_cert_pem: &str) -> axum::Router {
+    api_router_with_sender(store, ca_cert_pem, crate::sender::Sender::new(&[], 1024 * 1024))
+}
+
+/// The same router with the sender a test needs — one whose deadline a test can
+/// actually wait out, or one that trusts a test origin's CA.
+pub fn api_router_with_sender(
+    store: std::sync::Arc<crate::Store>,
+    ca_cert_pem: &str,
+    sender: crate::sender::Sender,
+) -> axum::Router {
     let pems = crate::ca::CaPems { cert: ca_cert_pem.to_string(), key: String::new() };
     let reach = std::sync::Arc::new(crate::reach::Controller::new(
         crate::Config::default(),
         std::sync::Arc::clone(&store),
         pems,
     ));
-    crate::api::router(store, std::sync::Arc::new(ca_cert_pem.to_string()), reach)
+    crate::api::router(store, std::sync::Arc::new(ca_cert_pem.to_string()), reach, sender)
 }

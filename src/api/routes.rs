@@ -18,9 +18,10 @@ use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use super::view::{self, FlowPageView, FlowSummary, FlowView, ReachView};
-use super::{curl, decode, har};
+use super::{curl, decode, har, send};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::reach;
+use crate::sender::{Outgoing, SendError, Sender};
 use crate::store::{FlowFilter, StatusMatch, Store, STATUS_GRAMMAR};
 
 #[derive(Clone)]
@@ -28,6 +29,7 @@ pub struct AppState {
     pub store: Arc<Store>,
     pub ca_cert_pem: Arc<String>,
     pub reach: Arc<reach::Controller>,
+    pub sender: Sender,
 }
 
 /// The filter half of a listing request. Every endpoint that selects flows
@@ -54,7 +56,9 @@ impl FilterQuery {
         let source = self
             .source
             .as_deref()
-            .map(|value| view::parse_source(value).ok_or("source must be captured or imported"))
+            .map(|value| {
+                view::parse_source(value).ok_or("source must be captured, imported or sent")
+            })
             .transpose()?;
         let status = self
             .status
@@ -194,6 +198,54 @@ pub async fn import_flows(
             Json(json!({ "imported": imported })).into_response()
         }
         Err(reason) => (StatusCode::BAD_REQUEST, reason).into_response(),
+    }
+}
+
+/// The seed flow's request, sent again with the body's overrides laid over it.
+/// The seed is looked up before the body is read, so a gone seed is a 404
+/// whatever the caller asked to change.
+pub async fn replay_flow(
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+    body: Bytes,
+) -> Response {
+    let Some(flow_id) = parse_flow_id(&id) else {
+        return bad_id();
+    };
+    let Some(seed) = state.store.get(flow_id) else {
+        return (StatusCode::NOT_FOUND, format!("no flow {id} in the ring")).into_response();
+    };
+    match send::parse_fields(&body).and_then(|fields| send::from_seed(&seed, fields)) {
+        Ok(outgoing) => dispatch(&state, outgoing, Some(flow_id)).await,
+        Err(refusal) => refusal.into_response(),
+    }
+}
+
+/// A request written from scratch, sent the same way a replay is.
+pub async fn send_flow(State(state): State<AppState>, body: Bytes) -> Response {
+    match send::parse_fields(&body).and_then(send::from_scratch) {
+        Ok(outgoing) => dispatch(&state, outgoing, None).await,
+        Err(refusal) => refusal.into_response(),
+    }
+}
+
+/// Answers once the reply exists, and only then lands the flow: an exchange
+/// that never happened is an answer with a reason, never a row (DEC-58).
+async fn dispatch(state: &AppState, outgoing: Outgoing, seed: Option<FlowId>) -> Response {
+    match state.sender.send(outgoing, seed).await {
+        Ok(flow) => {
+            let location = format!("/flows/{}", flow.id);
+            let view = FlowView::from(&flow);
+            state.store.import(vec![flow]);
+            (StatusCode::CREATED, [(header::LOCATION, location)], Json(view)).into_response()
+        }
+        Err(failure) => {
+            let status = match failure {
+                SendError::NoResponse(_) => StatusCode::GATEWAY_TIMEOUT,
+                SendError::Transport(_) => StatusCode::BAD_GATEWAY,
+            };
+            (status, failure.to_string()).into_response()
+        }
     }
 }
 
@@ -423,7 +475,8 @@ mod tests {
             Arc::clone(&store),
             pems,
         ));
-        AppState { store, ca_cert_pem: Arc::new("PEM".into()), reach }
+        let sender = crate::sender::Sender::new(&[], 1024);
+        AppState { store, ca_cert_pem: Arc::new("PEM".into()), reach, sender }
     }
 
     async fn export(state: &AppState, query: &str) -> (StatusCode, axum::http::HeaderMap, Value) {
@@ -533,7 +586,7 @@ mod tests {
         let state = state_with(&["http://a.test/"]);
         let (status, value) = clear(&state, "source=nonsense").await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert_eq!(value, "source must be captured or imported");
+        assert_eq!(value, "source must be captured, imported or sent");
 
         let (_, listed) = list(&state, "").await;
         assert_eq!(listed.as_array().expect("rows").len(), 1, "a refused clear removes nothing");

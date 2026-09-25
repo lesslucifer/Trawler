@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use http::{HeaderMap, Method};
+use http::Method;
 use hudsucker::hyper::{Request, Response};
 use hudsucker::{Body, HttpContext, HttpHandler, RequestOrResponse};
 
 use crate::capture;
-use crate::flow::{Flow, FlowId, Header, RequestRec, ResponseRec};
+use crate::flow::{header_list, version_token, Flow, FlowId, RequestRec, ResponseRec};
 use crate::store::Store;
 
 /// The proxy-side producer. Dumb by design: it turns each HTTP exchange into a
@@ -32,19 +32,6 @@ impl Recorder {
     }
 }
 
-fn version_str(version: http::Version) -> String {
-    format!("{version:?}")
-}
-
-fn headers_to_vec(map: &HeaderMap) -> Vec<Header> {
-    map.iter()
-        .map(|(name, value)| Header {
-            name: name.as_str().to_owned(),
-            value: String::from_utf8_lossy(value.as_bytes()).into_owned(),
-        })
-        .collect()
-}
-
 impl HttpHandler for Recorder {
     async fn handle_request(
         &mut self,
@@ -68,8 +55,8 @@ impl HttpHandler for Recorder {
         let request = RequestRec {
             method: parts.method.as_str().to_owned(),
             uri: parts.uri.to_string(),
-            version: version_str(parts.version),
-            headers: headers_to_vec(&parts.headers),
+            version: version_token(parts.version),
+            headers: header_list(&parts.headers),
             body: body_rec,
         };
 
@@ -90,8 +77,8 @@ impl HttpHandler for Recorder {
 
         let response = ResponseRec {
             status: parts.status.as_u16(),
-            version: version_str(parts.version),
-            headers: headers_to_vec(&parts.headers),
+            version: version_token(parts.version),
+            headers: header_list(&parts.headers),
             body: body_rec,
         };
 
@@ -99,40 +86,5 @@ impl HttpHandler for Recorder {
         self.store.set_response(exchange.flow_id, response, duration_ms);
 
         Response::from_parts(parts, forwarded)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{headers_to_vec, version_str};
-    use http::{HeaderMap, HeaderValue, Version};
-
-    #[test]
-    fn version_renders_api_wire_format() {
-        assert_eq!(version_str(Version::HTTP_11), "HTTP/1.1");
-        assert_eq!(version_str(Version::HTTP_2), "HTTP/2.0");
-        assert_eq!(version_str(Version::HTTP_10), "HTTP/1.0");
-    }
-
-    #[test]
-    fn maps_and_preserves_duplicates() {
-        let mut map = HeaderMap::new();
-        map.append("x-dup", "one".parse().unwrap());
-        map.append("x-dup", "two".parse().unwrap());
-        map.insert("content-type", "text/plain".parse().unwrap());
-        let out = headers_to_vec(&map);
-        let dup: Vec<_> =
-            out.iter().filter(|h| h.name == "x-dup").map(|h| h.value.as_str()).collect();
-        assert_eq!(dup, vec!["one", "two"]);
-        assert!(out.iter().any(|h| h.name == "content-type" && h.value == "text/plain"));
-    }
-
-    #[test]
-    fn non_utf8_value_is_lossy() {
-        let mut map = HeaderMap::new();
-        map.insert("x-bin", HeaderValue::from_bytes(&[0xff, 0xfe]).unwrap());
-        let out = headers_to_vec(&map);
-        let v = out.iter().find(|h| h.name == "x-bin").unwrap();
-        assert!(v.value.contains('\u{FFFD}'));
     }
 }

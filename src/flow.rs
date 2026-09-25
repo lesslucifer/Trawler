@@ -27,10 +27,12 @@ impl std::fmt::Display for FlowId {
 /// Where a flow came from. Until HAR import every flow was captured by the
 /// proxy, so nothing recorded the fact; now the ring holds flows the proxy never
 /// saw and a user must be able to tell them apart and select them separately.
+/// `Sent` is an exchange Trawler's own client made (DEC-58).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FlowSource {
     Captured,
     Imported,
+    Sent,
 }
 
 #[derive(Clone, Debug)]
@@ -111,7 +113,26 @@ pub struct Flow {
     pub response: Option<ResponseRec>,
     pub duration_ms: Option<u64>,
     pub source: FlowSource,
+    /// The flow a sent one was replayed from. It may name a flow the ring has
+    /// since let go: the link records where the request came from, not a
+    /// reference the store keeps alive.
+    pub seed: Option<FlowId>,
     host: Option<String>,
+}
+
+/// The version spelling every flow carries, whichever side of Trawler made the
+/// exchange.
+pub(crate) fn version_token(version: http::Version) -> String {
+    format!("{version:?}")
+}
+
+pub(crate) fn header_list(map: &http::HeaderMap) -> Vec<Header> {
+    map.iter()
+        .map(|(name, value)| Header {
+            name: name.as_str().to_owned(),
+            value: String::from_utf8_lossy(value.as_bytes()).into_owned(),
+        })
+        .collect()
 }
 
 pub(crate) fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
@@ -128,6 +149,7 @@ impl Flow {
             response: None,
             duration_ms: None,
             source: FlowSource::Captured,
+            seed: None,
             host,
         }
     }
@@ -136,6 +158,15 @@ impl Flow {
     #[must_use]
     pub fn imported(mut self) -> Self {
         self.source = FlowSource::Imported;
+        self
+    }
+
+    /// The same flow, marked as sent by Trawler itself, from `seed` when it was
+    /// a replay and from nothing when it was composed.
+    #[must_use]
+    pub fn sent(mut self, seed: Option<FlowId>) -> Self {
+        self.source = FlowSource::Sent;
+        self.seed = seed;
         self
     }
 
@@ -215,9 +246,51 @@ mod tests {
     }
 
     #[test]
-    fn a_captured_flow_is_the_default_and_import_is_the_only_other_mark() {
-        assert_eq!(FlowBuilder::new().build().source, FlowSource::Captured);
+    fn a_captured_flow_is_the_default_and_carries_no_seed() {
+        let flow = FlowBuilder::new().build();
+        assert_eq!(flow.source, FlowSource::Captured);
+        assert_eq!(flow.seed, None);
         assert_eq!(FlowBuilder::new().build().imported().source, FlowSource::Imported);
+    }
+
+    #[test]
+    fn a_sent_flow_is_marked_and_names_its_seed_when_it_had_one() {
+        let seed = FlowBuilder::new().build();
+        let replayed = FlowBuilder::new().build().sent(Some(seed.id));
+        assert_eq!(replayed.source, FlowSource::Sent);
+        assert_eq!(replayed.seed, Some(seed.id));
+
+        let composed = FlowBuilder::new().build().sent(None);
+        assert_eq!(composed.source, FlowSource::Sent);
+        assert_eq!(composed.seed, None);
+    }
+
+    #[test]
+    fn version_renders_api_wire_format() {
+        assert_eq!(version_token(http::Version::HTTP_11), "HTTP/1.1");
+        assert_eq!(version_token(http::Version::HTTP_2), "HTTP/2.0");
+        assert_eq!(version_token(http::Version::HTTP_10), "HTTP/1.0");
+    }
+
+    #[test]
+    fn header_list_preserves_duplicates() {
+        let mut map = http::HeaderMap::new();
+        map.append("x-dup", "one".parse().unwrap());
+        map.append("x-dup", "two".parse().unwrap());
+        map.insert("content-type", "text/plain".parse().unwrap());
+        let out = header_list(&map);
+        let dup: Vec<_> =
+            out.iter().filter(|h| h.name == "x-dup").map(|h| h.value.as_str()).collect();
+        assert_eq!(dup, vec!["one", "two"]);
+        assert!(out.iter().any(|h| h.name == "content-type" && h.value == "text/plain"));
+    }
+
+    #[test]
+    fn header_list_is_lossy_on_non_utf8_values() {
+        let mut map = http::HeaderMap::new();
+        map.insert("x-bin", http::HeaderValue::from_bytes(&[0xff, 0xfe]).unwrap());
+        let out = header_list(&map);
+        assert!(out.iter().find(|h| h.name == "x-bin").unwrap().value.contains('\u{FFFD}'));
     }
 
     #[test]
