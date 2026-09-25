@@ -18,6 +18,7 @@ import {
   removable,
   removedCount,
   removeRow,
+  rewrittenBy,
   restart,
   revertBody,
   revertRow,
@@ -392,5 +393,67 @@ describe("send and start over", () => {
 
     expect(restart(edited)).toEqual(start);
     expect(restart({ ...blankDraft(), url: "x" })).toEqual(blankDraft());
+  });
+});
+
+describe("a row named for a header the core rewrites, whoever typed it", () => {
+  it("an added Content-Length row says the core sets it, and is not sent", () => {
+    const { draft, key } = withRow(draftFrom(seed()));
+    const typed = updateRow(draft, key, { name: "Content-Length", value: "999" });
+    const row = typed.rows.find((r) => r.key === key)!;
+
+    expect(rewrittenBy(row)).toBe("set from the body");
+    expect(toRequest(typed).fields.headers ?? []).not.toContainEqual({ name: "Content-Length", value: "999" });
+  });
+
+  it("a seed row renamed to Connection leaves the wire, and the rest of the list goes", () => {
+    const start = draftFrom(seed());
+    const draft = updateRow(start, rowNamed(start, "Cookie").key, { name: "Connection" });
+
+    expect(rewrittenBy(rowNamed(draft, "Connection"))).toBe("the client's to set");
+    expect(toRequest(draft).fields.headers).toEqual([
+      { name: "Content-Type", value: "application/json" },
+      { name: "Authorization", value: "Bearer OLD" },
+    ]);
+  });
+
+  it("an added core-owned row alone changes nothing sent, yet the draft has moved", () => {
+    const { draft, key } = withRow(draftFrom(seed()));
+    const typed = updateRow(draft, key, { name: "TE", value: "trailers" });
+
+    expect(toRequest(typed).fields).toEqual({});
+    expect(isEdited(typed)).toBe(true);
+  });
+
+  it("any other name is the draft's own", () => {
+    expect(rewrittenBy({ key: 0, name: "X-Content-Length", value: "1", origin: null })).toBeUndefined();
+  });
+});
+
+describe("the seed's Host row, once renamed", () => {
+  it("is an ordinary header, and can go", () => {
+    const start = draftFrom(seed());
+    const renamed = updateRow(start, rowNamed(start, "Host").key, { name: "X-Custom" });
+
+    expect(removable(renamed, rowNamed(renamed, "X-Custom"))).toBe(true);
+    expect(toRequest(renamed).fields.headers).toContainEqual({ name: "X-Custom", value: "a.test" });
+  });
+
+  it("removed, it is never counted, and nothing about the wire changes: the core sends the URL's host", () => {
+    const start = draftFrom(seed());
+    const renamed = updateRow(start, rowNamed(start, "Host").key, { name: "X-Custom" });
+    const gone = removeRow(renamed, rowNamed(renamed, "X-Custom").key);
+
+    expect(removedCount(gone)).toBe(0);
+    expect(toRequest(gone).fields).toEqual({});
+  });
+});
+
+describe("a captured body too large to show", () => {
+  it("is known from its size and never decoded", () => {
+    expect(seedBody({ state: "captured", size: TEXT_MAX + 1, data_base64: "not base64 at all!" })).toEqual({
+      kind: "binary",
+      size: TEXT_MAX + 1,
+    });
   });
 });

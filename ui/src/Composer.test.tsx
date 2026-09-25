@@ -348,3 +348,20 @@ describe("the Host row a seed carried", () => {
     expect(screen.getByRole("button", { name: "remove Host" })).toBeInTheDocument();
   });
 });
+
+describe("a row the core rewrites, typed by hand", () => {
+  it("says so in its mark slot instead of claiming to be sent", () => {
+    render(<Harness start={draftFrom(seed())} />);
+    fireEvent.click(screen.getByRole("button", { name: COMPOSER_COPY.addHeader }));
+    fireEvent.change(screen.getByRole("textbox", { name: "header 5 name" }), { target: { value: "Content-Length" } });
+
+    expect(marks()[4]).toBe("set from the body");
+  });
+
+  it("a renamed seed row keeps its revert beside the core's sentence", () => {
+    render(<Harness start={draftFrom(seed())} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "header 4 name" }), { target: { value: "Connection" } });
+
+    expect(marks()[3]).toBe(`the client's to set${COMPOSER_COPY.revert}`);
+  });
+});

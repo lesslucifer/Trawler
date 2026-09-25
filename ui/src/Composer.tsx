@@ -13,6 +13,7 @@ import {
   removedCount,
   removeRow,
   restart,
+  rewrittenBy,
   revertBody,
   revertRow,
   rowMark,
@@ -285,6 +286,7 @@ function HeaderRow({
   onRemove: () => void;
 }) {
   const mark = rowMark(draft, row);
+  const rewritten = rewrittenBy(row);
   return (
     <div data-testid="header-row" data-mark={mark ?? undefined} className="contents">
       <span data-wire="header name" data-focus={`name-${row.key}`}>
@@ -306,16 +308,19 @@ function HeaderRow({
         />
       </span>
       <span data-testid="row-mark" className="flex items-center gap-chrome-gap text-chrome text-ink-mute">
+        {rewritten ??
+          (mark === "edited"
+            ? COMPOSER_COPY.edited
+            : mark === "added"
+              ? COMPOSER_COPY.added
+              : mark === "follows"
+                ? COMPOSER_COPY.follows
+                : null)}
         {mark === "edited" && (
-          <>
-            {COMPOSER_COPY.edited}
-            <Button frame="bare" tone="mute" onClick={onRevert}>
-              {COMPOSER_COPY.revert}
-            </Button>
-          </>
+          <Button frame="bare" tone="mute" onClick={onRevert}>
+            {COMPOSER_COPY.revert}
+          </Button>
         )}
-        {mark === "added" && COMPOSER_COPY.added}
-        {mark === "follows" && COMPOSER_COPY.follows}
       </span>
       {removable(draft, row) ? (
         <IconButton glyph="close" label={`remove ${row.name || `header ${index + 1}`}`} onClick={onRemove} />

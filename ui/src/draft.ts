@@ -49,6 +49,14 @@ export function coreOwned(name: string): string | undefined {
 
 export const CORE_OWNED_NAMES = Object.keys(CORE_OWNED);
 
+// By the row's name as it stands, not as the seed had it: a row renamed or
+// added to one of these is rewritten on the wire like any other.
+export function rewrittenBy(row: DraftRow): string | undefined {
+  return coreOwned(row.name);
+}
+
+const isHost = (name: string) => name.toLowerCase() === "host";
+
 export function droppedRows(seed: FlowView): HeaderView[] {
   return seed.request_headers.filter((h) => coreOwned(h.name) !== undefined);
 }
@@ -71,6 +79,8 @@ function decode(body: BodyView): SeedBody {
     case "empty":
       return { kind: "empty" };
     case "captured": {
+      if (body.size === 0) return { kind: "empty" };
+      if (body.size > TEXT_MAX) return { kind: "binary", size: body.size };
       const bytes = Uint8Array.from(atob(body.data_base64), (c) => c.charCodeAt(0));
       if (bytes.length === 0) return { kind: "empty" };
       if (bytes.length > TEXT_MAX || rawKind(bytes) !== "text") return { kind: "binary", size: bytes.length };
@@ -129,23 +139,41 @@ export function shownValue(draft: Draft, row: DraftRow): string {
   }
 }
 
-// The seed's Host row cannot go: the core sends the URL's host whenever the
-// draft names none, so a removal would show a header as gone that is sent.
+// The seed's Host row cannot go while it names Host: the core sends the URL's
+// host whenever the draft names none, so a removal would show a header as gone
+// that is sent. For the same reason it is never counted as removed.
 export function removable(draft: Draft, row: DraftRow): boolean {
-  return seedRow(draft, row)?.name.toLowerCase() !== "host";
+  return !(isHost(row.name) && isHost(seedRow(draft, row)?.name ?? ""));
 }
 
 export function removedCount(draft: Draft): number {
   if (!draft.seed) return 0;
   const kept = new Set(draft.rows.map((row) => row.origin));
-  return draft.seed.request_headers.filter((h, i) => coreOwned(h.name) === undefined && !kept.has(i)).length;
+  return draft.seed.request_headers.filter(
+    (h, i) => coreOwned(h.name) === undefined && !isHost(h.name) && !kept.has(i),
+  ).length;
 }
 
+// What the core would receive from the seed with no header list given: its own
+// headers, minus the ones it rewrites and minus its Host, which follows the URL.
+function seedWire(seed: FlowView): HeaderView[] {
+  return seed.request_headers.filter((h) => coreOwned(h.name) === undefined && !isHost(h.name));
+}
+
+const sameWire = (a: HeaderView[], b: HeaderView[]) =>
+  a.length === b.length && a.every((h, i) => h.name === b[i].name && h.value === b[i].value);
+
 function headersChanged(draft: Draft): boolean {
-  return removedCount(draft) > 0 || draft.rows.some((row) => {
-    const mark = rowMark(draft, row);
-    return mark === "edited" || mark === "added";
-  });
+  return draft.seed !== null && !sameWire(wireRows(draft), seedWire(draft.seed));
+}
+
+function rowsMoved(draft: Draft): boolean {
+  if (!draft.seed) return draft.rows.length > 0;
+  const start = draftFrom(draft.seed).rows;
+  return (
+    draft.rows.length !== start.length ||
+    draft.rows.some((row, i) => row.origin !== start[i].origin || row.name !== start[i].name || row.value !== start[i].value)
+  );
 }
 
 // Whether the body goes at all. An unedited body is sent by omission, so the
@@ -168,10 +196,8 @@ export function revertBody(draft: Draft): Draft {
 }
 
 export function isEdited(draft: Draft): boolean {
-  if (!draft.seed) return draft.method !== "GET" || draft.url !== "" || draft.rows.length > 0 || draft.body !== "";
-  return (
-    draft.method !== draft.seed.method || draft.url !== draft.seed.uri || headersChanged(draft) || bodyReplaced(draft)
-  );
+  if (!draft.seed) return draft.method !== "GET" || draft.url !== "" || rowsMoved(draft) || draft.body !== "";
+  return draft.method !== draft.seed.method || draft.url !== draft.seed.uri || rowsMoved(draft) || bodyReplaced(draft);
 }
 
 export function canSend(draft: Draft): boolean {
@@ -204,13 +230,14 @@ export function addRow(draft: Draft): Draft {
 
 function wireRows(draft: Draft): HeaderView[] {
   return draft.rows
-    .filter((row) => rowMark(draft, row) !== "follows")
+    .filter((row) => rowMark(draft, row) !== "follows" && rewrittenBy(row) === undefined)
     .map((row) => ({ name: row.name, value: row.value }));
 }
 
 // Only what differs from the seed is sent. A changed header list goes whole,
-// minus an unedited Host row: a Host in a given list is sent as typed, and the
-// seed's would carry the old host to a new URL.
+// minus an unedited Host row (a Host in a given list is sent as typed, and the
+// seed's would carry the old host to a new URL) and minus the rows the core
+// rewrites whatever they say.
 export function toRequest(draft: Draft): DraftRequest {
   if (!draft.seed) {
     const fields: SendFields = { method: draft.method, url: draft.url };
