@@ -35,6 +35,12 @@ const recordClipboard = () =>
       value: { writeText: (text: string) => ((w.__copied = text), Promise.resolve()) },
     });
   });
+const flowLineButtonReading = async (label: string) => {
+  for (const button of await $$('[data-testid="flow-line"] button')) {
+    if ((await button.getText()).includes(label)) return button;
+  }
+  throw new Error(`no flow-line button reads ${label}`);
+};
 const lastCopied = () => browser.execute(() => (window as unknown as { __copied?: string }).__copied);
 
 // The window is already bound to this run's core: the launcher handed it the
@@ -346,10 +352,10 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
   it("copies a runnable curl for the request and confirms at the button", async () => {
     const detail = await $('[data-testid="detail"]').getText();
     expect(detail).not.toMatch(/curl /);
-    // The flow line's one button. CopyButton nests its label, so a text selector
-    // (direct text nodes only) cannot find it; and WebKit's getText includes the
-    // visibility:hidden widest-label span, so the text is matched, not equated.
-    const copyAsCurl = $('[data-testid="flow-line"] button');
+    // CopyButton nests its label, so a text selector (direct text nodes only)
+    // cannot find it among the flow line's buttons; and WebKit's getText includes
+    // the visibility:hidden widest-label span, so the text is matched, not equated.
+    const copyAsCurl = await flowLineButtonReading("copy as curl");
     expect(await copyAsCurl.getText()).toContain("copy as curl");
     expect(await copyAsCurl.getText()).not.toContain("copied");
     await recordClipboard();
