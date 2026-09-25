@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab600929f34851f0dfad4d0" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REPLAY.W2 result: the design of record</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REPLAY.W2 result — the composer's design of record, closed</h1>
+      <p>One six-item run, drawn against the doors W1 shipped, held whole by the owner's round, and archived at a blob W3 can cite.</p>
+      <div class="meta">v1 · 2026-09-25 · Trawler · T3 WU result · <span class="badge id">E-REPLAY.W2</span> · branch <code>wu/replay/design-of-record</code> · <a href="2026-09-25-replay-w2-design-of-record-plan.html">WU plan</a> · <a href="2026-09-23-replay-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <p>Delivered against all ten expected rows. The run is
+      <a href="2026-09-25-replay-composer-design-run.html"><code>docs/work/2026-09-25-replay-composer-design-run.html</code></a>,
+      archived at commit <code>41f0116</code>, blob <code>9d4cff1b733dfbc6520602560532f537ef92b671</code>.</p>
+    <table data-item="outcome">
+      <thead><tr><th>#</th><th>Expected</th><th>At the tip</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>one run, archived, a new htmldoc id, the bootstrap</td><td>yes. Id <code>6ab5f6f39f34851f0dfad470</code>, minted for this run. Run #7's file stays archived at <code>015f4f3</code></td></tr>
+        <tr><td>2</td><td>every Given answered, none W1 did not ship, the Not given line</td><td>yes. 24 rows: 16 used, 8 deliberately unused, 0 blocked. Cancel, saved requests and a draft that survives a relaunch are on the Not given line</td></tr>
+        <tr><td>3</td><td>the registry mounted across seven states</td><td>yes. Seven states and the entries. Mounted: <code>Field</code>, <code>Select</code>, <code>MethodLabel</code>, <code>Section</code>, <code>Button</code>, <code>IconButton</code>, <code>Notice</code>, <code>StatusLine</code>, <code>StatusPill</code>, <code>DurationText</code>, <code>TimestampText</code>, <code>SegmentedControl</code>. The draft is live, so typing moves the marks. Every state was rendered headless and read before the owner's round</td></tr>
+        <tr><td>4</td><td>run #7's four Tune calls applied</td><td>yes</td></tr>
+        <tr><td>5</td><td>decisions 7 and 8 rendered</td><td>yes. The list beside the 520 px pane. <em>The door that made a draft reopens it</em>, and <em>start over</em></td></tr>
+        <tr><td>6</td><td>a key path per pointer act</td><td>yes. 13 rows, none of them <code>proposed:</code></td></tr>
+        <tr><td>7</td><td>proposals and blocked-on</td><td>yes. 7 proposals: two <code>Field</code> deltas, two screen-owned elements, three lexicon entries. Run #7's three blocked-on rows closed, each naming what closed it</td></tr>
+        <tr><td>8</td><td>the review item records the round</td><td>yes. The owner said <em>LGTM</em> to five named calls, and nothing moved</td></tr>
+        <tr><td>9</td><td><code>verify-doc</code> green · <code>design/v1</code> with an empty built set</td><td>green on 12/12 hard rules, 0 suppressions, verified at <code>ready</code> with the final review row, then archived. <code>design-scope</code> names the run and no <code>ui/src/</code> file</td></tr>
+        <tr><td>10</td><td>the bill</td><td>yes, <a href="#bill">below</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="bill">The round's bill</h2>
+    <p>Wall-clock comes from the commits. Tokens are read back from the session transcript's per-turn usage.</p>
+    <table data-c="bill">
+      <thead><tr><th>Stage</th><th>Wall clock (UTC)</th><th>Agent turns</th><th>Output tokens</th><th>Cache read</th><th>Cache write</th></tr></thead>
+      <tbody>
+        <tr><td>authoring: substrate, the plan, the run, rendering, two fix passes</td><td>04:17 → 04:37 · 20 min</td><td>47</td><td>78,115</td><td>9.52 M</td><td>186 k</td></tr>
+        <tr><td>the owner's round</td><td>04:37 → 05:00 · 23 min</td><td>1</td><td>1,126</td><td>0.29 M</td><td>1 k</td></tr>
+        <tr><td>close: review row, green, archive, this report</td><td>05:00 → 05:05 · 5 min</td><td>8</td><td>4,247</td><td>2.31 M</td><td>6 k</td></tr>
+      </tbody>
+    </table>
+    <table data-c="bill-reading">
+      <thead><tr><th>Reading</th><th>What it means for the flow</th></tr></thead>
+      <tbody>
+        <tr><td>the owner's round was the longest stage, and it moved nothing</td><td>the same shape as E-ONBOARD's first bill: the human is the cost, not the agent</td></tr>
+        <tr><td>0 edit→verify cycles on the mockup's rules. The one red was the review item's citation form</td><td>edit twice, verify twice held. Rendering found two defects no predicate reads: a mono stand-in lost to stylesheet order, and ragged value columns</td></tr>
+        <tr><td>cache read is 120× the output</td><td>a bill that reports one total is reporting cache traffic</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Plan said</th><th>What happened</th><th>Why, and what it binds</th></tr></thead>
+      <tbody>
+        <tr><td>epic plan W3: "FlowDetail's header gets the replay control"</td><td><em>replay</em> sits in the flow line, beside <em>copy as curl</em></td><td>both send this request again, one elsewhere and one here. The owner held it, and W3 builds from the run</td></tr>
+        <tr><td>one <code>Field</code> delta (multi-line)</td><td>two: multi-line, and the mono family for a verbatim value</td><td>found by rendering. mono-for-wire-data binds every value this screen edits, and <code>Field</code> fixes the ui family. DEC-59 carries both</td></tr>
+        <tr><td>run #7's three absences: too large · streaming · <em>none</em></td><td>streaming · too large · read error</td><td>W1's contract. An empty body is captured and sends empty</td></tr>
+        <tr><td>—</td><td>headers the core rewrites leave the draft, and an unedited <code>Host</code> is sent by omission</td><td>W1's header rules. A <code>Host</code> in a given list is sent as typed, so W3's draft → request mapping must omit an unedited one</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>cargo xtask verify-doc</code> on the run, at <code>ready</code> with the final review row</td><td>green · 12/12 hard rules · 0 suppressions</td></tr>
+        <tr><td><code>cargo xtask verify-doc</code> on the plan and this result</td><td>green</td></tr>
+        <tr><td><code>cargo xtask design-scope epic/replay HEAD</code></td><td>1 artifact: the run. No <code>ui/src/</code> file</td></tr>
+        <tr><td><code>cargo xtask gate0</code></td><td>green at <code>41f0116</code>: fmt, clippy <code>-D warnings</code>, the whole suite. The code is untouched</td></tr>
+        <tr><td>headless Chrome, every state</td><td>all mounts render, and the draft's marks follow typing</td></tr>
+        <tr><td>tests</td><td>unit, integration and e2e waived, each with its reason on <code>test/v2</code> (the WU plan's test plan)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">None in this WU. A design's truth reaches T2 after its build: UC-8's app half and DEC-59 land at W3, and the lexicon rows for <em>draft</em>, <em>sent</em> and <em>replay</em> at W4. <code>doc/v1</code> carries <code>t2_waived</code> with that reason.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <thead><tr><th>For</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>W3</td><td>cite the run by path and blob <code>9d4cff1</code> on its <code>design/v1</code> note</td></tr>
+        <tr><td>W3</td><td>the draft module's rules, from the run: only what differs from the seed is sent · an unedited body and an unedited <code>Host</code> go by omission · the marks and the removed count · the rows the core rewrites are left out · send is gated on a URL</td></tr>
+        <tr><td>W3</td><td>focus returns to <em>send</em> when the reply or the refusal lands, because the disabled window drops it</td></tr>
+        <tr><td>W3</td><td>the sentences in the run's copy table, including the binary or over-128 KiB body's</td></tr>
+        <tr><td>W4</td><td>lexicon rows: <em>draft</em> · <em>sent</em> · <em>replay</em>, and <em>seed</em> stays the API's word</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
