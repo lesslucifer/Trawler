@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-REPLAY
+wu: E-REPLAY.W4
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "The epic's one T1 edit, committed by the owner at 377dbb0 under Reviewed-By: key vuluu. The core now has an outbound path of its own beside the proxy: the overview says the core can send a request itself, the module list names the sender, the runtime paragraph and diagram show two paths reaching upstream servers and writing into the store (the proxy handler and the sender) where it said the proxy handler was the only bridge, the caption adds that the API sends as well as ingests and removes, and a decision row says why a sent request goes through the core's own client rather than looping back through the proxy port (DEC-58)."
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "E-REPLAY struck in the sequence with what landed and how run #7's three blocked-on rows closed; Wave 3 begun in Consequences. The silent-harness row struck as guarded by W4, with the three guards. Two residue rows from W3: the app mirrors the core's header-rewrite rules behind a source-reading test, and an Esc inside a modal reaches the pane's document listener. The design flow's bill row gains its second measured data point, E-REPLAY.W2's round."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "The Lexicon gains the three words the design run proposed and the UI shipped: draft (the request in the composer), sent (a flow Trawler itself sent, DEC-58's source value and the list mark's name), replay (the act of opening a draft from a flow, never its result), each with its Never column; seed stays the API's word."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-8 indexed as it shipped: the two doors through one sender, the sent mark and the seed link, a never-captured seed body refused rather than sent empty, no flow for a send with no reply, and the composer in the detail pane."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-8 restated against the tip: its contract and composer tables re-read against src/sender.rs, src/api/send.rs and the composer and found whole, so the change is the provenance callout, which now names the e2e journeys replay.spec.ts drives. Version bumped."
+  - path: "docs/work/2026-09-25-replay-w4-close-plan.html"
+    tier: T3
+    action: added
+    distills: "the W4 plan: requirement, mapping, the guard table, commits, expected result and test plan"
