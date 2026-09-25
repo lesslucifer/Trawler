@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W4 wu/replay/close -> epic/replay. The code is the e2e harness and specs (ui/e2e) and the gate tool's ui module (xtask/src/ui.rs). The round ran at 377dbb0, the owner's T1 commit; the result report committed after it at this tip changes no code path, so the binding below is the code the finders read."
+epic: E-REPLAY
+wu: E-REPLAY.W4
+branch: wu/replay/close
+base: 7bd1850b69c337cceddc3838dfe4ecf4b7a8ee5a
+head: f0999a06741fb78d580c050a012f64be07751312
+diff_sha256: fa628781a8dae801f103a6f3bfba4918496638f5007a47f248e37b0e2e52f1b6
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 205
+    finders: 489
+    verifiers: 0
+    total: 517
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+refuted: "No candidate reached a verifier, so verifier_model is absent as a reading nobody took. The finders traced leads to ground: CORRECTNESS read the installed @wdio/cli 9.32 launcher and found onComplete runs from a finally block with results zeroed when no worker spawned, so the silent-boot case writes a tally the judge reads red, and passed/failed count spec-file jobs, matching SPECS.length; the bind-and-release closed port is the idiom tests/replay.rs already uses; the hit header split and echo_headers' to_str fallback have no panic path. EFFICIENCY found no runtime path in scope (no src/ file changes). ALTITUDE found the tally file follows the PORTS_FILE cross-process convention and the static guards sit where xtask already guards the front-end toolchain's silent failures (the Tailwind lint precedent)."
+verdict: PASS
+date: 2026-09-25
