@@ -1632,3 +1632,17 @@ test("a reply that lands after its draft was replaced never speaks for the new o
   expect(screen.getByTestId("send-zone")).toHaveTextContent("not sent yet");
   expect(screen.getByRole("button", { name: "send" })).toBeEnabled();
 });
+
+test("new request over an open replay draft opens a fresh composer, with focus in its URL field", async () => {
+  const { api } = replayWorld();
+  render(<App api={api} initialState={PROVEN} />);
+  await replayFirst();
+  expect(screen.getByRole("textbox", { name: "url" })).toHaveValue("https://a.test/users");
+
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.trigger }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "new request" }));
+
+  const url = await screen.findByRole("textbox", { name: "url" });
+  await waitFor(() => expect(url).toHaveValue(""));
+  expect(url).toHaveFocus();
+});

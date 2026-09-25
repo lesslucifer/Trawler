@@ -47,11 +47,26 @@ export function coreOwned(name: string): string | undefined {
   return CORE_OWNED[name.toLowerCase()];
 }
 
+export const CORE_OWNED_NAMES = Object.keys(CORE_OWNED);
+
 export function droppedRows(seed: FlowView): HeaderView[] {
   return seed.request_headers.filter((h) => coreOwned(h.name) !== undefined);
 }
 
+// Every render of the composer asks, and the answer is fixed for the seed's
+// life: a body up to TEXT_MAX is decoded once, not once per keystroke.
+const decoded = new WeakMap<BodyView, SeedBody>();
+
 export function seedBody(body: BodyView): SeedBody {
+  let known = decoded.get(body);
+  if (!known) {
+    known = decode(body);
+    decoded.set(body, known);
+  }
+  return known;
+}
+
+function decode(body: BodyView): SeedBody {
   switch (body.state) {
     case "empty":
       return { kind: "empty" };
@@ -114,6 +129,12 @@ export function shownValue(draft: Draft, row: DraftRow): string {
   }
 }
 
+// The seed's Host row cannot go: the core sends the URL's host whenever the
+// draft names none, so a removal would show a header as gone that is sent.
+export function removable(draft: Draft, row: DraftRow): boolean {
+  return seedRow(draft, row)?.name.toLowerCase() !== "host";
+}
+
 export function removedCount(draft: Draft): number {
   if (!draft.seed) return 0;
   const kept = new Set(draft.rows.map((row) => row.origin));
@@ -173,9 +194,12 @@ export function removeRow(draft: Draft, key: number): Draft {
 
 // Keys only have to be unique within one draft, and the seed's rows already
 // hold 0..n-1, so the next one is past every key in use.
-export function addRow(draft: Draft): { draft: Draft; key: number } {
-  const key = Math.max(draft.seed ? draft.seed.request_headers.length - 1 : -1, ...draft.rows.map((r) => r.key)) + 1;
-  return { draft: { ...draft, rows: [...draft.rows, { key, name: "", value: "", origin: null }] }, key };
+export function nextKey(draft: Draft): number {
+  return Math.max(draft.seed ? draft.seed.request_headers.length - 1 : -1, ...draft.rows.map((r) => r.key)) + 1;
+}
+
+export function addRow(draft: Draft): Draft {
+  return { ...draft, rows: [...draft.rows, { key: nextKey(draft), name: "", value: "", origin: null }] };
 }
 
 function wireRows(draft: Draft): HeaderView[] {

@@ -65,16 +65,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const inspected = pane?.kind === "inspector" ? pane.id : null;
   const [retryNonce, setRetryNonce] = useState(0);
   const { flow: detail, failed: detailFailed } = useFlowDetail(client, inspected, retryNonce);
-  const { kept, open: openDraft, edit, send } = useDraft(client);
+  const { kept, seedId, open: openDraft, edit, send } = useDraft(client);
   const inspect = useCallback((id: string) => setPane({ kind: "inspector", id }), []);
   const compose = (seed: FlowView | null) => {
     openDraft(seed);
     setPane({ kind: "composer" });
   };
   const leaveComposer = useCallback(() => {
-    const seedId = kept?.draft.seed?.id;
     setPane(seedId ? { kind: "inspector", id: seedId } : null);
-  }, [kept]);
+  }, [seedId]);
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
@@ -488,6 +487,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       detail={
         pane?.kind === "composer" && kept ? (
           <Composer
+            key={kept.serial}
             draft={kept.draft}
             outcome={kept.outcome}
             onEdit={edit}
@@ -510,7 +510,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       {closeDialog}
       <FlowList
         flows={flows}
-        selectedId={inspected ?? (pane?.kind === "composer" ? kept?.draft.seed?.id : null)}
+        selectedId={inspected ?? (pane?.kind === "composer" ? seedId : null)}
         onSelect={inspect}
         filtered={hasFilter}
         cleared={clearedEmpty}

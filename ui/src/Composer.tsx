@@ -2,11 +2,14 @@ import { useEffect, useRef } from "react";
 import {
   addRow,
   binarySentence,
+  bodyReplaced,
   bodyRevertible,
   canSend,
   coreOwned,
   droppedRows,
   isEdited,
+  nextKey,
+  removable,
   removedCount,
   removeRow,
   restart,
@@ -213,9 +216,8 @@ function Headers({ draft, onEdit, focus }: { draft: Draft; onEdit: Edit; focus: 
   };
 
   const add = () => {
-    const { key } = addRow(draft);
-    onEdit((d) => addRow(d).draft);
-    focus(`name-${key}`);
+    focus(`name-${nextKey(draft)}`);
+    onEdit(addRow);
   };
 
   return (
@@ -315,14 +317,17 @@ function HeaderRow({
         {mark === "added" && COMPOSER_COPY.added}
         {mark === "follows" && COMPOSER_COPY.follows}
       </span>
-      <IconButton glyph="close" label={`remove ${row.name || `header ${index + 1}`}`} onClick={onRemove} />
+      {removable(draft, row) ? (
+        <IconButton glyph="close" label={`remove ${row.name || `header ${index + 1}`}`} onClick={onRemove} />
+      ) : (
+        <span />
+      )}
     </div>
   );
 }
 
 function Body({ draft, onEdit, focus }: { draft: Draft; onEdit: Edit; focus: (name: string) => void }) {
   const seeded = draft.seed ? seedBody(draft.seed.request_body) : null;
-  const typed = draft.body !== "";
   const standIn =
     seeded?.kind === "absent"
       ? { sentence: seeded.sentence, detail: COMPOSER_COPY.typeToSend }
@@ -334,7 +339,7 @@ function Body({ draft, onEdit, focus }: { draft: Draft; onEdit: Edit; focus: (na
     <Section title="Body">
       {standIn && (
         <div data-testid="body-stand-in" className="pb-2">
-          <Notice detail={typed ? COMPOSER_COPY.typedInstead : standIn.detail}>{standIn.sentence}</Notice>
+          <Notice detail={bodyReplaced(draft) ? COMPOSER_COPY.typedInstead : standIn.detail}>{standIn.sentence}</Notice>
         </div>
       )}
       <span data-wire="request body" data-focus="body" className="block">

@@ -322,3 +322,29 @@ describe("leaving", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+describe("the Host row a seed carried", () => {
+  it("offers no remove: the core sends the URL's host whatever the draft says", () => {
+    render(<Harness start={draftFrom(seed())} />);
+
+    expect(screen.queryByRole("button", { name: "remove Host" })).toBeNull();
+    expect(screen.getByRole("button", { name: "remove Cookie" })).toBeInTheDocument();
+  });
+
+  it("offers no remove once typed in either, because removing it would bring the URL's host back", () => {
+    render(<Harness start={draftFrom(seed())} />);
+
+    fireEvent.change(value("Host"), { target: { value: "c.test" } });
+
+    expect(screen.queryByRole("button", { name: "remove Host" })).toBeNull();
+    expect(screen.getByRole("button", { name: COMPOSER_COPY.revert })).toBeInTheDocument();
+  });
+
+  it("an added Host row is the draft's own, and can go", () => {
+    render(<Harness start={blankDraft()} />);
+    fireEvent.click(screen.getByRole("button", { name: COMPOSER_COPY.addHeader }));
+    fireEvent.change(screen.getByRole("textbox", { name: "header 1 name" }), { target: { value: "Host" } });
+
+    expect(screen.getByRole("button", { name: "remove Host" })).toBeInTheDocument();
+  });
+});

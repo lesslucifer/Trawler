@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BodyView, FlowView } from "./api";
 import { TEXT_MAX } from "./body";
+import sender from "../../src/sender.rs?raw";
 import {
   addRow,
   binarySentence,
@@ -9,9 +10,12 @@ import {
   bodyRevertible,
   canSend,
   coreOwned,
+  CORE_OWNED_NAMES,
   draftFrom,
   droppedRows,
   isEdited,
+  nextKey,
+  removable,
   removedCount,
   removeRow,
   restart,
@@ -55,6 +59,8 @@ function seed(over: Partial<FlowView> = {}): FlowView {
   };
 }
 
+const withRow = (draft: Draft) => ({ draft: addRow(draft), key: nextKey(draft) });
+
 const rowNamed = (draft: Draft, name: string) => {
   const row = draft.rows.find((r) => r.name === name);
   if (!row) throw new Error(`no ${name} row`);
@@ -84,6 +90,16 @@ describe("a draft from a seed", () => {
       expect(coreOwned(name)).toBeDefined();
     },
   );
+
+  it("names exactly the headers the core's sender rewrites — one list, read off src/sender.rs", () => {
+    const list = /const CONNECTION_HEADERS: &\[&str\] =\s*&\[([^\]]*)\]/.exec(sender);
+    expect(list).not.toBeNull();
+    const connection = [...list![1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(sender).toContain("headers.remove(header::CONTENT_LENGTH)");
+
+    expect([...CORE_OWNED_NAMES].sort()).toEqual(["content-length", ...connection].sort());
+    for (const name of connection) expect(coreOwned(name)).toBe("the client's to set");
+  });
 
   it("leaves every other header the draft's", () => {
     expect(coreOwned("Host")).toBeUndefined();
@@ -124,7 +140,7 @@ describe("the row marks", () => {
   });
 
   it("an added row is added, with a key no seed row holds", () => {
-    const { draft, key } = addRow(draftFrom(seed()));
+    const { draft, key } = withRow(draftFrom(seed()));
 
     expect(draft.rows.filter((r) => r.key === key)).toHaveLength(1);
     expect(key).toBeGreaterThanOrEqual(seed().request_headers.length);
@@ -132,8 +148,8 @@ describe("the row marks", () => {
   });
 
   it("two added rows never share a key", () => {
-    const first = addRow(draftFrom(seed()));
-    const second = addRow(first.draft);
+    const first = withRow(draftFrom(seed()));
+    const second = withRow(first.draft);
 
     expect(second.key).not.toBe(first.key);
   });
@@ -160,13 +176,13 @@ describe("the row marks", () => {
   });
 
   it("revert on an added row changes nothing", () => {
-    const { draft, key } = addRow(draftFrom(seed()));
+    const { draft, key } = withRow(draftFrom(seed()));
 
     expect(revertRow(draft, key)).toBe(draft);
   });
 
   it("a draft from scratch marks nothing", () => {
-    const { draft } = addRow(blankDraft());
+    const { draft } = withRow(blankDraft());
 
     expect(rowMark(draft, draft.rows[0])).toBeNull();
     expect(removedCount(draft)).toBe(0);
@@ -174,6 +190,21 @@ describe("the row marks", () => {
 });
 
 describe("the Host row follows the URL until someone types in it", () => {
+  it("the seed's Host row cannot be removed, edited or not; every other row can", () => {
+    const start = draftFrom(seed());
+    const edited = updateRow(start, rowNamed(start, "Host").key, { value: "c.test" });
+
+    expect(start.rows.map((r) => removable(start, r))).toEqual([false, true, true, true]);
+    expect(removable(edited, rowNamed(edited, "Host"))).toBe(false);
+  });
+
+  it("a Host row the draft added is its own, and can go", () => {
+    const { draft, key } = withRow(blankDraft());
+    const named = updateRow(draft, key, { name: "Host" });
+
+    expect(removable(named, named.rows[0])).toBe(true);
+  });
+
   it("shows the URL's host, not the seed's", () => {
     const draft = { ...draftFrom(seed()), url: "https://b.test:8443/users" };
 
@@ -238,6 +269,13 @@ describe("the body", () => {
   it("text over TEXT_MAX never enters the field either", () => {
     expect(seedBody(captured("a".repeat(TEXT_MAX + 1)))).toEqual({ kind: "binary", size: TEXT_MAX + 1 });
     expect(seedBody(captured("a".repeat(TEXT_MAX)))).toMatchObject({ kind: "text" });
+  });
+
+  it("is decoded once per body, not once per render", () => {
+    const body = captured('{"name":"a"}');
+
+    expect(seedBody(body)).toBe(seedBody(body));
+    expect(seedBody(captured('{"name":"a"}'))).not.toBe(seedBody(body));
   });
 
   it("a binary body is described with its size", () => {
@@ -326,7 +364,7 @@ describe("a draft from scratch", () => {
     const bare = { ...blankDraft(), url: "https://a.test/" };
     expect(toRequest(bare)).toEqual({ seedId: null, fields: { method: "GET", url: "https://a.test/" } });
 
-    const { draft, key } = addRow({ ...bare, method: "POST", body: "{}" });
+    const { draft, key } = withRow({ ...bare, method: "POST", body: "{}" });
     expect(toRequest(updateRow(draft, key, { name: "X-A", value: "1" }))).toEqual({
       seedId: null,
       fields: { method: "POST", url: "https://a.test/", headers: [{ name: "X-A", value: "1" }], body: "{}" },
@@ -337,7 +375,7 @@ describe("a draft from scratch", () => {
     expect(isEdited({ ...blankDraft(), url: "h" })).toBe(true);
     expect(isEdited({ ...blankDraft(), method: "PUT" })).toBe(true);
     expect(isEdited({ ...blankDraft(), body: "x" })).toBe(true);
-    expect(isEdited(addRow(blankDraft()).draft)).toBe(true);
+    expect(isEdited(withRow(blankDraft()).draft)).toBe(true);
   });
 });
 

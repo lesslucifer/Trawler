@@ -51,5 +51,5 @@ export function useDraft(api: TrawlerApi) {
     }
   }, [api, kept]);
 
-  return { kept, open, edit, send };
+  return { kept, seedId: kept?.draft.seed?.id ?? null, open, edit, send };
 }
