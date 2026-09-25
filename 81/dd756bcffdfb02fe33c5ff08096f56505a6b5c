@@ -20,6 +20,7 @@ fleet:
     gate0: 74
     finders: 450
     verifiers: 275
+    total: 793
   by_finder:
     correctness: { found: 2, verified: 2 }
     efficiency: { found: 2, verified: 1 }
