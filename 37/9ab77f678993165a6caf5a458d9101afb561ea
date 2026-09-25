@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-REPLAY
+wu: E-REPLAY.W2
+branch: HEAD
+tests:
+  unit: { waived: "the WU adds no executable code; its only artifact is a design run doc, and every predicate over that doc is a verify-doc rule with its own tests in xtask" }
+  integration: { waived: "the WU's contract is a green, closed, citable run; verify-doc asserts green, 6·run-closed asserts closed at this merge, and design-scope with 9·design asserts it is consumable by W3" }
+  e2e: { waived: "the epic's e2e is W4's replay.spec.ts against the built composer; a design doc renders no surface for a driver to touch" }
