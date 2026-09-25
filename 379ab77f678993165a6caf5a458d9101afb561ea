@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-REPLAY
+wu: E-REPLAY.W2
+base: 50b9769b7d510e9334b22c2b3c0416211863dd84
+design_sha256: 4b4d367c69e1c761399f810927ac02295016826fe0d096edd7280f39de15b156
+verdict: PASS
+artifacts: [docs/work/2026-09-25-replay-composer-design-run.html]
+date: 2026-09-25
