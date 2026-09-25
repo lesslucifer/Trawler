@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W3 wu/replay/composer -> epic/replay (round 4)"
+epic: E-REPLAY
+wu: E-REPLAY.W3
+branch: wu/replay/composer
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+head: ae2d4228c072d18c929c7995ca3665be9c8aec31
+diff_sha256: c96a4e83d6b27ba29ad54220f8af134a4e1be4186b01dcedb74c110906de16ae
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 88
+    finders: 551
+    verifiers: 118
+    total: 669
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+refuted:
+  - finding: "two draft rows named Host reach the wire as two Host headers"
+    why: "the core's unchanged, tested contract (DEC-58: everything else goes as given, duplicates kept); the design run leaves judging a request to the core"
+waivers: []
+nits:
+  - finding: "ui/src/Composer.tsx two rows sharing a header name give their value fields the same accessible name"
+    waived: "each row's name field is numbered (header n name) and sits beside its value in reading order; a numbered value label is a copy change the run did not draw, and no wrong value is sent"
+verdict: PASS
+date: 2026-09-25
