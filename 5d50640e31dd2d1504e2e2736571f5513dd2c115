@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-REPLAY
+base: 47eae8a2cef58560dbc040693d69b65d7f6781d5
+design_sha256: 94dc9a8f43aefc9b797596ea2a70ad2f4fa4fefa68921d21e2d6314f6b16ed12
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-09-25-replay-composer-design-run.html
+    blob: 9d4cff1b733dfbc6520602560532f537ef92b671
+    built: [ui/src/Composer.tsx, ui/src/App.tsx, ui/src/FlowDetail.tsx, ui/src/CaptureControls.tsx, ui/src/FlowList.tsx, ui/src/components/Field.tsx]
+accounting: "THE EPIC'S HAND-OFF, END TO END. design-scope lists no artifact at this tip, and that is the close working: the composer's six-item run was authored and closed at W2 (archived at 41f0116), cited by blob at W3, and retired from the tree by this epic's closing commit 5d50640 - added and archived inside one range, so the endpoint diff carries no artifact while the W2 and W3 seams were each judged on it. The path is cited at its last state reachable from the tip (DEC-28): blob 9d4cff1b is the one W3 cited and the one the file holds at 5d50640^, so the pin names one state. The one added surface, Composer.tsx, is cited, never declared. The five other rendered files are the run's too: App.tsx's pane union (inspector | composer) and the one kept draft, FlowDetail's replay control beside copy as curl, CaptureControls' new request entry and the import paste box on Field, FlowList's sent mark in the reserved box, and Field's multi-line, verbatim and read-only forms, which the run proposed and DEC-59 records. W4 touched no rendered file. No component design file was written, since Field was extended in its TSDoc, so components-unbuilt has nothing to resolve and nothing is dropped."
+date: 2026-09-25
