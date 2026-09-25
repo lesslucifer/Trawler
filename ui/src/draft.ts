@@ -3,12 +3,14 @@ import { bodyNotice, humanBytes, rawKind, TEXT_MAX } from "./body";
 
 // The request in the composer, before and after it is sent. `origin` is the
 // row's index in the seed's header list, or null for a row the draft added —
-// the one fact every mark is a comparison against.
+// the one fact every mark is a comparison against. `typed` is what a value
+// cannot tell: a Host typed back to the seed's own host is still typed.
 export interface DraftRow {
   key: number;
   name: string;
   value: string;
   origin: number | null;
+  typed: boolean;
 }
 
 export interface Draft {
@@ -102,7 +104,7 @@ export function draftFrom(seed: FlowView): Draft {
     method: seed.method,
     url: seed.uri,
     rows: seed.request_headers
-      .map((h, origin) => ({ key: origin, name: h.name, value: h.value, origin }))
+      .map((h, origin) => ({ key: origin, name: h.name, value: h.value, origin, typed: false }))
       .filter((row) => coreOwned(row.name) === undefined),
     body: body.kind === "text" ? body.text : "",
   };
@@ -124,8 +126,8 @@ export function rowMark(draft: Draft, row: DraftRow): RowMark {
   if (!draft.seed) return null;
   const from = seedRow(draft, row);
   if (!from) return "added";
-  if (from.name !== row.name || from.value !== row.value) return "edited";
-  return row.name.toLowerCase() === "host" ? "follows" : null;
+  if (isHost(from.name) && isHost(row.name)) return row.typed ? "edited" : "follows";
+  return from.name !== row.name || from.value !== row.value ? "edited" : null;
 }
 
 // What the Host row shows while nobody has typed in it: the host the core will
@@ -172,7 +174,7 @@ function rowsMoved(draft: Draft): boolean {
   const start = draftFrom(draft.seed).rows;
   return (
     draft.rows.length !== start.length ||
-    draft.rows.some((row, i) => row.origin !== start[i].origin || row.name !== start[i].name || row.value !== start[i].value)
+    draft.rows.some((row, i) => row.origin !== start[i].origin || rowMark(draft, row) !== null && rowMark(draft, row) !== "follows")
   );
 }
 
@@ -205,13 +207,14 @@ export function canSend(draft: Draft): boolean {
 }
 
 export function updateRow(draft: Draft, key: number, patch: Partial<Pick<DraftRow, "name" | "value">>): Draft {
-  return { ...draft, rows: draft.rows.map((row) => (row.key === key ? { ...row, ...patch } : row)) };
+  return { ...draft, rows: draft.rows.map((row) => (row.key === key ? { ...row, ...patch, typed: true } : row)) };
 }
 
 export function revertRow(draft: Draft, key: number): Draft {
   const row = draft.rows.find((r) => r.key === key);
   const from = row && seedRow(draft, row);
-  return from ? updateRow(draft, key, { name: from.name, value: from.value }) : draft;
+  if (!from) return draft;
+  return { ...draft, rows: draft.rows.map((r) => (r.key === key ? { ...r, name: from.name, value: from.value, typed: false } : r)) };
 }
 
 export function removeRow(draft: Draft, key: number): Draft {
@@ -225,7 +228,7 @@ export function nextKey(draft: Draft): number {
 }
 
 export function addRow(draft: Draft): Draft {
-  return { ...draft, rows: [...draft.rows, { key: nextKey(draft), name: "", value: "", origin: null }] };
+  return { ...draft, rows: [...draft.rows, { key: nextKey(draft), name: "", value: "", origin: null, typed: false }] };
 }
 
 function wireRows(draft: Draft): HeaderView[] {

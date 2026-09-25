@@ -365,3 +365,15 @@ describe("a row the core rewrites, typed by hand", () => {
     expect(marks()[3]).toBe(`the client's to set${COMPOSER_COPY.revert}`);
   });
 });
+
+describe("the Host box once typed in", () => {
+  it("keeps what was typed even when it is the seed's own host and the URL has moved", () => {
+    render(<Harness start={draftFrom(seed())} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "url" }), { target: { value: "https://b.test/users" } });
+
+    fireEvent.change(value("Host"), { target: { value: "a.test" } });
+
+    expect(value("Host")).toHaveValue("a.test");
+    expect(marks()[0]).toBe(`${COMPOSER_COPY.edited}${COMPOSER_COPY.revert}`);
+  });
+});

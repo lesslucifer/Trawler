@@ -96,7 +96,12 @@ describe("a draft from a seed", () => {
     const list = /const CONNECTION_HEADERS: &\[&str\] =\s*&\[([^\]]*)\]/.exec(sender);
     expect(list).not.toBeNull();
     const connection = [...list![1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-    expect(sender).toContain("headers.remove(header::CONTENT_LENGTH)");
+    // "set from the body" is this exact rule: whatever a draft lists, the length
+    // is removed and, for a body, set from its bytes. Any other rule is a
+    // different sentence, so any edit here must fail this test.
+    expect(sender).toMatch(
+      /headers\.remove\(header::CONTENT_LENGTH\);\s*if !body\.is_empty\(\) \{\s*headers\.insert\(header::CONTENT_LENGTH, HeaderValue::from\(body\.len\(\)\)\);\s*\}/,
+    );
 
     expect([...CORE_OWNED_NAMES].sort()).toEqual(["content-length", ...connection].sort());
     for (const name of connection) expect(coreOwned(name)).toBe("the client's to set");
@@ -426,7 +431,7 @@ describe("a row named for a header the core rewrites, whoever typed it", () => {
   });
 
   it("any other name is the draft's own", () => {
-    expect(rewrittenBy({ key: 0, name: "X-Content-Length", value: "1", origin: null })).toBeUndefined();
+    expect(rewrittenBy({ key: 0, name: "X-Content-Length", value: "1", origin: null, typed: false })).toBeUndefined();
   });
 });
 
@@ -455,5 +460,36 @@ describe("a captured body too large to show", () => {
       kind: "binary",
       size: TEXT_MAX + 1,
     });
+  });
+});
+
+describe("a Host typed in stays typed, whatever it says", () => {
+  it("typed back to the seed's own value after the URL moved, it is edited, shown and sent as typed", () => {
+    const start = { ...draftFrom(seed()), url: "https://b.test/users" };
+    const draft = updateRow(start, rowNamed(start, "Host").key, { value: "a.test" });
+    const host = rowNamed(draft, "Host");
+
+    expect(rowMark(draft, host)).toBe("edited");
+    expect(shownValue(draft, host)).toBe("a.test");
+    expect(toRequest(draft).fields.headers).toContainEqual({ name: "Host", value: "a.test" });
+    expect(isEdited(draft)).toBe(true);
+  });
+
+  it("revert hands it back to the URL", () => {
+    const start = { ...draftFrom(seed()), url: "https://b.test/users" };
+    const key = rowNamed(start, "Host").key;
+    const draft = revertRow(updateRow(start, key, { value: "a.test" }), key);
+
+    expect(rowMark(draft, rowNamed(draft, "Host"))).toBe("follows");
+    expect(shownValue(draft, rowNamed(draft, "Host"))).toBe("b.test");
+    expect(toRequest(draft).fields).toEqual({ url: "https://b.test/users" });
+  });
+
+  it("any other row typed back to its seed's value is no edit", () => {
+    const start = draftFrom(seed());
+    const draft = updateRow(start, rowNamed(start, "Cookie").key, { value: "sid=9f2c" });
+
+    expect(rowMark(draft, rowNamed(draft, "Cookie"))).toBeNull();
+    expect(isEdited(draft)).toBe(false);
   });
 });
