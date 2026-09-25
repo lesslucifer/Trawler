@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W3 wu/replay/composer -> epic/replay (round 3)"
+epic: E-REPLAY
+wu: E-REPLAY.W3
+branch: wu/replay/composer
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+head: 05f1a6571c42bfc84045f3129a8a7aa76c052730
+diff_sha256: 302d804e134f35f79d0e9d662d1685b75d43f818c448d8630561201b9f3c8b97
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 64
+    finders: 600
+    verifiers: 351
+    total: 951
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 1, verified: 1 }
+findings: { found: 2, verified: 2, waived: 0 }
+blockers:
+  - finding: "ui/src/draft.ts rowMark judges the Host row 'follows' by value alone, so a Host typed back to the seed's value after the URL changed is overwritten in the box by the URL's host and omitted from the request: the typed Host never reaches the wire"
+importants:
+  - finding: "ui/src/draft.test.ts pins CORE_OWNED's content-length entry to src/sender.rs only by a substring, so a change to the core's Content-Length rule passes every test while the draft's 'set from the body' goes stale"
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-09-25
