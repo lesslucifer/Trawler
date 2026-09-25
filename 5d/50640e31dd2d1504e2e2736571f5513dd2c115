@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 5d50640e31dd2d1504e2e2736571f5513dd2c115
+base: 47eae8a2cef58560dbc040693d69b65d7f6781d5
+tier: key
+signer: vuluu
+report: docs/.archive/2026-09-25-replay-epic-result.html
+report_sha256: 44ce96f58168eebb3f8a52af9fd2711c9d872d4d14ade7e38481131cfbbf9031
+date: 2026-09-25
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECdSA15VPdaDdVVNd0tgBOZEbIuwkpHmocwGzLGQU7E8IZfP3sRtdb5GE
+  +LC5lxk15S/YUwdTwmR/Ts7cVMaFoG
+  -----END SSH SIGNATURE-----
