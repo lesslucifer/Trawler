@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W1 wu/replay/sender -> epic/replay"
+epic: E-REPLAY
+wu: E-REPLAY.W1
+branch: wu/replay/sender
+base: f293d3b5c7f8e9d13981d562ef6038257a2e11ce
+head: 353c46ae290524c14abbf24472fb799175c952ff
+diff_sha256: 237a97cec647dfc9d9c5c141154397233a4152c8b0290779205a456fbc15fe2e
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 0
+  stage_seconds:
+    finders: 670
+    verifiers: 369
+    total: 1039
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 1, verified: 1 }
+findings: { found: 3, verified: 3, waived: 1 }
+waivers:
+  - finding: "src/sender.rs:97-102 drops capture::capture's unread remainder, so an over-cap or streaming reply closes the connection instead of returning it to the pool"
+    reason: "reusing that connection means draining the rest of the body first: unbounded bytes for an over-cap reply, and never for an SSE stream, which does not end. One handshake is the bounded price, and it is the one the proxy path pays when a client stops reading. Stated on the code in the fix round"
+verdict: FAIL
+date: 2026-09-25
