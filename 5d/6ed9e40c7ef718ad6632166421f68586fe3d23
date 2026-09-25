@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W1 wu/replay/sender -> epic/replay (round 2)"
+epic: E-REPLAY
+wu: E-REPLAY.W1
+branch: wu/replay/sender
+base: f293d3b5c7f8e9d13981d562ef6038257a2e11ce
+head: 5d6ed9e40c7ef718ad6632166421f68586fe3d23
+diff_sha256: 8c3fa5f51da890a9177938dddad3bf365f4fbf9c91e35b7d87a19cf1b6aa2e1d
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 1
+  stage_seconds:
+    finders: 464
+    verifiers: 184
+    total: 648
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 2, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "src/sender.rs:82-84 records the sent request body by driving already-held Bytes through capture::capture's async frame loop, where a length check would do"
+    waived: "round 1 verified the synchronous classifier as a duplicate of the capture rule (important). One owner of the cap is worth one frame's async pass per send, which is off any hot path"
+  - finding: "src/sender.rs:104-106, the branch where a reply head arrives and its body then stalls past the deadline, has no test (its read_error outcome is DEC-58's ruling, refuted as a defect)"
+    waived: "accepted at this tip only: the regression test is the next commit on the branch, and round 3 binds the tip that carries it"
+verdict: PASS
+date: 2026-09-25
