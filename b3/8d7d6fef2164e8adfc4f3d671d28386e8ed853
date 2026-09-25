@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-REPLAY
+wu: E-REPLAY.W3
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+tip: b38d7d6fef2164e8adfc4f3d671d28386e8ed853
+diff_sha256: 95902707ad6980072e872e5af551a00e216ad9dde4a2178202de12aff8649fb6
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-25
