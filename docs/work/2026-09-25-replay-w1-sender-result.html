@@ -9,7 +9,7 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-REPLAY.W1 result — Trawler sends a request, and what came back is a flow</h1>
-      <p>Delivered as planned: two doors, one sender on the proxy's connector, and <code>source: sent</code> with a seed link. Five small calls went beyond the plan, each listed below.</p>
+      <p>Delivered as planned: two doors, one sender on the proxy's connector, and <code>source: sent</code> with a seed link. Six calls went beyond the plan, one of them forced by the review, each listed below.</p>
       <div class="meta">v1 · 2026-09-25 · Trawler · T3 WU result · <span class="badge id">E-REPLAY.W1</span> · branch <code>wu/replay/sender</code> · <a href="2026-09-25-replay-w1-sender-plan.html">WU plan</a> · <a href="2026-09-23-replay-plan.html">epic plan</a></div>
     </div>
   </header>
@@ -42,6 +42,10 @@
           <td>the lock exists so that no field joins the row by accident. This one joins by design (epic expected result 3), so the lock is updated rather than bypassed</td></tr>
         <tr><td>the recorder's <code>version_str</code> / <code>headers_to_vec</code> moved to <code>flow.rs</code> as <code>version_token</code> / <code>header_list</code>, with their tests</td>
           <td>the sender needs the same spellings. A second copy could drift, and the sender importing from the recorder would couple the two producers</td></tr>
+        <tr><td>a URL carrying <code>user:pass@</code> is refused (<code>400</code>, or <code>422</code> on a seed), and the core's <code>Host</code> is the URL's host and port. <em>Found by the review</em></td>
+          <td>the first review round reproduced <code>Host: user:pass@…</code> on the wire. Credentials in a URL are neither a <code>Host</code> nor an <code>Authorization</code> header, so the doors refuse them rather than drop them or invent a header from them</td></tr>
+        <tr><td>the sent request body is recorded through <code>capture::capture</code>, not a local classifier. <em>Found by the review</em></td>
+          <td>the plan named the capture cap as the rule. A second implementation of it could drift, so the proxy's own function now holds both producers' bodies</td></tr>
         <tr><td>the <code>504</code> integration test waits 1 s, not the shipped 30 s</td>
           <td>it drives <code>test_support::api_router_with_sender</code> with <code>Sender::with_deadline</code>, a test-only seam (<code>cfg(test-utils)</code>). The shipped deadline stays a constant, as decision 4 ruled</td></tr>
       </tbody>
@@ -51,9 +55,10 @@
     <table data-item="evidence">
       <thead><tr><th>Kind</th><th>Where</th></tr></thead>
       <tbody>
-        <tr><td>commits on <code>wu/replay/sender</code></td><td><code>98fc02e</code> plan · <code>0bb0063</code> code and tests · <code>c82bb95</code> T2 distillation · this report</td></tr>
+        <tr><td>commits on <code>wu/replay/sender</code></td><td><code>98fc02e</code> plan · <code>0bb0063</code> code and tests · <code>c82bb95</code> T2 distillation · <code>353c46a</code> this report · <code>ebf4c14</code> review fixes · the review round's doc edits</td></tr>
         <tr><td>integration (11)</td><td><code>tests/replay.rs</code>, real <code>serve()</code> over ephemeral ports, with a loopback echo origin, h1 / h2 / untrusted TLS origins and a closed port. Seeds are captured through the proxy. Plus the <code>replay__a_sent_flow_view_shape_is_locked</code> snapshot. Stable over repeated runs</td></tr>
         <tr><td>unit (new and changed)</td><td><code>src/sender.rs</code> (header rules, held body, cause chain, a finished send, a silent upstream) · <code>src/api/send.rs</code> (the merge and every refusal) · <code>src/flow.rs</code> · <code>src/api/view.rs</code> · <code>src/store.rs</code> · <code>src/api/mod.rs</code> (the routes)</td></tr>
+        <tr><td>review</td><td>round 1 FAIL on <code>353c46a</code>: three findings confirmed. Userinfo and the duplicate classifier are fixed in <code>ebf4c14</code>, each with its regression test written first. The dropped response remainder is waived: draining it reads an unbounded body to save one handshake, and the code states that. Round 2 runs on the fixed tip</td></tr>
         <tr><td>regression</td><td><code>cargo xtask gate0</code> green: fmt, clippy pedantic, and the whole suite, including <code>e2e_capture</code>, <code>e2e_h2</code> and <code>e2e_export</code> unchanged</td></tr>
         <tr><td>e2e</td><td>waived, as the plan states: the journeys are W4's <code>replay.spec.ts</code> through the composer</td></tr>
       </tbody>

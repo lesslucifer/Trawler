@@ -100,9 +100,11 @@ nothing lands"]
       <tbody>
         <tr><td><code>Content-Length</code> is the body's</td>
           <td>the most common edit is the body, and a stale length cuts it short on the wire</td></tr>
-        <tr><td><code>Host</code> follows the URL unless the caller typed one</td>
+        <tr><td><code>Host</code> is the URL's host and port unless the caller typed one</td>
           <td>a changed URL with the seed's <code>Host</code> routes to the wrong site. The seed's own
-            <code>Host</code> is not "typed". Only one in a header list the caller gave is</td></tr>
+            <code>Host</code> is not "typed". Only one in a header list the caller gave is. A URL's
+            <code>user:pass@</code> is neither a <code>Host</code> nor an <code>Authorization</code> header,
+            so the doors refuse it rather than drop it or turn it into one</td></tr>
         <tr><td>connection headers are the client's</td>
           <td>HTTP/2 refuses <code>Connection</code>, <code>Keep-Alive</code>,
             <code>Proxy-Connection</code>, <code>Transfer-Encoding</code>, <code>Upgrade</code> and

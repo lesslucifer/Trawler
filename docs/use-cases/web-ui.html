@@ -834,13 +834,14 @@ the client lacks the certificate"]
           </tr>
           <tr>
             <td>a malformed request: not JSON, an unknown field, a missing <code>method</code> or <code>url</code>,
-            a URL that is not absolute <code>http(s)</code>, a method that is not a token, a header the wire cannot
+            a URL that is not absolute <code>http(s)</code> or that carries <code>user:pass@</code> (credentials
+            travel as an <code>Authorization</code> header, never inside the URL), a method that is not a token, a header the wire cannot
             carry, <code>body</code> and <code>body_base64</code> both</td>
             <td><code>400</code> with a one-sentence reason naming the field, and nothing sent</td>
           </tr>
           <tr>
             <td>a replay of a seed that cannot be sent as it stands: its request body was never captured
-            (streamed, too large, read error), or its URL is not absolute, and the caller gave none</td>
+            (streamed, too large, read error), or its URL is not absolute or carries credentials, and the caller gave none</td>
             <td><code>422</code> naming the absence (<code>the seed's request body was not captured (too_large); give a body to replace it</code>).
             <strong>A missing body is never sent as an empty one.</strong> A seed the ring no longer holds is a <code>404</code></td>
           </tr>
