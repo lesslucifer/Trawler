@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 379ab77f678993165a6caf5a458d9101afb561ea
+base: 50b9769b7d510e9334b22c2b3c0416211863dd84
+tier: key
+signer: vuluu
+report: docs/work/2026-09-25-replay-w2-design-of-record-result.html
+report_sha256: de06e59788a9d5f7705ed0ceed057f887f6458eff2b46afc83f3c2af1ba62121
+date: 2026-09-25
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAicd/pZuceq1ZfGUHKBIErwHbndHKrN1KsSjQ6qZ0SebZNk9NHSuFqp0
+  e4OCe2k8WWoYy0PopESeOAVhnPiFgK
+  -----END SSH SIGNATURE-----
