@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-REPLAY
+wu: E-REPLAY.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-25-replay-composer-design-run.html"
+    tier: T3
+    action: added
+    distills: "the replay composer's design of record: the Given list read off W1's doors, the mounted mockup across seven states and the entries, keyboard paths, seven proposals, run #7's blocked-on rows closed, and the owner's round; archived for W3 to cite by blob"
+  - path: "docs/work/2026-09-25-replay-w2-design-of-record-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement, what W1's contract changed about run #7, the expected results and the per-layer waivers"
+  - path: "docs/work/2026-09-25-replay-w2-design-of-record-result.html"
+    tier: T3
+    action: added
+    distills: "the outcome against ten rows, the round's measured bill, four deviations and W3's follow-ups"
+t2_waived: "a design's truth reaches T2 after its build: UC-8's app half and DEC-59 land at W3, and the lexicon rows for draft, sent and replay at W4"
