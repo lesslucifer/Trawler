@@ -1,0 +1,36 @@
+schema: doc/v1
+epic: E-REPLAY
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "The epic's one T1 edit and its one shape change, committed by the owner at 377dbb0 under Reviewed-By: key vuluu. The core gains an outbound path that is not the proxy: the overview says the core can send a request itself, the module list names the sender, the runtime paragraph and diagram show the proxy handler and the sender as the two paths that reach upstream servers and write into the store, the caption adds that the API sends, and a decision row says why a sent request goes through the core's own client rather than looping back through the proxy port (DEC-58)."
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "E-REPLAY struck with what landed and how design run #7's three blocked-on rows closed; Wave 3 begun in Consequences, naming the sender as what wave 4 reuses. The silent-harness row struck as guarded, with its three guards. Two residue rows: the app mirrors the core's header-rewrite rules behind a source-reading test, and an Esc inside a modal reaches the pane's document listener. The design flow's bill row gains its second measured data point, from W2's round."
+  - path: "docs/decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html"
+    tier: T2
+    action: added
+    distills: "The epic's load-bearing decision, landed at W1 before the screen. A sent flow is sent by the core's own client, sharing the proxy's upstream TLS trust and capture cap, and not looped through the proxy port. It is the third member of DEC-38's closed provenance enum, named sent rather than replayed because a composed request replays nothing; it names its seed, and the link may dangle. The call answers only once a reply exists, and a transport failure lands no flow, because a flow asserts an exchange happened. The header rules and why they are rules. The doors add no exposure beyond the proxy DEC-55's reach already arms."
+  - path: "docs/decisions/dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html"
+    tier: T2
+    action: added
+    distills: "Field's fork, DEC-16 step 1: multiline, verbatim and readOnly under one box and one contract rather than a second text-area component; the import dialog moved onto it. Why the edited mark is the screen's, drawn in words beside the box, and why a malformed value gets no red border: DEC-19 has no token for either, and the core's refusal is shown verbatim instead."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-58 and DEC-59 routed, each with its decision, rules and rejected alternatives."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "The Lexicon gains draft (the request in the composer), sent (a flow Trawler itself sent, DEC-58's source value and the list mark's name) and replay (the act of opening a draft from a flow, never its result), each with its Never column; seed stays the API's word."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-8 indexed as it shipped: the two doors through one sender, the sent mark and the seed link, a never-captured seed body refused rather than sent empty, no flow for a send with no reply, and the composer in the detail pane."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-8 NEW, beside UC-6 on the same API-plus-app precedent. The contract table: the replay door merging overrides onto a seed, the compose door taking a whole request, the 201 with the new flow, the 400 and 422 refusals by name, the 502 and 504 with no flow landed; three consequences a reader cannot infer from the signature (the call answers when the reply exists, some headers follow the request, the seed link can dangle). The composer table: what a user does and what they get, from opening a draft through the Host row and the core-owned rows, the marks, the body stand-ins, what is sent, the outcome, and the one kept draft. UC-5 gains the replay entry, UC-4 the new-request act and the sent mark, and ?source=sent widens the listing's set with no promise changed. The provenance callout names the code, the integration and unit tests, and the three e2e journeys."
