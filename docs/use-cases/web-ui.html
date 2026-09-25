@@ -890,7 +890,9 @@ the client lacks the certificate"]
             <td>every field filled from it, headers in wire order. The rows the core rewrites
             (<code>Content-Length</code>, the connection headers) are left out, and one line names each that the
             flow carried and why. The <code>Host</code> row shows the URL's host, reads <em>follows the URL</em>,
-            and is sent only once someone types in it</td></tr>
+            and is sent only once someone types in it, whatever they type. It has no remove, because the core
+            sends the URL's host whenever the draft names none. A row added or renamed to a header the core rewrites
+            says so in its mark slot and is not sent</td></tr>
           <tr><td>edits a header, adds one, removes one</td>
             <td>only that row marks itself, in words: <em>edited</em> with <em>revert</em>, or <em>added</em>.
             A removed row is counted in the heading (<em>Headers · 3 · 1 removed</em>). A draft from scratch marks
