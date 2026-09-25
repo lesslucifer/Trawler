@@ -44,9 +44,15 @@ function clearNoticeMarkers() {
 // true before any flow exists, so it MUST run first. The flows spec MUST run last:
 // its closing pair kills the core to prove the shell states a silence, and the
 // harness exits the process rather than draining it, so nothing can follow. The
-// capture spec sits between them — it empties the capture, which the flows spec
-// refills from its own hits. Order is explicit, not alphabetical-by-accident.
-const SPECS = ["./specs/onboarding.spec.ts", "./specs/capture.spec.ts", "./specs/flows.spec.ts"];
+// capture and replay specs sit between them — each leaves the capture empty, which
+// the flows spec refills from its own hits. Order is explicit, not
+// alphabetical-by-accident.
+const SPECS = [
+  "./specs/onboarding.spec.ts",
+  "./specs/capture.spec.ts",
+  "./specs/replay.spec.ts",
+  "./specs/flows.spec.ts",
+];
 
 let harness: ChildProcessWithoutNullStreams | undefined;
 
