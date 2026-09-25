@@ -7,7 +7,7 @@ import { Select } from "./Select";
 describe("Field", () => {
   it("reports every keystroke and delays nothing (B1)", () => {
     const seen: string[] = [];
-    const onChange = vi.fn((event: ChangeEvent<HTMLInputElement>) => seen.push(event.target.value));
+    const onChange = vi.fn((event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => seen.push(event.target.value));
     const { rerender } = render(<Field value="" onChange={onChange} aria-label="host" />);
 
     const input = screen.getByRole("textbox", { name: "host" });
@@ -93,5 +93,82 @@ describe("Field", () => {
     const input = screen.getByRole("textbox", { name: "host" });
     expect(input).toBeDisabled();
     expect(input.className).toContain("disabled:opacity-disabled");
+  });
+
+  it("multi-line is a textarea in the same box, class for class (DEC-59)", () => {
+    render(
+      <>
+        <Field value="" onChange={() => {}} aria-label="host" />
+        <Field value="" onChange={() => {}} aria-label="body" multiline />
+      </>,
+    );
+
+    const line = screen.getByRole("textbox", { name: "host" });
+    const lines = screen.getByRole("textbox", { name: "body" });
+    expect(lines.tagName).toBe("TEXTAREA");
+    expect(line.tagName).toBe("INPUT");
+    for (const shared of line.className.split(/\s+/).filter(Boolean)) {
+      expect(lines.className).toContain(shared);
+    }
+    expect(lines.className).toContain("resize-none");
+  });
+
+  it("multi-line takes its height from the caller, as it takes its width", () => {
+    render(<Field value="" onChange={() => {}} aria-label="body" multiline className="h-body-max w-full" />);
+
+    const box = screen.getByRole("textbox", { name: "body" });
+    expect(box.className).toContain("h-body-max");
+    expect(box.className).not.toMatch(/(^|\s)h-(?!body-max)/);
+  });
+
+  it("multi-line reports every keystroke and keeps its line breaks", () => {
+    const seen: string[] = [];
+    render(<Field value="" onChange={(e) => seen.push(e.target.value)} aria-label="body" multiline />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "body" }), { target: { value: '{\n  "a": 1\n}' } });
+
+    expect(seen).toEqual(['{\n  "a": 1\n}']);
+  });
+
+  it("verbatim swaps the family to mono and changes nothing else", () => {
+    render(
+      <>
+        <Field value="" onChange={() => {}} aria-label="chrome" />
+        <Field value="" onChange={() => {}} aria-label="wire" verbatim />
+      </>,
+    );
+
+    const chrome = screen.getByRole("textbox", { name: "chrome" }).className.split(/\s+/);
+    const wire = screen.getByRole("textbox", { name: "wire" }).className.split(/\s+/);
+    expect(chrome).toContain("font-ui");
+    expect(wire).toContain("font-mono");
+    expect(wire).not.toContain("font-ui");
+    expect(wire.filter((c) => c !== "font-mono")).toEqual(chrome.filter((c) => c !== "font-ui"));
+  });
+
+  it("read-only keeps the box focusable and dims it like disabled", () => {
+    render(<Field value="curl x" onChange={() => {}} aria-label="command" multiline readOnly />);
+
+    const box = screen.getByRole("textbox", { name: "command" });
+    expect(box).toHaveAttribute("readonly");
+    expect(box).not.toBeDisabled();
+    box.focus();
+    expect(box).toHaveFocus();
+    expect(box.className).toContain("read-only:opacity-disabled");
+  });
+
+  it("neither form judges its value — no invalid, no edited, no tone (DEC-59)", () => {
+    render(
+      <>
+        <Field value="htp:/x" onChange={() => {}} aria-label="url" verbatim />
+        <Field value="{" onChange={() => {}} aria-label="body" multiline verbatim />
+      </>,
+    );
+
+    for (const name of ["url", "body"]) {
+      const box = screen.getByRole("textbox", { name });
+      expect(box).not.toHaveAttribute("aria-invalid");
+      expect(box.className).not.toMatch(/warn|ok|accent|edited/);
+    }
   });
 });

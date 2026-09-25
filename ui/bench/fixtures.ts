@@ -24,6 +24,7 @@ export function flows(count: number): FlowSummary[] {
     uri: `https://${HOSTS[i % HOSTS.length]}/v2/resource/${i}/detail?page=${i % 20}&expand=all`,
     status: [200, 201, 304, 404, 500][i % 5],
     source: "captured",
+    seed: null,
     request_body_state: "empty",
     response_body_state: "captured",
   }));

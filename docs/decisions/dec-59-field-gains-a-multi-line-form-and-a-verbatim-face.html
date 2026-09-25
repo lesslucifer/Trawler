@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab602a09f34851f0dfad4d9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-59: Field gains a multi-line form and a verbatim face</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-59 — Field gains a multi-line form and a verbatim face, and the edited mark stays the screen's</h1>
+      <p>The composer needs a body box and wire-shaped text. Both become options of the one text input,
+        not a second one. Whether a value was edited is a comparison, and the screen draws it in words.</p>
+      <div class="meta">v1 · 2026-09-25 · Trawler · T2 decision · minted by
+        <strong>E-REPLAY.W3</strong> · step ① of <a href="dec-16-design-file-retirement.html">DEC-16</a> for
+        <code>ui/src/components/Field.tsx</code> · extends <a href="dec-30-the-three-gap-components.html">DEC-30</a> ·
+        holds <a href="dec-18-one-control-box.html">DEC-18</a> and
+        <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <p>DEC-30 built <code>Field</code> single-line, for the filter bar. The replay composer's design run proposed
+      two deltas to it, and the owner's round held them. Decisions are append-only, so the fork is recorded
+      here and the contract moves into <code>Field</code>'s TSDoc.</p>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> <code>Field</code> takes three options under one contract.
+        <code>multiline</code> renders a textarea in the same box. <code>verbatim</code> sets the mono family.
+        <code>readOnly</code> keeps the box focusable while the act it feeds runs. It still judges nothing:
+        no invalid state, no edited state, no colour.</p>
+    </div>
+
+    <h2 id="rules">What it rules</h2>
+    <table data-c="rules">
+      <thead><tr><th>Ruling</th><th>Why this way</th><th>Rejected</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong><code>multiline</code> is an option of <code>Field</code></strong>. It uses the same border,
+            radius, padding and states. The caller sets its height with a class, the same way the caller
+            sets its width. It never resizes by hand</td>
+          <td>two boxes that must be kept identical drift apart, and that drift is what DEC-18 and DEC-30 were
+            written to end. The import dialog's hand-made textarea was the first sign of it, and it now uses
+            <code>Field</code></td>
+          <td>a separate <code>TextArea</code> entry · a textarea that grows with its content, which moves
+            everything under it on each line typed</td>
+        </tr>
+        <tr>
+          <td><strong><code>verbatim</code> sets the mono family</strong></td>
+          <td>mono-for-wire-data covers every value sent as typed (a URL, a header, a body).
+            <code>Field</code> used the ui family because the filter bar types chrome. Passing
+            <code>font-mono</code> through <code>className</code> only worked because of stylesheet order</td>
+          <td>overriding the family through <code>className</code> · a mono default, which would make the
+            filter bar's chrome look like wire</td>
+        </tr>
+        <tr>
+          <td><strong><code>readOnly</code> is a state, dimmed like disabled</strong></td>
+          <td>a disabled box drops focus to <code>&lt;body&gt;</code>, outside a modal, where Esc is never
+            heard. The import dialog relies on this hold, so moving it onto <code>Field</code> brings the
+            state with it</td>
+          <td>leaving the import dialog on its own textarea, which keeps the second box</td>
+        </tr>
+        <tr>
+          <td><strong>The edited mark is the screen's, in words</strong>: <em>edited</em> + <em>revert</em>,
+            <em>added</em> and <em>follows the URL</em>, in a slot after the value</td>
+          <td>edited means compared with the seed. <code>Field</code> holds only the value, so it has nothing
+            to compare. DEC-19 leaves no colour for edited, so a word carries the mark and colour-plus-text
+            is met without a colour</td>
+          <td>an edited state on <code>Field</code> · a tinted border · a zone-level <em>modified</em> badge,
+            removed during run #7's Tune step because the row says more</td>
+        </tr>
+        <tr>
+          <td><strong>A malformed value gets no red border</strong></td>
+          <td>the core judges a URL when it is sent and answers <code>400 url must be absolute http(s)</code>.
+            The send zone shows that answer in words. Checking in the box would add a second judge that can
+            disagree with the first</td>
+          <td>an invalid state on <code>Field</code> (DEC-19 has no token for one)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences">
+      <thead><tr><th>Where</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src/components/Field.tsx</code></td><td>the TSDoc carries the contract: anatomy, use,
+          avoid and a read-only state. This record is where the reason lives</td></tr>
+        <tr><td>the replay composer</td><td>the URL, header names and values, and the body are
+          <code>verbatim</code> fields. The body is <code>multiline</code> at <code>h-body-max</code></td></tr>
+        <tr><td>the import dialog</td><td>its paste box is <code>Field multiline verbatim</code> at
+          <code>h-field-sm</code>, and it is <code>readOnly</code> while importing</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -23,6 +23,7 @@ function view(over: Partial<FlowView> = {}): FlowView {
     uri: "http://example.com/a?x=1",
     status: 200,
     source: "captured",
+    seed: null,
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/2.0",
     request_headers: [{ name: "Accept", value: "application/json" }],
@@ -310,4 +311,21 @@ test("a header value taller than three lines is clamped, and one act under its n
     expect(cell.className).not.toMatch(/max-h-value-clamp/);
     expect(screen.getByRole("button", { name: "less of set-cookie" })).toBeInTheDocument();
   });
+});
+
+test("replay stands in the flow line beside copy as curl, and opens a draft of this flow", () => {
+  const onReplay = vi.fn();
+  render(<FlowDetail api={stubApi()} flow={view()} onClose={() => {}} onReplay={onReplay} />);
+  const line = screen.getByTestId("flow-line");
+
+  const buttons = within(line).getAllByRole("button");
+  const replay = within(line).getByRole("button", { name: "replay" });
+  expect(buttons.indexOf(replay)).toBe(buttons.indexOf(within(line).getByRole("button", { name: "copy as curl" })) - 1);
+  fireEvent.click(within(line).getByRole("button", { name: "replay" }));
+  expect(onReplay).toHaveBeenCalledOnce();
+});
+
+test("with nothing to replay into, the inspector offers no replay", () => {
+  render(<FlowDetail api={stubApi()} flow={view()} onClose={() => {}} />);
+  expect(screen.queryByRole("button", { name: "replay" })).toBeNull();
 });

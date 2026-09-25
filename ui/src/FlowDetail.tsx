@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FlowView, HeaderView, Leg, TrawlerApi } from "./api";
 import { toCurl } from "./flow";
 import {
+  Button,
   CopyButton,
   CopyText,
   DurationText,
@@ -51,11 +52,13 @@ export function FlowDetail({
   flow,
   failed = false,
   onClose,
+  onReplay,
 }: {
   api: TrawlerApi;
   flow: FlowView | null;
   failed?: boolean;
   onClose: () => void;
+  onReplay?: () => void;
 }) {
   const [leg, setLeg] = useState<Leg>("request");
 
@@ -124,7 +127,11 @@ export function FlowDetail({
           <span data-wire="protocol-version" className="font-mono text-body text-ink-mute">
             {versionsLine(flow)}
           </span>
-          <CopyButton className="ml-auto" label="copy as curl" getPayload={() => toCurl(flow)} />
+          {/* Both send this request again: one elsewhere, one here. */}
+          <span className="ml-auto flex items-center gap-2">
+            {onReplay && <Button onClick={onReplay}>replay</Button>}
+            <CopyButton label="copy as curl" getPayload={() => toCurl(flow)} />
+          </span>
         </div>
       </div>
 

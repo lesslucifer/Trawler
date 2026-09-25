@@ -18,6 +18,7 @@ const flow: FlowSummary = {
   uri: "http://example.com/a/b?x=1",
   status: 200,
   source: "captured",
+  seed: null,
   request_body_state: "empty",
   response_body_state: "captured",
 };
@@ -57,6 +58,7 @@ function view(over: Partial<FlowView> = {}): FlowView {
     uri: "http://example.com/a?x=1",
     status: 200,
     source: "captured",
+    seed: null,
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/1.1",
     request_headers: [{ name: "Accept", value: "application/json" }],
