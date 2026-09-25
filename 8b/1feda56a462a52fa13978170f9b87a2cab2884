@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-REPLAY
+wu: E-REPLAY.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html"
+    tier: T2
+    action: added
+    distills: "why the core sends through its own client on the proxy's connector: sent over replayed, the dangling seed link, no flow for a transport failure or a silent upstream, the header rules, 400 vs 422, and why the doors add no exposure beyond an armed proxy (DEC-55)"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-8's API half (the two send doors, their refusals, the result as an ordinary sent flow, a failure as no flow) and the listing's source row widened to three values plus the seed link"
+  - path: "docs/work/2026-09-25-replay-w1-sender-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan: requirement, wire contract, header rules, recorded fields, expected results and test plan; archived at the epic gate"
+  - path: "docs/work/2026-09-25-replay-w1-sender-result.html"
+    tier: T3
+    action: added
+    distills: "the WU result: eight observables delivered, five calls beyond the plan, evidence, and the composer's Host-row follow-up for W2/W3; archived at the epic gate"
