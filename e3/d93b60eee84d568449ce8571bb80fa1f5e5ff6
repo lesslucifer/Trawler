@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W3 wu/replay/composer -> epic/replay (round 2)"
+epic: E-REPLAY
+wu: E-REPLAY.W3
+branch: wu/replay/composer
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+head: e3d93b60eee84d568449ce8571bb80fa1f5e5ff6
+diff_sha256: 2f6f78308ebcf845af5eb1c15e892bdd06e298a9849da86ab132be87d6a30745
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 0
+  stage_seconds:
+    gate0: 34
+    finders: 497
+    verifiers: 298
+    total: 795
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 1, verified: 1 }
+findings: { found: 4, verified: 4, waived: 0 }
+blockers:
+  - finding: "ui/src/draft.ts a row the user adds or renames to a core-owned name (Content-Length, Connection, ...) shows as an ordinary row and is sent, where src/sender.rs strips or recomputes it, so the draft shows a value that is not sent"
+importants:
+  - finding: "ui/src/draft.ts removable keys off the seed row's original name, so a Host row renamed to another header can never be removed"
+  - finding: "ui/src/draft.ts decode base64-decodes the whole captured body before checking TEXT_MAX, though the BodyView carries size; a 10 MiB body costs ~370 ms on the main thread at every draft open"
+waivers: []
+nits:
+  - finding: "ui/src/draft.ts CORE_OWNED duplicates src/sender.rs's list, kept in step by a test that reads the Rust source rather than a shared type-checked source"
+    waived: "the list is DEC-58's rule and draft.test.ts fails loudly on any drift; a core door that exposes it has no Given row in the design run and is outside this WU"
+verdict: FAIL
+date: 2026-09-25
