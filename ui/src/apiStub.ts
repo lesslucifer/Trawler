@@ -19,6 +19,12 @@ export function apiStub(over: Partial<TrawlerApi> = {}): TrawlerApi {
     reach: async () => UNREACHABLE,
     armReach: async () => UNREACHABLE,
     disarmReach: async () => UNREACHABLE,
+    replay: async () => {
+      throw new Error("replay is not stubbed for this test");
+    },
+    send: async () => {
+      throw new Error("send is not stubbed for this test");
+    },
     stream: () => () => {},
     ...over,
   };

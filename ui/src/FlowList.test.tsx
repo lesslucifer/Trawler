@@ -12,6 +12,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
     uri: "http://example.com/a/b?x=1",
     status: 200,
     source: "captured",
+    seed: null,
     request_body_state: "empty",
     response_body_state: "captured",
     ...over,

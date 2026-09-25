@@ -23,6 +23,7 @@ function view(over: Partial<FlowView> = {}): FlowView {
     uri: "http://example.com/a?x=1",
     status: 200,
     source: "captured",
+    seed: null,
     request_http_version: "HTTP/1.1",
     response_http_version: "HTTP/2.0",
     request_headers: [{ name: "Accept", value: "application/json" }],
