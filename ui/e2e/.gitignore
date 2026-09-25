@@ -6,3 +6,4 @@ pnpm-lock.yaml
 .core-ports.json
 .DS_Store
 *.log
+.run-tally.json

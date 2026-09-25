@@ -14,7 +14,7 @@ use std::sync::Arc;
 use axum::extract::{Query, State};
 use axum::http::header;
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{any, get};
 use axum::Router;
 use tempfile::tempdir;
 use tokio::net::TcpListener;
@@ -71,9 +71,15 @@ async fn main() {
             .route("/big", get(oversized_text_body))
             .route("/headers", get(long_headers_body))
             .route("/missing", get(not_found_body))
-            .route("/boom", get(server_error_body));
+            .route("/boom", get(server_error_body))
+            .route("/echo", any(echo_headers));
         let _ = axum_server::from_tcp_rustls(origin, tls).serve(app.into_make_service()).await;
     });
+
+    // Bound and released, so a send to it is refused and a spec can prove that a
+    // failed send lands no flow.
+    let closed_port =
+        std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
 
     let ca_dir = tempdir().unwrap();
     let config = Config {
@@ -115,6 +121,7 @@ async fn main() {
         "proxy": format!("http://{}", server.proxy_addr),
         "origin": format!("https://localhost:{origin_port}/"),
         "control": format!("http://{control_addr}"),
+        "closed": format!("http://127.0.0.1:{closed_port}/"),
     });
     println!("{ports}");
 
@@ -123,6 +130,7 @@ async fn main() {
 }
 
 // `/hit?p=json|br|img` proxies to that origin route; no param keeps the "/" hello.
+// `h=name:value` adds one request header, for a spec that edits it on replay.
 // The origin is HTTPS (a decrypted flow is the only kind onboarding's Verify counts),
 // so the client trusts Trawler's re-signing CA.
 async fn hit(State(ctrl): State<Control>, Query(q): Query<HashMap<String, String>>) -> &'static str {
@@ -136,8 +144,27 @@ async fn hit(State(ctrl): State<Control>, Query(q): Query<HashMap<String, String
         .add_root_certificate(trawler_ca)
         .build()
         .unwrap();
-    let _ = client.get(&url).send().await;
+    let mut request = client.get(&url);
+    if let Some((name, value)) = q.get("h").and_then(|h| h.split_once(':')) {
+        request = request.header(name.trim(), value.trim());
+    }
+    let _ = request.send().await;
     "hit-ok"
+}
+
+// Answers with the request headers it received, so a spec reads an edit off the
+// wire rather than off the flow. The pause is what lets a spec see the composer
+// waiting: the core answers only once the reply exists.
+async fn echo_headers(headers: axum::http::HeaderMap) -> impl IntoResponse {
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    let echoed: serde_json::Map<String, serde_json::Value> = headers
+        .iter()
+        .map(|(name, value)| (name.to_string(), value.to_str().unwrap_or_default().into()))
+        .collect();
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        serde_json::Value::Object(echoed).to_string(),
+    )
 }
 
 async fn json_body() -> impl IntoResponse {

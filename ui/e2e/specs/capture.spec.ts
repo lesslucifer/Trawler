@@ -74,7 +74,7 @@ describe("UC-6 / UC-7 — empty the capture, and bring a flow back", () => {
   it("takes a pasted curl command as a flow, marked imported", async () => {
     await openAct("import a curl command or a har file");
     await importAsk().waitForDisplayed({ timeout: 15_000 });
-    await importAsk().$('[data-wire="curl-command"]').setValue(CURL_COMMAND);
+    await importAsk().$('[data-wire="curl-command"] textarea').setValue(CURL_COMMAND);
     await importAsk().$("button=import").click();
 
     await importAsk().waitForExist({ reverse: true, timeout: 15_000 });
