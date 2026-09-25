@@ -78,11 +78,8 @@ async fn main() {
 
     // Bound and released, so a send to it is refused and a spec can prove that a
     // failed send lands no flow.
-    let closed_port = std::net::TcpListener::bind("127.0.0.1:0")
-        .unwrap()
-        .local_addr()
-        .unwrap()
-        .port();
+    let closed_port =
+        std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
 
     let ca_dir = tempdir().unwrap();
     let config = Config {
