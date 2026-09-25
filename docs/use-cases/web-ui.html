@@ -14,7 +14,7 @@
       UC-5 inspect), plus the native app's setup screen for capturing this machine or another device
       (UC-ONBOARD), the HAR round trip — taking a capture out and bringing one back (UC-6) — clearing the
       capture (UC-7), and sending a request again, edited or from scratch (UC-8).</p>
-      <div class="meta">v13 · 2026-09-25 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v14 · 2026-09-25 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span>, rebuilt on the platform axis with
       reach beyond loopback by <span class="badge id">E-ONBOARD</span> ·
@@ -926,6 +926,10 @@ the client lacks the certificate"]
       <span class="badge id">E-REPLAY.W3</span> (<code>ui/src/Composer.tsx</code>, <code>ui/src/draft.ts</code>),
       built from the replay composer's design run. Its rules are unit-tested in <code>draft.test.ts</code>, and
       the screen is tested against the API contract through the stub client in <code>App.test.tsx</code>.
+      End to end, <code>ui/e2e/specs/replay.spec.ts</code> drives the real window through three journeys
+      (<span class="badge id">E-REPLAY.W4</span>): <em>replay with one edit</em>, the edited header read back from
+      what the origin received; <em>compose from scratch</em>, the draft still editable after its send; and
+      <em>a send that fails</em>, ⚠ with no pill and no new row.
       <code>Field</code>'s multi-line form and why the edited mark is not a <code>Field</code> state:
       <a href="../decisions/dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html">DEC-59</a>. Why the core sends through its own client, why it is <code>sent</code> and not
       <code>replayed</code>, why a failure lands nothing, and why the doors add no exposure beyond an
