@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "Epic E-REPLAY -> main. The whole epic's code as one range: the sender and its two doors in the core (src/sender.rs, src/api/send.rs, src/api/routes.rs, src/flow.rs, src/api/view.rs, src/store.rs, src/lib.rs, src/recorder.rs), tests/replay.rs, the composer and its draft rules in the app (ui/src/Composer.tsx, draft.ts, useDraft.ts, App.tsx, api.ts, Field.tsx, FlowDetail.tsx, FlowList.tsx, CaptureControls.tsx), the e2e harness and specs (ui/e2e/), and the e2e run's tally judge (xtask/src/ui.rs). ONE ROUND. Each code-bearing WU was reviewed on its own diff as it landed - W1 PASS at round 3, W3 PASS at round 4, W4 PASS at round 1 - and this round re-judges the epic as a single range against main, the scope no WU review had: the seams between them. The archive commit at the tip changes no code path."
+epic: E-REPLAY
+branch: epic/replay
+base: 47eae8a2cef58560dbc040693d69b65d7f6781d5
+head: 5d50640e31dd2d1504e2e2736571f5513dd2c115
+diff_sha256: 25ef285781b528bf945906b6b3c0ec3360b9e62eb8fb96c3c7d402a8b97c7d4f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 95
+    finders: 345
+    verifiers: 80
+    total: 460
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+refuted: "ONE CANDIDATE, REFUTED: correctness proposed as important that the composer leaves method, URL, headers and body editable while a send is in flight, so the outcome could land beside fields that no longer describe the request that produced it. The verifier found it deliberate and data-safe: useDraft.ts send() takes toRequest(kept.draft) before it lands the sending phase, and the API call closes over that snapshot, so an edit during the wait changes nothing sent or recorded; UC-8's composer table disables send alone for the wait, and the draft is kept editable across its own send by epic decision 8 and asserted by Composer.test.tsx's answer-landing-never-pulls-focus case, which types in the body while sending. Leads the finders ruled out: the header rules against wire_request and the draft's CORE_OWNED pin (read off src/sender.rs by draft.test.ts); the seed lookup answering 404 before a malformed body; the late-reply serial guard in useDraft; capture() running on a clone so the bytes sent are untouched; header_list and version_token moved from recorder.rs into flow.rs and shared rather than duplicated; one Sender built in serve() and cloned into state; the view built before the flow moves into store.import, cheaper than the existing GET clone; the tally judge's branch order; and the e2e tooling kept inside xtask and ui/e2e."
+verdict: PASS
+date: 2026-09-25
