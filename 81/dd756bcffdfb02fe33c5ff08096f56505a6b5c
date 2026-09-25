@@ -1,0 +1,43 @@
+schema: cr/v5
+scope: "WU E-REPLAY.W3 wu/replay/composer -> epic/replay (round 1)"
+epic: E-REPLAY
+wu: E-REPLAY.W3
+branch: wu/replay/composer
+base: 36744fbc4da5e741e6cd5b9b11eb6324c069c125
+head: 81dd756bcffdfb02fe33c5ff08096f56505a6b5c
+diff_sha256: 98efcf7a8aa89f73969f28047f3969082955cec8ff2a209a3a6ff55ce2925f64
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 5
+    nit: 2
+  stage_seconds:
+    gate0: 74
+    finders: 450
+    verifiers: 275
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 2, verified: 1 }
+    altitude: { found: 3, verified: 2 }
+findings: { found: 7, verified: 4, waived: 0 }
+blockers:
+  - finding: "ui/src/App.tsx renders Composer with no key, so opening another draft while the composer is open (new request over a replay draft) reuses the instance: the URL-focus effect never re-fires and focus stays on the capture-menu trigger, against the run's keyboard path; the per-instance phase and pending-focus refs carry across drafts"
+importants:
+  - finding: "ui/src/draft.ts seedBody re-decodes the seed body (base64 + UTF-8 + rawKind, up to TEXT_MAX) up to four times per composer render, on every keystroke, though the seed never changes"
+  - finding: "ui/src/draft.ts CORE_OWNED duplicates src/sender.rs CONNECTION_HEADERS across the Rust/TS boundary with no shared source and no test catching drift"
+  - finding: "ui/src/draft.ts removing the untouched Host row counts as '1 removed' and flips isEdited, though what reaches the wire is unchanged (the core always sends the URL's host)"
+waivers: []
+nits:
+  - finding: "ui/src/Composer.tsx Body computes typed = draft.body !== '' inline instead of reusing bodyReplaced"
+    waived: "carried to the fix round, whose re-review binds the fix"
+  - finding: "ui/src/Composer.tsx add header calls addRow twice, once only to read the key"
+    waived: "carried to the fix round, whose re-review binds the fix"
+  - finding: "ui/src/App.tsx reaches into kept.draft.seed?.id in two places instead of useDraft exposing the seed id"
+    waived: "carried to the fix round, whose re-review binds the fix"
+verdict: FAIL
+date: 2026-09-25
