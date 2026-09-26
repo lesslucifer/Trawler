@@ -19,6 +19,7 @@ import {
 import {
   canAutoSetup,
   CA_FILENAME,
+  confirmHttpsOn,
   deviceName,
   isCommand,
   needsReach,
@@ -35,17 +36,20 @@ import {
   type Task,
 } from "./setup";
 import {
-  awaiting,
+  evidenceOf,
   foreignProxyNotice,
   NO_PROXY_READING,
   NO_TRAFFIC,
+  notDecryptingHere,
   provenDevice,
   proxyStatus,
+  routeByTraffic,
   setUpOn,
   stopRoutingNote,
   trafficReading,
   trafficStatus,
   trustStatus,
+  TUNNEL_GRACE_MS,
   type ProxyReading,
   type Running,
   type StepStatusView,
@@ -158,6 +162,24 @@ function useNow(): number {
     const id = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(id);
   }, []);
+  return now;
+}
+
+// Evidence needs a clock only at one edge: a tunnel becomes a refusal when its
+// grace passes with nothing decrypted after it. So the screen re-reads once, at
+// that edge, rather than ticking every task the way the traffic line does.
+function useGraceEdge(tunnelAt: number | null): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (tunnelAt === null) return;
+    const left = tunnelAt + TUNNEL_GRACE_MS - Date.now();
+    if (left <= 0) {
+      setNow(Date.now());
+      return;
+    }
+    const id = setTimeout(() => setNow(Date.now()), left);
+    return () => clearTimeout(id);
+  }, [tunnelAt]);
   return now;
 }
 
@@ -368,9 +390,15 @@ function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Tr
 // leaf a tick may re-render, rather than above the tasks that no clock can
 // change. StatusLine renders the verdict and refuses the instruction that goes
 // with it (its @avoid), so the remedy is the Notice beside it.
-function TrafficState({ traffic, trustedOn }: { traffic: Traffic; trustedOn: string | null }) {
+function TrafficState({
+  traffic,
+  certificate,
+}: {
+  traffic: Traffic;
+  certificate: { done: boolean; trustedOn: string | null };
+}) {
   const now = useNow();
-  const status = trafficStatus(traffic, now, trustedOn);
+  const status = trafficStatus(traffic, now, certificate);
   return (
     <>
       <StatusLine status={status} />
@@ -738,10 +766,17 @@ export function Onboarding({
   // machine's proxy is exactly what the Simulator routes through.
   const trustHere = probesTrust(platform) && autoHost;
   const routeHere = probesRoute(platform) && autoHost;
-  // Done is what a probe reads, never what its state line says this second: a
+  // Each task has one reading. A probe that concludes is it (DEC-33); where no
+  // probe concludes, this setup's own traffic is, because that is what the task
+  // promised to be confirmed by. This machine's route is the exception: its
+  // try-it command names the proxy itself, so a request that reached Trawler
+  // says nothing about the system proxy, and only the probe may.
+  // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
-  const trustDone = probesTrust(platform) && trustProbe === "trusted";
-  const routeDone = probesRoute(platform) && proxy.status === "ours";
+  const evidence = evidenceOf(traffic, useGraceEdge(traffic.lastTunnelAt));
+  const trustConcluded = probesTrust(platform) && trustProbe !== "unknown";
+  const trustDone = trustConcluded ? trustProbe === "trusted" : evidence.decrypted;
+  const routeDone = probesRoute(platform) ? proxy.status === "ours" : evidence.reached;
   // One prompt for the one thing most users want, and only while both halves
   // are this machine's to change and neither reads done (F27). Once either
   // does, each task carries its own, and the certificate never gets an
@@ -763,14 +798,18 @@ export function Onboarding({
     setUp.state === "running" || own.state === "running" ? r : probing ? "checking" : null;
 
   const trustState = probesTrust(platform)
-    ? trustStatus(trustProbe, busy(setUp, "installing"), setup.confirmOn)
-    : awaiting(setup.confirmOn);
+    ? trustStatus(trustProbe, busy(setUp, "installing"), confirmHttpsOn(platform, os), evidence)
+    : trustStatus("unknown", null, confirmHttpsOn(platform, os), evidence);
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
         confirmOn: setup.confirmOn,
       })
-    : awaiting(setup.confirmOn);
+    : routeByTraffic(evidence, setup.confirmOn);
+  // A tunnel nothing decrypted says the certificate is the step left, so the
+  // certificate task says it, once, while it is not done; once it is, the
+  // refusal is some other client's and the try task words it instead.
+  const refusedHere = !trustDone && evidence.unanswered;
 
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
@@ -794,14 +833,17 @@ export function Onboarding({
         failedHere(unsetProxyAction, reverseHere)
       ? "route"
       : null;
+  // Every sentence that says "the steps below" has them open: a failure's note,
+  // and the certificate task's account of a refusal.
+  const pointedAt = failedRoute ?? (refusedHere ? "trust" : null);
   const guidesOpen = !blocked && traffic.lastDecryptedAt === null;
   const trustGuideOpen =
-    failedRoute !== null
-      ? failedRoute === "trust"
+    pointedAt !== null
+      ? pointedAt === "trust"
       : guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined;
   const routeGuideOpen =
-    failedRoute !== null
-      ? failedRoute === "route"
+    pointedAt !== null
+      ? pointedAt === "route"
       : guidesOpen &&
         !trustGuideOpen &&
         routeGuide !== undefined &&
@@ -894,7 +936,13 @@ export function Onboarding({
             guideOpen={trustGuideOpen}
             save={onSaveCa ? saveCa : undefined}
             action={trustAction || undefined}
-          />
+          >
+            {refusedHere && (
+              <div data-testid="traffic-remedy" className="pb-2">
+                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os))}</Notice>
+              </div>
+            )}
+          </GuidedTask>
 
           <GuidedTask
             n={first + 2}
@@ -916,7 +964,13 @@ export function Onboarding({
           </GuidedTask>
 
           <GuidedTask n={first + 3} task={setup.try} dim={blocked}>
-            <TrafficState traffic={traffic} trustedOn={trustDone ? here : null} />
+            <TrafficState
+              traffic={traffic}
+              certificate={{
+                done: trustDone,
+                trustedOn: platform === "this" && trustDone ? here : null,
+              }}
+            />
             {setup.tryCommand && (
               <>
                 <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>

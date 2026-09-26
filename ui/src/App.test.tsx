@@ -365,8 +365,13 @@ test("a connection event settles the last task, and warns once no request answer
     () => expect(screen.getByTestId("task-3")).toHaveTextContent("arriving but not decrypting"),
     { timeout: 3_000 },
   );
-  expect(screen.getByTestId("traffic-remedy")).toHaveTextContent(
-    "does not trust Trawler's certificate yet",
+  // The refusal is the certificate task's to say, once its grace is spent.
+  await waitFor(
+    () =>
+      expect(within(screen.getByTestId("task-1")).getByTestId("traffic-remedy")).toHaveTextContent(
+        "does not trust Trawler's certificate yet",
+      ),
+    { timeout: TUNNEL_GRACE_MS + 2_000 },
   );
   // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();

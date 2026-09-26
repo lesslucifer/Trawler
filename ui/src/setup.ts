@@ -235,6 +235,12 @@ export function confirmOn(id: PlatformId, os: HostOs): string {
   return `we'll confirm this on ${deviceName(id, os)}'s first request`;
 }
 
+// The certificate is settled by a request that could decrypt, and plain HTTP
+// never could, so its promise names the kind of request that will settle it.
+export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
+  return `we'll confirm this on ${deviceName(id, os)}'s first HTTPS request`;
+}
+
 // The network task's title, needed before any instruction exists: it is the
 // task that makes the rest possible, so it is titled whether or not the rest
 // can be written yet.

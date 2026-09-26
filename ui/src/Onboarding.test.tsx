@@ -328,7 +328,7 @@ describe("this machine — three tasks, and one button that does two of them", (
       ).toBeInTheDocument(),
     );
     // And it does not claim the tasks are done — that is still the probes' word.
-    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first request");
+    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first HTTPS request");
   });
 
   // Review round 4, important: the way out was kept alive by the action that
@@ -722,7 +722,7 @@ describe("the iOS Simulator", () => {
     simulator();
 
     expect(task(1)).toHaveTextContent("Trust Trawler's certificate in the Simulator");
-    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first request");
+    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first HTTPS request");
     expect(task(1)).not.toHaveTextContent("done — installed and trusted");
   });
 
@@ -843,7 +843,7 @@ describe("a phone, once it may connect", () => {
   it("promises to confirm on the phone's own first request, and claims nothing now", () => {
     armedPhone();
 
-    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first request");
+    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first HTTPS request");
     expect(task(3)).toHaveTextContent("we'll confirm this on your iPhone's first request");
     expect(task(2)).not.toHaveAttribute("data-dim");
   });
@@ -868,8 +868,28 @@ describe("a phone, once it may connect", () => {
     draw({ reach: ARMED, traffic: capturing });
     pick("iPhone or iPad");
 
-    expect(open("3 steps")).toBe(false);
-    expect(open("2 steps")).toBe(false);
+    expect(document.querySelectorAll("details[open]")).toHaveLength(0);
+    expect(task(2)).toHaveTextContent("done — a request decrypted");
+    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+  });
+
+  // The owner's report: an iPhone pointed here without the certificate. Its
+  // requests arrive and nothing decrypts - which says the proxy is set and the
+  // certificate is the step left, so that is where the screen says so.
+  it("requests that arrive and do not decrypt confirm the proxy and point at the certificate", () => {
+    draw({ reach: ARMED, traffic: arriving });
+    pick("iPhone or iPad");
+
+    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+    expect(within(task(3)).queryByText("2 steps")).toBeNull();
+    expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
+    expect(task(2)).toHaveTextContent("not done — nothing decrypted");
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.",
+    );
+    expect(open("On your iPhone, open")).toBe(true);
+    expect(task(4)).toHaveTextContent("arriving but not decrypting");
+    expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
   });
 });
 
@@ -979,13 +999,14 @@ describe("the end", () => {
     expect(zone("proven")).not.toHaveTextContent(/iPhone/);
   });
 
-  it("an arriving connection that will not decrypt says what to finish, naming no device", () => {
+  it("an arriving connection that will not decrypt is said in the certificate task, with its steps open", () => {
     draw({ traffic: arriving });
 
-    expect(zone("traffic-remedy")).toHaveTextContent(
-      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
+    expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it.",
     );
-    expect(zone("traffic-remedy")).not.toHaveTextContent(/iPhone|Simulator|Android/);
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(within(task(3)).queryByTestId("traffic-remedy")).toBeNull();
   });
 
   it("the way back exists once capture has been proven, and not before", () => {
@@ -1051,7 +1072,7 @@ test("no step reports itself done — every state on the screen has a source", (
   draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null }, os: "linux" });
 
   // Nothing read either store on this host, so neither task may claim one was.
-  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first request");
+  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first HTTPS request");
   expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
   expect(document.body.textContent).not.toMatch(/done — /);
 });
