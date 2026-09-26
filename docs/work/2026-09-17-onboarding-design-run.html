@@ -69,12 +69,12 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · round 7 on 2026-09-26 · Trawler · T3 (docs/work/) ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 · Trawler · T3 (docs/work/) ·
         <strong>E-ONBREV.W4</strong> · branch <code>wu/onboard-review/actions-follow-reading</code> ·
         epic <a href="2026-09-25-onboard-review-plan.html">E-ONBREV</a> · rounds 1–6 by E-ONBOARD, whose docs are archived out of git</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="archived">
+  <main data-artifact="design-run" data-status="draft">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Mounted from the real <code>ui/src/components/</code>. The buttons under it switch platform and state — read each one alone.</p>
@@ -106,7 +106,11 @@
             <div class="a-pf-sim" id="m-steps-sim"></div>
             <div class="a-pf-off">
               <div class="a-rch-off" id="m-steps-off-unreached"></div>
-              <div class="a-rch-on" id="m-steps-off-reached"></div>
+              <div class="a-rch-on">
+                <div class="a-st-wait" id="m-steps-off-reached"></div>
+                <div class="a-st-tunnel" id="m-steps-off-tunnel"></div>
+                <div class="a-st-proven" id="m-steps-off-proven"></div>
+              </div>
             </div>
           </div>
 
@@ -460,7 +464,25 @@
           </Section>);
 
         /* ---- a phone: one task that changes this machine, three that do not - */
-        const phoneTasks = (armed) => (
+        /* Round 8. Nothing reads a phone's stores, so its tasks promise to be
+           confirmed by its first request — and once requests arrive, they are.
+           A request reaching Trawler says the proxy is set; one that decrypts
+           says the certificate is trusted; a tunnel nothing decrypts says the
+           certificate is the step left, so that is where its message sits. */
+        const CONFIRM = { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" };
+        const PHONE_TRUST = {
+          waiting: CONFIRM,
+          tunnel: { glyph: "⚠", tone: "warn", short: "not done — nothing is decrypting" },
+          proven: { glyph: "✓", tone: "ok", short: "done — HTTPS is decrypting" },
+        };
+        const REACHING = { glyph: "✓", tone: "ok", short: "done — requests are reaching Trawler" };
+        const PHONE_TRY = {
+          waiting: WAITING,
+          tunnel: { glyph: "⚠", tone: "warn", short: "arriving but not decrypting" },
+          proven: { glyph: "✓", tone: "ok", short: "capturing traffic" },
+        };
+        const PROXY_UNDO = ["Settings → Wi-Fi → the network → Configure Proxy → Off."];
+        const phoneTasks = (armed, traffic = "waiting") => (
           <Section variant="band" title="">
             <div className="flex flex-col gap-4">
             <TaskStep n={1} title="Allow your iPhone to connect"
@@ -484,8 +506,16 @@
             </TaskStep>
             <TaskStep n={2} title="On your iPhone, install the certificate" dim={!armed}
                       why={armed ? undefined : "after step 1"}
-                      status={armed ? { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" } : undefined}>
-              {armed && (
+                      status={armed ? PHONE_TRUST[traffic] : undefined}>
+              {armed && traffic === "tunnel" && (
+                <div className="pb-2">
+                  <Notice tone="mute">
+                    requests are arriving and none of them decrypt — your iPhone does not trust Trawler's
+                    certificate yet. The steps below install it.
+                  </Notice>
+                </div>
+              )}
+              {armed && traffic !== "proven" && (
                 <Steps n={3} open>
                   <Guide
                     steps={[
@@ -500,8 +530,9 @@
             </TaskStep>
             <TaskStep n={3} title="On your iPhone, set the Wi-Fi proxy" dim={!armed}
                       why={armed ? undefined : "after step 1"}
-                      status={armed ? { glyph: "◐", tone: "muted", short: "we'll confirm this on your iPhone's first request" } : undefined}>
-              {armed && (
+                      status={armed ? (traffic === "waiting" ? CONFIRM : REACHING) : undefined}>
+              {armed && traffic !== "waiting" && <WayBack title="to turn it off later" steps={PROXY_UNDO} />}
+              {armed && traffic === "waiting" && (
                 <>
                   <div className="flex gap-4">
                     <div>
@@ -521,7 +552,7 @@
                           "Put the server and port above into it, and save.",
                         ]}
                         undoTitle="to turn it off later"
-                        undo={["Settings → Wi-Fi → the network → Configure Proxy → Off."]}
+                        undo={PROXY_UNDO}
                       />
                     </Steps>
                   </div>
@@ -530,12 +561,14 @@
             </TaskStep>
             <TaskStep n={4} title="Open any website on your iPhone" dim={!armed}
                       why={armed ? "the first decrypted request is what proves setup works" : "after step 1"}
-                      status={armed ? { glyph: "○", tone: "muted", short: "waiting for the first request" } : undefined} />
+                      status={armed ? PHONE_TRY[traffic] : undefined} />
             </div>
           </Section>
         );
         mount("m-steps-off-unreached", phoneTasks(false));
         mount("m-steps-off-reached", phoneTasks(true));
+        mount("m-steps-off-tunnel", phoneTasks(true, "tunnel"));
+        mount("m-steps-off-proven", phoneTasks(true, "proven"));
 
         mount("m-probe-rest",
           <span className="font-ui text-control text-ink-mute">
@@ -581,6 +614,8 @@
         <tr><td>The reversal sits in task 2 and names only what is installed</td><td>round 7 · R14 · R15</td></tr>
         <tr><td>One guide open: a failed action's, else the first task not done. Shut while a button can still do the job; none once a request decrypts</td><td>round 5 · round 7 · R16</td></tr>
         <tr><td>No sentence contradicts a reading beside it: the end names this Mac only when both probes read done; the remedy defers to a trusted certificate</td><td>round 7 · R17 · R18</td></tr>
+        <tr><td>Where nothing reads a device, its requests are the reading: one arriving marks the proxy task done, one decrypting marks the certificate task done</td><td>round 8</td></tr>
+        <tr><td>The not-decrypting message sits in the certificate task while that task is not done, with its steps open; the try task keeps only its state</td><td>round 8</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
         <tr><td>The column is 60% of the window up to 880px; zones 24px apart, tasks 32px</td><td>rounds 5 · 6</td></tr>
       </table>
@@ -601,7 +636,7 @@
         <tr><td>title · purpose</td><td><em>Set up capture</em> · <em>Trawler sits between a device and the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate and send its traffic to Trawler.</em></td></tr>
         <tr><td>the question</td><td><em>which device's traffic do you want to see</em></td></tr>
         <tr><td>states · this machine</td><td><em>done — installed and trusted</em> · <em>not done — the certificate isn't trusted</em> · <em>done — this Mac routes through Trawler</em> · <em>not done — the system proxy is off</em> · <em>not done — another proxy is set</em> · <em>waiting for the first request</em> · <em>arriving but not decrypting</em> · <em>capturing traffic</em></td></tr>
-        <tr><td>states · a device</td><td><em>we'll confirm this on your iPhone's first request</em></td></tr>
+        <tr><td>states · a device</td><td><em>we'll confirm this on your iPhone's first request</em> until a request arrives · then the proxy task: <em>done — requests are reaching Trawler</em> · the certificate task: <em>done — HTTPS is decrypting</em>, or <em>not done — nothing is decrypting</em> while requests arrive and none decrypt</td></tr>
         <tr><td>the one act</td><td><em>Set up this Mac</em> · <em>one password prompt — it installs the certificate and sets the proxy</em></td></tr>
         <tr><td>the proxy's own action</td><td><em>Set the system proxy</em></td></tr>
         <tr><td>the reversal</td><td><em>stop routing through Trawler</em> · certificate trusted: <em>this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.</em> · otherwise: <em>this turns the proxy off and nothing else.</em></td></tr>
@@ -612,7 +647,8 @@
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.</em></td></tr>
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
-        <tr><td>undecrypted traffic</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em></td></tr>
+        <tr><td>undecrypted traffic, in a device's certificate task</td><td><em>requests are arriving and none of them decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em></td></tr>
+        <tr><td>undecrypted traffic, this machine</td><td>in task 1 while it reads not done: <em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> — in task 3, since task 1 is done</td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em></td></tr>
         <tr><td>never on this screen</td><td><em>flow</em> · <em>verdict</em> · <em>reach</em> · <em>platform</em> · <em>route</em> · <em>listen on</em></td></tr>
       </table>
@@ -688,6 +724,7 @@
         <tr><td>Round 7 — the owner, certificate trusted and proxy off: <em>Set up this Mac</em> and the certificate steps still showed under task 2. The review of 2026-09-25 found the same root six more times (R12–R18)</td><td>mockup — four readings of this machine, a failed set-up, the Simulator's proxy done · copy — the reversal's two lines, the failed notes, the remedy and the end per reading</td><td><code>DEC-13</code> · <code>DEC-33</code></td></tr>
         <tr><td>Round 7, on the draft — "when cert untrusted &amp; proxy off, all instruction fall to the 2 section; the CA trust related instruction should be in the first section and the proxy related instruction should be in the second" · "The design file is full of text that I don't read, can you simplify it?"</td><td>mockup — neither-done keeps each half's steps in its own task, and the one act leads task 1; the merged guide is gone · capabilities · keyboard · proposals · blocked-on · review — cut to one line each; history stays in git</td><td><code>taste</code> · UC-ONBOARD's one-act row</td></tr>
         <tr><td>Round 7, close — "ok, all LGTM now", on the per-task draft, its sentences and the one act leading task 1</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W4's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 8 — the owner, on an iPhone without the certificate: "receiving a message should means that the proxy setup step is done, there should be a message indicating that", and the not-decrypting message sat under step 4. The owner chose that the screen infers the device from the platform chosen, and that the fix lands in W4</td><td>mockup — the phone draws arriving-not-decrypting and capturing: the proxy task reads done and folds to its way back, the certificate task turns ⚠ with the message and its steps open, then ✓ · copy — the device states after a request, the message in the certificate task, and where this machine's message sits</td><td><code>DEC-33</code> — a device's task promised its first request as its reading, so the request is its source and not a borrowed one · the blocked-on attribution row stays open: a request from this Mac would also tick it</td></tr>
       </tbody>
     </table>
 
