@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-ONBREV
+wu: E-ONBREV.W2
+base: 36d48a05970b38e3512c45fd739f0c4cfeb104d8
+design_sha256: d1dff0c41189cf742098d754f82e73c01eda2296fe74770eb1b6d45b777ad178
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "The launch gate splits the one non-proven branch in two and adds no surface (epic plan Q1). checking renders the existing shell header (dot, title, reach chip) over an empty main area, and once the launch read went unanswered, the existing NotAnswering statement inside the same empty-region wrapper FlowList already renders it in. onboarding renders the setup screen unchanged, with that same NotAnswering in Layout's existing band zone while the core is silent. The rest of the edit is state (since, the unanswered read, the answer useFlows brings). No new component, copy, token or layout."
+date: 2026-09-27
