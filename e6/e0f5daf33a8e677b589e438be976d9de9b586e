@@ -1,0 +1,29 @@
+schema: cr/v5
+scope: "WU launch-gate -> epic/onboard-review"
+epic: E-ONBREV
+wu: E-ONBREV.W2
+branch: wu/onboard-review/launch-gate
+base: 36d48a05970b38e3512c45fd739f0c4cfeb104d8
+head: e6e0f5daf33a8e677b589e438be976d9de9b586e
+diff_sha256: 273091bd8f7abb4c9b5afed77d6e3cdbc1deb8687e4398a0f846f9e73a6a117b
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 35
+    finders: 441
+    total: 998
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-09-27
