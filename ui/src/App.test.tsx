@@ -1319,7 +1319,12 @@ function streamApi(answer: () => Promise<FlowSummary[]>) {
       return () => {};
     },
   });
-  return { api, down: () => act(() => handlers.current?.onDown?.()), up: () => act(() => handlers.current?.onUp?.()) };
+  return {
+    api,
+    down: () => act(() => handlers.current?.onDown?.()),
+    up: () => act(() => handlers.current?.onUp?.()),
+    fire: () => act(() => handlers.current?.onEvent()),
+  };
 }
 
 const FAILED = () => Promise.reject(new TypeError("Failed to fetch"));
@@ -1384,6 +1389,49 @@ test("the listing that ends a silent launch decides it, with no read of its own"
 
   expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
   expect(listFlows).toHaveBeenCalledTimes(asked + 1);
+});
+
+// Review round 2 (correctness, blocker): a launch read that took longer to fail
+// than a later listing took to answer was held to wait for a listing after that
+// one, so the app said the core was silent while its answer was on hand.
+// Written before the fix.
+test("a launch read that fails after a listing already answered is decided by that listing", async () => {
+  let failLaunch: (error: Error) => void = () => {};
+  const listFlows = vi
+    .fn<(filter: Filter) => Promise<FlowSummary[]>>()
+    .mockImplementationOnce(() => new Promise<FlowSummary[]>((_, reject) => (failLaunch = reject)))
+    .mockImplementation(async () => []);
+  render(<App api={apiStub({ listFlows })} />);
+  await waitFor(() => expect(listFlows).toHaveBeenCalledTimes(2));
+  await act(() => new Promise((settle) => setTimeout(settle, 50)));
+
+  await act(async () => failLaunch(new TypeError("Failed to fetch")));
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
+// Review round 2 (correctness, important): a silent launch that recovered took
+// its session's start from when the recovering listing was processed, not from
+// when the launch asked, so a request that started in between was a success
+// nobody announced. Written before the fix.
+test("a silent launch's session starts when the launch asked, so what started after it is announced", async () => {
+  let answer: () => Promise<FlowSummary[]> = FAILED;
+  const { api, up, fire } = streamApi(() => answer());
+  const launched = Date.now();
+  render(<App api={api} />);
+  await screen.findByText("trawler is not answering");
+  await act(() => new Promise((settle) => setTimeout(settle, 300)));
+
+  answer = async () => [];
+  up();
+  await screen.findByText(QUESTION);
+
+  const row = flow({ uri: "https://example.com/", started_at: new Date(launched + 100).toISOString() });
+  answer = async () => [row];
+  fire();
+
+  expect(await screen.findByTestId("set-up-banner")).toBeInTheDocument();
 });
 
 test("the stream coming back ends a silent launch, and an empty core then opens setup", async () => {
