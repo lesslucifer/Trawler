@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: b54e3a824558a2b39750bbd1ed131c11fd2568bd
+base: 760d7d95fd11fb77d7fb370f615c10e7acc03327
+tier: key
+signer: vuluu
+report: docs/work/2026-09-26-onboard-review-w4-actions-follow-reading-result.html
+report_sha256: 7d90a8b01bb43b23636f626202cd5740a41552bd410b1288fbe37f4c19aa9954
+date: 2026-09-26
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDS8dPKvMBkjP1Z/ZHjmD0fueI6tc6qn5J4dZEvuKH/O6RNIbVIX/NmIP
+  1dEY818q3hHzTeQ79SbA3RwBG3xIcM
+  -----END SSH SIGNATURE-----
