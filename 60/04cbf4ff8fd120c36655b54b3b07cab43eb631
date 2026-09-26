@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-ONBREV
+wu: E-ONBREV.W1
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-26-onboard-review-w1-walkthrough-plan.html"
+    tier: T3
+    action: added
+    distills: "the W1 plan: requirement, mapping, the mock seams, the reel and chapter table, expected result, test plan and commits"
+  - path: "docs/work/2026-09-26-onboard-review-w1-walkthrough-result.html"
+    tier: T3
+    action: added
+    distills: "the W1 result: six expected rows delivered, eight deviations with why, the evidence per commit, nothing citable to distil, and follow-ups for W2-W6"
+t2_waived: "W1 changes no product behaviour and no contract: the scenario feature, the harness front and the walkthrough are test support, and the command is named in cargo xtask's usage. UC-ONBOARD and the new DEC are W6's distillation per the epic plan."
