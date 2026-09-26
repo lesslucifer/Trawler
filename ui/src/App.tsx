@@ -79,10 +79,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // — a decrypted HTTPS flow already present means setup works, straight to the
   // list; otherwise show onboarding. Derived from capture, no persisted state.
   // A read nobody answered decides nothing: the app stays checking and says the
-  // core is silent, and any listing the core answered after the read was sent is
-  // the launch's answer — setup steps are no answer to a core that is not
-  // running (R2). The read keeps when it was sent and how many listings had
-  // answered by then, because a listing can answer before the read fails.
+  // core is silent — setup steps are no answer to a core that is not running
+  // (R2). Whatever the read's fate, any listing the core answered after it was
+  // sent is the launch's answer, so the read keeps when it was sent and how many
+  // listings had answered by then.
   const [launchUnanswered, setLaunchUnanswered] = useState(false);
   const answeredRef = useRef(answered);
   answeredRef.current = answered;
@@ -397,9 +397,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, [state.phase, silent]);
 
   useEffect(() => {
-    if (state.phase !== "checking" || !launchUnanswered || answered <= launchSent.current.answered) return;
+    if (state.phase !== "checking" || answered <= launchSent.current.answered) return;
     dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: launchSent.current.at });
-  }, [state.phase, launchUnanswered, answered, flows]);
+  }, [state.phase, answered, flows]);
 
   const setupHeader = (
     <>

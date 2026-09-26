@@ -1434,6 +1434,20 @@ test("a silent launch's session starts when the launch asked, so what started af
   expect(await screen.findByTestId("set-up-banner")).toBeInTheDocument();
 });
 
+// Review round 3 (correctness): a launch read that never settled while the
+// core answered every listing beside it held the window on the bare checking
+// screen, waiting for a failure that would never come. Written before the fix.
+test("a launch read that hangs is decided by a listing that answered after it was sent", async () => {
+  const listFlows = vi
+    .fn<(filter: Filter) => Promise<FlowSummary[]>>()
+    .mockImplementationOnce(NEVER)
+    .mockImplementation(async () => []);
+  render(<App api={apiStub({ listFlows })} />);
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
 test("the stream coming back ends a silent launch, and an empty core then opens setup", async () => {
   let answer: () => Promise<FlowSummary[]> = FAILED;
   const { api, up } = streamApi(() => answer());
