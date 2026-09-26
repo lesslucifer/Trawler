@@ -349,22 +349,36 @@ function linuxThis(): Chapter[] {
   ];
 }
 
+// The Simulator runs beside macOS only, so its proxy chapters are filmed there;
+// elsewhere the one moment worth filming is what choosing it offers at all.
 function iosSim(host: Host): Chapter[] {
+  const chosen: Chapter = {
+    id: "chosen",
+    title: "The iOS Simulator chosen",
+    offeredAs: "iOS Simulator",
+    act: async (w) => {
+      await w.closePicker();
+      await w.choose("iOS Simulator");
+    },
+    expect: `task 1 carries the Simulator's own certificate steps; task 2 offers "Set the system proxy", which the Simulator follows`,
+    findings: [],
+    anchor: [button("Set the system proxy")],
+  };
+  if (host !== "macos")
+    return [
+      firstPaint(host),
+      picker(host),
+      {
+        ...chosen,
+        expect: `nothing to choose — were it offered, it would give xcrun simctl steps${host === "windows" ? ` and a "Set the system proxy" button that says the Simulator follows ${DEVICE[host]}'s proxy` : ""}, none of which can apply on ${OS_NAME[host]}`,
+        findings: ["R8"],
+        anchor: [task(2)],
+      },
+    ];
   return [
     firstPaint(host),
     picker(host),
-    {
-      id: "chosen",
-      title: "The iOS Simulator chosen",
-      offeredAs: "iOS Simulator",
-      act: async (w) => {
-        await w.closePicker();
-        await w.choose("iOS Simulator");
-      },
-      expect: `task 1 carries the Simulator's own certificate steps; task 2 offers "Set the system proxy", which the Simulator follows`,
-      findings: [],
-      anchor: [button("Set the system proxy")],
-    },
+    chosen,
     {
       id: "set-proxy-failed",
       title: "Setting the proxy fails",
