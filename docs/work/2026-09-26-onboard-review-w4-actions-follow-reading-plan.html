@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab760869f34851f0dfad537" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W4 plan: actions follow their task's reading</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W4 — actions follow their task's reading</h1>
+      <p>Every action, every manual step and every sentence on the setup screen is rendered from the reading of the task it belongs to and from the outcome of the action, never from the host alone. This closes the owner's report (R12) and the six sweep findings with the same root.</p>
+      <div class="meta">v1 · 2026-09-26 · Trawler · T3 WU plan · <span class="badge id">E-ONBREV.W4</span> · branch <code>wu/onboard-review/actions-follow-reading</code> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R12–R18</a> · depends on <span class="badge id">E-ONBREV.W1</span> (merged, the <em>before</em> is recorded)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong>On the setup screen, the combined "Set up this machine" action is offered only while both halves read not
+      done; otherwise each task carries its own action and steps. A task that reads done offers no action and no install
+      steps, only its way back. The reversal renders inside the task it reverses and names only what is installed. A failed
+      action opens its manual route. The success line names this machine only when both probes read done, and the
+      not-decrypting remedy never contradicts a trust probe that reads done. The design of record states each of these
+      readings, and a permanent state-matrix test asserts the place, time and truth rules over every host × platform ×
+      trust × proxy × traffic × outcome.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-ONBREV</span> · the epic plan's W4 block · UC-ONBOARD: the one-act row and the
+      action-follows-reading rule · findings R12, R13, R14, R15, R16, R17 and R18 (all Root D) · open questions Q6 (an
+      amendment of the design of record, not a new run) and Q8 (a failure opens the manual route) · the findings' coverage
+      gaps "probe states tested for their state lines only" and "action-outcome tests never ask whether the route is open".
+    </p>
+
+    <h2 id="rule">The rule, per reading</h2>
+    <table data-c="layout-rule">
+      <tr><th>This machine, on a host that can set itself up (macOS, Windows)</th><th>Task 1 · the certificate</th><th>Task 2 · the proxy</th><th>Between the tasks</th></tr>
+      <tr><td>trust <em>not done</em> · proxy <em>not done</em></td><td>its state</td><td>its state (and the other-proxy notice)</td><td><strong>Set up this Mac</strong>, its one-prompt line, <em>do it manually</em> over both halves. Unchanged</td></tr>
+      <tr><td>trust <em>done</em> · proxy <em>not done</em> (R12, the owner's case)</td><td>✓, and <em>to remove it later</em>, closed</td><td><strong>Set the system proxy</strong>, and <em>do it manually</em> with the proxy steps</td><td>nothing</td></tr>
+      <tr><td>trust <em>not done</em> · proxy <em>done</em> (R12 mirror, R14)</td><td>its certificate steps, <em>N steps</em>, open</td><td>✓, <em>stop routing through Trawler</em>, and <em>to turn it off later</em>, closed</td><td>nothing</td></tr>
+      <tr><td>trust <em>done</em> · proxy <em>done</em> (R13)</td><td>✓, and <em>to remove it later</em>, closed</td><td>✓, <em>stop routing through Trawler</em>, and <em>to turn it off later</em>, closed</td><td>nothing</td></tr>
+    </table>
+    <p class="caption"><em>Done</em> is the probe's reading: trust reads <code>trusted</code>, or the proxy reads <code>ours</code>. Anything else, including a reading that could not conclude, is <em>not done</em>. The layout follows the reading and not the status line, so a re-check in flight does not flip it. The iOS Simulator already renders the per-task layout, and now follows the same rule for its proxy task (R15). A host with no automatic setup has no buttons, and its done tasks also fold to their way back.</p>
+
+    <table data-c="outcome-rule">
+      <tr><th>Outcome</th><th>What the screen does</th><th>Finding</th></tr>
+      <tr><td>an action that just resolved</td><td>its reversal appears inside task 2 at once, without waiting for the re-read (DEC-13's inherited rule, kept)</td><td>R15</td></tr>
+      <tr><td>an action that <em>failed</em> (not a cancelled prompt)</td><td>its manual route is the open guide: the combined <em>do it manually</em>, the proxy task's <em>do it manually</em>, or the proxy task's <em>to turn it off later</em></td><td>R16</td></tr>
+      <tr><td>a cancelled prompt · a declined replacement</td><td>unchanged: the button can still do the job, so its route stays closed</td><td>—</td></tr>
+      <tr><td>one guide open</td><td>a failed action's route, or else the first task not read done. A guide follows the rule again when the rule's answer changes</td><td>R16</td></tr>
+    </table>
+
+    <h3 id="words">The words that change</h3>
+    <table data-c="words">
+      <tr><th>Where</th><th>Today</th><th>Proposed (the owner rules in the design run's review)</th><th>Finding</th></tr>
+      <tr><td>the reversal's line, trust reads done</td><td>this turns the proxy off and nothing else — the steps below remove Trawler's certificate.</td><td>this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.</td><td>R14</td></tr>
+      <tr><td>the reversal's line, trust not done or not probed</td><td>same line, or none (Simulator)</td><td>this turns the proxy off and nothing else.</td><td>R14 · R15</td></tr>
+      <tr><td>the success line, This machine with a probe not done</td><td>You're set up — Trawler is capturing traffic from this Mac</td><td>You're set up — Trawler is capturing traffic</td><td>R17</td></tr>
+      <tr><td>the not-decrypting remedy, the chosen platform's trust reads done</td><td>… Finish the certificate step on that device.</td><td>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</td><td>R18</td></tr>
+    </table>
+
+    <h2 id="steps">How it lands</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  A["1 · re-open the design run in docs/work, round 7: the four readings, the failed route, the words"] --> B["2 · the owner reads the mockup: a human step"]
+  B --> C["3 · the review row records the calls; verify-doc green; archived"]
+  C --> D["4 · the build: Onboarding + verdicts"]
+  D --> E["5 · the state-matrix test"]
+  E --> F["6 · the walkthrough, re-run as evidence"]
+  F --> G["7 · the result report"]
+      </pre>
+      <div class="caption">No build begins before step 3. The design run is gitignored under <code>docs/.archive/</code>, and its copy there is byte-identical to its last tracked blob (<code>10443bc^</code>), so it is restored to <code>docs/work/</code> as that blob and amended there. The build's <code>design/v1</code> note cites the blob that step 3 leaves.</div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>A reader checks…</th><th>…and sees</th></tr>
+      <tr><td>the owner's case: macOS, This machine, trust <code>trusted</code>, proxy <code>none</code> (P8, inverted)</td><td>no "Set up this Mac" and no one-prompt line; task 2 holds "Set the system proxy" and its own <em>do it manually</em> with only the proxy command; no <code>add-trusted-cert</code> step anywhere on the screen; task 1 holds only <em>to remove it later</em></td></tr>
+      <tr><td>both probes done</td><td>no install step and no install action anywhere; each task has its way back, closed</td></tr>
+      <tr><td>a set-up, set-proxy or unset that failed</td><td>the route the note points at is open</td></tr>
+      <tr><td>the iOS Simulator with the proxy ours</td><td>no "Set the system proxy"; the reversal and its line inside task 2</td></tr>
+      <tr><td>a decrypted request on This machine with a probe not done</td><td>the success line names no device</td></tr>
+      <tr><td>the state-matrix test</td><td>green over every host × platform × trust × proxy × traffic × outcome it enumerates, each rule named when it fails</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code> at the tip</td><td>exit 0, every anchor painting; the R12–R18 chapters show the rows above</td></tr>
+      <tr><td>the design run</td><td>round 7 in its review item with the owner's calls, <code>data-status="archived"</code>, <code>verify-doc</code> green</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>File</th><th>Asserts</th></tr>
+      <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code></td><td>the not-decrypting remedy with and without a trust probe that reads done; the success line's device only when both probes read done; the reversal's line per trust reading</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>each row of the two rule tables above, at the rendered screen: the four readings on macOS and Windows; P8 inverted; each failure opens its route and a cancelled prompt does not; the reversal inside task 2 on This machine and on the Simulator; the reversal appears on resolve before the re-read</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code> (new, permanent)</td><td>host (4) × platform (This machine, iOS Simulator, Android emulator) × trust (3) × proxy (4) × traffic (waiting, capturing, not decrypting) × each offered action's outcome (done, nothing, failed, refused). It renders each state, flattens it to an outline (each task's state, buttons, guides open or closed with their commands, and every block between tasks), and asserts <strong>place</strong> (an install command or action sits in its own task, or in the combined block only while both halves read not done; a reversal sits in task 2), <strong>time</strong> (a task read done offers no install action or step; the combined action only while both read not done), and <strong>truth</strong> (the success line, the remedy and the reversal's line against the readings on the same screen; a failure's note names an open route; at most one guide open)</td></tr>
+      <tr><td>e2e</td><td>—</td><td><strong>waived</strong> at WU level, as the epic plan rules for R12: the per-half layout turns on the real machine's trust store and proxy, which a hermetic run cannot set. The walkthrough re-run is the evidence, and the epic's e2e is W6's</td></tr>
+    </table>
+
+    <h2 id="deviations-known">Known before the build</h2>
+    <table data-c="known">
+      <tr><th>Point</th><th>What this plan does</th></tr>
+      <tr><td>P8 is not written down</td><td>The review never saved its probe list. This plan takes P8 as R12's recorded reproduction (the first row of <em>Expected</em>), and the result report says so</td></tr>
+      <tr><td>"a guide follows the rule when its answer changes"</td><td>Needed so a failure can open a route that is already mounted closed. It keys a guide on its own open answer, which is not R11's platform switch: a switch that leaves the answer the same leaves the guide as the user left it. R10 and R11 stay with W5 and the owner's ruling</td></tr>
+      <tr><td>"Set up this Mac" failing on a fresh machine (the osascript trust prompt)</td><td>Not in scope. It is the possible R23 the owner has not yet placed</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <ol data-c="commits">
+      <li>this plan</li>
+      <li>the design run re-opened and amended, round 7 (draft), for the owner to read</li>
+      <li>the review row with the owner's calls, and the run archived</li>
+      <li>the verdicts: the remedy, the success line's device and the reversal's line, with their unit tests</li>
+      <li>the screen: layout per reading, the reversal in its task, failure opens the route, with the Onboarding tests</li>
+      <li>the state-matrix test</li>
+      <li>the result report, after the walkthrough re-run</li>
+    </ol>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
