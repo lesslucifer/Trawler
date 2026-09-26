@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-ONBREV.W2 — result: the launch gate</h1>
       <p>Setup now shows only once the app knows capture is unproven. Nothing paints while the launch read is in flight, a core that does not answer is said to be silent, and a row Trawler imported or sent proves nothing.</p>
-      <div class="meta">v2 · 2026-09-26 · review round 1's two importants fixed · Trawler · T3 WU result · <span class="badge id">E-ONBREV.W2</span> · branch <code>wu/onboard-review/launch-gate</code> · <a href="2026-09-26-onboard-review-w2-launch-gate-plan.html">WU plan</a> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R1–R3</a></div>
+      <div class="meta">v3 · 2026-09-26 · review rounds 1 and 2 fixed · Trawler · T3 WU result · <span class="badge id">E-ONBREV.W2</span> · branch <code>wu/onboard-review/launch-gate</code> · <a href="2026-09-26-onboard-review-w2-launch-gate-plan.html">WU plan</a> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R1–R3</a></div>
     </div>
   </header>
   <main>
@@ -33,6 +33,7 @@
       <tr><th>From the plan</th><th>What changed</th><th>Why</th></tr>
       <tr><td>the unanswered read is set by a failed read</td><td>it is also set by the stream dropping while the read is still in flight</td><td>a read that hangs on a dead core would otherwise leave a blank window with no statement. It is the same silence, and the same listing ends it</td></tr>
       <tr><td>the read runs again when a listing answers</td><td>the listing that answers decides, with no read of its own. <code>useFlows</code> counts the listings the core answered (<code>answered</code>), and the gate decides from the first one after the read went unanswered</td><td>review round 1 (correctness and efficiency, both important): the re-read was asked the moment the read failed, before anything had answered, and again for rows <code>flows</code> already held. An empty list is also what <code>useFlows</code> starts with, so a count is what tells an empty answer from no answer</td></tr>
+      <tr><td>—</td><td>the unanswered read keeps when it was sent and how many listings had answered by then. Any listing after the send decides it, and a recovered launch's session starts at the send</td><td>review round 2 (correctness): a read that took longer to fail than a later listing took to answer waited for yet another listing, so the app said the core was silent with its answer on hand (blocker). A recovered launch took its session's start from when the recovering listing was processed, so a request that started in between opened the list unannounced (important)</td></tr>
       <tr><td>—</td><td>the old App test "the onboarding phase renders no connection band" is replaced by its inverse</td><td>it pinned E-UI's rule that the band belongs to the flow shell only. W2's contract reverses that rule. It also passed only because it asserted before <code>useFlows</code>' 150 ms debounce failed</td></tr>
     </table>
 
@@ -44,9 +45,11 @@
       <tr><td><code>96e9089</code></td><td>the launch gate: <code>since</code>, the checking render, the unanswered read and its re-read, the setup band, the banner rule</td><td>unit: <code>onboardingMachine.test.ts</code> +1, three amended. integration: <code>App.test.tsx</code> +7, one replaced (P1 and P2 inverted). Every negative case red before the fix</td></tr>
       <tr><td><code>a16ea63</code></td><td>this result, v1</td><td>review round 1 at this tip: FAIL, two importants verified, the <code>cr/v5</code> note records it</td></tr>
       <tr><td><code>91b7551</code></td><td>the review's fix: <code>useFlows</code>' <code>answered</code>, and the gate deciding from it. <code>launchRead</code> is gone</td><td>unit: <code>useFlows.test.ts</code> +1. integration: <code>App.test.tsx</code> +2, the regression tests, written first and red before the fix (3 reads where 2 were owed, then 5 where 4 were)</td></tr>
-      <tr><td id="walkthrough-evidence">walkthrough</td><td colspan="2"><code>cargo xtask ui walkthrough</code> at <code>91b7551</code>, after the review's fix: green, 24 reels and 144 chapters filmed. The six launch-reel frames under <code>target/walkthrough/macos-this/</code> were read against their captions. Each shows what its caption says, where the <em>before</em> showed R1 and R2</td></tr>
+      <tr><td><code>c50674c</code></td><td>this result, v2</td><td>review round 2 at this tip: FAIL, one blocker and one important verified, the <code>cr/v5</code> note records it</td></tr>
+      <tr><td><code>9c89ce2</code></td><td>the review's second fix: <code>launchSent</code> holds the read's send time and the listings answered by then. <code>launchUnanswered</code> is a flag again</td><td>integration: <code>App.test.tsx</code> +2, the regression tests, written first and red before the fix: a read that fails after a listing answered is decided by that listing, and what started after a silent launch asked is announced</td></tr>
+      <tr><td id="walkthrough-evidence">walkthrough</td><td colspan="2"><code>cargo xtask ui walkthrough</code> at <code>9c89ce2</code>, after the review's fixes: green, 24 reels and 144 chapters filmed. The six launch-reel frames under <code>target/walkthrough/macos-this/</code> were read against their captions. Each shows what its caption says, where the <em>before</em> showed R1 and R2</td></tr>
     </table>
-    <p class="caption">Suite at <code>91b7551</code>: 59 files, 14235 tests green. eslint and tsc clean.</p>
+    <p class="caption">Suite at <code>9c89ce2</code>: 59 files, 14237 tests green. eslint and tsc clean.</p>
 
     <h2 id="distillation">Distillation</h2>
     <p data-item="distillation">Nothing to T2 in this WU. The epic plan gives UC-ONBOARD's proof, checking and not-answering rows to W6's distillation, beside the rest. The sentences W6 has to change: UC-ONBOARD's "only a decrypted flow reveals the list", which gains "captured", and the launch rows, which gain the checking and not-answering moments.</p>
