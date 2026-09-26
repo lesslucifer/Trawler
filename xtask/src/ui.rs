@@ -24,6 +24,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
             Ok((0, "ui bench complete".to_string()))
         }
         ["e2e"] => e2e(&dir),
+        ["walkthrough"] => super::walkthrough::run(&dir, repo),
         ["specimens"] => specimens(repo, "build-specimens.mjs"),
         ["specimens", "--check"] => specimens(repo, "check-render.mjs"),
         _ => Err(super::USAGE.to_string()),
@@ -193,12 +194,14 @@ mod tests {
 
     #[test]
     fn no_e2e_spec_selects_by_partial_text() {
-        let specs = crate::repo_root().expect("repo root").join("ui/e2e/specs");
-        for entry in std::fs::read_dir(&specs).expect("ui/e2e/specs") {
-            let path = entry.expect("spec entry").path();
-            let source = std::fs::read_to_string(&path).expect("spec source");
-            let lines = partial_text_selector_lines(&source);
-            assert!(lines.is_empty(), "{} uses *= on lines {lines:?}", path.display());
+        let e2e = crate::repo_root().expect("repo root").join("ui/e2e");
+        for dir in ["specs", "walkthrough"] {
+            for entry in std::fs::read_dir(e2e.join(dir)).expect("an e2e source dir") {
+                let path = entry.expect("spec entry").path();
+                let source = std::fs::read_to_string(&path).expect("spec source");
+                let lines = partial_text_selector_lines(&source);
+                assert!(lines.is_empty(), "{} uses *= on lines {lines:?}", path.display());
+            }
         }
     }
 
@@ -261,6 +264,13 @@ mod tests {
         let err = run(&["bench", "--forever"], Path::new(".")).unwrap_err();
         assert!(err.contains("usage:"));
         assert!(super::super::USAGE.contains("cargo xtask ui bench"));
+    }
+
+    #[test]
+    fn walkthrough_takes_no_arguments_and_is_documented() {
+        let err = run(&["walkthrough", "--only", "macos-this"], Path::new(".")).unwrap_err();
+        assert!(err.contains("usage:"));
+        assert!(super::super::USAGE.contains("cargo xtask ui walkthrough"));
     }
 
     #[test]

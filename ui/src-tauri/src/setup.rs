@@ -76,7 +76,7 @@ fn refused_prompt(stderr: &str) -> bool {
     text.contains("-128") || text.contains("-60007") || text.contains("cancel")
 }
 
-fn command_failed(stderr: &str, no_detail: &str) -> SetupError {
+pub(crate) fn command_failed(stderr: &str, no_detail: &str) -> SetupError {
     let detail = stderr.trim();
     SetupError {
         refused: refused_prompt(detail),
@@ -107,7 +107,8 @@ fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
     Ok(cert)
 }
 
-const NO_INSTALL_DETAIL: &str = "install failed — the OS reported no detail; use the steps below";
+pub(crate) const NO_INSTALL_DETAIL: &str =
+    "install failed — the OS reported no detail; use the steps below";
 
 // Trawler's CA is issued with this CN; the store dumps below are matched on it,
 // the same key W2's removal steps use.
@@ -141,14 +142,17 @@ fn ca_is_trusted(os: &str) -> Option<bool> {
 
 // "trusted" / "untrusted" ⇒ probed this machine and concluded; "unknown" ⇒ no
 // reliable probe on this OS, so the UI falls back to capture-will-confirm wording.
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn ca_trusted() -> String {
-    match ca_is_trusted(std::env::consts::OS) {
+    trust_word(ca_is_trusted(std::env::consts::OS)).into()
+}
+
+pub(crate) fn trust_word(reading: Option<bool>) -> &'static str {
+    match reading {
         Some(true) => "trusted",
         Some(false) => "untrusted",
         None => "unknown",
     }
-    .into()
 }
 
 // The kernel calls a device `en1`; its owner calls it Wi-Fi, in the same
@@ -156,7 +160,7 @@ pub fn ca_trusted() -> String {
 // and only the shell may ask it — the core is kept out of shelling to the OS
 // (DEC-13, and E-ONBOARD.W1's reading of it when it took if-addrs instead).
 // A host with no answer renames nothing, which leaves the device name standing.
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn interface_names() -> HashMap<String, String> {
     hardware_ports(std::env::consts::OS)
 }
@@ -335,23 +339,27 @@ fn checked_address(host: &str, port: u16) -> Result<(), SetupError> {
 }
 
 const NO_PROXY_AUTO: &str = "no automatic proxy setup on this system — follow the guided steps";
+pub(crate) const NO_SET_PROXY_DETAIL: &str =
+    "couldn't set the proxy — no detail; use the steps below";
+pub(crate) const NO_UNSET_PROXY_DETAIL: &str =
+    "couldn't turn the proxy off — no detail; use the steps below";
 
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn set_proxy(host: String, port: u16) -> Result<(), SetupError> {
     checked_address(&host, port)?;
     let os = std::env::consts::OS;
     let services = services_to_configure(os)?;
     let commands =
         set_proxy_commands(os, &services, &host, port).ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
-    run_all(commands, "couldn't set the proxy — no detail; use the steps below")
+    run_all(commands, NO_SET_PROXY_DETAIL)
 }
 
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn unset_proxy() -> Result<(), SetupError> {
     let os = std::env::consts::OS;
     let services = services_to_configure(os)?;
     let commands = unset_proxy_commands(os, &services).ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
-    run_all(commands, "couldn't turn the proxy off — no detail; use the steps below")
+    run_all(commands, NO_UNSET_PROXY_DETAIL)
 }
 
 // The one thing most users want, and the one prompt it is worth: on macOS the
@@ -383,7 +391,7 @@ fn set_up_commands(
     }
 }
 
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), SetupError> {
     checked_address(&host, port)?;
     let os = std::env::consts::OS;
@@ -501,12 +509,12 @@ pub struct ProxyReading {
     address: Option<String>,
 }
 
-fn read_proxy(active: Option<(String, u16)>, host: &str, port: u16) -> ProxyReading {
+pub(crate) fn read_proxy(active: Option<(String, u16)>, host: &str, port: u16) -> ProxyReading {
     let address = active.as_ref().map(|(h, p)| format!("{h}:{p}"));
     ProxyReading { status: classify(active, host, port).as_str(), address }
 }
 
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn proxy_status(host: String, port: u16) -> ProxyReading {
     read_proxy(active_system_proxy(std::env::consts::OS), &host, port)
 }
@@ -652,8 +660,8 @@ mod tests {
 
     #[test]
     fn setting_up_rejects_non_certificate_input() {
-        let err =
-            set_up_this_machine("BEGIN RSA PRIVATE KEY".into(), "127.0.0.1".into(), 7420).unwrap_err();
+        let err = set_up_this_machine("BEGIN RSA PRIVATE KEY".into(), "127.0.0.1".into(), 7420)
+            .unwrap_err();
         assert!(err.detail.contains("not a PEM certificate"));
         assert!(!err.refused);
     }

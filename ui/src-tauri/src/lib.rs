@@ -1,25 +1,33 @@
+#[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
+#[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 
 #[cfg(feature = "e2e")]
 mod e2e_core_address;
 
+#[cfg(feature = "scenario")]
+mod scenario;
+
 pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![
-            setup::ca_trusted,
-            setup::set_proxy,
-            setup::set_up_this_machine,
-            setup::unset_proxy,
-            setup::proxy_status,
-            setup::interface_names,
-            setup::notice_dismissed,
-            setup::dismiss_notice,
-            reach::confirm_reach,
-            reach::confirm_replace_proxy
-        ]);
+        .plugin(tauri_plugin_fs::init());
+    #[cfg(not(feature = "scenario"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        setup::ca_trusted,
+        setup::set_proxy,
+        setup::set_up_this_machine,
+        setup::unset_proxy,
+        setup::proxy_status,
+        setup::interface_names,
+        setup::notice_dismissed,
+        setup::dismiss_notice,
+        reach::confirm_reach,
+        reach::confirm_replace_proxy
+    ]);
+    #[cfg(feature = "scenario")]
+    let builder = scenario::install(builder);
     #[cfg(feature = "e2e")]
     let builder = builder
         .plugin(e2e_core_address::init())

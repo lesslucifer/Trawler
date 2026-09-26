@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab737739f34851f0dfad52c" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W1 result: the walkthrough recording</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W1 — result: the walkthrough recording</h1>
+      <p>One command films the setup screen on every host × platform and writes a captioned video per reel and an index to tick. The <em>before</em> is recorded.</p>
+      <div class="meta">v1 · 2026-09-26 · Trawler · T3 WU result · <span class="badge id">E-ONBREV.W1</span> · branch <code>wu/onboard-review/walkthrough</code> · <a href="2026-09-26-onboard-review-w1-walkthrough-plan.html">WU plan</a> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (WU plan)</th><th>Shipped</th></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code> exits 0 with 24 videos, 24 caption tracks and the index</td><td><strong>delivered</strong>: the second full run exits 0 with <code>walkthrough complete - 24 reels, 144 chapters filmed</code>. It wrote 24 <code>.mp4</code> (H.264 plus a timed-text caption track, 1440×1200) and 24 <code>.vtt</code></td></tr>
+      <tr><td>the index: a section per reel, a chapter per step with frame, expectation, finding chips and a tick-box</td><td><strong>delivered</strong>: 144 chapters with one tick-box each, remembered per viewer. A skipped chapter keeps its tick-box and says why it was skipped</td></tr>
+      <tr><td>the <em>before</em> frames show R1–R22 at the chapters that name them</td><td><strong>delivered</strong>, read frame by frame for R1, R2, R4, R5, R8, R12, R16, R17, R18, R19, R20 and R22. The rest are the owner's tick</td></tr>
+      <tr><td>an anchor that never paints turns the command red, naming the reel and chapter, and no video claims the reel</td><td><strong>delivered and seen for real</strong>: the first full run went red with <code>linux-ios-sim/walk: stopped before chapter 3 (chosen), 2 of 6 filmed</code>. It wrote no <code>linux-ios-sim.mp4</code> and the index said why</td></tr>
+      <tr><td>a finding no chapter names turns the command red before any build</td><td><strong>delivered</strong>: <code>judge_plan</code> runs before the build (unit-tested)</td></tr>
+      <tr><td><code>cargo xtask ui e2e</code> unchanged</td><td><strong>delivered</strong>: the e2e builds without <code>scenario</code> into the default target dir, and the harness's <code>api</code> field still points at the core</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What shipped</th><th>Why</th></tr>
+      <tr><td>"captioned video"</td><td>captions are timed text: <code>mov_text</code> in the mp4, and WebVTT beside it for the index's player</td><td>this ffmpeg is built without <code>drawtext</code>, so burned-in captions would need a font toolchain. Timed text needs none and stays the same on every run</td></tr>
+      <tr><td>epic plan: "the three confirms"</td><td>two confirms are scripted (<code>confirm_reach</code>, <code>confirm_replace_proxy</code>); the save sheet is not driven</td><td>the shell has two confirm commands. The save sheet is a dialog-plugin call, not a shell command, and no finding is about it</td></tr>
+      <tr><td>—</td><td>the scenario also opens on a patch from <code>TRAWLER_SCENARIO_SCRIPT</code></td><td>the window reads the interface names and takes its first probes as it mounts, before a harness can reach it</td></tr>
+      <tr><td>—</td><td>under <code>scenario</code> the real commands lose their <code>#[tauri::command]</code> attribute</td><td>tauri exports each command's macros at the crate root, so two commands of one name cannot coexist in one crate</td></tr>
+      <tr><td>reel table: <code>&lt;host&gt;-ios-sim</code> films its proxy chapters on every host</td><td>off macOS the reel films first paint, the picker and the choice (R8). R15 and R16 are filmed on macOS</td><td>found by the first full run: on Linux the Simulator is offered but has no proxy button, so a proxy chapter there films a moment that should not exist</td></tr>
+      <tr><td>—</td><td>frames are 1440×1200, taller than the shipped 1440×800 window</td><td>at 800 px the success line under task 3 was cut at the frame's edge, and R17 is about that line</td></tr>
+      <tr><td>150 chapters</td><td>144</td><td>the Simulator change above</td></tr>
+      <tr><td>—</td><td>only the new <code>front.rs</code> is rustfmt-formatted in the harness</td><td><code>main.rs</code> was not rustfmt-clean before this WU, and reformatting it would bury the change</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>the shell's <code>scenario</code> feature</td><td><code>ui/src-tauri/src/scenario.rs</code>, 13 unit tests; the shell's suite is 36 without the feature and 52 with it · commit <code>c00959b</code> and the opening patch in <code>1c84269</code></td></tr>
+      <tr><td>the harness's API front and the untrusted hit</td><td><code>ui/e2e/harness/front.rs</code>, 6 unit tests, plus a manual smoke run: flows forward, down mode fails at the network layer, a scripted arm answers · <code>5ad0a46</code></td></tr>
+      <tr><td>the script, spec and wdio config</td><td><code>ui/e2e/walkthrough/</code> · <code>1c84269</code></td></tr>
+      <tr><td>the command</td><td><code>xtask/src/walkthrough.rs</code> (16 unit tests), <code>xtask/src/ui.rs</code> (usage guard, and the partial-text guard now covers the walkthrough), <code>xtask/tests/walkthrough.rs</code> (4 integration tests) · <code>92f361e</code></td></tr>
+      <tr><td>the <em>before</em> recording</td><td><code>target/walkthrough/</code> (git-ignored) · two full runs on this branch: the first, on <code>1c84269</code>'s script, red on the one chapter that script got wrong; the second, on <code>92f361e</code>, green with 144 frames, 24 videos and <code>index.html</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">Nothing citable. W1 changes no product behaviour and no contract. The walkthrough is test support, and the command is named in <code>cargo xtask</code>'s usage. UC-ONBOARD and the new DEC are W6's distillation, per the epic plan.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li><strong>W5</strong>: the scenario maps an unreadable proxy to today's absence (<code>read_proxy(None, …)</code>). When W5 gives the reader a "cannot read" answer, it changes that mapping in <code>scenario.rs</code> in the same commit, or the <em>after</em> recording shows R19 unfixed.</li>
+      <li><strong>W2–W5</strong>: each fix keeps the anchors painting. A chapter anchors on test ids and on button-text prefixes ("Allow devices on my", "Set up this", "stop routing through Trawler"). A fix that renames or removes one extends that chapter's anchor list rather than dropping the chapter.</li>
+      <li><strong>W6</strong>: re-run <code>cargo xtask ui walkthrough</code> for the <em>after</em>, and keep the <em>before</em> <code>target/walkthrough/</code> by copying it aside first, since the command starts from an empty directory.</li>
+      <li>The last frame of each reel lingers 5 s past its caption, a side effect of the concat demuxer needing the last frame listed twice.</li>
+      <li><code>tsc -p ui/e2e</code> does not resolve its type libraries. This predates the WU; tsx's runtime load is the check the walkthrough gets.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

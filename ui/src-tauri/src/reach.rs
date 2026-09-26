@@ -42,7 +42,7 @@ async fn ask(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub async fn confirm_reach(app: tauri::AppHandle, address: String) -> Result<bool, String> {
     ask(app, TITLE, confirm_message(&address), ALLOW).await
 }
@@ -62,7 +62,7 @@ fn replace_message(address: &str) -> String {
     )
 }
 
-#[tauri::command]
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub async fn confirm_replace_proxy(app: tauri::AppHandle, address: String) -> Result<bool, String> {
     ask(app, REPLACE_TITLE, replace_message(&address), REPLACE).await
 }
