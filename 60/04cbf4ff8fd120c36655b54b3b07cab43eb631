@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-ONBREV
+wu: E-ONBREV.W1
+branch: HEAD
+base: 10b57016f3be7523815f20e27b979f8b1954b3bc
+tip: 6004cbf4ff8fd120c36655b54b3b07cab43eb631
+diff_sha256: 057f616a3fe8b201315ab0ee8b0e5b198cf23a6c384e50ed4aab7d3101599a53
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-26
