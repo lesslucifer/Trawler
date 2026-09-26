@@ -31,6 +31,10 @@ export function useFlows(api: TrawlerApi) {
   // answered, and what it said was no.
   const [refused, setRefused] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // How many listings the core has answered with rows. An empty list is also
+  // what the hook starts with, so this is what tells "the core said nothing is
+  // captured" apart from "nothing has answered yet".
+  const [answered, setAnswered] = useState(0);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
   // tunnel but no flow). Onboarding reads it as "traffic has reached Trawler at
@@ -66,6 +70,7 @@ export function useFlows(api: TrawlerApi) {
       (list) => {
         if (mine !== latest.current) return;
         setFlows(list);
+        setAnswered((n) => n + 1);
         setHosts((known) => merge(known, list));
         setRefused(null);
         setSilent(false);
@@ -149,6 +154,7 @@ export function useFlows(api: TrawlerApi) {
     connections,
     lastConnectionAt,
     silent,
+    answered,
     refused,
     retrying,
     retry,

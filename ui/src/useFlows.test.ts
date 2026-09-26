@@ -178,6 +178,27 @@ test("a listing that arrives clears whichever failure preceded it", async () => 
   expect(result.current.flows).toHaveLength(1);
 });
 
+test("answered counts the listings that came back, so an empty answer is told from none yet", async () => {
+  let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
+  const api = feedApi(() => answer());
+  const { result } = renderHook(() => useFlows(api));
+  expect(result.current.answered).toBe(0);
+  await waitFor(() => expect(result.current.silent).toBe(true));
+  expect(result.current.answered).toBe(0);
+
+  answer = async () => [];
+  await act(async () => {
+    await result.current.retry();
+  });
+  expect(result.current.answered).toBe(1);
+  expect(result.current.flows).toEqual([]);
+
+  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
+  act(() => result.current.update("status", "4xz"));
+  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+  expect(result.current.answered).toBe(1);
+});
+
 test("a retry that fails again leaves the statement standing", async () => {
   const api = feedApi(() => Promise.reject(new TypeError("still dead")));
   const { result } = renderHook(() => useFlows(api));

@@ -1358,6 +1358,34 @@ test("a launch the core does not answer says so, and its retry reads again", asy
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
+// Review round 1 (correctness, efficiency): the launch read was asked again the
+// moment it failed, before anything had answered, and again after a listing
+// answered with the very rows it was asking for. Written before the fix.
+test("a launch read nobody answered is not asked again before anything answers", async () => {
+  const { api, listFlows } = shellApi(FAILED);
+  render(<App api={api} />);
+  await screen.findByText("trawler is not answering");
+  await act(() => new Promise((settle) => setTimeout(settle, 300)));
+
+  // The launch read, and useFlows' own listing: nothing else was asked.
+  expect(listFlows).toHaveBeenCalledTimes(2);
+});
+
+test("the listing that ends a silent launch decides it, with no read of its own", async () => {
+  let answer: () => Promise<FlowSummary[]> = FAILED;
+  const { api, listFlows } = shellApi(() => answer());
+  render(<App api={api} />);
+  await screen.findByText("trawler is not answering");
+  await act(() => new Promise((settle) => setTimeout(settle, 300)));
+  const asked = listFlows.mock.calls.length;
+
+  answer = async () => [HTTPS];
+  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+
+  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
+  expect(listFlows).toHaveBeenCalledTimes(asked + 1);
+});
+
 test("the stream coming back ends a silent launch, and an empty core then opens setup", async () => {
   let answer: () => Promise<FlowSummary[]> = FAILED;
   const { api, up } = streamApi(() => answer());

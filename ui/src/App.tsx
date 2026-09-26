@@ -53,7 +53,7 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, hosts, connections, lastConnectionAt, silent, refused, retrying, retry, update } =
+  const { filter, flows, hosts, connections, lastConnectionAt, silent, answered, refused, retrying, retry, update } =
     useFlows(client);
   // Which absence an empty list shows turns on WHY it is empty, and a clear is
   // the one reason no property of the list can carry. The flag disarms as soon
@@ -78,11 +78,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
   // list; otherwise show onboarding. Derived from capture, no persisted state.
-  // A read nobody answered decides nothing: the app stays checking, says the
-  // core is silent, and reads again once a listing answers — setup steps are no
-  // answer to a core that is not running (R2).
-  const [launchUnanswered, setLaunchUnanswered] = useState(false);
-  const [launchRead, setLaunchRead] = useState(0);
+  // A read nobody answered decides nothing: the app stays checking and says the
+  // core is silent, and the next listing the core answers is the launch's answer
+  // — setup steps are no answer to a core that is not running (R2). Held here is
+  // how many listings had answered when the read went unanswered, or null.
+  const [launchUnansweredAt, setLaunchUnansweredAt] = useState<number | null>(null);
+  const answeredRef = useRef(answered);
+  answeredRef.current = answered;
+  const markUnanswered = useCallback(() => setLaunchUnansweredAt((at) => at ?? answeredRef.current), []);
 
   useEffect(() => {
     if (state.phase !== "checking") return;
@@ -91,12 +94,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     client.listFlows({}).then(
       (flows) =>
         live && dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: asked }),
-      () => live && setLaunchUnanswered(true),
+      () => live && markUnanswered(),
     );
     return () => {
       live = false;
     };
-  }, [client, state.phase, launchRead]);
+  }, [client, state.phase, markUnanswered]);
 
   // Live check (W4): the first-ever decrypted HTTPS flow the stream brings in flips
   // Verify green and reveals the list. Gated on !everProven so a deliberate
@@ -388,12 +391,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // The stream dropping during the launch read is the same silence as the read
   // failing, and the same listing answering ends both.
   useEffect(() => {
-    if (state.phase === "checking" && silent) setLaunchUnanswered(true);
-  }, [state.phase, silent]);
+    if (state.phase === "checking" && silent) markUnanswered();
+  }, [state.phase, silent, markUnanswered]);
 
   useEffect(() => {
-    if (state.phase === "checking" && launchUnanswered && !silent) setLaunchRead((n) => n + 1);
-  }, [state.phase, launchUnanswered, silent, flows]);
+    if (state.phase !== "checking" || launchUnansweredAt === null || answered <= launchUnansweredAt) return;
+    dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: Date.now() });
+  }, [state.phase, launchUnansweredAt, answered, flows]);
 
   const setupHeader = (
     <>
@@ -409,7 +413,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
-        {launchUnanswered && (
+        {launchUnansweredAt !== null && (
           <div data-testid="empty" className="flex justify-center p-12">
             <NotAnswering retrying={retrying} onRetry={retryConnection} />
           </div>
