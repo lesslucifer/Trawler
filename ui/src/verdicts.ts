@@ -164,8 +164,22 @@ const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
   waiting: { glyph: "○", tone: "muted", short: "waiting for the first request" },
 };
 
-export function trafficStatus(seen: Traffic, now: number): StepStatusView {
-  return TRAFFIC_VERDICT[trafficReading(seen, now)];
+// Where the chosen platform's own certificate probe reads trusted, a tunnel
+// nothing decrypts cannot be that store's missing certificate, and the remedy
+// may not send the user back to a step the task above it reads as done.
+const trustedNotDecrypting = (device: string) =>
+  `something is connecting and none of it is decrypting — ${device} trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.`;
+
+export function trafficStatus(
+  seen: Traffic,
+  now: number,
+  trustedOn: string | null = null,
+): StepStatusView {
+  const reading = trafficReading(seen, now);
+  const verdict = TRAFFIC_VERDICT[reading];
+  return reading === "not-decrypting" && trustedOn !== null
+    ? { ...verdict, remedy: trustedNotDecrypting(trustedOn) }
+    : verdict;
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A
@@ -176,4 +190,20 @@ export function trafficStatus(seen: Traffic, now: number): StepStatusView {
 export function setUpOn(device: string | null): string {
   const here = device === null ? "" : ` from ${device}`;
   return `You're set up — Trawler is capturing traffic${here}`;
+}
+
+// The device a decrypted request may be credited to. This machine is named only
+// where both of its probes say the request could have come from it; anywhere
+// else the sentence proves capture and names no one.
+export function provenDevice(device: string, trust: TrustProbe, proxy: ProxyProbe): string | null {
+  return trust === "trusted" && proxy === "ours" ? device : null;
+}
+
+// The reversal turns the proxy off and nothing else, and says so. Where the
+// certificate reads trusted it also says that stays, and where to remove it;
+// anywhere else there is nothing installed to name.
+export function stopRoutingNote(certificateTrusted: boolean): string {
+  return certificateTrusted
+    ? "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it."
+    : "this turns the proxy off and nothing else.";
 }

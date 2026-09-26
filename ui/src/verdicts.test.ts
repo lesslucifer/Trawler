@@ -3,9 +3,11 @@ import {
   awaiting,
   foreignProxyNotice,
   NO_TRAFFIC,
+  provenDevice,
   proxyStatus,
   RECENT_MS,
   setUpOn,
+  stopRoutingNote,
   trafficStatus,
   trustStatus,
   TUNNEL_GRACE_MS,
@@ -106,6 +108,29 @@ test("the end of setup names this machine, and claims nothing where it cannot", 
   expect(setUpOn(null)).toBe("You're set up — Trawler is capturing traffic");
 });
 
+// R17: a decrypted request is credited to this machine only where the two
+// readings beside it say it could have come from here.
+test.each([
+  ["trusted", "ours", "this Mac"],
+  ["trusted", "none", null],
+  ["trusted", "foreign", null],
+  ["trusted", "unknown", null],
+  ["untrusted", "ours", null],
+  ["unknown", "ours", null],
+  ["untrusted", "none", null],
+] as const)("the end names this machine for trust %s and proxy %s: %s", (trust, proxy, named) => {
+  expect(provenDevice("this Mac", trust, proxy)).toBe(named);
+});
+
+// R14: the reversal names only what is installed.
+test("the reversal's line names the certificate only where it reads trusted", () => {
+  expect(stopRoutingNote(true)).toBe(
+    "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.",
+  );
+  expect(stopRoutingNote(false)).toBe("this turns the proxy off and nothing else.");
+  expect(stopRoutingNote(false)).not.toMatch(/certificate/);
+});
+
 // Task 3 is the traffic layer, judged against a clock. The complaint that
 // produced it: a flow captured earlier kept the screen green after the proxy
 // had been turned off, because "seen" had no time attached.
@@ -157,6 +182,21 @@ describe("trafficStatus reads recency, never history", () => {
     // own blocked-on row says so - and the screen's choice is the user's answer
     // to a different question.
     expect(v.remedy).not.toMatch(/platform/);
+  });
+
+  // R18: the remedy defers to a certificate probe that reads trusted.
+  it("a tunnel beside a trusted certificate sends no one back to the certificate step", () => {
+    const v = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS) }, NOW, "this Mac");
+    expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "arriving but not decrypting" });
+    expect(v.remedy).toBe(
+      "something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.",
+    );
+    expect(v.remedy).not.toMatch(/Finish the certificate step/);
+  });
+
+  it("a trusted certificate changes no other reading's words", () => {
+    const quiet = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: ago(1) }, NOW, "this Mac");
+    expect(quiet).toEqual(at({ lastPlainAt: ago(1) }));
   });
 
   it("a tunnel answered by a decrypted request is capturing", () => {
