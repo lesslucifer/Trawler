@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-ONBREV
+wu: E-ONBREV.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-25-onboard-review-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan v5: the W2 block records since on not-detected and re-invoke for the banner rule and links the WU plan; the W3 block reads the since W2 records"
+  - path: "docs/work/2026-09-26-onboard-review-w2-launch-gate-plan.html"
+    tier: T3
+    action: added
+    distills: "the W2 plan: requirement, the launch before and after, the changes per file, expected result, test plan and commits"
+  - path: "docs/work/2026-09-26-onboard-review-w2-launch-gate-result.html"
+    tier: T3
+    action: added
+    distills: "the W2 result: eight expected rows delivered, six deviations with why (review rounds 1 to 3 and the launch read's patience among them), the evidence per commit and the walkthrough, the distillation W6 owes"
+t2_waived: "The epic plan's distillation list gives UC-ONBOARD's proof, checking and not-answering rows to W6. The sentences W6 has to change are named in this WU's result under distillation."
