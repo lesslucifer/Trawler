@@ -191,10 +191,12 @@ function ActionNote({
 }
 
 // Fork D4: disabled in flight AND a progress line beside it — both halves or
-// neither, so a dead control is never the only signal.
+// neither, so a dead control is never the only signal. The caption says what
+// the button does, so it stays under the button and above what happened.
 function Action({
   testId,
   label,
+  caption,
   action,
   note,
   onClick,
@@ -203,6 +205,7 @@ function Action({
 }: {
   testId: string;
   label: string;
+  caption?: string;
   action: ActionHandle;
   note: ActionNotes;
   onClick: () => void;
@@ -219,6 +222,9 @@ function Action({
       >
         {label}
       </Button>
+      {caption !== undefined && (
+        <p className="pt-2 font-ui text-chrome text-ink-mute">{caption}</p>
+      )}
       <ActionNote testId={testId} action={action} note={note} />
     </div>
   );
@@ -803,19 +809,15 @@ export function Onboarding({
         !routeUnderButton;
 
   const trustAction = setUpHere && (
-    <>
-      <Action
-        testId="set-up"
-        label={`Set up ${here}`}
-        action={setUp}
-        note={SETUP_NOTE}
-        onClick={setUpHere}
-        disabled={probing}
-      />
-      <p className="pt-2 font-ui text-chrome text-ink-mute">
-        one password prompt — it installs the certificate and sets the proxy
-      </p>
-    </>
+    <Action
+      testId="set-up"
+      label={`Set up ${here}`}
+      caption="one password prompt — it installs the certificate and sets the proxy"
+      action={setUp}
+      note={SETUP_NOTE}
+      onClick={setUpHere}
+      disabled={probing}
+    />
   );
 
   // The action and its reversal are two controls, not two halves of one, and a
@@ -839,12 +841,12 @@ export function Onboarding({
           <Action
             testId="unset-proxy"
             label="stop routing through Trawler"
+            caption={stopRoutingNote(trustDone)}
             action={unsetProxyAction}
             note={UNSETPROXY_NOTE}
             onClick={unsetProxyAction.trigger}
             frame="bare"
           />
-          <p className="pt-2 font-ui text-chrome text-ink-mute">{stopRoutingNote(trustDone)}</p>
         </div>
       )}
     </>

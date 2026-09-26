@@ -540,6 +540,18 @@ describe("a failed action opens the route its note points at (R16)", () => {
     expect(open("Run — this sets the Wi-Fi service; change the name for Ethernet:")).toBe(false);
   });
 
+  it("the button's line stays under the button, above what happened", async () => {
+    draw({ onSetUpThisMachine: vi.fn(() => Promise.reject(failure)) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    const note = await screen.findByText("setting up failed — the steps below do it by hand.");
+    const line = screen.getByText(
+      "one password prompt — it installs the certificate and sets the proxy",
+    );
+    expect(line.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("a failed proxy action opens the proxy's steps", async () => {
     draw({ ...readings("trusted", "none"), onSetProxy: vi.fn(() => Promise.reject(failure)) });
 
