@@ -12,12 +12,23 @@ export function statusTone(status: number | null): StatusTone {
   return "muted";
 }
 
+// Only a row the proxy captured says anything about a device's setup: an
+// imported or sent row carries an https:// URI no device routed.
+export function isCaptured(flow: FlowSummary): boolean {
+  return flow.source === "captured";
+}
+
 // A decrypted HTTPS flow is the sole proof onboarding worked (E-UISETUP.W4): the
 // MITM rewrites a decrypted request to absolute form, so an https:// URI means
 // the exchange was intercepted and decrypted; a plain proxied request stays
-// http:// and does not count.
-export function isDecryptedHttps(flows: FlowSummary[]): boolean {
-  return flows.some((f) => f.uri.startsWith("https://"));
+// http:// and does not count. `since` is the earliest start that counts.
+export function isDecryptedHttps(flows: FlowSummary[], since?: number): boolean {
+  return flows.some(
+    (f) =>
+      isCaptured(f) &&
+      f.uri.startsWith("https://") &&
+      (since === undefined || Date.parse(f.started_at) >= since),
+  );
 }
 
 // When the newest flow of each kind started, as epoch ms. The setup screen reads
@@ -31,6 +42,7 @@ export interface FlowTimes {
 export function latestFlowTimes(flows: FlowSummary[]): FlowTimes {
   const times: FlowTimes = { lastDecryptedAt: null, lastPlainAt: null };
   for (const flow of flows) {
+    if (!isCaptured(flow)) continue;
     const at = Date.parse(flow.started_at);
     if (Number.isNaN(at)) continue;
     const key = flow.uri.startsWith("https://") ? "lastDecryptedAt" : "lastPlainAt";

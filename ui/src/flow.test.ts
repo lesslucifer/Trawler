@@ -47,6 +47,23 @@ test("isDecryptedHttps: only an https:// URI proves capture", () => {
   expect(isDecryptedHttps([flow, { ...flow, id: "f2", uri: "https://example.com/" }])).toBe(true);
 });
 
+test("isDecryptedHttps: an imported or sent https row proves nothing — no device routed it", () => {
+  const https = { ...flow, uri: "https://example.com/" };
+  expect(isDecryptedHttps([{ ...https, source: "imported" }])).toBe(false);
+  expect(isDecryptedHttps([{ ...https, source: "sent" }])).toBe(false);
+  expect(isDecryptedHttps([{ ...https, source: "sent" }, { ...https, id: "f2" }])).toBe(true);
+});
+
+test("isDecryptedHttps: since is the earliest start that counts, and without one any start does", () => {
+  const https = { ...flow, uri: "https://example.com/" };
+  const at = Date.parse(https.started_at);
+  expect(isDecryptedHttps([https], at + 1)).toBe(false);
+  expect(isDecryptedHttps([https], at)).toBe(true);
+  expect(isDecryptedHttps([https], at - 1)).toBe(true);
+  expect(isDecryptedHttps([{ ...https, started_at: "not a date" }])).toBe(true);
+  expect(isDecryptedHttps([{ ...https, started_at: "not a date" }], at)).toBe(false);
+});
+
 const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 
 function view(over: Partial<FlowView> = {}): FlowView {
@@ -116,6 +133,18 @@ test("latestFlowTimes takes the newest started_at per kind, decrypted apart from
     lastPlainAt: Date.parse("2026-07-12T10:00:05Z"),
   });
   expect(latestFlowTimes([])).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
+});
+
+test("latestFlowTimes reads captured rows only, of either scheme", () => {
+  const at = (source: FlowSummary["source"], uri: string): FlowSummary => ({ ...flow, source, uri });
+  expect(
+    latestFlowTimes([
+      at("imported", "https://a.test/"),
+      at("sent", "https://b.test/"),
+      at("imported", "http://c.test/"),
+      at("sent", "http://d.test/"),
+    ]),
+  ).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
 });
 
 // hostOf answers from a memo keyed on the URI's authority, so what matters is

@@ -4,7 +4,7 @@ import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachStat
 import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
 import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
-import { isDecryptedHttps, latestFlowTimes } from "./flow";
+import { isCaptured, isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
 import { useProxyCloseConfirm } from "./closeConfirm";
@@ -398,7 +398,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           traffic={{
             ...latestFlowTimes(flows),
             lastTunnelAt: lastConnectionAt,
-            ever: flows.length > 0 || connections > 0,
+            ever: flows.some(isCaptured) || connections > 0,
           }}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}

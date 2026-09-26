@@ -146,6 +146,33 @@ test("launch with only a plain-HTTP flow shows onboarding (http:// is not proof)
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
+// R3: E-EXPORT and E-REPLAY added rows no device routed, and the proof rule
+// predated them. Only a captured row says anything about a device's setup.
+test.each(["imported", "sent"] as const)(
+  "a launch whose only https row was %s shows setup, the try task still waiting",
+  async (source) => {
+    const { api } = mockApi(() => [flow({ uri: "https://example.com/", source, started_at: new Date().toISOString() })]);
+    render(<App api={api} />);
+    expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+    expect(screen.getByTestId("task-3")).toHaveTextContent("waiting for the first request");
+    expect(screen.queryByTestId("flow-row")).toBeNull();
+  },
+);
+
+test("a request Trawler sent, arriving on the setup screen, neither proves setup nor reads as capturing", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+
+  rows = [flow({ uri: "https://example.com/", source: "sent", started_at: new Date().toISOString() })];
+  fire();
+  await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(1));
+  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  expect(screen.getByTestId("task-3")).toHaveTextContent("waiting for the first request");
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
 test("a decrypted HTTPS flow arriving live flips Verify green and reveals the list", async () => {
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
