@@ -33,7 +33,8 @@ const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven
 const trafficOf = (reading: TrafficCase): Traffic => {
   const now = Date.now();
   if (reading === "capturing") return { ...NO_TRAFFIC, lastDecryptedAt: now - 1_000 };
-  if (reading === "not-decrypting") return { ...NO_TRAFFIC, lastTunnelAt: now - TUNNEL_GRACE_MS - 1_000 };
+  if (reading === "not-decrypting")
+    return { ...NO_TRAFFIC, lastTunnelAt: now - TUNNEL_GRACE_MS - 1_000 };
   return NO_TRAFFIC;
 };
 
@@ -71,7 +72,8 @@ function draw(s: State, handlers: Handlers = {}) {
     />,
   );
   if (s.platform !== "this") {
-    fireEvent.click(screen.getByRole("button", { name: "which device's traffic do you want to see" }));
+    const question = "which device's traffic do you want to see";
+    fireEvent.click(screen.getByRole("button", { name: question }));
     fireEvent.click(screen.getByRole("option", { name: platformLabel(s.platform, s.os) }));
   }
 }
@@ -247,7 +249,8 @@ const STATES: State[] = HOSTS.flatMap((os) =>
   ),
 );
 
-const name = (s: State) => `${s.os} · ${s.platform} · trust ${s.trust} · proxy ${s.proxy} · ${s.traffic}`;
+const name = (s: State) =>
+  `${s.os} · ${s.platform} · trust ${s.trust} · proxy ${s.proxy} · ${s.traffic}`;
 
 describe("every reading at rest", () => {
   test("the matrix is the sweep's whole host-platform axis", () => {
