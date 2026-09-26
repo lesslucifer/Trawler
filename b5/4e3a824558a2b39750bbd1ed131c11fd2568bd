@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU actions-follow-reading -> epic/onboard-review"
+epic: E-ONBREV
+wu: E-ONBREV.W4
+branch: wu/onboard-review/actions-follow-reading
+base: 760d7d95fd11fb77d7fb370f615c10e7acc03327
+head: b54e3a824558a2b39750bbd1ed131c11fd2568bd
+diff_sha256: aa4db612f45f33d4996b868aecf1c16107d8b95b3625d86e4601ecc7ce46094c
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 35
+    finders: 525
+    verifiers: 0
+    total: 530
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-09-26
