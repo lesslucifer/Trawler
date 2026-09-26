@@ -1,0 +1,29 @@
+schema: cr/v5
+scope: "WU actions-follow-reading -> epic/onboard-review"
+epic: E-ONBREV
+wu: E-ONBREV.W4
+branch: wu/onboard-review/actions-follow-reading
+base: 760d7d95fd11fb77d7fb370f615c10e7acc03327
+head: 3a12d314641d82db8ba88534cc8f7652e34d0c0b
+diff_sha256: b4faa8206accc4b12529a51a7ca0a6686006c60a4834a5155d2ba4629eb26426
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 88
+    finders: 467
+    total: 719
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-09-26
