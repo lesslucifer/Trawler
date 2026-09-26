@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab72fe49f34851f0dfad527" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W1 plan: the walkthrough recording</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W1 — the walkthrough recording</h1>
+      <p>One command walks the real window through every platform on every host, with the machine-touching answers scripted and the traffic real. It films each step and captions it with what the screen should show. This WU records the <em>before</em>.</p>
+      <div class="meta">v1 · 2026-09-26 · Trawler · T3 WU plan · <span class="badge id">E-ONBREV.W1</span> · branch <code>wu/onboard-review/walkthrough</code> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R1–R22</a> · depends on none</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong><code>cargo xtask ui walkthrough</code> builds the app with the shell's <code>scenario</code> feature, drives
+      the real window through a scripted run per host × platform, and writes <code>target/walkthrough/</code>: one captioned
+      video per host × platform and an <code>index.html</code> with a chapter per step and a tick-box per expectation. Every
+      finding R1–R22 is named by at least one chapter. The command is red when any chapter's anchor element is missing,
+      when a run finished fewer chapters than it scripted, or when a finding is named by no chapter.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-ONBREV</span> · the epic plan's W1 block: the owner's verification of the whole epic, every
+      UC-ONBOARD row, R1–R22 as captions · expected-result row "Run <code>cargo xtask ui walkthrough</code> at the epic
+      tip" · open questions Q9 (the real window, screenshots stitched per step) and Q10 (<code>target/walkthrough/</code>,
+      out of git) · the E2E test plan's walkthrough row, which W6 re-runs for the <em>after</em>.
+    </p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  X["cargo xtask ui walkthrough"] --> B["build: VITE_E2E dist + tauri build --features scenario (own target dir)"]
+  X --> P["plan.ts → runs: reel × launch"]
+  P --> R["per run: wdio walkthrough.conf.ts"]
+  R --> H["harness: core + TLS origin + API front"]
+  R --> W["scenario window: host OS, probes, confirms, elevated actions scripted"]
+  R --> F["frames + manifest.json per run"]
+  F --> S["ffmpeg per reel → &lt;host&gt;-&lt;platform&gt;.mp4 + .vtt"]
+  F --> I["index.html: chapters, captions, tick-boxes"]
+      </pre>
+      <div class="caption">One wdio run per launch. The app reads its host OS and core address before its first script, and a navigation aborts it, so every launch is a fresh process.</div>
+    </div>
+
+    <h3 id="seams">The mock seams</h3>
+    <table data-c="seams">
+      <tr><th>Machine-touching answer</th><th>Scripted by</th><th>Real path kept</th></tr>
+      <tr><td>host OS (<code>navigator.userAgent</code>)</td><td>shell init script from <code>TRAWLER_SCENARIO_HOST</code></td><td>the frontend's own <code>hostOs()</code></td></tr>
+      <tr><td><code>ca_trusted</code> · <code>proxy_status</code></td><td>the scenario's raw OS reading</td><td>the shell's own trust word and <code>read_proxy</code> classifier, so W5's "cannot read" fix shows in the <em>after</em></td></tr>
+      <tr><td><code>set_up_this_machine</code> · <code>set_proxy</code> · <code>unset_proxy</code></td><td>outcome: ok · refused · failed(detail); ok moves the readings</td><td>the <code>SetupError</code> wire shape</td></tr>
+      <tr><td><code>confirm_reach</code> · <code>confirm_replace_proxy</code></td><td>yes / no</td><td>—</td></tr>
+      <tr><td><code>interface_names</code></td><td>a scripted map</td><td>—</td></tr>
+      <tr><td><code>/reach</code> (reads the machine's interfaces, arming binds the LAN)</td><td>the harness's API front answers it</td><td>every other route forwards to the real core, SSE streamed</td></tr>
+      <tr><td>a slow or absent core at launch</td><td>the API front: up · slow · down (drops the socket)</td><td>—</td></tr>
+    </table>
+    <p class="caption">The <code>scenario</code> feature exists only in the walkthrough build. It is built into <code>ui/src-tauri/target/scenario</code>, so an e2e run never drives a scenario binary. The save sheet is a dialog-plugin call, not a shell command, so no chapter drives "save…".</p>
+
+    <h3 id="reels">Reels and chapters</h3>
+    <table data-c="reels">
+      <tr><th>Reel</th><th>Launches</th><th>Chapters (findings)</th></tr>
+      <tr><td><code>macos-this</code></td><td>slow-core · core-down · imported-only · sent-only · walk</td><td>flash while checking (R1) · list after the answer · down at launch (R2) · core back, old rows (R2) · imported only (R3) · sent only (R3) · first paint · picker · both undone · cert done (R12) · proxy done (R12, R14) · both done (R13) · prompt cancelled · set-up failed (R16) · foreign proxy declined · set-up ok · unset failed (R16) · not decrypting, cert green (R18) · first request → banner · another device (R4, R5, R6, R17) · filtered re-entry (R7)</td></tr>
+      <tr><td><code>windows-this</code></td><td>walk</td><td>the macOS walk's chapters from first paint on, on "this PC"; the picker chapter checks R8</td></tr>
+      <tr><td><code>linux-this</code></td><td>walk</td><td>first paint · picker (R8) · proxy after gsettings (R19) · probe row (R20) · first request → banner · another device (R4, R5, R6)</td></tr>
+      <tr><td><code>&lt;host&gt;-ios-sim</code></td><td>walk</td><td>offered? (R8 off macOS; the reel stops where it is not offered) · set-proxy offered · set-proxy failed (R16) · proxy ours (R15) · unset ok</td></tr>
+      <tr><td><code>&lt;host&gt;-android-sim</code></td><td>walk</td><td>chosen: first guide open (R10) · linux only: close it, switch to This machine (R11)</td></tr>
+      <tr><td><code>&lt;host&gt;-mac · windows · ubuntu · android</code></td><td>walk</td><td>chosen, one Ethernet address (R9, R21) · arm declined · armed, guides (R10)</td></tr>
+      <tr><td><code>&lt;host&gt;-ios</code></td><td>walk</td><td>the off-machine three · two addresses · no address (R22)</td></tr>
+    </table>
+    <p class="caption">24 reels, 28 launches. A chapter is <em>do</em> (scripted acts) → <em>anchor</em> (any-of selectors that prove the screen this chapter is about has painted) → frame → <em>expect</em> (what UC-ONBOARD says it should show, named by finding). An anchor is neutral between before and after, so both runs film the same moment. The expectation is the owner's tick. The spec does not assert it.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>A reader checks…</th><th>…and sees</th></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code> on this branch</td><td>exit 0; 24 <code>.mp4</code> + 24 <code>.vtt</code> and <code>index.html</code> under <code>target/walkthrough/</code></td></tr>
+      <tr><td>the index page</td><td>a section per reel with its video and captions, a chapter per step: frame, expectation, finding chips, tick-box</td></tr>
+      <tr><td>the <em>before</em> frames</td><td>each defect R1–R22 visible at the chapter that names it (setup during checking, the certificate steps under task 2, iOS Simulator offered on Windows, …)</td></tr>
+      <tr><td>an anchor that never paints</td><td>the run fails at that chapter, the command is red and names the reel and chapter, and no video claims the reel</td></tr>
+      <tr><td>a script that names no chapter for some R<i>n</i></td><td>the command is red before any build</td></tr>
+      <tr><td><code>cargo xtask ui e2e</code></td><td>unchanged: green, driving the plain e2e binary</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>File</th><th>Asserts</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/scenario.rs</code></td><td>a script parses with defaults; each OS reading classifies through the real classifier (unset → none, ours, foreign, unreadable → today's answer); each outcome returns the real error shape (refused, failed with detail); an ok set-up moves both readings and an ok unset clears the proxy; the host init script per OS and the refusal of an unknown one</td></tr>
+      <tr><td>unit</td><td><code>ui/e2e/harness/front.rs</code></td><td>the scripted reach answers in the core's shape, armed and unarmed; a down front drops the connection rather than answering</td></tr>
+      <tr><td>unit</td><td><code>xtask/src/walkthrough.rs</code></td><td>the plan judge (every R1–R22 named, unique chapter ids, every host × platform reel present); a run's verdict from its manifest (all scripted chapters framed, or red with the missing chapter); the ffconcat, SRT and WebVTT renderings; the ffmpeg argv; the index escapes captions and carries one tick-box per chapter</td></tr>
+      <tr><td>integration</td><td><code>xtask/tests/walkthrough.rs</code></td><td>the assembler over a fixture output tree of real PNG frames and manifests: one video and one caption track per reel and an index listing every chapter; a run with a missing anchor turns the whole assembly red, naming it. The stitch step is injected, so the test needs no ffmpeg</td></tr>
+      <tr><td>e2e</td><td>—</td><td><strong>waived</strong> at WU level: the walkthrough run is this WU's deliverable and is run as its evidence (the <em>before</em> recording). The epic's e2e is W6's</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <ol data-c="commits">
+      <li>the shell's <code>scenario</code> feature, with its unit tests</li>
+      <li>the harness's API front and the untrusted hit, with its unit tests</li>
+      <li>the walkthrough script, spec and wdio config</li>
+      <li><code>cargo xtask ui walkthrough</code>: plan judge, runs, stitching, index, with unit and integration tests</li>
+      <li>the result report after the <em>before</em> recording</li>
+    </ol>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
