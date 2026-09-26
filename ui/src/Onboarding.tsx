@@ -19,7 +19,7 @@ import {
 import {
   canAutoSetup,
   CA_FILENAME,
-  combine,
+  confirmHttpsOn,
   deviceName,
   isCommand,
   needsReach,
@@ -36,15 +36,20 @@ import {
   type Task,
 } from "./setup";
 import {
-  awaiting,
+  evidenceOf,
   foreignProxyNotice,
   NO_PROXY_READING,
   NO_TRAFFIC,
+  notDecryptingHere,
+  provenDevice,
   proxyStatus,
+  routeByTraffic,
   setUpOn,
+  stopRoutingNote,
   trafficReading,
   trafficStatus,
   trustStatus,
+  TUNNEL_GRACE_MS,
   type ProxyReading,
   type Running,
   type StepStatusView,
@@ -52,8 +57,8 @@ import {
   type TrustProbe,
 } from "./verdicts";
 
-// The setup surface, built from round 4 of the design run of 2026-09-17. It
-// leads with what this is, asks one question the user can answer, and answers
+// The setup surface, built from the design run of 2026-09-17 as round 7 left
+// it. It leads with what this is, asks one question the user can answer, and answers
 // it with numbered tasks: what to do, why, and the state something observed.
 //
 // A number is a reading aid; a state is a reading. No task reports itself done
@@ -160,6 +165,24 @@ function useNow(): number {
   return now;
 }
 
+// Evidence needs a clock only at one edge: a tunnel becomes a refusal when its
+// grace passes with nothing decrypted after it. So the screen re-reads once, at
+// that edge, rather than ticking every task the way the traffic line does.
+function useGraceEdge(tunnelAt: number | null): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (tunnelAt === null) return;
+    const left = tunnelAt + TUNNEL_GRACE_MS - Date.now();
+    if (left <= 0) {
+      setNow(Date.now());
+      return;
+    }
+    const id = setTimeout(() => setNow(Date.now()), left);
+    return () => clearTimeout(id);
+  }, [tunnelAt]);
+  return now;
+}
+
 function ActionNote({
   testId,
   action,
@@ -190,10 +213,12 @@ function ActionNote({
 }
 
 // Fork D4: disabled in flight AND a progress line beside it — both halves or
-// neither, so a dead control is never the only signal.
+// neither, so a dead control is never the only signal. The caption says what
+// the button does, so it stays under the button and above what happened.
 function Action({
   testId,
   label,
+  caption,
   action,
   note,
   onClick,
@@ -202,6 +227,7 @@ function Action({
 }: {
   testId: string;
   label: string;
+  caption?: string;
   action: ActionHandle;
   note: ActionNotes;
   onClick: () => void;
@@ -218,6 +244,9 @@ function Action({
       >
         {label}
       </Button>
+      {caption !== undefined && (
+        <p className="pt-2 font-ui text-chrome text-ink-mute">{caption}</p>
+      )}
       <ActionNote testId={testId} action={action} note={note} />
     </div>
   );
@@ -361,9 +390,15 @@ function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Tr
 // leaf a tick may re-render, rather than above the tasks that no clock can
 // change. StatusLine renders the verdict and refuses the instruction that goes
 // with it (its @avoid), so the remedy is the Notice beside it.
-function TrafficState({ traffic }: { traffic: Traffic }) {
+function TrafficState({
+  traffic,
+  certificate,
+}: {
+  traffic: Traffic;
+  certificate: { done: boolean; trustedOn: string | null };
+}) {
   const now = useNow();
-  const status = trafficStatus(traffic, now);
+  const status = trafficStatus(traffic, now, certificate);
   return (
     <>
       <StatusLine status={status} />
@@ -564,22 +599,32 @@ function ServerAndPort({ proxy }: { proxy: string }) {
   );
 }
 
-// What belongs to the tasks above it rather than to any one of them — the
-// action that does two of them at once, and the reversal that undoes them.
-// It takes the task body's own left edge and leaves the number column empty,
-// because a number here would read as a task nobody has to do.
-function TaskAside({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex gap-3 px-4 pt-3">
-      <span aria-hidden="true" className="w-step-marker shrink-0" />
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
+// A task's guide as its reading leaves it. A task read done keeps only its way
+// back; one not done keeps its route, and the route's summary says whether a
+// button above it already does the job (F10).
+interface TaskGuide {
+  guide: Guide;
+  summary: string;
+}
+
+function guideFor(
+  guide: Guide | undefined,
+  done: boolean,
+  underButton: boolean,
+): TaskGuide | undefined {
+  if (guide === undefined) return undefined;
+  if (!done) return { guide, summary: underButton ? MANUAL : stepCount(guide) };
+  return guide.undo?.length
+    ? { guide: { steps: guide.undo }, summary: guide.undoTitle ?? "to undo it later" }
+    : undefined;
 }
 
 // A task's instructions, and the state of the task they belong to. `dim` is the
 // one thing a task with no instructions needs: it keeps its number and says
 // which step comes first, rather than explaining what cannot happen yet (F9).
+// The guide is keyed on its summary and its open answer, so it follows the
+// rule again whenever the rule's answer changes — a failure that opens it, a
+// reading that folds it to its way back — and is the user's to toggle between.
 function GuidedTask({
   n,
   task,
@@ -595,7 +640,7 @@ function GuidedTask({
   task: Task;
   status?: StepStatusView;
   dim?: boolean;
-  guide?: Guide;
+  guide?: TaskGuide;
   guideOpen?: boolean;
   save?: ActionHandle;
   action?: ReactNode;
@@ -617,9 +662,10 @@ function GuidedTask({
           {guide && (
             <div className={action === undefined ? "" : "pt-3"}>
               <GuideView
-                guide={guide}
+                key={`${guide.summary}:${guideOpen}`}
+                guide={guide.guide}
                 save={save}
-                summary={action === undefined ? stepCount(guide) : MANUAL}
+                summary={guide.summary}
                 defaultOpen={guideOpen}
               />
             </div>
@@ -629,6 +675,12 @@ function GuidedTask({
     </TaskStep>
   );
 }
+
+// A failure the user did not choose, from an action the screen still offers.
+// A dismissed prompt is the user's own answer and the button can still do the
+// job, so it opens nothing (Q8).
+const failedHere = (action: ActionHandle, offered: boolean) =>
+  offered && action.state === "failed" && action.failure?.refused !== true;
 
 export function Onboarding({
   state,
@@ -670,10 +722,28 @@ export function Onboarding({
   const [platform, setPlatform] = useState<PlatformId>("this");
   const [listenOn, setListenOn] = useState<string | null>(null);
 
-  const setUp = useAction(onSetUpThisMachine);
+  // Which act last changed this machine's proxy, until a probe answers for it.
+  // DEC-13's inherited rule is that work which changed this host stays
+  // reversible from the moment it ran, so an act that set the proxy opens the
+  // way out before the re-read lands — and one that took it off closes it, since
+  // until the re-read lands the old reading still says ours. A conclusive
+  // reading replaces both; one that could not read replaces neither, because a
+  // probe that never answers may not strand a machine this app just changed.
+  const [lastRouteAct, setLastRouteAct] = useState<"set" | "unset" | null>(null);
+  useEffect(() => {
+    if (proxy.status !== "unknown") setLastRouteAct(null);
+  }, [proxy.status]);
+  const routing =
+    (act: "set" | "unset") =>
+    <T,>(outcome: T): T => {
+      if (outcome !== null) setLastRouteAct(act);
+      return outcome;
+    };
+
+  const setUp = useAction(onSetUpThisMachine && (() => onSetUpThisMachine().then(routing("set"))));
   const saveCa = useAction(onSaveCa);
-  const setProxyAction = useAction(onSetProxy);
-  const unsetProxyAction = useAction(onUnsetProxy);
+  const setProxyAction = useAction(onSetProxy && (() => onSetProxy().then(routing("set"))));
+  const unsetProxyAction = useAction(onUnsetProxy && (() => onUnsetProxy().then(routing("unset"))));
   const chosen =
     reach.interfaces.find((i) => i.address === listenOn)?.address ?? reach.interfaces[0]?.address;
   const arm = useAction(
@@ -687,10 +757,7 @@ export function Onboarding({
     proxyAddr,
     reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
   });
-  // Named only where this machine is the device: a decrypted request proves
-  // capture and never says which device made it, and the one platform where
-  // those are the same answer is the one the user is sitting at.
-  const provenOn = platform === "this" ? deviceName("this", os) : null;
+  const here = deviceName("this", os);
 
   const autoHost = canAutoSetup(os);
   // An action that changes this machine is offered for the store it changes,
@@ -698,13 +765,32 @@ export function Onboarding({
   // nothing for a Simulator with a keychain of its own, and setting this
   // machine's proxy is exactly what the Simulator routes through.
   const trustHere = probesTrust(platform) && autoHost;
-  const routeHere = probesRoute(platform) && autoHost ? setProxyAction.trigger : undefined;
-  // One prompt for the one thing most users want, and only where both halves of
-  // it are this machine's to change (F27). Where only one half is — the
-  // Simulator's proxy — that half stays the primary action on its own, and the
-  // certificate half of this machine's setup has no button of its own at all:
-  // what the one action replaced stays reachable in the manual route below it.
-  const setUpHere = trustHere && routeHere ? setUp.trigger : undefined;
+  const routeHere = probesRoute(platform) && autoHost;
+  // Each task has one reading. A probe that concludes is it (DEC-33); where no
+  // probe concludes, this setup's own traffic is, because that is what the task
+  // promised to be confirmed by. This machine's route is the exception: its
+  // try-it command names the proxy itself, so a request that reached Trawler
+  // says nothing about the system proxy, and only the probe may.
+  // Done is the reading, never what the state line says this second: a
+  // re-check in flight changes the line and may not change the layout.
+  const evidence = evidenceOf(traffic, useGraceEdge(traffic.lastTunnelAt));
+  const trustConcluded = probesTrust(platform) && trustProbe !== "unknown";
+  const trustDone = trustConcluded ? trustProbe === "trusted" : evidence.decrypted;
+  const routeDone = probesRoute(platform) ? proxy.status === "ours" : evidence.reached;
+  // One prompt for the one thing most users want, and only while both halves
+  // are this machine's to change and neither reads done (F27). Once either
+  // does, each task carries its own, and the certificate never gets an
+  // install-only button (UC-ONBOARD).
+  const setUpHere =
+    trustHere && routeHere && setProxyAction.trigger && !trustDone && !routeDone
+      ? setUp.trigger
+      : undefined;
+  const setProxyHere =
+    routeHere && setUpHere === undefined && !routeDone ? setProxyAction.trigger : undefined;
+  const reverseHere =
+    routeHere && unsetProxyAction.trigger && lastRouteAct !== "unset"
+      ? routeDone || lastRouteAct === "set"
+      : false;
 
   // The action the user just took outranks the re-read it triggers, and the one
   // combined action outranks both halves it is running.
@@ -712,60 +798,104 @@ export function Onboarding({
     setUp.state === "running" || own.state === "running" ? r : probing ? "checking" : null;
 
   const trustState = probesTrust(platform)
-    ? trustStatus(trustProbe, busy(setUp, "installing"), setup.confirmOn)
-    : awaiting(setup.confirmOn);
+    ? trustStatus(trustProbe, busy(setUp, "installing"), confirmHttpsOn(platform, os), evidence)
+    : trustStatus("unknown", null, confirmHttpsOn(platform, os), evidence);
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
-        device: deviceName("this", os),
+        device: here,
         confirmOn: setup.confirmOn,
       })
-    : awaiting(setup.confirmOn);
+    : routeByTraffic(evidence, setup.confirmOn);
+  // A tunnel nothing decrypted says the certificate is the step left, so the
+  // certificate task says it, once, while it is not done; once it is, the
+  // refusal is some other client's and the try task words it instead.
+  const refusedHere = !trustDone && evidence.unanswered;
 
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
   const blocked = needsReach(platform) && !armed;
   const first = needsReach(platform) ? 1 : 0;
 
-  // Each task's own guide survives only where no single action replaces both of
-  // them; where one does, the two are merged into its alternative below.
-  const trustGuide = setUpHere === undefined ? setup.trust.guide : undefined;
-  const routeGuide = setUpHere === undefined ? setup.route.guide : undefined;
-  const routeAction =
-    setUpHere === undefined && routeHere !== undefined ? (
-      <Action
-        testId="set-proxy"
-        label="Set the system proxy"
-        action={setProxyAction}
-        note={SETPROXY_NOTE}
-        onClick={routeHere}
-        disabled={probing}
-      />
-    ) : undefined;
+  const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
+  const routeUnderButton = setUpHere !== undefined || setProxyHere !== undefined;
+  const routeGuide = guideFor(setup.route.guide, routeDone, routeUnderButton);
 
-  // One guide is open, and it is the first whose task is not done: everything
-  // above it is finished and everything below it waits on this one. A guide
-  // under a button is never the open one — the button is the route, and the
-  // steps are what a reader asks for. Nothing observes a task on another
-  // device, so off-machine the first guided task stays open until a decrypted
-  // request says the whole job is over — the one reading that settles it for
-  // every platform at once.
-  //
-  // The second arm cannot fire today, and is kept because the rule is what is
-  // written here rather than what the current probes happen to allow: the two
-  // guides are always both present or both absent, so the route's turn needs a
-  // trust task that reads done while its own steps still render — and the only
-  // host that renders them is one with no one-click path, where the trust probe
-  // answers for no store at all. It goes live the day a probe does, which is an
-  // open row against the control API and not a change to this rule.
-  const everDecrypted = traffic.lastDecryptedAt !== null;
-  const guidesOpen = !blocked && !everDecrypted;
-  const trustGuideOpen = guidesOpen && trustGuide !== undefined && trustState.tone !== "ok";
+  // One guide is open. A failed action's route comes first, because its note
+  // says the steps below do it by hand. Otherwise it is the first whose task is
+  // not done: everything above it is finished and everything below it waits on
+  // this one. A guide under a button is shut while the button can still do the
+  // job — the button is the route, and the steps are what a reader asks for.
+  // Nothing observes a task on another device, so off-machine the first guided
+  // task stays open until a decrypted request says the whole job is over.
+  const failedRoute = failedHere(setUp, setUpHere !== undefined)
+    ? "trust"
+    : failedHere(setProxyAction, setProxyHere !== undefined) ||
+        failedHere(unsetProxyAction, reverseHere)
+      ? "route"
+      : null;
+  // Every sentence that says "the steps below" has them open — a failure's note
+  // and the certificate task's account of a refusal — each in its own task, so
+  // one never closes the steps another points at. Only where nothing points is
+  // the one open guide chosen by reading order.
+  const trustPointed = failedRoute === "trust" || refusedHere;
+  const routePointed = failedRoute === "route";
+  const byReading = !trustPointed && !routePointed;
+  const guidesOpen = !blocked && traffic.lastDecryptedAt === null;
+  const trustGuideOpen =
+    trustPointed ||
+    (byReading && guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined);
   const routeGuideOpen =
-    guidesOpen &&
-    !trustGuideOpen &&
-    routeGuide !== undefined &&
-    routeAction === undefined &&
-    routeState.tone !== "ok";
+    routePointed ||
+    (byReading &&
+      guidesOpen &&
+      !trustGuideOpen &&
+      routeGuide !== undefined &&
+      !routeDone &&
+      !routeUnderButton);
+
+  const trustAction = setUpHere && (
+    <Action
+      testId="set-up"
+      label={`Set up ${here}`}
+      caption="one password prompt — it installs the certificate and sets the proxy"
+      action={setUp}
+      note={SETUP_NOTE}
+      onClick={setUpHere}
+      disabled={probing}
+    />
+  );
+
+  // The action and its reversal are two controls, not two halves of one, and a
+  // reversal that failed leaves the way out open: the proxy it could not turn
+  // off is still set. It names the half it performs — only the proxy can be
+  // put back, and DEC-13 never offered to untrust a store.
+  const routeAction = (setProxyHere || reverseHere) && (
+    <>
+      {setProxyHere && (
+        <Action
+          testId="set-proxy"
+          label="Set the system proxy"
+          action={setProxyAction}
+          note={SETPROXY_NOTE}
+          onClick={setProxyHere}
+          disabled={probing}
+        />
+      )}
+      {reverseHere && unsetProxyAction.trigger && (
+        <div className={setProxyHere ? "pt-3" : ""}>
+          <Action
+            testId="unset-proxy"
+            label="stop routing through Trawler"
+            caption={stopRoutingNote(trustDone)}
+            action={unsetProxyAction}
+            note={UNSETPROXY_NOTE}
+            onClick={unsetProxyAction.trigger}
+            frame="bare"
+          />
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="flex h-full flex-col overflow-auto">
@@ -808,7 +938,14 @@ export function Onboarding({
             guide={trustGuide}
             guideOpen={trustGuideOpen}
             save={onSaveCa ? saveCa : undefined}
-          />
+            action={trustAction || undefined}
+          >
+            {refusedHere && (
+              <div data-testid="traffic-remedy" className="pb-2">
+                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os))}</Notice>
+              </div>
+            )}
+          </GuidedTask>
 
           <GuidedTask
             n={first + 2}
@@ -817,13 +954,11 @@ export function Onboarding({
             dim={blocked}
             guide={routeGuide}
             guideOpen={routeGuideOpen}
-            action={routeAction}
+            action={routeAction || undefined}
           >
             {proxy.status === "foreign" && probesRoute(platform) && (
               <div data-testid="foreign-proxy" className="pb-2">
-                <Notice tone="mute">
-                  {foreignProxyNotice(deviceName("this", os), proxy.address)}
-                </Notice>
+                <Notice tone="mute">{foreignProxyNotice(here, proxy.address)}</Notice>
               </div>
             )}
             {needsReach(platform) && armed && reach.proxy !== null && (
@@ -831,104 +966,14 @@ export function Onboarding({
             )}
           </GuidedTask>
 
-          {/* One primary action per screen, and the two single ones stay inside
-              the manual route it replaced. It sits under the tasks it covers
-              because it is both of them.
-
-              The action and its reversal are two controls, not two halves of
-              one: DEC-13's inherited rule is that work which changed this host
-              stays reversible from the moment it ran, so the way out appears
-              as soon as the action resolved and does not wait for the re-read
-              it triggered — a probe that has not answered, or never will, may
-              not strand a machine this app just changed. The action itself
-              stays until the probes say the work is done, because what is
-              done is still theirs to say and never the click's.
-
-              Whichever of the two opened the way out — the probe reading a
-              proxy that is ours, or the action having just resolved — a
-              reversal that SUCCEEDED closes it. That is proof the thing it
-              offered to undo is undone, and the only proof that does not wait
-              on a probe: the re-read the reversal triggers lands an IPC
-              round-trip later, and until it does the old reading still says
-              ours. A reversal that FAILED leaves the way out open, because
-              the proxy it could not turn off is still set.
-
-              The reversal names the half it performs. One action installs a
-              certificate and sets a proxy; only the proxy can be put back, and
-              DEC-13 never offered to untrust a store — so the control says
-              what it does, and the line beside it says where the steps for the
-              rest are. A button that claimed to undo the trust would be
-              answering, falsely, a question about what this machine trusts. */}
-          {setUpHere !== undefined && (
-            <TaskAside>
-              {!(proxy.status === "ours" && trustProbe === "trusted") && (
-                <>
-                  <Action
-                    testId="set-up"
-                    label={`Set up ${deviceName("this", os)}`}
-                    action={setUp}
-                    note={SETUP_NOTE}
-                    onClick={setUpHere}
-                    disabled={probing}
-                  />
-                  <p className="pt-2 font-ui text-chrome text-ink-mute">
-                    one password prompt — it installs the certificate and sets the proxy
-                  </p>
-                </>
-              )}
-              {(proxy.status === "ours" || setUp.state === "done") &&
-                unsetProxyAction.state !== "done" &&
-                unsetProxyAction.trigger && (
-                  <div className="pt-3">
-                    <Action
-                      testId="unset-proxy"
-                      label="stop routing through Trawler"
-                      action={unsetProxyAction}
-                      note={UNSETPROXY_NOTE}
-                      onClick={unsetProxyAction.trigger}
-                      frame="bare"
-                    />
-                    <p className="pt-2 font-ui text-chrome text-ink-mute">
-                      this turns the proxy off and nothing else — the steps below remove Trawler's
-                      certificate.
-                    </p>
-                  </div>
-                )}
-              {/* One action, one manual alternative: what the button does in
-                  one prompt, the steps do in two tasks' worth of commands. Two
-                  disclosures under two tasks with no button above either would
-                  promise an automatic route that is not there (F10). */}
-              <div className="pt-3">
-                <GuideView
-                  guide={combine(setup.trust.guide, setup.route.guide)}
-                  save={onSaveCa ? saveCa : undefined}
-                  summary={MANUAL}
-                />
-              </div>
-            </TaskAside>
-          )}
-
-          {/* The reversal for the Simulator, whose primary action is the proxy
-              alone: an action that changed this host may not become
-              irreversible because a probe stopped answering. */}
-          {setUpHere === undefined &&
-            routeHere !== undefined &&
-            unsetProxyAction.trigger &&
-            (proxy.status === "ours" || setProxyAction.state === "done") && (
-              <TaskAside>
-                <Action
-                  testId="unset-proxy"
-                  label="stop routing through Trawler"
-                  action={unsetProxyAction}
-                  note={UNSETPROXY_NOTE}
-                  onClick={unsetProxyAction.trigger}
-                  frame="bare"
-                />
-              </TaskAside>
-            )}
-
           <GuidedTask n={first + 3} task={setup.try} dim={blocked}>
-            <TrafficState traffic={traffic} />
+            <TrafficState
+              traffic={traffic}
+              certificate={{
+                done: trustDone,
+                trustedOn: platform === "this" && trustDone ? here : null,
+              }}
+            />
             {setup.tryCommand && (
               <>
                 <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
@@ -944,7 +989,10 @@ export function Onboarding({
           <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
         )}
 
-        <ProvenOutcome device={provenOn} traffic={traffic} />
+        <ProvenOutcome
+          device={platform === "this" ? provenDevice(here, trustProbe, proxy.status) : null}
+          traffic={traffic}
+        />
 
         {state.everProven && (
           <div data-testid="back" className="px-4">

@@ -1,7 +1,6 @@
 import { describe, expect, it, test } from "vitest";
 import {
   canAutoSetup,
-  combine,
   confirmOn,
   deviceName,
   hostOs,
@@ -381,37 +380,6 @@ describe("a guide's steps are the route, and everything else says what it is", (
     expect(setup("ios").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").route.guide?.steps).toHaveLength(2);
-  });
-});
-
-// One action covers two tasks, so one guide is its alternative — and the merge
-// may not turn a caveat into a step or a second route into the main one.
-describe("combine — two tasks' routes as one, each aside still its own kind", () => {
-  const merged = () => combine(setup("this").trust.guide, setup("this").route.guide);
-
-  it("takes both sequences, in the order the tasks are numbered", () => {
-    const one = merged();
-    expect(one.steps).toEqual([
-      ...(setup("this").trust.guide?.steps ?? []),
-      ...(setup("this").route.guide?.steps ?? []),
-    ]);
-  });
-
-  it("keeps notes as notes, alternatives as alternatives, and the way back as the way back", () => {
-    const one = merged();
-    expect(one.notes).toContain("Firefox keeps its own store — import it there too.");
-    expect(one.steps.flatMap((step) => step.filter((p) => typeof p === "string"))).not.toContain(
-      "Firefox keeps its own store — import it there too.",
-    );
-    expect(commands(one.alternatives ?? [])).toEqual([]);
-    expect(commands(one.undo ?? [])).toHaveLength(2);
-    expect(one.undoTitle).toBe("to undo it later");
-  });
-
-  it("a platform with no guides merges to an empty one rather than throwing", () => {
-    const empty = combine(undefined, undefined);
-    expect(empty.steps).toEqual([]);
-    expect(empty.undo).toEqual([]);
   });
 });
 

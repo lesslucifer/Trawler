@@ -235,7 +235,7 @@ test("Save writes the PEM under the filename the manual steps tell the user to r
     });
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByText("do it manually"));
+  fireEvent.click(within(await screen.findByTestId("task-1")).getByText("do it manually"));
   fireEvent.click(screen.getByRole("button", { name: "save…" }));
   await screen.findByText(new RegExp(`saved as ${CA_FILENAME}`));
 
@@ -290,8 +290,9 @@ test("a real failure keeps the OS's own words and leaves the manual route open",
   fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
   await screen.findByText(/setting up failed/);
 
-  fireEvent.click(screen.getByText("do it manually"));
-  expect(screen.getByTestId("steps")).toHaveTextContent(/security add-trusted-cert/);
+  const route = within(screen.getByTestId("task-1")).getByText("do it manually").closest("details")!;
+  expect(route).toHaveAttribute("open");
+  expect(route).toHaveTextContent(/security add-trusted-cert/);
   expect(screen.getByTestId("set-up-status")).toHaveTextContent("no network services to configure");
 });
 
@@ -364,8 +365,13 @@ test("a connection event settles the last task, and warns once no request answer
     () => expect(screen.getByTestId("task-3")).toHaveTextContent("arriving but not decrypting"),
     { timeout: 3_000 },
   );
-  expect(screen.getByTestId("traffic-remedy")).toHaveTextContent(
-    "does not trust Trawler's certificate yet",
+  // The refusal is the certificate task's to say, once its grace is spent.
+  await waitFor(
+    () =>
+      expect(within(screen.getByTestId("task-1")).getByTestId("traffic-remedy")).toHaveTextContent(
+        "does not trust Trawler's certificate yet",
+      ),
+    { timeout: TUNNEL_GRACE_MS + 2_000 },
   );
   // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();

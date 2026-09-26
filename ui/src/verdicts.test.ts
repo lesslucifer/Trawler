@@ -1,11 +1,16 @@
 import { describe, expect, test } from "vitest";
 import {
   awaiting,
+  evidenceOf,
   foreignProxyNotice,
+  notDecryptingHere,
+  routeByTraffic,
   NO_TRAFFIC,
+  provenDevice,
   proxyStatus,
   RECENT_MS,
   setUpOn,
+  stopRoutingNote,
   trafficStatus,
   trustStatus,
   TUNNEL_GRACE_MS,
@@ -106,6 +111,29 @@ test("the end of setup names this machine, and claims nothing where it cannot", 
   expect(setUpOn(null)).toBe("You're set up — Trawler is capturing traffic");
 });
 
+// R17: a decrypted request is credited to this machine only where the two
+// readings beside it say it could have come from here.
+test.each([
+  ["trusted", "ours", "this Mac"],
+  ["trusted", "none", null],
+  ["trusted", "foreign", null],
+  ["trusted", "unknown", null],
+  ["untrusted", "ours", null],
+  ["unknown", "ours", null],
+  ["untrusted", "none", null],
+] as const)("the end names this machine for trust %s and proxy %s: %s", (trust, proxy, named) => {
+  expect(provenDevice("this Mac", trust, proxy)).toBe(named);
+});
+
+// R14: the reversal names only what is installed.
+test("the reversal's line names the certificate only where it reads trusted", () => {
+  expect(stopRoutingNote(true)).toBe(
+    "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.",
+  );
+  expect(stopRoutingNote(false)).toBe("this turns the proxy off and nothing else.");
+  expect(stopRoutingNote(false)).not.toMatch(/certificate/);
+});
+
 // Task 3 is the traffic layer, judged against a clock. The complaint that
 // produced it: a flow captured earlier kept the screen green after the proxy
 // had been turned off, because "seen" had no time attached.
@@ -157,6 +185,27 @@ describe("trafficStatus reads recency, never history", () => {
     // own blocked-on row says so - and the screen's choice is the user's answer
     // to a different question.
     expect(v.remedy).not.toMatch(/platform/);
+  });
+
+  // R18: the remedy defers to a certificate probe that reads trusted.
+  it("a tunnel beside a trusted certificate sends no one back to the certificate step", () => {
+    const v = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS) }, NOW, {
+      done: true,
+      trustedOn: "this Mac",
+    });
+    expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "arriving but not decrypting" });
+    expect(v.remedy).toBe(
+      "something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.",
+    );
+    expect(v.remedy).not.toMatch(/Finish the certificate step/);
+  });
+
+  it("a trusted certificate changes no other reading's words", () => {
+    const quiet = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: ago(1) }, NOW, {
+      done: true,
+      trustedOn: "this Mac",
+    });
+    expect(quiet).toEqual(at({ lastPlainAt: ago(1) }));
   });
 
   it("a tunnel answered by a decrypted request is capturing", () => {
@@ -286,5 +335,99 @@ describe("the short form every state carries", () => {
   it("no state is a claim about a machine nothing read", () => {
     expect(awaiting(CONFIRM_ON)).toMatchObject({ glyph: "◐", tone: "muted", short: CONFIRM_ON });
     expect(awaiting(CONFIRM_ON).short).not.toMatch(/done/);
+  });
+});
+
+// ── Evidence: where no probe concludes, the traffic of this setup is the reading ──
+
+describe("evidence is what this setup's traffic has shown, not what it shows now", () => {
+  const NOW = 1_000_000;
+  const ago = (ms: number) => NOW - ms;
+  const of = (seen: Partial<Traffic>) => evidenceOf({ ...NO_TRAFFIC, ...seen }, NOW);
+
+  it("nothing yet is no evidence", () => {
+    expect(of({})).toEqual({ reached: false, decrypted: false, unanswered: false, refused: false });
+  });
+
+  it("any request that reached Trawler shows the route, however long ago", () => {
+    expect(of({ lastPlainAt: ago(RECENT_MS * 10) }).reached).toBe(true);
+    expect(of({ lastTunnelAt: ago(0) }).reached).toBe(true);
+    expect(of({ lastDecryptedAt: ago(RECENT_MS * 10) }).reached).toBe(true);
+  });
+
+  it("a tunnel inside its grace is not yet a refusal", () => {
+    expect(of({ lastTunnelAt: ago(TUNNEL_GRACE_MS - 1) })).toMatchObject({
+      unanswered: false,
+      refused: false,
+    });
+  });
+
+  it("a tunnel past its grace with nothing decrypted is a refusal, and stays one", () => {
+    expect(of({ lastTunnelAt: ago(TUNNEL_GRACE_MS) }).refused).toBe(true);
+    expect(of({ lastTunnelAt: ago(RECENT_MS * 10) }).refused).toBe(true);
+  });
+
+  it("one decrypted request outranks a later refusal - the certificate works somewhere", () => {
+    const mixed = of({ lastDecryptedAt: ago(RECENT_MS * 2), lastTunnelAt: ago(TUNNEL_GRACE_MS) });
+    expect(mixed).toMatchObject({ decrypted: true, unanswered: true, refused: false });
+  });
+
+  it("a tunnel answered by a later decrypted request is not left unanswered", () => {
+    expect(of({ lastTunnelAt: ago(10_000), lastDecryptedAt: ago(9_000) }).unanswered).toBe(false);
+  });
+});
+
+describe("a task no probe concludes reads its evidence", () => {
+  const CONFIRM_HTTPS = "we'll confirm this on your iPhone's first HTTPS request";
+  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({
+    reached: false,
+    decrypted: false,
+    unanswered: false,
+    refused: false,
+    ...e,
+  });
+
+  it("the certificate: decrypted is done, refused is not done, nothing is a promise", () => {
+    expect(trustStatus("unknown", null, CONFIRM_HTTPS, ev({ decrypted: true }))).toMatchObject({
+      glyph: "✓",
+      tone: "ok",
+      short: "done — a request decrypted",
+    });
+    expect(trustStatus("unknown", null, CONFIRM_HTTPS, ev({ refused: true }))).toMatchObject({
+      glyph: "⚠",
+      tone: "warn",
+      short: "not done — nothing decrypted",
+    });
+    expect(trustStatus("unknown", null, CONFIRM_HTTPS, ev({}))).toEqual(awaiting(CONFIRM_HTTPS));
+  });
+
+  it("a probe that concludes is never overruled by traffic (DEC-33)", () => {
+    expect(trustStatus("untrusted", null, CONFIRM_HTTPS, ev({ decrypted: true })).short).toBe(
+      "not done — the certificate isn't trusted",
+    );
+    expect(trustStatus("trusted", null, CONFIRM_HTTPS, ev({ refused: true })).short).toBe(
+      "done — installed and trusted",
+    );
+  });
+
+  it("the route: any request reaching Trawler is done, nothing yet is a promise", () => {
+    expect(routeByTraffic(ev({ reached: true }), CONFIRM_ON)).toMatchObject({
+      glyph: "✓",
+      short: "done — requests reached Trawler",
+    });
+    expect(routeByTraffic(ev({}), CONFIRM_ON)).toEqual(awaiting(CONFIRM_ON));
+  });
+
+  it("a refusal said in the certificate task names whose store and points at its steps", () => {
+    expect(notDecryptingHere("your iPhone")).toBe(
+      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.",
+    );
+  });
+
+  it("the try task leaves a refusal to a certificate task that is not done", () => {
+    const refused = { ...NO_TRAFFIC, lastTunnelAt: 1_000_000 - TUNNEL_GRACE_MS };
+    const v = trafficStatus(refused, 1_000_000, { done: false, trustedOn: null });
+    expect(v.short).toBe("arriving but not decrypting");
+    expect(v.remedy).toBeUndefined();
   });
 });

@@ -77,17 +77,74 @@ export const awaiting = (confirmOn: string): StepStatusView => ({
   short: confirmOn,
 });
 
+// What this setup's own traffic says about the two tasks, for wherever no probe
+// concludes them. It is evidence gathered, not a reading of now: a request that
+// reached Trawler proved the route when it arrived, and does not stop having
+// proved it when the window of "now" closes. A tunnel is a refusal only once
+// its grace has passed with no decrypted request after it (`unanswered`), and
+// one decrypted request outranks any number of refusals - it is the
+// certificate working somewhere - so `refused` is a refusal with no decrypt at
+// all.
+export interface Evidence {
+  reached: boolean;
+  decrypted: boolean;
+  unanswered: boolean;
+  refused: boolean;
+}
+
+export const NO_EVIDENCE: Evidence = {
+  reached: false,
+  decrypted: false,
+  unanswered: false,
+  refused: false,
+};
+
+export function evidenceOf(seen: Traffic, now: number): Evidence {
+  const decrypted = seen.lastDecryptedAt;
+  const tunnel = seen.lastTunnelAt;
+  const unanswered =
+    tunnel !== null &&
+    (decrypted === null || decrypted < tunnel) &&
+    now - tunnel >= TUNNEL_GRACE_MS;
+  return {
+    reached: decrypted !== null || seen.lastPlainAt !== null || tunnel !== null,
+    decrypted: decrypted !== null,
+    unanswered,
+    refused: unanswered && decrypted === null,
+  };
+}
+
+// A probe that concludes is the whole state (DEC-33) - traffic, however much of
+// it, never turns it green. Where it cannot conclude, the task promised its
+// device's first HTTPS request as its reading, and the traffic is that reading.
 export function trustStatus(
   probe: TrustProbe,
   running: Running,
   confirmOn: string,
+  evidence: Evidence = NO_EVIDENCE,
 ): StepStatusView {
   if (running === "checking") return reading("reading the certificate store…");
   if (running) return SETTING_UP;
   if (probe === "trusted") return { glyph: "✓", tone: "ok", short: "done — installed and trusted" };
-  if (probe === "unknown") return awaiting(confirmOn);
-  return { glyph: "○", tone: "muted", short: "not done — the certificate isn't trusted" };
+  if (probe === "untrusted")
+    return { glyph: "○", tone: "muted", short: "not done — the certificate isn't trusted" };
+  if (evidence.decrypted) return { glyph: "✓", tone: "ok", short: "done — a request decrypted" };
+  if (evidence.refused) return { glyph: "⚠", tone: "warn", short: "not done — nothing decrypted" };
+  return awaiting(confirmOn);
 }
+
+// A device's route, where nothing on this machine reads it: the request it
+// sends is the only witness, and it promised to be.
+export function routeByTraffic(evidence: Evidence, confirmOn: string): StepStatusView {
+  return evidence.reached
+    ? { glyph: "✓", tone: "ok", short: "done — requests reached Trawler" }
+    : awaiting(confirmOn);
+}
+
+// The certificate task's own account of a refusal: the certificate is the step
+// left, so the sentence says whose store and points at the steps under it.
+export const notDecryptingHere = (device: string) =>
+  `something reached Trawler and did not decrypt — ${device} does not trust Trawler's certificate yet. The steps below install it.`;
 
 export function proxyStatus(
   probe: ProxyProbe,
@@ -164,8 +221,26 @@ const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
   waiting: { glyph: "○", tone: "muted", short: "waiting for the first request" },
 };
 
-export function trafficStatus(seen: Traffic, now: number): StepStatusView {
-  return TRAFFIC_VERDICT[trafficReading(seen, now)];
+// Where the chosen platform's own certificate probe reads trusted, a tunnel
+// nothing decrypts cannot be that store's missing certificate, and the remedy
+// may not send the user back to a step the task above it reads as done.
+const trustedNotDecrypting = (device: string) =>
+  `something is connecting and none of it is decrypting — ${device} trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.`;
+
+// The try task words a refusal only where the certificate task reads done and
+// so cannot own it; anywhere else the certificate task says it, once.
+export function trafficStatus(
+  seen: Traffic,
+  now: number,
+  certificate: { done: boolean; trustedOn: string | null } = { done: true, trustedOn: null },
+): StepStatusView {
+  const reading = trafficReading(seen, now);
+  const verdict = TRAFFIC_VERDICT[reading];
+  if (reading !== "not-decrypting") return verdict;
+  if (!certificate.done) return { glyph: verdict.glyph, tone: verdict.tone, short: verdict.short };
+  return certificate.trustedOn === null
+    ? verdict
+    : { ...verdict, remedy: trustedNotDecrypting(certificate.trustedOn) };
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A
@@ -176,4 +251,20 @@ export function trafficStatus(seen: Traffic, now: number): StepStatusView {
 export function setUpOn(device: string | null): string {
   const here = device === null ? "" : ` from ${device}`;
   return `You're set up — Trawler is capturing traffic${here}`;
+}
+
+// The device a decrypted request may be credited to. This machine is named only
+// where both of its probes say the request could have come from it; anywhere
+// else the sentence proves capture and names no one.
+export function provenDevice(device: string, trust: TrustProbe, proxy: ProxyProbe): string | null {
+  return trust === "trusted" && proxy === "ours" ? device : null;
+}
+
+// The reversal turns the proxy off and nothing else, and says so. Where the
+// certificate reads trusted it also says that stays, and where to remove it;
+// anywhere else there is nothing installed to name.
+export function stopRoutingNote(certificateTrusted: boolean): string {
+  return certificateTrusted
+    ? "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it."
+    : "this turns the proxy off and nothing else.";
 }

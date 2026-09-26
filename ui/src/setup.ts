@@ -86,23 +86,6 @@ export interface Guide {
   undo?: GuideStep[];
 }
 
-const parts = (guide: Guide | undefined, key: "steps" | "alternatives" | "undo"): GuideStep[] => [
-  ...(guide?.[key] ?? []),
-];
-
-// Where one action covers two tasks, one guide is the alternative to it: the
-// two tasks' routes in the order they are numbered, and each of their asides
-// kept as the kind of aside it was.
-export function combine(first: Guide | undefined, second: Guide | undefined): Guide {
-  return {
-    steps: [...parts(first, "steps"), ...parts(second, "steps")],
-    notes: [...(first?.notes ?? []), ...(second?.notes ?? [])],
-    alternatives: [...parts(first, "alternatives"), ...parts(second, "alternatives")],
-    undoTitle: "to undo it later",
-    undo: [...parts(first, "undo"), ...parts(second, "undo")],
-  };
-}
-
 // One numbered task of a platform's setup: what the user does, why it is worth
 // doing, anything true about this platform they need before doing it, and the
 // instructions. A task with no guide is one whose instructions do not exist yet
@@ -250,6 +233,12 @@ function openWhere(id: PlatformId, os: HostOs): string {
 // machine it did not read.
 export function confirmOn(id: PlatformId, os: HostOs): string {
   return `we'll confirm this on ${deviceName(id, os)}'s first request`;
+}
+
+// The certificate is settled by a request that could decrypt, and plain HTTP
+// never could, so its promise names the kind of request that will settle it.
+export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
+  return `we'll confirm this on ${deviceName(id, os)}'s first HTTPS request`;
 }
 
 // The network task's title, needed before any instruction exists: it is the
