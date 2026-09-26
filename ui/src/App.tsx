@@ -78,17 +78,25 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
   // list; otherwise show onboarding. Derived from capture, no persisted state.
+  // A read nobody answered decides nothing: the app stays checking, says the
+  // core is silent, and reads again once a listing answers — setup steps are no
+  // answer to a core that is not running (R2).
+  const [launchUnanswered, setLaunchUnanswered] = useState(false);
+  const [launchRead, setLaunchRead] = useState(0);
+
   useEffect(() => {
     if (state.phase !== "checking") return;
     let live = true;
-    client
-      .listFlows({})
-      .then((flows) => live && dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected" }))
-      .catch(() => live && dispatch({ t: "not-detected" }));
+    const asked = Date.now();
+    client.listFlows({}).then(
+      (flows) =>
+        live && dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: asked }),
+      () => live && setLaunchUnanswered(true),
+    );
     return () => {
       live = false;
     };
-  }, [client, state.phase]);
+  }, [client, state.phase, launchRead]);
 
   // Live check (W4): the first-ever decrypted HTTPS flow the stream brings in flips
   // Verify green and reveals the list. Gated on !everProven so a deliberate
@@ -102,12 +110,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // capture already working is not news.
   const [justSetUp, setJustSetUp] = useState(false);
 
+  // A captured row that started before this setup opened still proves capture,
+  // but it is a success from before the session, and so not news (R2).
   useEffect(() => {
     if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(flows)) {
-      setJustSetUp(true);
+      setJustSetUp(isDecryptedHttps(flows, state.since ?? undefined));
       dispatch({ t: "captured" });
     }
-  }, [state.phase, state.everProven, flows]);
+  }, [state.phase, state.everProven, state.since, flows]);
 
   // Entering setup retires the announcement, however the user got there. The
   // banner belongs to one transition, and coming back out of setup without
@@ -291,7 +301,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     />
   );
 
-  const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
+  const reInvoke = () => dispatch({ t: "re-invoke", at: Date.now() });
+  const dot = <StatusDot status={dotStatus(state)} onClick={reInvoke} />;
 
   const setUpBanner = justSetUp && (
     <div data-testid="set-up-banner">
@@ -299,7 +310,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         tone="ok"
         action={
           <>
-            <Button onClick={() => dispatch({ t: "re-invoke" })}>set up another device</Button>
+            <Button onClick={reInvoke}>set up another device</Button>
             <Button frame="bare" tone="mute" onClick={() => setJustSetUp(false)}>
               dismiss
             </Button>
@@ -374,16 +385,45 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     if (!notAnswering) mainRef.current?.focus();
   }, [notAnswering, retrying]);
 
-  if (state.phase !== "proven") {
+  // The stream dropping during the launch read is the same silence as the read
+  // failing, and the same listing answering ends both.
+  useEffect(() => {
+    if (state.phase === "checking" && silent) setLaunchUnanswered(true);
+  }, [state.phase, silent]);
+
+  useEffect(() => {
+    if (state.phase === "checking" && launchUnanswered && !silent) setLaunchRead((n) => n + 1);
+  }, [state.phase, launchUnanswered, silent, flows]);
+
+  const setupHeader = (
+    <>
+      {dot}
+      <h1 className="font-serif text-title italic">Trawler</h1>
+      {reachChip}
+    </>
+  );
+
+  // Until the launch read answers, the app does not know whether setup is
+  // owed, so nothing it would instruct is drawn (R1).
+  if (state.phase === "checking") {
+    return (
+      <Layout mainRef={mainRef} header={setupHeader}>
+        {closeDialog}
+        {launchUnanswered && (
+          <div data-testid="empty" className="flex justify-center p-12">
+            <NotAnswering retrying={retrying} onRetry={retryConnection} />
+          </div>
+        )}
+      </Layout>
+    );
+  }
+
+  if (state.phase === "onboarding") {
     return (
       <Layout
-        header={
-          <>
-            {dot}
-            <h1 className="font-serif text-title italic">Trawler</h1>
-            {reachChip}
-          </>
-        }
+        mainRef={mainRef}
+        header={setupHeader}
+        band={notAnswering ? <NotAnswering retrying={retrying} onRetry={retryConnection} /> : undefined}
       >
         {closeDialog}
         <Onboarding

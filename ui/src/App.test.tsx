@@ -20,8 +20,8 @@ vi.mock("@tauri-apps/api/window", () => ({
 
 // Capture is proven only by a live decrypted flow (W4); until then App shows
 // onboarding. These list/filter tests force the proven phase to reach the list.
-const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true };
-const ONBOARDING: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true, since: null };
+const ONBOARDING: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false, since: null };
 
 const QUESTION = "which device's traffic do you want to see";
 
@@ -1306,13 +1306,117 @@ test("a retry that fails again keeps the band and re-enables the way out", async
   expect(document.activeElement).not.toBe(screen.getByRole("main"));
 });
 
-// The band belongs to the flow shell. Onboarding has its own account of what is
-// and is not working, and this epic does not open it.
-test("the onboarding phase renders no connection band", async () => {
-  const { api } = shellApi(() => Promise.reject(new TypeError("Failed to fetch")));
-  render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByText("which device's traffic do you want to see");
+// The launch gate (E-ONBREV.W2). The launch read decides whether setup is owed,
+// so until it answers nothing setup would say is drawn, and a read nobody
+// answered decides nothing. The stream's handlers are held so a test can drop
+// it and bring it back, the two things a core does between keystrokes.
+function streamApi(answer: () => Promise<FlowSummary[]>) {
+  const handlers: { current: StreamHandlers | null } = { current: null };
+  const api = apiStub({
+    listFlows: () => answer(),
+    stream: (h: StreamHandlers) => {
+      handlers.current = h;
+      return () => {};
+    },
+  });
+  return { api, down: () => act(() => handlers.current?.onDown?.()), up: () => act(() => handlers.current?.onUp?.()) };
+}
+
+const FAILED = () => Promise.reject(new TypeError("Failed to fetch"));
+const NEVER = () => new Promise<FlowSummary[]>(() => {});
+
+// R1: asserted on the synchronous render, the paint a findBy… query waits past.
+test("while the launch read is in flight only the shell and the checking dot paint", async () => {
+  const { api } = shellApi(NEVER);
+  render(<App api={api} />);
+  expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
+  expect(screen.queryByText(QUESTION)).toBeNull();
+  expect(screen.queryByTestId("task-1")).toBeNull();
+
+  await act(() => new Promise((settle) => setTimeout(settle, 200)));
+  expect(screen.queryByText(QUESTION)).toBeNull();
   expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
+// R2: a core that is not running is not answered with setup steps, and the
+// captured rows it holds when it comes back are a success from before.
+test("a launch the core does not answer says so, and its retry reads again", async () => {
+  let answer: () => Promise<FlowSummary[]> = FAILED;
+  const { api } = shellApi(() => answer());
+  render(<App api={api} />);
+
+  const region = await screen.findByTestId("empty");
+  expect(region).toHaveTextContent("trawler is not answering");
+  expect(region).toHaveTextContent(`no answer from ${apiAddr()}`);
+  expect(screen.queryByText(QUESTION)).toBeNull();
+  expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
+
+  answer = async () => [HTTPS];
+  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+
+  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
+  expect(screen.queryByTestId("set-up-banner")).toBeNull();
+});
+
+test("the stream coming back ends a silent launch, and an empty core then opens setup", async () => {
+  let answer: () => Promise<FlowSummary[]> = FAILED;
+  const { api, up } = streamApi(() => answer());
+  render(<App api={api} />);
+  await screen.findByText("trawler is not answering");
+
+  answer = async () => [];
+  up();
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
+test("a stream that drops while the launch read hangs is the same silence", async () => {
+  const { api, down } = streamApi(NEVER);
+  render(<App api={api} />);
+  down();
+
+  expect(await screen.findByText("trawler is not answering")).toBeInTheDocument();
+  expect(screen.queryByText(QUESTION)).toBeNull();
+});
+
+test("the setup screen states a core that stops answering above its steps", async () => {
+  const { api, down } = streamApi(async () => []);
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+  expect(screen.queryByTestId("band")).toBeNull();
+
+  down();
+
+  const band = await screen.findByTestId("band");
+  expect(band).toHaveTextContent("trawler is not answering");
+  expect(band).toHaveTextContent(`no answer from ${apiAddr()}`);
+  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+});
+
+test("a captured row that started before setup opened reveals the list, and announces nothing", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+
+  rows = [flow({ uri: "https://example.com/", started_at: new Date(Date.now() - 60_000).toISOString() })];
+  fire();
+
+  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
+  expect(screen.queryByTestId("set-up-banner")).toBeNull();
+});
+
+test("a captured row that started after setup opened is the success the banner announces", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+
+  rows = [flow({ uri: "https://example.com/", started_at: new Date().toISOString() })];
+  fire();
+
+  expect(await screen.findByTestId("set-up-banner")).toBeInTheDocument();
 });
 
 // Regression (review round 1, correctness + altitude): the pane's failure and the
