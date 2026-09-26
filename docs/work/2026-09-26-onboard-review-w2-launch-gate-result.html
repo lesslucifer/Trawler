@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab7e1139f34851f0dfad577" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W2 result: the launch gate</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W2 — result: the launch gate</h1>
+      <p>Setup now shows only once the app knows capture is unproven. Nothing paints while the launch read is in flight, a core that does not answer is said to be silent, and a row Trawler imported or sent proves nothing.</p>
+      <div class="meta">v1 · 2026-09-26 · Trawler · T3 WU result · <span class="badge id">E-ONBREV.W2</span> · branch <code>wu/onboard-review/launch-gate</code> · <a href="2026-09-26-onboard-review-w2-launch-gate-plan.html">WU plan</a> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R1–R3</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td><code>/flows</code> pending: the checking dot, no setup title, question or task</td><td>the <code>checking</code> branch renders the shell and the dot only, asserted on the synchronous render</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td><code>/flows</code> failing: "no answer from …", no setup steps</td><td>the statement in the main area, the dot still checking</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>then an old captured row: the list, no banner</td><td>the read runs again once a listing answers (the stream back, or retry). A captured row decides <code>proven</code> as at any launch</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>imported-only, sent-only launch: setup, the try task waiting</td><td>proof and the traffic reading read <code>source === "captured"</code>. <code>ever</code> counts captured rows only</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a sent row on the setup screen: setup stays, not capturing</td><td>as expected</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>the core stops on the setup screen: the statement above it</td><td>the band carries <code>NotAnswering</code> while <code>useFlows</code> reads silent</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a captured row from before setup opened: the list, no banner. A new one: the banner</td><td><code>since</code> is recorded by <code>not-detected</code> (the read's issue time) and <code>re-invoke</code>. The banner reads it</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>the walkthrough's four launch reels hold their captions</td><td id="walkthrough-outcome">every caption holds: <code>slow-core</code> shows the shell and the dot, then the list with no banner. <code>core-down</code> shows the statement with no steps, then the list with no banner once the core is back. <code>imported-only</code> and <code>sent-only</code> show setup with task 3 waiting</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What changed</th><th>Why</th></tr>
+      <tr><td>the unanswered read is set by a failed read</td><td>it is also set by the stream dropping while the read is still in flight</td><td>a read that hangs on a dead core would otherwise leave a blank window with no statement. It is the same silence, and the same listing ends it</td></tr>
+      <tr><td>—</td><td>the old App test "the onboarding phase renders no connection band" is replaced by its inverse</td><td>it pinned E-UI's rule that the band belongs to the flow shell only. W2's contract reverses that rule. It also passed only because it asserted before <code>useFlows</code>' 150 ms debounce failed</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Commit</th><th>What</th><th>Tests</th></tr>
+      <tr><td><code>8f9c178</code></td><td>the plan. The epic plan's W2 block records <code>since</code>, and its W3 block reads it</td><td>—</td></tr>
+      <tr><td><code>81f543a</code></td><td>captured-only proof: <code>isCaptured</code>, <code>isDecryptedHttps(flows, since?)</code>, <code>latestFlowTimes</code>, <code>ever</code></td><td>unit: <code>flow.test.ts</code> +3. integration: <code>App.test.tsx</code> +3 (P6 inverted). All six red before the fix</td></tr>
+      <tr><td><code>96e9089</code></td><td>the launch gate: <code>since</code>, the checking render, the unanswered read and its re-read, the setup band, the banner rule</td><td>unit: <code>onboardingMachine.test.ts</code> +1, three amended. integration: <code>App.test.tsx</code> +7, one replaced (P1 and P2 inverted). Every negative case red before the fix</td></tr>
+      <tr><td id="walkthrough-evidence">walkthrough</td><td colspan="2"><code>cargo xtask ui walkthrough</code> at <code>96e9089</code>: green, 24 reels and 144 chapters filmed. The six launch-reel frames under <code>target/walkthrough/macos-this/</code> were read against their captions. Each shows what its caption says, where the <em>before</em> showed R1 and R2</td></tr>
+    </table>
+    <p class="caption">Suite at <code>96e9089</code>: 59 files, 14232 tests green. eslint and tsc clean.</p>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">Nothing to T2 in this WU. The epic plan gives UC-ONBOARD's proof, checking and not-answering rows to W6's distillation, beside the rest. The sentences W6 has to change: UC-ONBOARD's "only a decrypted flow reveals the list", which gains "captured", and the launch rows, which gain the checking and not-answering moments.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">None new. W3 builds on the <code>since</code> recorded here and narrows the setup screen's traffic reading with it.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
