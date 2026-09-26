@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-ONBREV
+wu: E-ONBREV.W4
+branch: HEAD
+changes:
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the design of record, round 7: restored from its last blob, amended so every action follows its task's reading (four readings of this machine, a failed set-up, the Simulator's proxy done, the sentences per reading), moved on the owner's reading so each half's steps are in its own task, cut to what is read, and archived"
+  - path: "docs/work/2026-09-26-onboard-review-w4-actions-follow-reading-plan.html"
+    tier: T3
+    action: added
+    distills: "the W4 plan: requirement, the rule per reading and per outcome, the words, how it lands, expected result, test plan and commits"
+  - path: "docs/work/2026-09-26-onboard-review-w4-actions-follow-reading-result.html"
+    tier: T3
+    action: added
+    distills: "the W4 result: eight expected rows delivered, five deviations with why, the evidence per commit, the distillation W6 owes, and follow-ups"
+t2_waived: "The epic plan's distillation list gives UC-ONBOARD's one-act-only-while-both-halves-undone row to W6. The two UC-ONBOARD sentences this WU made stale are named in the result's follow-ups for W6, and the design of record already states the new truth."
