@@ -16,6 +16,7 @@ use crate::setup::{
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
+const SCRIPT_VAR: &str = "TRAWLER_SCENARIO_SCRIPT";
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -239,8 +240,22 @@ fn host_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     .build()
 }
 
+// The window reads the interface names and takes its first probes as it mounts,
+// before a harness can reach it, so a launch's opening readings travel in the
+// environment like its host does.
+fn opening(script: Option<&str>) -> Result<Scenario, String> {
+    let mut scenario = Scenario::default();
+    if let Some(script) = script.map(str::trim).filter(|s| !s.is_empty()) {
+        let patch = serde_json::from_str(script).map_err(|e| format!("{SCRIPT_VAR}: {e}"))?;
+        scenario.apply(patch);
+    }
+    Ok(scenario)
+}
+
 pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
-    builder.manage(Mutex::new(Scenario::default())).plugin(host_plugin()).invoke_handler(
+    let scenario =
+        opening(std::env::var(SCRIPT_VAR).ok().as_deref()).unwrap_or_else(|e| panic!("{e}"));
+    builder.manage(Mutex::new(scenario)).plugin(host_plugin()).invoke_handler(
         tauri::generate_handler![
             scenario_script,
             ca_trusted,
@@ -370,6 +385,16 @@ mod tests {
             assert!(script.starts_with("Object.defineProperty(navigator, \"userAgent\""));
         }
         assert!(!host_script(Some("linux")).unwrap().unwrap().contains("Windows"));
+    }
+
+    #[test]
+    fn a_launch_opens_on_the_readings_its_environment_names() {
+        let s =
+            opening(Some(r#"{"trust":"trusted","interface_names":{"en0":"Ethernet"}}"#)).unwrap();
+        assert_eq!(s.trust_reading(), "trusted");
+        assert_eq!(s.interface_names.get("en0").map(String::as_str), Some("Ethernet"));
+        assert_eq!(opening(None), Ok(Scenario::default()));
+        assert!(opening(Some("{\"trusted\":1}")).unwrap_err().starts_with(SCRIPT_VAR));
     }
 
     #[test]
