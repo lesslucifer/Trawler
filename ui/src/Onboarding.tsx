@@ -833,22 +833,25 @@ export function Onboarding({
         failedHere(unsetProxyAction, reverseHere)
       ? "route"
       : null;
-  // Every sentence that says "the steps below" has them open: a failure's note,
-  // and the certificate task's account of a refusal.
-  const pointedAt = failedRoute ?? (refusedHere ? "trust" : null);
+  // Every sentence that says "the steps below" has them open — a failure's note
+  // and the certificate task's account of a refusal — each in its own task, so
+  // one never closes the steps another points at. Only where nothing points is
+  // the one open guide chosen by reading order.
+  const trustPointed = failedRoute === "trust" || refusedHere;
+  const routePointed = failedRoute === "route";
+  const byReading = !trustPointed && !routePointed;
   const guidesOpen = !blocked && traffic.lastDecryptedAt === null;
   const trustGuideOpen =
-    pointedAt !== null
-      ? pointedAt === "trust"
-      : guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined;
+    trustPointed ||
+    (byReading && guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined);
   const routeGuideOpen =
-    pointedAt !== null
-      ? pointedAt === "route"
-      : guidesOpen &&
-        !trustGuideOpen &&
-        routeGuide !== undefined &&
-        !routeDone &&
-        !routeUnderButton;
+    routePointed ||
+    (byReading &&
+      guidesOpen &&
+      !trustGuideOpen &&
+      routeGuide !== undefined &&
+      !routeDone &&
+      !routeUnderButton);
 
   const trustAction = setUpHere && (
     <Action

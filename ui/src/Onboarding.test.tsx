@@ -575,6 +575,25 @@ describe("a failed action opens the route its note points at (R16)", () => {
     expect(open("to remove it later")).toBe(false);
   });
 
+  // Review round 2, blocker: a failed reversal took the one open guide away from
+  // the certificate task while its refusal still said "the steps below".
+  it("a failure elsewhere leaves open the steps a refusal points at", async () => {
+    draw({
+      ...readings("untrusted", "ours"),
+      traffic: arriving,
+      onUnsetProxy: vi.fn(() => Promise.reject(failure)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("couldn't turn the proxy off — the steps below do it by hand.")).toBeInTheDocument(),
+    );
+    expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent("The steps below install it.");
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(open("to turn it off later")).toBe(true);
+  });
+
   it("a dismissed prompt opens nothing — the button can still do the job", async () => {
     draw({ onSetUpThisMachine: vi.fn(() => Promise.reject({ refused: true, detail: "(-128)" })) });
 

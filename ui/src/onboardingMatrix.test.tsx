@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Onboarding } from "./Onboarding";
 import type { OnbState } from "./onboardingMachine";
 import type { ReachState } from "./api";
@@ -295,7 +295,7 @@ const RULES: Record<string, Rule> = {
     },
 
   "truth: every sentence that points at the steps below has them open": (o) => {
-    const pointing = o.tasks.filter((t) => /the steps below/.test(t.text));
+    const pointing = o.tasks.filter((t) => /the steps below/i.test(t.text));
     const shut = pointing.filter((t) => t.openGuides.length === 0).map((t) => t.n);
     return shut.length === 0 ? null : `tasks [${shut}] point at steps left shut`;
   },
@@ -324,7 +324,7 @@ const RULES: Record<string, Rule> = {
       (t) =>
         t.guides.some((g) => !WAY_BACK.has(g)) ||
         t.openGuides.some(
-          (g) => g !== "details" && !(WAY_BACK.has(g) && /the steps below/.test(t.text)),
+          (g) => g !== "details" && !(WAY_BACK.has(g) && /the steps below/i.test(t.text)),
         ) ||
         t.commands.includes(INSTALL_COMMAND.trust) ||
         t.commands.includes(INSTALL_COMMAND.route),
@@ -385,10 +385,10 @@ const RULES: Record<string, Rule> = {
       : null;
   },
 
-  "one guide open at most": (o) => {
-    const open = o.tasks.flatMap((t) =>
-      t.openGuides.filter((g) => g !== "details").map((g) => `${t.n}:${g}`),
-    );
+  "one guide open at most, beyond those a sentence points at": (o) => {
+    const open = o.tasks
+      .filter((t) => !/the steps below/i.test(t.text))
+      .flatMap((t) => t.openGuides.filter((g) => g !== "details").map((g) => `${t.n}:${g}`));
     return open.length <= 1 ? null : `open: ${open.join(", ")}`;
   },
 };
@@ -440,7 +440,20 @@ const ACTIONS = [
   { key: "unset", label: REVERSAL, status: "unset-proxy-status", sets: false },
 ] as const;
 
-const ACTED = STATES.filter((s) => s.history === "none" && !OFF_MACHINE.has(s.platform)).flatMap(
+// One history per class of evidence - nothing, reached only, refused, decrypted,
+// decrypted then refused - so every outcome meets every kind of evidence
+// beside it, and a failure's note is judged next to a refusal's.
+const EVIDENCE_CLASSES = new Set<History>([
+  "none",
+  "plain",
+  "refused",
+  "capturing",
+  "decrypted-then-refused",
+]);
+
+const ACTED = STATES.filter(
+  (s) => EVIDENCE_CLASSES.has(s.history) && !OFF_MACHINE.has(s.platform),
+).flatMap(
   (s) =>
     ACTIONS.flatMap((a) =>
       OUTCOMES.filter((outcome) => a.key !== "unset" || outcome !== "nothing").map(
@@ -460,6 +473,13 @@ describe("every offered action, in every outcome", () => {
     await act(async () => {
       fireEvent.click(button);
     });
+    // The status element exists while the action runs too; the outcome is only
+    // judged once it has settled, or the sweep judges the in-flight screen.
+    await waitFor(() =>
+      expect(screen.queryByTestId(a.status)?.getAttribute("data-state")).not.toBe("running"),
+    );
+    if (outcome !== "done" && outcome !== "nothing")
+      expect(screen.getByTestId(a.status)).toHaveAttribute("data-state", "failed");
 
     const m = model(s);
     const setIt = a.sets && outcome === "done";
