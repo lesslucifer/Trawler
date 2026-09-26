@@ -52,6 +52,14 @@
       <tr><td>one guide open</td><td>a failed action's route, or else the first task not read done. A guide follows the rule again when the rule's answer changes</td><td>R16</td></tr>
     </table>
 
+    <h3 id="readings">Round 8 — each task's reading, for every platform</h3>
+    <table data-c="reading-model">
+      <tr><th>Task</th><th>Where a probe concludes</th><th>Everywhere else — this setup's traffic</th></tr>
+      <tr><td>certificate</td><td>the probe (DEC-33)</td><td>a request decrypted → done · a tunnel past its grace with nothing decrypted → ⚠ not done, the refusal said here with the steps open · neither → a promise naming the first HTTPS request</td></tr>
+      <tr><td>proxy</td><td>the probe, wherever one exists (this machine, the Simulator)</td><td>any request reached Trawler → done · none → a promise naming the first request</td></tr>
+    </table>
+    <p class="caption">Added after the owner's iPhone report: requests arrived and could not decrypt, yet the proxy step still promised to be confirmed by the first request, and the refusal sat under the try step. The owner chose that the screen infers the device from the platform chosen, and asked for the change to be made systematically rather than case by case. The matrix is widened to every platform, reach, probe pair and traffic history, and judges each against this table.</p>
+
     <h3 id="words">The words that change</h3>
     <table data-c="words">
       <tr><th>Where</th><th>Today</th><th>Proposed (the owner rules in the design run's review)</th><th>Finding</th></tr>
@@ -93,7 +101,7 @@ flowchart LR
       <tr><th>Level</th><th>File</th><th>Asserts</th></tr>
       <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code></td><td>the not-decrypting remedy with and without a trust probe that reads done; the success line's device only when both probes read done; the reversal's line per trust reading</td></tr>
       <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>each row of the two rule tables above, at the rendered screen: the four readings on macOS and Windows; P8 inverted; each failure opens its route and a cancelled prompt does not; the reversal inside task 2 on This machine and on the Simulator; the reversal appears on resolve before the re-read</td></tr>
-      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code> (new, permanent)</td><td>host (4) × platform (This machine, iOS Simulator, Android emulator) × trust (3) × proxy (4) × traffic (waiting, capturing, not decrypting) × each offered action's outcome (done, nothing, failed, refused). It renders each state, flattens it to an outline (each task's state, buttons, guides open or closed with their commands, and every block between tasks), and asserts <strong>place</strong> (an install command or action sits in its own task and nothing renders between tasks; a reversal sits in task 2), <strong>time</strong> (a task read done offers no install action or step; "Set up this Mac" only while both read not done), and <strong>truth</strong> (the success line, the remedy and the reversal's line against the readings on the same screen; a failure's note names an open route; at most one guide open)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code> (new, permanent)</td><td>host (4) × all eight platforms × reach armed or not × trust (3) × proxy (4) × eight traffic histories, judged against the reading model above, and each offered action's outcome (done, nothing, failed, refused). It renders each state, flattens it to an outline (each task's state, buttons, guides open or closed with their commands, and every block between tasks), and asserts <strong>place</strong> (an install command or action sits in its own task and nothing renders between tasks; a reversal sits in task 2), <strong>time</strong> (a task read done offers no install action or step; "Set up this Mac" only while both read not done), and <strong>truth</strong> (the success line, the remedy and the reversal's line against the readings on the same screen; a failure's note names an open route; at most one guide open)</td></tr>
       <tr><td>e2e</td><td>—</td><td><strong>waived</strong> at WU level, as the epic plan rules for R12: the per-half layout turns on the real machine's trust store and proxy, which a hermetic run cannot set. The walkthrough re-run is the evidence, and the epic's e2e is W6's</td></tr>
     </table>
 
