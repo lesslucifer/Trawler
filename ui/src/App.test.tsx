@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import App from "./App";
+import App, { LAUNCH_PATIENCE_MS } from "./App";
 import { ApiError, apiAddr, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -1446,6 +1446,25 @@ test("a launch read that hangs is decided by a listing that answered after it wa
 
   expect(await screen.findByText(QUESTION)).toBeInTheDocument();
   expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
+// A core that takes connections and never answers them sends no failure and
+// drops no stream, so only the launch read's own patience can say it is silent.
+test("a launch read nothing answers within its patience is said to be silent, and decides nothing", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const { api } = shellApi(NEVER);
+    render(<App api={api} />);
+    await act(async () => vi.advanceTimersByTime(LAUNCH_PATIENCE_MS - 1));
+    expect(screen.queryByText("trawler is not answering")).toBeNull();
+
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(screen.getByText("trawler is not answering")).toBeInTheDocument();
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test("the stream coming back ends a silent launch, and an empty core then opens setup", async () => {

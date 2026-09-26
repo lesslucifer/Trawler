@@ -29,6 +29,11 @@ import {
 } from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
+// A core on this machine answers /flows in milliseconds. One that has not
+// answered the launch read in this long is silent, whether or not the read
+// ever settles.
+export const LAUNCH_PATIENCE_MS = 5_000;
+
 // Select holds at most one option and never returns to unselected, so "any" is a
 // real choice that happens to mean no filter — not a clear affordance the
 // component's contract rules out.
@@ -93,6 +98,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     let live = true;
     const asked = Date.now();
     launchSent.current = { at: asked, answered: answeredRef.current };
+    const patience = setTimeout(() => live && setLaunchUnanswered(true), LAUNCH_PATIENCE_MS);
     client.listFlows({}).then(
       (flows) =>
         live && dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: asked }),
@@ -100,6 +106,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     );
     return () => {
       live = false;
+      clearTimeout(patience);
     };
   }, [client, state.phase]);
 
