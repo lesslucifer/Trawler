@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-ONBREV
+wu: E-ONBREV.W6
+branch: HEAD
+changes:
+  - path: "docs/core-technical-design.html"
+    tier: T1
+    action: updated
+    distills: "the API table gains /ca.pem, /ca.cer and /ca.mobileconfig beside /ca.crt, and the iOS trust row downloads the profile from :7421/ca.mobileconfig"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: only a captured https row reveals the list, setup shows only while capture is unproven for the device being set up now, and every opening is a session (DEC-60)"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD at the epic's shipped truth: when setup shows (checking, not answering, not proven, the payoff, the dot and another device as sessions), the platforms each host offers and each platform's certificate file, the network task naming its address and interface with a no-address remedy, unknown for a probe that cannot read, one reading per task, the one act only while both halves are undone and the reversal inside its task, the pointed-steps, R10 and platform-switch guide rules, source captured as the proof, the three CA routes and /stats no longer feeding setup, and the e2e journeys and waivers that pin it"
+  - path: "docs/work/2026-09-25-onboard-review-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan v8: the W6 block links its WU plan"
+  - path: "docs/work/2026-09-27-onboard-review-w6-e2e-distill-plan.html"
+    tier: T3
+    action: added
+    distills: "the W6 plan: requirement, mapping, the journeys in one window, the changes, the UC-ONBOARD distillation table, expected result, test plan with the waivers, what was known before the build, commits"
+  - path: "docs/work/2026-09-27-onboard-review-w6-e2e-distill-result.html"
+    tier: T3
+    action: added
+    distills: "the W6 result: every expected row delivered, three deviations with why, evidence per commit and the after recording, the distillation, and the follow-ups for the epic sign-off"
