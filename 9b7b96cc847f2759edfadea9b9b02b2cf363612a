@@ -1,0 +1,13 @@
+schema: design/v1
+epic: E-ONBREV
+wu: E-ONBREV.W7
+base: 25da1b97e7ee7d6fa18031cb0b5179191869d703
+design_sha256: 30fcf5cfc8f82bcf8956ff2645b56fb8b6ccff6b27da5309974d4d26d773f83a
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "State only: the save handler takes the step's format and saves that format's bytes under its file name, where it saved the PEM for every platform. Nothing it renders changes."
+  - path: ui/src/Onboarding.tsx
+    why: "Copy and wiring inside the existing layout (epic plan non-goal exception for W7). The save control's existing note names the file its step saves instead of one fixed name, the reach addresses carry one URL per format, and the certificate task's existing refusal Notice appends the platform's not-decrypting sentence. No new component, token, zone or layout: the same Notice, ActionNote and step list render longer sentences."
+date: 2026-09-27
