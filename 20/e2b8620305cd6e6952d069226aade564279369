@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "Epic E-ONBREV -> main. The whole epic's code as one range: the launch gate, the setup session and the reading model in the app (ui/src/App.tsx, Onboarding.tsx, onboardingMachine.ts, useFlows.ts, flow.ts, setup.ts, verdicts.ts, api.ts, apiStub.ts), the shell's three-way proxy reading and its scenario feature (ui/src-tauri/src/), the three certificate routes and /reach's ca_urls in the core (src/ca.rs, src/api/, src/reach.rs, src/lib.rs), the e2e harness's API front and specs (ui/e2e/), and the walkthrough command (xtask/src/walkthrough.rs, xtask/src/ui.rs, xtask/tests/walkthrough.rs). ONE ROUND. Each code-bearing WU was reviewed on its own diff as it landed, all seven PASS, and this round re-judges the epic as a single range against main, the scope no WU review had: the seams between them. The two closing commits at the tip (268b36f, the roadmap row; 20e2b86, the work docs archived) change no code path."
+epic: E-ONBREV
+branch: epic/onboard-review
+base: 1ec6f0728591bf2d5db65e0423f0243e067565a3
+head: 20e2b8620305cd6e6952d069226aade564279369
+diff_sha256: be7b2385a78c273e05467cd129f4dbb673329f58b42f17925af27be15ed80063
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 1
+  stage_seconds:
+    finders: 737
+    verifiers: 285
+    total: 1060
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+nits:
+  - finding: "useFlows refresh()'s refused (400) branch clears the list's rows whatever the scope, where the success branch writes them only for the list scope or an unfiltered read, so a refused setup-scope read would wipe the list's cached rows"
+    waived: "Unreachable at this tip: the setup scope sends the empty query, and the core refuses only a malformed filter, so a 400 arrives only for the list's own filter, whose rows it is right to clear. The finder raised it as latent, for a future filter on the unfiltered read; that change would be the one to own it."
+refuted: "TWO CANDIDATES, BOTH REFUTED, one verifier each. (1) altitude proposed as important that the certificate file names are kept twice, in the core's Content-Disposition (src/api/routes.rs) and the app's CA_FILES (ui/src/setup.ts), with no cross-check. The verifier found the shape pre-existing and only widened: the base already held CA_FILENAME trawler-ca.pem in setup.ts beside the core's literal; the app's own save path discards the header (api.ts caFile reads bytes only) and names the file from CA_FILES, so a core rename cannot desync what the app saves or says; each side is pinned by its own test (tests/api.rs every_ca_download_suggests_the_file_its_url_names; setup.test.ts's sweep over every platform x host), and literal route names across the out-of-process API boundary are the codebase's norm. (2) altitude proposed as important that the eight platforms are retyped in ui/e2e/walkthrough/script.ts and xtask/src/walkthrough.rs apart from setup.ts's PLATFORM_IDS, so a stale set would be filmed silently. The verifier found the drift loud: the walkthrough picks each platform by the real picker's aria-label, so a removed or relabelled platform fails its anchor and turns the run red; an id-only rename changes nothing observable; an added platform is a coverage gap in a manual recording tool no gate runs, and judge_plan already cross-checks the two walkthrough lists against each other. Leads the finders ruled out: useFlows fans one listing per refresh to both scopes with one hook instance; the launch read and the answered counter guarded by the live ref and effect cleanup; sessionTraffic's per-render scan no costlier than the list it replaced; setupFor computed only for the chosen platform; the DER and profile derived per request on cold download routes; scenario.rs reusing setup.rs's classifiers rather than reimplementing them; front.rs reusing trawler::reach's Addresses and CaUrls."
+verdict: PASS
+date: 2026-09-27
