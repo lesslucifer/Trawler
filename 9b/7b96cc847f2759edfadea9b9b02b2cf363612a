@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 9b7b96cc847f2759edfadea9b9b02b2cf363612a
+base: 25da1b97e7ee7d6fa18031cb0b5179191869d703
+tier: key
+signer: vuluu
+report: docs/work/2026-09-27-onboard-review-w7-ca-files-result.html
+report_sha256: 516c2fce029496794d254fed143093df9c3ad669e2739350c42ccaa3492adb93
+date: 2026-09-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA9MHmqs4rhu0VplpedpfYc1hhu4IPsN8bcVTGJGgC/R/I5pyShFIJ/Lt
+  8O0dqevJWmo0FxW7kNyM5O1jblLYML
+  -----END SSH SIGNATURE-----
