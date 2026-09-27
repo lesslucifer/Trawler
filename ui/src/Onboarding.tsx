@@ -18,6 +18,7 @@ import {
 } from "./components/index";
 import {
   canAutoSetup,
+  canProbe,
   CA_FILES,
   caFormatFor,
   confirmHttpsOn,
@@ -135,6 +136,9 @@ const DISARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "stopping…" },
   failed: { tone: "warn", text: "couldn't stop listening." },
 };
+
+const noAddress = (device: string) =>
+  `this machine holds no network address a second device could reach it at. Join the network ${device} is on, then check again.`;
 
 // The save resolves a full path natively and a bare name in the browser; the
 // steps below name a file, so the note does too.
@@ -470,14 +474,14 @@ function AddressChoice({
   value: string;
   onChange: (address: string) => void;
 }) {
-  if (addresses.length < 2) return null;
   const chosen = addresses.find((address) => address.address === value);
+  if (chosen === undefined) return null;
   const others = addresses.filter((address) => address.address !== value);
   return (
     <>
       <p className={ZONE_LABEL}>address to use</p>
       <p data-testid="listen-on" className="pt-2 font-ui text-body text-ink-body">
-        {chosen && addressLabel(chosen)}
+        {addressLabel(chosen)}
       </p>
       {others.length > 0 && (
         <div className="pt-2">
@@ -508,17 +512,21 @@ function AddressChoice({
 function NetworkTask({
   n,
   title,
+  device,
   reach,
   chosen,
   onChoose,
+  onReread,
   arm,
   disarm,
 }: {
   n: number;
   title: string;
+  device: string;
   reach: ReachState;
   chosen: string | undefined;
   onChoose: (address: string) => void;
+  onReread?: () => void;
   arm: ActionHandle;
   disarm: ActionHandle;
 }) {
@@ -548,6 +556,7 @@ function NetworkTask({
     );
   }
 
+  const network = reach.interfaces.find((i) => i.address === chosen);
   return (
     <TaskStep
       n={n}
@@ -559,18 +568,25 @@ function NetworkTask({
         short: "not done — Trawler answers on this machine only",
       }}
     >
-      {chosen === undefined ? (
-        <Notice tone="mute">
-          this machine holds no network address a second device could reach it at
-        </Notice>
+      {network === undefined ? (
+        <>
+          <Notice tone="mute">{noAddress(device)}</Notice>
+          {onReread && (
+            <div data-testid="reread-reach" className="pt-2">
+              <Button onClick={onReread} frame="bare" tone="mute">
+                check again
+              </Button>
+            </div>
+          )}
+        </>
       ) : (
         <>
-          <AddressChoice addresses={reach.interfaces} value={chosen} onChange={onChoose} />
+          <AddressChoice addresses={reach.interfaces} value={network.address} onChange={onChoose} />
           {arm.trigger && (
             <div className="pt-3">
               <Action
                 testId="arm-reach"
-                label="Allow devices on my Wi-Fi to connect"
+                label={`Allow devices on ${network.name} to connect`}
                 action={arm}
                 note={ARM_NOTE}
                 onClick={arm.trigger}
@@ -578,7 +594,7 @@ function NetworkTask({
             </div>
           )}
           <p className="pt-2 font-ui text-chrome text-ink-mute">
-            other devices on your Wi-Fi will be able to use this proxy and see captured traffic
+            other devices on {network.name} will be able to use this proxy and see captured traffic
             until Trawler quits
           </p>
         </>
@@ -630,6 +646,7 @@ function guideFor(
 // A task's instructions, and the state of the task they belong to. `dim` is the
 // one thing a task with no instructions needs: it keeps its number and says
 // which step comes first, rather than explaining what cannot happen yet (F9).
+// Where the first step cannot be done either, it says nothing it waits on (R22).
 // The guide is keyed on its summary and its open answer, so it follows the
 // rule again whenever the rule's answer changes — a failure that opens it, a
 // reading that folds it to its way back — and is the user's to toggle between.
@@ -638,6 +655,7 @@ function GuidedTask({
   task,
   status,
   dim,
+  waitsOn,
   guide,
   guideOpen = false,
   save,
@@ -648,6 +666,7 @@ function GuidedTask({
   task: Task;
   status?: StepStatusView;
   dim?: boolean;
+  waitsOn?: string;
   guide?: TaskGuide;
   guideOpen?: boolean;
   save?: ActionHandle;
@@ -659,7 +678,7 @@ function GuidedTask({
     <TaskStep
       n={n}
       title={task.title}
-      why={dim ? "after step 1" : task.why}
+      why={dim ? waitsOn : task.why}
       status={dim ? undefined : status}
       dim={dim}
     >
@@ -706,6 +725,7 @@ interface SetupProps {
   onRecheck?: () => void;
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
+  onRereadReach?: () => void;
 }
 
 // The screen asks which device before it instructs one. Asked to set up another
@@ -780,6 +800,7 @@ function PlatformSetup({
   onRecheck,
   onArmReach,
   onDisarmReach,
+  onRereadReach,
 }: SetupProps & { platform: PlatformId }) {
   const [listenOn, setListenOn] = useState<string | null>(null);
 
@@ -875,6 +896,7 @@ function PlatformSetup({
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
   const blocked = needsReach(platform) && !armed;
+  const waitsOn = chosen === undefined ? undefined : "after step 1";
   const first = needsReach(platform) ? 1 : 0;
 
   const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
@@ -958,16 +980,20 @@ function PlatformSetup({
     </>
   );
 
+  // Keyed on the platform so a switch opens each guide as the new platform's
+  // rule says, not as the user left the one in the same place before it (R11).
   return (
     <>
-      <div data-testid="steps" className="flex flex-col gap-4">
+      <div key={platform} data-testid="steps" className="flex flex-col gap-4">
         {needsReach(platform) && (
           <NetworkTask
             n={1}
             title={reachTaskTitle(platform, os)}
+            device={deviceName(platform, os)}
             reach={reach}
             chosen={chosen}
             onChoose={setListenOn}
+            onReread={onRereadReach}
             arm={arm}
             disarm={disarm}
           />
@@ -978,6 +1004,7 @@ function PlatformSetup({
           task={setup.trust}
           status={trustState}
           dim={blocked}
+          waitsOn={waitsOn}
           guide={trustGuide}
           guideOpen={trustGuideOpen}
           save={onSaveCa ? saveCa : undefined}
@@ -995,6 +1022,7 @@ function PlatformSetup({
           task={setup.route}
           status={routeState}
           dim={blocked}
+          waitsOn={waitsOn}
           guide={routeGuide}
           guideOpen={routeGuideOpen}
           action={routeAction || undefined}
@@ -1009,7 +1037,7 @@ function PlatformSetup({
           )}
         </GuidedTask>
 
-        <GuidedTask n={first + 3} task={setup.try} dim={blocked}>
+        <GuidedTask n={first + 3} task={setup.try} dim={blocked} waitsOn={waitsOn}>
           <TrafficState
             traffic={traffic}
             certificate={{
@@ -1028,7 +1056,7 @@ function PlatformSetup({
         </GuidedTask>
       </div>
 
-      {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
+      {(probesTrust(platform) || probesRoute(platform)) && canProbe(os) && onRecheck && (
         <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
       )}
 

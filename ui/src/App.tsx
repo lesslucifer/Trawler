@@ -219,6 +219,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // not say. It is read in every phase because an exposure this machine is
   // under is not a fact about the setup screen.
   const [reach, setReach] = useState<ReachState>(UNREACHABLE);
+  const [reachNonce, setReachNonce] = useState(0);
+  const rereadReach = useCallback(() => setReachNonce((n) => n + 1), []);
 
   useEffect(() => {
     let live = true;
@@ -229,7 +231,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return () => {
       live = false;
     };
-  }, [client]);
+  }, [client, reachNonce]);
 
   // The core answers with the kernel's device names, because asking the host
   // what its owner calls `en1` means running one of the host's own tools and
@@ -466,6 +468,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           reach={named}
           onArmReach={armReach}
           onDisarmReach={disarmReach}
+          onRereadReach={rereadReach}
         />
       </Layout>
     );

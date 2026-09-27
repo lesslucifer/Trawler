@@ -11,7 +11,7 @@
       <h1>E-ONBREV — epic plan</h1>
       <p>Make the setup screen appear, open its instructions, and claim success only at the moments
         UC-ONBOARD says it does. That covers every way into the screen, not only the first run.</p>
-      <div class="meta">v6 · 2026-09-27 · W7 gives each platform the certificate file its installer opens · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
+      <div class="meta">v7 · 2026-09-27 · the owner rules Q3, Q4, Q5 and Q7, and W5 is planned · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
         built from <a href="2026-09-25-onboard-review-findings.html">the timing review</a> (R1–R22) and
         <a href="2026-09-27-onboard-review-w7-ca-files-plan.html">the certificate-file audit</a> (R23–R30)</div>
     </div>
@@ -217,11 +217,14 @@
           Simulator outside macOS. The shell's proxy probe answers <code>unknown</code> where it cannot read,
           and the probe row shows only where a probe can answer on this host. The network task states the
           address with one interface, names the chosen interface in its copy, and gives no reachable address
-          a remedy and a re-read. R10 and R11 follow the owner's ruling on the open questions below.</p>
+          a remedy and a re-read. Switching platform remounts the tasks (R11, Q4). R10 changes no code: its
+          rule stands (Q3), and W6 states it in UC-ONBOARD.
+          <a href="2026-09-27-onboard-review-w5-host-offers-plan.html">WU plan</a>.</p>
         <p data-item="wu-maps-to">UC-ONBOARD: the platform-per-host and probe-says-so rows · R8 · R9 · R19 –
-          R22 (R10 · R11 if ruled in)</p>
+          R22 · R11 (R10 closed by Q3's ruling)</p>
         <p data-item="wu-expected">The inverted P5 and P7 probes pass. The platform table is unit-tested per
-          host OS. A shell unit test covers each OS's "cannot read" branch of the proxy probe.</p>
+          host OS. A shell unit test covers each OS's "cannot read" branch of the proxy probe. The walkthrough is
+          not re-run for W5: the owner tests it on the real hosts (2026-09-27), and W6 re-runs it.</p>
         <p data-item="wu-deps">E-ONBREV.W1 (it can land in parallel with W3 and W4)</p>
       </div>
 
@@ -307,13 +310,13 @@
           costs a small design amendment in W3.</td></tr>
       <tr><td>Q3</td><td>R10: should the open guide advance by reading order where nothing observes?</td>
         <td>No. Keep the rule and state it in UC-ONBOARD. Advancing on a guess would be the stepper cursor
-          DEC-33 refuses.</td></tr>
+          DEC-33 refuses. <strong>Ruled 2026-09-27: no.</strong></td></tr>
       <tr><td>Q4</td><td>R11: should <code>Disclosure</code> follow the rule only when the rule's answer
         changes?</td>
         <td>Yes, by keying the guide on its platform so a switch remounts it. There is no controlled
-          open/onToggle pair (the component's <code>@avoid</code>).</td></tr>
+          open/onToggle pair (the component's <code>@avoid</code>). <strong>Ruled 2026-09-27: yes.</strong></td></tr>
       <tr><td>Q5</td><td>Should the Android emulator stay offered on every host?</td>
-        <td>Yes. The emulator runs on all three.</td></tr>
+        <td>Yes. The emulator runs on all three. <strong>Ruled 2026-09-27: kept on every host. W5 is not re-filmed; the owner tests it on the real hosts.</strong></td></tr>
       <tr><td>Q9</td><td>Record the real Tauri window, or the UI in a plain browser?</td>
         <td>The real window, through the existing WebdriverIO harness. It is the app you run, and the
           <code>scenario</code> feature is the only mock seam. Screenshots stitched per step, not a live
@@ -324,7 +327,7 @@
       <tr><td>Q7</td><td>R19: read the Linux proxy (<code>gsettings get</code>), or answer
         <code>unknown</code>?</td>
         <td><code>unknown</code>. A new reader is the "new probes" non-goal, and <code>unknown</code> already
-          words the task truthfully.</td></tr>
+          words the task truthfully. <strong>Ruled 2026-09-27: <code>unknown</code>.</strong></td></tr>
       <tr><td>Q8</td><td>R16: does a failure open the manual route even though "a guide under a button is
         never the open one"?</td>
         <td>Yes. UC-ONBOARD already promises it. The rule reads "…while the button can still do the job".</td></tr>

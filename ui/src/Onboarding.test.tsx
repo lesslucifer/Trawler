@@ -193,6 +193,18 @@ describe("the one question, asked in the user's words", () => {
     }
   });
 
+  it.each(["windows", "linux", "other"] as const)(
+    "on %s offers no iOS Simulator, which runs beside macOS only (R8)",
+    (os) => {
+      draw({ os });
+
+      fireEvent.click(picker());
+      expect(screen.queryByRole("option", { name: "iOS Simulator" })).toBeNull();
+      expect(screen.getByRole("option", { name: "Android emulator" })).toBeInTheDocument();
+      expect(screen.getAllByRole("option")).toHaveLength(PLATFORM_IDS.length - 1);
+    },
+  );
+
   it("starts on this machine, named for the host it detected, and says so unopened", () => {
     draw({ os: "macos" });
 
@@ -849,7 +861,7 @@ describe("a phone, before the network is allowed", () => {
     phone();
 
     expect(task(1)).toHaveTextContent(
-      "other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits",
+      "other devices on Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits",
     );
     expect(task(1)).not.toHaveTextContent(/Trawler will ask before/);
     expect(task(1)).not.toHaveTextContent(/Anything on that network/);
@@ -871,7 +883,7 @@ describe("a phone, before the network is allowed", () => {
     phone();
 
     expect(
-      screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }),
+      screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Set up/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
@@ -1008,7 +1020,7 @@ describe("the address is an offer, not a menu", () => {
     draw({ reach: UNARMED, onArmReach });
     pick("iPhone or iPad");
 
-    fireEvent.click(screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
 
     await waitFor(() => expect(onArmReach).toHaveBeenCalledWith("192.168.1.24"));
   });
@@ -1017,7 +1029,7 @@ describe("the address is an offer, not a menu", () => {
     draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
     pick("iPhone or iPad");
 
-    fireEvent.click(screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
 
     await waitFor(() =>
       expect(
@@ -1034,6 +1046,57 @@ describe("the address is an offer, not a menu", () => {
       "this machine holds no network address a second device could reach it at",
     );
     expect(screen.queryByRole("button", { name: /Allow devices/ })).toBeNull();
+  });
+
+  it("names the one address it will arm before anything is armed (R9)", () => {
+    draw({ reach: { ...UNARMED, interfaces: [{ name: "Ethernet", address: "192.168.1.23" }] } });
+    pick("iPhone or iPad");
+
+    expect(zone("listen-on")).toHaveTextContent("Ethernet · 192.168.1.23");
+    expect(screen.queryByText("other addresses")).toBeNull();
+  });
+
+  it("names the interface it arms, in its button and its warning (R21)", () => {
+    draw({ reach: { ...UNARMED, interfaces: [{ name: "Ethernet", address: "192.168.1.23" }] } });
+    pick("iPhone or iPad");
+
+    expect(
+      screen.getByRole("button", { name: "Allow devices on Ethernet to connect" }),
+    ).toBeInTheDocument();
+    expect(task(1)).toHaveTextContent("other devices on Ethernet will be able to use this proxy");
+    expect(task(1)).not.toHaveTextContent(/Wi-Fi/);
+  });
+
+  it("names the interface of the address taken instead (R21)", () => {
+    draw({ reach: UNARMED });
+    pick("iPhone or iPad");
+
+    fireEvent.click(screen.getByText("other addresses"));
+    fireEvent.click(screen.getByRole("button", { name: "Ethernet · 10.0.4.7" }));
+
+    expect(
+      screen.getByRole("button", { name: "Allow devices on Ethernet to connect" }),
+    ).toBeInTheDocument();
+  });
+
+  it("with no address, says how to get one and re-reads on demand (R22)", () => {
+    const onRereadReach = vi.fn();
+    draw({ reach: { ...UNARMED, interfaces: [] }, onRereadReach });
+    pick("iPhone or iPad");
+
+    expect(task(1)).toHaveTextContent("Join the network your iPhone is on, then check again.");
+    fireEvent.click(within(task(1)).getByRole("button", { name: "check again" }));
+    expect(onRereadReach).toHaveBeenCalledOnce();
+  });
+
+  it("with no address, the tasks below wait on nothing that cannot be done (R22)", () => {
+    draw({ reach: { ...UNARMED, interfaces: [] } });
+    pick("iPhone or iPad");
+
+    for (const n of [2, 3, 4]) {
+      expect(task(n)).toHaveAttribute("data-dim");
+      expect(task(n)).not.toHaveTextContent("after step 1");
+    }
   });
 });
 
@@ -1117,6 +1180,29 @@ describe("one reading of this machine, re-taken by one control", () => {
     pick("Android device");
 
     expect(zone("probe")).toBeNull();
+  });
+
+  it.each(["macos", "windows"] as const)("is offered for this machine on %s, which can read it", (os) => {
+    draw({ os, probedAt: ago(60_000) });
+
+    expect(zone("probe")).toBeInTheDocument();
+  });
+
+  it.each(["linux", "other"] as const)(
+    "is absent for this machine on %s, where no probe can answer (R20)",
+    (os) => {
+      draw({ os, trustProbe: "unknown", proxy: { status: "unknown", address: null } });
+
+      expect(zone("probe")).toBeNull();
+      expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
+    },
+  );
+
+  it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
+    draw({ os: "linux", proxy: { status: "unknown", address: null } });
+
+    expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
+    expect(task(2)).not.toHaveTextContent("the system proxy is off");
   });
 
   it("re-reads on demand", () => {
@@ -1271,6 +1357,17 @@ describe("one guide open, whatever the user picked", () => {
     atPlatform(id, { traffic: capturing });
 
     expect(opened()).toHaveLength(0);
+  });
+  it("a guide the user closed does not follow them to the next platform (R11)", () => {
+    draw({ os: "linux", reach: ARMED });
+    pick("Another Mac");
+    const closed = within(task(2)).getAllByRole("group")[0] as HTMLDetailsElement;
+    expect(closed).toHaveAttribute("open");
+    closed.open = false;
+
+    pick(setup.platformLabel("this", "linux"));
+
+    expect(within(task(1)).getAllByRole("group")[0]).toHaveAttribute("open");
   });
 });
 

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab8ea5a9f34851f0dfad5bb" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W5 plan: what each host can read and offer</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W5 — what each host can read and offer</h1>
+      <p>A host offers only the platforms that can run beside it. A probe that cannot read says so. The network task names the address and the interface it arms, and a host with no reachable address gets a way forward.</p>
+      <div class="meta">v1 · 2026-09-27 · Trawler · T3 WU plan · <span class="badge id">E-ONBREV.W5</span> · branch <code>wu/onboard-review/host-offers</code> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R8 · R9 · R10 · R11 · R19–R22</a> · depends on <span class="badge id">E-ONBREV.W1</span> (merged)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong>The platform question offers the iOS Simulator on macOS only, and the Android emulator on every host.
+      The shell's proxy probe answers <code>unknown</code> whenever it cannot read: on every host with no reader, and
+      whenever a reader fails to run or prints something it cannot parse. "Check again" shows only on a host where a
+      probe can answer. The network task always shows the address it will arm, even when there is only one. Its button
+      and its warning name that address's interface. A host with no reachable address says how to get one and offers a
+      re-read. The tasks below it are then dimmed without "after step 1". Switching platform remounts the tasks, so
+      every guide opens as the new platform's rule says, whatever the user closed on the last one.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-ONBREV</span> · the epic plan's W5 block · UC-ONBOARD: the platform-per-host row and the
+      probe-says-so row · findings R8, R9, R19, R20, R21 and R22, plus R11 · the owner's rulings of 2026-09-27: Q3 no
+      (R10 keeps its rule, with no code), Q4 yes (R11 in), Q5 yes (the emulator stays on every host), Q7
+      <code>unknown</code> · the findings' coverage gaps "the shell's probe tests cover parsing, not the cannot-read branch
+      per OS" and "<code>platformChoices</code> is tested for labels, not for which platforms each host gets".
+    </p>
+
+    <h2 id="proxy-reading">The proxy reading, before and after</h2>
+    <div class="diagram" data-c="proxy-reading">
+      <pre class="mermaid">
+flowchart LR
+  R[active_system_proxy os] --> S["Set(host, port)"]
+  R --> O[Off]
+  R --> U[Unreadable]
+  S -->|matches Trawler| ours
+  S -->|another address| foreign
+  O --> none
+  U --> unknown
+  U -.before W5.-> none
+      </pre>
+      <div class="caption">Before, the reader returned one absence for "off" and for "could not read". So Linux, and any failed <code>networksetup</code> or <code>reg</code> run, read as "the system proxy is off" (R19). After, "could not read" is a reading of its own, and it reaches the screen as <code>unknown</code>. The task then says "we'll confirm this on this machine's first request".</div>
+    </div>
+
+    <table data-c="read-table">
+      <tr><th>Host</th><th>Reader outcome</th><th>Reading</th></tr>
+      <tr><td>macOS</td><td>a service's <code>networksetup</code> reports an enabled proxy</td><td><code>Set</code></td></tr>
+      <tr><td>macOS</td><td>every service ran and reported none enabled</td><td><code>Off</code></td></tr>
+      <tr><td>macOS</td><td>the service list or a service's read fails to run or exits non-zero, and no service reports a proxy</td><td><code>Unreadable</code></td></tr>
+      <tr><td>Windows</td><td><code>ProxyEnable</code> is 0 or absent</td><td><code>Off</code></td></tr>
+      <tr><td>Windows</td><td><code>ProxyEnable</code> is on, and <code>ProxyServer</code> parses as <code>host:port</code></td><td><code>Set</code></td></tr>
+      <tr><td>Windows</td><td><code>reg</code> fails to run, or <code>ProxyServer</code> is missing or does not parse (for example a per-scheme list)</td><td><code>Unreadable</code></td></tr>
+      <tr><td>Linux · other</td><td>no reader (Q7)</td><td><code>Unreadable</code></td></tr>
+    </table>
+
+    <h2 id="changes-h">Changes</h2>
+    <table data-c="changes">
+      <tr><th>Where</th><th>Change</th><th>Finding</th></tr>
+      <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>the reader returns <code>Set</code> · <code>Off</code> · <code>Unreadable</code>, and <code>ProxyStatus</code> gains <code>Unknown</code>. Each OS's reader parses the command outputs it was handed, so every branch is unit-testable without running a command. The quit dialog is unchanged: <code>unknown</code> takes the same path <code>none</code> did</td><td>R19</td></tr>
+      <tr><td><code>ui/src-tauri/src/scenario.rs</code></td><td>the scripted <code>Unreadable</code> proxy now reaches the classifier as unreadable, not as off</td><td>R19</td></tr>
+      <tr><td><code>ui/src/setup.ts</code></td><td>a platform names the hosts it runs beside. The iOS Simulator runs beside macOS only, and <code>platformChoices(os)</code> lists only what runs there. <code>canProbe(os)</code> says whether this host has a reader: macOS and Windows</td><td>R8 · R20</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code></td><td>the probe row needs <code>canProbe(os)</code>. The address line shows for one address too. The arm button and the warning under it name the chosen interface. The no-address notice says to join the network the device is on and carries a re-read. With no address, the tasks below are dimmed without "after step 1". The tasks are keyed on the platform</td><td>R9 · R11 · R20 · R21 · R22</td></tr>
+      <tr><td><code>ui/src/App.tsx</code></td><td>the re-read asks the core's <code>/reach</code> again. It enumerates interfaces on every read</td><td>R22</td></tr>
+      <tr><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>the sweep walks the platforms each host offers</td><td>R8</td></tr>
+      <tr><td><code>ui/e2e/walkthrough/script.ts</code></td><td>the arm button is found by "Allow devices on", since its label now names the interface. The captions already state this WU's expectations</td><td>R21</td></tr>
+    </table>
+    <p class="caption">Design: nothing here is a new surface. The Onboarding edits are copy and render conditions inside the existing layout, and the re-read reuses the bare "check again" button the probe row already has. <code>design/v1</code> declares <code>Onboarding.tsx</code> and <code>App.tsx</code> undesigned with those reasons. R10 changes no code: its rule stands (Q3), and W6 states it in UC-ONBOARD.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>A reader checks…</th><th>…and sees</th></tr>
+      <tr><td>open the platform picker on Windows, on Linux and on an unknown host</td><td>no "iOS Simulator" option. "Android emulator" is offered</td></tr>
+      <tr><td>open the platform picker on macOS</td><td>all eight platforms, the iOS Simulator among them</td></tr>
+      <tr><td>Linux, This machine, after running the given <code>gsettings</code> command</td><td>task 2 reads "we'll confirm this on this machine's first request", not "the system proxy is off". There is no "check again" row</td></tr>
+      <tr><td>macOS, This machine, <code>networksetup</code> cannot run</td><td>task 2 reads "we'll confirm this on this Mac's first request"</td></tr>
+      <tr><td>Windows, the proxy set to a per-scheme list</td><td>task 2 reads "we'll confirm this on this PC's first request", not "the system proxy is off"</td></tr>
+      <tr><td>macOS or Windows, This machine</td><td>the "check again" row, as before</td></tr>
+      <tr><td>one reachable address, Ethernet · 192.168.1.23, platform "iPhone or iPad"</td><td>"address to use" names Ethernet · 192.168.1.23 before arming. The button reads "Allow devices on Ethernet to connect", and the warning says "other devices on Ethernet"</td></tr>
+      <tr><td>two addresses</td><td>one address named, the other under "other addresses". The button names the chosen one's interface</td></tr>
+      <tr><td>no reachable address</td><td>task 1 says to join the network the device is on and offers "check again". Tasks 2–4 are dimmed and do not say "after step 1". Once an address appears, "check again" brings in the arm button</td></tr>
+      <tr><td>Linux, Android emulator: close its open guide, then choose This machine</td><td>This machine's certificate guide is open, as its own rule says</td></tr>
+      <tr><td>quit with the proxy unreadable</td><td>the same notice as with the proxy off</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>File</th><th>Asserts</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code></td><td>every row of the reading table above, as a case: macOS enabled, all off, the service list failing, one service failing with none enabled, one failing beside one enabled. Windows off, absent, set, <code>reg</code> failing, server missing, a per-scheme server. Linux and other are <code>Unreadable</code>. <code>classify</code> maps <code>Unreadable</code> to <code>unknown</code> with no address</td></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/scenario.rs</code></td><td>a scripted unreadable proxy reads <code>unknown</code>, and a scripted unset one reads <code>none</code></td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>the platform table per host: macOS offers all eight, and Windows, Linux and other offer seven with no <code>ios-sim</code>. <code>android-sim</code> is on every host. <code>canProbe</code> is true on macOS and Windows only</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>P5 inverted (R8): on a Windows host the picker has no iOS Simulator. P7 inverted (R9): one address is named under "address to use" before arming. R21: the button and the warning name the interface. R22: no address gives the remedy and "check again", which calls the re-read, and dims tasks 2–4 without "after step 1". R20: no probe row on Linux or other, and one on macOS and Windows. R11: a guide closed on the emulator, then This machine chosen, opens This machine's guide</td></tr>
+      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code></td><td>"check again" in the network task reads <code>/reach</code> again, and a new address shows the arm button</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>the place, time and truth rules hold over every offered host × platform state, and no state is swept for a platform its host does not offer</td></tr>
+      <tr><td>e2e</td><td>—</td><td><em>waived at WU level (the owner, 2026-09-27):</em> the walkthrough is not re-run for W5, and the owner tests the build on the real hosts. W6 re-runs the walkthrough, whose R8, R9 and R19–R22 chapters already caption this WU's expectations</td></tr>
+    </table>
+
+    <h2 id="known">Known before the build</h2>
+    <table data-c="known">
+      <tr><th>Point</th><th>What this plan does</th></tr>
+      <tr><td>P5 and P7 are not written down</td><td>The review saved no probe list. This plan takes P5 as R8's recorded reproduction (a Windows user agent offered the Simulator), and P7 as R9's (one address, none shown)</td></tr>
+      <tr><td>Linux's route stays unconfirmable</td><td>This machine's task 2 reads only the probe, because its try-it command names the proxy itself (W4). With the probe <code>unknown</code> on Linux, the task keeps its promise until the first captured request ends setup. The probe row goes, but the task's reading does not move to traffic</td></tr>
+      <tr><td>A remount on switch</td><td>Only the tasks are keyed on the platform. The screen's own state stays, including the last proxy act and the address chosen, so a reversal offered before the switch is still offered after it</td></tr>
+      <tr><td>Interface names</td><td>A name is what the host calls the device: "Wi-Fi" or "Ethernet" on macOS through the shell's map, and the kernel's name (<code>eth0</code>, <code>wlan0</code>) where no map exists. The copy names it as given</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan recording the owner's rulings and linking it</td></tr>
+      <tr><td>2</td><td>the shell: a proxy that cannot be read answers <code>unknown</code>, with the per-OS units and the scenario's</td></tr>
+      <tr><td>3</td><td>the host's offers: the Simulator on macOS only, the probe row only where a probe answers, the matrix over offered states</td></tr>
+      <tr><td>4</td><td>the network task: the one address named, the interface in its copy, the no-address remedy and re-read, and the walkthrough's button prefix</td></tr>
+      <tr><td>5</td><td>a platform switch remounts its tasks</td></tr>
+      <tr><td>6</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab8ed9c9f34851f0dfad5c7" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W5 result: what each host can read and offer</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W5 — result: what each host can read and offer</h1>
+      <p>Each host now offers only the platforms that run beside it. A proxy the shell cannot read says so. The network task names its address and interface, and a host with no address gets a way forward.</p>
+      <div class="meta">v1 · 2026-09-27 · Trawler · T3 WU result · <span class="badge id">E-ONBREV.W5</span> · branch <code>wu/onboard-review/host-offers</code> · <a href="2026-09-27-onboard-review-w5-host-offers-plan.html">WU plan</a> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · <a href="2026-09-25-onboard-review-findings.html">findings R8 · R9 · R10 · R11 · R19–R22</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>the picker on Windows, Linux and an unknown host: no iOS Simulator, the Android emulator offered</td><td>the Simulator names macOS as the one host it runs beside, and <code>platformChoices(os)</code> lists only what runs on the host</td><td>delivered</td></tr>
+      <tr><td>the picker on macOS: all eight</td><td>unchanged on macOS</td><td>delivered</td></tr>
+      <tr><td>Linux, This machine, after <code>gsettings</code>: the promise, not "off", and no "check again"</td><td>the shell answers <code>unknown</code> on a host with no reader. The probe row needs <code>canProbe(os)</code>, which is macOS and Windows</td><td>delivered</td></tr>
+      <tr><td>macOS with <code>networksetup</code> unable to run: the promise</td><td>a failed service list, or a service read that fails with none enabled, is <code>Unreadable</code></td><td>delivered</td></tr>
+      <tr><td>Windows with a per-scheme proxy: the promise</td><td>a server that is not one <code>host:port</code> is <code>Unreadable</code>. Before, it classified as a foreign proxy whose host was the whole list</td><td>delivered</td></tr>
+      <tr><td>macOS or Windows, This machine: "check again"</td><td>unchanged</td><td>delivered</td></tr>
+      <tr><td>one address: named before arming. The button and the warning name Ethernet</td><td>the address line shows for one address. The button reads "Allow devices on <em>interface</em> to connect", and the warning reads "other devices on <em>interface</em> will be able to…"</td><td>delivered</td></tr>
+      <tr><td>two addresses: one named, one under "other addresses", the button names the chosen interface</td><td>taking the other address renames the button</td><td>delivered</td></tr>
+      <tr><td>no address: the remedy and "check again". Tasks 2–4 dimmed with no "after step 1". A new address brings the arm button</td><td>"Join the network <em>device</em> is on, then check again." The button re-reads <code>/reach</code>, which enumerates interfaces on every read</td><td>delivered</td></tr>
+      <tr><td>a guide closed on one platform does not stay closed on the next</td><td>the tasks are keyed on the platform. The screen's own state (the last proxy act, the address chosen) survives the switch</td><td>delivered</td></tr>
+      <tr><td>quit with the proxy unreadable: the same notice as with it off</td><td>the close confirm takes the remote notice for <code>unknown</code>, the path <code>none</code> took</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What changed</th><th>Why</th></tr>
+      <tr><td>R11's case: "Linux, Android emulator, close its guide, then This machine"</td><td>pinned as Another Mac, then This machine, on Linux</td><td>the emulator's certificate guide has three steps and This machine's has two. Their keys already differed, so that case passed before the fix. Another Mac and This machine both open a two-step guide, which is where the native open state carried over. The test is red without the key</td></tr>
+      <tr><td>the arm copy</td><td>"my" and "your" are dropped: "Allow devices on Wi-Fi to connect", "other devices on Wi-Fi"</td><td>the interface name is the host's word for it. "My Ethernet" and "my en0" do not read as English</td></tr>
+      <tr><td>—</td><td>an extra commit, <code>19cf9e4</code>, pins the quit path for <code>unknown</code></td><td>the plan's quit row had no test of its own</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Commit</th><th>What</th><th>Tests</th></tr>
+      <tr><td><code>0e45851</code></td><td>the plan, and the epic plan's rulings</td><td>—</td></tr>
+      <tr><td><code>3d048a3</code></td><td>the shell's three-way proxy reading</td><td>unit: <code>setup.rs</code> +10 (macOS ×5, Windows ×3, no reader, unknown carries no address), 3 amended. <code>scenario.rs</code> 2 amended (unreadable reads unknown, unset reads none)</td></tr>
+      <tr><td><code>e3baa04</code></td><td>the Simulator on macOS only, the probe row where a probe answers, the matrix over offered states</td><td>unit: <code>setup.test.ts</code> +8 (the platform table per host, <code>canProbe</code>). integration: <code>Onboarding.test.tsx</code> +8 (P5 inverted on three hosts, the probe row on four, R19's promise on Linux). <code>onboardingMatrix.test.tsx</code>: the count amended, and no Simulator state off macOS</td></tr>
+      <tr><td><code>3b1bb13</code></td><td>the network task: one address named, the interface in its copy, the no-address remedy and re-read</td><td>integration: <code>Onboarding.test.tsx</code> +5 (P7 inverted, R21 ×2, R22 ×2), labels amended. <code>App.test.tsx</code> +1 ("check again" reads <code>/reach</code> anew and offers what it finds), labels amended</td></tr>
+      <tr><td><code>f7cedb3</code></td><td>a platform switch remounts its tasks</td><td>integration: <code>Onboarding.test.tsx</code> +1, red before the key</td></tr>
+      <tr><td><code>19cf9e4</code></td><td>quit reads <code>unknown</code> as it reads <code>none</code></td><td>unit: <code>closeConfirm.test.tsx</code> +1</td></tr>
+      <tr><td>suite</td><td colspan="2"><code>cargo xtask gate0</code> green at <code>f7cedb3</code>. Vitest: 59 files, 12104 tests green. The shell crate: <code>cargo test</code> with and without <code>scenario</code>, and clippy on both, green</td></tr>
+      <tr><td>walkthrough</td><td colspan="2"><em>not run, waived by the owner (2026-09-27):</em> the owner tests the build on the real hosts. W6 re-runs it. Its R8, R9, R11 and R19–R22 chapters already caption this WU's expectations. The only script change is the arm button's prefix, "Allow devices on"</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">Nothing to T2 in this WU: the epic plan gives UC-ONBOARD to W6. The sentences W6 has to add: a host is offered only the platforms that run beside it (the iOS Simulator on macOS only). A probe that cannot read says so, on every host, and "check again" shows only where a probe can answer. The network task names the address and the interface it arms, and a host with no address is told to join the device's network and read again. Where nothing observes a task, the open guide stays the first undone one (R10, Q3). Switching platform opens each guide as the new platform's rule says.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">None new. R10 is closed by the owner's ruling (Q3), with no code.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

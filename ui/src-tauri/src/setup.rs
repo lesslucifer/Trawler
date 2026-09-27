@@ -409,12 +409,15 @@ pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), S
 // proxy on this system routes through Trawler; "foreign" ⇒ some other active
 // proxy on this system — also actionable, since unset_proxy turns the OS proxy
 // state off without reading whose address is set; "none" ⇒ this system is clean
-// (the remote-device notice — a device elsewhere may point here).
+// (the remote-device notice — a device elsewhere may point here); "unknown" ⇒
+// nothing here could read it, which quit treats as "none" and setup words as a
+// promise rather than a false "off" (R19).
 #[derive(Debug, PartialEq, Eq)]
 enum ProxyStatus {
     Ours,
     Foreign,
     None,
+    Unknown,
 }
 
 impl ProxyStatus {
@@ -423,8 +426,31 @@ impl ProxyStatus {
             ProxyStatus::Ours => "ours",
             ProxyStatus::Foreign => "foreign",
             ProxyStatus::None => "none",
+            ProxyStatus::Unknown => "unknown",
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ProxyRead {
+    Set(String, u16),
+    Off,
+    Unreadable,
+}
+
+// A command's outcome detached from its process, so every branch of a reader
+// runs in a unit test without the host's tools.
+struct Ran {
+    ok: bool,
+    stdout: String,
+}
+
+fn ran(program: &str, args: &[&str]) -> Option<Ran> {
+    let out = Command::new(program).args(args).output().ok()?;
+    Some(Ran {
+        ok: out.status.success(),
+        stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
+    })
 }
 
 // `networksetup -get{,secure}webproxy <svc>` prints `Enabled: Yes/No`, `Server: …`,
@@ -448,52 +474,97 @@ fn parse_active_proxy(out: &str) -> Option<(String, u16)> {
     }
 }
 
-fn classify(active: Option<(String, u16)>, host: &str, port: u16) -> ProxyStatus {
-    match active {
-        Some((s, p)) if s == host && p == port => ProxyStatus::Ours,
-        Some(_) => ProxyStatus::Foreign,
-        None => ProxyStatus::None,
+fn classify(read: &ProxyRead, host: &str, port: u16) -> ProxyStatus {
+    match read {
+        ProxyRead::Set(s, p) if s == host && *p == port => ProxyStatus::Ours,
+        ProxyRead::Set(..) => ProxyStatus::Foreign,
+        ProxyRead::Off => ProxyStatus::None,
+        ProxyRead::Unreadable => ProxyStatus::Unknown,
     }
 }
 
-fn active_system_proxy(os: &str) -> Option<(String, u16)> {
-    match os {
-        // Check HTTPS (securewebproxy) first, then HTTP — Trawler sets both, but a
-        // hand-configured proxy or one externally half-cleared could have only one
-        // on; catching either keeps a routing proxy from being missed.
-        "macos" => macos_services().ok()?.into_iter().find_map(|svc| {
-            let read = |flag: &str| {
-                let out = Command::new("networksetup").args([flag, &svc]).output().ok()?;
-                parse_active_proxy(&String::from_utf8_lossy(&out.stdout))
-            };
-            read("-getsecurewebproxy").or_else(|| read("-getwebproxy"))
-        }),
-        "windows" => {
-            let out = Command::new("reg")
-                .args(["query", WININET_KEY, "/v", "ProxyEnable"])
-                .output()
-                .ok()?;
-            let on = String::from_utf8_lossy(&out.stdout)
-                .lines()
-                .find(|l| l.contains("ProxyEnable"))
-                .and_then(|l| l.rsplit("0x").next())
-                .map(|hex| hex.trim() != "0")
-                .unwrap_or(false);
-            if !on {
-                return None;
+// HTTPS (securewebproxy) is read before HTTP — Trawler sets both, but a
+// hand-configured proxy or one externally half-cleared could have only one on,
+// and catching either keeps a routing proxy from being missed. A read that
+// failed means the services that did answer cannot vouch for a clean system.
+fn macos_proxy(
+    listing: Option<&Ran>,
+    mut read: impl FnMut(&str, &str) -> Option<Ran>,
+) -> ProxyRead {
+    let services = match listing {
+        Some(listing) if listing.ok => parse_services(&listing.stdout),
+        _ => return ProxyRead::Unreadable,
+    };
+    if services.is_empty() {
+        return ProxyRead::Unreadable;
+    }
+    let mut unreadable = false;
+    for svc in &services {
+        for flag in ["-getsecurewebproxy", "-getwebproxy"] {
+            match read(flag, svc) {
+                Some(out) if out.ok => {
+                    if let Some((host, port)) = parse_active_proxy(&out.stdout) {
+                        return ProxyRead::Set(host, port);
+                    }
+                }
+                _ => unreadable = true,
             }
-            let out = Command::new("reg")
-                .args(["query", WININET_KEY, "/v", "ProxyServer"])
-                .output()
-                .ok()?;
-            let server = String::from_utf8_lossy(&out.stdout)
+        }
+    }
+    if unreadable {
+        ProxyRead::Unreadable
+    } else {
+        ProxyRead::Off
+    }
+}
+
+// `reg query` exits non-zero for a value never written, and a ProxyEnable never
+// written is a proxy never enabled — so only `reg` failing to run leaves the
+// switch unread. A server not in the one shape the setter writes (host:port),
+// such as a per-scheme list, is one this reader cannot place.
+fn windows_proxy(enable: Option<&Ran>, server: impl FnOnce() -> Option<Ran>) -> ProxyRead {
+    let Some(enable) = enable else { return ProxyRead::Unreadable };
+    let on = enable
+        .stdout
+        .lines()
+        .find(|l| l.contains("ProxyEnable"))
+        .and_then(|l| l.rsplit("0x").next())
+        .is_some_and(|hex| hex.trim() != "0");
+    if !on {
+        return ProxyRead::Off;
+    }
+    server()
+        .and_then(|out| {
+            out.stdout
                 .lines()
                 .find(|l| l.contains("ProxyServer"))
-                .and_then(|l| l.split_whitespace().last().map(ToString::to_string))?;
-            let (h, p) = server.rsplit_once(':')?;
-            Some((h.to_string(), p.parse().ok()?))
+                .and_then(|l| l.split_whitespace().last())
+                .and_then(host_and_port)
+        })
+        .map_or(ProxyRead::Unreadable, |(host, port)| ProxyRead::Set(host, port))
+}
+
+fn host_and_port(server: &str) -> Option<(String, u16)> {
+    let (host, port) = server.rsplit_once(':')?;
+    if host.is_empty() || host.contains(['=', ';']) {
+        return None;
+    }
+    Some((host.to_string(), port.parse().ok()?))
+}
+
+fn active_system_proxy(os: &str) -> ProxyRead {
+    match os {
+        "macos" => {
+            macos_proxy(ran("networksetup", &["-listallnetworkservices"]).as_ref(), |flag, svc| {
+                ran("networksetup", &[flag, svc])
+            })
         }
-        _ => None,
+        "windows" => {
+            windows_proxy(ran("reg", &["query", WININET_KEY, "/v", "ProxyEnable"]).as_ref(), || {
+                ran("reg", &["query", WININET_KEY, "/v", "ProxyServer"])
+            })
+        }
+        _ => ProxyRead::Unreadable,
     }
 }
 
@@ -509,14 +580,17 @@ pub struct ProxyReading {
     address: Option<String>,
 }
 
-pub(crate) fn read_proxy(active: Option<(String, u16)>, host: &str, port: u16) -> ProxyReading {
-    let address = active.as_ref().map(|(h, p)| format!("{h}:{p}"));
-    ProxyReading { status: classify(active, host, port).as_str(), address }
+pub(crate) fn read_proxy(read: &ProxyRead, host: &str, port: u16) -> ProxyReading {
+    let address = match read {
+        ProxyRead::Set(h, p) => Some(format!("{h}:{p}")),
+        ProxyRead::Off | ProxyRead::Unreadable => None,
+    };
+    ProxyReading { status: classify(read, host, port).as_str(), address }
 }
 
 #[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn proxy_status(host: String, port: u16) -> ProxyReading {
-    read_proxy(active_system_proxy(std::env::consts::OS), &host, port)
+    read_proxy(&active_system_proxy(std::env::consts::OS), &host, port)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -804,22 +878,156 @@ mod tests {
     // that classifies it has to carry the address it already read.
     #[test]
     fn the_reading_carries_the_address_it_classified() {
-        let foreign = read_proxy(Some(("10.1.1.1".into(), 8080)), "127.0.0.1", 7420);
+        let foreign = read_proxy(&ProxyRead::Set("10.1.1.1".into(), 8080), "127.0.0.1", 7420);
         assert_eq!(
             foreign,
             ProxyReading { status: "foreign", address: Some("10.1.1.1:8080".into()) }
         );
 
-        let ours = read_proxy(Some(("127.0.0.1".into(), 7420)), "127.0.0.1", 7420);
+        let ours = read_proxy(&ProxyRead::Set("127.0.0.1".into(), 7420), "127.0.0.1", 7420);
         assert_eq!(ours, ProxyReading { status: "ours", address: Some("127.0.0.1:7420".into()) });
     }
 
     #[test]
     fn a_machine_with_no_proxy_reports_no_address_to_name() {
         assert_eq!(
-            read_proxy(None, "127.0.0.1", 7420),
+            read_proxy(&ProxyRead::Off, "127.0.0.1", 7420),
             ProxyReading { status: "none", address: None }
         );
+    }
+
+    #[test]
+    fn a_proxy_nothing_could_read_is_unknown_and_names_no_address() {
+        assert_eq!(
+            read_proxy(&ProxyRead::Unreadable, "127.0.0.1", 7420),
+            ProxyReading { status: "unknown", address: None }
+        );
+    }
+
+    fn answered(stdout: &str) -> Option<Ran> {
+        Some(Ran { ok: true, stdout: stdout.into() })
+    }
+
+    fn exited_non_zero(stdout: &str) -> Option<Ran> {
+        Some(Ran { ok: false, stdout: stdout.into() })
+    }
+
+    const MAC_SERVICES: &str =
+        "An asterisk (*) denotes that a network service is disabled.\nWi-Fi\nThunderbolt Bridge\n";
+    const MAC_ON: &str = "Enabled: Yes\nServer: 127.0.0.1\nPort: 7420\n";
+    const MAC_OFF: &str = "Enabled: No\nServer: \nPort: 0\n";
+
+    #[test]
+    fn macos_reads_the_first_enabled_proxy_of_any_service() {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |flag, svc| {
+            if svc == "Thunderbolt Bridge" && flag == "-getwebproxy" {
+                answered(MAC_ON)
+            } else {
+                answered(MAC_OFF)
+            }
+        });
+        assert_eq!(read, ProxyRead::Set("127.0.0.1".into(), 7420));
+    }
+
+    #[test]
+    fn macos_is_off_only_when_every_service_answered_off() {
+        assert_eq!(
+            macos_proxy(answered(MAC_SERVICES).as_ref(), |_, _| answered(MAC_OFF)),
+            ProxyRead::Off
+        );
+    }
+
+    #[test]
+    fn macos_cannot_read_without_its_service_list() {
+        let never = |_: &str, _: &str| -> Option<Ran> { unreachable!("no service to read") };
+        assert_eq!(macos_proxy(None, never), ProxyRead::Unreadable);
+        assert_eq!(macos_proxy(exited_non_zero("").as_ref(), never), ProxyRead::Unreadable);
+        assert_eq!(macos_proxy(answered("").as_ref(), never), ProxyRead::Unreadable);
+    }
+
+    #[test]
+    fn macos_cannot_vouch_for_off_when_a_service_failed_to_answer() {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |_, svc| {
+            if svc == "Wi-Fi" {
+                None
+            } else {
+                answered(MAC_OFF)
+            }
+        });
+        assert_eq!(read, ProxyRead::Unreadable);
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |_, svc| {
+            if svc == "Wi-Fi" {
+                exited_non_zero("** Error")
+            } else {
+                answered(MAC_OFF)
+            }
+        });
+        assert_eq!(read, ProxyRead::Unreadable);
+    }
+
+    #[test]
+    fn macos_reads_a_proxy_one_service_reports_beside_one_that_failed() {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |_, svc| {
+            if svc == "Wi-Fi" {
+                None
+            } else {
+                answered(MAC_ON)
+            }
+        });
+        assert_eq!(read, ProxyRead::Set("127.0.0.1".into(), 7420));
+    }
+
+    const WIN_ENABLED: &str =
+        "\r\nHKEY_CURRENT_USER\\...\r\n    ProxyEnable    REG_DWORD    0x1\r\n";
+    const WIN_DISABLED: &str =
+        "\r\nHKEY_CURRENT_USER\\...\r\n    ProxyEnable    REG_DWORD    0x0\r\n";
+
+    fn win_server(server: &str) -> Option<Ran> {
+        answered(&format!(
+            "\r\nHKEY_CURRENT_USER\\...\r\n    ProxyServer    REG_SZ    {server}\r\n"
+        ))
+    }
+
+    #[test]
+    fn windows_is_off_when_the_switch_is_off_or_was_never_written() {
+        let never = || -> Option<Ran> { unreachable!("an off switch names no server") };
+        assert_eq!(windows_proxy(answered(WIN_DISABLED).as_ref(), never), ProxyRead::Off);
+        let absent = exited_non_zero(
+            "ERROR: The system was unable to find the specified registry key or value.",
+        );
+        assert_eq!(windows_proxy(absent.as_ref(), never), ProxyRead::Off);
+    }
+
+    #[test]
+    fn windows_reads_an_enabled_host_and_port() {
+        let read = windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server("10.0.0.9:3128"));
+        assert_eq!(read, ProxyRead::Set("10.0.0.9".into(), 3128));
+    }
+
+    #[test]
+    fn windows_cannot_read_when_reg_cannot_run_or_the_server_is_not_one_address() {
+        let never = || -> Option<Ran> { unreachable!("an unread switch names no server") };
+        assert_eq!(windows_proxy(None, never), ProxyRead::Unreadable);
+        assert_eq!(windows_proxy(answered(WIN_ENABLED).as_ref(), || None), ProxyRead::Unreadable);
+        assert_eq!(
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || exited_non_zero("ERROR")),
+            ProxyRead::Unreadable
+        );
+        let per_scheme = || win_server("http=127.0.0.1:7420;https=127.0.0.1:7420");
+        assert_eq!(
+            windows_proxy(answered(WIN_ENABLED).as_ref(), per_scheme),
+            ProxyRead::Unreadable
+        );
+        assert_eq!(
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server("7420")),
+            ProxyRead::Unreadable
+        );
+    }
+
+    #[test]
+    fn a_host_with_no_reader_cannot_read_its_proxy() {
+        assert_eq!(active_system_proxy("linux"), ProxyRead::Unreadable);
+        assert_eq!(active_system_proxy("freebsd"), ProxyRead::Unreadable);
     }
 
     #[test]
@@ -870,13 +1078,14 @@ mod tests {
 
     #[test]
     fn classify_maps_the_active_proxy_against_trawlers_address() {
-        let ours = Some(("127.0.0.1".to_string(), 7420));
-        assert_eq!(classify(ours, "127.0.0.1", 7420), ProxyStatus::Ours);
-        let other_port = Some(("127.0.0.1".to_string(), 8080));
-        assert_eq!(classify(other_port, "127.0.0.1", 7420), ProxyStatus::Foreign);
-        let other_host = Some(("10.0.0.1".to_string(), 7420));
-        assert_eq!(classify(other_host, "127.0.0.1", 7420), ProxyStatus::Foreign);
-        assert_eq!(classify(None, "127.0.0.1", 7420), ProxyStatus::None);
+        let ours = ProxyRead::Set("127.0.0.1".into(), 7420);
+        assert_eq!(classify(&ours, "127.0.0.1", 7420), ProxyStatus::Ours);
+        let other_port = ProxyRead::Set("127.0.0.1".into(), 8080);
+        assert_eq!(classify(&other_port, "127.0.0.1", 7420), ProxyStatus::Foreign);
+        let other_host = ProxyRead::Set("10.0.0.1".into(), 7420);
+        assert_eq!(classify(&other_host, "127.0.0.1", 7420), ProxyStatus::Foreign);
+        assert_eq!(classify(&ProxyRead::Off, "127.0.0.1", 7420), ProxyStatus::None);
+        assert_eq!(classify(&ProxyRead::Unreadable, "127.0.0.1", 7420), ProxyStatus::Unknown);
     }
 
     #[test]
