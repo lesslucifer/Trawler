@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 20e2b8620305cd6e6952d069226aade564279369
+base: 1ec6f0728591bf2d5db65e0423f0243e067565a3
+tier: key
+signer: vuluu
+report: docs/.archive/2026-09-27-onboard-review-epic-result.html
+report_sha256: afcbdc728ea288afa5e99391d8f81a4f27e1f7cd08d0241cc7e0f213c01af9bc
+date: 2026-09-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBJdVt/LS6D+dPe4KNow4HUfxSMm+7aXR4HwtKzwnvGFd2PwBs4sF1Lqh
+  J3dvPoIcUb3nlH4FqGv6KZ7avnKCcL
+  -----END SSH SIGNATURE-----
