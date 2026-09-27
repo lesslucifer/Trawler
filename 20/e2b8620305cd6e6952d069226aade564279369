@@ -1,0 +1,28 @@
+schema: doc/v1
+epic: E-ONBREV
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "Two deferred rows from this epic. R31 (W7): the screen cannot say which host failed to decrypt or why, because hudsucker logs a handshake failure and hands nothing to a handler; revisit as its own epic. The unplaced W4 finding (added at close): Set up this Mac can fail with -60007, the authorization denied since no user interaction was possible; since W4 it opens task 1's manual steps, and why the prompt could not show stays open."
+  - path: "docs/core-technical-design.html"
+    tier: T1
+    action: updated
+    distills: "The epic's one T1 edit, committed by the owner through mr commit at 7fad60a. The API table gains /ca.pem, /ca.cer and /ca.mobileconfig beside /ca.crt, whose body is unchanged; the iOS trust row installs the profile from :7421/ca.mobileconfig, correcting the old row's proxy port. No other shape change."
+  - path: "docs/decisions/dec-60-a-setup-session-starts-when-setup-opens.html"
+    tier: T2
+    action: added
+    distills: "The epic's load-bearing decision, landed at W3. A setup session starts when setup opens: the guide rule, the traffic task and the success line read only captured rows that started after it, unfiltered by the list, and set up another device never answers this machine. Session by time, not by device identity, which the core cannot attribute."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-60 routed with its decision and rules."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row names the captured proof and the setup session in place of a decrypted flow revealing the list."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD at the shipped truth (W6). A when-setup-shows table: checking, not answering, not proven, the payoff, the dot and another device, each a session (DEC-60). The platforms table gains the hosts each platform is offered on and its certificate file (the iPhone the profile, Android DER, the desktops and the Simulator PEM). The reach callout names the address, the interface and the no-address remedy. Cannot read is unknown on every host, and each task has one reading. The acts table: the one act offered only while both halves are undone, the proxy half on its own, the reversal inside its task. The reading rules cover pointed steps, R10's rule and a platform switch. What the rebuild kept names source captured and the file per platform; the API callout lists the three CA routes and says /stats no longer feeds setup; Pinned by names the journeys and the three waivers."
