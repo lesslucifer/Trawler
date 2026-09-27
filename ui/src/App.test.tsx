@@ -553,6 +553,51 @@ test("re-entering setup retires the banner — leaving again is not a second suc
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
+// R6 · Q2: "set up another device" preselected this machine, the device already
+// set up, and with it (R4) said at once that this machine was set up.
+test("set up another device leaves the question open when this machine was the last answer", async () => {
+  await setupSucceeds();
+  const banner = await screen.findByTestId("set-up-banner");
+  fireEvent.click(within(banner).getByRole("button", { name: "set up another device" }));
+
+  await screen.findByText(QUESTION);
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("choose a device");
+  expect(screen.queryByTestId("steps")).toBeNull();
+  expect(screen.queryByTestId("proven")).toBeNull();
+  expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected");
+});
+
+test("set up another device opens on the last device chosen, when that was not this machine", async () => {
+  onMacHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("iPhone or iPad");
+  rows = [flow({ uri: "https://example.com/" })];
+  fire();
+
+  const banner = await screen.findByTestId("set-up-banner");
+  fireEvent.click(within(banner).getByRole("button", { name: "set up another device" }));
+  await screen.findByText(QUESTION);
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("iPhone or iPad");
+});
+
+test("the dot opens setup on the last device chosen", async () => {
+  await setupSucceeds();
+  const banner = await screen.findByTestId("set-up-banner");
+  fireEvent.click(within(banner).getByRole("button", { name: "set up another device" }));
+  await screen.findByText(QUESTION);
+  pickPlatform("Android emulator");
+  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  await screen.findByTestId("flow-row");
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("Android emulator");
+  expect(screen.getByTestId("steps")).toBeInTheDocument();
+});
+
 // A request made from now on, so it starts inside a setup session opened before it.
 const startedNow = () => new Date(Date.now() + 1).toISOString();
 

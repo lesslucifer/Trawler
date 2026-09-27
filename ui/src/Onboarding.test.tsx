@@ -114,6 +114,47 @@ const commandNamed = (label: string) =>
 // F1. The screen used to open on a lowercase grey failure verdict, which is
 // the one thing a first-time user cannot act on.
 
+// ── The way in: which device this session is for (R6 · Q2) ──────────────────
+// "Set up another device" preselected this machine, the one already set up.
+
+describe("the question opens on the way in", () => {
+  const another: OnbState = { ...onboarding, everProven: true, another: true };
+
+  it("left open for another device over this machine: no task, no re-read, the way back", () => {
+    draw({ state: another });
+
+    expect(picker()).toHaveTextContent("choose a device");
+    expect(zone("lead")).not.toBeNull();
+    expect(zone("steps")).toBeNull();
+    expect(zone("probe")).toBeNull();
+    expect(zone("proven")).toBeNull();
+    expect(zone("back")).not.toBeNull();
+  });
+
+  it("answered, it draws that platform's tasks with the first guide open, and says what was chosen", () => {
+    const dispatch = vi.fn();
+    draw({ state: another, dispatch });
+
+    pick("Android emulator");
+
+    expect(zone("steps")).not.toBeNull();
+    expect(task(1).querySelector("details[open]")).not.toBeNull();
+    expect(dispatch).toHaveBeenCalledWith({ t: "choose", platform: "android-sim" });
+  });
+
+  it("opens on the last device chosen", () => {
+    draw({ state: { ...another, chosen: "ios" } });
+    expect(picker()).toHaveTextContent("iPhone or iPad");
+    expect(zone("steps")).not.toBeNull();
+  });
+
+  it("left open, still says this session is capturing, naming no device", () => {
+    draw({ state: another, traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now() } });
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
+    expect(zone("proven")).not.toHaveTextContent(/from /);
+  });
+});
+
 describe("the screen leads with what it is", () => {
   it("opens on a title and a sentence of purpose", () => {
     draw();

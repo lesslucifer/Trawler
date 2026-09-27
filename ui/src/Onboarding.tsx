@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
-import { COPY, type OnbEvent, type OnbState } from "./onboardingMachine";
+import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
   Button,
@@ -79,6 +79,7 @@ const TITLE = "Set up capture";
 const PURPOSE =
   "Trawler sits between a device and the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate and send its traffic to Trawler.";
 const QUESTION = "which device's traffic do you want to see";
+const UNANSWERED = "choose a device";
 
 // An action that resolves a string names what it produced; the note quotes that
 // name rather than the one we asked for, since the two differ whenever the user
@@ -689,27 +690,7 @@ function GuidedTask({
 const failedHere = (action: ActionHandle, offered: boolean) =>
   offered && action.state === "failed" && action.failure?.refused !== true;
 
-export function Onboarding({
-  state,
-  dispatch,
-  os = "other",
-  proxyAddr = "127.0.0.1:7420",
-  trustProbe = "unknown",
-  proxy = NO_PROXY_READING,
-  probing = false,
-  probedAt = null,
-  traffic = NO_TRAFFIC,
-  reach = UNREACHABLE,
-  onSetUpThisMachine,
-  onSaveCa,
-  onSetProxy,
-  onUnsetProxy,
-  onRecheck,
-  onArmReach,
-  onDisarmReach,
-}: {
-  state: OnbState;
-  dispatch: (e: OnbEvent) => void;
+interface SetupProps {
   os?: HostOs;
   proxyAddr?: string;
   trustProbe?: TrustProbe;
@@ -725,8 +706,81 @@ export function Onboarding({
   onRecheck?: () => void;
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
-}) {
-  const [platform, setPlatform] = useState<PlatformId>("this");
+}
+
+// The screen asks which device before it instructs one. Asked to set up another
+// device, it leaves the question open rather than answer the device already
+// set up (R6); every task below belongs to the answer, so none is drawn without
+// one.
+export function Onboarding({
+  state,
+  dispatch,
+  ...setup
+}: SetupProps & { state: OnbState; dispatch: (e: OnbEvent) => void }) {
+  const [platform, setPlatform] = useState(() => opensOn(state));
+  const choose = (id: PlatformId) => {
+    setPlatform(id);
+    dispatch({ t: "choose", platform: id });
+  };
+
+  return (
+    <div className="flex h-full flex-col overflow-auto">
+      <div className="mx-auto flex w-full max-w-reading flex-col gap-6 py-8">
+        <div data-testid="lead" className="px-4">
+          <p className="font-serif text-note text-ink">{TITLE}</p>
+          <p className="pt-2 font-ui text-body text-ink-body">{PURPOSE}</p>
+        </div>
+
+        <div data-testid="platform" className="flex flex-wrap items-center gap-3 px-4">
+          <p className={ZONE_LABEL}>{QUESTION}</p>
+          <Select
+            options={platformChoices(setup.os ?? "other")}
+            value={platform ?? undefined}
+            onChange={(id) => choose(id as PlatformId)}
+            label={QUESTION}
+            placeholder={UNANSWERED}
+            searchable={false}
+            className="w-picker"
+          />
+        </div>
+
+        {platform === null ? (
+          <ProvenOutcome device={null} traffic={setup.traffic ?? NO_TRAFFIC} />
+        ) : (
+          <PlatformSetup platform={platform} {...setup} />
+        )}
+
+        {state.everProven && (
+          <div data-testid="back" className="px-4">
+            <Button onClick={() => dispatch({ t: "exit" })} frame="bare" tone="mute">
+              <span aria-hidden="true">‹ </span>
+              {COPY.back}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PlatformSetup({
+  platform,
+  os = "other",
+  proxyAddr = "127.0.0.1:7420",
+  trustProbe = "unknown",
+  proxy = NO_PROXY_READING,
+  probing = false,
+  probedAt = null,
+  traffic = NO_TRAFFIC,
+  reach = UNREACHABLE,
+  onSetUpThisMachine,
+  onSaveCa,
+  onSetProxy,
+  onUnsetProxy,
+  onRecheck,
+  onArmReach,
+  onDisarmReach,
+}: SetupProps & { platform: PlatformId }) {
   const [listenOn, setListenOn] = useState<string | null>(null);
 
   // Which act last changed this machine's proxy, until a probe answers for it.
@@ -905,111 +959,83 @@ export function Onboarding({
   );
 
   return (
-    <div className="flex h-full flex-col overflow-auto">
-      <div className="mx-auto flex w-full max-w-reading flex-col gap-6 py-8">
-        <div data-testid="lead" className="px-4">
-          <p className="font-serif text-note text-ink">{TITLE}</p>
-          <p className="pt-2 font-ui text-body text-ink-body">{PURPOSE}</p>
-        </div>
-
-        <div data-testid="platform" className="flex flex-wrap items-center gap-3 px-4">
-          <p className={ZONE_LABEL}>{QUESTION}</p>
-          <Select
-            options={platformChoices(os)}
-            value={platform}
-            onChange={(id) => setPlatform(id as PlatformId)}
-            label={QUESTION}
-            searchable={false}
-            className="w-picker"
+    <>
+      <div data-testid="steps" className="flex flex-col gap-4">
+        {needsReach(platform) && (
+          <NetworkTask
+            n={1}
+            title={reachTaskTitle(platform, os)}
+            reach={reach}
+            chosen={chosen}
+            onChoose={setListenOn}
+            arm={arm}
+            disarm={disarm}
           />
-        </div>
+        )}
 
-        <div data-testid="steps" className="flex flex-col gap-4">
-          {needsReach(platform) && (
-            <NetworkTask
-              n={1}
-              title={reachTaskTitle(platform, os)}
-              reach={reach}
-              chosen={chosen}
-              onChoose={setListenOn}
-              arm={arm}
-              disarm={disarm}
-            />
+        <GuidedTask
+          n={first + 1}
+          task={setup.trust}
+          status={trustState}
+          dim={blocked}
+          guide={trustGuide}
+          guideOpen={trustGuideOpen}
+          save={onSaveCa ? saveCa : undefined}
+          action={trustAction || undefined}
+        >
+          {refusedHere && (
+            <div data-testid="traffic-remedy" className="pb-2">
+              <Notice tone="mute">{notDecryptingHere(deviceName(platform, os), setup.notDecrypting)}</Notice>
+            </div>
           )}
+        </GuidedTask>
 
-          <GuidedTask
-            n={first + 1}
-            task={setup.trust}
-            status={trustState}
-            dim={blocked}
-            guide={trustGuide}
-            guideOpen={trustGuideOpen}
-            save={onSaveCa ? saveCa : undefined}
-            action={trustAction || undefined}
-          >
-            {refusedHere && (
-              <div data-testid="traffic-remedy" className="pb-2">
-                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os), setup.notDecrypting)}</Notice>
+        <GuidedTask
+          n={first + 2}
+          task={setup.route}
+          status={routeState}
+          dim={blocked}
+          guide={routeGuide}
+          guideOpen={routeGuideOpen}
+          action={routeAction || undefined}
+        >
+          {proxy.status === "foreign" && probesRoute(platform) && (
+            <div data-testid="foreign-proxy" className="pb-2">
+              <Notice tone="mute">{foreignProxyNotice(here, proxy.address)}</Notice>
+            </div>
+          )}
+          {needsReach(platform) && armed && reach.proxy !== null && (
+            <ServerAndPort proxy={reach.proxy} />
+          )}
+        </GuidedTask>
+
+        <GuidedTask n={first + 3} task={setup.try} dim={blocked}>
+          <TrafficState
+            traffic={traffic}
+            certificate={{
+              done: trustDone,
+              trustedOn: platform === "this" && trustDone ? here : null,
+            }}
+          />
+          {setup.tryCommand && (
+            <>
+              <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
+              <div className="pt-2">
+                <CommandBlock value={setup.tryCommand} label="the try-it command" />
               </div>
-            )}
-          </GuidedTask>
-
-          <GuidedTask
-            n={first + 2}
-            task={setup.route}
-            status={routeState}
-            dim={blocked}
-            guide={routeGuide}
-            guideOpen={routeGuideOpen}
-            action={routeAction || undefined}
-          >
-            {proxy.status === "foreign" && probesRoute(platform) && (
-              <div data-testid="foreign-proxy" className="pb-2">
-                <Notice tone="mute">{foreignProxyNotice(here, proxy.address)}</Notice>
-              </div>
-            )}
-            {needsReach(platform) && armed && reach.proxy !== null && (
-              <ServerAndPort proxy={reach.proxy} />
-            )}
-          </GuidedTask>
-
-          <GuidedTask n={first + 3} task={setup.try} dim={blocked}>
-            <TrafficState
-              traffic={traffic}
-              certificate={{
-                done: trustDone,
-                trustedOn: platform === "this" && trustDone ? here : null,
-              }}
-            />
-            {setup.tryCommand && (
-              <>
-                <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
-                <div className="pt-2">
-                  <CommandBlock value={setup.tryCommand} label="the try-it command" />
-                </div>
-              </>
-            )}
-          </GuidedTask>
-        </div>
-
-        {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
-          <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
-        )}
-
-        <ProvenOutcome
-          device={platform === "this" ? provenDevice(here, trustProbe, proxy.status) : null}
-          traffic={traffic}
-        />
-
-        {state.everProven && (
-          <div data-testid="back" className="px-4">
-            <Button onClick={() => dispatch({ t: "exit" })} frame="bare" tone="mute">
-              <span aria-hidden="true">‹ </span>
-              {COPY.back}
-            </Button>
-          </div>
-        )}
+            </>
+          )}
+        </GuidedTask>
       </div>
-    </div>
+
+      {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
+        <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
+      )}
+
+      <ProvenOutcome
+        device={platform === "this" ? provenDevice(here, trustProbe, proxy.status) : null}
+        traffic={traffic}
+      />
+    </>
   );
 }
