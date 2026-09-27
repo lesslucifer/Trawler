@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 732c57d389713339d85d7bd9e0a3c28975ba4127
+base: 97bdf850e5b59beda8f85c45129fd370f359d1d7
+tier: key
+signer: vuluu
+report: docs/work/2026-09-27-onboard-review-w5-host-offers-result.html
+report_sha256: ab75f7aa2f58d7d6e1747234b43d6b92afe01eb54cd498355d36279372f36395
+date: 2026-09-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDluy+EtBcUDEWzG5zmhxtrGddReYJdLHH+KFOFjCUTXLTe6DntmUpHWe
+  YHScFYmXzKlnuyRh83uZ9eXC9TJQQO
+  -----END SSH SIGNATURE-----
