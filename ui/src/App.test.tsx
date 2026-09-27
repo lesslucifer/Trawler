@@ -745,6 +745,25 @@ test("entering setup reads the reach state rather than assuming one", async () =
   );
 });
 
+// R22: the core enumerates interfaces on every read, so joining a network and
+// asking again is all a host with no address needs.
+test("with no address, check again reads the core's reach anew and offers what it finds", async () => {
+  const reach = vi
+    .fn<() => Promise<typeof UNARMED>>()
+    .mockResolvedValueOnce({ ...UNREACHABLE, interfaces: [] })
+    .mockResolvedValue(UNARMED);
+  await offMachine({ reach });
+
+  const task1 = screen.getByTestId("task-1");
+  await waitFor(() => expect(task1).toHaveTextContent("Join the network your iPhone is on"));
+  fireEvent.click(within(task1).getByRole("button", { name: "check again" }));
+
+  await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+  expect(
+    await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }),
+  ).toBeInTheDocument();
+});
+
 // DEC-55: arming is an authorization act, so the ask comes first and the bind
 // only on a yes. A cancelled dialog must cost nothing at all.
 test("a refused confirm arms nothing — no POST, no address, no listening", async () => {
@@ -754,7 +773,7 @@ test("a refused confirm arms nothing — no POST, no address, no listening", asy
   const armReach = vi.fn(async () => ARMED);
   await offMachine({ reach: async () => UNARMED, armReach });
 
-  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("confirm_reach", { address: "192.168.1.24" }),
@@ -778,7 +797,7 @@ test("an allowed confirm arms that address, and the screen renders what answered
   const armReach = vi.fn(async () => ARMED);
   await offMachine({ reach: async () => UNARMED, armReach });
 
-  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
 
   await waitFor(() => expect(armReach).toHaveBeenCalledWith("192.168.1.24"));
   expect(screen.queryByTestId("arm-reach-status")).toBeNull();

@@ -490,7 +490,7 @@ const CA_SHOWN: Record<"mac" | "windows" | "ubuntu" | "ios" | "android", { says:
 };
 
 function offMachine(host: Host, platform: Platform): Chapter[] {
-  const allow = "Allow devices on my";
+  const allow = "Allow devices on";
   const ca = CA_SHOWN[platform as keyof typeof CA_SHOWN];
   const chapters: Chapter[] = [
     firstPaint(host),
