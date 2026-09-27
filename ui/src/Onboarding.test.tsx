@@ -24,7 +24,7 @@ const UNARMED: ReachState = {
   armed: false,
   proxy: null,
   api: null,
-  ca_cert_url: null,
+  ca_urls: null,
   interfaces: INTERFACES,
 };
 
@@ -32,7 +32,11 @@ const ARMED: ReachState = {
   armed: true,
   proxy: "192.168.1.24:9999",
   api: "192.168.1.24:7421",
-  ca_cert_url: "http://192.168.1.24:7421/ca.crt",
+  ca_urls: {
+    pem: "http://192.168.1.24:7421/ca.pem",
+    cer: "http://192.168.1.24:7421/ca.cer",
+    mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
+  },
   interfaces: INTERFACES,
 };
 
@@ -852,7 +856,20 @@ describe("a phone, once it may connect", () => {
 
     expect(
       screen.getByRole("button", { name: /copy the certificate URL/i }),
-    ).toHaveTextContent("http://192.168.1.24:7421/ca.crt");
+    ).toHaveTextContent("http://192.168.1.24:7421/ca.mobileconfig");
+  });
+
+  it("saves the profile the iPhone installs, and names it by the file it is", async () => {
+    const onSaveCa = vi.fn(async () => "/Users/me/Downloads/trawler-ca.mobileconfig");
+    draw({ reach: ARMED, onSaveCa });
+    pick("iPhone or iPad");
+
+    fireEvent.click(within(task(2)).getByRole("button", { name: "save…" }));
+
+    expect(onSaveCa).toHaveBeenCalledWith("mobileconfig");
+    expect(
+      await within(task(2)).findByText("saved as trawler-ca.mobileconfig. now trust it with the steps here."),
+    ).toBeInTheDocument();
     expect(within(zone("device-address")!).getByRole("button", { name: /copy the proxy host/i }))
       .toHaveTextContent("192.168.1.24");
     expect(within(zone("device-address")!).getByRole("button", { name: /copy the proxy port/i }))
@@ -1280,4 +1297,17 @@ test("the column scrolls whole — no zone holds an inner scroller", () => {
   const scrollers = container.querySelectorAll("[class*='overflow-auto'],[class*='overflow-y-auto']");
   expect(scrollers).toHaveLength(1);
   expect(scrollers[0]).toBe(container.firstElementChild);
+});
+
+test("the emulator's save control saves the DER its installer opens, and names it by that file", async () => {
+  const onSaveCa = vi.fn(async () => "trawler-ca.cer");
+  draw({ onSaveCa });
+  pick("Android emulator");
+
+  fireEvent.click(within(task(1)).getByRole("button", { name: "save…" }));
+
+  expect(onSaveCa).toHaveBeenCalledWith("cer");
+  expect(
+    await within(task(1)).findByText("saved as trawler-ca.cer. now trust it with the steps here."),
+  ).toBeInTheDocument();
 });

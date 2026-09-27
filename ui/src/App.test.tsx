@@ -8,7 +8,7 @@ import { apiStub } from "./apiStub";
 import { CAPTURE_COPY } from "./CaptureControls";
 import * as files from "./body";
 import type { OnbState } from "./onboardingMachine";
-import { CA_FILENAME } from "./setup";
+import { CA_FILES } from "./setup";
 import { TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
@@ -82,6 +82,7 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
     }),
     connectionCount: vi.fn(async () => connections),
     caCertPem: vi.fn(async () => PEM),
+    caFile: vi.fn(async () => new TextEncoder().encode(PEM)),
     getFlow: vi.fn(async (id: string): Promise<FlowView> => {
       const summary = store().find((f) => f.id === id)!;
       return {
@@ -264,10 +265,11 @@ test("Save writes the PEM under the filename the manual steps tell the user to r
 
   fireEvent.click(within(await screen.findByTestId("task-1")).getByText("do it manually"));
   fireEvent.click(screen.getByRole("button", { name: "save…" }));
-  await screen.findByText(new RegExp(`saved as ${CA_FILENAME}`));
+  await screen.findByText(new RegExp(`saved as ${CA_FILES.pem}`));
 
-  expect(api.caCertPem).toHaveBeenCalledOnce();
-  expect(saved.name).toBe(CA_FILENAME);
+  expect(api.caFile).toHaveBeenCalledOnce();
+  expect(api.caFile).toHaveBeenCalledWith("pem");
+  expect(saved.name).toBe(CA_FILES.pem);
   expect(screen.getByTestId("steps")).toHaveTextContent(
     `Save Trawler's certificate as ${saved.name}`,
   );
@@ -574,7 +576,11 @@ const ARMED = {
   armed: true,
   proxy: "192.168.1.24:7420",
   api: "192.168.1.24:7421",
-  ca_cert_url: "http://192.168.1.24:7421/ca.crt",
+  ca_urls: {
+    pem: "http://192.168.1.24:7421/ca.pem",
+    cer: "http://192.168.1.24:7421/ca.cer",
+    mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
+  },
   interfaces: INTERFACES,
 };
 
