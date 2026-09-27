@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-ONBREV.W7 — the certificate file each platform opens</h1>
       <p>Each platform downloads, saves and is told about one certificate file, in the format its own installer opens. An iPhone gets a configuration profile, Android gets DER, and the desktops keep PEM.</p>
-      <div class="meta">v1 · 2026-09-27 · Trawler · T3 WU plan · <span class="badge id">E-ONBREV.W7</span> · branch <code>wu/onboard-review/ca-files</code> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · findings R23–R28 below · depends on <span class="badge id">E-ONBREV.W1</span> (merged, the <em>before</em> is recorded)</div>
+      <div class="meta">v2 · 2026-09-27 · the owner's second iPhone report (R29, R30) added · Trawler · T3 WU plan · <span class="badge id">E-ONBREV.W7</span> · branch <code>wu/onboard-review/ca-files</code> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · findings R23–R30 below · depends on <span class="badge id">E-ONBREV.W1</span> (merged, the <em>before</em> is recorded)</div>
     </div>
   </header>
   <main>
@@ -21,13 +21,15 @@
       Apple configuration profile at <code>/ca.mobileconfig</code>. Each download suggests a file name that matches
       its URL, and <code>/reach</code> names all three URLs. iPhone and iPad are sent to the profile in Safari.
       Android and its emulator get the DER file. Every desktop and the iOS Simulator keep PEM. In every platform's
-      certificate task, the download, the save control and every command name the same one file.</strong>
+      certificate task, the download, the save control and every command name the same one file. The iPhone's trust step
+      says installing the profile does not trust it. When traffic arrives and doesn't decrypt, each platform's certificate
+      task names the check its users most often miss.</strong>
     </p>
 
     <h2 id="maps-to">Mapping</h2>
     <p data-item="maps-to">
       <span class="badge id">E-ONBREV</span> · the epic plan's W7 block · UC-ONBOARD: the certificate-file row ·
-      findings R23–R28 (below; the owner's iPhone report is R23 and R24) · open questions Q11–Q13 (the owner took the proposed defaults, 2026-09-27) · UC-1 unchanged
+      findings R23–R30 (below; the owner's first iPhone report is R23 and R24, the second R29 and R30) · open questions Q11–Q13 (the owner took the proposed defaults, 2026-09-27) · UC-1 unchanged
       (<code>/ca.crt</code> keeps its PEM body).
     </p>
 
@@ -63,6 +65,21 @@
       <tr><td>R28</td><td>iPhone, Android, Android emulator</td>
         <td>the install step names a Settings path but no file</td>
         <td>The user has to guess which file to pick in the installer.</td></tr>
+      <tr><td>R29</td><td>iPhone or iPad</td>
+        <td>"Then turn it on: Settings → General → About → Certificate Trust Settings."</td>
+        <td>The owner installed the profile, took it for done, and got <code>CertificateUnknown</code> and "This
+          Connection Is Not Private" until the switch was on. The step doesn't say that installing is not
+          trusting.</td></tr>
+      <tr><td>R30</td><td>every platform</td>
+        <td>"something reached Trawler and did not decrypt — … does not trust Trawler's certificate yet. The steps below
+          install it."</td>
+        <td>A user who already did the steps gets no check to make. Each platform has a usual cause: the iPhone's trust
+          switch; Android's user store and the apps that ignore it; a browser or Simulator still holding the store it
+          started with; Firefox's own store. Pinned apps and Apple's services never decrypt at all.</td></tr>
+      <tr><td>R31</td><td>every platform</td>
+        <td>nothing says which host failed or why</td>
+        <td>The core logs <code>Failed to establish TLS connection</code> with the client's reason, but the screen can't
+          see it. <em>Out of W7</em> (Q14): the backlog carries it.</td></tr>
       <tr><td>—</td><td>this machine, another Mac, Windows, Ubuntu, iOS Simulator</td>
         <td><code>security add-trusted-cert</code>, <code>certutil -addstore</code>,
           <code>update-ca-certificates</code> (copied to <code>.crt</code>), NSS <code>certutil</code> and
@@ -110,6 +127,9 @@ flowchart LR
           Not Verified, because only you made it."</td></tr>
       <tr><td>iPhone or iPad · alternative</td><td>"No browser on it? Save … as <code>trawler-ca.pem</code> and carry the file over instead."</td>
         <td>"Or save <code>trawler-ca.mobileconfig</code> [save] and AirDrop it over."</td></tr>
+      <tr><td>iPhone or iPad · trust</td><td>"Then turn it on: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA."</td>
+        <td>"Then turn on full trust. Installing does not: Settings → General → About → Certificate Trust Settings →
+          Trawler Proxy CA. Until it is on, Safari says This Connection Is Not Private."</td></tr>
       <tr><td>Android phone · download</td><td>"open <code>…/ca.crt</code> — it downloads the certificate."</td>
         <td>"open <code>…/ca.cer</code> — it downloads <code>trawler-ca.cer</code>."</td></tr>
       <tr><td>Android · install</td><td>"… Install a certificate → CA certificate."</td>
@@ -123,6 +143,18 @@ flowchart LR
         <td>"open <code>…/ca.pem</code> — it downloads <code>trawler-ca.pem</code>." The commands are unchanged</td></tr>
       <tr><td>this machine, iOS Simulator</td><td>"Save Trawler's certificate as <code>trawler-ca.pem</code>"</td>
         <td>unchanged</td></tr>
+    </table>
+    <table data-c="not-decrypting">
+      <tr><th>Traffic arrives and doesn't decrypt on…</th><th>The certificate task adds, after "The steps below install it."</th></tr>
+      <tr><td>this machine, another Mac, Windows, Ubuntu</td><td>"Already did? A browser keeps the store it started with
+        until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt."</td></tr>
+      <tr><td>iPhone or iPad</td><td>"Installed the profile already? Trust is a separate switch: Settings → General →
+        About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is
+        the test."</td></tr>
+      <tr><td>iOS Simulator</td><td>"Already did? Restart the Simulator — its apps keep the store they started with."</td></tr>
+      <tr><td>Android phone, Android emulator</td><td>"Already did? Trawler Proxy CA should be under Settings → Security →
+        Encryption &amp; credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a
+        website in Chrome is the test."</td></tr>
     </table>
     <p class="caption">Design: no new surface. Only the file each sentence names changes, and the iOS install note
       is added to an existing step. <code>setup.ts</code> and <code>Onboarding.tsx</code> are declared
@@ -141,6 +173,8 @@ flowchart LR
         <code>ca_urls: {pem, cer, mobileconfig}</code> over the armed address, or null when nothing is armed</td><td>R27</td></tr>
       <tr><td><code>ui/src/api.ts</code></td><td>the reach type follows. <code>caFile(format)</code> returns a
         format's bytes. <code>caCertPem</code> stays for the one-click setup</td><td>R24 · R26</td></tr>
+      <tr><td><code>ui/src/setup.ts</code> · <code>verdicts.ts</code> · <code>Onboarding.tsx</code></td><td>each platform's
+        <code>notDecrypting</code> check, spoken after the certificate task's refusal. The iPhone's trust step</td><td>R29 · R30</td></tr>
       <tr><td><code>ui/src/setup.ts</code></td><td><code>CA_FILES</code>: one name per format. Each platform picks
         its format, and every download, save step, install step and command reads that name from there</td><td>R23 – R28</td></tr>
       <tr><td><code>ui/src/Onboarding.tsx</code> · <code>App.tsx</code></td><td>the save control saves its step's
@@ -167,6 +201,8 @@ flowchart LR
           step</td></tr>
       <tr><td>every platform's certificate task, on every host</td>
         <td>one file name, the one its URL or save control produces</td></tr>
+      <tr><td>the certificate task of any platform, with traffic arriving undecrypted</td>
+        <td>the refusal, then that platform's check (the table above)</td></tr>
       <tr><td>on a real iPhone, the URL opened in Safari</td>
         <td>"Profile Downloaded". It installs from Settings, and Trawler Proxy CA can be trusted in Certificate
           Trust Settings</td></tr>
@@ -194,6 +230,13 @@ flowchart LR
         each certificate task names exactly one of <code>CA_FILES</code>, its URL and save control are that
         format's, and every command in it reads that name. iOS says Safari and never names <code>.pem</code>.
         Android and the emulator name <code>trawler-ca.cer</code></td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>Every platform has a <code>notDecrypting</code> check.
+        The iPhone's names Certificate Trust Settings and Safari, Android's the User store and Chrome, the Simulator's a
+        restart, and the desktops' a browser restart and Firefox. The iPhone's trust step says installing does not
+        trust</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>With traffic arriving undecrypted, the
+        certificate task on the iPhone, on Android and on this machine shows the refusal followed by that platform's
+        check</td></tr>
       <tr><td>unit</td><td><code>ui/src/api.test.ts</code></td><td><code>caFile</code> fetches each format's path and
         returns its bytes. A failure throws <code>ApiError</code></td></tr>
       <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> · <code>App.test.tsx</code></td><td>The save
@@ -202,7 +245,8 @@ flowchart LR
       <tr><td>e2e</td><td>—</td><td><em>waived at WU level:</em> no hermetic run has an iPhone or an Android device,
         and the epic plan gives the journeys to W6. The formats are pinned byte for byte at integration level. The
         evidence is the owner installing the profile on a real iPhone and the DER on a real Android device through
-        an armed reach, and the walkthrough's device reels re-run through the real window</td></tr>
+        an armed reach, and the walkthrough's device reels re-run through the real window. The iPhone half is done
+        (2026-09-27): the profile installed; with full trust on, Safari's example.com decrypted and proved setup</td></tr>
     </table>
 
     <h2 id="distillation">Distillation owed to W6</h2>
@@ -218,7 +262,10 @@ flowchart LR
         and integration tests</td></tr>
       <tr><td>3</td><td>each platform names and saves its own file, with the setup sweep and the save-control
         tests</td></tr>
-      <tr><td>4</td><td>the result report, including the owner's real-device installs</td></tr>
+      <tr><td>4</td><td>the walkthrough's device reels caption their file, and the judge knows the new findings</td></tr>
+      <tr><td>5</td><td>R29 and R30: the iPhone's trust step, and each platform's not-decrypting check, with their
+        tests</td></tr>
+      <tr><td>6</td><td>the result report, including the owner's real-device installs</td></tr>
     </table>
 
   </main>

@@ -13,7 +13,7 @@
         UC-ONBOARD says it does. That covers every way into the screen, not only the first run.</p>
       <div class="meta">v6 · 2026-09-27 · W7 gives each platform the certificate file its installer opens · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
         built from <a href="2026-09-25-onboard-review-findings.html">the timing review</a> (R1–R22) and
-        <a href="2026-09-27-onboard-review-w7-ca-files-plan.html">the certificate-file audit</a> (R23–R28)</div>
+        <a href="2026-09-27-onboard-review-w7-ca-files-plan.html">the certificate-file audit</a> (R23–R30)</div>
     </div>
   </header>
   <main>
@@ -74,7 +74,8 @@
           file.</strong> iPhone or iPad gets an Apple configuration profile (<code>trawler-ca.mobileconfig</code>).
           Android and its emulator get DER (<code>trawler-ca.cer</code>). Every desktop and the iOS Simulator get
           PEM (<code>trawler-ca.pem</code>). The download, the save control and every command in a guide name
-          that one file.</td><td>R23 – R28</td></tr>
+          that one file. Where a platform's trust is a separate act from its install, the step says so.
+          Traffic that arrives and doesn't decrypt gets the check that platform's users most often miss.</td><td>R23 – R30</td></tr>
       <tr><td><span class="badge id">UC-4</span></td>
         <td>Unchanged. Only the dot's reading on re-entry moves (R5), and that is UC-ONBOARD's.</td><td>—</td></tr>
     </table>
@@ -118,6 +119,9 @@
       <tr><td>On a real Android phone, open the certificate URL the Android guide gives</td>
         <td><code>trawler-ca.cer</code> lands in Downloads, and "Install a certificate → CA certificate" can
           pick it</td></tr>
+      <tr><td>iPhone, the profile installed, full trust off, Safari opens an https site</td>
+        <td>the certificate task says the trust switch is still off and names its path in Settings. It says Apple's own
+          services never decrypt, and that a website in Safari is the test</td></tr>
       <tr><td>Read every platform's certificate task, on every host</td>
         <td>it names one file, the one its download and save control produce, and every command in it reads
           that name</td></tr>
@@ -227,9 +231,11 @@
           profile at <code>/ca.mobileconfig</code>. <code>/ca.crt</code> is unchanged. <code>/reach</code> names
           the three URLs. Each platform's guide downloads, saves and names only its own file: iOS gets the
           profile, opened in Safari; Android and its emulator get DER; the desktops and the Simulator keep PEM.
+          The iPhone's trust step says installing does not trust. When traffic doesn't decrypt, each platform's
+          certificate task names the check its users most often miss.
           <a href="2026-09-27-onboard-review-w7-ca-files-plan.html">WU plan</a>.</p>
-        <p data-item="wu-maps-to">UC-ONBOARD: the certificate-file row · R23 – R28 (the owner's iPhone
-          report)</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the certificate-file row · R23 – R30 (the owner's iPhone
+          reports: the file, then the trust switch)</p>
         <p data-item="wu-expected">Unit and integration tests pin each format's bytes, type and file name, and
           a sweep over every platform × host asserts that each certificate task names one file, the one its
           URL or save control produces. The owner installs the profile on a real iPhone and the DER file on
@@ -334,6 +340,10 @@
         <code>.crt</code>?</td>
         <td>DER <code>.cer</code>. Every Android version's CA installer reads DER, and its file picker lists
           <code>.cer</code>.</td></tr>
+      <tr><td>Q14</td><td>R31: should the screen name which host failed and why (the phone refused the certificate,
+        or closed the connection the way a pinning app does)?</td>
+        <td>Yes, but not in W7. The core cannot see a handshake failure today: hudsucker only logs it. Catching it is a
+          core change with a surface of its own, so it goes to the backlog for its own epic.</td></tr>
       <tr><td>Q13</td><td>R27: does <code>/ca.crt</code> change?</td>
         <td>No. Its PEM body stays for UC-1, <code>curl --cacert</code> and every existing client. Only the
           file name its download suggests changes, to <code>trawler-ca.crt</code>, so the URL and the file
