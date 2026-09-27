@@ -17,6 +17,10 @@ const QUESTION = "which device's traffic do you want to see";
 // suite's target is macOS — so the label is exact, not guessed.
 const THIS_MACHINE = "This machine \u2014 macOS";
 const picker = () => $(`[aria-label="${QUESTION}"][aria-haspopup="listbox"]`);
+const dot = () => $('[data-testid="status-dot"]');
+const successLine = () => $('[data-testid="proven"]');
+const tryTask = () => $('[data-testid="task-3"]');
+const button = (prefix: string) => $(`//button[starts-with(normalize-space(.), "${prefix}")]`);
 
 // The platform axis is a Select, so an answer is two clicks: open the trigger,
 // then the option. Both are matched by aria-label — the component's own
@@ -44,11 +48,14 @@ async function shellIsUp() {
 // user names the platform they are setting up, and every instruction below that
 // answer belongs to it.
 //
-// Two journeys, both through the real Tauri window against a real ephemeral
-// core. THIS MACHINE is the payoff journey — a real proxied HTTPS request is
-// decrypted by the core and that, and nothing else, ends onboarding. ANOTHER
-// PLATFORM is the journey W1 exists for, and it runs FIRST: capture latches
-// everProven, and after the reveal the app never re-forces setup.
+// Through the real Tauri window against a real ephemeral core, whose launcher
+// sent one https request before the window came up, so the launch read finds a
+// row the core sent itself. THIS MACHINE is the payoff journey — a real proxied
+// HTTPS request is decrypted by the core and that, and nothing else, ends
+// onboarding. ANOTHER PLATFORM runs before it, because capture latches
+// everProven and after the reveal the app never re-forces setup. The two
+// re-entry journeys (E-ONBREV) run after it for the same reason: each is a new
+// setup session on a capture already proven.
 //
 // What journey 2 does NOT drive, and why. Arming reach is an authorization act
 // (DEC-55) and the shell asks before it binds — confirm_reach opens a native
@@ -67,8 +74,9 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await shellIsUp();
   });
 
-  it("a fresh launch leads with what this screen is, not with the flow list", async () => {
+  it("a launch over a core holding only a sent row leads with setup, not with the flow list", async () => {
     await expect($('[data-testid="lead"]')).toBeExisting();
+    await expect($('[data-testid="flow-row"]')).not.toBeExisting();
     await expect($('[data-testid="platform"]')).toBeExisting();
     await expect($('[data-testid="steps"]')).toBeExisting();
     await expect($('[aria-label="host"]')).not.toBeExisting();
@@ -151,6 +159,8 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
 
     await expect($('[data-testid="lead"]')).not.toBeExisting();
     await expect($('[data-testid="flow-row"]')).toHaveText(expect.stringContaining("localhost"));
+    // The seeded row was in the core all along: setup stood over it.
+    await expect($('[data-testid="flow-row"] [aria-label="sent"]')).toBeExisting();
 
     // The moment setup succeeds is the list's first paint, not the setup
     // screen's last — and it offers the next device rather than only closing.
@@ -159,9 +169,57 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await expect(banner).toHaveText(expect.stringContaining("set up another device"));
   });
 
-  // Re-invoke (status dot) + Back-to-flows navigation is covered at the integration
-  // layer (App.test.tsx); the e2e proves the capture-driven journey spine, not the
-  // 10px dot-click interaction.
+  // A second device is its own setup session: the first device's success is
+  // not this one's, so nothing reads as set up until a new request arrives.
+  it("setting up another device keeps capture connected and answers no device", async () => {
+    await button("set up another device").click();
+
+    await expect($('[data-testid="lead"]')).toBeExisting();
+    await expect(dot()).toHaveAttribute("data-status", "connected");
+    await expect($('[data-testid="task-1"]')).not.toBeExisting();
+    await expect(successLine()).not.toBeExisting();
+  });
+
+  it("the device chosen opens its first guide, and only its own request says set up", async () => {
+    await choosePlatform("Android emulator");
+
+    await expect($('[data-testid="task-1"] details[open]')).toBeExisting();
+    await expect(tryTask()).toHaveText(expect.stringContaining("waiting for the first request"));
+    await expect(successLine()).not.toBeExisting();
+
+    await hit();
+    await successLine().waitForExist({ timeout: 15_000, timeoutMsg: "no success line after the new request" });
+    await expect(tryTask()).toHaveText(expect.stringContaining("capturing traffic"));
+  });
+
+  // Setup reads its own session unfiltered: a list filtered to nothing is the
+  // list's view, never the setup screen's evidence.
+  it("re-entry with the list filtered to nothing still reads the new request", async () => {
+    await button("‹ back to flows").click();
+    await $('[aria-label="filter"]').setValue("no-such-path.test");
+    await browser.waitUntil(async () => (await rowCount()) === 0, {
+      timeout: 15_000,
+      timeoutMsg: "non-matching filter did not empty the list",
+    });
+
+    await dot().click();
+    await expect(picker()).toHaveText(expect.stringContaining("Android emulator"));
+    await expect(tryTask()).toHaveText(expect.stringContaining("waiting for the first request"));
+    await expect(successLine()).not.toBeExisting();
+
+    await hit();
+    await successLine().waitForExist({ timeout: 15_000, timeoutMsg: "the filtered re-entry never read the request" });
+    await expect(tryTask()).toHaveText(expect.stringContaining("capturing traffic"));
+  });
+
+  it("back from setup keeps the list's filter, and clearing it brings the rows back", async () => {
+    await button("‹ back to flows").click();
+    await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
+    expect(await rowCount()).toBe(0);
+
+    await $('[aria-label="filter"]').clearValue();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, { timeout: 15_000 });
+  });
 
   // Lifecycle wiring is exercised here implicitly: this app boots through the Tauri
   // setup hook (launch reconciliation) and quits through the RunEvent::ExitRequested
@@ -170,20 +228,6 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
   // clear_proxy_marker commands, the marker gate and native off-argvs are unit-tested
   // in src-tauri + closeConfirm.test.tsx; the real proxy-off is elevation-gated and
   // not hermetically runnable, so it is not driven from the UI here.
-
-  // UC-4 list behaviour, now reached through setup: the revealed list filters
-  // and appends live exactly as before.
-  it("filters the row out on a non-matching query and back in when cleared", async () => {
-    // Host is a dropdown of what capture has seen, so an unmatchable value is no
-    // longer expressible there; the free-text key is where an arbitrary query lives.
-    await $('[aria-label="filter"]').setValue("no-such-path.test");
-    await browser.waitUntil(async () => (await rowCount()) === 0, {
-      timeout: 15_000,
-      timeoutMsg: "non-matching filter did not empty the list",
-    });
-    await $('[aria-label="filter"]').clearValue();
-    await browser.waitUntil(async () => (await rowCount()) >= 1, { timeout: 15_000 });
-  });
 
   it("appends a second row on a new request without a manual refresh", async () => {
     const before = await rowCount();
