@@ -980,9 +980,11 @@ function PlatformSetup({
     </>
   );
 
+  // Keyed on the platform so a switch opens each guide as the new platform's
+  // rule says, not as the user left the one in the same place before it (R11).
   return (
     <>
-      <div data-testid="steps" className="flex flex-col gap-4">
+      <div key={platform} data-testid="steps" className="flex flex-col gap-4">
         {needsReach(platform) && (
           <NetworkTask
             n={1}

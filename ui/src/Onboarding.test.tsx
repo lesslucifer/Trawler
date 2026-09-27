@@ -1358,6 +1358,17 @@ describe("one guide open, whatever the user picked", () => {
 
     expect(opened()).toHaveLength(0);
   });
+  it("a guide the user closed does not follow them to the next platform (R11)", () => {
+    draw({ os: "linux", reach: ARMED });
+    pick("Another Mac");
+    const closed = within(task(2)).getAllByRole("group")[0] as HTMLDetailsElement;
+    expect(closed).toHaveAttribute("open");
+    closed.open = false;
+
+    pick(setup.platformLabel("this", "linux"));
+
+    expect(within(task(1)).getAllByRole("group")[0]).toHaveAttribute("open");
+  });
 });
 
 test("the reading column answers to the window, not to a dialog", () => {
