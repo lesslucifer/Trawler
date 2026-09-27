@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 5eb236bcb996b77682989eba5c5abba853376fed
+base: 36d48a05970b38e3512c45fd739f0c4cfeb104d8
+tier: key
+signer: vuluu
+report: docs/work/2026-09-26-onboard-review-w2-launch-gate-result.html
+report_sha256: 1281b1dc3f6083234d290e4e908a5b14e68fa769cc49221636b20698d9ea8523
+date: 2026-09-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBqBFaN8mGn58DRKgchKF56x2AV7FYb8Pxs/K6JzvO0sB/S+j2enopiL2
+  W6ToyflmwGFPEdRDeDiDeB0pfPqQUD
+  -----END SSH SIGNATURE-----
