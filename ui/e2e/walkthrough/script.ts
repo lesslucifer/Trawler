@@ -427,8 +427,8 @@ function androidSim(host: Host): Chapter[] {
         await w.closePicker();
         await w.choose("Android emulator");
       },
-      expect: `each task carries its own steps and the first guide is open. Nothing observes the emulator, so the guide does not advance by itself (the rule Q3 keeps)`,
-      findings: ["R10"],
+      expect: `each task carries its own steps and the first guide is open. Nothing observes the emulator, so the guide does not advance by itself (the rule Q3 keeps). The certificate task saves trawler-ca.cer, pushes it with adb and picks trawler-ca.cer in the installer, and names no .pem`,
+      findings: ["R10", "R26", "R28"],
       anchor: [task(1)],
     },
   ];
@@ -447,8 +447,25 @@ function androidSim(host: Host): Chapter[] {
   return chapters;
 }
 
+// What each off-machine certificate task has to name once armed: the one file
+// that platform's installer opens, from the URL that downloads it.
+const CA_SHOWN: Record<"mac" | "windows" | "ubuntu" | "ios" | "android", { says: string; findings: string[] }> = {
+  mac: { says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read", findings: ["R27"] },
+  windows: { says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read", findings: ["R27"] },
+  ubuntu: { says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read", findings: ["R27"] },
+  ios: {
+    says: "opens /ca.mobileconfig in Safari, which downloads trawler-ca.mobileconfig, installs Trawler Proxy CA from VPN & Device Management, and says why iOS calls it Not Verified; its other way saves the same profile to AirDrop over, and no .pem is named",
+    findings: ["R23", "R24", "R27", "R28"],
+  },
+  android: {
+    says: "opens /ca.cer, which downloads trawler-ca.cer, and the install step picks trawler-ca.cer; its other way saves the same file",
+    findings: ["R25", "R27", "R28"],
+  },
+};
+
 function offMachine(host: Host, platform: Platform): Chapter[] {
   const allow = "Allow devices on my";
+  const ca = CA_SHOWN[platform as keyof typeof CA_SHOWN];
   const chapters: Chapter[] = [
     firstPaint(host),
     picker(host),
@@ -481,9 +498,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.script({ allow_reach: true });
         await w.click(allow);
       },
-      expect: `task 1 reads allowed, listening on 192.168.1.23; the tasks below are no longer dimmed, the certificate task's guide is open, and the device's server and port are shown`,
-      findings: ["R10"],
-      anchor: ['[data-testid="device-address"]'],
+      expect: `task 1 reads allowed, listening on 192.168.1.23; the tasks below are no longer dimmed, the certificate task's guide is open, and the device's server and port are shown. The certificate task ${ca.says}`,
+      findings: ["R10", ...ca.findings],
+      anchor: ['[data-testid="device-address"]', '[data-wire="certificate url"]'],
     },
   ];
   if (platform === "ios")
