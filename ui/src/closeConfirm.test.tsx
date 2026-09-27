@@ -7,7 +7,7 @@ const ADDR = "127.0.0.1:7420";
 // A fake Tauri window + invoke: captures the onCloseRequested handler so a test can
 // fire a close, stubs proxy_status / notice_dismissed per case, and records
 // which commands + destroy() ran.
-function fakeDeps(status: "ours" | "foreign" | "none", noticeDismissed = false) {
+function fakeDeps(status: "ours" | "foreign" | "none" | "unknown", noticeDismissed = false) {
   let closeHandler: (e: { preventDefault: () => void }) => void = () => {};
   const destroy = vi.fn(async () => {});
   const invoke = vi.fn(async (cmd: string) => {
@@ -74,6 +74,13 @@ test("foreign: actionable too — unset_proxy turns the OS proxy off whoever set
 
 test("none: the remote notice — nothing local to act on", async () => {
   const f = fakeDeps("none");
+  const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
+  await closeAndWait(f);
+  await waitFor(() => expect(result.current.mode).toBe("remote"));
+});
+
+test("unknown: a proxy nothing could read takes the path none takes (R19)", async () => {
+  const f = fakeDeps("unknown");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
   await waitFor(() => expect(result.current.mode).toBe("remote"));
