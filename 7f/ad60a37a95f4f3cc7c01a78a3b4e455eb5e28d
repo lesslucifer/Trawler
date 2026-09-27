@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU e2e-distill -> epic/onboard-review"
+epic: E-ONBREV
+wu: E-ONBREV.W6
+branch: wu/onboard-review/e2e-distill
+base: 80231250b9f632538bc5b20dbf89598dfd10188d
+head: 7fad60a37a95f4f3cc7c01a78a3b4e455eb5e28d
+diff_sha256: c5b89152159792da05d55891e7e75479005c3b32f3628f103f970f8e13b424a6
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 67
+    finders: 504
+    verifiers: 0
+    total: 529
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-09-27
