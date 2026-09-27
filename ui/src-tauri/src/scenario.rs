@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use serde::Deserialize;
 
 use crate::setup::{
-    command_failed, read_proxy, trust_word, ProxyReading, SetupError, NO_INSTALL_DETAIL,
+    command_failed, read_proxy, trust_word, ProxyRead, ProxyReading, SetupError, NO_INSTALL_DETAIL,
     NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
 };
 
@@ -120,14 +120,13 @@ impl Scenario {
         })
     }
 
-    // Today's reader returns nothing both for a proxy that is off and for one it
-    // could not read, so both reach the classifier as the same absence.
     fn proxy_reading(&self, host: &str, port: u16) -> ProxyReading {
-        let active = match &self.proxy {
-            ProxyOs::Set { host, port } => Some((host.clone(), *port)),
-            ProxyOs::Unset | ProxyOs::Unreadable => None,
+        let read = match &self.proxy {
+            ProxyOs::Set { host, port } => ProxyRead::Set(host.clone(), *port),
+            ProxyOs::Unset => ProxyRead::Off,
+            ProxyOs::Unreadable => ProxyRead::Unreadable,
         };
-        read_proxy(active, host, port)
+        read_proxy(&read, host, port)
     }
 
     fn set_up(&mut self, host: String, port: u16) -> Result<(), SetupError> {
@@ -286,7 +285,10 @@ mod tests {
     fn a_fresh_scenario_is_an_untrusted_machine_with_no_proxy_that_refuses_every_confirm() {
         let s = Scenario::default();
         assert_eq!(s.trust_reading(), "untrusted");
-        assert_eq!(s.proxy_reading("127.0.0.1", 7420), read_proxy(None, "127.0.0.1", 7420));
+        assert_eq!(
+            s.proxy_reading("127.0.0.1", 7420),
+            read_proxy(&ProxyRead::Off, "127.0.0.1", 7420)
+        );
         assert!(!s.allow_reach && !s.allow_replace);
     }
 
@@ -318,17 +320,22 @@ mod tests {
         let ours = patched(r#"{"proxy":{"set":{"host":"127.0.0.1","port":7420}}}"#);
         assert_eq!(
             ours.proxy_reading("127.0.0.1", 7420),
-            read_proxy(Some(("127.0.0.1".into(), 7420)), "127.0.0.1", 7420)
+            read_proxy(&ProxyRead::Set("127.0.0.1".into(), 7420), "127.0.0.1", 7420)
         );
         let foreign = patched(r#"{"proxy":{"set":{"host":"10.0.0.9","port":3128}}}"#);
         assert_eq!(
             foreign.proxy_reading("127.0.0.1", 7420),
-            read_proxy(Some(("10.0.0.9".into(), 3128)), "127.0.0.1", 7420)
+            read_proxy(&ProxyRead::Set("10.0.0.9".into(), 3128), "127.0.0.1", 7420)
         );
         let unreadable = patched(r#"{"proxy":"unreadable"}"#);
         assert_eq!(
             unreadable.proxy_reading("127.0.0.1", 7420),
-            read_proxy(None, "127.0.0.1", 7420)
+            read_proxy(&ProxyRead::Unreadable, "127.0.0.1", 7420)
+        );
+        let unset = patched(r#"{"proxy":"unset"}"#);
+        assert_eq!(
+            unset.proxy_reading("127.0.0.1", 7420),
+            read_proxy(&ProxyRead::Off, "127.0.0.1", 7420)
         );
     }
 
