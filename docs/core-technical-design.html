@@ -155,7 +155,8 @@ sequenceDiagram
         <tr><td><code>GET /flows/:id</code></td><td>Full flow detail (a <code>FlowView</code>)</td></tr>
         <tr><td><code>GET /flows/:id/{request,response}/body?decode=1</code></td><td>Raw bytes, or decoded + pretty-printed</td></tr>
         <tr><td><code>GET /stream</code></td><td>SSE of live <code>FlowEvent</code>s</td></tr>
-        <tr><td><code>GET /ca.crt</code></td><td>Download the root CA — the delivery path for iOS / Android trust</td></tr>
+        <tr><td><code>GET /ca.crt</code></td><td>The root CA as PEM, for UC-1's download, <code>curl --cacert</code> and every existing client</td></tr>
+        <tr><td><code>GET /ca.pem</code> · <code>/ca.cer</code> · <code>/ca.mobileconfig</code></td><td>The same CA per installer: PEM for desktops and <code>simctl</code>, DER for Android, an unsigned configuration profile for iOS. <code>/reach</code> names their URLs</td></tr>
       </tbody>
     </table>
 
@@ -280,7 +281,7 @@ flowchart TD
         <tr>
           <td>iOS</td>
           <td>Wi-Fi &gt; Configure Proxy (manual, Mac's LAN IP:7420); per-network.</td>
-          <td>Open <code>http://&lt;ip&gt;:7420/ca.crt</code> in Safari to install the profile, <em>then</em> Settings &gt; General &gt; About &gt; Certificate Trust Settings → toggle full trust (mandatory, frequently missed).</td>
+          <td>Open <code>http://&lt;ip&gt;:7421/ca.mobileconfig</code> in Safari to download the profile, install it from Settings, <em>then</em> Settings &gt; General &gt; About &gt; Certificate Trust Settings → toggle full trust (mandatory, frequently missed).</td>
           <td>iOS 18.0–18.1 had a bug hiding the trust toggle (fixed 18.2). Pinned apps never work.</td>
         </tr>
         <tr>
