@@ -921,7 +921,7 @@ describe("a phone, once it may connect", () => {
     expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
     expect(task(2)).toHaveTextContent("not done — nothing decrypted");
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
-      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.",
+      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it. Installed the profile already? Trust is a separate switch: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is the test.",
     );
     expect(open("On your iPhone, open")).toBe(true);
     expect(task(4)).toHaveTextContent("arriving but not decrypting");
@@ -1039,7 +1039,7 @@ describe("the end", () => {
     draw({ traffic: arriving });
 
     expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
-      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it.",
+      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.",
     );
     expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
     expect(within(task(3)).queryByTestId("traffic-remedy")).toBeNull();
@@ -1310,4 +1310,13 @@ test("the emulator's save control saves the DER its installer opens, and names i
   expect(
     await within(task(1)).findByText("saved as trawler-ca.cer. now trust it with the steps here."),
   ).toBeInTheDocument();
+});
+
+test("an Android device whose requests arrive and do not decrypt is told where its user store is, and what ignores it", () => {
+  draw({ reach: ARMED, traffic: arriving });
+  pick("Android device");
+
+  expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
+    "something reached Trawler and did not decrypt — your Android device does not trust Trawler's certificate yet. The steps below install it. Already did? Trawler Proxy CA should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.",
+  );
 });

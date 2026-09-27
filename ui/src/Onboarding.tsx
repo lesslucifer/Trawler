@@ -949,7 +949,7 @@ export function Onboarding({
           >
             {refusedHere && (
               <div data-testid="traffic-remedy" className="pb-2">
-                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os))}</Notice>
+                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os), setup.notDecrypting)}</Notice>
               </div>
             )}
           </GuidedTask>

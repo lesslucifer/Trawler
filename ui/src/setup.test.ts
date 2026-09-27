@@ -535,3 +535,41 @@ describe("each platform names the one certificate file its installer opens", () 
     }
   });
 });
+
+// The owner's second iPhone report: the profile installed, trust off, and
+// nothing on the screen said installing is not trusting. Each platform names
+// what its users check next when traffic arrives and does not decrypt.
+describe("each platform says what to check when its traffic does not decrypt", () => {
+  it.each(PLATFORM_IDS)("%s has a check to make", (id) => {
+    expect(setup(id).notDecrypting).toMatch(/\S/);
+  });
+
+  it("the iPhone's is the trust switch, and Safari is its test", () => {
+    const check = setup("ios").notDecrypting;
+    expect(check).toContain("Settings → General → About → Certificate Trust Settings → Trawler Proxy CA");
+    expect(check).toMatch(/Apple's own services never decrypt; a website in Safari is the test/);
+  });
+
+  it.each(["android", "android-sim"] as const)("%s's is the User store, and Chrome is its test", (id) => {
+    const check = setup(id).notDecrypting;
+    expect(check).toContain("Trusted credentials → User");
+    expect(check).toMatch(/Android 7\+; a website in Chrome is the test/);
+  });
+
+  it("the Simulator's is a restart", () => {
+    expect(setup("ios-sim").notDecrypting).toMatch(/Restart the Simulator/);
+  });
+
+  it.each(["this", "mac", "windows", "ubuntu"] as const)("%s's is a browser restart, Firefox and pinning", (id) => {
+    const check = setup(id).notDecrypting;
+    expect(check).toMatch(/restarts/);
+    expect(check).toMatch(/Firefox keeps its own/);
+    expect(check).toMatch(/pin their own certificate/);
+  });
+
+  it("the iPhone's trust step says installing does not trust, and what Safari says until it does", () => {
+    const steps = setup("ios").trust.guide!.steps.map((step) => step.join(" "));
+    expect(steps[2]).toMatch(/^Then turn on full trust\. Installing does not: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA\./);
+    expect(steps[2]).toMatch(/Until it is on, Safari says This Connection Is Not Private\./);
+  });
+});

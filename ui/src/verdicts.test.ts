@@ -418,9 +418,9 @@ describe("a task no probe concludes reads its evidence", () => {
     expect(routeByTraffic(ev({}), CONFIRM_ON)).toEqual(awaiting(CONFIRM_ON));
   });
 
-  it("a refusal said in the certificate task names whose store and points at its steps", () => {
-    expect(notDecryptingHere("your iPhone")).toBe(
-      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.",
+  it("a refusal said in the certificate task names whose store, points at its steps, then gives the check to make", () => {
+    expect(notDecryptingHere("your iPhone", "Check the switch.")).toBe(
+      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it. Check the switch.",
     );
   });
 

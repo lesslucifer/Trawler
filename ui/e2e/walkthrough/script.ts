@@ -503,6 +503,21 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       anchor: ['[data-testid="device-address"]', '[data-wire="certificate url"]'],
     },
   ];
+  if (platform === "ios" || platform === "android")
+    chapters.push({
+      id: "not-decrypting",
+      title: "Arriving but not decrypting",
+      act: async (w) => {
+        await w.hit({ untrusted: true });
+        await w.pause(3_500);
+      },
+      expect:
+        platform === "ios"
+          ? `task 2 reads "not done — nothing decrypted" and its steps are open; the remedy says the profile's trust is a separate switch, names Settings → General → About → Certificate Trust Settings → Trawler Proxy CA, and makes a website in Safari the test. Step 3 says installing does not trust`
+          : `task 2 reads "not done — nothing decrypted" and its steps are open; the remedy names where Trawler Proxy CA sits in the User store, that most apps ignore a user certificate, and makes a website in Chrome the test`,
+      findings: platform === "ios" ? ["R29", "R30"] : ["R30"],
+      anchor: ['[data-testid="traffic-remedy"]'],
+    });
   if (platform === "ios")
     chapters.push(
       {

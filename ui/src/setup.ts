@@ -128,6 +128,9 @@ export interface PlatformSetup {
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
+  // What a user who already did the certificate steps checks next when traffic
+  // arrives and does not decrypt: the one thing this platform's users miss.
+  notDecrypting: string;
 }
 
 // The addresses an off-machine platform's instructions are built from. Null
@@ -452,6 +455,18 @@ const CA_NAME = "Trawler Proxy CA";
 
 const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not signed by a company.";
 
+const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
+
+const NOT_DECRYPTING_DESKTOP =
+  "Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.";
+
+const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate switch: ${IOS_TRUST_PATH}. Apple's own services never decrypt; a website in Safari is the test.`;
+
+const NOT_DECRYPTING_SIMULATOR =
+  "Already did? Restart the Simulator — its apps keep the store they started with.";
+
+const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
+
 const androidInstall = (format: CaFormat) =>
   `Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate → ${CA_FILES[format]}.`;
 
@@ -505,6 +520,7 @@ function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     try: tryTask("this", os),
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
     confirmOn: confirmOn("this", os),
+    notDecrypting: NOT_DECRYPTING_DESKTOP,
   };
 }
 
@@ -537,6 +553,7 @@ function anotherMachineSetup(
     },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
+    notDecrypting: NOT_DECRYPTING_DESKTOP,
   };
 }
 
@@ -557,7 +574,9 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               [
                 `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
               ],
-              [`Then turn it on: Settings → General → About → Certificate Trust Settings → ${CA_NAME}.`],
+              [
+                `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
+              ],
             ]
           : [downloadStep(`On ${device}`, reach, format), [androidInstall(format)]],
         notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
@@ -586,6 +605,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
     route: { title: `On ${device}, set the Wi-Fi proxy`, guide: route },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
+    notDecrypting: ios ? NOT_DECRYPTING_IOS : NOT_DECRYPTING_ANDROID,
   };
 }
 
@@ -637,6 +657,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     route: { title: "In the emulator, set the Wi-Fi proxy", guide: route },
     try: tryTask("android-sim", os),
     confirmOn: confirmOn("android-sim", os),
+    notDecrypting: NOT_DECRYPTING_ANDROID,
   };
 }
 
@@ -678,6 +699,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     },
     try: tryTask("ios-sim", os),
     confirmOn: confirmOn("ios-sim", os),
+    notDecrypting: NOT_DECRYPTING_SIMULATOR,
   };
 }
 

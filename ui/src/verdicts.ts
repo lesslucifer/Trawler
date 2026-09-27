@@ -142,9 +142,10 @@ export function routeByTraffic(evidence: Evidence, confirmOn: string): StepStatu
 }
 
 // The certificate task's own account of a refusal: the certificate is the step
-// left, so the sentence says whose store and points at the steps under it.
-export const notDecryptingHere = (device: string) =>
-  `something reached Trawler and did not decrypt — ${device} does not trust Trawler's certificate yet. The steps below install it.`;
+// left, so the sentence says whose store, points at the steps under it, and
+// gives the user who already took them the check their platform's users miss.
+export const notDecryptingHere = (device: string, check: string) =>
+  `something reached Trawler and did not decrypt — ${device} does not trust Trawler's certificate yet. The steps below install it. ${check}`;
 
 export function proxyStatus(
   probe: ProxyProbe,

@@ -11,7 +11,7 @@ use std::process::Command;
 
 use serde::Deserialize;
 
-pub const FINDINGS: std::ops::RangeInclusive<u32> = 1..=28;
+pub const FINDINGS: std::ops::RangeInclusive<u32> = 1..=30;
 pub const HOSTS: [&str; 3] = ["macos", "windows", "linux"];
 pub const PLATFORMS: [&str; 8] =
     ["this", "mac", "windows", "ubuntu", "ios-sim", "android-sim", "ios", "android"];
@@ -615,8 +615,8 @@ mod tests {
     #[test]
     fn a_finding_the_review_does_not_have_is_refused() {
         let mut plan = full_plan();
-        plan.reels[1].launches[0].chapters[0].findings.push("R29".into());
-        assert!(judge_plan(&plan).unwrap_err().contains("R29, which is no finding"));
+        plan.reels[1].launches[0].chapters[0].findings.push("R31".into());
+        assert!(judge_plan(&plan).unwrap_err().contains("R31, which is no finding"));
     }
 
     #[test]
