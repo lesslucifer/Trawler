@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBREV
+wu: E-ONBREV.W6
+branch: HEAD
+tests:
+  unit: { waived: "W6 adds or changes no unit of product code: its code diff is the e2e launcher's sent-row seed and the onboarding spec, both test support, and the seed is exercised by the spec's first cases" }
+  integration: { waived: "W6 changes no product code; every contract its journeys cross is already pinned at integration by W2-W7 (App.test.tsx, Onboarding.test.tsx, onboardingMatrix.test.tsx, tests/ for the CA routes)" }
+  e2e: { count: 11, covers: "the epic's three journeys through the real window against an ephemeral core: a launch over a core holding only a sent https row shows setup with the try task waiting and no row, and the revealed list later shows that sent row; set up another device keeps the dot connected, answers no device and shows no success line until the chosen device's first guide is open and a new captured request arrives; re-entry by the dot with the list filtered to nothing reopens on the last platform, reads the new request as capturing, and back keeps the filter. The launch flash (R1), the per-half layout (R12) and a real phone's installer (W7) stay waived at e2e and pinned below it, per the epic plan" }
