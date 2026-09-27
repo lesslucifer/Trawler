@@ -1,0 +1,13 @@
+schema: design/v1
+epic: E-ONBREV
+wu: E-ONBREV.W5
+base: 97bdf850e5b59beda8f85c45129fd370f359d1d7
+design_sha256: a471702f9f034af876a37bd5c653cd6f2b7a8ccd8d40643935b2d761d3a655be
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/Onboarding.tsx
+    why: "Copy and render conditions inside the existing setup layout: the address line already drawn for two addresses now also shows for one; the arm button and its warning name the chosen interface instead of 'Wi-Fi'; the no-address notice gains a remedy sentence and the bare 'check again' button the probe row already uses; dimmed tasks drop 'after step 1' when step 1 cannot be done; the probe row gains a host condition; the task list is keyed on the platform. No new surface, zone or component."
+  - path: ui/src/App.tsx
+    why: "State wiring only: a re-read nonce re-runs the existing /reach read and is passed to Onboarding as onRereadReach. Nothing rendered changes."
+date: 2026-09-27
