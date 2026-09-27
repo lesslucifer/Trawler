@@ -14,12 +14,15 @@ use std::sync::Arc;
 use axum::extract::{Query, State};
 use axum::http::header;
 use axum::response::IntoResponse;
-use axum::routing::{any, get};
+use axum::routing::{any, get, post};
+use axum::Json;
 use axum::Router;
 use tempfile::tempdir;
 use tokio::net::TcpListener;
 use tokio::sync::Notify;
 use trawler::{serve, Config};
+
+mod front;
 
 #[derive(Clone)]
 struct Control {
@@ -27,6 +30,7 @@ struct Control {
     origin_url: String,
     trawler_ca_pem: String,
     stop: Arc<Notify>,
+    front: Arc<front::Front>,
 }
 
 // Self-signed CA + a localhost leaf for the origin. The core trusts the CA
@@ -98,12 +102,16 @@ async fn main() {
         .await
         .unwrap();
 
+    let front = Arc::new(front::Front::new(server.api_addr, server.proxy_addr.port()));
+    let front_addr = front::serve(Arc::clone(&front)).await;
+
     let stop = Arc::new(Notify::new());
     let control_state = Control {
         proxy_url: format!("http://{}", server.proxy_addr),
         origin_url: format!("https://localhost:{origin_port}/"),
         trawler_ca_pem,
         stop: Arc::clone(&stop),
+        front,
     };
     let control = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let control_addr = control.local_addr().unwrap();
@@ -112,6 +120,8 @@ async fn main() {
             .route("/hit", get(hit))
             .route("/stop", get(stop_handler))
             .route("/kill", get(kill_handler))
+            .route("/front", get(front_mode))
+            .route("/front/reach", post(front_reach))
             .with_state(control_state);
         let _ = axum::serve(control, app).await;
     });
@@ -122,6 +132,7 @@ async fn main() {
         "origin": format!("https://localhost:{origin_port}/"),
         "control": format!("http://{control_addr}"),
         "closed": format!("http://127.0.0.1:{closed_port}/"),
+        "front": format!("http://{front_addr}"),
     });
     println!("{ports}");
 
@@ -132,18 +143,19 @@ async fn main() {
 // `/hit?p=json|br|img` proxies to that origin route; no param keeps the "/" hello.
 // `h=name:value` adds one request header, for a spec that edits it on replay.
 // The origin is HTTPS (a decrypted flow is the only kind onboarding's Verify counts),
-// so the client trusts Trawler's re-signing CA.
+// so the client trusts Trawler's re-signing CA — unless `untrusted` is given, which
+// is a device that has not installed it: its tunnel opens and nothing decrypts.
 async fn hit(State(ctrl): State<Control>, Query(q): Query<HashMap<String, String>>) -> &'static str {
     let trawler_ca = reqwest::Certificate::from_pem(ctrl.trawler_ca_pem.as_bytes()).unwrap();
     let url = match q.get("p") {
         Some(p) => format!("{}{}", ctrl.origin_url, p.trim_start_matches('/')),
         None => ctrl.origin_url.clone(),
     };
-    let client = reqwest::Client::builder()
-        .proxy(reqwest::Proxy::all(&ctrl.proxy_url).unwrap())
-        .add_root_certificate(trawler_ca)
-        .build()
-        .unwrap();
+    let mut client = reqwest::Client::builder().proxy(reqwest::Proxy::all(&ctrl.proxy_url).unwrap());
+    if !q.contains_key("untrusted") {
+        client = client.add_root_certificate(trawler_ca);
+    }
+    let client = client.build().unwrap();
     let mut request = client.get(&url);
     if let Some((name, value)) = q.get("h").and_then(|h| h.split_once(':')) {
         request = request.header(name.trim(), value.trim());
@@ -252,6 +264,34 @@ async fn long_headers_body() -> impl IntoResponse {
         );
     }
     (headers, r#"{"greeting":"hello","under":"the headers"}"#)
+}
+
+// `/front?mode=up|down|slow&ms=<n>`: how the window's core answers from now on.
+async fn front_mode(
+    State(ctrl): State<Control>,
+    Query(q): Query<HashMap<String, String>>,
+) -> Result<&'static str, (axum::http::StatusCode, String)> {
+    let mode = match q.get("mode").map(String::as_str) {
+        Some("up") => front::Mode::Up,
+        Some("down") => front::Mode::Down,
+        Some("slow") => {
+            let ms = q.get("ms").and_then(|ms| ms.parse().ok()).unwrap_or(10_000);
+            front::Mode::Slow(std::time::Duration::from_millis(ms))
+        }
+        other => {
+            return Err((axum::http::StatusCode::BAD_REQUEST, format!("no front mode {other:?}")))
+        }
+    };
+    ctrl.front.set_mode(mode);
+    Ok("front-ok")
+}
+
+async fn front_reach(
+    State(ctrl): State<Control>,
+    Json(interfaces): Json<Vec<front::Interface>>,
+) -> &'static str {
+    ctrl.front.set_interfaces(interfaces);
+    "front-ok"
 }
 
 async fn stop_handler(State(ctrl): State<Control>) -> &'static str {

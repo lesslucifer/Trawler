@@ -20,9 +20,9 @@ use uuid::Uuid;
 use super::view::{self, FlowPageView, FlowSummary, FlowView, ReachView};
 use super::{curl, decode, har, send};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
-use crate::reach;
 use crate::sender::{Outgoing, SendError, Sender};
 use crate::store::{FlowFilter, StatusMatch, Store, STATUS_GRAMMAR};
+use crate::{ca, reach};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -341,13 +341,50 @@ pub async fn ui_page() -> Response {
     ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], include_str!("ui.html")).into_response()
 }
 
+/// The CA under the name its URL says, for clients that read PEM — UC-1's
+/// download, `curl --cacert`, and every client that predates the per-platform
+/// files. The screen names the three below instead.
 pub async fn ca_cert(State(state): State<AppState>) -> Response {
+    ca_download(
+        "application/x-x509-ca-cert",
+        "trawler-ca.crt",
+        state.ca_cert_pem.as_bytes().to_vec(),
+    )
+}
+
+/// PEM, the encoding every desktop trust command and `simctl` read.
+pub async fn ca_pem(State(state): State<AppState>) -> Response {
+    ca_download("application/x-pem-file", "trawler-ca.pem", state.ca_cert_pem.as_bytes().to_vec())
+}
+
+/// DER, the encoding every Android CA installer reads, under the extension its
+/// file picker lists.
+pub async fn ca_cer(State(state): State<AppState>) -> Response {
+    match ca::der(&state.ca_cert_pem) {
+        Ok(der) => ca_download("application/x-x509-ca-cert", "trawler-ca.cer", der),
+        Err(reason) => (StatusCode::INTERNAL_SERVER_ERROR, reason).into_response(),
+    }
+}
+
+/// The configuration profile an iPhone or iPad installs the CA from.
+pub async fn ca_mobileconfig(State(state): State<AppState>) -> Response {
+    match ca::der(&state.ca_cert_pem) {
+        Ok(der) => ca_download(
+            "application/x-apple-aspen-config",
+            "trawler-ca.mobileconfig",
+            ca::mobileconfig(&der).into_bytes(),
+        ),
+        Err(reason) => (StatusCode::INTERNAL_SERVER_ERROR, reason).into_response(),
+    }
+}
+
+fn ca_download(content_type: &'static str, filename: &'static str, body: Vec<u8>) -> Response {
     (
         [
-            (header::CONTENT_TYPE, "application/x-x509-ca-cert"),
-            (header::CONTENT_DISPOSITION, "attachment; filename=\"trawler-ca.pem\""),
+            (header::CONTENT_TYPE, content_type.to_owned()),
+            (header::CONTENT_DISPOSITION, format!("attachment; filename=\"{filename}\"")),
         ],
-        state.ca_cert_pem.as_bytes().to_vec(),
+        body,
     )
         .into_response()
 }
@@ -833,7 +870,7 @@ mod tests {
         assert!(!view.armed);
         assert_eq!(view.proxy, None, "an address nothing is listening on is the lie to avoid");
         assert_eq!(view.api, None);
-        assert_eq!(view.ca_cert_url, None);
+        assert_eq!(view.ca_urls, None);
         for interface in &view.interfaces {
             assert!(!interface.address.is_loopback(), "loopback is not another device's address");
         }

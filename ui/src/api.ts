@@ -4,6 +4,9 @@
 
 export type FlowSource = "captured" | "imported" | "sent";
 
+// The encodings the core serves its CA in, one per kind of installer.
+export type CaFormat = "pem" | "cer" | "mobileconfig";
+
 export interface FlowSummary {
   id: string;
   started_at: string;
@@ -153,7 +156,7 @@ export interface ReachState {
   armed: boolean;
   proxy: string | null;
   api: string | null;
-  ca_cert_url: string | null;
+  ca_urls: Record<CaFormat, string> | null;
   interfaces: ReachInterface[];
 }
 
@@ -163,7 +166,7 @@ export const UNREACHABLE: ReachState = {
   armed: false,
   proxy: null,
   api: null,
-  ca_cert_url: null,
+  ca_urls: null,
   interfaces: [],
 };
 
@@ -186,8 +189,8 @@ export interface TrawlerApi {
   importHar(bytes: Uint8Array): Promise<number>;
   importCurl(command: string): Promise<number>;
   clearFlows(filter: Filter): Promise<number>;
-  connectionCount(): Promise<number>;
   caCertPem(): Promise<string>;
+  caFile(format: CaFormat): Promise<Uint8Array>;
   getFlow(id: string): Promise<FlowView>;
   getBody(id: string, leg: Leg, pretty: boolean): Promise<BodyFetch>;
   reach(): Promise<ReachState>;
@@ -244,15 +247,15 @@ export function createApi(baseUrl?: string): TrawlerApi {
       if (!res.ok) throw new Error(await refusal(res));
       return ((await res.json()) as { removed: number }).removed;
     },
-    async connectionCount() {
-      const res = await fetch(`${base()}/stats`);
-      if (!res.ok) throw new ApiError(res.status, `GET /stats failed: ${res.status}`);
-      return ((await res.json()) as { connections: number }).connections;
-    },
     async caCertPem() {
-      const res = await fetch(`${base()}/ca.crt`);
-      if (!res.ok) throw new ApiError(res.status, `GET /ca.crt failed: ${res.status}`);
+      const res = await fetch(`${base()}/ca.pem`);
+      if (!res.ok) throw new ApiError(res.status, `GET /ca.pem failed: ${res.status}`);
       return res.text();
+    },
+    async caFile(format) {
+      const res = await fetch(`${base()}/ca.${format}`);
+      if (!res.ok) throw new ApiError(res.status, `GET /ca.${format} failed: ${res.status}`);
+      return new Uint8Array(await res.arrayBuffer());
     },
     async getFlow(id) {
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}`);

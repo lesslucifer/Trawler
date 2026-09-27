@@ -379,24 +379,50 @@
       for.</p>
     </div>
 
+    <div data-c="uc-onboard-when">
+      <p><strong>When setup shows: only while capture is unproven for the device being set up now</strong>
+      (<span class="badge id">E-ONBREV</span>). Every opening starts a <em>setup session</em> at the moment it
+      opened (<a href="../decisions/dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a>).</p>
+      <table>
+        <tr><th>Moment</th><th>The screen</th></tr>
+        <tr><td>the launch read is in flight</td><td>the shell and the checking dot, with no instruction</td></tr>
+        <tr><td>the core does not answer</td><td>"no answer from &lt;address&gt;" and a retry, never setup
+          steps</td></tr>
+        <tr><td>the core answers with no captured https row</td><td>setup, answered <em>this machine</em>.
+          Imported and sent rows count for nothing</td></tr>
+        <tr><td>a captured https row arrives</td><td>the list, and "You're set up" only for a row that started
+          after setup opened: a launch that finds capture already working is not news</td></tr>
+        <tr><td>the dot, once capture is proven</td><td>a new session, opened on the last platform chosen. The
+          dot stays <em>connected</em></td></tr>
+        <tr><td>"set up another device"</td><td>a new session, opened on the last platform chosen if it was not
+          this machine. Otherwise the question is unanswered and no task shows until one is chosen</td></tr>
+      </table>
+      <p>A session reads only captured rows and tunnels that started after it opened, unfiltered by whatever
+      the list is filtered to. So the first device's success is never the second device's, and the list's
+      view is never the screen's evidence.</p>
+    </div>
+
     <div data-c="uc-onboard-platforms">
       <p><strong>Eight platforms, three capabilities.</strong> What the screen may promise is decided by
-      what it can observe about that platform — never by what would be convenient to say.</p>
+      what it can observe about that platform — never by what would be convenient to say. A host offers
+      only the platforms that can run beside it.</p>
       <table>
-        <tr><th>Platform</th><th>Probed?</th><th>Needs reach?</th><th>What it may promise</th></tr>
-        <tr><td>This machine</td><td>trust + proxy</td><td>no</td>
-          <td>a read state for both tasks, and a decrypted request names <em>this machine</em> by
-            name</td></tr>
-        <tr><td>iOS Simulator</td><td>proxy only</td><td>no</td>
+        <tr><th>Platform</th><th>Offered on</th><th>Probed?</th><th>Needs reach?</th><th>Certificate file</th><th>What it may promise</th></tr>
+        <tr><td>This machine</td><td>every host</td><td>trust + proxy, where a probe can read (macOS,
+          Windows)</td><td>no</td><td><code>trawler-ca.pem</code></td>
+          <td>a read state for both tasks. The success line names <em>this machine</em> only when both probes
+            read done</td></tr>
+        <tr><td>iOS Simulator</td><td>macOS only</td><td>proxy only</td><td>no</td><td><code>trawler-ca.pem</code></td>
           <td>it routes through this machine's proxy, but keeps a trust store of its own — so the
             certificate is installed with <code>simctl</code> and the trust half is never claimed from the
             host's keychain</td></tr>
-        <tr><td>Android emulator</td><td>neither</td><td>no</td><td>instructions only; no state this app
-          can read</td></tr>
-        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>neither</td><td>yes</td>
+        <tr><td>Android emulator</td><td>every host</td><td>neither</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
+          <td>its tasks read this session's traffic, since no probe can read it</td></tr>
+        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code></td>
           <td>nothing about that machine. The tasks say what <em>will</em> settle them, in the words they
             will be settled by</td></tr>
-        <tr><td>iPhone or iPad · Android device</td><td>neither</td><td>yes</td>
+        <tr><td>iPhone or iPad · Android device</td><td>every host</td><td>neither</td><td>yes</td>
+          <td><code>trawler-ca.mobileconfig</code> (a configuration profile) · <code>trawler-ca.cer</code> (DER)</td>
           <td>as above — and the traffic layer cannot say which device a decrypted request came from, so
             the end of setup promises a confirmation rather than reporting one</td></tr>
       </table>
@@ -409,7 +435,9 @@
       raises; the loopback pair is never touched, arming <em>adds</em> a second proxy and control API, and
       nothing is persisted — the exposure dies with the process that confirmed it. For the five platforms
       that need it, this is task 1, and until it is done the tasks that depend on it are dimmed rather than
-      given steps that cannot work. The CORS grant does not widen with the bind; the opt-in is this
+      given steps that cannot work. The task names the address it will arm before it is armed, even when
+      there is only one, and its button and warning name that address's interface. With no reachable
+      address, it says to join the network the device is on and offers a re-read. The CORS grant does not widen with the bind; the opt-in is this
       contract's whole authorization boundary.</p>
     </div>
 
@@ -421,8 +449,9 @@
         <tr><th>Layer</th><th>Answers for</th><th>Readings</th></tr>
         <tr><td><strong>The probes</strong> — a dated snapshot, re-taken on demand</td>
           <td>this machine only: does it trust the CA, does its system proxy point at Trawler</td>
-          <td>trusted / not trusted / can't be checked from here. Traffic, however much of it, never turns
-            them green</td></tr>
+          <td>trusted / not trusted / <code>unknown</code>. A probe that cannot read answers
+            <code>unknown</code>, never "off", on every host. Traffic, however much of it, never turns them
+            green</td></tr>
         <tr><td><strong>The traffic layer</strong> — judged against a clock, from timestamps</td>
           <td>the wire, now</td>
           <td>a decrypted flow inside the window reads <em>capturing</em>; a tunnel no flow answered reads
@@ -430,22 +459,32 @@
             certificate; plain HTTP only is its own reading; traffic seen earlier but nothing recent reads
             <em>idle</em>. An old flow can only ever produce idle</td></tr>
       </table>
-      <p>Where a probe can't conclude, the wording says so and points at the traffic task — never a false
-      "not set up". A phone that trusts the certificate and points here reads as two true facts side by
-      side: not trusted on this machine, and capturing traffic.</p>
+      <p><strong>Each task has one reading:</strong> a probe that concludes, else this session's traffic.
+      A decrypted request settles the certificate task, and any request that reached Trawler settles the
+      route task. This machine's route is the exception: its try-it command names the proxy itself, so only
+      its probe may settle it. Where a probe can't conclude, the wording says so and points at the traffic
+      task — never a false "not set up". The dated row and its re-read show only on a host where a probe can
+      answer. A phone that trusts the certificate and points here reads as two true facts side by side: not
+      trusted on this machine, and capturing traffic.</p>
     </div>
 
     <div data-c="uc-onboard-acts">
       <p><strong>One act on this machine, one password prompt.</strong> Where the host can do the work
       (macOS, Windows), installing the certificate and setting the system proxy are a single elevated
       action — one prompt, not two — and the two single commands survive as the manual route beneath it.
-      There is no install-only button and no command behind one. A refused authorization is the user's own
-      outcome, worded as one, with the tool's text under a disclosure; a real failure keeps the OS's words
-      and opens the manual route.</p>
+      <strong>An action follows its task's reading.</strong> The one act is offered only while both halves
+      read undone. Once either reads done, each task carries its own: "Set the system proxy" with its steps,
+      or the certificate's steps. There is no install-only button and no command behind one. A task read done
+      offers no action and keeps only its undo. A refused authorization is the user's own outcome, worded as
+      one, with the tool's text under a disclosure; a real failure keeps the OS's words and opens the manual
+      route.</p>
       <table>
         <tr><th>Act</th><th>What it costs</th><th>What it says afterwards</th></tr>
-        <tr><td>Set up this machine</td><td>one confirm (the OS elevation prompt)</td>
+        <tr><td>Set up this machine — offered only while neither half reads done</td><td>one confirm (the OS
+          elevation prompt)</td>
           <td>the probes say whether it is done — the click never does</td></tr>
+        <tr><td>Set the system proxy — the proxy half, once the certificate reads done</td><td>one confirm</td>
+          <td>the same: the proxy probe says whether it is done</td></tr>
         <tr><td>Replace a proxy this machine already has</td>
           <td>a second confirm naming the proxy it is about to replace</td>
           <td>the ask states the old proxy does not come back. A refusal writes nothing and says which
@@ -454,9 +493,11 @@
           captured traffic becomes readable and that the exposure ends when Trawler quits</td>
           <td>the task reads <em>listening on &lt;host&gt; until Trawler quits</em>, and a chip in the
             header holds it for as long as it holds</td></tr>
-        <tr><td>Stop routing through Trawler</td><td>none — reversing is not a new exposure</td>
-          <td>it names the half it performs: the proxy goes off, and the certificate's removal is in the
-            steps below. Nothing claims to untrust a store</td></tr>
+        <tr><td>Stop routing through Trawler — inside the proxy task</td><td>none — reversing is not a new
+          exposure</td>
+          <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
+            say so and point at the certificate task's steps to remove it. Nothing claims to untrust a
+            store</td></tr>
       </table>
     </div>
 
@@ -467,6 +508,15 @@
         <tr><th>Rule</th><th>Why</th></tr>
         <tr><td>At most one guide open — the first whose task is not done, and none once a request has
           decrypted</td><td>four disclosures three levels deep is what the rebuild replaced</td></tr>
+        <tr><td>A sentence that says "the steps below" has them open: a failed act's, and the certificate
+          task's account of a refusal. A guide under a button is shut while the button can still do the
+          job</td><td>the button is the route, and the steps are what a reader asks for</td></tr>
+        <tr><td>Where nothing observes the tasks (another device), the first guided task stays open until a
+          decrypted request. The open guide never advances by reading order</td><td>advancing on a guess is
+          the stepper cursor <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>
+          refuses</td></tr>
+        <tr><td>Switching platform opens each guide as the new platform's rule says</td><td>a guide the user
+          closed on one platform is not the next platform's</td></tr>
         <tr><td>A command sits on a surface of its own, verbatim and never truncated; a value a user types
           into a field stays inside the sentence naming that field</td><td>they are read in two different
           places, and a cut command is a broken command</td></tr>
@@ -494,7 +544,7 @@ the rest are dimmed, not given steps that fail"]
   A --> W
   D --> W
   W --> C{"what arrived recently?"}
-  C -- "a decrypted https flow" --> OK["capturing → reveal the list,
+  C -- "a captured https row since setup opened" --> OK["capturing → reveal the list,
 which says so and offers the next device"]
   C -- "a tunnel no flow answered" --> TR["arriving but not decrypting —
 the client lacks the certificate"]
@@ -502,21 +552,27 @@ the client lacks the certificate"]
   C -- "nothing recent" --> ID["idle, or waiting for the first request"]
       </pre>
       <div class="caption">The platform answer governs everything below it. The probes answer for this
-        machine and are re-read on demand; the traffic reading answers for the wire, against a clock.
-        Neither borrows from the other, and only a decrypted flow ends setup.</div>
+        machine and are re-read on demand; the traffic reading answers for the wire, against a clock, over
+        this session's captured rows only. Neither borrows from the other, and only a captured https row ends
+        setup. Once capture is proven, a new session shows its success line in place and does not reveal the
+        list again.</div>
     </div>
 
     <div data-c="uc-onboard-kept">
       <p><strong>What the rebuild kept, unchanged.</strong></p>
       <table>
         <tr><th>Guarantee</th><th>Still true because</th></tr>
-        <tr><td>Only a decrypted flow reveals the list</td><td>a probe-green task and a bare connection
-          both refuse to end setup. The payoff fires solely on the first <code>https://</code> flow the
-          MITM rewrote to absolute form, and capture latches once proven</td></tr>
+        <tr><td>Only a captured flow reveals the list</td><td>a probe-green task and a bare connection
+          both refuse to end setup. The payoff fires solely on an <code>https://</code> row with
+          <code>source: "captured"</code>: an imported or sent row never reveals the list or feeds the
+          traffic reading. Capture latches once proven</td></tr>
         <tr><td>The certificate is saved from the step that names it</td><td>every manual route's first
-          step names <code>trawler-ca.pem</code> and produces the file, reporting what actually happened: a
-          failure says so, a cancelled dialog says nothing was saved, and a save the user renamed is
-          confirmed under the name that landed with the mismatch named outright</td></tr>
+          step names that platform's one file (the platforms table) and produces it. Its download URL, its
+          save control and every command in the guide name the same file. The save reports what actually
+          happened: a failure says so, a cancelled dialog says nothing was saved, and a save the user renamed is
+          confirmed under the name that landed with the mismatch named outright. Where trust is a separate act
+          from installing, as on an iPhone, the step says so. Traffic that arrives and doesn't decrypt gets
+          the check that platform's users most often miss</td></tr>
         <tr><td>A probe reading is a dated snapshot, re-taken on demand</td><td>nothing pushes when the user
           changes a setting outside Trawler, so one row above the tasks dates the reading and re-runs both
           probes; so does the window regaining focus. While a re-read runs the control is disabled and both
@@ -531,12 +587,15 @@ the client lacks the certificate"]
     </div>
 
     <div class="callout" data-c="uc-onboard-provenance">
-      <p>API surface consumed by setup, usable by any client: <code>GET /stats</code> →
-      <code>{ connections }</code> and the <code>connection</code> SSE event (<code>{ authority }</code>) on
-      the existing <code>/stream</code>; and <code>GET/POST/DELETE /reach</code>, which reports the
-      interfaces a second device could use and arms or disarms one. The connection tally is a monotonic
-      counter in the store, bumped when the proxy opens a <code>CONNECT</code> tunnel — kept outside the
-      flow ring so eviction never touches it. The two local probes (CA-in-trust-store,
+      <p>API surface consumed by setup, usable by any client: the <code>connection</code> SSE event
+      (<code>{ authority }</code>) on the existing <code>/stream</code>; <code>GET/POST/DELETE /reach</code>,
+      which reports the interfaces a second device could use, arms or disarms one, and names the three
+      certificate URLs; and the one CA as <code>/ca.pem</code>, <code>/ca.cer</code> (DER) and
+      <code>/ca.mobileconfig</code> (an unsigned configuration profile). <code>/ca.crt</code> keeps its PEM
+      body for every existing client. <code>GET /stats</code> → <code>{ connections }</code> stays for any
+      client, but setup no longer reads it: the tally carries no time, so no session can hold it. The tally
+      is a monotonic counter in the store, bumped when the proxy opens a <code>CONNECT</code> tunnel — kept
+      outside the flow ring so eviction never touches it. The two local probes (CA-in-trust-store,
       system-proxy-address) live in the Tauri app, not the core; they read the real machine so they are not
       hermetically testable (the state <em>derivation</em> they feed is fully unit-tested), and the same
       boundary is why the shell, never the core, raises every confirm.</p>
@@ -549,11 +608,19 @@ the client lacks the certificate"]
       <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed handshake
       bumps <code>/stats</code> + emits <code>connection</code>, records no flow); the reach seam's
       integration tests over ephemeral ports; the state-derivation and probe-parser unit tests; and the
-      UC-ONBOARD e2e spine's two journeys — <em>this machine</em> through to a decrypted flow and the list's
-      first paint, and <em>an off-machine platform</em> before it, which asserts that an unmet precondition
-      is stated once and dims what depends on it. Arming reach is driven at integration rather than e2e: it
-      opens a native dialog no WebDriver can reach, and stubbing that confirm would prove the act by
-      removing the authorization DEC-55 requires.</p>
+      UC-ONBOARD e2e spine (<code>ui/e2e/specs/onboarding.spec.ts</code>): a launch over a core holding only a
+      sent row, which still shows setup; <em>an off-machine platform</em>, which asserts that an unmet
+      precondition is stated once and dims what depends on it; <em>this machine</em> through to a decrypted
+      flow and the list's first paint; a second device's session, which keeps the dot connected and shows no
+      success line until its own request; and a re-entry with the list filtered to nothing, which still reads
+      the new request. Arming reach is driven at integration rather than e2e: it opens a native dialog no
+      WebDriver can reach, and stubbing that confirm would prove the act by removing the authorization DEC-55
+      requires. Three more are pinned below e2e for the same kind of reason: the launch's checking paint
+      (<code>App.test.tsx</code>: WebDriver cannot see a paint shorter than its poll), the one act's four
+      probe readings (<code>Onboarding.test.tsx</code> and <code>onboardingMatrix.test.tsx</code>: the real
+      trust store and proxy cannot be set hermetically), and each certificate format's bytes
+      (<code>tests/</code>), with the owner's installs on a real iPhone and Android device as their
+      evidence.</p>
     </div>
 
     <h2 id="uc-6">UC-6 — Take the capture out as a HAR file, and bring one back</h2>

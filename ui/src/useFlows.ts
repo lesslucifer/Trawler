@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, type Filter, type FlowSummary, type FlowView, type TrawlerApi } from "./api";
+import { ApiError, filterParams, type Filter, type FlowSummary, type FlowView, type TrawlerApi } from "./api";
 import { hostOf } from "./flow";
 
 const DEBOUNCE_MS = 150;
@@ -16,12 +16,19 @@ function refusalOf(error: unknown): boolean {
   return error instanceof ApiError && error.status === 400;
 }
 
+// The list reads what its filter asks for. The setup screen reads every row,
+// whatever the list is filtered to (R7).
+export type FlowsScope = "list" | "setup";
+
 // Live flow feed, ported from the web shell: server-side filtering (the API owns
 // the semantics) + a debounced refetch on filter change and on any SSE lifecycle
 // event. The list is whatever GET /flows returns for the current filter.
-export function useFlows(api: TrawlerApi) {
+export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
   const [filter, setFilter] = useState<Filter>({});
   const [flows, setFlows] = useState<FlowSummary[]>([]);
+  // Each scope keeps its own answer, so coming back from setup never shows the
+  // list rows its filter excludes. A listing with no filter answers both.
+  const [everything, setEverything] = useState<FlowSummary[]>([]);
   // The core is not answering. Two things observe it — a listing that did not
   // come back, and the stream dropping — and both write here. Rows already on
   // screen survive it: they were true when they arrived, and discarding evidence
@@ -31,14 +38,13 @@ export function useFlows(api: TrawlerApi) {
   // answered, and what it said was no.
   const [refused, setRefused] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
-  // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
+  // How many listings the core has answered with rows. An empty list is also
+  // what the hook starts with, so this is what tells "the core said nothing is
+  // captured" apart from "nothing has answered yet".
+  const [answered, setAnswered] = useState(0);
+  // The moment the newest CONNECT tunnel was seen — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
-  // tunnel but no flow). Onboarding reads it as "traffic has reached Trawler at
-  // some point" — idle rather than waiting; the flow list itself ignores it.
-  // Seeded once from /stats, then bumped live.
-  const [connections, setConnections] = useState(0);
-  // The moment the newest tunnel was seen. Only a live event carries one — the
-  // /stats seed is a count with no time, so it can say "ever", never "now".
+  // tunnel but no flow). Onboarding reads it; the flow list ignores it.
   const [lastConnectionAt, setLastConnectionAt] = useState<number | null>(null);
   // Every host capture has ever seen, which is NOT what `flows` holds: that list
   // is server-filtered, so deriving the host options from it would collapse them
@@ -48,6 +54,8 @@ export function useFlows(api: TrawlerApi) {
 
   const filterRef = useRef(filter);
   filterRef.current = filter;
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
 
   // Four things trigger a listing — the filter effect, an SSE event, the stream
   // coming back, and retry — so responses can land out of order. Only the newest
@@ -59,13 +67,18 @@ export function useFlows(api: TrawlerApi) {
   // never read as a failed fetch.
   const refresh = useCallback(() => {
     const mine = ++latest.current;
+    const unfiltered = filterParams(filterRef.current).toString() === "";
+    const forList = scopeRef.current === "list";
+    const query = forList ? filterRef.current : {};
     // What was asked, captured with the request: by the time a refusal comes
     // back the box may hold something the core has never judged.
-    const asked = filterRef.current.status ?? "";
-    return api.listFlows(filterRef.current).then(
+    const asked = query.status ?? "";
+    return api.listFlows(query).then(
       (list) => {
         if (mine !== latest.current) return;
-        setFlows(list);
+        if (forList || unfiltered) setFlows(list);
+        if (!forList || unfiltered) setEverything(list);
+        setAnswered((n) => n + 1);
         setHosts((known) => merge(known, list));
         setRefused(null);
         setSilent(false);
@@ -111,21 +124,12 @@ export function useFlows(api: TrawlerApi) {
   useEffect(() => {
     debouncedRefresh();
     return () => clearTimeout(timer.current);
-  }, [filter, debouncedRefresh]);
+  }, [filter, scope, debouncedRefresh]);
 
   useEffect(() => {
-    // The /stats seed and live `connection` bumps race: the seed fetch may resolve
-    // after a bump already landed, and its count predates that connection. Merge as
-    // a floor (max) inside the functional updater so the stale seed can never regress
-    // a value live events have already advanced — the counter is monotonic anyway.
-    // A failed seed says nothing the listing has not already said, so it stays quiet.
-    api.connectionCount().then((c) => setConnections((n) => Math.max(n, c))).catch(() => {});
     const close = api.stream({
       onEvent: debouncedRefresh,
-      onConnection: () => {
-        setConnections((n) => n + 1);
-        setLastConnectionAt(Date.now());
-      },
+      onConnection: () => setLastConnectionAt(Date.now()),
       // A core that dies under an open window sends nothing — so the dropped
       // stream is the only thing that can say so before the next keystroke. It
       // says only that: a refusal the core already gave is a separate fact and
@@ -145,10 +149,11 @@ export function useFlows(api: TrawlerApi) {
   return {
     filter,
     flows,
+    everything,
     hosts,
-    connections,
     lastConnectionAt,
     silent,
+    answered,
     refused,
     retrying,
     retry,

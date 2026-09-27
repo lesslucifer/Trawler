@@ -10,8 +10,8 @@ export function apiStub(over: Partial<TrawlerApi> = {}): TrawlerApi {
     importHar: async () => 0,
     importCurl: async () => 0,
     clearFlows: async () => 0,
-    connectionCount: async () => 0,
     caCertPem: async () => "",
+    caFile: async () => new Uint8Array(),
     getFlow: async () => {
       throw new Error("getFlow is not stubbed for this test");
     },

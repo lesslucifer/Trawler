@@ -9,6 +9,7 @@ pub mod notes_write;
 pub mod preflight;
 pub mod tally;
 pub mod ui;
+pub mod walkthrough;
 pub mod wizard;
 
 use std::path::{Path, PathBuf};
@@ -41,6 +42,7 @@ usage:
   cargo xtask ui bench                                        (pnpm install + run the perf benchmarks)
   cargo xtask ui e2e                                          (build e2e app + drive the real window via WebdriverIO)
   cargo xtask ui specimens [--check]                          (compile the collection for design files; --check renders each over file://)
+  cargo xtask ui walkthrough                                  (film the setup screen on every host x platform → target/walkthrough/: a video per reel + index.html)
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
 pub fn repo_root() -> Result<PathBuf, String> {

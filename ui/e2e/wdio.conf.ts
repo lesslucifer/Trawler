@@ -75,6 +75,20 @@ function startCore(): Promise<void> {
   });
 }
 
+// UC-ONBOARD's proof is a captured row, and a row the core sent itself is not
+// one (R3). The launch read is what that rule governs, so the window must come
+// up over a core that already holds a sent https row — which only the launcher
+// can arrange, since the window launches once, after onPrepare.
+async function seedSentFlow(): Promise<void> {
+  const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8"));
+  const sent = await fetch(`${ports.api}/flows`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ method: "GET", url: ports.origin }),
+  });
+  if (sent.status !== 201) throw new Error(`the core refused the seed send: ${sent.status}`);
+}
+
 export const config: WebdriverIO.Config = {
   runner: "local",
   specs: SPECS,
@@ -101,6 +115,7 @@ export const config: WebdriverIO.Config = {
   onPrepare: async () => {
     clearNoticeMarkers();
     await startCore();
+    await seedSentFlow();
   },
   onComplete: async (_exitCode, _config, _capabilities, results) => {
     writeFileSync(

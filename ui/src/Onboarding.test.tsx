@@ -12,7 +12,14 @@ vi.mock("./setup", async (importOriginal) => {
   return { ...mod, setupFor: vi.fn(mod.setupFor) };
 });
 
-const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+const onboarding: OnbState = {
+  phase: "onboarding",
+  step: "trust-ca",
+  everProven: false,
+  since: null,
+  chosen: "this",
+  another: false,
+};
 const ADDR = "127.0.0.1:9999";
 
 const INTERFACES = [
@@ -24,7 +31,7 @@ const UNARMED: ReachState = {
   armed: false,
   proxy: null,
   api: null,
-  ca_cert_url: null,
+  ca_urls: null,
   interfaces: INTERFACES,
 };
 
@@ -32,7 +39,11 @@ const ARMED: ReachState = {
   armed: true,
   proxy: "192.168.1.24:9999",
   api: "192.168.1.24:7421",
-  ca_cert_url: "http://192.168.1.24:7421/ca.crt",
+  ca_urls: {
+    pem: "http://192.168.1.24:7421/ca.pem",
+    cer: "http://192.168.1.24:7421/ca.cer",
+    mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
+  },
   interfaces: INTERFACES,
 };
 
@@ -103,6 +114,47 @@ const commandNamed = (label: string) =>
 // F1. The screen used to open on a lowercase grey failure verdict, which is
 // the one thing a first-time user cannot act on.
 
+// ── The way in: which device this session is for (R6 · Q2) ──────────────────
+// "Set up another device" preselected this machine, the one already set up.
+
+describe("the question opens on the way in", () => {
+  const another: OnbState = { ...onboarding, everProven: true, another: true };
+
+  it("left open for another device over this machine: no task, no re-read, the way back", () => {
+    draw({ state: another });
+
+    expect(picker()).toHaveTextContent("choose a device");
+    expect(zone("lead")).not.toBeNull();
+    expect(zone("steps")).toBeNull();
+    expect(zone("probe")).toBeNull();
+    expect(zone("proven")).toBeNull();
+    expect(zone("back")).not.toBeNull();
+  });
+
+  it("answered, it draws that platform's tasks with the first guide open, and says what was chosen", () => {
+    const dispatch = vi.fn();
+    draw({ state: another, dispatch });
+
+    pick("Android emulator");
+
+    expect(zone("steps")).not.toBeNull();
+    expect(task(1).querySelector("details[open]")).not.toBeNull();
+    expect(dispatch).toHaveBeenCalledWith({ t: "choose", platform: "android-sim" });
+  });
+
+  it("opens on the last device chosen", () => {
+    draw({ state: { ...another, chosen: "ios" } });
+    expect(picker()).toHaveTextContent("iPhone or iPad");
+    expect(zone("steps")).not.toBeNull();
+  });
+
+  it("left open, still says this session is capturing, naming no device", () => {
+    draw({ state: another, traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now() } });
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
+    expect(zone("proven")).not.toHaveTextContent(/from /);
+  });
+});
+
 describe("the screen leads with what it is", () => {
   it("opens on a title and a sentence of purpose", () => {
     draw();
@@ -140,6 +192,18 @@ describe("the one question, asked in the user's words", () => {
       ).toBeInTheDocument();
     }
   });
+
+  it.each(["windows", "linux", "other"] as const)(
+    "on %s offers no iOS Simulator, which runs beside macOS only (R8)",
+    (os) => {
+      draw({ os });
+
+      fireEvent.click(picker());
+      expect(screen.queryByRole("option", { name: "iOS Simulator" })).toBeNull();
+      expect(screen.getByRole("option", { name: "Android emulator" })).toBeInTheDocument();
+      expect(screen.getAllByRole("option")).toHaveLength(PLATFORM_IDS.length - 1);
+    },
+  );
 
   it("starts on this machine, named for the host it detected, and says so unopened", () => {
     draw({ os: "macos" });
@@ -300,12 +364,12 @@ describe("this machine — three tasks, and one button that does two of them", (
   it("says what the reversal leaves behind, and where the steps for it are", () => {
     draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
 
-    expect(screen.getByTestId("steps")).toHaveTextContent(
-      "this turns the proxy off and nothing else — the steps below remove Trawler's certificate.",
+    expect(task(2)).toHaveTextContent(
+      "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.",
     );
-    fireEvent.click(screen.getByText("do it manually"));
-    fireEvent.click(screen.getByText("to undo it later"));
-    expect(commandNamed("the removal command")).toHaveTextContent("security delete-certificate");
+    fireEvent.click(within(task(1)).getByText("to remove it later"));
+    expect(within(task(1)).getByRole("button", { name: "the removal command" }).closest("div"))
+      .toHaveTextContent("security delete-certificate");
   });
 
   // Review round 3, important: DEC-13's inherited rule is that an action which
@@ -328,7 +392,7 @@ describe("this machine — three tasks, and one button that does two of them", (
       ).toBeInTheDocument(),
     );
     // And it does not claim the tasks are done — that is still the probes' word.
-    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first request");
+    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first HTTPS request");
   });
 
   // Review round 4, important: the way out was kept alive by the action that
@@ -421,39 +485,227 @@ describe("this machine — three tasks, and one button that does two of them", (
 // ── The manual route ────────────────────────────────────────────────────────
 // F10's rule, applied to the shape F27 created: one action, one alternative.
 
-describe("the manual route is the alternative to the button", () => {
-  it("one disclosure holds what the button would have done, in task order", () => {
+describe("each task holds its own route, under the one button", () => {
+  it("the certificate's steps are task 1's and the proxy's are task 2's", () => {
     draw();
 
-    fireEvent.click(screen.getByText("do it manually"));
-
-    expect(commandNamed("the trust command")).toHaveTextContent("security add-trusted-cert");
-    expect(commandNamed("the proxy command")).toHaveTextContent("networksetup -setwebproxy");
-    expect(screen.getAllByText("do it manually")).toHaveLength(1);
+    expect(within(task(1)).getByText(MANUAL)).toBeInTheDocument();
+    expect(within(task(2)).getByText(MANUAL)).toBeInTheDocument();
+    expect(within(task(1)).getByRole("button", { name: "the trust command" })).toBeInTheDocument();
+    expect(within(task(1)).queryByRole("button", { name: "the proxy command" })).toBeNull();
+    expect(within(task(2)).getByRole("button", { name: "the proxy command" })).toBeInTheDocument();
+    expect(within(task(2)).queryByRole("button", { name: "the trust command" })).toBeNull();
   });
 
   it("stays shut until it is asked for — the button is the route, these are the other one", () => {
     draw();
 
     expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(false);
+    expect(open("Run — this sets the Wi-Fi service; change the name for Ethernet:")).toBe(false);
   });
 
-  it("keeps both tasks' asides as the kind of aside each one was", () => {
+  it("keeps each task's asides as the kind of aside each one was", () => {
     draw();
-    fireEvent.click(screen.getByText("do it manually"));
+    fireEvent.click(within(task(1)).getByText(MANUAL));
 
-    expect(screen.getByTestId("guide-note")).toHaveTextContent(
+    expect(within(task(1)).getByTestId("guide-note")).toHaveTextContent(
       "Firefox keeps its own store — import it there too.",
     );
     expect(open("Or double-click the file and set the Trawler CA to Always Trust.")).toBe(false);
-    expect(open("Or delete the Trawler Proxy CA entry in Keychain Access → System.")).toBe(false);
+    expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
+    expect(within(task(2)).getByText("to turn it off later")).toBeInTheDocument();
   });
 
-  it("no task carries a guide of its own where one button covers two", () => {
+  it("the one act leads task 1, and nothing renders between the tasks", () => {
     draw();
 
-    expect(within(task(1)).queryByText("do it manually")).toBeNull();
-    expect(within(task(2)).queryByText("do it manually")).toBeNull();
+    expect(within(task(1)).getByRole("button", { name: "Set up this Mac" })).toBeInTheDocument();
+    expect(task(1)).toHaveTextContent(
+      "one password prompt — it installs the certificate and sets the proxy",
+    );
+    const between = [...screen.getByTestId("steps").children].filter(
+      (child) => !/^task-\d$/.test(child.getAttribute("data-testid") ?? ""),
+    );
+    expect(between).toHaveLength(0);
+  });
+});
+
+// ── Actions follow their task's reading (E-ONBREV.W4, R12–R18) ──────────────
+// What the host can do decides which actions exist; what each probe reads
+// decides which the screen offers, and where. Done is the probe's reading.
+
+const readings = (trust: "trusted" | "untrusted", proxy: "ours" | "none"): Props => ({
+  trustProbe: trust,
+  proxy: { status: proxy, address: null },
+});
+
+const openEveryDisclosure = () =>
+  document.querySelectorAll("details").forEach((d) => d.setAttribute("open", ""));
+
+describe.each(["macos", "windows"] as const)("on %s, the layout is a reading", (os) => {
+  const here = os === "macos" ? "this Mac" : "this PC";
+
+  // P8, inverted: the owner's case.
+  it("certificate trusted, proxy off: the proxy task carries its own action and steps", () => {
+    draw({ os, ...readings("trusted", "none") });
+
+    expect(screen.queryByRole("button", { name: `Set up ${here}` })).toBeNull();
+    expect(screen.queryByText(/one password prompt/)).toBeNull();
+    expect(within(task(2)).getByRole("button", { name: "Set the system proxy" })).toBeInTheDocument();
+    expect(within(task(2)).getByText(MANUAL)).toBeInTheDocument();
+    expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
+    expect(within(task(1)).queryByText(MANUAL)).toBeNull();
+    openEveryDisclosure();
+    expect(screen.queryByRole("button", { name: "the trust command" })).toBeNull();
+    expect(screen.queryByText(/Save Trawler's certificate/)).toBeNull();
+    expect(within(task(2)).getByRole("button", { name: "the proxy command" })).toBeInTheDocument();
+  });
+
+  it("proxy set, certificate not trusted: the certificate's steps are open in task 1", () => {
+    draw({ os, ...readings("untrusted", "ours") });
+
+    expect(screen.queryByRole("button", { name: `Set up ${here}` })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(within(task(1)).getByText("2 steps")).toBeInTheDocument();
+    expect(within(task(2)).getByRole("button", { name: "stop routing through Trawler" }))
+      .toBeInTheDocument();
+    expect(task(2)).toHaveTextContent("this turns the proxy off and nothing else.");
+    expect(task(2)).not.toHaveTextContent(/certificate/);
+    expect(open("to turn it off later")).toBe(false);
+  });
+
+  it("both done: nothing left to install, each task keeps its way back, shut", () => {
+    draw({ os, ...readings("trusted", "ours") });
+
+    expect(screen.queryByRole("button", { name: `Set up ${here}` })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
+    expect(open("to remove it later")).toBe(false);
+    expect(open("to turn it off later")).toBe(false);
+    openEveryDisclosure();
+    expect(screen.queryByRole("button", { name: "the trust command" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "the proxy command" })).toBeNull();
+    expect(screen.queryByText(MANUAL)).toBeNull();
+  });
+});
+
+describe("a failed action opens the route its note points at (R16)", () => {
+  const failure = { refused: false, detail: "no network services to configure" };
+
+  it("a failed set-up opens the certificate's steps under it", async () => {
+    draw({ onSetUpThisMachine: vi.fn(() => Promise.reject(failure)) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("setting up failed — the steps below do it by hand.")).toBeInTheDocument(),
+    );
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(open("Run — this sets the Wi-Fi service; change the name for Ethernet:")).toBe(false);
+  });
+
+  it("the button's line stays under the button, above what happened", async () => {
+    draw({ onSetUpThisMachine: vi.fn(() => Promise.reject(failure)) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    const note = await screen.findByText("setting up failed — the steps below do it by hand.");
+    const line = screen.getByText(
+      "one password prompt — it installs the certificate and sets the proxy",
+    );
+    expect(line.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("a failed proxy action opens the proxy's steps", async () => {
+    draw({ ...readings("trusted", "none"), onSetProxy: vi.fn(() => Promise.reject(failure)) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("setting the proxy failed — the steps below do it by hand.")).toBeInTheDocument(),
+    );
+    expect(open("Run — this sets the Wi-Fi service; change the name for Ethernet:")).toBe(true);
+  });
+
+  it("a failed reversal opens the steps that turn the proxy off", async () => {
+    draw({ ...readings("trusted", "ours"), onUnsetProxy: vi.fn(() => Promise.reject(failure)) });
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("couldn't turn the proxy off — the steps below do it by hand.")).toBeInTheDocument(),
+    );
+    expect(open("to turn it off later")).toBe(true);
+    expect(open("to remove it later")).toBe(false);
+  });
+
+  // Review round 2, blocker: a failed reversal took the one open guide away from
+  // the certificate task while its refusal still said "the steps below".
+  it("a failure elsewhere leaves open the steps a refusal points at", async () => {
+    draw({
+      ...readings("untrusted", "ours"),
+      traffic: arriving,
+      onUnsetProxy: vi.fn(() => Promise.reject(failure)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("couldn't turn the proxy off — the steps below do it by hand.")).toBeInTheDocument(),
+    );
+    expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent("The steps below install it.");
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(open("to turn it off later")).toBe(true);
+  });
+
+  it("a dismissed prompt opens nothing — the button can still do the job", async () => {
+    draw({ onSetUpThisMachine: vi.fn(() => Promise.reject({ refused: true, detail: "(-128)" })) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByText(/password prompt was cancelled/)).toBeInTheDocument());
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(false);
+  });
+});
+
+describe("the reversal sits in the task it reverses", () => {
+  it("on the Simulator, a proxy that is ours offers the way out and not the action again (R15)", () => {
+    draw(readings("untrusted", "ours"));
+    pick("iOS Simulator");
+
+    expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
+    expect(within(task(2)).getByRole("button", { name: "stop routing through Trawler" }))
+      .toBeInTheDocument();
+    expect(task(2)).toHaveTextContent("this turns the proxy off and nothing else.");
+  });
+
+  it("appears in task 2 the moment the action resolves, before the re-read", async () => {
+    draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(within(task(2)).getByRole("button", { name: "stop routing through Trawler" }))
+        .toBeInTheDocument(),
+    );
+  });
+
+  it("comes back when the proxy is set again after it was taken off", async () => {
+    const props: Props = readings("trusted", "ours");
+    const { rerender } = draw(props);
+
+    fireEvent.click(screen.getByRole("button", { name: "stop routing through Trawler" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull(),
+    );
+    rerender(screenAt({ ...props, proxy: { status: "none", address: null } }));
+    fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+    rerender(screenAt(props));
+
+    await waitFor(() =>
+      expect(within(task(2)).getByRole("button", { name: "stop routing through Trawler" }))
+        .toBeInTheDocument(),
+    );
   });
 });
 
@@ -553,7 +805,7 @@ describe("the iOS Simulator", () => {
     simulator();
 
     expect(task(1)).toHaveTextContent("Trust Trawler's certificate in the Simulator");
-    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first request");
+    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first HTTPS request");
     expect(task(1)).not.toHaveTextContent("done — installed and trusted");
   });
 
@@ -609,7 +861,7 @@ describe("a phone, before the network is allowed", () => {
     phone();
 
     expect(task(1)).toHaveTextContent(
-      "other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits",
+      "other devices on Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits",
     );
     expect(task(1)).not.toHaveTextContent(/Trawler will ask before/);
     expect(task(1)).not.toHaveTextContent(/Anything on that network/);
@@ -631,7 +883,7 @@ describe("a phone, before the network is allowed", () => {
     phone();
 
     expect(
-      screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }),
+      screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Set up/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
@@ -664,7 +916,20 @@ describe("a phone, once it may connect", () => {
 
     expect(
       screen.getByRole("button", { name: /copy the certificate URL/i }),
-    ).toHaveTextContent("http://192.168.1.24:7421/ca.crt");
+    ).toHaveTextContent("http://192.168.1.24:7421/ca.mobileconfig");
+  });
+
+  it("saves the profile the iPhone installs, and names it by the file it is", async () => {
+    const onSaveCa = vi.fn(async () => "/Users/me/Downloads/trawler-ca.mobileconfig");
+    draw({ reach: ARMED, onSaveCa });
+    pick("iPhone or iPad");
+
+    fireEvent.click(within(task(2)).getByRole("button", { name: "save…" }));
+
+    expect(onSaveCa).toHaveBeenCalledWith("mobileconfig");
+    expect(
+      await within(task(2)).findByText("saved as trawler-ca.mobileconfig. now trust it with the steps here."),
+    ).toBeInTheDocument();
     expect(within(zone("device-address")!).getByRole("button", { name: /copy the proxy host/i }))
       .toHaveTextContent("192.168.1.24");
     expect(within(zone("device-address")!).getByRole("button", { name: /copy the proxy port/i }))
@@ -674,7 +939,7 @@ describe("a phone, once it may connect", () => {
   it("promises to confirm on the phone's own first request, and claims nothing now", () => {
     armedPhone();
 
-    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first request");
+    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first HTTPS request");
     expect(task(3)).toHaveTextContent("we'll confirm this on your iPhone's first request");
     expect(task(2)).not.toHaveAttribute("data-dim");
   });
@@ -699,8 +964,28 @@ describe("a phone, once it may connect", () => {
     draw({ reach: ARMED, traffic: capturing });
     pick("iPhone or iPad");
 
-    expect(open("3 steps")).toBe(false);
-    expect(open("2 steps")).toBe(false);
+    expect(document.querySelectorAll("details[open]")).toHaveLength(0);
+    expect(task(2)).toHaveTextContent("done — a request decrypted");
+    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+  });
+
+  // The owner's report: an iPhone pointed here without the certificate. Its
+  // requests arrive and nothing decrypts - which says the proxy is set and the
+  // certificate is the step left, so that is where the screen says so.
+  it("requests that arrive and do not decrypt confirm the proxy and point at the certificate", () => {
+    draw({ reach: ARMED, traffic: arriving });
+    pick("iPhone or iPad");
+
+    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+    expect(within(task(3)).queryByText("2 steps")).toBeNull();
+    expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
+    expect(task(2)).toHaveTextContent("not done — nothing decrypted");
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it. Installed the profile already? Trust is a separate switch: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is the test.",
+    );
+    expect(open("On your iPhone, open")).toBe(true);
+    expect(task(4)).toHaveTextContent("arriving but not decrypting");
+    expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
   });
 });
 
@@ -735,7 +1020,7 @@ describe("the address is an offer, not a menu", () => {
     draw({ reach: UNARMED, onArmReach });
     pick("iPhone or iPad");
 
-    fireEvent.click(screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
 
     await waitFor(() => expect(onArmReach).toHaveBeenCalledWith("192.168.1.24"));
   });
@@ -744,7 +1029,7 @@ describe("the address is an offer, not a menu", () => {
     draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
     pick("iPhone or iPad");
 
-    fireEvent.click(screen.getByRole("button", { name: "Allow devices on my Wi-Fi to connect" }));
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
 
     await waitFor(() =>
       expect(
@@ -762,6 +1047,57 @@ describe("the address is an offer, not a menu", () => {
     );
     expect(screen.queryByRole("button", { name: /Allow devices/ })).toBeNull();
   });
+
+  it("names the one address it will arm before anything is armed (R9)", () => {
+    draw({ reach: { ...UNARMED, interfaces: [{ name: "Ethernet", address: "192.168.1.23" }] } });
+    pick("iPhone or iPad");
+
+    expect(zone("listen-on")).toHaveTextContent("Ethernet · 192.168.1.23");
+    expect(screen.queryByText("other addresses")).toBeNull();
+  });
+
+  it("names the interface it arms, in its button and its warning (R21)", () => {
+    draw({ reach: { ...UNARMED, interfaces: [{ name: "Ethernet", address: "192.168.1.23" }] } });
+    pick("iPhone or iPad");
+
+    expect(
+      screen.getByRole("button", { name: "Allow devices on Ethernet to connect" }),
+    ).toBeInTheDocument();
+    expect(task(1)).toHaveTextContent("other devices on Ethernet will be able to use this proxy");
+    expect(task(1)).not.toHaveTextContent(/Wi-Fi/);
+  });
+
+  it("names the interface of the address taken instead (R21)", () => {
+    draw({ reach: UNARMED });
+    pick("iPhone or iPad");
+
+    fireEvent.click(screen.getByText("other addresses"));
+    fireEvent.click(screen.getByRole("button", { name: "Ethernet · 10.0.4.7" }));
+
+    expect(
+      screen.getByRole("button", { name: "Allow devices on Ethernet to connect" }),
+    ).toBeInTheDocument();
+  });
+
+  it("with no address, says how to get one and re-reads on demand (R22)", () => {
+    const onRereadReach = vi.fn();
+    draw({ reach: { ...UNARMED, interfaces: [] }, onRereadReach });
+    pick("iPhone or iPad");
+
+    expect(task(1)).toHaveTextContent("Join the network your iPhone is on, then check again.");
+    fireEvent.click(within(task(1)).getByRole("button", { name: "check again" }));
+    expect(onRereadReach).toHaveBeenCalledOnce();
+  });
+
+  it("with no address, the tasks below wait on nothing that cannot be done (R22)", () => {
+    draw({ reach: { ...UNARMED, interfaces: [] } });
+    pick("iPhone or iPad");
+
+    for (const n of [2, 3, 4]) {
+      expect(task(n)).toHaveAttribute("data-dim");
+      expect(task(n)).not.toHaveTextContent("after step 1");
+    }
+  });
 });
 
 // ── The end of setup ────────────────────────────────────────────────────────
@@ -770,11 +1106,33 @@ describe("the address is an offer, not a menu", () => {
 
 describe("the end", () => {
   it("says setup worked, and names the device it worked for", () => {
-    draw({ traffic: capturing });
+    draw({ traffic: capturing, ...readings("trusted", "ours") });
 
     expect(zone("proven")).toHaveTextContent(
       "You're set up — Trawler is capturing traffic from this Mac",
     );
+  });
+
+  // R17: the probes beside it say the request cannot have come from this Mac.
+  it.each([
+    ["untrusted", "none"],
+    ["trusted", "none"],
+    ["untrusted", "ours"],
+  ] as const)("names no device where this Mac reads certificate %s and proxy %s", (trust, proxy) => {
+    draw({ traffic: capturing, ...readings(trust, proxy) });
+
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
+    expect(zone("proven")).not.toHaveTextContent(/this Mac/);
+  });
+
+  // R18: the remedy may not send the user back to a step task 1 reads as done.
+  it("an arriving connection beside a trusted certificate names somewhere else to look", () => {
+    draw({ traffic: arriving, ...readings("trusted", "ours") });
+
+    expect(zone("traffic-remedy")).toHaveTextContent(
+      "something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.",
+    );
+    expect(zone("traffic-remedy")).not.toHaveTextContent(/Finish the certificate step/);
   });
 
   // A decrypted request proves capture and never says which device made it —
@@ -788,13 +1146,14 @@ describe("the end", () => {
     expect(zone("proven")).not.toHaveTextContent(/iPhone/);
   });
 
-  it("an arriving connection that will not decrypt says what to finish, naming no device", () => {
+  it("an arriving connection that will not decrypt is said in the certificate task, with its steps open", () => {
     draw({ traffic: arriving });
 
-    expect(zone("traffic-remedy")).toHaveTextContent(
-      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
+    expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.",
     );
-    expect(zone("traffic-remedy")).not.toHaveTextContent(/iPhone|Simulator|Android/);
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(within(task(3)).queryByTestId("traffic-remedy")).toBeNull();
   });
 
   it("the way back exists once capture has been proven, and not before", () => {
@@ -823,6 +1182,29 @@ describe("one reading of this machine, re-taken by one control", () => {
     expect(zone("probe")).toBeNull();
   });
 
+  it.each(["macos", "windows"] as const)("is offered for this machine on %s, which can read it", (os) => {
+    draw({ os, probedAt: ago(60_000) });
+
+    expect(zone("probe")).toBeInTheDocument();
+  });
+
+  it.each(["linux", "other"] as const)(
+    "is absent for this machine on %s, where no probe can answer (R20)",
+    (os) => {
+      draw({ os, trustProbe: "unknown", proxy: { status: "unknown", address: null } });
+
+      expect(zone("probe")).toBeNull();
+      expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
+    },
+  );
+
+  it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
+    draw({ os: "linux", proxy: { status: "unknown", address: null } });
+
+    expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
+    expect(task(2)).not.toHaveTextContent("the system proxy is off");
+  });
+
   it("re-reads on demand", () => {
     const onRecheck = vi.fn();
     draw({ onRecheck });
@@ -844,7 +1226,7 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
   it("updates the reading without re-running the instructions", () => {
     const resolved = vi.mocked(setup.setupFor);
-    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now(), ever: true } });
+    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now() } });
     expect(zone("proven")).toBeInTheDocument();
 
     resolved.mockClear();
@@ -860,7 +1242,7 @@ test("no step reports itself done — every state on the screen has a source", (
   draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null }, os: "linux" });
 
   // Nothing read either store on this host, so neither task may claim one was.
-  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first request");
+  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first HTTPS request");
   expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
   expect(document.body.textContent).not.toMatch(/done — /);
 });
@@ -872,7 +1254,7 @@ test("no step reports itself done — every state on the screen has a source", (
 describe("a command is a block, not a phrase inside a sentence", () => {
   it("leaves the sentence that introduces it and takes a surface of its own", () => {
     draw();
-    fireEvent.click(screen.getByText("do it manually"));
+    fireEvent.click(within(task(1)).getByText(MANUAL));
 
     const block = commandNamed("the trust command");
     expect(block).toHaveTextContent("security add-trusted-cert");
@@ -883,7 +1265,7 @@ describe("a command is a block, not a phrase inside a sentence", () => {
 
   it("is wire data in the mono family, whole and uncut", () => {
     draw();
-    fireEvent.click(screen.getByText("do it manually"));
+    fireEvent.click(within(task(1)).getByText(MANUAL));
 
     const code = commandNamed("the trust command").querySelector("[data-wire]")!;
     expect(code).toHaveAttribute("data-wire", "shell command");
@@ -976,6 +1358,17 @@ describe("one guide open, whatever the user picked", () => {
 
     expect(opened()).toHaveLength(0);
   });
+  it("a guide the user closed does not follow them to the next platform (R11)", () => {
+    draw({ os: "linux", reach: ARMED });
+    pick("Another Mac");
+    const closed = within(task(2)).getAllByRole("group")[0] as HTMLDetailsElement;
+    expect(closed).toHaveAttribute("open");
+    closed.open = false;
+
+    pick(setup.platformLabel("this", "linux"));
+
+    expect(within(task(1)).getAllByRole("group")[0]).toHaveAttribute("open");
+  });
 });
 
 test("the reading column answers to the window, not to a dialog", () => {
@@ -1049,4 +1442,26 @@ test("the column scrolls whole — no zone holds an inner scroller", () => {
   const scrollers = container.querySelectorAll("[class*='overflow-auto'],[class*='overflow-y-auto']");
   expect(scrollers).toHaveLength(1);
   expect(scrollers[0]).toBe(container.firstElementChild);
+});
+
+test("the emulator's save control saves the DER its installer opens, and names it by that file", async () => {
+  const onSaveCa = vi.fn(async () => "trawler-ca.cer");
+  draw({ onSaveCa });
+  pick("Android emulator");
+
+  fireEvent.click(within(task(1)).getByRole("button", { name: "save…" }));
+
+  expect(onSaveCa).toHaveBeenCalledWith("cer");
+  expect(
+    await within(task(1)).findByText("saved as trawler-ca.cer. now trust it with the steps here."),
+  ).toBeInTheDocument();
+});
+
+test("an Android device whose requests arrive and do not decrypt is told where its user store is, and what ignores it", () => {
+  draw({ reach: ARMED, traffic: arriving });
+  pick("Android device");
+
+  expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
+    "something reached Trawler and did not decrypt — your Android device does not trust Trawler's certificate yet. The steps below install it. Already did? Trawler Proxy CA should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.",
+  );
 });

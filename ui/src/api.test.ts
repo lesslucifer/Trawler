@@ -52,27 +52,34 @@ test("listFlows fetches /flows with the filter and parses typed rows", async () 
   expect(result[0].status).toBe(200);
 });
 
-test("caCertPem fetches /ca.crt as text and throws on a non-ok response", async () => {
+test("caCertPem fetches /ca.pem as text and throws on a non-ok response", async () => {
   const pem = "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n";
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => pem });
   vi.stubGlobal("fetch", fetchMock);
   await expect(createApi("http://127.0.0.1:9999").caCertPem()).resolves.toBe(pem);
-  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/ca.crt");
+  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/ca.pem");
 
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
   await expect(createApi("http://x").caCertPem()).rejects.toThrow(/404/);
 });
 
+test.each(["pem", "cer", "mobileconfig"] as const)(
+  "caFile fetches /ca.%s as bytes and throws on a non-ok response",
+  async (format) => {
+    const bytes = new Uint8Array([0x30, 0x82, 0x01]);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => bytes.buffer });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(createApi("http://x").caFile(format)).resolves.toEqual(bytes);
+    expect(fetchMock).toHaveBeenCalledWith(`http://x/ca.${format}`);
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    await expect(createApi("http://x").caFile(format)).rejects.toThrow(new RegExp(`/ca.${format} failed: 500`));
+  },
+);
+
 test("listFlows throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
   await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);
-});
-
-test("connectionCount reads /stats and returns the connections tally", async () => {
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connections: 3 }) });
-  vi.stubGlobal("fetch", fetchMock);
-  await expect(createApi("http://127.0.0.1:9999").connectionCount()).resolves.toBe(3);
-  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/stats");
 });
 
 // A bare CONNECT tunnel never becomes a flow, so a `connection` event must bump
@@ -312,7 +319,7 @@ test("listFlows parses the provenance mark off a summary", async () => {
   expect((await createApi("http://x").listFlows({}))[0].source).toBe("imported");
 });
 
-const UNREACHABLE = { armed: false, proxy: null, api: null, ca_cert_url: null, interfaces: [] };
+const UNREACHABLE = { armed: false, proxy: null, api: null, ca_urls: null, interfaces: [] };
 
 test("reach reads the current state and the interfaces on offer", async () => {
   const state = {
@@ -335,7 +342,11 @@ test("armReach posts the chosen address and returns what actually bound", async 
     armed: true,
     proxy: "192.168.1.20:7420",
     api: "192.168.1.20:7421",
-    ca_cert_url: "http://192.168.1.20:7421/ca.crt",
+    ca_urls: {
+      pem: "http://192.168.1.20:7421/ca.pem",
+      cer: "http://192.168.1.20:7421/ca.cer",
+      mobileconfig: "http://192.168.1.20:7421/ca.mobileconfig",
+    },
     interfaces: [{ name: "en0", address: "192.168.1.20" }],
   };
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => armed });
@@ -348,7 +359,7 @@ test("armReach posts the chosen address and returns what actually bound", async 
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ address: "192.168.1.20" }),
   });
-  expect(result.ca_cert_url).toBe("http://192.168.1.20:7421/ca.crt");
+  expect(result.ca_urls?.mobileconfig).toBe("http://192.168.1.20:7421/ca.mobileconfig");
 });
 
 test("a refused arm throws the server's own sentence, for the person who confirmed", async () => {

@@ -18,6 +18,9 @@ tauri-build = { version = "2.0", features = [] }
 # WebDriver e2e build only — pulls the wdio plugins so the embedded WebDriver
 # and execute API exist. Release builds omit this, keeping the shell thin.
 e2e = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
+# The walkthrough build only (E-ONBREV.W1): every command that reads or changes
+# this machine answers from a script the harness sets. Never in a release build.
+scenario = ["e2e"]
 
 [dependencies]
 tauri = { version = "2.1", features = [] }

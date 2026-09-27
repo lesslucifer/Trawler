@@ -85,7 +85,6 @@ describe("the live feed's host accumulation", () => {
       // A fresh array per call, so a caller can tell one refresh's result from
       // the last one's by identity — the list's contents never change.
       listFlows: async () => [...list],
-      connectionCount: async () => 0,
       caCertPem: async () => "",
       getFlow: async () => {
         throw new Error("unused");
