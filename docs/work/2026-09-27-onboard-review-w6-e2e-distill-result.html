@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab911ac9f34851f0dfad5dd" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W6 result: e2e and distillation</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W6 — result: e2e and distillation</h1>
+      <p>The epic's three journeys pass in the real window, the walkthrough was re-filmed for the <em>after</em>, and UC-ONBOARD and the core's API table now state what the epic shipped.</p>
+      <div class="meta">v1 · 2026-09-27 · Trawler · T3 WU result · <span class="badge id">E-ONBREV.W6</span> · branch <code>wu/onboard-review/e2e-distill</code> · <a href="2026-09-27-onboard-review-w6-e2e-distill-plan.html">WU plan</a> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td><code>cargo xtask ui e2e</code> green, the three journeys passing</td><td>4 of 4 spec files passed. The onboarding spec has 11 cases, the three journeys among them</td><td>delivered</td></tr>
+      <tr><td>a launch over a core holding only the sent row: setup, task 3 waiting, no row</td><td>the launcher sends one https GET through <code>POST /flows</code> before the window launches. The first two cases assert the lead, no flow row and "waiting for the first request"</td><td>delivered</td></tr>
+      <tr><td>the list's first paint shows the captured and the sent row</td><td>the payoff case asserts a row marked <code>sent</code> in the revealed list</td><td>delivered</td></tr>
+      <tr><td>"set up another device": the dot connected, no task, no success line</td><td>as expected</td><td>delivered</td></tr>
+      <tr><td>Android emulator, then a new request: guide open and waiting, then capturing and the success line</td><td>as expected</td><td>delivered</td></tr>
+      <tr><td>filtered to <code>no-such-path.test</code>, the dot, a request: capturing and the success line, back still filtered</td><td>as expected. The dot also reopens on "Android emulator", the last platform chosen</td><td>delivered</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code>: a video per host × platform and the index</td><td>24 reels, 153 chapters, <code>target/walkthrough/index.html</code>. No chapter missed its element</td><td>delivered</td></tr>
+      <tr><td>UC-ONBOARD states every row of the distillation table</td><td>every row, checked against the shipped code (see Distillation)</td><td>delivered</td></tr>
+      <tr><td><code>core-technical-design</code>'s API table and iOS row</td><td>the three routes, and the iOS row downloading the profile from <code>:7421/ca.mobileconfig</code></td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>Plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>the filter case moves inside J3</td><td>J3 is two cases: the filtered re-entry, then back keeping the filter and clearing it. The old UC-4 filter case is removed</td><td>that case asserted the same filter out and back in that J3's second case now asserts, one step later</td></tr>
+      <tr><td>—</td><td>UC-ONBOARD's row in the use-cases index names the captured proof and the setup session</td><td>the index row still said "a decrypted flow reveals the list", which the epic changed</td></tr>
+      <tr><td>the iOS row names the profile</td><td>it also moves the URL from <code>:7420/ca.crt</code> to <code>:7421/ca.mobileconfig</code></td><td>the certificate routes are served on the control API's port, not the proxy's. The old row had the wrong port</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>the plan</td><td><code>400d300</code></td></tr>
+      <tr><td>the journeys</td><td><code>5626611</code>: <code>ui/e2e/wdio.conf.ts</code> (the sent-row seed) and <code>ui/e2e/specs/onboarding.spec.ts</code>. <code>cargo xtask ui e2e</code>: 4 of 4 spec files and 46 cases passed</td></tr>
+      <tr><td>UC-ONBOARD</td><td><code>64008b1</code> · <code>docs/use-cases/web-ui.html</code></td></tr>
+      <tr><td>the use-cases index</td><td><code>3b48abf</code></td></tr>
+      <tr><td>T1</td><td><code>docs/core-technical-design.html</code>, committed by the owner through <code>mr commit</code></td></tr>
+      <tr><td>the <em>after</em> recording</td><td><code>target/walkthrough/</code> (git-ignored), filmed at <code>3b48abf</code>: 24 reels, 153 chapters. The <em>before</em> is kept at <code>target/walkthrough-before/</code>, with 24 reels from W1</td></tr>
+      <tr><td>e2e waivers</td><td>the launch flash (R1), the per-half layout (R12) and a real phone's installer (W7), each pinned below e2e as the plan's test table names</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <tr><th>Doc</th><th>What it now states</th></tr>
+      <tr><td>UC-ONBOARD (<code>web-ui.html</code>)</td><td>a new "when setup shows" table: checking, not answering, not proven, the payoff, the dot and "another device", each a session (DEC-60). The platforms table adds the hosts each platform is offered on and its certificate file. The reach callout names the address, the interface and the no-address remedy. The layers now say "cannot read" is <code>unknown</code>, and each task has one reading. The acts table has the one act offered only while both halves are undone, the proxy half on its own, and the reversal inside its task. The reading rules cover the pointed steps, R10's rule (Q3) and a platform switch. "What the rebuild kept" names <code>source: "captured"</code> and the file per platform. The API callout lists the three CA routes, and says <code>/stats</code> no longer feeds setup. "Pinned by" names the five journeys and the three waivers</td></tr>
+      <tr><td>the use-cases index</td><td>UC-ONBOARD's row</td></tr>
+      <tr><td><code>core-technical-design</code> (T1)</td><td>the API table and the iOS trust row</td></tr>
+      <tr><td>DEC-60 · R31's backlog entry</td><td>already landed with W3 and W7. Re-read against the code, and no change needed</td></tr>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li>The owner ticks every chapter of <code>target/walkthrough/index.html</code> before the epic sign-off.</li>
+      <li>The epic result links the <em>after</em> recording beside the <em>before</em>, then the epic gate into <code>main</code>.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
