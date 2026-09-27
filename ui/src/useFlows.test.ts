@@ -1,83 +1,79 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useFlowDetail, useFlows } from "./useFlows";
+import { useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
 import { ApiError } from "./api";
 import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 
-// Fake API with a hand-resolved /stats promise and a captured stream handler set,
-// so a test can interleave a live `connection` bump with the seed's resolution.
+// A captured stream handler set, so a test can fire a live `connection`.
 function fakeApi() {
   let handlers: StreamHandlers | undefined;
-  let resolveStats: ((n: number) => void) | null = null;
   const api = apiStub({
-    connectionCount: () => new Promise<number>((res) => (resolveStats = res)),
     stream: (h) => {
       handlers = h;
       return () => {};
     },
   });
-  return {
-    api,
-    fireConnection: () => handlers?.onConnection?.(),
-    resolveStats: (n: number) => resolveStats?.(n),
-    statsPending: () => resolveStats !== null,
-  };
+  return { api, fireConnection: () => handlers?.onConnection?.() };
 }
 
-// Regression: the /stats seed must never regress a value that live `connection`
-// events already advanced. A bump landing WHILE the seed fetch is in flight, then a
-// stale seed count resolving, must leave the bumped value — else `connections` (and
-// thus onboarding's `trafficSeen`) falsely drops back to the pre-connection count.
-test("a connection bump during the in-flight /stats seed is not clobbered by a stale seed", async () => {
+// Only a live event can say "now", which is what the setup screen's traffic
+// verdict reads.
+test("a live connection is stamped with its time", () => {
   const f = fakeApi();
   const { result } = renderHook(() => useFlows(f.api));
-
-  await waitFor(() => expect(f.statsPending()).toBe(true));
-
-  // Live tunnel observed before the seed resolves: counter goes 0 -> 1.
-  act(() => f.fireConnection());
-  expect(result.current.connections).toBe(1);
-
-  // The seed now resolves with a STALE count (0 — taken before that connection).
-  // async act flushes the promise's .then microtask that applies the seed.
-  await act(async () => {
-    f.resolveStats(0);
-  });
-
-  // Floor-merge keeps the bumped value; a plain setter would clobber it to 0.
-  expect(result.current.connections).toBe(1);
-});
-
-test("the /stats seed still advances the counter when it is ahead of live bumps", async () => {
-  const f = fakeApi();
-  const { result } = renderHook(() => useFlows(f.api));
-  await waitFor(() => expect(f.statsPending()).toBe(true));
-
-  await act(async () => {
-    f.resolveStats(4);
-  });
-  expect(result.current.connections).toBe(4);
-  act(() => f.fireConnection());
-  expect(result.current.connections).toBe(5);
-});
-
-// A tunnel counted before the UI subscribed has no time, so the seed leaves the
-// timestamp empty; only a live event can say "now", which is what the setup
-// screen's traffic verdict reads.
-test("a live connection is stamped with its time; the /stats seed stamps nothing", async () => {
-  const f = fakeApi();
-  const { result } = renderHook(() => useFlows(f.api));
-  await waitFor(() => expect(f.statsPending()).toBe(true));
-
-  await act(async () => {
-    f.resolveStats(4);
-  });
-  expect(result.current.connections).toBe(4);
   expect(result.current.lastConnectionAt).toBeNull();
 
   const before = Date.now();
   act(() => f.fireConnection());
   expect(result.current.lastConnectionAt).toBeGreaterThanOrEqual(before);
+});
+
+// R7: the setup screen reads every captured row whatever the list is filtered
+// to, and the list, when the user comes back to it, shows only its own rows.
+describe("the setup scope reads unfiltered, and the list keeps its own rows", () => {
+  const rows = () => [summary("f1", "http://example.com/"), summary("f2", "http://other.test/")];
+  const scopedApi = (store = rows()) =>
+    apiStub({
+      listFlows: vi.fn(async (filter) => store.filter((f) => !filter.host || f.uri.includes(filter.host))),
+    });
+
+  it("an empty filter answers both scopes with one listing", async () => {
+    const api = scopedApi();
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.flows).toHaveLength(2));
+    expect(result.current.everything).toHaveLength(2);
+    expect(api.listFlows).toHaveBeenCalledTimes(1);
+  });
+
+  it("a filtered list leaves everything as it was", async () => {
+    const api = scopedApi();
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.everything).toHaveLength(2));
+    act(() => result.current.update("host", "other.test"));
+    await waitFor(() => expect(result.current.flows).toHaveLength(1));
+    expect(result.current.everything).toHaveLength(2);
+  });
+
+  it("the setup scope asks unfiltered, writes everything, and leaves the list's rows", async () => {
+    const store = rows();
+    const api = scopedApi(store);
+    let scope: FlowsScope = "list";
+    const { result, rerender } = renderHook(() => useFlows(api, scope));
+    act(() => result.current.update("host", "other.test"));
+    await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+    store.push(summary("f3", "https://third.test/"));
+    scope = "setup";
+    rerender();
+    await waitFor(() => expect(result.current.everything).toHaveLength(3));
+    expect(api.listFlows).toHaveBeenLastCalledWith({});
+    expect(result.current.flows.map((f) => f.id)).toEqual(["f2"]);
+
+    scope = "list";
+    rerender();
+    await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ host: "other.test" }));
+    expect(result.current.flows.map((f) => f.id)).toEqual(["f2"]);
+  });
 });
 
 // The host options must survive their own filter. `flows` is server-filtered, so

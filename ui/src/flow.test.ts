@@ -1,4 +1,13 @@
-import { bodyText, hostOf, isDecryptedHttps, latestFlowTimes, statusTone, toCurl, toRow } from "./flow";
+import {
+  bodyText,
+  hostOf,
+  isDecryptedHttps,
+  latestFlowTimes,
+  sessionTraffic,
+  statusTone,
+  toCurl,
+  toRow,
+} from "./flow";
 import type { BodyView, FlowSummary, FlowView } from "./api";
 
 test("status tone: 2xx ok, 4xx/5xx warn, pending/other muted", () => {
@@ -62,6 +71,49 @@ test("isDecryptedHttps: since is the earliest start that counts, and without one
   expect(isDecryptedHttps([https], at - 1)).toBe(true);
   expect(isDecryptedHttps([{ ...https, started_at: "not a date" }])).toBe(true);
   expect(isDecryptedHttps([{ ...https, started_at: "not a date" }], at)).toBe(false);
+});
+
+// R4: a second device's setup may not read the first device's requests.
+describe("sessionTraffic reads only what started once the session opened", () => {
+  const https = { ...flow, id: "f2", uri: "https://example.com/" };
+  const at = Date.parse(flow.started_at);
+
+  it("counts a captured row that started at the session's start, and none before it", () => {
+    expect(sessionTraffic([flow, https], at, null)).toEqual({
+      lastDecryptedAt: at,
+      lastPlainAt: at,
+      lastTunnelAt: null,
+    });
+    expect(sessionTraffic([flow, https], at + 1, null)).toEqual({
+      lastDecryptedAt: null,
+      lastPlainAt: null,
+      lastTunnelAt: null,
+    });
+  });
+
+  it("ignores imported and sent rows inside the session", () => {
+    const rows = [{ ...https, source: "imported" as const }, { ...flow, source: "sent" as const }];
+    expect(sessionTraffic(rows, at, null)).toMatchObject({ lastDecryptedAt: null, lastPlainAt: null });
+  });
+
+  it("keeps a tunnel from the session's start on, and drops an earlier one", () => {
+    expect(sessionTraffic([], at, at).lastTunnelAt).toBe(at);
+    expect(sessionTraffic([], at, at - 1).lastTunnelAt).toBeNull();
+  });
+
+  it("bounds nothing before a session has opened", () => {
+    expect(sessionTraffic([https], null, at - 5)).toEqual({
+      lastDecryptedAt: at,
+      lastPlainAt: null,
+      lastTunnelAt: at - 5,
+    });
+  });
+});
+
+test("latestFlowTimes: since is the earliest start that counts", () => {
+  const at = Date.parse(flow.started_at);
+  expect(latestFlowTimes([flow], at).lastPlainAt).toBe(at);
+  expect(latestFlowTimes([flow], at + 1).lastPlainAt).toBeNull();
 });
 
 const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));

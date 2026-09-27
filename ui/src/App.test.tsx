@@ -20,8 +20,22 @@ vi.mock("@tauri-apps/api/window", () => ({
 
 // Capture is proven only by a live decrypted flow (W4); until then App shows
 // onboarding. These list/filter tests force the proven phase to reach the list.
-const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true, since: null };
-const ONBOARDING: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false, since: null };
+const PROVEN: OnbState = {
+  phase: "proven",
+  step: "verify",
+  everProven: true,
+  since: null,
+  chosen: "this",
+  another: false,
+};
+const ONBOARDING: OnbState = {
+  phase: "onboarding",
+  step: "trust-ca",
+  everProven: false,
+  since: null,
+  chosen: "this",
+  another: false,
+};
 
 const QUESTION = "which device's traffic do you want to see";
 
@@ -37,6 +51,13 @@ function onMacHost() {
   Object.defineProperty(window.navigator, "userAgent", {
     configurable: true,
     value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+  });
+}
+
+function onLinuxHost() {
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
   });
 }
 
@@ -67,7 +88,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 
 // Mock API: `store` is the current server-side result; a filter with host !== ""
 // narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
-function mockApi(store: () => FlowSummary[], connections = 0) {
+function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
   let onConnection = () => {};
   const api: TrawlerApi = apiStub({
@@ -80,7 +101,6 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
         !needle?.trim() || uri.toLowerCase().includes(needle.trim().toLowerCase());
       return store().filter((f) => like(f.uri, filter.host) && like(f.uri, filter.q));
     }),
-    connectionCount: vi.fn(async () => connections),
     caCertPem: vi.fn(async () => PEM),
     caFile: vi.fn(async () => new TextEncoder().encode(PEM)),
     getFlow: vi.fn(async (id: string): Promise<FlowView> => {
@@ -531,6 +551,76 @@ test("re-entering setup retires the banner — leaving again is not a second suc
 
   await screen.findByTestId("flow-row");
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
+});
+
+// A request made from now on, so it starts inside a setup session opened before it.
+const startedNow = () => new Date(Date.now() + 1).toISOString();
+
+// P3 inverted (R4 · R5): coming back to set up another device read the first
+// device's request, so no guide opened, the screen said "You're set up" at once,
+// and the dot turned red. Written before the fix.
+test("re-entry is a new session: the first device's request opens nothing and proves nothing", async () => {
+  onLinuxHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
+  fire();
+  await screen.findByTestId("flow-row");
+
+  const listed = vi.mocked(api.listFlows).mock.calls.length;
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+  await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(listed));
+
+  expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected");
+  expect(screen.queryByTestId("proven")).toBeNull();
+  expect(screen.getByText(/waiting for the first request/)).toBeInTheDocument();
+  expect(document.querySelectorAll("details[open]").length).toBeGreaterThan(0);
+
+  rows = [...rows, flow({ id: "f2", uri: "https://second.test/", started_at: startedNow() })];
+  fire();
+  expect(await screen.findByTestId("proven")).toHaveTextContent("You're set up");
+  expect(screen.getByText("capturing traffic")).toBeInTheDocument();
+});
+
+// P4 inverted (R7): the setup screen's reading obeyed the list's filter, so a
+// new device's traffic read "nothing arriving" whenever the filter excluded it.
+// Written before the fix.
+test("setup reads every captured row whatever the list is filtered to, and back keeps the filter", async () => {
+  onLinuxHost();
+  let rows = [flow({ uri: "https://example.com/" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "nomatch" } });
+  await waitFor(() => expect(screen.queryByTestId("flow-row")).toBeNull());
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+  rows = [...rows, flow({ id: "f2", uri: "https://second.test/", started_at: startedNow() })];
+  fire();
+  expect(await screen.findByText("capturing traffic")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ q: "nomatch" }));
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+  expect(screen.getByLabelText("filter")).toHaveValue("nomatch");
+});
+
+test("a tunnel from before setup opened is not this session's traffic", async () => {
+  onLinuxHost();
+  const { api, fireConnection } = mockApi(() => [flow({ uri: "https://example.com/" })]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  fireConnection();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+  expect(screen.getByText(/waiting for the first request/)).toBeInTheDocument();
+  expect(screen.queryByText(/a connection just arrived/)).toBeNull();
 });
 
 // A launch that finds capture already working is not news, and a core that

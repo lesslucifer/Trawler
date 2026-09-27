@@ -12,7 +12,14 @@ vi.mock("./setup", async (importOriginal) => {
   return { ...mod, setupFor: vi.fn(mod.setupFor) };
 });
 
-const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false, since: null };
+const onboarding: OnbState = {
+  phase: "onboarding",
+  step: "trust-ca",
+  everProven: false,
+  since: null,
+  chosen: "this",
+  another: false,
+};
 const ADDR = "127.0.0.1:9999";
 
 const INTERFACES = [
@@ -1092,7 +1099,7 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
   it("updates the reading without re-running the instructions", () => {
     const resolved = vi.mocked(setup.setupFor);
-    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now(), ever: true } });
+    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now() } });
     expect(zone("proven")).toBeInTheDocument();
 
     resolved.mockClear();

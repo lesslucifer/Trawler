@@ -97,7 +97,14 @@ const UNARMED: ReachState = { ...ARMED, armed: false, proxy: null, api: null, ca
 type Outcome = "done" | "nothing" | "failed" | "refused";
 const OUTCOMES: Outcome[] = ["done", "nothing", "failed", "refused"];
 
-const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false, since: null };
+const onboarding: OnbState = {
+  phase: "onboarding",
+  step: "trust-ca",
+  everProven: false,
+  since: null,
+  chosen: "this",
+  another: false,
+};
 
 const settle = (outcome: Outcome) => () => {
   if (outcome === "done") return Promise.resolve();

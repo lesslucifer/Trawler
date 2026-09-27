@@ -4,7 +4,7 @@ import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachStat
 import { CA_FILES, hostOs, splitProxyAddr, type CaFormat } from "./setup";
 import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
-import { isCaptured, isDecryptedHttps, latestFlowTimes } from "./flow";
+import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
 import { useProxyCloseConfirm } from "./closeConfirm";
@@ -58,14 +58,25 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, hosts, connections, lastConnectionAt, silent, answered, refused, retrying, retry, update } =
-    useFlows(client);
+  const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
+  const {
+    filter,
+    flows,
+    everything,
+    hosts,
+    lastConnectionAt,
+    silent,
+    answered,
+    refused,
+    retrying,
+    retry,
+    update,
+  } = useFlows(client, state.phase === "proven" ? "list" : "setup");
   // Which absence an empty list shows turns on WHY it is empty, and a clear is
   // the one reason no property of the list can carry. The flag disarms as soon
   // as rows return or the query moves, so it can only ever describe the emptiness
   // it caused.
   const [clearedEmpty, setClearedEmpty] = useState(false);
-  const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [pane, setPane] = useState<Pane>(null);
   const inspected = pane?.kind === "inspector" ? pane.id : null;
   const [retryNonce, setRetryNonce] = useState(0);
@@ -113,7 +124,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Live check (W4): the first-ever decrypted HTTPS flow the stream brings in flips
   // Verify green and reveals the list. Gated on !everProven so a deliberate
   // re-invoke (help) isn't instantly bounced back by the already-captured flow;
-  // once proven, the dot and Back-to-flows drive navigation. `flows` refetches on
+  // once proven, the dot and Back-to-flows drive navigation. `everything` refetches on
   // every SSE event via useFlows, so observing it is the whole live check.
   // The moment setup succeeds used to be silent: the screen was replaced by a
   // list of one row and nothing said the thing the user had been working
@@ -125,11 +136,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // A captured row that started before this setup opened still proves capture,
   // but it is a success from before the session, and so not news (R2).
   useEffect(() => {
-    if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(flows)) {
-      setJustSetUp(isDecryptedHttps(flows, state.since ?? undefined));
+    if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(everything)) {
+      setJustSetUp(isDecryptedHttps(everything, state.since ?? undefined));
       dispatch({ t: "captured" });
     }
-  }, [state.phase, state.everProven, state.since, flows]);
+  }, [state.phase, state.everProven, state.since, everything]);
 
   // Entering setup retires the announcement, however the user got there. The
   // banner belongs to one transition, and coming back out of setup without
@@ -311,6 +322,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   );
 
   const reInvoke = () => dispatch({ t: "re-invoke", at: Date.now() });
+  const setUpAnother = () => dispatch({ t: "re-invoke", at: Date.now(), another: true });
   const dot = <StatusDot status={dotStatus(state)} onClick={reInvoke} />;
 
   const setUpBanner = justSetUp && (
@@ -319,7 +331,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         tone="ok"
         action={
           <>
-            <Button onClick={reInvoke}>set up another device</Button>
+            <Button onClick={setUpAnother}>set up another device</Button>
             <Button frame="bare" tone="mute" onClick={() => setJustSetUp(false)}>
               dismiss
             </Button>
@@ -402,8 +414,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   useEffect(() => {
     if (state.phase !== "checking" || answered <= launchSent.current.answered) return;
-    dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: launchSent.current.at });
-  }, [state.phase, answered, flows]);
+    dispatch(isDecryptedHttps(everything) ? { t: "captured" } : { t: "not-detected", at: launchSent.current.at });
+  }, [state.phase, answered, everything]);
 
   const setupHeader = (
     <>
@@ -445,11 +457,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           proxy={proxyReading}
           probing={probing}
           probedAt={probedAt}
-          traffic={{
-            ...latestFlowTimes(flows),
-            lastTunnelAt: lastConnectionAt,
-            ever: flows.some(isCaptured) || connections > 0,
-          }}
+          traffic={sessionTraffic(everything, state.since, lastConnectionAt)}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
