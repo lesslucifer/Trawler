@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU reentry-session -> epic/onboard-review"
+epic: E-ONBREV
+wu: E-ONBREV.W3
+branch: wu/onboard-review/reentry-session
+base: 8166b6dcd04cdbc2bd7923b96735f743a16e0410
+head: d2042fec6c441d92ef4a6c8efe25159803859e69
+diff_sha256: ccecb6b0a41ff861c937cd377135f9ff9197e773d29c0459044fab8f86e5e5c4
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 0
+  stage_seconds:
+    gate0: 78
+    finders: 325
+    verifiers: 202
+    total: 576
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-09-27
