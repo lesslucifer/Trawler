@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab8d7089f34851f0dfad5ae">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-60: a setup session starts when setup opens</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-60 — a setup session starts when setup opens</h1>
+      <p>Setup is opened once per device, and each opening is its own session. The screen reads only what that
+        session produced, since nothing can say which device a request came from.</p>
+      <div class="meta">v1 · 2026-09-27 · Trawler · T2 decision · minted by <strong>E-ONBREV.W3</strong> from
+        the review's R4–R7 · relates to <a href="dec-13-onboarding-capabilities.html">DEC-13</a>,
+        <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> · UC-ONBOARD · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Coming back to set up a second device…</th><th>because</th><th>Finding</th></tr>
+      <tr><td>opened no steps, and said "You're set up" at once</td><td>the screen read the first device's request</td><td>R4</td></tr>
+      <tr><td>turned the header's dot red</td><td>the dot read the phase, not whether capture had been proven</td><td>R5</td></tr>
+      <tr><td>answered This machine</td><td>the only default was <code>this</code>, whatever the way in</td><td>R6</td></tr>
+      <tr><td>read "nothing arriving" for the new device</td><td>its traffic reading obeyed the list's filter</td><td>R7</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> Opening setup starts a session at the moment it records (<code>since</code>).
+        Every reading the setup screen takes from traffic counts only captured rows and tunnels that started at or
+        after <code>since</code>, listed unfiltered. The capture indicator keeps saying capture works once it has
+        been proven. "Set up another device" never answers the device already set up.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>Each opening records <code>since</code>: the launch read's send time on a first run, the
+        click on every re-entry</td><td>time is the only boundary available. The core cannot attribute a request
+        to a device (DEC-13's blocked-on row)</td></tr>
+      <tr><td>2</td><td>The try task, every task read from traffic, the one-open-guide rule and the success line
+        read only captured rows and tunnels at or after <code>since</code></td><td>evidence from an earlier session
+        is another device's (<a href="dec-33-two-layers-and-a-clock.html">DEC-33</a>: a verdict never borrows
+        from outside its own reading)</td></tr>
+      <tr><td>3</td><td>The session's rows are listed unfiltered. The list keeps its own filtered rows for when the
+        user comes back</td><td>a filter is the list's question. The setup screen never asked it</td></tr>
+      <tr><td>4</td><td>A count with no time (the core's <code>/stats</code> tally) feeds no session</td><td>it cannot
+        be placed after <code>since</code>. Inside a session every row and tunnel carries its own time</td></tr>
+      <tr><td>5</td><td>Once capture has been proven, the dot reads connected in setup too</td><td>setting up
+        another device is not capture breaking on the first</td></tr>
+      <tr><td>6</td><td>"Set up another device" opens on the last device chosen in this app session when that was
+        not This machine. Otherwise it leaves the question unanswered, and no task is drawn until it is answered.
+        The dot opens on the last device chosen, This machine included</td><td>the button names another device.
+        The dot says "run setup again"</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Attribute each request to a device and read that device's rows</td><td>the core cannot tell a phone's
+        request from this machine's. A new reading is its own epic</td></tr>
+      <tr><td>Clear the list's filter when setup opens</td><td>it takes away a choice the user made about the list,
+        to answer a question the list never asked</td></tr>
+      <tr><td>Keep the <code>/stats</code> tally as "something reached Trawler"</td><td>a first launch would read
+        "nothing arriving right now" from traffic before the session, which is the borrowing rule 2 forbids</td></tr>
+      <tr><td>Preselect the first device that is not This machine</td><td>a guess dressed as an answer. The user
+        knows which device, and the screen does not</td></tr>
+      <tr><td>Restart the session when the platform changes</td><td>the session is the opening. A change of mind
+        inside it would discard the evidence the user just produced</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

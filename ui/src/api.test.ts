@@ -82,13 +82,6 @@ test("listFlows throws on a non-ok response", async () => {
   await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);
 });
 
-test("connectionCount reads /stats and returns the connections tally", async () => {
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connections: 3 }) });
-  vi.stubGlobal("fetch", fetchMock);
-  await expect(createApi("http://127.0.0.1:9999").connectionCount()).resolves.toBe(3);
-  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/stats");
-});
-
 // A bare CONNECT tunnel never becomes a flow, so a `connection` event must bump
 // One fake EventSource for every stream test: they all need the same thing —
 // a handle on the listeners the client registered, so the test can fire one.

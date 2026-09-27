@@ -62,6 +62,13 @@
     .a-rch-off{display:block}
     .reached .a-rch-off{display:none}
     .reached .a-rch-on{display:block}
+    /* round 9 — "set up another device" over a last answer of this machine:
+       the question stands unanswered and nothing that answers it is drawn. */
+    .a-pf-none{display:none}
+    .another .a-pf-machine,.another .a-pf-sim,.another .a-pf-off,.another .a-pf-probed{display:none}
+    .another .a-pf-none{display:block}
+    .another [data-zone="steps"]{display:none}
+    .another [data-zone="back"]{display:block}
   </style>
 </head>
 <body>
@@ -69,8 +76,8 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBREV.W4</strong> · branch <code>wu/onboard-review/actions-follow-reading</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBREV.W3</strong> · branch <code>wu/onboard-review/reentry-session</code> ·
         epic <a href="2026-09-25-onboard-review-plan.html">E-ONBREV</a> · rounds 1–6 by E-ONBOARD, whose docs are archived out of git</div>
     </div>
   </header>
@@ -94,6 +101,7 @@
             <div class="a-pf-machine" id="m-picker-machine"></div>
             <div class="a-pf-sim" id="m-picker-sim"></div>
             <div class="a-pf-off" id="m-picker-off"></div>
+            <div class="a-pf-none" id="m-picker-none"></div>
           </div>
 
           <div class="a-zone" data-zone="steps">
@@ -148,6 +156,8 @@
               data-label-off="▶ show setup running" data-label-on="◀ hide setup running">▶ show setup running</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="proven"
               data-label-off="▶ show capturing" data-label-on="◀ hide capturing">▶ show capturing</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="another"
+              data-label-off="▶ set up another device, this machine last chosen" data-label-on="◀ back to a first setup">▶ set up another device, this machine last chosen</button>
       <script type="text/babel">
         const { React, createRoot, Notice, Section, StatusLine, Button, CommandBlock,
                 StepList, CopyText, Disclosure, Select, Spinner, TaskStep, TimestampText } = window.Trawler;
@@ -191,7 +201,7 @@
            move when the answer changes. */
         const picker = (chosen) => (
           <Select options={PLATFORMS} value={chosen} onChange={noop} label={QUESTION}
-                  searchable={false} className="w-picker" />
+                  placeholder="choose a device" searchable={false} className="w-picker" />
         );
 
         /* PROPOSED — CommandBlock, mounted: W5 builds it in the same unit that
@@ -242,6 +252,9 @@
         mount("m-picker-machine", picker("this"));
         mount("m-picker-sim", picker("ios-sim"));
         mount("m-picker-off", picker("ios"));
+        /* Round 9: the device this setup is for is the one question nobody has
+           answered yet, so it is asked rather than guessed. */
+        mount("m-picker-none", picker(undefined));
 
         /* ---- this machine: the layout is a reading of the two probes ------ */
         /* Round 7. Which controls and which steps a task carries is decided by
@@ -591,6 +604,7 @@
           </div>
           <div className="a-pf-sim"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic</Notice></div>
           <div className="a-pf-off"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic</Notice></div>
+          <div className="a-pf-none"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic</Notice></div>
         </>);
         mount("m-back",
           <Button frame="bare" tone="mute" onClick={noop}>‹ show traffic</Button>);
@@ -617,6 +631,9 @@
         <tr><td>Every task has one reading: a probe that concludes, else this setup's own traffic (the model below)</td><td>round 8 · DEC-33</td></tr>
         <tr><td>A refusal is said once: in the certificate task while it is not done, else in the try task while nothing decrypts now</td><td>round 8</td></tr>
         <tr><td>Every sentence that says "the steps below" has them open</td><td>rounds 7 · 8</td></tr>
+        <tr><td>A setup session starts when setup opens. The tasks read from traffic, the open guide, the try task and the end read only what started after it, unfiltered by the list</td><td>round 9 · R4 · R7</td></tr>
+        <tr><td>Once capture has been proven, the header's dot stays connected in setup</td><td>round 9 · R5</td></tr>
+        <tr><td><em>set up another device</em> never answers this machine: it opens on the last other device chosen, else the question stands unanswered and no task is drawn until it is answered</td><td>round 9 · R6 · Q2</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
         <tr><td>The column is 60% of the window up to 880px; zones 24px apart, tasks 32px</td><td>rounds 5 · 6</td></tr>
       </table>
@@ -644,7 +661,7 @@
       <table data-c="copy-table">
         <tr><th>Where</th><th>What it says</th></tr>
         <tr><td>title · purpose</td><td><em>Set up capture</em> · <em>Trawler sits between a device and the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate and send its traffic to Trawler.</em></td></tr>
-        <tr><td>the question</td><td><em>which device's traffic do you want to see</em></td></tr>
+        <tr><td>the question</td><td><em>which device's traffic do you want to see</em> · unanswered: <em>choose a device</em></td></tr>
         <tr><td>states · this machine</td><td><em>done — installed and trusted</em> · <em>not done — the certificate isn't trusted</em> · <em>done — this Mac routes through Trawler</em> · <em>not done — the system proxy is off</em> · <em>not done — another proxy is set</em> · <em>waiting for the first request</em> · <em>arriving but not decrypting</em> · <em>capturing traffic</em></td></tr>
         <tr><td>states · a device</td><td>the proxy task: <em>we'll confirm this on your iPhone's first request</em>, then <em>done — requests reached Trawler</em> · the certificate task: <em>we'll confirm this on your iPhone's first HTTPS request</em>, then <em>done — a request decrypted</em> or <em>not done — nothing decrypted</em></td></tr>
         <tr><td>the one act</td><td><em>Set up this Mac</em> · <em>one password prompt — it installs the certificate and sets the proxy</em></td></tr>
@@ -668,13 +685,14 @@
     <table data-item="capabilities" data-c="given-table">
       <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
       <tr><td><code>state.everProven</code> · <code>dispatch</code></td><td>used</td><td>back — the way out, once capture has been proven</td></tr>
+      <tr><td><code>state.chosen</code> · <code>state.another</code></td><td>used</td><td>platform — what the question opens on: the last device chosen, or nothing for another device over this machine; a choice is dispatched back</td></tr>
       <tr><td><code>state.step</code></td><td>deliberately unused</td><td>tasks are numbered and all shown; none is "current"</td></tr>
-      <tr><td><code>os</code></td><td>used</td><td>the picker's first answer, and which host's commands</td></tr>
+      <tr><td><code>os</code></td><td>used</td><td>This machine's label, and which host's commands</td></tr>
       <tr><td><code>proxyAddr</code></td><td>used</td><td>every command this machine runs</td></tr>
       <tr><td><code>trustProbe</code> — trusted · untrusted · unknown</td><td>used</td><td>task 1's reading, on this machine only</td></tr>
       <tr><td><code>proxy</code> — ours · foreign · none · unknown, and the address</td><td>used</td><td>task 2's reading, on this machine and the Simulator; the address names a proxy about to be replaced</td></tr>
       <tr><td><code>probing</code> · <code>probedAt</code> · <code>onRecheck</code></td><td>used</td><td>probe — one dated re-read of both</td></tr>
-      <tr><td><code>traffic</code> — decrypted · tunnel · plain · ever</td><td>used</td><td>try — the only proof; a tunnel cannot be tied to a platform (blocked-on)</td></tr>
+      <tr><td><code>traffic</code> — decrypted · tunnel · plain, this session's only: captured, since setup opened, unfiltered</td><td>used</td><td>try — the only proof; a tunnel cannot be tied to a platform (blocked-on)</td></tr>
       <tr><td><code>reach.armed</code> · <code>interfaces</code> · <code>proxy</code> · <code>ca_cert_url</code></td><td>used</td><td>task 1 off-machine, and the values a device types in</td></tr>
       <tr><td><code>reach.api</code></td><td>deliberately unused</td><td>no step points at it</td></tr>
       <tr><td><code>onSetUpThisMachine</code></td><td>used</td><td>the one act — only while both halves read not done</td></tr>
@@ -736,6 +754,8 @@
         <tr><td>Round 7, close — "ok, all LGTM now", on the per-task draft, its sentences and the one act leading task 1</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W4's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 8 — the owner, on an iPhone without the certificate: "receiving a message should means that the proxy setup step is done, there should be a message indicating that", and the not-decrypting message sat under step 4. The owner chose that the screen infers the device from the platform chosen, that the fix lands in W4, and — on the draft — "I don't want to help you verify case by case, please think thoroughly of similar cases and change systematically"</td><td>mockup — the phone draws a refusal and capture · copy — each task's reading as one model (probe that concludes, else this setup's traffic), the device states, the refusal said once in the certificate task, the certificate's promise naming an HTTPS request · the matrix widened to every platform, reach and traffic history, judged against the model</td><td><code>DEC-33</code> — a task no probe concludes promised its first request as its reading, so the request is its source and not a borrowed one · the blocked-on attribution row stays open</td></tr>
         <tr><td>Round 8, close — "LGTM, let's proceed", on the reading model and its wording</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W4's <code>design/v1</code> note re-cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 9 — the review of 2026-09-25: coming back to set up a second device opened no steps, said "You're set up" at once, turned the dot red, answered this machine and obeyed the list's filter (R4–R7). The epic plan's Q2 proposed what "set up another device" opens on</td><td>mockup — the question unanswered, with nothing below it but the end and the way back · rules — the session, the dot, the way in · copy — <em>choose a device</em> · given — <code>chosen</code> · <code>another</code>, and this session's traffic</td><td>UC-ONBOARD's re-entry row · <code>DEC-33</code> — a reading from before the session is not this session's evidence</td></tr>
+        <tr><td>Round 9, close — "LGTM as drawn", on the unanswered question with the end line and the way back beneath it, and on the dot opening on the last choice</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W3's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
       </tbody>
     </table>
 

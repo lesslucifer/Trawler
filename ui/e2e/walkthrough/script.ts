@@ -291,9 +291,21 @@ function autoThis(host: Host): Chapter[] {
         await w.script({ trust: "untrusted", proxy: "unset" });
         await w.click("set up another device");
       },
-      expect: `the dot stays connected; "${thisLabel(host)}" is not preselected; the chosen platform's first guide is open; no "You're set up" line before a new captured request, and never one naming ${device} beside two not-done tasks`,
-      findings: ["R4", "R5", "R6", "R17"],
+      expect: `the dot stays connected; "${thisLabel(host)}" is not preselected — the question reads "choose a device" and no task is drawn; no "You're set up" line before a new captured request`,
+      findings: ["R4", "R5", "R6"],
       anchor: ['[data-testid="lead"]'],
+    },
+    anotherChosen(),
+    {
+      id: "another-this",
+      title: "This machine chosen again, neither half done",
+      act: async (w) => {
+        await w.choose(thisLabel(host));
+        await w.hit();
+      },
+      expect: `task 3 reads "capturing traffic", and the success line names no device: task 1 and task 2 read not done, so the request cannot be ${device}'s`,
+      findings: ["R17"],
+      anchor: ['[data-testid="proven"]'],
     },
     {
       id: "filtered-reentry",
@@ -304,7 +316,7 @@ function autoThis(host: Host): Chapter[] {
         await w.dot();
         await w.hit();
       },
-      expect: `with the list filtered to a query nothing matches, the new captured request still reads in setup: task 3 "capturing traffic"`,
+      expect: `the dot opens setup on "${thisLabel(host)}", the last device chosen. With the list filtered to a query nothing matches, the new captured request still reads in setup: task 3 "capturing traffic"`,
       findings: ["R7"],
       anchor: ['[data-testid="lead"]'],
     },
@@ -342,11 +354,25 @@ function linuxThis(): Chapter[] {
       id: "another-device",
       title: "Set up another device",
       act: (w) => w.click("set up another device"),
-      expect: `the dot stays connected; "${thisLabel("linux")}" is not preselected; the chosen platform's first guide is open; no "You're set up" line before a new captured request`,
+      expect: `the dot stays connected; "${thisLabel("linux")}" is not preselected — the question reads "choose a device" and no task is drawn; no "You're set up" line before a new captured request`,
       findings: ["R4", "R5", "R6"],
       anchor: ['[data-testid="lead"]'],
     },
+    anotherChosen(),
   ];
+}
+
+// The second device's own session: the question answered, its first guide opens
+// although the first device's request is still in the list.
+function anotherChosen(): Chapter {
+  return {
+    id: "another-chosen",
+    title: "The second device chosen",
+    act: (w) => w.choose("Android emulator"),
+    expect: `the Android emulator's tasks, with task 1's steps open; task 3 reads "waiting for the first request" and no "You're set up" line shows before a new captured request`,
+    findings: ["R4"],
+    anchor: [task(1)],
+  };
 }
 
 // The Simulator runs beside macOS only, so its proxy chapters are filmed there;

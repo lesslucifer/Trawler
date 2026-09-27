@@ -164,8 +164,9 @@ describe("trafficStatus reads recency, never history", () => {
     expect(v.remedy).toBeUndefined();
   });
 
-  it("a tally with no time can only ever mean quiet", () => {
-    expect(at({ ever: true }).short).toBe("nothing arriving right now");
+  it("anything this session saw, past the window, is quiet rather than waiting", () => {
+    expect(at({ lastPlainAt: ago(RECENT_MS + 1) }).short).toBe("nothing arriving right now");
+    expect(at({ lastTunnelAt: ago(RECENT_MS + 1) }).short).toBe("nothing arriving right now");
   });
 
   it("a tunnel inside its grace is neither proof nor failure", () => {
@@ -302,7 +303,12 @@ describe("the short form every state carries", () => {
       "arriving — plain HTTP only",
       "open a website whose address starts with https://",
     ],
-    ["traffic · quiet", trafficStatus(seen({ ever: true }), NOW), "nothing arriving right now", undefined],
+    [
+      "traffic · quiet",
+      trafficStatus(seen({ lastPlainAt: NOW - RECENT_MS - 1 }), NOW),
+      "nothing arriving right now",
+      undefined,
+    ],
     ["traffic · waiting", trafficStatus(NO_TRAFFIC, NOW), "waiting for the first request", undefined],
   ];
 

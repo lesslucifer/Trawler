@@ -32,20 +32,17 @@ export interface StepStatusView {
 }
 
 // When each kind of traffic last reached Trawler, as epoch ms; null = not in
-// this session. `ever` also counts what the core saw before the UI subscribed
-// (the /stats tally), which carries no time and so can only ever mean "idle".
+// this setup session.
 export interface Traffic {
   lastDecryptedAt: number | null;
   lastPlainAt: number | null;
   lastTunnelAt: number | null;
-  ever: boolean;
 }
 
 export const NO_TRAFFIC: Traffic = {
   lastDecryptedAt: null,
   lastPlainAt: null,
   lastTunnelAt: null,
-  ever: false,
 };
 
 // "Now" is the last 30 s: long enough to read the screen after one curl, short
@@ -194,8 +191,7 @@ export function trafficReading(seen: Traffic, now: number): TrafficReading {
   if (recent(tunnel) && unanswered)
     return now - tunnel < TUNNEL_GRACE_MS ? "just-arrived" : "not-decrypting";
   if (recent(seen.lastPlainAt)) return "plain-only";
-  const anything =
-    seen.ever || seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || tunnel !== null;
+  const anything = seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || tunnel !== null;
   return anything ? "idle" : "waiting";
 }
 

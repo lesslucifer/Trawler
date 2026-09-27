@@ -189,7 +189,6 @@ export interface TrawlerApi {
   importHar(bytes: Uint8Array): Promise<number>;
   importCurl(command: string): Promise<number>;
   clearFlows(filter: Filter): Promise<number>;
-  connectionCount(): Promise<number>;
   caCertPem(): Promise<string>;
   caFile(format: CaFormat): Promise<Uint8Array>;
   getFlow(id: string): Promise<FlowView>;
@@ -247,11 +246,6 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/flows?${filterParams(filter)}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await refusal(res));
       return ((await res.json()) as { removed: number }).removed;
-    },
-    async connectionCount() {
-      const res = await fetch(`${base()}/stats`);
-      if (!res.ok) throw new ApiError(res.status, `GET /stats failed: ${res.status}`);
-      return ((await res.json()) as { connections: number }).connections;
     },
     async caCertPem() {
       const res = await fetch(`${base()}/ca.pem`);

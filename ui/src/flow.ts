@@ -1,4 +1,5 @@
 import type { BodyView, FlowSummary, FlowView } from "./api";
+import type { Traffic } from "./verdicts";
 
 export type StatusTone = "ok" | "warn" | "muted";
 
@@ -39,16 +40,31 @@ export interface FlowTimes {
   lastPlainAt: number | null;
 }
 
-export function latestFlowTimes(flows: FlowSummary[]): FlowTimes {
+export function latestFlowTimes(flows: FlowSummary[], since?: number): FlowTimes {
   const times: FlowTimes = { lastDecryptedAt: null, lastPlainAt: null };
   for (const flow of flows) {
     if (!isCaptured(flow)) continue;
     const at = Date.parse(flow.started_at);
-    if (Number.isNaN(at)) continue;
+    if (Number.isNaN(at) || (since !== undefined && at < since)) continue;
     const key = flow.uri.startsWith("https://") ? "lastDecryptedAt" : "lastPlainAt";
     times[key] = Math.max(times[key] ?? at, at);
   }
   return times;
+}
+
+// The setup screen reads one setup session: what was captured, and the newest
+// tunnel, from the moment that session opened. Traffic from before it is some
+// earlier session's evidence (DEC-60). A null `since` bounds nothing.
+export function sessionTraffic(
+  flows: FlowSummary[],
+  since: number | null,
+  lastTunnelAt: number | null,
+): Traffic {
+  const from = since ?? undefined;
+  return {
+    ...latestFlowTimes(flows, from),
+    lastTunnelAt: lastTunnelAt !== null && (from === undefined || lastTunnelAt >= from) ? lastTunnelAt : null,
+  };
 }
 
 export interface FlowRow {
