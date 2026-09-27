@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7fad60a37a95f4f3cc7c01a78a3b4e455eb5e28d
+base: 80231250b9f632538bc5b20dbf89598dfd10188d
+tier: key
+signer: vuluu
+report: docs/work/2026-09-27-onboard-review-w6-e2e-distill-result.html
+report_sha256: 4b5bd196ae1c136f11d41f307d6d33e1a0bf76dbfcd78d0a1ef0de1af864d77c
+date: 2026-09-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDc1glyaF4AC7mG9nQkaFYHxB5wyWbOSHaa97VDFAXW///8N04h3/RFW4
+  r6ilJhemw9ZEhI24fRQbYnRlCv6hgO
+  -----END SSH SIGNATURE-----
