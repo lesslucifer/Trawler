@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBREV
+wu: E-ONBREV.W3
+base: 8166b6dcd04cdbc2bd7923b96735f743a16e0410
+design_sha256: b6d6aa90682f6cb01127df82ee361add33a96284ff73d15cf44aa92894eea52c
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: cdf9e7a9bc881f757352702e10b99b2492c159d7
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "State only: useFlows is asked for the setup scope outside the list phase, the setup screen's traffic is sessionTraffic over the unfiltered rows from since, the launch and live checks read those rows, and the banner's set-up-another-device button dispatches re-invoke with another. Nothing it renders changes: the same branches, header, band, banner and Onboarding mount."
+date: 2026-09-27
