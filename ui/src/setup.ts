@@ -165,6 +165,8 @@ interface PlatformFacts {
   probesRoute: boolean;
   // Do this platform's instructions need an address beyond loopback?
   needsReach: boolean;
+  // The one host this platform runs beside, where it cannot run on every host.
+  onlyBeside?: HostOs;
 }
 
 const PLATFORMS: Record<PlatformId, PlatformFacts> = {
@@ -207,6 +209,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: true,
     needsReach: false,
+    onlyBeside: "macos",
   },
   "android-sim": {
     label: "Android emulator",
@@ -286,7 +289,17 @@ export function platformLabel(id: PlatformId, os: HostOs): string {
 }
 
 export function platformChoices(os: HostOs): { id: PlatformId; label: string }[] {
-  return PLATFORM_IDS.map((id) => ({ id, label: platformLabel(id, os) }));
+  return PLATFORM_IDS.filter((id) => (PLATFORMS[id].onlyBeside ?? os) === os).map((id) => ({
+    id,
+    label: platformLabel(id, os),
+  }));
+}
+
+// Whether this host has a reader for its own trust store and system proxy. A
+// platform that shares a store asks it; a host with no reader answers unknown,
+// and a re-read of nothing is not offered.
+export function canProbe(os: HostOs): boolean {
+  return os === "macos" || os === "windows";
 }
 
 export function probesTrust(id: PlatformId): boolean {

@@ -6,7 +6,7 @@ import type { ReachState } from "./api";
 import {
   canAutoSetup,
   deviceName,
-  PLATFORM_IDS,
+  platformChoices,
   platformLabel,
   type HostOs,
   type PlatformId,
@@ -416,7 +416,7 @@ function judge(s: State, extra: { reversal: boolean }, also: string[] = []) {
 }
 
 const STATES: State[] = HOSTS.flatMap((os) =>
-  PLATFORM_IDS.flatMap((platform) =>
+  platformChoices(os).flatMap(({ id: platform }) =>
     (OFF_MACHINE.has(platform) ? [true, false] : [false]).flatMap((armed) =>
       TRUST.flatMap((trust) =>
         PROXY.flatMap((proxy) =>
@@ -432,8 +432,11 @@ const name = (s: State) =>
   ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}`;
 
 describe("every reading at rest", () => {
-  test("the matrix is every host, platform, reach, probe pair and traffic history", () => {
-    expect(STATES).toHaveLength(4 * (3 + 5 * 2) * 3 * 4 * HISTORIES.length);
+  test("the matrix is every host, the platforms it offers, reach, probe pair and traffic history", () => {
+    const onMac = 3 + 5 * 2;
+    const elsewhere = 2 + 5 * 2;
+    expect(STATES).toHaveLength((onMac + 3 * elsewhere) * 3 * 4 * HISTORIES.length);
+    expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });
 
   test.each(STATES.map((s) => [name(s), s] as const))("%s", (_name, s) => {

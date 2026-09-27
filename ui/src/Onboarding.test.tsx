@@ -193,6 +193,18 @@ describe("the one question, asked in the user's words", () => {
     }
   });
 
+  it.each(["windows", "linux", "other"] as const)(
+    "on %s offers no iOS Simulator, which runs beside macOS only (R8)",
+    (os) => {
+      draw({ os });
+
+      fireEvent.click(picker());
+      expect(screen.queryByRole("option", { name: "iOS Simulator" })).toBeNull();
+      expect(screen.getByRole("option", { name: "Android emulator" })).toBeInTheDocument();
+      expect(screen.getAllByRole("option")).toHaveLength(PLATFORM_IDS.length - 1);
+    },
+  );
+
   it("starts on this machine, named for the host it detected, and says so unopened", () => {
     draw({ os: "macos" });
 
@@ -1117,6 +1129,29 @@ describe("one reading of this machine, re-taken by one control", () => {
     pick("Android device");
 
     expect(zone("probe")).toBeNull();
+  });
+
+  it.each(["macos", "windows"] as const)("is offered for this machine on %s, which can read it", (os) => {
+    draw({ os, probedAt: ago(60_000) });
+
+    expect(zone("probe")).toBeInTheDocument();
+  });
+
+  it.each(["linux", "other"] as const)(
+    "is absent for this machine on %s, where no probe can answer (R20)",
+    (os) => {
+      draw({ os, trustProbe: "unknown", proxy: { status: "unknown", address: null } });
+
+      expect(zone("probe")).toBeNull();
+      expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
+    },
+  );
+
+  it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
+    draw({ os: "linux", proxy: { status: "unknown", address: null } });
+
+    expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
+    expect(task(2)).not.toHaveTextContent("the system proxy is off");
   });
 
   it("re-reads on demand", () => {

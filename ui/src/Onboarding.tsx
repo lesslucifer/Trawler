@@ -18,6 +18,7 @@ import {
 } from "./components/index";
 import {
   canAutoSetup,
+  canProbe,
   CA_FILES,
   caFormatFor,
   confirmHttpsOn,
@@ -1028,7 +1029,7 @@ function PlatformSetup({
         </GuidedTask>
       </div>
 
-      {(probesTrust(platform) || probesRoute(platform)) && onRecheck && (
+      {(probesTrust(platform) || probesRoute(platform)) && canProbe(os) && onRecheck && (
         <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
       )}
 

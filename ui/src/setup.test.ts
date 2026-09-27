@@ -2,6 +2,7 @@ import { describe, expect, it, test } from "vitest";
 import {
   CA_FILES,
   canAutoSetup,
+  canProbe,
   caFormatFor,
   confirmOn,
   deviceName,
@@ -18,6 +19,7 @@ import {
   splitProxyAddr,
   type Guide,
   type GuideStep,
+  type HostOs,
   type PlatformId,
   type PlatformSetup,
 } from "./setup";
@@ -102,6 +104,13 @@ test("only macOS and Windows have a one-click setup path", () => {
   expect(canAutoSetup("other")).toBe(false);
 });
 
+test("only macOS and Windows have a reader for their own trust store and proxy", () => {
+  expect(canProbe("macos")).toBe(true);
+  expect(canProbe("windows")).toBe(true);
+  expect(canProbe("linux")).toBe(false);
+  expect(canProbe("other")).toBe(false);
+});
+
 test("splitProxyAddr splits host and port on the last colon", () => {
   expect(splitProxyAddr("127.0.0.1:7420")).toEqual({ host: "127.0.0.1", port: 7420 });
   expect(splitProxyAddr("192.168.1.5:8080")).toEqual({ host: "192.168.1.5", port: 8080 });
@@ -120,6 +129,25 @@ test("the axis offers the eight platforms, this machine first", () => {
     "ios",
     "android",
   ]);
+});
+
+describe("a host is offered only the platforms that run beside it", () => {
+  const offered = (os: HostOs) => platformChoices(os).map((p) => p.id);
+
+  test("macOS offers all eight, the iOS Simulator among them", () => {
+    expect(offered("macos")).toEqual([...PLATFORM_IDS]);
+  });
+
+  test.each<HostOs>(["windows", "linux", "other"])("%s offers no iOS Simulator", (os) => {
+    expect(offered(os)).toEqual(PLATFORM_IDS.filter((id) => id !== "ios-sim"));
+  });
+
+  test.each<HostOs>(["macos", "windows", "linux", "other"])(
+    "%s offers the Android emulator",
+    (os) => {
+      expect(offered(os)).toContain("android-sim");
+    },
+  );
 });
 
 test("this machine names the detected host, and names nothing it did not detect", () => {
