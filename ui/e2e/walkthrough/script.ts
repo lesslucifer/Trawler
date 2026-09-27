@@ -297,6 +297,17 @@ function autoThis(host: Host): Chapter[] {
     },
     anotherChosen(),
     {
+      id: "another-this",
+      title: "This machine chosen again, neither half done",
+      act: async (w) => {
+        await w.choose(thisLabel(host));
+        await w.hit();
+      },
+      expect: `task 3 reads "capturing traffic", and the success line names no device: task 1 and task 2 read not done, so the request cannot be ${device}'s`,
+      findings: ["R17"],
+      anchor: ['[data-testid="proven"]'],
+    },
+    {
       id: "filtered-reentry",
       title: "Re-entry with the list filtered",
       act: async (w) => {
@@ -305,7 +316,7 @@ function autoThis(host: Host): Chapter[] {
         await w.dot();
         await w.hit();
       },
-      expect: `the dot opens setup on the Android emulator, the last device chosen. With the list filtered to a query nothing matches, the new captured request still reads in setup: task 3 "capturing traffic"`,
+      expect: `the dot opens setup on "${thisLabel(host)}", the last device chosen. With the list filtered to a query nothing matches, the new captured request still reads in setup: task 3 "capturing traffic"`,
       findings: ["R7"],
       anchor: ['[data-testid="lead"]'],
     },
