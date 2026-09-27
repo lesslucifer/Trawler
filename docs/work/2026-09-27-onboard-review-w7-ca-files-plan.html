@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab892539f34851f0dfad58a" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBREV.W7 plan: the certificate file each platform opens</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBREV.W7 — the certificate file each platform opens</h1>
+      <p>Each platform downloads, saves and is told about one certificate file, in the format its own installer opens. An iPhone gets a configuration profile, Android gets DER, and the desktops keep PEM.</p>
+      <div class="meta">v2 · 2026-09-27 · the owner's second iPhone report (R29, R30) added · Trawler · T3 WU plan · <span class="badge id">E-ONBREV.W7</span> · branch <code>wu/onboard-review/ca-files</code> · <a href="2026-09-25-onboard-review-plan.html">epic plan</a> · findings R23–R30 below · depends on <span class="badge id">E-ONBREV.W1</span> (merged, the <em>before</em> is recorded)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong>The core serves its one CA as PEM at <code>/ca.pem</code>, as DER at <code>/ca.cer</code> and as an
+      Apple configuration profile at <code>/ca.mobileconfig</code>. Each download suggests a file name that matches
+      its URL, and <code>/reach</code> names all three URLs. iPhone and iPad are sent to the profile in Safari.
+      Android and its emulator get the DER file. Every desktop and the iOS Simulator keep PEM. In every platform's
+      certificate task, the download, the save control and every command name the same one file. The iPhone's trust step
+      says installing the profile does not trust it. When traffic arrives and doesn't decrypt, each platform's certificate
+      task names the check its users most often miss.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-ONBREV</span> · the epic plan's W7 block · UC-ONBOARD: the certificate-file row ·
+      findings R23–R30 (below; the owner's first iPhone report is R23 and R24, the second R29 and R30) · open questions Q11–Q13 (the owner took the proposed defaults, 2026-09-27) · UC-1 unchanged
+      (<code>/ca.crt</code> keeps its PEM body).
+    </p>
+
+    <h2 id="audit">Audit: what each platform is told and given today</h2>
+    <p class="caption">One route serves every platform: <code>GET /ca.crt</code> answers the PEM with
+      <code>Content-Disposition: attachment; filename="trawler-ca.pem"</code>. The save control writes the same PEM
+      as <code>trawler-ca.pem</code> (<code>CA_FILENAME</code>).</p>
+    <table data-c="audit">
+      <tr><th>#</th><th>Platform</th><th>The screen says</th><th>What the device does with it</th></tr>
+      <tr><td>R23</td><td>iPhone or iPad</td>
+        <td>"open <code>…/ca.crt</code> — it downloads the profile"</td>
+        <td>The download is a PEM file named <code>trawler-ca.pem</code>, not a profile. Saved to Files, it opens
+          nothing (the owner's report). The step also doesn't say Safari, the only iOS browser that hands a
+          profile to Settings.</td></tr>
+      <tr><td>R24</td><td>iPhone or iPad</td>
+        <td>"No browser on it? Save Trawler's certificate as <code>trawler-ca.pem</code> and carry the file over
+          instead."</td>
+        <td>This names a <code>.pem</code> on a screen that just said "profile", and iOS cannot install a
+          <code>.pem</code> carried over by AirDrop or Files.</td></tr>
+      <tr><td>R25</td><td>Android phone</td>
+        <td>"open <code>…/ca.crt</code> — it downloads the certificate", then "Install a certificate → CA
+          certificate"</td>
+        <td>The file that arrives is <code>trawler-ca.pem</code>. The installer's picker lists
+          <code>.crt</code> and <code>.cer</code>, and on some versions a <code>.pem</code> can't be picked.</td></tr>
+      <tr><td>R26</td><td>Android emulator</td>
+        <td>"Save … as <code>trawler-ca.pem</code>", then <code>adb push trawler-ca.pem /sdcard/Download/</code></td>
+        <td>The same file, with the same picker problem as R25.</td></tr>
+      <tr><td>R27</td><td>another Mac, Windows PC, Ubuntu, iPhone, Android</td>
+        <td>the URL ends <code>/ca.crt</code>; another machine's step says "… and save it as
+          <code>trawler-ca.pem</code>"</td>
+        <td>The URL and the file disagree on the name, so the user is asked to rename a file that the URL
+          promised was a <code>.crt</code>.</td></tr>
+      <tr><td>R28</td><td>iPhone, Android, Android emulator</td>
+        <td>the install step names a Settings path but no file</td>
+        <td>The user has to guess which file to pick in the installer.</td></tr>
+      <tr><td>R29</td><td>iPhone or iPad</td>
+        <td>"Then turn it on: Settings → General → About → Certificate Trust Settings."</td>
+        <td>The owner installed the profile, took it for done, and got <code>CertificateUnknown</code> and "This
+          Connection Is Not Private" until the switch was on. The step doesn't say that installing is not
+          trusting.</td></tr>
+      <tr><td>R30</td><td>every platform</td>
+        <td>"something reached Trawler and did not decrypt — … does not trust Trawler's certificate yet. The steps below
+          install it."</td>
+        <td>A user who already did the steps gets no check to make. Each platform has a usual cause: the iPhone's trust
+          switch; Android's user store and the apps that ignore it; a browser or Simulator still holding the store it
+          started with; Firefox's own store. Pinned apps and Apple's services never decrypt at all.</td></tr>
+      <tr><td>R31</td><td>every platform</td>
+        <td>nothing says which host failed or why</td>
+        <td>The core logs <code>Failed to establish TLS connection</code> with the client's reason, but the screen can't
+          see it. <em>Out of W7</em> (Q14): the backlog carries it.</td></tr>
+      <tr><td>—</td><td>this machine, another Mac, Windows, Ubuntu, iOS Simulator</td>
+        <td><code>security add-trusted-cert</code>, <code>certutil -addstore</code>,
+          <code>update-ca-certificates</code> (copied to <code>.crt</code>), NSS <code>certutil</code> and
+          <code>simctl add-root-cert</code>, each reading <code>trawler-ca.pem</code></td>
+        <td>Already right: every one of those tools reads PEM. Only the download's URL and name change
+          (R27).</td></tr>
+    </table>
+
+    <h2 id="formats">The file each platform gets</h2>
+    <div class="diagram" data-c="formats">
+      <pre class="mermaid">
+flowchart LR
+  CA["the one CA<br/>ca/trawler-ca.pem"] --> PEM["/ca.pem<br/>trawler-ca.pem<br/>application/x-pem-file"]
+  CA --> DER["/ca.cer<br/>trawler-ca.cer<br/>application/pkix-cert"]
+  CA --> MC["/ca.mobileconfig<br/>trawler-ca.mobileconfig<br/>application/x-apple-aspen-config"]
+  CA --> OLD["/ca.crt · PEM, unchanged body<br/>suggests trawler-ca.crt<br/>not named by the screen"]
+  PEM --> D["this machine · another Mac · Windows · Ubuntu · iOS Simulator"]
+  DER --> A["Android phone · Android emulator"]
+  MC --> I["iPhone or iPad"]
+      </pre>
+      <div class="caption">One CA and three encodings. <code>/ca.crt</code> stays for UC-1, <code>curl --cacert</code> and every existing client (Q13).</div>
+    </div>
+    <table data-c="format-table">
+      <tr><th>Format</th><th>Contents</th><th>Why this platform</th></tr>
+      <tr><td>PEM</td><td>the file on disk, byte for byte</td>
+        <td>Every desktop trust command and <code>simctl</code> read PEM. Linux's <code>update-ca-certificates</code>
+          needs PEM content under a <code>.crt</code> name, which the given <code>cp</code> already does.</td></tr>
+      <tr><td>DER</td><td>the certificate's DER bytes, decoded from the PEM</td>
+        <td>Every Android version's CA installer reads DER, and its picker lists <code>.cer</code> (Q12).</td></tr>
+      <tr><td>profile</td><td>a plist: a <code>Configuration</code> payload holding one
+        <code>com.apple.security.root</code> payload, whose data is the DER. The display name is "Trawler Proxy CA".
+        The UUIDs are derived from the DER (<code>uuid</code> v5), so reinstalling the same CA replaces the old
+        profile instead of adding a second one</td>
+        <td>Safari hands a profile to Settings. It also installs from Files and AirDrop, which a bare certificate
+          does not. It is unsigned, so iOS labels it "Not Verified" (Q11).</td></tr>
+    </table>
+
+    <h2 id="copy">The copy, before and after</h2>
+    <table data-c="copy">
+      <tr><th>Platform</th><th>Before</th><th>After</th></tr>
+      <tr><td>iPhone or iPad · download</td><td>"open <code>…/ca.crt</code> — it downloads the profile."</td>
+        <td>"open <code>…/ca.mobileconfig</code> in Safari — it downloads <code>trawler-ca.mobileconfig</code>."</td></tr>
+      <tr><td>iPhone or iPad · install</td><td>"Open it: Settings → General → VPN &amp; Device Management → install the profile."</td>
+        <td>"Install it: Settings → General → VPN &amp; Device Management → Trawler Proxy CA → Install. iOS marks it
+          Not Verified, because only you made it."</td></tr>
+      <tr><td>iPhone or iPad · alternative</td><td>"No browser on it? Save … as <code>trawler-ca.pem</code> and carry the file over instead."</td>
+        <td>"Or save <code>trawler-ca.mobileconfig</code> [save] and AirDrop it over."</td></tr>
+      <tr><td>iPhone or iPad · trust</td><td>"Then turn it on: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA."</td>
+        <td>"Then turn on full trust. Installing does not: Settings → General → About → Certificate Trust Settings →
+          Trawler Proxy CA. Until it is on, Safari says This Connection Is Not Private."</td></tr>
+      <tr><td>Android phone · download</td><td>"open <code>…/ca.crt</code> — it downloads the certificate."</td>
+        <td>"open <code>…/ca.cer</code> — it downloads <code>trawler-ca.cer</code>."</td></tr>
+      <tr><td>Android · install</td><td>"… Install a certificate → CA certificate."</td>
+        <td>"… Install a certificate → CA certificate → <code>trawler-ca.cer</code>."</td></tr>
+      <tr><td>Android · alternative</td><td>"No browser on it? Save … as <code>trawler-ca.pem</code> …"</td>
+        <td>"No browser on it? Save <code>trawler-ca.cer</code> [save] and carry the file over instead."</td></tr>
+      <tr><td>Android emulator</td><td>save <code>trawler-ca.pem</code> · <code>adb push trawler-ca.pem …</code></td>
+        <td>save <code>trawler-ca.cer</code> · <code>adb push trawler-ca.cer /sdcard/Download/</code> · install names
+          <code>trawler-ca.cer</code></td></tr>
+      <tr><td>another Mac, Windows, Ubuntu</td><td>"open <code>…/ca.crt</code> and save it as <code>trawler-ca.pem</code>."</td>
+        <td>"open <code>…/ca.pem</code> — it downloads <code>trawler-ca.pem</code>." The commands are unchanged</td></tr>
+      <tr><td>this machine, iOS Simulator</td><td>"Save Trawler's certificate as <code>trawler-ca.pem</code>"</td>
+        <td>unchanged</td></tr>
+    </table>
+    <table data-c="not-decrypting">
+      <tr><th>Traffic arrives and doesn't decrypt on…</th><th>The certificate task adds, after "The steps below install it."</th></tr>
+      <tr><td>this machine, another Mac, Windows, Ubuntu</td><td>"Already did? A browser keeps the store it started with
+        until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt."</td></tr>
+      <tr><td>iPhone or iPad</td><td>"Installed the profile already? Trust is a separate switch: Settings → General →
+        About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is
+        the test."</td></tr>
+      <tr><td>iOS Simulator</td><td>"Already did? Restart the Simulator — its apps keep the store they started with."</td></tr>
+      <tr><td>Android phone, Android emulator</td><td>"Already did? Trawler Proxy CA should be under Settings → Security →
+        Encryption &amp; credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a
+        website in Chrome is the test."</td></tr>
+    </table>
+    <p class="caption">Design: no new surface. Only the file each sentence names changes, and the iOS install note
+      is added to an existing step. <code>setup.ts</code> and <code>Onboarding.tsx</code> are declared
+      <code>undesigned</code> in <code>design/v1</code>, as W2 did for the checking render.</p>
+
+    <h2 id="changes">Changes per file</h2>
+    <table data-c="changes">
+      <tr><th>Where</th><th>Change</th><th>Finding</th></tr>
+      <tr><td><code>src/ca.rs</code></td><td><code>CaPems</code> gains the DER and the profile, built once at load
+        from the PEM. The profile's UUIDs come from the DER</td><td>R23 · R25</td></tr>
+      <tr><td><code>Cargo.toml</code></td><td><code>uuid</code> gains its <code>v5</code> feature</td><td>R23</td></tr>
+      <tr><td><code>src/api/routes.rs</code> · <code>mod.rs</code></td><td><code>/ca.pem</code>, <code>/ca.cer</code> and
+        <code>/ca.mobileconfig</code>, each with its type and a matching file name. <code>/ca.crt</code> keeps its
+        body and suggests <code>trawler-ca.crt</code></td><td>R23 – R27</td></tr>
+      <tr><td><code>src/reach.rs</code> · <code>src/api/view.rs</code></td><td><code>ca_cert_url</code> becomes
+        <code>ca_urls: {pem, cer, mobileconfig}</code> over the armed address, or null when nothing is armed</td><td>R27</td></tr>
+      <tr><td><code>ui/src/api.ts</code></td><td>the reach type follows. <code>caFile(format)</code> returns a
+        format's bytes. <code>caCertPem</code> stays for the one-click setup</td><td>R24 · R26</td></tr>
+      <tr><td><code>ui/src/setup.ts</code> · <code>verdicts.ts</code> · <code>Onboarding.tsx</code></td><td>each platform's
+        <code>notDecrypting</code> check, spoken after the certificate task's refusal. The iPhone's trust step</td><td>R29 · R30</td></tr>
+      <tr><td><code>ui/src/setup.ts</code></td><td><code>CA_FILES</code>: one name per format. Each platform picks
+        its format, and every download, save step, install step and command reads that name from there</td><td>R23 – R28</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code> · <code>App.tsx</code></td><td>the save control saves its step's
+        format under that format's name</td><td>R24 · R26</td></tr>
+      <tr><td><code>ui/e2e/harness/front.rs</code></td><td>the scripted reach view carries <code>ca_urls</code></td><td>—</td></tr>
+      <tr><td><code>ui/src-tauri</code></td><td>unchanged. The one-click setup still writes PEM to a temp file</td><td>—</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>A reader checks…</th><th>…and sees</th></tr>
+      <tr><td><code>curl -i http://127.0.0.1:7421/ca.mobileconfig</code></td>
+        <td><code>application/x-apple-aspen-config</code>, <code>trawler-ca.mobileconfig</code>, and a plist whose one
+          root payload holds the CA's DER</td></tr>
+      <tr><td><code>curl -i …/ca.cer</code> and <code>…/ca.pem</code></td>
+        <td>DER as <code>trawler-ca.cer</code>, and PEM as <code>trawler-ca.pem</code>, equal to
+          <code>ca/trawler-ca.pem</code></td></tr>
+      <tr><td><code>curl …/ca.crt</code></td><td>the same PEM body as before</td></tr>
+      <tr><td>the iPhone guide, reach armed</td>
+        <td>the <code>/ca.mobileconfig</code> URL, "in Safari", <code>trawler-ca.mobileconfig</code>, and no
+          <code>.pem</code> anywhere in the task</td></tr>
+      <tr><td>the Android and emulator guides</td>
+        <td><code>trawler-ca.cer</code> in the download, the save control, <code>adb push</code> and the install
+          step</td></tr>
+      <tr><td>every platform's certificate task, on every host</td>
+        <td>one file name, the one its URL or save control produces</td></tr>
+      <tr><td>the certificate task of any platform, with traffic arriving undecrypted</td>
+        <td>the refusal, then that platform's check (the table above)</td></tr>
+      <tr><td>on a real iPhone, the URL opened in Safari</td>
+        <td>"Profile Downloaded". It installs from Settings, and Trawler Proxy CA can be trusted in Certificate
+          Trust Settings</td></tr>
+      <tr><td>on a real Android phone, the URL opened</td>
+        <td><code>trawler-ca.cer</code> in Downloads, which the CA installer can pick and install</td></tr>
+      <tr><td>the walkthrough's iPhone, Android and emulator reels</td><td>every caption's expectation holds on
+        screen</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>File</th><th>Asserts</th></tr>
+      <tr><td>unit</td><td><code>src/ca.rs</code></td><td>The DER equals the certificate's DER. The profile parses
+        (<code>quick-xml</code>) to one <code>Configuration</code> holding one <code>com.apple.security.root</code>
+        payload, whose data decodes to that DER. Its UUIDs are equal across two builds of one CA and differ for
+        another CA</td></tr>
+      <tr><td>unit</td><td><code>src/reach.rs</code></td><td><code>ca_urls</code> over an IPv4 and an IPv6 armed
+        address</td></tr>
+      <tr><td>integration</td><td><code>tests/api.rs</code></td><td>For each of the four routes: status, content
+        type, a file name matching the URL, and the body (the PEM on disk; DER that parses to it; the profile's
+        payload equal to it). <code>/ca.crt</code>'s body is unchanged</td></tr>
+      <tr><td>integration</td><td><code>tests/reach.rs</code></td><td>Once armed, <code>/reach</code> names the three
+        URLs over the armed address, each answering there. Disarmed, it names none</td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>A sweep over every platform × host OS × reach:
+        each certificate task names exactly one of <code>CA_FILES</code>, its URL and save control are that
+        format's, and every command in it reads that name. iOS says Safari and never names <code>.pem</code>.
+        Android and the emulator name <code>trawler-ca.cer</code></td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>Every platform has a <code>notDecrypting</code> check.
+        The iPhone's names Certificate Trust Settings and Safari, Android's the User store and Chrome, the Simulator's a
+        restart, and the desktops' a browser restart and Firefox. The iPhone's trust step says installing does not
+        trust</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>With traffic arriving undecrypted, the
+        certificate task on the iPhone, on Android and on this machine shows the refusal followed by that platform's
+        check</td></tr>
+      <tr><td>unit</td><td><code>ui/src/api.test.ts</code></td><td><code>caFile</code> fetches each format's path and
+        returns its bytes. A failure throws <code>ApiError</code></td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> · <code>App.test.tsx</code></td><td>The save
+        control saves <code>trawler-ca.mobileconfig</code> on the iOS alternative, <code>trawler-ca.cer</code> on
+        the emulator, and <code>trawler-ca.pem</code> on this machine, each with that format's bytes</td></tr>
+      <tr><td>e2e</td><td>—</td><td><em>waived at WU level:</em> no hermetic run has an iPhone or an Android device,
+        and the epic plan gives the journeys to W6. The formats are pinned byte for byte at integration level. The
+        evidence is the owner installing the profile on a real iPhone and the DER on a real Android device through
+        an armed reach, and the walkthrough's device reels re-run through the real window. The iPhone half is done
+        (2026-09-27): the profile installed; with full trust on, Safari's example.com decrypted and proved setup</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation owed to W6</h2>
+    <p data-c="distillation">UC-ONBOARD's "certificate is saved from the step that names it" row names the file
+      per platform, not <code>trawler-ca.pem</code> for all. <a href="../core-technical-design.html">core-technical-design</a>'s
+      API table gains the three routes, and its iOS row names the profile.</p>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan's W7 block, its non-goal exceptions and Q11–Q13</td></tr>
+      <tr><td>2</td><td>the core serves PEM, DER and the profile, and <code>/reach</code> names them, with their unit
+        and integration tests</td></tr>
+      <tr><td>3</td><td>each platform names and saves its own file, with the setup sweep and the save-control
+        tests</td></tr>
+      <tr><td>4</td><td>the walkthrough's device reels caption their file, and the judge knows the new findings</td></tr>
+      <tr><td>5</td><td>R29 and R30: the iPhone's trust step, and each platform's not-decrypting check, with their
+        tests</td></tr>
+      <tr><td>6</td><td>the result report, including the owner's real-device installs</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

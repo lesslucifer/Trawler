@@ -1,9 +1,13 @@
 import { describe, expect, it, test } from "vitest";
 import {
+  CA_FILES,
   canAutoSetup,
+  caFormatFor,
   confirmOn,
   deviceName,
   hostOs,
+  isCommand,
+  isSave,
   reachTaskTitle,
   needsReach,
   probesRoute,
@@ -25,7 +29,14 @@ const UA = {
 };
 
 const ADDR = "127.0.0.1:9999";
-const REACH = { proxy: "192.168.1.24:9999", caCertUrl: "http://192.168.1.24:7421/ca.crt" };
+const REACH = {
+  proxy: "192.168.1.24:9999",
+  caUrls: {
+    pem: "http://192.168.1.24:7421/ca.pem",
+    cer: "http://192.168.1.24:7421/ca.cer",
+    mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
+  },
+};
 const ctx = (over: Partial<Parameters<typeof setupFor>[1]> = {}) => ({
   os: "macos" as const,
   proxyAddr: ADDR,
@@ -180,7 +191,8 @@ describe("every platform's instructions are its own", () => {
   it.each(PLATFORM_IDS)("%s names no address it was not given", (id) => {
     const text = everything(setup(id));
     expect(text).not.toMatch(/7420/);
-    expect(text.replace(REACH.caCertUrl, "")).not.toMatch(/7421/);
+    const withoutCa = Object.values(REACH.caUrls).reduce((t, url) => t.split(url).join(""), text);
+    expect(withoutCa).not.toMatch(/7421/);
   });
 });
 
@@ -197,9 +209,9 @@ describe("the Android emulator and the Android device stop sharing one answer", 
   });
 
   it("send the certificate by different routes", () => {
-    expect(copies(emulator())).toContain("adb push trawler-ca.pem /sdcard/Download/");
-    expect(copies(device())).toContain(REACH.caCertUrl);
-    expect(copies(device())).not.toContain("adb push trawler-ca.pem /sdcard/Download/");
+    expect(copies(emulator())).toContain("adb push trawler-ca.cer /sdcard/Download/");
+    expect(copies(device())).toContain(REACH.caUrls.cer);
+    expect(copies(device())).not.toContain("adb push trawler-ca.cer /sdcard/Download/");
   });
 
   it("point at different hosts — the emulator's alias, the device's reach address", () => {
@@ -235,7 +247,7 @@ test("no instruction punts an address in prose", () => {
 
 describe("an off-machine platform is pointed at the address reach reported", () => {
   it.each(PLATFORM_IDS.filter(needsReach))("%s fetches the certificate over it", (id) => {
-    expect(copies(setup(id))).toContain(REACH.caCertUrl);
+    expect(copies(setup(id))).toContain(REACH.caUrls[caFormatFor(id)]);
   });
 
   it.each(["mac", "windows", "ubuntu"] as const)("%s routes through it, never loopback", (id) => {
@@ -369,9 +381,13 @@ describe("a guide's steps are the route, and everything else says what it is", (
       "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
     );
     expect(
-      alternatives("ios").flatMap((step) => step.filter((p) => typeof p === "string")),
+      alternatives("android").flatMap((step) => step.filter((p) => typeof p === "string")),
     ).toContain("No browser on it?");
+    expect(
+      alternatives("ios").flatMap((step) => step.filter((p) => typeof p === "string")),
+    ).toContain("and AirDrop it over.");
     expect(saves(setup("ios"))).toBe(1);
+    expect(saves(setup("android"))).toBe(1);
   });
 
   it("what is left in the sequence is short enough to read before starting", () => {
@@ -460,5 +476,100 @@ describe("the words each platform is spoken about in", () => {
     for (const word of [/\bflows?\b/i, /\bverdict\b/i, /\breach\b/i, /\bplatform\b/i, /listen on/i]) {
       expect(text).not.toMatch(word);
     }
+  });
+});
+
+// The owner's iPhone was sent a PEM under a step that promised a profile, and
+// told to carry a .pem over when iOS installs none. Each platform's certificate
+// task names one file, the one its URL or save control produces, and every
+// command in it reads that name.
+describe("each platform names the one certificate file its installer opens", () => {
+  const HOSTS = ["macos", "windows", "linux", "other"] as const;
+  const FILES = Object.values(CA_FILES);
+  const cases = PLATFORM_IDS.flatMap((id) =>
+    HOSTS.flatMap((os) => [REACH, null].map((reach) => [id, os, reach] as const)),
+  );
+
+  it.each(cases)("%s on %s, reach %o", (id, os, reach) => {
+    const trust = setupFor(id, ctx({ os, reach })).trust.guide;
+    if (trust === undefined) return;
+    const format = caFormatFor(id);
+    const steps = [...trust.steps, ...(trust.alternatives ?? [])];
+    const said = steps
+      .flatMap((step) => step.map((p) => (typeof p === "string" ? p : isCommand(p) ? p.command : "")))
+      .concat(trust.notes ?? [])
+      .join("\n");
+
+    expect(FILES.filter((file) => said.includes(file))).toEqual([CA_FILES[format]]);
+    for (const part of steps.flat()) {
+      if (isSave(part)) expect(part.save).toBe(format);
+      if (typeof part === "object" && "wire" in part && part.wire === "certificate url") {
+        expect(part.copy).toBe(REACH.caUrls[format]);
+      }
+    }
+    for (const command of commands(steps).filter((c) => /trawler-ca\./.test(c))) {
+      expect(command).toContain(CA_FILES[format]);
+    }
+  });
+
+  it("gives an iPhone the profile, Android DER, and every other platform PEM", () => {
+    expect(caFormatFor("ios")).toBe("mobileconfig");
+    expect(caFormatFor("android")).toBe("cer");
+    expect(caFormatFor("android-sim")).toBe("cer");
+    for (const id of ["this", "mac", "windows", "ubuntu", "ios-sim"] as const) {
+      expect(caFormatFor(id)).toBe("pem");
+    }
+  });
+
+  it("sends an iPhone to Safari for the profile, says why iOS calls it Not Verified, and never names a .pem", () => {
+    const text = everything(setup("ios"));
+    expect(text).toMatch(/in Safari/);
+    expect(text).toMatch(/Not Verified/);
+    expect(text).not.toMatch(/\.pem\b/);
+  });
+
+  it("names the file to pick in each phone installer", () => {
+    expect(prose(setup("ios"))).toMatch(/VPN & Device Management → Trawler Proxy CA → Install/);
+    for (const id of ["android", "android-sim"] as const) {
+      expect(prose(setup(id))).toMatch(/CA certificate → trawler-ca\.cer\./);
+    }
+  });
+});
+
+// The owner's second iPhone report: the profile installed, trust off, and
+// nothing on the screen said installing is not trusting. Each platform names
+// what its users check next when traffic arrives and does not decrypt.
+describe("each platform says what to check when its traffic does not decrypt", () => {
+  it.each(PLATFORM_IDS)("%s has a check to make", (id) => {
+    expect(setup(id).notDecrypting).toMatch(/\S/);
+  });
+
+  it("the iPhone's is the trust switch, and Safari is its test", () => {
+    const check = setup("ios").notDecrypting;
+    expect(check).toContain("Settings → General → About → Certificate Trust Settings → Trawler Proxy CA");
+    expect(check).toMatch(/Apple's own services never decrypt; a website in Safari is the test/);
+  });
+
+  it.each(["android", "android-sim"] as const)("%s's is the User store, and Chrome is its test", (id) => {
+    const check = setup(id).notDecrypting;
+    expect(check).toContain("Trusted credentials → User");
+    expect(check).toMatch(/Android 7\+; a website in Chrome is the test/);
+  });
+
+  it("the Simulator's is a restart", () => {
+    expect(setup("ios-sim").notDecrypting).toMatch(/Restart the Simulator/);
+  });
+
+  it.each(["this", "mac", "windows", "ubuntu"] as const)("%s's is a browser restart, Firefox and pinning", (id) => {
+    const check = setup(id).notDecrypting;
+    expect(check).toMatch(/restarts/);
+    expect(check).toMatch(/Firefox keeps its own/);
+    expect(check).toMatch(/pin their own certificate/);
+  });
+
+  it("the iPhone's trust step says installing does not trust, and what Safari says until it does", () => {
+    const steps = setup("ios").trust.guide!.steps.map((step) => step.join(" "));
+    expect(steps[2]).toMatch(/^Then turn on full trust\. Installing does not: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA\./);
+    expect(steps[2]).toMatch(/Until it is on, Safari says This Connection Is Not Private\./);
   });
 });

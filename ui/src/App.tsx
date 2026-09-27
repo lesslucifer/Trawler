@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
-import { CA_FILENAME, hostOs, splitProxyAddr } from "./setup";
+import { CA_FILES, hostOs, splitProxyAddr, type CaFormat } from "./setup";
 import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isCaptured, isDecryptedHttps, latestFlowTimes } from "./flow";
@@ -261,10 +261,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     setReach(await client.disarmReach());
   };
 
-  const saveCa = async () => {
-    const pem = await client.caCertPem();
-    return saveBody(new TextEncoder().encode(pem), CA_FILENAME);
-  };
+  const saveCa = async (format: CaFormat) => saveBody(await client.caFile(format), CA_FILES[format]);
 
   // A proxy this machine already has is the user's, and replacing it is the
   // one setup action that takes something away — so it costs a confirm, the

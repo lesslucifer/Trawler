@@ -11,8 +11,9 @@
       <h1>E-ONBREV — epic plan</h1>
       <p>Make the setup screen appear, open its instructions, and claim success only at the moments
         UC-ONBOARD says it does. That covers every way into the screen, not only the first run.</p>
-      <div class="meta">v5 · 2026-09-26 · W2 records <code>since</code>, W3 reads it · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
-        built from <a href="2026-09-25-onboard-review-findings.html">the timing review</a> (R1–R22)</div>
+      <div class="meta">v6 · 2026-09-27 · W7 gives each platform the certificate file its installer opens · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
+        built from <a href="2026-09-25-onboard-review-findings.html">the timing review</a> (R1–R22) and
+        <a href="2026-09-27-onboard-review-w7-ca-files-plan.html">the certificate-file audit</a> (R23–R30)</div>
     </div>
   </header>
   <main>
@@ -68,6 +69,13 @@
         <td><strong>A probe that cannot read says so.</strong> "Cannot read" is <code>unknown</code>, never
           <code>none</code>, on every host. The re-read control is shown only where a probe can answer.</td>
         <td>R19 · R20</td></tr>
+      <tr><td><span class="badge id">UC-ONBOARD</span></td>
+        <td><strong>Each platform gets the certificate file its installer opens, and names only that
+          file.</strong> iPhone or iPad gets an Apple configuration profile (<code>trawler-ca.mobileconfig</code>).
+          Android and its emulator get DER (<code>trawler-ca.cer</code>). Every desktop and the iOS Simulator get
+          PEM (<code>trawler-ca.pem</code>). The download, the save control and every command in a guide name
+          that one file. Where a platform's trust is a separate act from its install, the step says so.
+          Traffic that arrives and doesn't decrypt gets the check that platform's users most often miss.</td><td>R23 – R30</td></tr>
       <tr><td><span class="badge id">UC-4</span></td>
         <td>Unchanged. Only the dot's reading on re-entry moves (R5), and that is UC-ONBOARD's.</td><td>—</td></tr>
     </table>
@@ -105,18 +113,33 @@
       <tr><td>Open the platform picker on Windows and on Linux</td><td>no "iOS Simulator" option</td></tr>
       <tr><td>A host with one reachable address, platform "iPhone or iPad"</td>
         <td>the address appears under the network task before the arm button is pressed</td></tr>
+      <tr><td>On a real iPhone, open the certificate URL the iOS guide gives, in Safari</td>
+        <td>iOS says "Profile Downloaded". The profile installs from Settings, and Trawler Proxy CA appears
+          under Certificate Trust Settings</td></tr>
+      <tr><td>On a real Android phone, open the certificate URL the Android guide gives</td>
+        <td><code>trawler-ca.cer</code> lands in Downloads, and "Install a certificate → CA certificate" can
+          pick it</td></tr>
+      <tr><td>iPhone, the profile installed, full trust off, Safari opens an https site</td>
+        <td>the certificate task says the trust switch is still off and names its path in Settings. It says Apple's own
+          services never decrypt, and that a website in Safari is the test</td></tr>
+      <tr><td>Read every platform's certificate task, on every host</td>
+        <td>it names one file, the one its download and save control produce, and every command in it reads
+          that name</td></tr>
     </table>
 
     <h2 id="non-goals">Non-goals</h2>
     <ul data-item="non-goals">
       <li>Re-designing the setup screen's content, copy or layout. The design of record stands, and only the
-        moments it appears at change.</li>
+        moments it appears at change. One exception is W7: a certificate task's sentences change only to
+        name the file that platform now gets.</li>
       <li>Attributing a request to a device. The core still cannot say which device sent a flow, and the
         re-entry session uses time, not identity.</li>
       <li>New probes (for example a Linux trust probe). R10 is answered by the owner's rule decision, not by a
         new reading.</li>
       <li>The quit dialog, reach's bind semantics (DEC-55), and the core's API. Every fix here is client-side.
-        <code>source</code> is already on every row.</li>
+        <code>source</code> is already on every row. One exception is W7: the core serves the certificate
+        in the two new formats, and <code>/reach</code> names their URLs. <code>/ca.crt</code> keeps its body,
+        so UC-1 and every existing client are unchanged.</li>
     </ul>
 
     <h2 id="wus">Working units</h2>
@@ -201,6 +224,25 @@
         <p data-item="wu-deps">E-ONBREV.W1 (it can land in parallel with W3 and W4)</p>
       </div>
 
+      <div class="card" data-wu="E-ONBREV.W7">
+        <h3 id="w7">E-ONBREV.W7 — the certificate file each platform opens</h3>
+        <p data-item="wu-summary">The core serves the one CA in three formats, each with a file name that
+          matches its URL: PEM at <code>/ca.pem</code>, DER at <code>/ca.cer</code>, and an Apple configuration
+          profile at <code>/ca.mobileconfig</code>. <code>/ca.crt</code> is unchanged. <code>/reach</code> names
+          the three URLs. Each platform's guide downloads, saves and names only its own file: iOS gets the
+          profile, opened in Safari; Android and its emulator get DER; the desktops and the Simulator keep PEM.
+          The iPhone's trust step says installing does not trust. When traffic doesn't decrypt, each platform's
+          certificate task names the check its users most often miss.
+          <a href="2026-09-27-onboard-review-w7-ca-files-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the certificate-file row · R23 – R30 (the owner's iPhone
+          reports: the file, then the trust switch)</p>
+        <p data-item="wu-expected">Unit and integration tests pin each format's bytes, type and file name, and
+          a sweep over every platform × host asserts that each certificate task names one file, the one its
+          URL or save control produces. The owner installs the profile on a real iPhone and the DER file on
+          a real Android device.</p>
+        <p data-item="wu-deps">E-ONBREV.W1 (it can land in parallel with W3 and W5)</p>
+      </div>
+
       <div class="card" data-wu="E-ONBREV.W6">
         <h3 id="w6">E-ONBREV.W6 — e2e and distillation</h3>
         <p data-item="wu-summary">The epic's e2e journeys in the real window, then UC-ONBOARD, the new DEC and
@@ -208,8 +250,8 @@
           recording, and the epic result links it beside the "before".</p>
         <p data-item="wu-maps-to">the whole epic · the e2e and distillation rows below</p>
         <p data-item="wu-expected">The e2e is green on the three journeys below, and the T2 docs state the
-          four changed contracts.</p>
-        <p data-item="wu-deps">E-ONBREV.W1 · W2 · W3 · W4 · W5</p>
+          changed contracts.</p>
+        <p data-item="wu-deps">E-ONBREV.W1 · W2 · W3 · W4 · W5 · W7</p>
       </div>
     </div>
 
@@ -231,18 +273,25 @@
       <tr><td colspan="2">Waived at e2e, pinned at App level: the launch flash (R1). WebDriver cannot observe
         a paint shorter than its poll interval, so the synchronous-render App test is the proof. The
         per-half layout (R12) is also waived at e2e: it turns on the real machine's trust store and proxy,
-        which a hermetic run cannot set, so the four probe combinations are pinned at Onboarding level.</td></tr>
+        which a hermetic run cannot set, so the four probe combinations are pinned at Onboarding level.
+        A real phone's installer accepting its file (W7) is also waived at e2e: no hermetic run has an iPhone
+        or an Android device. The formats are pinned byte for byte at integration level, and the owner's
+        install on each real device is W7's evidence.</td></tr>
     </table>
 
     <h2 id="distillation">Distillation plan</h2>
     <ul data-item="distillation-plan">
       <li><strong>T2 use case:</strong> UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a>. It
         gains the captured-only proof, the checking and not-answering rows, the re-entry session, the one act
-        offered only while both halves are undone, and platforms per host. The "What the rebuild kept" table's first row is restated to name
-        <code>source</code>.</li>
+        offered only while both halves are undone, platforms per host, and the certificate file each platform
+        gets. The "What the rebuild kept" table's first row is restated to name <code>source</code>. The
+        "certificate is saved from the step that names it" row names the file per platform, not
+        <code>trawler-ca.pem</code> for all.</li>
       <li><strong>T2 decision:</strong> a new DEC, "a setup session starts when setup opens", with its row in
         the <a href="../decisions/decisions-index.html">decisions index</a>.</li>
-      <li><strong>T1:</strong> none expected. No shape change.</li>
+      <li><strong>T1:</strong> <a href="../core-technical-design.html">core-technical-design</a>: the API
+        table gains <code>/ca.pem</code>, <code>/ca.cer</code> and <code>/ca.mobileconfig</code>, and its iOS
+        row names the profile. There is no other shape change.</li>
     </ul>
 
     <h2 id="open-questions">Open questions</h2>
@@ -282,6 +331,23 @@
         design run?</td>
         <td>An amendment. Both layouts already exist in the design of record (the Simulator renders the
           per-task one on this host), so W4 cites the amended run and adds no new surface.</td></tr>
+      <tr><td>Q11</td><td>R23: what does an iPhone or iPad get: a configuration profile, or a bare DER
+        certificate?</td>
+        <td>The profile (<code>.mobileconfig</code>). Safari hands it to the profile installer, and it also
+          installs from Files and AirDrop, where a bare certificate does not. It is unsigned, so iOS labels it
+          "Not Verified". The copy says so, because that label is expected.</td></tr>
+      <tr><td>Q12</td><td>R25: what does Android get: DER <code>.cer</code>, or PEM renamed to
+        <code>.crt</code>?</td>
+        <td>DER <code>.cer</code>. Every Android version's CA installer reads DER, and its file picker lists
+          <code>.cer</code>.</td></tr>
+      <tr><td>Q14</td><td>R31: should the screen name which host failed and why (the phone refused the certificate,
+        or closed the connection the way a pinning app does)?</td>
+        <td>Yes, but not in W7. The core cannot see a handshake failure today: hudsucker only logs it. Catching it is a
+          core change with a surface of its own, so it goes to the backlog for its own epic.</td></tr>
+      <tr><td>Q13</td><td>R27: does <code>/ca.crt</code> change?</td>
+        <td>No. Its PEM body stays for UC-1, <code>curl --cacert</code> and every existing client. Only the
+          file name its download suggests changes, to <code>trawler-ca.crt</code>, so the URL and the file
+          agree. The screen no longer names it.</td></tr>
     </table>
 
   </main>

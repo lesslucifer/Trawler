@@ -286,16 +286,78 @@ async fn body_204_when_nothing_retained() {
     assert_eq!(status, StatusCode::NO_CONTENT);
 }
 
-#[tokio::test]
-async fn ca_cert_download() {
-    let store = Arc::new(Store::new(1_000_000, 64));
-    let r = trawler::test_support::api_router(store, "PEMDATA");
+fn a_ca() -> rcgen::Certificate {
+    let key_pair = rcgen::KeyPair::generate().unwrap();
+    rcgen::CertificateParams::new(vec!["trawler-test".into()])
+        .unwrap()
+        .self_signed(&key_pair)
+        .unwrap()
+}
 
-    let (status, headers, body) = get(&r, "/ca.crt").await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(headers["content-type"], "application/x-x509-ca-cert");
-    assert_eq!(headers["content-disposition"], "attachment; filename=\"trawler-ca.pem\"");
-    assert_eq!(body, b"PEMDATA");
+#[tokio::test]
+async fn every_ca_download_suggests_the_file_its_url_names() {
+    let ca = a_ca();
+    let r = trawler::test_support::api_router(Arc::new(Store::new(1_000_000, 64)), &ca.pem());
+
+    for (path, content_type, filename) in [
+        ("/ca.crt", "application/x-x509-ca-cert", "trawler-ca.crt"),
+        ("/ca.pem", "application/x-pem-file", "trawler-ca.pem"),
+        ("/ca.cer", "application/x-x509-ca-cert", "trawler-ca.cer"),
+        ("/ca.mobileconfig", "application/x-apple-aspen-config", "trawler-ca.mobileconfig"),
+    ] {
+        let (status, headers, _body) = get(&r, path).await;
+        assert_eq!(status, StatusCode::OK, "{path}");
+        assert_eq!(headers["content-type"], content_type, "{path}");
+        assert_eq!(
+            headers["content-disposition"],
+            format!("attachment; filename=\"{filename}\"").as_str(),
+            "{path}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_pem_downloads_carry_the_ca_byte_for_byte() {
+    let ca = a_ca();
+    let r = trawler::test_support::api_router(Arc::new(Store::new(1_000_000, 64)), &ca.pem());
+
+    for path in ["/ca.crt", "/ca.pem"] {
+        let (_status, _headers, body) = get(&r, path).await;
+        assert_eq!(body, ca.pem().as_bytes(), "{path}");
+    }
+}
+
+#[tokio::test]
+async fn the_cer_download_is_the_der_of_the_ca() {
+    let ca = a_ca();
+    let r = trawler::test_support::api_router(Arc::new(Store::new(1_000_000, 64)), &ca.pem());
+
+    let (_status, _headers, body) = get(&r, "/ca.cer").await;
+    assert_eq!(body, ca.der().to_vec());
+}
+
+#[tokio::test]
+async fn the_profile_download_carries_the_ca_as_its_root_payload() {
+    use base64::Engine;
+    let ca = a_ca();
+    let r = trawler::test_support::api_router(Arc::new(Store::new(1_000_000, 64)), &ca.pem());
+
+    let (_status, _headers, body) = get(&r, "/ca.mobileconfig").await;
+    let profile = String::from_utf8(body).unwrap();
+    assert!(profile.starts_with("<?xml"), "{profile}");
+    assert!(profile.contains("<string>com.apple.security.root</string>"));
+    let der = base64::engine::general_purpose::STANDARD.encode(ca.der());
+    assert!(profile.contains(&format!("<data>{der}</data>")), "the payload is not this CA");
+}
+
+#[tokio::test]
+async fn a_ca_that_is_not_a_certificate_fails_the_derived_downloads_rather_than_serving_nothing() {
+    let r = trawler::test_support::api_router(Arc::new(Store::new(1_000_000, 64)), "PEMDATA");
+
+    for path in ["/ca.cer", "/ca.mobileconfig"] {
+        let (status, _headers, _body) = get(&r, path).await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{path}");
+    }
 }
 
 #[tokio::test]

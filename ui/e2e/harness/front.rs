@@ -17,6 +17,7 @@ use axum::routing::any;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use tokio::net::{TcpListener, TcpStream};
+use trawler::reach::{Addresses, CaUrls};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Mode {
@@ -37,7 +38,7 @@ pub struct ReachView {
     armed: bool,
     proxy: Option<String>,
     api: Option<String>,
-    ca_cert_url: Option<String>,
+    ca_urls: Option<CaUrls>,
     interfaces: Vec<Interface>,
 }
 
@@ -90,7 +91,13 @@ impl Front {
             armed: script.armed_on.is_some(),
             proxy: at(self.proxy_port),
             api: at(self.api_port),
-            ca_cert_url: at(self.api_port).map(|api| format!("http://{api}/ca.crt")),
+            ca_urls: script.armed_on.map(|ip| {
+                Addresses {
+                    proxy: SocketAddr::new(ip, self.proxy_port),
+                    api: SocketAddr::new(ip, self.api_port),
+                }
+                .ca_urls()
+            }),
             interfaces: script.interfaces.clone(),
         }
     }
@@ -244,7 +251,7 @@ mod tests {
                 armed: false,
                 proxy: None,
                 api: None,
-                ca_cert_url: None,
+                ca_urls: None,
                 interfaces: vec![ethernet()]
             }
         );
@@ -257,7 +264,10 @@ mod tests {
         let view = front.arm("192.168.1.23".parse().unwrap()).unwrap();
         assert_eq!(view.proxy.as_deref(), Some("192.168.1.23:7420"));
         assert_eq!(view.api.as_deref(), Some("192.168.1.23:7421"));
-        assert_eq!(view.ca_cert_url.as_deref(), Some("http://192.168.1.23:7421/ca.crt"));
+        assert_eq!(
+            view.ca_urls.map(|urls| urls.mobileconfig).as_deref(),
+            Some("http://192.168.1.23:7421/ca.mobileconfig")
+        );
         assert!(view.armed);
         assert!(!front.disarm().armed);
     }
@@ -272,7 +282,7 @@ mod tests {
     #[test]
     fn the_view_serialises_to_the_fields_the_app_reads() {
         let json = serde_json::to_value(front().reach_view()).unwrap();
-        for field in ["armed", "proxy", "api", "ca_cert_url", "interfaces"] {
+        for field in ["armed", "proxy", "api", "ca_urls", "interfaces"] {
             assert!(json.get(field).is_some(), "missing {field}");
         }
     }

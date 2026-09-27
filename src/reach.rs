@@ -42,12 +42,21 @@ pub struct Addresses {
     pub api: SocketAddr,
 }
 
+/// Where a device that just typed the proxy address goes for the
+/// certificate: one URL per format a platform's installer opens.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct CaUrls {
+    pub pem: String,
+    pub cer: String,
+    pub mobileconfig: String,
+}
+
 impl Addresses {
-    /// Where a device that just typed the proxy address goes for the
-    /// certificate. Built from the bound API socket rather than from the
-    /// requested address, so it cannot name a port nothing is listening on.
-    pub fn ca_cert_url(&self) -> String {
-        format!("http://{}/ca.crt", self.api)
+    /// Built from the bound API socket rather than from the requested address,
+    /// so no URL can name a port nothing is listening on.
+    pub fn ca_urls(&self) -> CaUrls {
+        let at = |file: &str| format!("http://{}/{file}", self.api);
+        CaUrls { pem: at("ca.pem"), cer: at("ca.cer"), mobileconfig: at("ca.mobileconfig") }
     }
 }
 
@@ -381,12 +390,19 @@ mod tests {
     }
 
     #[test]
-    fn the_certificate_url_names_the_port_that_answers() {
+    fn the_certificate_urls_name_the_port_that_answers_one_per_format() {
         let addresses = Addresses {
             proxy: "192.168.1.20:7420".parse().unwrap(),
             api: "192.168.1.20:7421".parse().unwrap(),
         };
-        assert_eq!(addresses.ca_cert_url(), "http://192.168.1.20:7421/ca.crt");
+        assert_eq!(
+            addresses.ca_urls(),
+            CaUrls {
+                pem: "http://192.168.1.20:7421/ca.pem".into(),
+                cer: "http://192.168.1.20:7421/ca.cer".into(),
+                mobileconfig: "http://192.168.1.20:7421/ca.mobileconfig".into(),
+            }
+        );
     }
 
     #[test]
@@ -395,7 +411,7 @@ mod tests {
             proxy: "[2001:db8::1]:7420".parse().unwrap(),
             api: "[2001:db8::1]:7421".parse().unwrap(),
         };
-        assert_eq!(addresses.ca_cert_url(), "http://[2001:db8::1]:7421/ca.crt");
+        assert_eq!(addresses.ca_urls().mobileconfig, "http://[2001:db8::1]:7421/ca.mobileconfig");
     }
 
     // The refusal matters because the PEMs are held since boot: a controller

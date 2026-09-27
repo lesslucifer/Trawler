@@ -85,10 +85,14 @@ const ARMED: ReachState = {
   armed: true,
   proxy: "192.168.1.24:9999",
   api: "192.168.1.24:7421",
-  ca_cert_url: "http://192.168.1.24:7421/ca.crt",
+  ca_urls: {
+    pem: "http://192.168.1.24:7421/ca.pem",
+    cer: "http://192.168.1.24:7421/ca.cer",
+    mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
+  },
   interfaces: [{ name: "Wi-Fi", address: "192.168.1.24" }],
 };
-const UNARMED: ReachState = { ...ARMED, armed: false, proxy: null, api: null, ca_cert_url: null };
+const UNARMED: ReachState = { ...ARMED, armed: false, proxy: null, api: null, ca_urls: null };
 
 type Outcome = "done" | "nothing" | "failed" | "refused";
 const OUTCOMES: Outcome[] = ["done", "nothing", "failed", "refused"];

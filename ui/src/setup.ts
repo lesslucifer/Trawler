@@ -5,8 +5,11 @@
 // platform's OS is only ever an implementation detail of its instructions.
 // Pure data and pure functions; no I/O, no React.
 
+import type { CaFormat } from "./api";
 import type { ProxyTarget } from "./proxyTargets";
 import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
+
+export type { CaFormat };
 
 export type HostOs = "macos" | "windows" | "linux" | "other";
 
@@ -28,12 +31,23 @@ export function splitProxyAddr(addr: string): { host: string; port: number } {
   return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
 }
 
-export const CA_FILENAME = "trawler-ca.pem";
+// One file per format a platform's installer opens, each under the name its
+// download suggests, so the file a step names is the file the user has.
+export const CA_FILES: Record<CaFormat, string> = {
+  pem: "trawler-ca.pem",
+  cer: "trawler-ca.cer",
+  mobileconfig: "trawler-ca.mobileconfig",
+};
 
-// Step one of every manual route names this file, so the screen owes the user a
-// way to produce it: the save control sits at the end of this sentence, which is
-// why it carries no terminal period.
-export const SAVE_CA_STEP = `Save Trawler's certificate as ${CA_FILENAME}`;
+const PEM_FILE = CA_FILES.pem;
+
+// A route that starts on this machine names the file first, so the screen owes
+// the user a way to produce it: the save control sits at the end of this
+// sentence, which is why it carries no terminal period.
+export const saveCaStep = (format: CaFormat): GuideStep => [
+  `Save Trawler's certificate as ${CA_FILES[format]}`,
+  { save: format },
+];
 
 export const PLATFORM_IDS = [
   "this",
@@ -67,11 +81,17 @@ export interface CommandPart {
   command: string;
   label: string;
 }
-export type StepPart = string | CopyPart | CommandPart | { save: true };
+export interface SavePart {
+  save: CaFormat;
+}
+export type StepPart = string | CopyPart | CommandPart | SavePart;
 export type GuideStep = readonly StepPart[];
 
 export const isCommand = (part: StepPart): part is CommandPart =>
   typeof part === "object" && "command" in part;
+
+export const isSave = (part: StepPart): part is SavePart =>
+  typeof part === "object" && "save" in part;
 
 // One platform's instructions for one task. `steps` is the route the reader
 // takes; everything else is what a numbered step must not be. A note is true of
@@ -108,6 +128,9 @@ export interface PlatformSetup {
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
+  // What a user who already did the certificate steps checks next when traffic
+  // arrives and does not decrypt: the one thing this platform's users miss.
+  notDecrypting: string;
 }
 
 // The addresses an off-machine platform's instructions are built from. Null
@@ -115,7 +138,7 @@ export interface PlatformSetup {
 // title-only.
 export interface ReachAddresses {
   proxy: string;
-  caCertUrl: string;
+  caUrls: Record<CaFormat, string>;
 }
 
 export interface SetupContext {
@@ -302,7 +325,7 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
         "Run it in a terminal:",
         {
           command:
-            "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+            `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${PEM_FILE}`,
           label: "the trust command",
         },
       ],
@@ -326,7 +349,7 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
     install: [
       [
         "In an elevated terminal run:",
-        { command: "certutil -addstore -f ROOT trawler-ca.pem", label: "the trust command" },
+        { command: `certutil -addstore -f ROOT ${PEM_FILE}`, label: "the trust command" },
       ],
     ],
     notes: [FIREFOX_NOTE],
@@ -344,7 +367,7 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
         "Run it in a terminal:",
         {
           command:
-            "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+            `sudo cp ${PEM_FILE} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
           label: "the trust command",
         },
       ],
@@ -354,7 +377,7 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
       [
         "Chrome reads the NSS store instead:",
         {
-          command: "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
+          command: `certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ${PEM_FILE}`,
           label: "the NSS command",
         },
       ],
@@ -428,11 +451,40 @@ const EMULATOR_HOST = "10.0.2.2";
 const ANDROID_USER_CA =
   "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
 
-function downloadStep(where: string, caCertUrl: string, what: string): GuideStep {
+const CA_NAME = "Trawler Proxy CA";
+
+const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not signed by a company.";
+
+const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
+
+const NOT_DECRYPTING_DESKTOP =
+  "Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.";
+
+const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate switch: ${IOS_TRUST_PATH}. Apple's own services never decrypt; a website in Safari is the test.`;
+
+const NOT_DECRYPTING_SIMULATOR =
+  "Already did? Restart the Simulator — its apps keep the store they started with.";
+
+const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
+
+const androidInstall = (format: CaFormat) =>
+  `Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate → ${CA_FILES[format]}.`;
+
+// Each platform gets the one format its installer opens: an iPhone installs a
+// configuration profile from Safari, Files and AirDrop alike, where a bare
+// certificate installs from none of them; Android's CA installer reads DER and
+// lists .cer; every desktop trust command and simctl read PEM.
+export function caFormatFor(id: PlatformId): CaFormat {
+  if (id === "ios") return "mobileconfig";
+  if (id === "android" || id === "android-sim") return "cer";
+  return "pem";
+}
+
+function downloadStep(where: string, reach: ReachAddresses, format: CaFormat, how = ""): GuideStep {
   return [
     `${where}, open`,
-    { copy: caCertUrl, label: "the certificate URL", wire: "certificate url" },
-    `— it downloads ${what}.`,
+    { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url" },
+    `${how}— it downloads ${CA_FILES[format]}.`,
   ];
 }
 
@@ -453,7 +505,7 @@ function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
       title: "Trust Trawler's certificate",
       why: `so ${host}'s HTTPS can be decrypted`,
       guide: {
-        steps: [[SAVE_CA_STEP, { save: true }], ...trust.install],
+        steps: [saveCaStep(caFormatFor("this")), ...trust.install],
         notes: trust.notes,
         alternatives: trust.alternatives,
         undoTitle: trust.undoTitle,
@@ -468,6 +520,7 @@ function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     try: tryTask("this", os),
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
     confirmOn: confirmOn("this", os),
+    notDecrypting: NOT_DECRYPTING_DESKTOP,
   };
 }
 
@@ -487,14 +540,7 @@ function anotherMachineSetup(
         reach === null
           ? undefined
           : {
-              steps: [
-                [
-                  `On ${device}, open`,
-                  { copy: reach.caCertUrl, label: "the certificate URL", wire: "certificate url" },
-                  `and save it as ${CA_FILENAME}.`,
-                ],
-                ...trust.install,
-              ],
+              steps: [downloadStep(`On ${device}`, reach, caFormatFor(id)), ...trust.install],
               notes: trust.notes,
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
@@ -507,36 +553,34 @@ function anotherMachineSetup(
     },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
+    notDecrypting: NOT_DECRYPTING_DESKTOP,
   };
 }
 
 function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | null): PlatformSetup {
   const ios = id === "ios";
   const device = deviceName(id, os);
-  const noBrowser: GuideStep = [
-    "No browser on it?",
-    SAVE_CA_STEP,
-    { save: true },
-    "and carry the file over instead.",
-  ];
+  const format = caFormatFor(id);
+  const carryOver: GuideStep = ios
+    ? [`Or save Trawler's certificate as ${CA_FILES[format]}`, { save: format }, "and AirDrop it over."]
+    : ["No browser on it?", ...saveCaStep(format), "and carry the file over instead."];
   const trust: Guide | undefined =
     reach === null
       ? undefined
       : {
         steps: ios
           ? [
-              downloadStep(`On ${device}`, reach.caCertUrl, "the profile"),
-              ["Open it: Settings → General → VPN & Device Management → install the profile."],
-              ["Then turn it on: Settings → General → About → Certificate Trust Settings."],
-            ]
-          : [
-              downloadStep(`On ${device}`, reach.caCertUrl, "the certificate"),
+              downloadStep(`On ${device}`, reach, format, "in Safari "),
               [
-                "Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
+                `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
               ],
-            ],
-        notes: ios ? undefined : [ANDROID_USER_CA],
-        alternatives: [noBrowser],
+              [
+                `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
+              ],
+            ]
+          : [downloadStep(`On ${device}`, reach, format), [androidInstall(format)]],
+        notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
+        alternatives: [carryOver],
       };
   const route: Guide | undefined =
     reach === null
@@ -561,21 +605,21 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
     route: { title: `On ${device}, set the Wi-Fi proxy`, guide: route },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
+    notDecrypting: ios ? NOT_DECRYPTING_IOS : NOT_DECRYPTING_ANDROID,
   };
 }
 
 function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
   const { port } = splitProxyAddr(proxyAddr);
+  const format = caFormatFor("android-sim");
   const trust: Guide = {
     steps: [
-      [SAVE_CA_STEP, { save: true }],
+      saveCaStep(format),
       [
         "Push it to the emulator:",
-        { command: "adb push trawler-ca.pem /sdcard/Download/", label: "the push command" },
+        { command: `adb push ${CA_FILES[format]} /sdcard/Download/`, label: "the push command" },
       ],
-      [
-        "Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
-      ],
+      [androidInstall(format)],
     ],
     notes: [ANDROID_USER_CA],
     undoTitle: "to remove it later",
@@ -613,6 +657,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     route: { title: "In the emulator, set the Wi-Fi proxy", guide: route },
     try: tryTask("android-sim", os),
     confirmOn: confirmOn("android-sim", os),
+    notDecrypting: NOT_DECRYPTING_ANDROID,
   };
 }
 
@@ -623,11 +668,11 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
   const host = HOST_NOUN[os];
   const trust: Guide = {
     steps: [
-      [SAVE_CA_STEP, { save: true }],
+      saveCaStep(caFormatFor("ios-sim")),
       [
         "With the Simulator running, run:",
         {
-          command: `xcrun simctl keychain booted add-root-cert ${CA_FILENAME}`,
+          command: `xcrun simctl keychain booted add-root-cert ${PEM_FILE}`,
           label: "the trust command",
         },
       ],
@@ -654,6 +699,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     },
     try: tryTask("ios-sim", os),
     confirmOn: confirmOn("ios-sim", os),
+    notDecrypting: NOT_DECRYPTING_SIMULATOR,
   };
 }
 

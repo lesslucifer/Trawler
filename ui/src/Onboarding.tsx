@@ -18,10 +18,12 @@ import {
 } from "./components/index";
 import {
   canAutoSetup,
-  CA_FILENAME,
+  CA_FILES,
+  caFormatFor,
   confirmHttpsOn,
   deviceName,
   isCommand,
+  isSave,
   needsReach,
   probesRoute,
   probesTrust,
@@ -29,6 +31,7 @@ import {
   reachTaskTitle,
   setupFor,
   splitProxyAddr,
+  type CaFormat,
   type Guide,
   type GuideStep,
   type HostOs,
@@ -136,18 +139,18 @@ const DISARM_NOTE: ActionNotes = {
 // steps below name a file, so the note does too.
 const fileName = (path: string) => path.split(/[/\\]/).pop() ?? path;
 
-const SAVECA_NOTE: ActionNotes = {
+const saveCaNote = (named: string): ActionNotes => ({
   running: { tone: "pending", text: "saving…" },
   done: (path: string) => ({
     tone: "ok",
     text:
-      fileName(path) === CA_FILENAME
-        ? `saved as ${CA_FILENAME}. now trust it with the steps here.`
-        : `saved as ${fileName(path)} — the steps here name ${CA_FILENAME}, so use ${fileName(path)} instead.`,
+      fileName(path) === named
+        ? `saved as ${named}. now trust it with the steps here.`
+        : `saved as ${fileName(path)} — the steps here name ${named}, so use ${fileName(path)} instead.`,
   }),
   nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
-};
+});
 
 const TICK_MS = 1000;
 
@@ -300,15 +303,19 @@ function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
 // The save control produces the file the step names, so its outcome lands inside
 // that step rather than under the guide that contains it.
 function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }) {
-  const carriesSave = (step: GuideStep) => step.some((p) => typeof p === "object" && "save" in p);
   return (
     <StepList
-      steps={steps.map((step, i) => (
-        <div key={i} className="flex min-w-0 flex-col gap-chrome-gap">
-          <StepParts step={step} save={save} />
-          {save && carriesSave(step) && <ActionNote testId="save-ca" action={save} note={SAVECA_NOTE} />}
-        </div>
-      ))}
+      steps={steps.map((step, i) => {
+        const saves = step.find(isSave);
+        return (
+          <div key={i} className="flex min-w-0 flex-col gap-chrome-gap">
+            <StepParts step={step} save={save} />
+            {save && saves && (
+              <ActionNote testId="save-ca" action={save} note={saveCaNote(CA_FILES[saves.save])} />
+            )}
+          </div>
+        );
+      })}
     />
   );
 }
@@ -712,7 +719,7 @@ export function Onboarding({
   traffic?: Traffic;
   reach?: ReachState;
   onSetUpThisMachine?: () => Promise<null | void>;
-  onSaveCa?: () => Promise<string | null>;
+  onSaveCa?: (format: CaFormat) => Promise<string | null>;
   onSetProxy?: () => Promise<null | void>;
   onUnsetProxy?: () => Promise<void>;
   onRecheck?: () => void;
@@ -741,7 +748,7 @@ export function Onboarding({
     };
 
   const setUp = useAction(onSetUpThisMachine && (() => onSetUpThisMachine().then(routing("set"))));
-  const saveCa = useAction(onSaveCa);
+  const saveCa = useAction(onSaveCa && (() => onSaveCa(caFormatFor(platform))));
   const setProxyAction = useAction(onSetProxy && (() => onSetProxy().then(routing("set"))));
   const unsetProxyAction = useAction(onUnsetProxy && (() => onUnsetProxy().then(routing("unset"))));
   const chosen =
@@ -751,11 +758,11 @@ export function Onboarding({
   );
   const disarm = useAction(onDisarmReach);
 
-  const armed = reach.armed && reach.proxy !== null && reach.ca_cert_url !== null;
+  const armed = reach.armed && reach.proxy !== null && reach.ca_urls !== null;
   const setup = setupFor(platform, {
     os,
     proxyAddr,
-    reach: armed ? { proxy: reach.proxy!, caCertUrl: reach.ca_cert_url! } : null,
+    reach: armed ? { proxy: reach.proxy!, caUrls: reach.ca_urls! } : null,
   });
   const here = deviceName("this", os);
 
@@ -942,7 +949,7 @@ export function Onboarding({
           >
             {refusedHere && (
               <div data-testid="traffic-remedy" className="pb-2">
-                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os))}</Notice>
+                <Notice tone="mute">{notDecryptingHere(deviceName(platform, os), setup.notDecrypting)}</Notice>
               </div>
             )}
           </GuidedTask>
