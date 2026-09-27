@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBREV
+base: 1ec6f0728591bf2d5db65e0423f0243e067565a3
+design_sha256: 9d2c7f9148c890939d2ab658e01b3d1cb376d89e7c5d91c70a707a76c5ae3b66
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: cdf9e7a9bc881f757352702e10b99b2492c159d7
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "No surface of its own across the epic. W2 split the non-proven branch: the checking moment renders the existing shell header over an empty main area (epic plan Q1), and an unanswered launch mounts the existing NotAnswering statement. W3, W5 and W7 changed only state and wiring: the setup scope and sessionTraffic from since, the banner's re-invoke with another, the /reach re-read nonce, and the save handler writing the step's own format."
+accounting: "THE EPIC'S HAND-OFF, END TO END. design-scope lists no artifact at this tip, and that is the close working. The setup screen's design run was re-opened, amended and closed inside the range: rounds 7 and 8 at W4 (cited at blob 274a3afc), round 9 at W3 (cited at blob cdf9e7a9), each judged on the seam that landed it. The closing commit 20e2b86 retires it from the tree, so the endpoint diff carries no artifact. The path is cited at its last state reachable from the tip (DEC-28): blob cdf9e7a9 is the one W3 cited and the one the file holds at 20e2b86^, data-status archived. Onboarding.tsx is built from it: the per-task layout and the one act only while both halves are undone (round 7), one reading per task (round 8), and the unanswered question with PlatformSetup split out (round 9). W5's and W7's Onboarding edits are copy and render conditions inside that layout, as their own notes declared. App.tsx is declared above. No new surface is added, and no component design file was written, so components-unbuilt has nothing to resolve and nothing is dropped."
+date: 2026-09-27
