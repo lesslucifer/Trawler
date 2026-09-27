@@ -12,7 +12,7 @@ vi.mock("./setup", async (importOriginal) => {
   return { ...mod, setupFor: vi.fn(mod.setupFor) };
 });
 
-const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false, since: null };
 const ADDR = "127.0.0.1:9999";
 
 const INTERFACES = [

@@ -1,16 +1,17 @@
 import { expect, test } from "vitest";
 import { dotStatus, initial, reduce, stepStatus, type OnbState } from "./onboardingMachine";
 
-const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false, since: 1_000 };
 
 test("initial() is checking@trust-ca, never proven", () => {
-  expect(initial()).toEqual({ phase: "checking", step: "trust-ca", everProven: false });
+  expect(initial()).toEqual({ phase: "checking", step: "trust-ca", everProven: false, since: null });
 });
 
 test("not-detected drops checking into onboarding at the first step", () => {
-  expect(reduce(initial(), { t: "not-detected" })).toMatchObject({
+  expect(reduce(initial(), { t: "not-detected", at: 5_000 })).toMatchObject({
     phase: "onboarding",
     step: "trust-ca",
+    since: 5_000,
   });
 });
 
@@ -30,16 +31,24 @@ test("captured proves capture and latches everProven", () => {
 
 test("re-invoke re-opens onboarding from the first step", () => {
   const proven = reduce(onboarding, { t: "captured" });
-  expect(reduce(proven, { t: "re-invoke" })).toMatchObject({
+  expect(reduce(proven, { t: "re-invoke", at: 9_000 })).toMatchObject({
     phase: "onboarding",
     step: "trust-ca",
     everProven: true,
+    since: 9_000,
   });
+});
+
+test("only opening setup moves since — a step, a proof and a way out keep it", () => {
+  expect(reduce(onboarding, { t: "goto", step: "verify" }).since).toBe(1_000);
+  const proven = reduce(onboarding, { t: "captured" });
+  expect(proven.since).toBe(1_000);
+  expect(reduce(reduce(proven, { t: "re-invoke", at: 2_000 }), { t: "exit" }).since).toBe(2_000);
 });
 
 test("exit returns to proven only once ever proven, else no-op", () => {
   expect(reduce(onboarding, { t: "exit" })).toBe(onboarding); // never proven → no-op
-  const reopened = reduce(reduce(onboarding, { t: "captured" }), { t: "re-invoke" });
+  const reopened = reduce(reduce(onboarding, { t: "captured" }), { t: "re-invoke", at: 2_000 });
   expect(reduce(reopened, { t: "exit" }).phase).toBe("proven");
 });
 

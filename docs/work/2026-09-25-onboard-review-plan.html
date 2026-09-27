@@ -11,7 +11,7 @@
       <h1>E-ONBREV — epic plan</h1>
       <p>Make the setup screen appear, open its instructions, and claim success only at the moments
         UC-ONBOARD says it does. That covers every way into the screen, not only the first run.</p>
-      <div class="meta">v4 · 2026-09-26 · W1 added: the walkthrough recording, before and after · the rest renumbered · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
+      <div class="meta">v5 · 2026-09-26 · W2 records <code>since</code>, W3 reads it · Trawler · T3 (docs/work/) · branch <code>epic/onboard-review</code> ·
         built from <a href="2026-09-25-onboard-review-findings.html">the timing review</a> (R1–R22)</div>
     </div>
   </header>
@@ -149,7 +149,9 @@
           <code>isDecryptedHttps</code> and <code>latestFlowTimes</code>. The <code>checking</code> phase renders
           the shell with the checking dot and no instructions. A failed launch read retries under the
           connection statement instead of dispatching <code>not-detected</code>, and the setup branch mounts
-          <code>NotAnswering</code>. The banner fires only for a captured row that started after setup opened.</p>
+          <code>NotAnswering</code>. The banner fires only for a captured row that started after setup opened, so the state machine
+          records <code>since</code> (epoch ms) on <code>not-detected</code> and <code>re-invoke</code>.
+          <a href="2026-09-26-onboard-review-w2-launch-gate-plan.html">WU plan</a>.</p>
         <p data-item="wu-maps-to">UC-ONBOARD: the proof, checking and not-answering rows · R1 · R2 · R3</p>
         <p data-item="wu-expected">The review's P1, P2 and P6 probes, inverted, pass as unit and App tests. A
           launch never paints a setup instruction before the self-test answers, and never shows one for a core
@@ -159,8 +161,7 @@
 
       <div class="card" data-wu="E-ONBREV.W3">
         <h3 id="w3">E-ONBREV.W3 — re-entry is a new setup session</h3>
-        <p data-item="wu-summary">The state machine records <code>since</code> (epoch ms) on
-          <code>not-detected</code> and <code>re-invoke</code>. The setup screen's traffic comes from an
+        <p data-item="wu-summary">The setup session starts at the <code>since</code> W2 records. The setup screen's traffic comes from an
           unfiltered, captured-only reading after <code>since</code>, never from the list's filtered
           <code>flows</code>. <code>dotStatus</code> reads <code>everProven</code>. The way in reaches
           <code>Onboarding</code>, so "set up another device" does not preselect <code>this</code>. The rule
@@ -168,7 +169,7 @@
         <p data-item="wu-maps-to">UC-ONBOARD: the re-entry and "another device" rows · R4 · R5 · R6 · R7</p>
         <p data-item="wu-expected">The inverted P3 and P4 probes pass. Re-entry opens the chosen platform's
           first guide, keeps the dot connected, and shows no success line before a new captured request.</p>
-        <p data-item="wu-deps">E-ONBREV.W2 (captured-only proof is the reading this session narrows)</p>
+        <p data-item="wu-deps">E-ONBREV.W2 (captured-only proof is the reading this session narrows, and <code>since</code> is recorded there)</p>
       </div>
 
       <div class="card" data-wu="E-ONBREV.W4">
