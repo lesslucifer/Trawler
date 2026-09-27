@@ -179,7 +179,7 @@ async fn a_fresh_core_answers_only_this_machine() {
     assert_eq!(state["armed"], false);
     assert!(state["proxy"].is_null(), "an unarmed core has no address to give");
     assert!(state["api"].is_null());
-    assert!(state["ca_cert_url"].is_null());
+    assert!(state["ca_urls"].is_null());
     assert!(state["interfaces"].is_array(), "the choices are listed before anything is armed");
 
     h.shutdown().await;
@@ -203,25 +203,25 @@ async fn arming_adds_a_proxy_and_an_api_that_answer_at_the_reported_address() {
     );
     assert_ne!(reach_api, h.server().api_addr);
     assert_eq!(
-        armed["ca_cert_url"].as_str().unwrap(),
-        format!("http://{reach_api}/ca.crt"),
-        "the certificate URL names the API socket that actually answers"
+        armed["ca_urls"],
+        serde_json::json!({
+            "pem": format!("http://{reach_api}/ca.pem"),
+            "cer": format!("http://{reach_api}/ca.cer"),
+            "mobileconfig": format!("http://{reach_api}/ca.mobileconfig"),
+        }),
+        "the certificate URLs name the API socket that actually answers"
     );
 
     let through_reach = Harness::through(reach_proxy);
     let fetched = through_reach.get(h.origin_url("/ok")).send().await.unwrap();
     assert_eq!(fetched.text().await.unwrap(), "hello");
 
-    let certificate = h
-        .client
-        .get(armed["ca_cert_url"].as_str().unwrap())
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    assert!(certificate.contains("-----BEGIN CERTIFICATE-----"), "reachable but no certificate");
+    for format in ["pem", "cer", "mobileconfig"] {
+        let certificate =
+            h.client.get(armed["ca_urls"][format].as_str().unwrap()).send().await.unwrap();
+        assert_eq!(certificate.status(), reqwest::StatusCode::OK, "{format}");
+        assert!(!certificate.bytes().await.unwrap().is_empty(), "reachable but no {format}");
+    }
 
     h.shutdown().await;
 }

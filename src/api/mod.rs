@@ -22,7 +22,8 @@ use routes::AppState;
 /// command, under `?format=curl`), the two send doors (a replay of a flow, and
 /// a request from scratch), a connection tally
 /// (`/stats`), full-flow detail, raw or decoded bodies, a live SSE stream, the
-/// reach control (`/reach`), and the CA download.
+/// reach control (`/reach`), and the CA downloads: one per format a platform's
+/// installer opens.
 pub fn router(
     store: Arc<Store>,
     ca_cert_pem: Arc<String>,
@@ -61,6 +62,9 @@ pub fn router_from(state: AppState) -> Router {
             get(routes::reach_status).post(routes::arm_reach).delete(routes::disarm_reach),
         )
         .route("/ca.crt", get(routes::ca_cert))
+        .route("/ca.pem", get(routes::ca_pem))
+        .route("/ca.cer", get(routes::ca_cer))
+        .route("/ca.mobileconfig", get(routes::ca_mobileconfig))
         .layer(middleware::from_fn(allow_cross_origin))
         .with_state(state)
 }

@@ -175,10 +175,10 @@ pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     info!("control API listening on http://{}", server.api_addr);
     info!("CA download at http://{}/ca.crt", server.api_addr);
     if let Some(addresses) = server.reachable_at().await {
+        let ca = addresses.ca_urls();
         info!(
-            "reachable from other devices at http://{} — certificate at {}",
-            addresses.proxy,
-            addresses.ca_cert_url()
+            "reachable from other devices at http://{} — certificate at {} (iOS: {}, Android: {})",
+            addresses.proxy, ca.pem, ca.mobileconfig, ca.cer
         );
     } else {
         info!("loopback only — other devices cannot reach this Trawler");
