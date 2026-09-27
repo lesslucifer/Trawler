@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: d2042fec6c441d92ef4a6c8efe25159803859e69
+base: 8166b6dcd04cdbc2bd7923b96735f743a16e0410
+tier: key
+signer: vuluu
+report: docs/work/2026-09-27-onboard-review-w3-reentry-session-result.html
+report_sha256: 78a6bbfc49c833b3ce55bb0b8562c58db9b9ac804e6add908153bf7d2b27c99d
+date: 2026-09-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB4fhejypVkxis9NsAp/JGpmVBI9ZxGvrh0szX/WmGz/+vczCmb91fNcn
+  FluMdksDAydDpFwQS4R+pRmTuz2NwE
+  -----END SSH SIGNATURE-----
