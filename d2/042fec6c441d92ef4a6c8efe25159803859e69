@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-ONBREV
+wu: E-ONBREV.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-60-a-setup-session-starts-when-setup-opens.html"
+    tier: T2
+    action: added
+    distills: "DEC-60: opening setup starts a session at since; the setup screen reads only captured rows and tunnels from since on, unfiltered; the /stats tally feeds no session; the dot stays connected once proven; set up another device opens on the last other device or on the question unanswered, the dot on the last choice; five rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the index row for DEC-60"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 9 of the design of record: the unanswered question drawn in the mockup, the session, dot and way-in rules, the choose-a-device copy, the chosen and another givens, the owner's LGTM; archived"
+  - path: "docs/work/2026-09-25-onboard-review-plan.html"
+    tier: T3
+    action: updated
+    distills: "the W3 block links its WU plan"
+  - path: "docs/work/2026-09-27-onboard-review-w3-reentry-session-plan.html"
+    tier: T3
+    action: added
+    distills: "the W3 plan: requirement, mapping, the session before and after, the changes per file, expected result, test plan, what was known before the build, commits"
+  - path: "docs/work/2026-09-27-onboard-review-w3-reentry-session-result.html"
+    tier: T3
+    action: added
+    distills: "the W3 result: every expected row delivered, four deviations with why, the evidence per commit and the walkthrough, the distillation W6 owes"
