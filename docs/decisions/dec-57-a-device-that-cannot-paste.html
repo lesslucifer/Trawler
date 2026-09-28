@@ -13,11 +13,11 @@
         another. The clipboard does not cross that gap. Rendering those values as a scannable code is
         the remedy — and it is a new dependency and a new surface, so it is a decision rather than a
         widget.</p>
-      <div class="meta">v1 · 2026-09-21 · Trawler · T2 decision · minted by
+      <div class="meta">v2 · 2026-09-28 · Trawler · T2 decision · minted by
         <strong>E-ONBOARD.W6</strong> from the PO review's <strong>F28</strong> ·
         relates to <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a>,
         <a href="dec-16-design-file-retirement.html">DEC-16</a> ·
-        UC-ONBOARD · <strong>proposed — not built</strong></div>
+        UC-ONBOARD · <strong>built</strong> by E-ONBRVP.W2 as <code>QrCode</code></div>
     </div>
   </header>
   <main>
@@ -74,6 +74,23 @@
       <tr><td>Whether an Apple-style configuration profile would be better than a
         code</td><td>out of scope and deliberately so: a profile is an OS-specific installer, which is a
         larger capability than rendering a value the screen already shows</td></tr>
+    </table>
+
+    <h2 id="built">How the build settled it</h2>
+    <table data-c="built">
+      <tr><th>Left to the build</th><th>Settled as</th><th>Why</th></tr>
+      <tr><td>library</td><td><code>uqr</code> (MIT, no dependencies), bundled into the app. The code is drawn
+        as one SVG path in the app's own tokens</td><td>rule 3</td></tr>
+      <tr><td>which values</td><td>the certificate URL only, on iPhone and Android device, once Wi-Fi devices
+        are allowed (owner, E-ONBRVP.W2 Q3). No code for the proxy host and port</td><td>a scan cannot fill in
+        Wi-Fi settings, and an iPhone's camera does nothing with plain text, so a code there is decoration
+        (rule 2)</td></tr>
+      <tr><td>its look</td><td>dark modules on a light <code>ink</code> plate, 128px (<code>scan-code</code>),
+        error correction M, a two-module quiet zone inside the plate</td><td>the polarity every camera reads, on
+        a dark app; M survives screen glare and stays small</td></tr>
+      <tr><td>its contract</td><td>a T1 registry component, <code>QrCode</code>; its TSDoc is the contract
+        (DEC-16), drawn in round 11 of the setup screen's design run</td><td>rule 4</td></tr>
+      <tr><td>rejected at build</td><td>a light-on-dark code: some camera apps do not read an inverted code</td><td>—</td></tr>
     </table>
 
     <h2 id="alternatives">Rejected</h2>

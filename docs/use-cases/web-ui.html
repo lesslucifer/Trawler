@@ -21,7 +21,9 @@
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
       UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
-      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span></div>    </div>
+      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
+      UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
+      way into setup, by <span class="badge id">E-ONBRVP.W2</span></div>    </div>
   </header>
   <main>
 
@@ -184,6 +186,11 @@
         <td>The composer, in the detail pane, with a draft from scratch
         (<a href="#uc-8-composer">UC-8</a>). A kept draft from scratch reopens with its edits; a kept draft
         seeded from a flow is replaced.</td></tr>
+        <tr><td><strong>set up another device</strong></td>
+        <td>Setup, exactly as the success banner's link opens it (<a href="#uc-onboard-moves">the moves
+        table</a>): on the last other device chosen, else with the question unanswered. It is the list's way
+        into setup once the list has flows, beside the header's dot. It has no face of its own: none of the app's
+        existing marks means setup.</td></tr>
         <tr><td><strong>clear</strong></td>
         <td>The header's <code>⌫</code> shortcut is named for the live filtered count. By default it opens a
         modal ask titled with that count, whose initial focus is on the answer that does nothing — the act
@@ -462,7 +469,10 @@
         <tr><td>iPhone or iPad · Android device</td><td>every host</td><td>neither</td><td>yes</td>
           <td><code>trawler-ca.mobileconfig</code> (a configuration profile) · <code>trawler-ca.cer</code> (DER)</td>
           <td>as above — and the traffic layer cannot say which device a decrypted request came from, so
-            the end of setup promises a confirmation rather than reporting one</td></tr>
+            the end of setup promises a confirmation rather than reporting one. Their certificate URL also
+            has a code a phone's camera opens, under the printed URL
+            (<a href="../decisions/dec-57-a-device-that-cannot-paste.html">DEC-57</a>). The proxy host and port stay
+            typed</td></tr>
       </table>
     </div>
 
@@ -488,14 +498,15 @@
         <tr><td><strong>The probes</strong> — a dated snapshot, re-taken on demand</td>
           <td>this machine only: does it trust the CA, does its system proxy point at Trawler</td>
           <td>trusted / not trusted / <code>unknown</code>. A probe that cannot read answers
-            <code>unknown</code>, never "off", on every host. Traffic, however much of it, never turns them
-            green</td></tr>
+            <code>unknown</code>, never "off", on every host. On macOS, trusted means the installed copy
+            verifies, never only that a certificate of Trawler's name is in a keychain. Traffic, however much
+            of it, never turns them green</td></tr>
         <tr><td><strong>The traffic layer</strong> — judged against a clock, from timestamps</td>
           <td>the wire, now</td>
           <td>a decrypted flow inside the window reads <em>capturing</em>; a tunnel no flow answered reads
             <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
-            certificate; plain HTTP only is its own reading; traffic seen earlier but nothing recent reads
-            <em>idle</em>. An old flow can only ever produce idle</td></tr>
+            certificate; plain HTTP only reads not done, with the remedy asking for an https site; traffic seen
+            earlier but nothing recent reads <em>idle</em>. An old flow can only ever produce idle</td></tr>
       </table>
       <p><strong>Each task has one reading:</strong> a probe that concludes, else this session's traffic.
       A decrypted request settles the certificate task, and any request that reached Trawler settles the
@@ -504,6 +515,23 @@
       task — never a false "not set up". The dated row and its re-read show only on a host where a probe can
       answer. A phone that trusts the certificate and points here reads as two true facts side by side: not
       trusted on this machine, and capturing traffic.</p>
+    </div>
+
+    <div data-c="uc-onboard-states">
+      <p><strong>A state is read from its first word</strong> (F5, <span class="badge id">E-ONBRVP.W2</span>).
+      Every task's state line opens with one of six words, and each glyph owns one meaning. The reason after the
+      dash is the task's own.</p>
+      <table>
+        <tr><th>Glyph</th><th>Word</th><th>Means</th><th>Example</th></tr>
+        <tr><td>✓</td><td>done</td><td>something read it done</td><td>done — installed and trusted</td></tr>
+        <tr><td>○</td><td>not done</td><td>read, not done yet, nothing failed</td><td>not done — only plain http so far</td></tr>
+        <tr><td>⚠</td><td>not working</td><td>tried, and failed</td><td>not working — nothing decrypted</td></tr>
+        <tr><td>◐</td><td>can't check here</td><td>nothing here can read it; its first request settles it</td><td>can't check here — your iPhone's first request confirms it</td></tr>
+        <tr><td>⟳</td><td>checking · setting up</td><td>a reading or a write is running</td><td>checking — the proxy settings</td></tr>
+      </table>
+      <p><strong>Each fact is said once</strong> (F19). While a write runs, the state lines of the tasks it
+      covers read <em>setting up</em>, and only the note under its button says what the user must do. An
+      action's note carries only what no state line reports.</p>
     </div>
 
     <div data-c="uc-onboard-acts">
@@ -515,7 +543,11 @@
       or the certificate's steps. There is no install-only button and no command behind one. A task read done
       offers no action and keeps only its undo. A refused authorization is the user's own outcome, worded as
       one, with the tool's text under a disclosure; a real failure keeps the OS's words and opens the manual
-      route.</p>
+      route. An approval the OS could not show (macOS's -60007) is neither. The user answered the password
+      prompt, and the trust write asked for a second approval that never reached them. It reads <em>macOS
+      couldn't show the prompt to approve this, so it isn't done</em> and opens the manual route. The one act
+      goes on to set the proxy once the certificate verifies as trusted, whatever the trust write's own
+      exit.</p>
       <table>
         <tr><th>Act</th><th>What it costs</th><th>What it says afterwards</th></tr>
         <tr><td>Set up this machine — offered only while neither half reads done</td><td>one confirm (the OS
@@ -531,6 +563,11 @@
           captured traffic becomes readable and that the exposure ends when Trawler quits</td>
           <td>the task reads <em>listening on &lt;host&gt; until Trawler quits</em>, and a chip in the
             header holds it for as long as it holds</td></tr>
+        <tr><td>Make a request to example.com — This machine's try task only, beside opening a website and the
+          curl command (<a href="../decisions/dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>)</td>
+          <td>none — one request changes nothing on this host. It runs on a click only, never on its own</td>
+          <td>whether example.com answered. The tasks still read only what Trawler captured of it, so a click
+          never makes a task done</td></tr>
         <tr><td>Stop routing through Trawler — inside the proxy task</td><td>none — reversing is not a new
           exposure</td>
           <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
@@ -574,7 +611,8 @@ flowchart TD
   Q -- "another computer · a phone" --> R{"reach armed?"}
   R -- "no" --> D["task 1 asks for it once;
 the rest are dimmed, not given steps that fail"]
-  R -- "yes" --> A["a host, a port and a certificate URL to type"]
+  R -- "yes" --> A["a host and a port to type,
+a certificate URL to type or scan"]
   H --> PR["probe this machine: CA trusted? proxy set?"]
   PR --> ST["the probed tasks' states, stamped 'checked at'"]
   ST -. "check again · window focus" .-> PR
@@ -586,7 +624,7 @@ the rest are dimmed, not given steps that fail"]
 which says so and offers the next device"]
   C -- "a tunnel no flow answered" --> TR["arriving but not decrypting —
 the client lacks the certificate"]
-  C -- "plain http only" --> PL["arriving — plain HTTP only"]
+  C -- "plain http only" --> PL["not done — only plain http so far"]
   C -- "nothing recent" --> ID["idle, or waiting for the first request"]
       </pre>
       <div class="caption">The platform answer governs everything below it. The probes answer for this
