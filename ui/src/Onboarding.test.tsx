@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { Onboarding } from "./Onboarding";
+import { Onboarding, useRouteMemory } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
 import { PLATFORM_IDS, type PlatformId } from "./setup";
@@ -53,25 +53,10 @@ const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000) };
 
 type Props = Partial<Parameters<typeof Onboarding>[0]>;
 
-const screenAt = (props: Props) => (
-  <Onboarding
-    state={onboarding}
-    dispatch={vi.fn()}
-    os="macos"
-    proxyAddr={ADDR}
-    onRecheck={vi.fn()}
-    onSetUpThisMachine={vi.fn(async () => {})}
-    onSaveCa={vi.fn(async () => null)}
-    onSetProxy={vi.fn(async () => {})}
-    onUnsetProxy={vi.fn(async () => {})}
-    onArmReach={vi.fn(async () => {})}
-    onDisarmReach={vi.fn(async () => {})}
-    {...props}
-  />
-);
-
-const draw = (props: Props = {}) =>
-  render(
+// App holds what the shell last did to the proxy (S5); the host holds it the same way.
+function Host(props: Props) {
+  const [routeAct, onRouteAct] = useRouteMemory(props.proxy?.status ?? "unknown");
+  return (
     <Onboarding
       state={onboarding}
       dispatch={vi.fn()}
@@ -84,9 +69,16 @@ const draw = (props: Props = {}) =>
       onUnsetProxy={vi.fn(async () => {})}
       onArmReach={vi.fn(async () => {})}
       onDisarmReach={vi.fn(async () => {})}
+      routeAct={routeAct}
+      onRouteAct={onRouteAct}
       {...props}
-    />,
+    />
   );
+}
+
+const screenAt = (props: Props) => <Host {...props} />;
+
+const draw = (props: Props = {}) => render(screenAt(props));
 
 const QUESTION = "which device's traffic do you want to see";
 const MANUAL = "do it manually";
@@ -359,6 +351,13 @@ describe("this machine — three tasks, and one button that does two of them", (
     expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /undo this setup/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Set up this Mac" })).toBeNull();
+  });
+
+  // S6: the reversal was the one action a reading in flight did not hold.
+  it("the reversal waits for a reading in flight, like every other action", () => {
+    draw({ trustProbe: "trusted", proxy: { status: "ours", address: null }, probing: true });
+
+    expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeDisabled();
   });
 
   it("says what the reversal leaves behind, and where the steps for it are", () => {
@@ -1156,12 +1155,16 @@ describe("the end", () => {
     expect(within(task(3)).queryByTestId("traffic-remedy")).toBeNull();
   });
 
-  it("the way back exists once capture has been proven, and not before", () => {
-    const dispatch = vi.fn();
-    draw({ state: { ...onboarding, everProven: true }, dispatch });
+  // Q3 · DEC-61: the list is a screen to switch to, not a reward for finishing.
+  it("the way back is there whether or not capture has been proven", () => {
+    for (const everProven of [false, true]) {
+      const dispatch = vi.fn();
+      const { unmount } = draw({ state: { ...onboarding, everProven }, dispatch });
 
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(COPY.back) }));
-    expect(dispatch).toHaveBeenCalledWith({ t: "exit" });
+      fireEvent.click(screen.getByRole("button", { name: COPY.back }));
+      expect(dispatch).toHaveBeenCalledWith({ t: "exit" });
+      unmount();
+    }
   });
 });
 

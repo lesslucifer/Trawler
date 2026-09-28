@@ -743,7 +743,18 @@
             since it has no time. The dot stays connected once capture was proven. "Set up another device" opens on the
             last device chosen unless that was This machine, else on the question unanswered. The dot opens on the last
             choice. Rejected: attributing requests to a device, clearing the list's filter, keeping the tally,
-            preselecting a guess, restarting the session on a platform change</td>
+            preselecting a guess, restarting the session on a platform change. Rule 5 superseded by DEC-61</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-61-the-dot-is-a-switch-and-capture-proof-expires.html"><code>dec-61-the-dot-is-a-switch-and-capture-proof-expires.html</code></a></td>
+          <td><span class="badge id">DEC-61</span></td>
+          <td><strong>The header's dot switches screens in every phase, and reads the newest captured request:
+            red with none, green for 3 minutes after one, then quiet.</strong> http counts for the dot and never
+            for the certificate task. The newest capture ignores the list's filter. An empty list offers "set up
+            capture", and setup's way back is always shown. Only a decrypted https request from this session moves
+            setup to the list on its own. Replaces DEC-60 rule 5. Rejected: a dot green forever, red after quiet
+            minutes, https-only, a second button, blocking the list on a silent core</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

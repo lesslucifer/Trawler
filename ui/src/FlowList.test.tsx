@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowList } from "./FlowList";
-import { apiAddr, defaultProxyAddr, type FlowSummary } from "./api";
+import type { FlowSummary } from "./api";
 
 function flow(over: Partial<FlowSummary> = {}): FlowSummary {
   return {
@@ -91,23 +91,66 @@ test("host and path truncate, and the row carries the full path as its title", (
 test("an empty list with no filter names the act that fills it", () => {
   render(<FlowList flows={[]} />);
 
-  expect(screen.getByTestId("empty")).toHaveTextContent("no flows yet");
-  expect(screen.getByTestId("empty")).toHaveTextContent(defaultProxyAddr());
+  expect(screen.getByTestId("empty")).toHaveTextContent("Nothing captured yet");
+  expect(screen.getByTestId("empty")).toHaveTextContent("once they go through Trawler");
   expect(screen.getByTestId("empty")).not.toHaveTextContent(
-    "no flows match this filter",
+    "Nothing matches your filter",
   );
+});
+
+// Every empty is the whole of the row region, so each is stated centred in it.
+test("every empty is centred in the region, as the region's own statement", () => {
+  const cases = [{}, { filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  for (const props of cases) {
+    const { unmount } = render(<FlowList flows={[]} {...props} />);
+    const region = screen.getByTestId("empty");
+    expect(region.className).toContain("items-center");
+    expect(region.className).toContain("justify-center");
+    expect(region.querySelector("[data-layout]")).toHaveAttribute("data-layout", "region");
+    unmount();
+  }
+});
+
+// The owner, on round 10: less technical, more user friendly. No empty names an
+// address, a port or a piece of Trawler's insides.
+test("no empty speaks in addresses or internals", () => {
+  const cases = [{}, { filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  for (const props of cases) {
+    const { unmount } = render(<FlowList flows={[]} onSetUp={() => {}} {...props} />);
+    const said = screen.getByTestId("empty").textContent ?? "";
+    expect(said).not.toMatch(/\d+\.\d+\.\d+\.\d+|:\d{4}|\bcore\b|\bproxy\b|\bflows?\b|\bclass\b/i);
+    unmount();
+  }
+});
+
+// P4: a window nothing has reached is the one empty whose remedy is setup.
+test("an empty list with nothing captured offers set up capture", () => {
+  const onSetUp = vi.fn();
+  render(<FlowList flows={[]} onSetUp={onSetUp} />);
+
+  fireEvent.click(within(screen.getByTestId("empty")).getByRole("button", { name: "set up capture" }));
+  expect(onSetUp).toHaveBeenCalledOnce();
+});
+
+test("a filtered, cleared, refused or silent empty offers no setup: none of them is a window nothing reached", () => {
+  const cases = [{ filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  for (const props of cases) {
+    const { unmount } = render(<FlowList flows={[]} onSetUp={() => {}} {...props} />);
+    expect(screen.queryByRole("button", { name: "set up capture" })).toBeNull();
+    unmount();
+  }
 });
 
 test("an empty list with a filter says the query excludes the traffic, not that none exists", () => {
   render(<FlowList flows={[]} filtered />);
 
   expect(screen.getByTestId("empty")).toHaveTextContent(
-    "no flows match this filter",
+    "Nothing matches your filter",
   );
   expect(screen.getByTestId("empty")).toHaveTextContent(
-    "clear a field to widen the search",
+    "Try a shorter search, or clear one of the fields above.",
   );
-  expect(screen.getByTestId("empty")).not.toHaveTextContent("no flows yet");
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("Nothing captured yet");
 });
 
 test("the row region is one tab stop whose options carry the selection", () => {
@@ -254,10 +297,10 @@ test("cell 1 is sized by the cross-day timestamp an import produces, not by the 
 test("a cleared list gets its own heading — telling someone to send traffic they just sent is the bug", () => {
   render(<FlowList flows={[]} cleared />);
   const absence = screen.getByTestId("empty");
-  expect(absence).toHaveTextContent("capture cleared");
-  expect(absence).not.toHaveTextContent("no flows yet");
+  expect(absence).toHaveTextContent("All cleared");
+  expect(absence).not.toHaveTextContent("Nothing captured yet");
   // Same remedy as the never-captured absence, because after a clear it is.
-  expect(absence).toHaveTextContent(defaultProxyAddr());
+  expect(absence).toHaveTextContent("New requests will show up here as they arrive.");
 });
 
 test("the three absences never share a sentence", () => {
@@ -273,7 +316,7 @@ test("the three absences never share a sentence", () => {
 
 test("a clear that emptied a filtered view says it was cleared, not that the filter excludes everything", () => {
   render(<FlowList flows={[]} filtered cleared />);
-  expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared");
+  expect(screen.getByTestId("empty")).toHaveTextContent("All cleared");
 });
 
 // Five causes, five sentences, and an order between them. The order is the point:
@@ -285,10 +328,10 @@ test("a core that is not answering takes the empty region from both empties", ()
       <FlowList flows={[]} filtered={filtered} silent />,
     );
     const region = screen.getByTestId("empty");
-    expect(region).toHaveTextContent("trawler is not answering");
-    expect(region).toHaveTextContent(apiAddr());
-    expect(region).not.toHaveTextContent("no flows yet");
-    expect(region).not.toHaveTextContent("no flows match this filter");
+    expect(region).toHaveTextContent("Trawler's capture service isn't answering");
+    expect(within(region).getByRole("button", { name: "try again" })).toBeEnabled();
+    expect(region).not.toHaveTextContent("Nothing captured yet");
+    expect(region).not.toHaveTextContent("Nothing matches your filter");
     unmount();
   }
 });
@@ -298,12 +341,12 @@ test("a core that is not answering takes the empty region from both empties", ()
 // nothing has reached, and claiming so would be the shell inventing history.
 test("the silence says nothing reached the window only when nothing did", () => {
   const { unmount } = render(<FlowList flows={[]} silent />);
-  expect(screen.getByTestId("empty")).toHaveTextContent("nothing has reached the window");
+  expect(screen.getByTestId("empty")).toHaveTextContent("Nothing has been captured yet.");
   unmount();
 
   render(<FlowList flows={[]} filtered silent />);
-  expect(screen.getByTestId("empty")).not.toHaveTextContent("nothing has reached the window");
-  expect(screen.getByTestId("empty")).toHaveTextContent("trawler is not answering");
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("Nothing has been captured yet.");
+  expect(screen.getByTestId("empty")).toHaveTextContent("Trawler's capture service isn't answering");
 });
 
 // The same reasoning that keeps the clause off a filtered region keeps it off a
@@ -312,8 +355,8 @@ test("the silence says nothing reached the window only when nothing did", () => 
 test("a cleared capture that then loses its core is not told nothing ever arrived", () => {
   render(<FlowList flows={[]} silent cleared />);
   const region = screen.getByTestId("empty");
-  expect(region).toHaveTextContent("trawler is not answering");
-  expect(region).not.toHaveTextContent("nothing has reached the window");
+  expect(region).toHaveTextContent("Trawler's capture service isn't answering");
+  expect(region).not.toHaveTextContent("Nothing has been captured yet.");
 });
 
 // The run ranked "not answering" above the two empties and never against a
@@ -322,22 +365,22 @@ test("a cleared capture that then loses its core is not told nothing ever arrive
 test("a refusal is not hidden by the silence that followed it", () => {
   render(<FlowList flows={[]} silent refused="4xz" />);
   const region = screen.getByTestId("empty");
-  expect(region).toHaveTextContent("4xz is not a status");
-  expect(region).not.toHaveTextContent("trawler is not answering");
+  expect(region).toHaveTextContent("“4xz” isn't a status code");
+  expect(region).not.toHaveTextContent("Trawler's capture service isn't answering");
 });
 
 test("the empty region's retry is offered, and reports the act", () => {
   const onRetry = vi.fn();
   render(<FlowList flows={[]} silent onRetry={onRetry} />);
-  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+  fireEvent.click(screen.getByRole("button", { name: "try again" }));
   expect(onRetry).toHaveBeenCalledOnce();
 });
 
 // Fork D4: disabled and a progress line are one obligation, never half of one.
 test("a retry in flight disables its button and says what is awaited", () => {
   render(<FlowList flows={[]} silent retrying />);
-  expect(screen.getByRole("button", { name: "retry" })).toBeDisabled();
-  expect(screen.getByTestId("empty")).toHaveTextContent(`trying ${apiAddr()}…`);
+  expect(screen.getByRole("button", { name: "try again" })).toBeDisabled();
+  expect(screen.getByTestId("empty")).toHaveTextContent("Trying again…");
   expect(screen.getByTestId("empty")).not.toHaveTextContent("the rows below");
 });
 
@@ -346,19 +389,19 @@ test("a retry in flight disables its button and says what is awaited", () => {
 test("a refused status names the value and offers a grammar, not a retry", () => {
   render(<FlowList flows={[]} filtered refused="4xz" />);
   const region = screen.getByTestId("empty");
-  expect(region).toHaveTextContent("4xz is not a status");
-  expect(region).toHaveTextContent("type a code (404) or a class (4xx)");
-  expect(region).not.toHaveTextContent("no flows match this filter");
-  expect(screen.queryByRole("button", { name: "retry" })).toBeNull();
+  expect(region).toHaveTextContent("“4xz” isn't a status code");
+  expect(region).toHaveTextContent("Try a code like 404, or a range like 4xx.");
+  expect(region).not.toHaveTextContent("Nothing matches your filter");
+  expect(screen.queryByRole("button", { name: "try again" })).toBeNull();
 });
 
 test("with no failure the two inherited empties are unchanged", () => {
   const { unmount } = render(<FlowList flows={[]} silent={false} refused={null} />);
-  expect(screen.getByTestId("empty")).toHaveTextContent("no flows yet");
+  expect(screen.getByTestId("empty")).toHaveTextContent("Nothing captured yet");
   unmount();
 
   render(<FlowList flows={[]} filtered silent={false} refused={null} />);
-  expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
+  expect(screen.getByTestId("empty")).toHaveTextContent("Nothing matches your filter");
 });
 
 // The empty region only exists when the region is empty, which is what keeps the

@@ -801,6 +801,19 @@ mod tests {
         assert!(value["next_cursor"].is_string());
     }
 
+    // The app's header dot reads this one query (DEC-61): the newest row the
+    // proxy captured, past any newer row that was imported.
+    #[tokio::test]
+    async fn one_page_of_one_captured_row_is_the_newest_capture() {
+        let state = state_with(&["http://old/", "http://new/"]);
+        import(&state, &document(&entry("http://file/"))).await;
+
+        let (status, value) = list(&state, "source=captured&limit=1").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value["flows"].as_array().expect("flows").len(), 1);
+        assert_eq!(value["flows"][0]["uri"], "http://new/");
+    }
+
     #[tokio::test]
     async fn malformed_paging_parameters_are_refused_by_name() {
         let state = state_with(&["http://a/"]);

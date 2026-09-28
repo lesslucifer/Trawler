@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { Onboarding } from "./Onboarding";
+import { Onboarding, useRouteMemory } from "./Onboarding";
 import type { OnbState } from "./onboardingMachine";
 import type { ReachState } from "./api";
 import {
@@ -123,8 +123,10 @@ interface State {
 
 type Handlers = Partial<Record<"setUp" | "setProxy" | "unset", Outcome>>;
 
-function draw(s: State, handlers: Handlers = {}) {
-  render(
+// App holds what the shell last did to the proxy (S5); the host holds it the same way.
+function Host({ s, handlers }: { s: State; handlers: Handlers }) {
+  const [routeAct, onRouteAct] = useRouteMemory(s.proxy);
+  return (
     <Onboarding
       state={onboarding}
       dispatch={vi.fn()}
@@ -141,8 +143,14 @@ function draw(s: State, handlers: Handlers = {}) {
       onUnsetProxy={vi.fn(settle(handlers.unset ?? "done") as () => Promise<void>)}
       onArmReach={vi.fn(async () => {})}
       onDisarmReach={vi.fn(async () => {})}
-    />,
+      routeAct={routeAct}
+      onRouteAct={onRouteAct}
+    />
   );
+}
+
+function draw(s: State, handlers: Handlers = {}) {
+  render(<Host s={s} handlers={handlers} />);
   if (s.platform !== "this") {
     const question = "which device's traffic do you want to see";
     fireEvent.click(screen.getByRole("button", { name: question }));

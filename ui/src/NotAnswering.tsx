@@ -1,11 +1,11 @@
-import { apiAddr } from "./api";
 import { Button, Notice } from "./components/index";
 
-// One sentence for one cause, mounted in two places: the shell band while there
-// is something below to qualify, the row region when there is not. The trailing
-// clause characterises what the reader is looking at, so it is passed only when
-// there is something true to say — an omitted clause is how this states the
-// silence without also claiming why the region below it is empty.
+// One statement for one cause, mounted in three places: the shell band while
+// there is something below to qualify, and as the whole region — the rows'
+// or setup's — when there is not. The trailing sentence characterises what the
+// reader is looking at, so it is passed only when there is something true to
+// say — an omitted sentence is how this states the silence without also
+// claiming why the region below it is empty.
 //
 // Fork D4 is why `retrying` drives both the disabled button and the detail line:
 // disabling a button without saying what is awaited is half a contract.
@@ -13,24 +13,25 @@ export function NotAnswering({
   trailing,
   retrying,
   onRetry,
+  region = false,
 }: {
   trailing?: string;
   retrying: boolean;
   onRetry: () => void;
+  region?: boolean;
 }) {
-  const addr = apiAddr();
-  const silence = trailing === undefined ? `no answer from ${addr}` : `no answer from ${addr} — ${trailing}`;
   return (
     <Notice
       tone="warn"
-      detail={retrying ? `trying ${addr}…` : silence}
+      layout={region ? "region" : "inline"}
+      detail={retrying ? "Trying again…" : (trailing ?? "It usually comes back on its own in a moment.")}
       action={
         <Button onClick={onRetry} disabled={retrying}>
-          retry
+          try again
         </Button>
       }
     >
-      trawler is not answering
+      Trawler's capture service isn't answering
     </Notice>
   );
 }

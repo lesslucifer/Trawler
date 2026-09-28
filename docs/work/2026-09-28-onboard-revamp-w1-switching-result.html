@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aba15dd9f34851f0dfad6de" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W1 result: list ⇄ setup</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W1 — result: moving between the list and setup</h1>
+      <p>The dot switches screens at any time and goes quiet when nothing has been captured for 3 minutes. An empty list leads into setup, and a capture service that isn't answering blocks setup with a way to try again.</p>
+      <div class="meta">v1 · 2026-09-28 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W1</span> · branch <code>wu/onboard-revamp/switching</code> · <a href="2026-09-28-onboard-revamp-w1-switching-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 10</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>in setup, before anything is captured, click the dot: the list, "no flows yet", a red dot and "set up capture"</td><td><code>dotEvent</code> gives <code>exit</code> outside the list, and <code>exit</code> opens the list proven or not. The list reads "Nothing captured yet" with <em>set up capture</em>, and the dot reads <code>broken</code> once the core has answered. The words are the owner's round 10 rewording</td><td>delivered</td></tr>
+      <tr><td>capture a request, wait 3 minutes: quiet. The next request: green</td><td><code>dotStatus(lastCaptureAt, now)</code> with <code>QUIET_AFTER_MS</code> = 180 000. <code>App</code> re-renders once, at the edge. The quiet look is a hollow ok ring (<code>StatusDot</code> @states)</td><td>delivered</td></tr>
+      <tr><td>capture only plain http: a green dot, the certificate step not done</td><td><code>lastCaptureAt</code> counts captured rows of either scheme. The certificate task and the live check still read decrypted https only</td><td>delivered</td></tr>
+      <tr><td>stop the core in setup: "core not running" and a retry, no steps. Retry after it is back: the steps return</td><td>setup is replaced by "Trawler's capture service isn't answering", <em>try again</em> and <em>show traffic</em>, centred. Retry brings the steps back</td><td>delivered</td></tr>
+      <tr><td>allow Wi-Fi devices, restart the core: the chip goes on its own</td><td>reach is re-read when <code>silent</code> goes false, and each time a setup session opens</td><td>delivered</td></tr>
+      <tr><td>turn the proxy off outside Trawler, open setup: "checking…" first, then not set</td><td>the probes were already re-run, and shown as checking, on every entry. What was missing was "stop routing through Trawler", the one action that ignored a reading in flight. It now waits like the others</td><td>delivered</td></tr>
+      <tr><td>"back to flows" with the keyboard: focus on the list</td><td>a move the user makes (dot, <em>set up capture</em>, <em>set up another device</em>, <em>show traffic</em>) focuses the new screen's main area. A move the app makes claims no focus</td><td>delivered</td></tr>
+      <tr><td>UC-ONBOARD and DEC-61: the moves table and the dot's four states</td><td>UC-ONBOARD's "Moving between the list and setup" section, DEC-61, DEC-60 rule 5 superseded</td><td>delivered</td></tr>
+      <tr><td><code>target/walkthrough-before-onbrvp/</code>: the epic's "before", 24 reels at <code>83df11b</code></td><td>filmed and kept: 24 reels, 153 chapters</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What changed</th><th>Why</th></tr>
+      <tr><td>commits 3–5, one per group of findings</td><td>one build commit, <code>3bef075</code></td><td>every group changes <code>App.tsx</code> in the same few places</td></tr>
+      <tr><td>commit 2, the design round before the build</td><td>the round was drafted after the build and reviewed over two drafts</td><td>the owner said "build W1". The round mounts the real <code>StatusDot</code>, which had to have the quiet state first</td></tr>
+      <tr><td>"back to flows"</td><td>the way back reads <em>show traffic</em></td><td>it now shows on every setup screen, where the lexicon keeps <em>flow</em> off. The design of record already said <em>show traffic</em></td></tr>
+      <tr><td>S6: setup opens in "checking…"</td><td>only the reversal changed</td><td>a mutation test showed the entry already painted checking: a click's effects flush before paint</td></tr>
+      <tr><td>blocked setup in <code>Onboarding.tsx</code></td><td>drawn by <code>App</code>, like the launch's silent state</td><td>the setup screen has nothing to render without the core, and <code>App</code> owns the connection</td></tr>
+      <tr><td>—</td><td>a row that started before the setup session no longer moves anyone to the list</td><td>with the dot a switch, an old row would bounce a user out of the setup they had just opened (DEC-61 rule 6)</td></tr>
+      <tr><td>—</td><td>the dot reads a new query, <code>GET /flows?source=captured&amp;limit=1</code>, beside every listing</td><td>a filtered list does not bring a request its filter excludes, and the dot may not go quiet on it</td></tr>
+      <tr><td>—</td><td><code>Notice</code> gains <code>layout="region"</code>. The list's five empties and the not-answering statement are centred and reworded, with no address, port or <em>core</em></td><td>the owner's two round 10 comments: "make it a clearer message &amp; centered", then "less technical and more user friendly"</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Commit</th><th>What</th><th>Tests</th></tr>
+      <tr><td><code>06fe375</code> · <code>7160a24</code> · <code>20b2e52</code> · <code>e70070a</code></td><td>the plan, v1 to v4</td><td>—</td></tr>
+      <tr><td><code>3bef075</code></td><td>the switch, the quiet dot, <code>latestCapture</code>, the empty list's way in, blocked setup, the reach re-reads, the reversal waiting, the proxy memory in <code>App</code> (<code>useRouteMemory</code>), focus after a move</td><td>unit: <code>onboardingMachine.test.ts</code> (switch both ways, the 3-minute edge on both sides) · <code>StatusDot.test.tsx</code> (quiet, the destination words) · <code>flow.test.ts</code> (<code>lastCaptureAt</code>, http included) · <code>api.test.ts</code> +2 · <code>useFlows.test.ts</code> +4 · <code>routes.rs</code> +1 (the dot's query). integration: <code>App.test.tsx</code> +16, <code>Onboarding.test.tsx</code> +1 and one amended, <code>FlowList.test.tsx</code> +2</td></tr>
+      <tr><td><code>75d479d</code> · <code>7de45b0</code> · <code>2e053d1</code></td><td>design run round 10: drafted, reviewed twice, closed on "LGTM", archived</td><td>—</td></tr>
+      <tr><td><code>0a13de8</code></td><td>DEC-61, UC-ONBOARD's moves section, DEC-60 rule 5 superseded, the rulebook's <code>ok</code> row</td><td>—</td></tr>
+      <tr><td><code>9e2030d</code> · <code>2f27e1a</code></td><td><code>Notice layout="region"</code>, the centred empties, the plain wording, <em>capture service</em> in the lexicon</td><td>unit: <code>Notice.test.tsx</code> +3. integration: <code>FlowList.test.tsx</code> +2 (every empty centred, none in addresses or internals), <code>App.test.tsx</code> blocked setup centred</td></tr>
+    </table>
+    <p class="caption">Each problem's test was checked by undoing its fix: S2, S3, S4, S5, S6 (the reversal), S7 and P5 each turn their test red. The first "checking on entry" fix did not, which is how the S6 deviation was found. The plan's probes against the old app, written during the sweep, showed each defect. Suite at <code>2e053d1</code>: 59 files, 12 138 tests green; eslint, tsc and the build clean. The e2e stays waived to W20 by the plan, but <code>cargo xtask ui e2e</code> was run because this WU changed the words its specs read: its first run caught two <code>flows.spec.ts</code> assertions on the old <em>retry</em> button, fixed in the commit that carries this report; after it, 4 spec files, 46 tests green.</p>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: <a href="../decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html">DEC-61</a> and its index row; <a href="../decisions/dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a> rule 5 marked superseded; UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> gains "Moving between the list and setup" and its "when setup shows" rows follow DEC-61; the use-cases index row; the <a href="../design-rules/design-rules-index.html">rulebook</a>'s <code>ok</code> meaning gains the quiet ring, and its lexicon gains <em>capture service</em>. Component truth: <code>StatusDot</code> and <code>Notice</code> TSDoc.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">P3, expiring step proof, is carried into W3–W10 by the epic plan. The header's "reachable on …" chip still names an address, which the round 10 wording did not touch. W20's <code>onboarding.spec.ts</code> takes the list ⇄ setup round trips.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

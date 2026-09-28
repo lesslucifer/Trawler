@@ -195,7 +195,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
   // Setup reads its own session unfiltered: a list filtered to nothing is the
   // list's view, never the setup screen's evidence.
   it("re-entry with the list filtered to nothing still reads the new request", async () => {
-    await button("‹ back to flows").click();
+    await button("‹ show traffic").click();
     await $('[aria-label="filter"]').setValue("no-such-path.test");
     await browser.waitUntil(async () => (await rowCount()) === 0, {
       timeout: 15_000,
@@ -213,7 +213,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
   });
 
   it("back from setup keeps the list's filter, and clearing it brings the rows back", async () => {
-    await button("‹ back to flows").click();
+    await button("‹ show traffic").click();
     await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
     expect(await rowCount()).toBe(0);
 

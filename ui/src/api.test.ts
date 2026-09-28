@@ -77,6 +77,25 @@ test.each(["pem", "cer", "mobileconfig"] as const)(
   },
 );
 
+test("latestCapture asks for the one newest captured row and answers it, or null", async () => {
+  const row = { id: "f9", started_at: "2026-07-12T10:00:00Z", source: "captured" } as FlowSummary;
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ flows: [row], next_cursor: "f8" }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ flows: [], next_cursor: null }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const api = createApi("http://127.0.0.1:9999/");
+  expect(await api.latestCapture()).toBe(row);
+  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/flows?source=captured&limit=1");
+  expect(await api.latestCapture()).toBeNull();
+});
+
+test("latestCapture throws ApiError on a non-ok response", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+  await expect(createApi("http://x").latestCapture()).rejects.toBeInstanceOf(ApiError);
+});
+
 test("listFlows throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
   await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);

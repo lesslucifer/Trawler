@@ -5,8 +5,9 @@
 import type { PlatformId } from "./setup";
 
 export type Step = "trust-ca" | "set-proxy" | "verify";
-export type Phase = "checking" | "onboarding" | "proven";
-export type DotStatus = "broken" | "checking" | "connected";
+export type Phase = "checking" | "onboarding" | "list";
+export type DotStatus = "broken" | "checking" | "quiet" | "connected";
+export type DotOpens = "setup" | "list";
 
 // `since` is when this setup session opened (epoch ms), null before one has:
 // a request that started earlier is not news about the session. `chosen` is
@@ -25,9 +26,9 @@ export type OnbEvent =
   | { t: "goto"; step: Step }
   | { t: "captured" } // fresh decrypted HTTPS flow — W4 detector dispatches
   | { t: "not-detected"; at: number } // launch self-test answered with nothing that proves capture
-  | { t: "re-invoke"; at: number; another?: boolean } // tap status dot / "set up another device" → re-setup
+  | { t: "re-invoke"; at: number; another?: boolean } // the dot or "set up capture" from the list / "set up another device" → re-setup
   | { t: "choose"; platform: PlatformId }
-  | { t: "exit" }; // Back to flows — returns to proven iff everProven, else no-op
+  | { t: "exit" }; // "show traffic", or the dot from setup or the launch check — the list, proven or not
 
 export const STEPS: readonly Step[] = ["trust-ca", "set-proxy", "verify"];
 
@@ -47,7 +48,7 @@ export function reduce(s: OnbState, e: OnbEvent): OnbState {
     case "goto":
       return { ...s, step: e.step };
     case "captured":
-      return { ...s, phase: "proven", everProven: true };
+      return { ...s, phase: "list", everProven: true };
     case "not-detected":
       return { ...s, phase: "onboarding", step: "trust-ca", since: e.at };
     case "re-invoke":
@@ -55,7 +56,7 @@ export function reduce(s: OnbState, e: OnbEvent): OnbState {
     case "choose":
       return { ...s, chosen: e.platform };
     case "exit":
-      return s.everProven ? { ...s, phase: "proven" } : s;
+      return { ...s, phase: "list" };
   }
 }
 
@@ -75,18 +76,39 @@ export function opensOn(s: OnbState): PlatformId | null {
   return s.another && s.chosen === "this" ? null : s.chosen;
 }
 
-// Re-entering setup starts a new session; it does not stop capture that has
-// already been proven from working (R5).
-export function dotStatus(s: OnbState): DotStatus {
-  if (s.phase === "proven" || s.everProven) return "connected";
-  return s.phase === "checking" ? "checking" : "broken";
+// The dot switches screens in every phase (DEC-61): the list opens setup, and
+// setup or the launch check opens the list.
+export function dotOpens(s: OnbState): DotOpens {
+  return s.phase === "list" ? "setup" : "list";
+}
+
+export function dotEvent(s: OnbState, at: number): OnbEvent {
+  return dotOpens(s) === "setup" ? { t: "re-invoke", at } : { t: "exit" };
+}
+
+export const QUIET_AFTER_MS = 180_000;
+
+// A capture proves the proxy worked then, not that it works now (DEC-61): a
+// setting changed outside Trawler leaves nothing behind but silence. So the dot
+// reads the newest captured request, http or https, and not the phase.
+// `lastCaptureAt` is undefined until the core has answered, null when it has
+// captured nothing.
+export function dotStatus(lastCaptureAt: number | null | undefined, now: number): DotStatus {
+  if (lastCaptureAt === undefined) return "checking";
+  if (lastCaptureAt === null) return "broken";
+  return now - lastCaptureAt < QUIET_AFTER_MS ? "connected" : "quiet";
 }
 
 export const COPY = {
-  back: "back to flows",
+  back: "show traffic",
   dotTitle: {
-    broken: "Not capturing yet — click to set up",
+    broken: "Nothing captured yet",
     checking: "Checking…",
-    connected: "Capturing — click to run setup again",
+    quiet: "Nothing captured in the last 3 minutes",
+    connected: "Capturing",
+  },
+  dotAction: {
+    setup: "click to set up",
+    list: "click to show traffic",
   },
 } as const;

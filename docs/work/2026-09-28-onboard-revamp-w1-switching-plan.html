@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab9c7cc9f34851f0dfad63e" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W1 plan: list ⇄ setup</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W1 — moving between the list and setup</h1>
+      <p>What the app shows, keeps and checks again each time you move between the flow list and the setup screen.</p>
+      <div class="meta">v4 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W1</span> · branch <code>wu/onboard-revamp/switching</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on none</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("the plan is ok, now let's build W1", 2026-09-28): S5 taken, Q5 and Q6 as
+      proposed. Built; the design round (round 10 of the setup screen's design run) waits for your review.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong>The dot switches between the list and setup at any time, and shows whether Trawler captured anything in
+      the last 3 minutes. A core that does not answer is stated on both screens, with a retry, and blocks setup. Every
+      move between the two screens keeps, checks again or starts fresh exactly what UC-ONBOARD's table says, and a
+      test holds each row.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-ONBRVP</span> · the epic plan's W1 block · UC-ONBOARD: a new "moving between the list
+      and setup" section · F23 (the dot reads the traffic), moved here from W2 · a new DEC-61, because two E-ONBREV
+      rules change (see <a href="#proposals">your proposals</a>).
+    </p>
+
+    <h2 id="proposals">Your proposals</h2>
+    <table data-c="proposals">
+      <tr><th>You proposed</th><th>Example</th><th>Where it goes</th></tr>
+      <tr><td><strong>P1</strong> · the dot switches between setup and the list at any time, including during the first check at launch</td><td>You are halfway through setting up your iPhone and want to look at a request. You click the dot, and the list opens. You click it again, and setup is back.</td><td>this WU</td></tr>
+      <tr><td><strong>P2</strong> · the dot gets a middle state for "nothing captured recently"</td><td>You set up this morning, then turned the proxy off in System Settings. The dot turns quiet 3 minutes after the last capture, instead of staying green all day.</td><td>this WU, together with F23 from W2</td></tr>
+      <tr><td><strong>P3</strong> · a setup step turned green by a captured flow also expires</td><td>An iPhone's certificate step is green because a request decrypted an hour ago, and you have since deleted the profile.</td><td>deferred to the status WUs W3–W10, written into the epic plan</td></tr>
+      <tr><td><strong>P4</strong> · an empty list offers a button into setup</td><td>You open the list before anything is captured. It says "no flows yet" and offers "set up capture".</td><td>this WU</td></tr>
+      <tr><td><strong>P5</strong> · a core that is not running blocks setup, with a retry</td><td>The core is not running. Setup shows "Trawler's core is not running" and a retry button, and none of the steps.</td><td>this WU (it answers S1 and S3)</td></tr>
+    </table>
+    <p class="caption">P1 and P2 change two E-ONBREV rules, "only a captured flow shows the list" and "once capture is proven, it stays proven", so DEC-61 records both. "You're set up" still needs an https request, because plain http does not prove the certificate.</p>
+
+    <h2 id="dot">The dot, after this WU</h2>
+    <table data-c="dot">
+      <tr><th>Dot</th><th>When</th><th>Example</th></tr>
+      <tr><td>grey · checking</td><td>the app has just started and is asking the core what it has captured</td><td>the first second after launch</td></tr>
+      <tr><td>red · not set up</td><td>nothing has been captured since the app started</td><td>a fresh install</td></tr>
+      <tr><td><strong>new</strong> · quiet</td><td>something was captured earlier, but nothing in the last 3 minutes</td><td>you set up this morning, then turned the proxy off</td></tr>
+      <tr><td>green · capturing</td><td>a request, http or https, was captured in the last 3 minutes</td><td>you are browsing through Trawler right now</td></tr>
+    </table>
+    <p class="caption">A click always switches screens: from the list it opens setup, and from setup it opens the list. The quiet state's look is chosen in the design round. The palette has only green, red and grey, so a hollow green ring is one option. An http request turns the dot green, but it never turns setup's certificate step green.</p>
+
+    <h2 id="findings">Problems found, and your rulings</h2>
+    <table data-c="findings">
+      <tr><th>#</th><th>Example of what happens today</th><th>Fix</th><th>Ruling</th></tr>
+      <tr><td>S1</td><td>You start Trawler while its core is not running. The dot is grey. You click it, and setup steps appear, as if the problem were your settings.</td><td>With P1, the dot opens the list. With P5, setup shows "core not running" and a retry, in place of every step</td><td>take, as P1 + P5</td></tr>
+      <tr><td>S2</td><td>Each time setup opens, it starts counting requests from that moment, so the device you set up earlier cannot count as the new one. Today the dot in setup re-opens setup, and the counting starts again. Example: your iPhone just worked and setup says "You're set up". You click the dot, and the message goes, because counting restarted and the iPhone's request came before it.</td><td>With P1, the dot in setup opens the list, so counting never restarts in place</td><td>take, as P1</td></tr>
+      <tr><td>S3</td><td>The core starts after the app, and the phone's step 1 says "join the network" on a Mac that is on Wi-Fi.</td><td>Rare, since the app ships with its core. When it happens, P5's retry applies, and the network addresses are read again once the core answers</td><td>take, as P5</td></tr>
+      <tr><td>S4</td><td>You allowed Wi-Fi devices, then the core restarted. The header still says "reachable on 192.168.1.24".</td><td>When the core comes back, setup and the header refresh on their own</td><td>take</td></tr>
+      <tr><td>S5</td><td>On a Mac, "Set the system proxy" changes a macOS setting for you, then reads it back to check. If that read-back fails, the app cannot see the setting, but it remembers it just turned the proxy on and keeps offering "stop routing through Trawler". That memory is lost when you leave setup. Example: you set the proxy, the read-back fails, you go to the list and come back. The button is gone, the proxy is still on, and you must turn it off in System Settings yourself. This is rare, because the read-back rarely fails.</td><td>Keep the memory until the app quits, or until a read-back succeeds</td><td>take</td></tr>
+      <tr><td>S6</td><td>At 10:00 setup read "proxy on". You turn the proxy off in System Settings. At 10:30 you open setup, and for a moment it still shows "proxy on" with a working "stop routing" button.</td><td>Setup opens in "checking…", and its buttons wait for the new reading</td><td>take</td></tr>
+      <tr><td>S7</td><td>Using the keyboard, you press "back to flows", and focus jumps to the top of the window.</td><td>After a move, focus goes to the main area of the new screen</td><td>take</td></tr>
+      <tr><td>S8</td><td>The list is filtered to <code>api.test</code>. A matching request arrives in setup. You go back, and for a split second the list does not show it.</td><td>none</td><td>refute: a split second is fine</td></tr>
+      <tr><td>S9</td><td>For a phone, you pick "Ethernet" in step 1 but do not allow it. You leave and come back, and the pick reads "Wi-Fi" again.</td><td>none</td><td>refute</td></tr>
+    </table>
+    <p class="caption">These already work and stay as they are: your filter, the selected request with its detail pane, and an unsent draft all survive a trip to setup and back.</p>
+
+    <h2 id="table">What each move does</h2>
+    <table data-c="transitions">
+      <tr><th>You…</th><th>You see</th><th>Kept</th><th>Checked again</th><th>Starts fresh</th></tr>
+      <tr><td>start the app</td><td>a grey dot, until the core answers. The dot already switches (Q5)</td><td>—</td><td>captured requests, network addresses</td><td>—</td></tr>
+      <tr><td>…and nothing https is captured</td><td>setup, for This machine</td><td>—</td><td>certificate and proxy readings</td><td>—</td></tr>
+      <tr><td>…and https was already captured</td><td>the list</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>…and the core does not answer</td><td>on the list: "no answer" with a retry. In setup: "core not running" with a retry, and no steps</td><td>—</td><td>everything, when it answers</td><td>—</td></tr>
+      <tr><td>capture your first https request in setup</td><td>the list, with "You're set up"</td><td>the device you chose</td><td>the list</td><td>setup's messages</td></tr>
+      <tr><td>click the dot, or "set up capture" on an empty list</td><td>setup, on the device you chose last</td><td>filter, selection, draft</td><td>everything setup reads, starting in "checking…"</td><td>setup's messages and open sections, and its request counting</td></tr>
+      <tr><td>click "set up another device"</td><td>as the dot, but the device question is empty if you last chose This machine</td><td>as the dot</td><td>as the dot</td><td>as the dot</td></tr>
+      <tr><td>click the dot or "back to flows" in setup</td><td>the list as you left it</td><td>filter, selection, draft, the device you chose</td><td>the list</td><td>setup's messages</td></tr>
+      <tr><td>lose the core</td><td>"no answer" on the list, and "core not running" in setup</td><td>everything else</td><td>—</td><td>—</td></tr>
+      <tr><td>get the core back</td><td>the message goes, and the screen refreshes itself</td><td>everything else</td><td>the list, network addresses, "reachable on …"</td><td>—</td></tr>
+      <tr><td>quit</td><td>the close dialog over the current screen. W11 rules what it says</td><td>everything, if you cancel</td><td>—</td><td>—</td></tr>
+    </table>
+
+    <h2 id="changes">Where the changes land</h2>
+    <table data-c="changes">
+      <tr><th>Where</th><th>Change</th><th>For</th></tr>
+      <tr><td><code>onboardingMachine.ts</code></td><td>the dot switches screens in every phase. <code>dotStatus</code> reads the time of the last captured request</td><td>P1 · P2 · S1 · S2</td></tr>
+      <tr><td><code>StatusDot.tsx</code></td><td>a fourth state, quiet</td><td>P2</td></tr>
+      <tr><td><code>FlowList.tsx</code></td><td>"no flows yet" offers "set up capture"</td><td>P4</td></tr>
+      <tr><td><code>Onboarding.tsx</code></td><td>"core not running" with a retry, in place of every step. "back to flows" always shows. "stop routing" waits for a reading like the other buttons</td><td>P5 · P1 · S6</td></tr>
+      <tr><td><code>App.tsx</code></td><td>network addresses and "reachable on …" are read again when the core comes back and when setup opens. Setup opens in "checking…". Focus moves after a switch. A clock turns the dot quiet</td><td>S3 · S4 · S6 · S7 · P2</td></tr>
+      <tr><td><code>docs/decisions/</code></td><td>DEC-61: the dot is a switch, and capture proof expires</td><td>P1 · P2</td></tr>
+      <tr><td><code>docs/use-cases/web-ui.html</code></td><td>UC-ONBOARD gains the moves table and the dot's four states</td><td>all</td></tr>
+    </table>
+    <p class="caption">Design: three new looks (the quiet dot, the empty list's button, and setup blocked by a silent core) are drawn in one design round, which you review before the build.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>Try this…</th><th>…and you see</th></tr>
+      <tr><td>in setup, before anything is captured, click the dot</td><td>the list, "no flows yet", a red dot and a "set up capture" button</td></tr>
+      <tr><td>capture a request, then wait 3 minutes with no traffic</td><td>the dot turns quiet. The next captured request turns it green again</td></tr>
+      <tr><td>capture only plain http</td><td>a green dot, and setup's certificate step still not done</td></tr>
+      <tr><td>stop the core while setup is open</td><td>"core not running" and a retry, and no steps. Start the core and press retry, and the steps come back with fresh readings</td></tr>
+      <tr><td>allow Wi-Fi devices, then restart the core</td><td>the "reachable on …" chip goes away on its own</td></tr>
+      <tr><td>turn the proxy off outside Trawler, then open setup</td><td>"checking…" first, and then the proxy task reads not set</td></tr>
+      <tr><td>press "back to flows" with the keyboard</td><td>focus on the list</td></tr>
+      <tr><td>UC-ONBOARD and DEC-61</td><td>the moves table and the dot's four states</td></tr>
+      <tr><td><code>target/walkthrough-before-onbrvp/</code></td><td>the epic's "before" videos, 24 reels, filmed at <code>83df11b</code></td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>unit</td><td><code>ui/src/onboardingMachine.test.ts</code></td><td>the dot switches both ways in every phase. <code>dotStatus</code> gives red, quiet and green from the last capture time, with the 3-minute edge tested on both sides, and http counting as a capture</td></tr>
+      <tr><td>unit</td><td><code>ui/src/components/StatusDot.test.tsx</code></td><td>the quiet state renders its look and its words</td></tr>
+      <tr><td>integration</td><td><code>ui/src/FlowList.test.tsx</code></td><td>"no flows yet" offers "set up capture", and a filtered or cleared empty list does not</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>a silent core shows "core not running" and a retry, with no steps. "back to flows" shows before anything is proven. "stop routing" waits while a reading is in flight</td></tr>
+      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code></td><td>one test per row of the moves table, and one per problem taken. Each problem's test is first written to show the problem, then fixed. The dot turns quiet after 3 minutes, on a fake clock</td></tr>
+      <tr><td>e2e</td><td>—</td><td><em>waived at WU level:</em> the epic plan gives the list ⇄ setup round trips to W20's <code>onboarding.spec.ts</code>. The "before" walkthrough is filmed here</td></tr>
+    </table>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Answer</th></tr>
+      <tr><td>Q1</td><td>How long without a capture before the dot turns quiet?</td><td>ruled: 3 minutes</td></tr>
+      <tr><td>Q2</td><td>Does "at any time" include the first check at launch?</td><td>ruled: yes, and an empty list offers a way into setup (P4)</td></tr>
+      <tr><td>Q3</td><td>Should "back to flows" also show before anything is captured?</td><td>ruled: yes</td></tr>
+      <tr><td>Q4</td><td>What turns the dot green?</td><td>ruled: any captured request, http included. Plain http never turns the certificate step green</td></tr>
+      <tr><td>Q5</td><td>You click the dot during the launch check and land on the list. The check then finds nothing captured. Does the app move you to setup?</td><td>ruled: <strong>no</strong>. You chose the list, and its empty state offers "set up capture"</td></tr>
+      <tr><td>Q6</td><td>The list is open and the core stops. The list keeps its rows under "no answer". Should the list also block, like setup?</td><td>ruled: <strong>no</strong>. The rows already on screen are still true and still worth reading. Only setup blocks, because its steps cannot work without the core</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan (v1 <code>06fe375</code>, v2 <code>7160a24</code>)</td></tr>
+      <tr><td>2</td><td>the design round for the three new looks, for you to review</td></tr>
+      <tr><td>3</td><td>the dot as a switch, the quiet dot and the empty list's button (P1, P2, P4, S1, S2), with their tests</td></tr>
+      <tr><td>4</td><td>setup blocked by a silent core, refresh on the core's return, and "checking…" on entry (P5, S3, S4, S6), with their tests</td></tr>
+      <tr><td>5</td><td>focus after a move (S7), and S5 if taken, with their tests</td></tr>
+      <tr><td>6</td><td>DEC-61, and UC-ONBOARD's new section</td></tr>
+      <tr><td>7</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

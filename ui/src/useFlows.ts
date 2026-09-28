@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, filterParams, type Filter, type FlowSummary, type FlowView, type TrawlerApi } from "./api";
-import { hostOf } from "./flow";
+import { hostOf, lastCaptureAt as newestCapture } from "./flow";
 
 const DEBOUNCE_MS = 150;
 
@@ -46,6 +46,14 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
   // tunnel but no flow). Onboarding reads it; the flow list ignores it.
   const [lastConnectionAt, setLastConnectionAt] = useState<number | null>(null);
+  // The newest captured request this window has heard of, from any listing and
+  // from the core's own newest row, so neither a filter nor a clear can lower
+  // it. Undefined until the core has answered either.
+  const [lastCaptureAt, setLastCaptureAt] = useState<number | null | undefined>(undefined);
+  const raiseCapture = useCallback(
+    (at: number | null) => setLastCaptureAt((mark) => (at === null ? (mark ?? null) : Math.max(mark ?? at, at))),
+    [],
+  );
   // Every host capture has ever seen, which is NOT what `flows` holds: that list
   // is server-filtered, so deriving the host options from it would collapse them
   // to the one already chosen and strand the user there. Accumulated instead, so
@@ -73,12 +81,17 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
     // What was asked, captured with the request: by the time a refusal comes
     // back the box may hold something the core has never judged.
     const asked = query.status ?? "";
+    api.latestCapture().then(
+      (row) => raiseCapture(row && newestCapture([row])),
+      () => {},
+    );
     return api.listFlows(query).then(
       (list) => {
         if (mine !== latest.current) return;
         if (forList || unfiltered) setFlows(list);
         if (!forList || unfiltered) setEverything(list);
         setAnswered((n) => n + 1);
+        raiseCapture(newestCapture(list));
         setHosts((known) => merge(known, list));
         setRefused(null);
         setSilent(false);
@@ -104,7 +117,7 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
         setRefused((refusal) => (refusal === asked ? refusal : null));
       },
     );
-  }, [api]);
+  }, [api, raiseCapture]);
 
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const debouncedRefresh = useCallback(() => {
@@ -152,6 +165,7 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
     everything,
     hosts,
     lastConnectionAt,
+    lastCaptureAt,
     silent,
     answered,
     refused,

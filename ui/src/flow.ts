@@ -52,6 +52,14 @@ export function latestFlowTimes(flows: FlowSummary[], since?: number): FlowTimes
   return times;
 }
 
+// The newest captured request of either scheme: http proves the proxy is in
+// the path as surely as https does, and the dot asks nothing more (DEC-61).
+export function lastCaptureAt(flows: FlowSummary[]): number | null {
+  const { lastDecryptedAt, lastPlainAt } = latestFlowTimes(flows);
+  if (lastDecryptedAt === null) return lastPlainAt;
+  return lastPlainAt === null ? lastDecryptedAt : Math.max(lastDecryptedAt, lastPlainAt);
+}
+
 // The setup screen reads one setup session: what was captured, and the newest
 // tunnel, from the moment that session opened. Traffic from before it is some
 // earlier session's evidence (DEC-60). A null `since` bounds nothing.

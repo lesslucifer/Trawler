@@ -185,6 +185,9 @@ export interface StreamHandlers {
 
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
+  // The newest row the proxy captured, whatever the list is filtered to: the
+  // header's dot reads it (DEC-61), and a filter must not quieten it.
+  latestCapture(): Promise<FlowSummary | null>;
   exportHar(filter: Filter): Promise<HarExport>;
   importHar(bytes: Uint8Array): Promise<number>;
   importCurl(command: string): Promise<number>;
@@ -212,6 +215,11 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/flows?${filterParams(filter)}`);
       if (!res.ok) throw new ApiError(res.status, `GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
+    },
+    async latestCapture() {
+      const res = await fetch(`${base()}/flows?source=captured&limit=1`);
+      if (!res.ok) throw new ApiError(res.status, `GET /flows failed: ${res.status}`);
+      return ((await res.json()) as { flows: FlowSummary[] }).flows[0] ?? null;
     },
     async exportHar(filter) {
       const res = await fetch(`${base()}/flows/export?${filterParams(filter)}`);
