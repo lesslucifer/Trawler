@@ -1,0 +1,45 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-60-a-setup-session-starts-when-setup-opens.html"
+    tier: T2
+    action: updated
+    distills: "rule 5, the dot connected once proven, marked superseded by DEC-61"
+  - path: "docs/decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html"
+    tier: T2
+    action: added
+    distills: "the dot switches screens in every phase and reads the newest captured request: red, green for 3 minutes, then quiet; http counts for the dot only; the filter cannot quieten it; the empty list's way in and the always-shown way back; only a session's decrypted https moves setup to the list"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-61's row, and DEC-60's row noting rule 5 superseded"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "ok's meaning gains the quiet ring (StatusDot quiet to ring); the lexicon gains capture service, the user's word for the core"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: only a captured https row ends setup on its own, and the dot switches at any time and goes quiet after 3 minutes"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's Moving between the list and setup section (the dot's four states and the moves table), its when-setup-shows rows after DEC-61, the silent capture service blocking setup, and the kept guarantee reworded to ending setup on its own"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: added
+    distills: "the setup screen's design of record, re-opened from its last state for round 10 and closed archived: the dot's four looks and destinations, the empty list's way in, the capture service not answering in place of every task, the way back on every screen, Notice's region form and the plain wording"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "W1's summary, mapping and expected result after the owner's proposals; F23 moved from W2 to W1; P3 carried into W3-W10"
+  - path: "docs/work/2026-09-28-onboard-revamp-w1-switching-plan.html"
+    tier: T3
+    action: added
+    distills: "W1's plan: the sweep's nine findings with the owner's rulings, the proposals, the moves table and the test plan"
+  - path: "docs/work/2026-09-28-onboard-revamp-w1-switching-result.html"
+    tier: T3
+    action: added
+    distills: "W1's result: outcome per expected row, deviations, evidence and distillation"
