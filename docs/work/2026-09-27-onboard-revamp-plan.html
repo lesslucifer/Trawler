@@ -95,7 +95,7 @@ flowchart LR
     <table data-c="residue">
       <thead><tr><th>Row</th><th>What the user meets today</th><th>Taken by</th></tr></thead>
       <tbody>
-        <tr><td>F23</td><td>The header dot can read red, "Not capturing yet", above a screen that says Trawler is capturing. The dot follows the setup phase, not the traffic. E-ONBREV.W3 fixed part of this.</td><td>W2</td></tr>
+        <tr><td>F23</td><td>The header dot can read red, "Not capturing yet", above a screen that says Trawler is capturing. The dot follows the setup phase, not the traffic. E-ONBREV.W3 fixed part of this.</td><td>W1, moved from W2 by the owner's 2026-09-28 proposals: the dot becomes a switch with a "quiet" state</td></tr>
         <tr><td>F26</td><td>The only way from the flow list back to setup is a small dot with a tooltip, or the success banner's "set up another device". The list's ⋮ menu offers no route back.</td><td>W2</td></tr>
         <tr><td>F5</td><td>Task status is shown by five glyphs (○ ◐ ✓ ⚠ ⟳) with no words and no legend. Nobody can guess that ◐ means "can't be checked from here".</td><td>W2, reused by W3–W10</td></tr>
         <tr><td>F19</td><td>After an action, its note and the task's status line both confirm the same thing, so the user reads it twice.</td><td>W2, reused by W3–W10</td></tr>
@@ -127,7 +127,7 @@ flowchart LR
       <thead><tr><th>UC</th><th>Change</th><th>By</th></tr></thead>
       <tbody>
         <tr><td><span class="badge id">UC-ONBOARD</span></td><td>A "moving between the list and setup" section. For each state, it says what shows and what is kept, reloaded or reset.</td><td>W1</td></tr>
-        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>Status glyphs carry words. One fact is stated once. A test-request button on this machine (DEC-56). A scannable code beside each value a phone must type (DEC-57). The header dot reads the traffic.</td><td>W2</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>Status glyphs carry words. One fact is stated once. A test-request button on this machine (DEC-56). A scannable code beside each value a phone must type (DEC-57).</td><td>W2</td></tr>
         <tr><td><span class="badge id">UC-ONBOARD</span></td><td>For each platform, which status each task shows, what verifies it, and what the screen says when nothing can.</td><td>W3–W10</td></tr>
         <tr><td><span class="badge id">UC-ONBOARD</span></td><td>The quit dialog row, restated where the review changes it.</td><td>W11</td></tr>
         <tr><td><span class="badge id">UC-ONBOARD</span></td><td>An emphasis rule: in each guide the next action leads, and the optional and the explanatory recede. Each step offers an interactive route where one exists, and otherwise an image or video of the step.</td><td>W12–W19</td></tr>
@@ -150,11 +150,20 @@ flowchart LR
       </tbody>
     </table>
 
+    <div class="callout" data-c="expiring-proof">
+      <strong>Carried into W3–W10 (the owner, 2026-09-28):</strong> a captured flow is not permanent proof
+      that a setup step works. A step turned green by traffic expires after a while, and each status WU
+      decides, for its platform, how the step reads once its proof is old. Example: an iPhone's certificate
+      step is green from a request an hour ago, and the profile has since been deleted.
+    </div>
+
     <h2 id="non-goals">Non-goals</h2>
     <ul data-item="non-goals">
       <li>Re-opening E-ONBREV's timing rules: captured-only proof, the launch gate, the setup session
         (<a href="../decisions/dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a>). One changes
-        only if a finding shows it is wrong, and then as a new DEC.</li>
+        only if a finding shows it is wrong, and then as a new DEC. The owner's 2026-09-28 proposals change
+        two of them in W1, as DEC-61: the dot opens the list before anything is captured, and capture proof
+        expires.</li>
       <li>Core changes: the failed-handshake reason (R31) and device attribution each stay their own roadmap
         epic. A status WU may name the gap they would close, but does not close it.</li>
       <li>New probes, such as a Linux trust probe, unless a status WU's owner ruling asks for one (Q8).</li>
@@ -169,22 +178,23 @@ flowchart LR
           another device", success, back, the core dropping and returning) against every state. Rule, per
           transition, what renders and what is kept, reloaded or reset: the chosen platform, open guides,
           probe readings, action outcomes, the list's filter and selection. Takes the "before" walkthrough
-          for the whole epic.
+          for the whole epic. By the owner's 2026-09-28 proposals, the dot also becomes a switch between the
+          list and setup, usable at any time, with a "quiet" state when nothing was captured recently (F23,
+          DEC-61).
           <a href="2026-09-28-onboard-revamp-w1-switching-plan.html">WU plan</a>.</p>
-        <p data-item="wu-maps-to">UC-ONBOARD: the moving-between section</p>
-        <p data-item="wu-expected">A transition table in UC-ONBOARD, with a test for each row. No transition shows stale state or needlessly throws away state.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the moving-between section · F23</p>
+        <p data-item="wu-expected">A transition table in UC-ONBOARD, with a test for each row. No transition shows stale state or needlessly throws away state. The dot switches screens and reads red, quiet or green from recent capture.</p>
         <p data-item="wu-deps">none</p>
       </div>
       <div class="card" data-wu="E-ONBRVP.W2">
         <h3 id="w2">E-ONBRVP.W2 — the carried-in roadmap rows</h3>
         <p data-item="wu-summary">Re-check and fix the eight parked rows in <a href="#residue">the table above</a>,
-          except the quit dialog: words beside every glyph (F5), one statement per fact (F19), a dot that reads
-          the traffic (F23), the test-request button (F24, DEC-56), the list's route back (F26), the scannable
+          except the quit dialog: words beside every glyph (F5), one statement per fact (F19), the test-request button (F24, DEC-56), the list's route back (F26), the scannable
           code (F28, DEC-57, with its component design), the -60007 failure, and the Simulator's lingering
           control. F5 and F19 set the status vocabulary W3–W10 reuse.</p>
-        <p data-item="wu-maps-to">UC-ONBOARD · UC-4 · F5 · F19 · F23 · F24 · F26 · F28 · -60007 · the latch</p>
+        <p data-item="wu-maps-to">UC-ONBOARD · UC-4 · F5 · F19 · F24 · F26 · F28 · -60007 · the latch</p>
         <p data-item="wu-expected">Each row closed on the roadmap or restated with a reason. The status vocabulary is documented on its component.</p>
-        <p data-item="wu-deps">E-ONBRVP.W1 (the dot and the route back are transitions it rules)</p>
+        <p data-item="wu-deps">E-ONBRVP.W1 (the route back is a transition it rules)</p>
       </div>
       <div class="card" data-wu="E-ONBRVP.W3">
         <h3 id="w3">E-ONBRVP.W3 — status: This machine</h3>

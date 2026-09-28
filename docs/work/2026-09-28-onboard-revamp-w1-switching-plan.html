@@ -8,150 +8,141 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-ONBRVP.W1 — list ⇄ setup: what shows, what reloads</h1>
-      <p>Every way between the flow list and setup, walked against every piece of state the app holds. Each move keeps, re-reads or resets exactly what the table below says. Nine findings are waiting for the owner's ruling.</p>
-      <div class="meta">v1 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W1</span> · branch <code>wu/onboard-revamp/switching</code> · off <code>epic/onboard-revamp</code> at <code>83df11b</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on none</div>
+      <h1>E-ONBRVP.W1 — moving between the list and setup</h1>
+      <p>What the app shows, keeps and checks again each time you move between the flow list and the setup screen.</p>
+      <div class="meta">v2 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W1</span> · branch <code>wu/onboard-revamp/switching</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on none</div>
     </div>
   </header>
   <main>
 
     <div class="callout warn" data-c="status">
-      <strong>Waiting for the owner.</strong> The sweep is done and nine findings are below, each with a proposed
-      ruling. The build starts once each finding is ruled take, defer or refute. The requirement and test plan are
-      written for the proposed rulings, and a ruling that differs edits them first.
+      <strong>What I need from you:</strong> a yes or no on the four questions at the
+      <a href="#questions">end</a>, and a ruling on each problem in the <a href="#findings">problems table</a>.
+      I build once those are answered.
     </div>
 
     <h2 id="requirement">Requirement</h2>
     <p data-item="requirement">
-      <strong>Every move between the flow list and setup keeps, re-reads or resets each piece of the app's state
-      exactly as UC-ONBOARD's transition table says, and each row of that table is held by a named test. The moves
-      are launch, the dot, "set up another device", a first success, back, the core dropping and returning, and a
-      quit being asked.</strong>
+      <strong>The dot switches between the list and setup at any time. It shows whether Trawler captured something
+      recently, not just once. Every move between the two screens keeps, checks again or starts fresh exactly what
+      UC-ONBOARD's table says, and a test holds each row.</strong>
     </p>
 
     <h2 id="maps-to">Mapping</h2>
     <p data-item="maps-to">
       <span class="badge id">E-ONBRVP</span> · the epic plan's W1 block · UC-ONBOARD: a new "moving between the list
-      and setup" section · DEC-60 (a setup session starts when setup opens), applied rather than reopened · DEC-55
-      (reach is a fact about the process, re-read from what the core answers) · DEC-13 (work that changed this host
-      stays reversible from the moment it ran). W2 builds on this: the dot (F23) and the route back (F26) are
-      transitions this table rules. W11 builds on it too: quitting is a row here.
+      and setup" section · F23 (the dot reads the traffic), moved here from W2 because the dot is being redesigned here ·
+      a new DEC-61, because two E-ONBREV rules change (see <a href="#proposals">your proposals</a>).
     </p>
 
-    <h2 id="sweep">The sweep</h2>
-    <div class="diagram" data-c="moves">
-      <pre class="mermaid">
-stateDiagram-v2
-  [*] --> checking: launch
-  checking --> setup: the read answers, no captured https row
-  checking --> list: the read answers with one
-  checking --> checking: the core is silent → "no answer" + retry
-  setup --> list: a first captured https row → "You're set up"
-  setup --> list: ‹ back to flows (ever proven)
-  list --> setup: the dot
-  list --> setup: "set up another device"
-  setup --> setup: the dot (S2)
-  checking --> setup: the dot (S1)
-  note right of list
-    in every phase: the core drops and returns,
-    and a quit can be asked
-  end note
-      </pre>
-      <div class="caption">Every move <code>App.tsx</code> can make. The two moves marked S1 and S2 exist today and should not.</div>
-    </div>
-
-    <table data-c="state">
-      <tr><th>State</th><th>Lives in</th><th>Lifetime today</th></tr>
-      <tr><td>phase, <code>since</code>, <code>chosen</code>, <code>another</code>, <code>everProven</code></td><td><code>onboardingMachine</code> via <code>App</code></td><td>the app session</td></tr>
-      <tr><td>the list's filter, known hosts, the list's rows, <code>everything</code></td><td><code>useFlows</code></td><td>the app session. The rows are re-read on a scope change after a 150 ms debounce</td></tr>
-      <tr><td>the pane (selection or composer), the draft, the cleared-absence flag</td><td><code>App</code> · <code>useDraft</code></td><td>the app session, hidden while setup shows</td></tr>
-      <tr><td>the "You're set up" banner</td><td><code>App</code></td><td>until dismissed, or until setup opens</td></tr>
-      <tr><td>probe readings and their stamp</td><td><code>App</code></td><td>the app session. Re-read on each setup entry, "check again" and window focus</td></tr>
-      <tr><td>reach, with the interface names</td><td><code>App</code></td><td>read once at mount, then only from the answers to arm and disarm</td></tr>
-      <tr><td>the platform shown</td><td><code>Onboarding</code></td><td>one screen mount, opened on <code>opensOn</code></td></tr>
-      <tr><td>action outcomes, the last route act, the task 1 address pick, guides the user toggled</td><td><code>PlatformSetup</code> · <code>GuideView</code></td><td>one screen mount</td></tr>
-      <tr><td>focus</td><td>the DOM</td><td>lost to <code>body</code> when the focused control unmounts</td></tr>
+    <h2 id="proposals">Your three proposals</h2>
+    <table data-c="proposals">
+      <tr><th>You proposed</th><th>Example</th><th>Where it goes</th></tr>
+      <tr><td><strong>P1</strong> · the dot switches between setup and the list, at any time</td><td>You are halfway through setting up your iPhone and want to look at a request. You click the dot, and the list opens. You click it again, and setup is back.</td><td>this WU</td></tr>
+      <tr><td><strong>P2</strong> · the dot gets a middle state for "nothing captured recently"</td><td>Your Mac captured traffic this morning. Since then you turned the proxy off in System Settings. Today the dot stays green all day. With P2 it turns to "quiet" a few minutes after the last capture.</td><td>this WU, together with F23 from W2</td></tr>
+      <tr><td><strong>P3</strong> · a setup step turned green by a captured flow should also expire</td><td>An iPhone's "install the certificate" step is green because a request decrypted an hour ago. Since then you deleted the profile. The step should stop claiming green.</td><td>deferred to the status WUs W3–W10, each for its own platform. Written into the epic plan so each of them picks it up</td></tr>
     </table>
-    <p class="caption">Walked by reading every effect in <code>App.tsx</code>, <code>useFlows.ts</code> and <code>Onboarding.tsx</code>, then checked by nine throwaway probes against the real <code>App</code> (<code>ui/src/w1probe.test.tsx</code>, not committed). A probe that passes shows today's behavior. Eight confirmed their finding. The ninth (F) did so only once a filter was active, because an unfiltered listing answers both scopes.</p>
+    <p class="caption">P1 and P2 change two rules from E-ONBREV: "only a captured flow shows the list" and "once capture is proven, it stays proven". The epic plan says a changed rule gets a new DEC, so DEC-61 records both changes.</p>
 
-    <h2 id="findings">Findings, for the owner to rule</h2>
+    <h2 id="dot">The dot, after this WU</h2>
+    <table data-c="dot">
+      <tr><th>Dot</th><th>When</th><th>Example</th></tr>
+      <tr><td>grey · checking</td><td>the app has just started and is asking the core what it has captured</td><td>the first second after launch</td></tr>
+      <tr><td>red · not set up</td><td>no https request has been captured since the app started</td><td>a fresh install, or a Mac whose certificate is not trusted yet</td></tr>
+      <tr><td><strong>new</strong> · quiet</td><td>https was captured earlier, but nothing in the last 5 minutes</td><td>you set up this morning, then turned the proxy off</td></tr>
+      <tr><td>green · capturing</td><td>an https request was captured in the last 5 minutes</td><td>you are browsing through Trawler right now</td></tr>
+    </table>
+    <p class="caption">Clicking the dot always switches screens: from the list it opens setup, and from setup it opens the list. The quiet state's look is chosen in the design step. The palette has only green, red and grey, so it could be a hollow green ring, for example. The 5 minutes is question Q1.</p>
+
+    <h2 id="findings">Problems found, for you to rule</h2>
+    <p>I walked every move between the two screens in the code and checked each problem with a test against the real app. Each row has an example of what a user meets today.</p>
     <table data-c="findings">
-      <tr><th>#</th><th>What the user meets today</th><th>Probe</th><th>Proposed ruling</th></tr>
-      <tr><td>S1</td><td>While the launch read is still in flight, the checking dot opens setup when clicked. Setup steps then show against a core that may never answer, which UC-ONBOARD's first two rows forbid. The launch read's answer is thrown away.</td><td>A ✓</td><td><strong>take</strong>: the dot opens setup from the list only. While checking, a click does nothing, and the launch read still decides</td></tr>
-      <tr><td>S2</td><td>In setup, the dot restarts the session in place. <code>since</code> moves to now, so this session's success line and try-task reading vanish. The platform shown and every action outcome stay, and nothing on screen says why.</td><td>B ✓</td><td><strong>take</strong>: in setup, a click keeps the session. What the dot says there is W2's (F23)</td></tr>
-      <tr><td>S3</td><td>Reach is read once, at mount. If the core was not up at launch and comes up later, the read failed. The off-machine task 1 then says "join the network" on a machine that has one, until the user presses "check again".</td><td>C ✓</td><td><strong>take</strong>: reach is re-read when the core answers after a silence, and on every setup entry</td></tr>
-      <tr><td>S4</td><td>After the core restarts, an exposure the old core armed is gone, but the header chip and task 1 still say "listening on &lt;host&gt;".</td><td>D ✓</td><td><strong>take</strong>: fixed with S3</td></tr>
-      <tr><td>S5</td><td>This app sets the proxy, and the probe cannot read it. "stop routing through Trawler" shows. The user leaves setup and comes back, and the control is gone, although the proxy this app set may still be on.</td><td>H ✓</td><td><strong>take</strong>: the last act on this machine's proxy lasts the app session, and only a conclusive reading clears it</td></tr>
-      <tr><td>S6</td><td>Re-entry paints the last session's probe reading as current and acts on it. "stop routing through Trawler" can be clicked on a reading taken before setup was left. It is the one probed-task action not held while a re-read runs. The first frame also shows the old stamp without the in-flight state.</td><td>I ✓</td><td><strong>take</strong>: an entry starts in the in-flight state. Every probed-task action, the reversal included, waits for the entry's re-read. The dated reading stays painted, so the layout does not jump</td></tr>
-      <tr><td>S7</td><td>"back to flows" and the banner's "set up another device" remove the control that was pressed, and focus falls to <code>body</code>. A keyboard user starts again from the top of the window.</td><td>E ✓</td><td><strong>take</strong>: when a move removes the focused control, focus lands on the main region, which exists in every phase</td></tr>
-      <tr><td>S8</td><td>With a filter active, the list's first paint after setup shows the rows from when setup opened, and the count agrees with them. The re-read lands 150 ms later.</td><td>F ✓ (filtered)</td><td><strong>take</strong>: a scope change reads at once, undebounced</td></tr>
-      <tr><td>S9</td><td>An interface picked in task 1 but never armed resets to the first one on re-entry.</td><td>read</td><td><strong>refute</strong>: an unacted pick in a session that ended. Once armed, task 1 shows the armed address, which lasts</td></tr>
+      <tr><th>#</th><th>Example of what happens today</th><th>Proposed fix</th><th>Rule</th></tr>
+      <tr><td>S1</td><td>You start Trawler while its core is not running. The dot is grey. You click it, and setup steps appear, as if the problem were your settings.</td><td>During the first check the dot does nothing. That check lasts 5 seconds at most (Q2)</td><td>take?</td></tr>
+      <tr><td>S2</td><td>In setup, your iPhone just worked and the screen says "You're set up". You click the dot, and the message disappears because a new setup started.</td><td>With P1, the dot in setup opens the list instead</td><td>take?</td></tr>
+      <tr><td>S3</td><td>You open the app first and start the core a minute later. You choose iPhone. The screen says "join the network your iPhone is on", although your Mac is on Wi-Fi. It is right only after you press "check again".</td><td>Read the network addresses again whenever the core comes back, and each time setup opens</td><td>take?</td></tr>
+      <tr><td>S4</td><td>You allowed devices on Wi-Fi to connect, then restarted the core. The header still says "reachable on 192.168.1.24", but the new core is not listening there.</td><td>Fixed by the same change as S3</td><td>take?</td></tr>
+      <tr><td>S5</td><td>You press "Set the system proxy", but the app cannot read the proxy back. It still offers "stop routing through Trawler". You go to the list and come back, and that button is gone while the proxy is still on.</td><td>Remember that the app set the proxy until the app closes, or until a reading says otherwise</td><td>take?</td></tr>
+      <tr><td>S6</td><td>At 10:00 setup read "proxy on". You go to the list and turn the proxy off in System Settings. At 10:30 you open setup again, and for a moment it still shows "proxy on" with a working "stop routing" button.</td><td>Setup opens in the "checking…" state, and its buttons wait until the new reading arrives</td><td>take?</td></tr>
+      <tr><td>S7</td><td>Using the keyboard, you press "back to flows". Focus jumps to the top of the window, and you tab through the header again.</td><td>After a move, focus goes to the main area of the new screen</td><td>take?</td></tr>
+      <tr><td>S8</td><td>The list is filtered to <code>api.test</code>. In setup, a request to api.test arrives. You go back, and for a split second the list does not show it.</td><td>Load the list the moment you switch, not after the short typing delay</td><td>take?</td></tr>
+      <tr><td>S9</td><td>For a phone, you pick "Ethernet" in step 1 but do not allow it yet. You leave and come back, and the pick shows "Wi-Fi" again.</td><td>No fix: nothing was allowed yet. Once allowed, the address is kept</td><td>refute?</td></tr>
     </table>
-    <p class="caption">Also checked, and found to hold: the filter, the selection with its detail pane, and the draft survive a round trip. The selected row is scrolled back into view. The banner goes when setup opens and does not come back. A re-entered session does not reveal the list on success. A stream drop in either phase keeps what is on screen under the band.</p>
+    <p class="caption">These already work and stay as they are: your filter, the selected request with its detail pane, and an unsent draft all survive a trip to setup and back. The selected row scrolls back into view.</p>
 
-    <h2 id="table">The transition table — what UC-ONBOARD will say</h2>
+    <h2 id="table">What each move does</h2>
     <table data-c="transitions">
-      <tr><th>Move</th><th>What shows</th><th>Kept</th><th>Re-read</th><th>Reset</th></tr>
-      <tr><td>launch</td><td>the shell and the checking dot, with no instruction. The dot does nothing (S1)</td><td>—</td><td><code>/flows</code> once, reach, interface names</td><td>—</td></tr>
-      <tr><td>the read answers, with no captured https row</td><td>setup, on This machine. The session starts at the read's send time</td><td>—</td><td>both probes</td><td>—</td></tr>
-      <tr><td>the read answers, with a captured https row</td><td>the list, with no banner</td><td>—</td><td>—</td><td>—</td></tr>
-      <tr><td>the core is silent at launch</td><td>"no answer" and retry, never setup. The first listing that answers decides as above</td><td>—</td><td>reach, when the core answers (S3)</td><td>—</td></tr>
-      <tr><td>a first captured https row, in setup</td><td>the list, and "You're set up" only if the row started after setup opened</td><td>the platform chosen · probe readings · reach · the last proxy act (S5)</td><td>the list's rows</td><td>the screen's action outcomes and guides. Focus goes to main (S7)</td></tr>
-      <tr><td>the dot, from the list</td><td>setup, a new session, opened on the last platform chosen</td><td>the filter · selection and pane · draft · reach · the last proxy act · the dated probe reading, shown in flight (S6)</td><td>both probes · reach (S3) · an unfiltered listing, at once (S8)</td><td>session traffic · guides, which open by the rule · action outcomes · the address pick (S9) · the banner</td></tr>
-      <tr><td>"set up another device"</td><td>as the dot, except the question stays unanswered when the last choice was This machine</td><td>as the dot</td><td>as the dot</td><td>as the dot. Focus goes to main (S7)</td></tr>
-      <tr><td>‹ back to flows</td><td>the list as it was left, the selected row in view, no banner</td><td>the filter · selection and pane · draft · the platform chosen · the last proxy act</td><td>the list's rows, at once (S8)</td><td>the session · the screen's action outcomes. Focus goes to main (S7)</td></tr>
-      <tr><td>the dot, in setup</td><td>nothing changes (S2)</td><td>everything</td><td>—</td><td>—</td></tr>
-      <tr><td>the core drops, in any phase</td><td>"no answer" in the band. What is on screen stays under it</td><td>everything</td><td>—</td><td>—</td></tr>
-      <tr><td>the core returns</td><td>the band goes. A restarted core's empty capture shows as its own absence</td><td>the session and its <code>since</code></td><td>the listing · reach (S4)</td><td>—</td></tr>
-      <tr><td>a quit is asked, in any phase</td><td>the close dialog over the current screen. W11 rules what the dialog says</td><td>everything, on cancel</td><td>—</td><td>—</td></tr>
+      <tr><th>You…</th><th>You see</th><th>Kept</th><th>Checked again</th><th>Starts fresh</th></tr>
+      <tr><td>start the app</td><td>a grey dot and nothing else, until the core answers</td><td>—</td><td>captured requests, network addresses</td><td>—</td></tr>
+      <tr><td>…and nothing https is captured</td><td>setup, for This machine</td><td>—</td><td>certificate and proxy readings</td><td>—</td></tr>
+      <tr><td>…and https was already captured</td><td>the list</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>…and the core does not answer</td><td>"no answer from …" with a retry button, never setup steps</td><td>—</td><td>everything, when it answers</td><td>—</td></tr>
+      <tr><td>capture your first https request in setup</td><td>the list, with "You're set up"</td><td>the device you chose</td><td>the list</td><td>setup's messages</td></tr>
+      <tr><td>click the dot on the list</td><td>setup, on the device you chose last</td><td>filter, selection, draft</td><td>certificate and proxy readings, network addresses</td><td>setup's messages and open sections</td></tr>
+      <tr><td>click "set up another device"</td><td>setup, with the device question empty if you last chose This machine</td><td>as the dot</td><td>as the dot</td><td>as the dot</td></tr>
+      <tr><td>click the dot or "back to flows" in setup</td><td>the list as you left it</td><td>filter, selection, draft, the device you chose</td><td>the list</td><td>setup's messages</td></tr>
+      <tr><td>lose the core</td><td>"no answer" above whatever is on screen</td><td>everything on screen</td><td>—</td><td>—</td></tr>
+      <tr><td>get the core back</td><td>the message goes</td><td>everything on screen</td><td>the list, network addresses</td><td>—</td></tr>
+      <tr><td>quit</td><td>the close dialog over the current screen. W11 rules what it says</td><td>everything, if you cancel</td><td>—</td><td>—</td></tr>
     </table>
-    <p class="caption">Switching platform inside setup is not a move between the list and setup. UC-ONBOARD already rules it ("opens each guide as the new platform's rule says"), and W1 leaves it alone.</p>
 
     <h2 id="changes">Where the changes land</h2>
     <table data-c="changes">
-      <tr><th>Where</th><th>Change</th><th>Finding</th></tr>
-      <tr><td><code>onboardingMachine.ts</code></td><td><code>re-invoke</code> is answered only in <code>proven</code>. In <code>checking</code> and <code>onboarding</code> it returns the state unchanged</td><td>S1 · S2</td></tr>
-      <tr><td><code>App.tsx</code></td><td>reach is re-read when <code>silent</code> falls from true to false, and on entering <code>onboarding</code>. The last proxy act moves up from <code>PlatformSetup</code> and is cleared by a conclusive reading. <code>probing</code> is set in the same act that dispatches the entry, so the first paint is in flight. When the phase changes and focus has left the document's controls, it lands on <code>mainRef</code></td><td>S3 · S4 · S5 · S6 · S7</td></tr>
-      <tr><td><code>Onboarding.tsx</code></td><td><code>lastRouteAct</code> and its setter arrive as props. The reversal takes <code>disabled={probing}</code>, like the two actions beside it</td><td>S5 · S6</td></tr>
-      <tr><td><code>useFlows.ts</code></td><td>a scope change calls <code>refresh</code> directly. Filter keystrokes stay debounced</td><td>S8</td></tr>
-      <tr><td><code>docs/use-cases/web-ui.html</code></td><td>UC-ONBOARD gains "moving between the list and setup": the transition table above, stated contract-level</td><td>all</td></tr>
+      <tr><th>Where</th><th>Change</th><th>For</th></tr>
+      <tr><td><code>onboardingMachine.ts</code></td><td>the dot switches phase. While checking it does nothing. <code>dotStatus</code> reads the time of the last captured https request</td><td>P1 · P2 · S1 · S2</td></tr>
+      <tr><td><code>StatusDot.tsx</code></td><td>a fourth state, quiet, built from a component design</td><td>P2</td></tr>
+      <tr><td><code>App.tsx</code></td><td>network addresses read again when the core returns and when setup opens. The app remembers the proxy it set. Setup opens in "checking…". Focus moves after a switch. A clock ticks the dot from green to quiet</td><td>S3–S7 · P2</td></tr>
+      <tr><td><code>Onboarding.tsx</code></td><td>"back to flows" always shows (Q3). "stop routing" waits for a reading like the other buttons</td><td>P1 · S5 · S6</td></tr>
+      <tr><td><code>useFlows.ts</code></td><td>switching screens loads the list at once</td><td>S8</td></tr>
+      <tr><td><code>docs/decisions/</code></td><td>DEC-61: the dot is a switch, and capture proof expires</td><td>P1 · P2</td></tr>
+      <tr><td><code>docs/use-cases/web-ui.html</code></td><td>UC-ONBOARD gains the table above and the dot's four states</td><td>all</td></tr>
     </table>
-    <p class="caption">Design: nothing new is drawn. The in-flight state and a disabled action are both existing states of the setup screen, so the design run is not reopened. <code>App.tsx</code> and <code>Onboarding.tsx</code> are declared undesigned in <code>design/v1</code>: the change is state, focus and an existing disabled variant.</p>
+    <p class="caption">Design: the quiet dot is a new look, so it gets a component design that you review before it is built. Everything else reuses states the screens already have.</p>
 
     <h2 id="expected">Expected result</h2>
     <table data-item="expected">
-      <tr><th>A reader checks…</th><th>…and sees</th></tr>
-      <tr><td>click the dot while the launch read hangs</td><td>only the shell and the checking dot. When the read answers, it decides</td></tr>
-      <tr><td>in a re-entered session that shows "You're set up", click the dot</td><td>the success line stays</td></tr>
-      <tr><td>launch with the core down, then start it, then choose iPhone</td><td>task 1 offers the machine's addresses, with no "check again" needed</td></tr>
-      <tr><td>arm reach, restart the core</td><td>the chip goes, and task 1 reads not done</td></tr>
-      <tr><td>on a probe that cannot read, set the proxy, go back, click the dot</td><td>"stop routing through Trawler" is still offered</td></tr>
-      <tr><td>re-enter setup while the re-read is slow</td><td>both probed tasks read checking from the first frame, and the reversal waits for the re-read</td></tr>
-      <tr><td>press "back to flows" or "set up another device" from the keyboard</td><td>focus on the main region, not the window's top</td></tr>
-      <tr><td>filter the list, capture a matching row in setup, go back</td><td>the new row on the list's first paint</td></tr>
-      <tr><td>UC-ONBOARD</td><td>a "moving between the list and setup" section that states the table above, each row naming its test</td></tr>
-      <tr><td><code>target/walkthrough-before-onbrvp/</code></td><td>the epic's "before" reels, filmed at <code>83df11b</code>, for W20 to set beside the "after"</td></tr>
+      <tr><th>Try this…</th><th>…and you see</th></tr>
+      <tr><td>in setup, before anything is captured, click the dot</td><td>the list, with the red dot. Click it again, and setup is back</td></tr>
+      <tr><td>capture a request, then wait 5 minutes with no traffic</td><td>the dot turns quiet. The next captured https request turns it green again</td></tr>
+      <tr><td>click the grey dot while the app is starting</td><td>nothing. The first check still decides the screen</td></tr>
+      <tr><td>start the app before the core, then choose iPhone</td><td>your Mac's addresses, with no "check again" needed</td></tr>
+      <tr><td>allow Wi-Fi devices, then restart the core</td><td>the "reachable on …" chip goes away</td></tr>
+      <tr><td>turn the proxy off outside Trawler, then open setup</td><td>"checking…" first, and then the proxy task reads not set</td></tr>
+      <tr><td>press "back to flows" with the keyboard</td><td>focus on the list</td></tr>
+      <tr><td>UC-ONBOARD and DEC-61</td><td>the table of moves and the dot's four states</td></tr>
+      <tr><td><code>target/walkthrough-before-onbrvp/</code></td><td>the epic's "before" videos, 24 reels, filmed at <code>83df11b</code></td></tr>
     </table>
 
     <h2 id="test-plan">Test plan</h2>
     <table data-item="test-plan">
-      <tr><th>Level</th><th>File</th><th>Asserts</th></tr>
-      <tr><td>unit</td><td><code>ui/src/onboardingMachine.test.ts</code></td><td><code>re-invoke</code> from <code>checking</code> and from <code>onboarding</code> returns the same state, with <code>since</code> unmoved. From <code>proven</code> it behaves as before</td></tr>
-      <tr><td>unit</td><td><code>ui/src/useFlows.test.ts</code></td><td>a scope change lists at once, with no debounce wait. A filter change still waits for the debounce</td></tr>
-      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code></td><td>one test per finding taken, each first written as the probe that shows the defect and then inverted. S1: the checking dot opens nothing, and the read then decides. S2: the dot in setup keeps the success line. S3: a core that comes up after launch has its reach read. S4: after a restart, reach is re-read and the chip goes. S5: the reversal survives back and re-entry on an unreadable probe. S6: re-entry reads checking on first paint, and the reversal is disabled until the re-read lands. S7: back and the banner's button leave focus on main. S8: a filtered list's first paint after setup holds the row captured there</td></tr>
-      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code></td><td>the rows the sweep found holding keep a named test: the existing filter, re-entry, banner and launch tests. Two are added: the selection and its pane survive a round trip, and a cancelled quit over setup leaves setup as it was</td></tr>
-      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>the reversal renders disabled while <code>probing</code>, and a <code>lastRouteAct</code> passed in offers the reversal on an unknown reading</td></tr>
-      <tr><td>e2e</td><td>—</td><td><em>waived at WU level:</em> the epic plan gives the list ⇄ setup round trips from this table to W20's <code>onboarding.spec.ts</code>, together with W2's ⋮ route back. The "before" walkthrough is filmed here as the epic's baseline</td></tr>
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>unit</td><td><code>ui/src/onboardingMachine.test.ts</code></td><td>the dot switches in both directions, proven or not, and does nothing while checking. <code>dotStatus</code> gives red, quiet and green from the last capture time, with the 5-minute edge tested on both sides</td></tr>
+      <tr><td>unit</td><td><code>ui/src/components/StatusDot.test.tsx</code></td><td>the quiet state renders its look and its words</td></tr>
+      <tr><td>unit</td><td><code>ui/src/useFlows.test.ts</code></td><td>switching screens loads at once. Typing in the filter still waits</td></tr>
+      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code></td><td>one test per row of the moves table, and one per problem taken. Each problem's test is first written to show the problem, then fixed. The dot turns quiet after 5 minutes of no capture, on a fake clock</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>"back to flows" shows before anything is proven. "stop routing" waits while a reading is in flight</td></tr>
+      <tr><td>e2e</td><td>—</td><td><em>waived at WU level:</em> the epic plan gives the list ⇄ setup round trips to W20's <code>onboarding.spec.ts</code>. The "before" walkthrough is filmed here</td></tr>
+    </table>
+
+    <h2 id="questions">Questions for you</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>My proposal</th></tr>
+      <tr><td>Q1</td><td>How long without a capture before the dot turns quiet?</td><td><strong>5 minutes.</strong> Setup's own "nothing arriving right now" uses 30 seconds, but on the list a dot that changes every half minute would flicker whenever you pause</td></tr>
+      <tr><td>Q2</td><td>"At any time": does that include the first check at launch?</td><td><strong>No.</strong> The first check lasts 5 seconds at most, and until it answers the app does not know which screen is right (S1). After that, the dot always switches</td></tr>
+      <tr><td>Q3</td><td>Should "back to flows" also show before anything is captured, to match the dot?</td><td><strong>Yes.</strong> Two controls that go to the same place should follow the same rule</td></tr>
+      <tr><td>Q4</td><td>What makes the dot green: only a decrypted https request, or plain http too?</td><td><strong>https only.</strong> Plain http proves the proxy works but not the certificate, and that is today's rule for "set up"</td></tr>
     </table>
 
     <h2 id="commits">Commits</h2>
     <table data-c="commits">
       <tr><th>#</th><th>Commit</th></tr>
-      <tr><td>1</td><td>this plan, and its link from the epic plan's W1 block</td></tr>
-      <tr><td>2</td><td>the machine guard (S1, S2) and the scope read (S8), with their unit and App tests</td></tr>
-      <tr><td>3</td><td>reach re-read (S3, S4), the lifted proxy act (S5), the in-flight entry (S6) and focus (S7), with their App and Onboarding tests</td></tr>
-      <tr><td>4</td><td>UC-ONBOARD's "moving between the list and setup" section</td></tr>
-      <tr><td>5</td><td>the result report</td></tr>
+      <tr><td>1</td><td>this plan (v1 was <code>06fe375</code>)</td></tr>
+      <tr><td>2</td><td>the component design for the quiet dot, for you to review</td></tr>
+      <tr><td>3</td><td>the dot as a switch (P1, S1, S2), the loading fix (S8), and their tests</td></tr>
+      <tr><td>4</td><td>the quiet dot (P2), built from the closed design, and its tests</td></tr>
+      <tr><td>5</td><td>S3–S7, and their tests</td></tr>
+      <tr><td>6</td><td>DEC-61, and UC-ONBOARD's new section</td></tr>
+      <tr><td>7</td><td>the result report</td></tr>
     </table>
 
   </main>
