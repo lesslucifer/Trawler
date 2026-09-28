@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU onboard-revamp/switching -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W1
+branch: wu/onboard-revamp/switching
+base: 83df11b636008268450373cb4bf87c79a82e25b2
+head: 4990f64e0f965f335d720a27289cd6dc77cfc16d
+diff_sha256: ca36284dec984f5e48191ee358a410e607c781b4f4bb7327b38d60550da706a6
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 1
+  stage_seconds:
+    finders: 518
+    verifiers: 147
+    total: 726
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 2, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "App.test.tsx:1384-1385 asserts the band's first sentence twice, so its second sentence (\"New ones will show up once it's back.\") has no unit or integration assertion"
+    waived: "the sentence is asserted at e2e, ui/e2e/specs/flows.spec.ts:524, which ran green at this tip; the repeated line checks nothing false"
+verdict: PASS
+date: 2026-09-28
