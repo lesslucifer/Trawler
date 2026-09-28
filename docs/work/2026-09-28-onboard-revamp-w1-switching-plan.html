@@ -10,15 +10,14 @@
     <div class="inner">
       <h1>E-ONBRVP.W1 — moving between the list and setup</h1>
       <p>What the app shows, keeps and checks again each time you move between the flow list and the setup screen.</p>
-      <div class="meta">v3 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W1</span> · branch <code>wu/onboard-revamp/switching</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on none</div>
+      <div class="meta">v4 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W1</span> · branch <code>wu/onboard-revamp/switching</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on none</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>What I still need from you:</strong> a ruling on S5, which is rewritten below, and a yes or no on
-      <a href="#questions">Q5 and Q6</a>. Every other point is ruled. After that comes one design round for the three
-      new looks, which you review before I build them.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("the plan is ok, now let's build W1", 2026-09-28): S5 taken, Q5 and Q6 as
+      proposed. Built; the design round (round 10 of the setup screen's design run) waits for your review.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -64,7 +63,7 @@
       <tr><td>S2</td><td>Each time setup opens, it starts counting requests from that moment, so the device you set up earlier cannot count as the new one. Today the dot in setup re-opens setup, and the counting starts again. Example: your iPhone just worked and setup says "You're set up". You click the dot, and the message goes, because counting restarted and the iPhone's request came before it.</td><td>With P1, the dot in setup opens the list, so counting never restarts in place</td><td>take, as P1</td></tr>
       <tr><td>S3</td><td>The core starts after the app, and the phone's step 1 says "join the network" on a Mac that is on Wi-Fi.</td><td>Rare, since the app ships with its core. When it happens, P5's retry applies, and the network addresses are read again once the core answers</td><td>take, as P5</td></tr>
       <tr><td>S4</td><td>You allowed Wi-Fi devices, then the core restarted. The header still says "reachable on 192.168.1.24".</td><td>When the core comes back, setup and the header refresh on their own</td><td>take</td></tr>
-      <tr><td>S5</td><td>On a Mac, "Set the system proxy" changes a macOS setting for you, then reads it back to check. If that read-back fails, the app cannot see the setting, but it remembers it just turned the proxy on and keeps offering "stop routing through Trawler". That memory is lost when you leave setup. Example: you set the proxy, the read-back fails, you go to the list and come back. The button is gone, the proxy is still on, and you must turn it off in System Settings yourself. This is rare, because the read-back rarely fails.</td><td>Keep the memory until the app quits, or until a read-back succeeds</td><td><strong>needs you</strong>: take or refute?</td></tr>
+      <tr><td>S5</td><td>On a Mac, "Set the system proxy" changes a macOS setting for you, then reads it back to check. If that read-back fails, the app cannot see the setting, but it remembers it just turned the proxy on and keeps offering "stop routing through Trawler". That memory is lost when you leave setup. Example: you set the proxy, the read-back fails, you go to the list and come back. The button is gone, the proxy is still on, and you must turn it off in System Settings yourself. This is rare, because the read-back rarely fails.</td><td>Keep the memory until the app quits, or until a read-back succeeds</td><td>take</td></tr>
       <tr><td>S6</td><td>At 10:00 setup read "proxy on". You turn the proxy off in System Settings. At 10:30 you open setup, and for a moment it still shows "proxy on" with a working "stop routing" button.</td><td>Setup opens in "checking…", and its buttons wait for the new reading</td><td>take</td></tr>
       <tr><td>S7</td><td>Using the keyboard, you press "back to flows", and focus jumps to the top of the window.</td><td>After a move, focus goes to the main area of the new screen</td><td>take</td></tr>
       <tr><td>S8</td><td>The list is filtered to <code>api.test</code>. A matching request arrives in setup. You go back, and for a split second the list does not show it.</td><td>none</td><td>refute: a split second is fine</td></tr>
@@ -133,8 +132,8 @@
       <tr><td>Q2</td><td>Does "at any time" include the first check at launch?</td><td>ruled: yes, and an empty list offers a way into setup (P4)</td></tr>
       <tr><td>Q3</td><td>Should "back to flows" also show before anything is captured?</td><td>ruled: yes</td></tr>
       <tr><td>Q4</td><td>What turns the dot green?</td><td>ruled: any captured request, http included. Plain http never turns the certificate step green</td></tr>
-      <tr><td>Q5</td><td>You click the dot during the launch check and land on the list. The check then finds nothing captured. Does the app move you to setup?</td><td>proposed: <strong>no</strong>. You chose the list, and its empty state offers "set up capture"</td></tr>
-      <tr><td>Q6</td><td>The list is open and the core stops. The list keeps its rows under "no answer". Should the list also block, like setup?</td><td>proposed: <strong>no</strong>. The rows already on screen are still true and still worth reading. Only setup blocks, because its steps cannot work without the core</td></tr>
+      <tr><td>Q5</td><td>You click the dot during the launch check and land on the list. The check then finds nothing captured. Does the app move you to setup?</td><td>ruled: <strong>no</strong>. You chose the list, and its empty state offers "set up capture"</td></tr>
+      <tr><td>Q6</td><td>The list is open and the core stops. The list keeps its rows under "no answer". Should the list also block, like setup?</td><td>ruled: <strong>no</strong>. The rows already on screen are still true and still worth reading. Only setup blocks, because its steps cannot work without the core</td></tr>
     </table>
 
     <h2 id="commits">Commits</h2>
