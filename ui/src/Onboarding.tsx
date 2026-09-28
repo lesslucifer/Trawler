@@ -98,6 +98,11 @@ interface ActionNote {
 // below it (F18). The tool's own text is still payload, and stays reachable.
 const PROMPT_CANCELLED = "The password prompt was cancelled. Try again, or follow the manual steps.";
 
+// An approval the OS could not show never reached the user, so it is not theirs
+// to have cancelled (-60007); the task's state line says what it left undone.
+const PROMPT_UNSHOWABLE =
+  "macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.";
+
 // Declining the replace-a-foreign-proxy confirm resolves nothing rather than
 // rejecting, so it is not a failure and may not be worded as one — but it is
 // still an act, and an act that leaves the screen identical to one nobody
@@ -205,13 +210,14 @@ function ActionNote({
   action: ActionHandle;
   note: ActionNotes;
 }) {
-  const refused = action.state === "failed" && action.failure?.refused === true;
+  const failed = action.state === "failed" ? action.failure : undefined;
+  const prompt = failed?.refused ? PROMPT_CANCELLED : failed?.unshowable ? PROMPT_UNSHOWABLE : null;
   const entry = note[action.state];
   const shown = typeof entry === "function" ? entry(action.named) : entry;
-  if (!shown && !refused) return null;
+  if (!shown && prompt === null) return null;
   return (
     <div data-testid={`${testId}-status`} data-state={action.state} className="pt-chrome-y">
-      <Notice tone={refused ? "mute" : shown!.tone}>{refused ? PROMPT_CANCELLED : shown!.text}</Notice>
+      <Notice tone={prompt === null ? shown!.tone : "mute"}>{prompt ?? shown!.text}</Notice>
       {action.state === "failed" && action.failure !== undefined && (
         <div className="pt-2">
           <Disclosure summary="details">

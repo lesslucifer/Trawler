@@ -769,6 +769,52 @@ describe("a password prompt the user dismissed", () => {
   });
 });
 
+// ── An approval the OS could not show (-60007) ─────────────────────────────
+// R7. The user answered the password prompt; the trust write's own approval
+// never reached them, so the screen may not say they cancelled it.
+
+describe("an approval macOS could not show", () => {
+  const unshowable = {
+    refused: false,
+    unshowable: true,
+    detail:
+      "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)",
+  };
+
+  it("says what happened, never that the user cancelled, with the tool's text one click away", async () => {
+    draw({
+      trustProbe: "untrusted",
+      proxy: { status: "none", address: null },
+      onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("set-up-status")).toHaveTextContent(
+        "macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.",
+      ),
+    );
+    expect(screen.queryByText(/cancelled/)).toBeNull();
+    fireEvent.click(screen.getByText("details"));
+    expect(disclosing(unshowable.detail)).toHaveAttribute("open");
+  });
+
+  it("opens the steps it points at, and leaves the task's state to the probe", async () => {
+    draw({
+      trustProbe: "untrusted",
+      proxy: { status: "none", address: null },
+      onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+  });
+});
+
 // ── Another proxy ───────────────────────────────────────────────────────────
 // F17. The button is about to take something away, and the user is owed its name.
 

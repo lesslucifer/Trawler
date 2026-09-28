@@ -95,8 +95,8 @@ const ARMED: ReachState = {
 };
 const UNARMED: ReachState = { ...ARMED, armed: false, proxy: null, api: null, ca_urls: null };
 
-type Outcome = "done" | "nothing" | "failed" | "refused" | "pending";
-const OUTCOMES: Outcome[] = ["done", "nothing", "failed", "refused"];
+type Outcome = "done" | "nothing" | "failed" | "refused" | "unshowable" | "pending";
+const OUTCOMES: Outcome[] = ["done", "nothing", "failed", "refused", "unshowable"];
 
 const onboarding: OnbState = {
   phase: "onboarding",
@@ -111,7 +111,11 @@ const settle = (outcome: Outcome) => () => {
   if (outcome === "pending") return new Promise<never>(() => {});
   if (outcome === "done") return Promise.resolve();
   if (outcome === "nothing") return Promise.resolve(null);
-  return Promise.reject({ refused: outcome === "refused", detail: "scripted" });
+  return Promise.reject({
+    refused: outcome === "refused",
+    unshowable: outcome === "unshowable",
+    detail: "scripted",
+  });
 };
 
 interface State {
@@ -551,7 +555,7 @@ describe("every offered action, in every outcome", () => {
     // A failure the user did not choose says "the steps below do it by hand",
     // so the task its note sits in holds the one open guide.
     const also: string[] = [];
-    if (outcome === "failed") {
+    if (outcome === "failed" || outcome === "unshowable") {
       const note = screen.getByTestId(a.status);
       const holder = note.closest('[data-testid^="task-"]');
       const opened = holder && [...holder.querySelectorAll("details[open]")].filter(topLevel);

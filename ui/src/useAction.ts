@@ -9,9 +9,12 @@ export type ActionState = "idle" | "running" | "done" | "failed" | "nothing";
 // Why an action failed, as the shell splits it: `refused` means the user was
 // asked and said no — the prompt was dismissed, the authorization denied — so
 // nothing on the machine changed and the screen owes a sentence rather than the
-// tool's text. `detail` is that text, and it stays reachable either way.
+// tool's text. `unshowable` means the OS needed an approval it could not show,
+// so the user was never asked and may not be told they said no. `detail` is the
+// tool's text, and it stays reachable either way.
 export interface ActionFailure {
   refused: boolean;
+  unshowable: boolean;
   detail: string;
 }
 
@@ -20,10 +23,18 @@ export interface ActionFailure {
 // Error, a string from the core's client — arrives as itself.
 function asFailure(err: unknown): ActionFailure {
   if (typeof err === "object" && err !== null && "detail" in err) {
-    const { refused, detail } = err as { refused?: unknown; detail?: unknown };
-    return { refused: refused === true, detail: String(detail) };
+    const { refused, unshowable, detail } = err as {
+      refused?: unknown;
+      unshowable?: unknown;
+      detail?: unknown;
+    };
+    return { refused: refused === true, unshowable: unshowable === true, detail: String(detail) };
   }
-  return { refused: false, detail: err instanceof Error ? err.message : String(err) };
+  return {
+    refused: false,
+    unshowable: false,
+    detail: err instanceof Error ? err.message : String(err),
+  };
 }
 
 // A control that runs one of these owes both halves of Button's fork D4:
