@@ -19,6 +19,7 @@ export { ImageRenderer } from "./ImageRenderer";
 export { JsonRenderer } from "./JsonRenderer";
 export { KeyValueRow } from "./KeyValueRow";
 export { MethodLabel, HTTP_METHODS } from "./MethodLabel";
+export { QrCode } from "./QrCode";
 export { Notice } from "./Notice";
 export type { NoticeTone } from "./Notice";
 export { Section } from "./Section";

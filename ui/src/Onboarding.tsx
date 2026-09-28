@@ -9,6 +9,7 @@ import {
   CopyText,
   Disclosure,
   Notice,
+  QrCode,
   Select,
   Spinner,
   StatusLine,
@@ -26,6 +27,7 @@ import {
   deviceName,
   isCommand,
   isSave,
+  isScan,
   needsReach,
   probesRoute,
   probesTrust,
@@ -297,6 +299,7 @@ function Value({ value, label, wire }: { value: string; label: string; wire: str
 function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
   const said = step.filter((part) => !isCommand(part));
   const commands = step.filter(isCommand);
+  const scans = step.filter(isScan);
   return (
     <>
       {said.length > 0 && (
@@ -321,6 +324,11 @@ function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
       )}
       {commands.map((part, i) => (
         <CommandBlock key={i} value={part.command} label={part.label} />
+      ))}
+      {scans.map((part, i) => (
+        <div key={i} data-testid="scan-code" className="pt-2">
+          <QrCode value={part.copy} label={part.label} />
+        </div>
       ))}
     </>
   );

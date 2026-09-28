@@ -76,6 +76,8 @@ export interface CopyPart {
   copy: string;
   label: string;
   wire: string;
+  // A value a phone opens by scanning rather than typing (DEC-57).
+  scan?: boolean;
 }
 export interface CommandPart {
   command: string;
@@ -89,6 +91,9 @@ export type GuideStep = readonly StepPart[];
 
 export const isCommand = (part: StepPart): part is CommandPart =>
   typeof part === "object" && "command" in part;
+
+export const isScan = (part: StepPart): part is CopyPart =>
+  typeof part === "object" && "copy" in part && part.scan === true;
 
 export const isSave = (part: StepPart): part is SavePart =>
   typeof part === "object" && "save" in part;
@@ -493,10 +498,15 @@ export function caFormatFor(id: PlatformId): CaFormat {
   return "pem";
 }
 
-function downloadStep(where: string, reach: ReachAddresses, format: CaFormat, how = ""): GuideStep {
+function downloadStep(
+  where: string,
+  reach: ReachAddresses,
+  format: CaFormat,
+  { how = "", scan = false }: { how?: string; scan?: boolean } = {},
+): GuideStep {
   return [
     `${where}, open`,
-    { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url" },
+    { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url", scan },
     `${how}— it downloads ${CA_FILES[format]}.`,
   ];
 }
@@ -583,7 +593,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              downloadStep(`On ${device}`, reach, format, "in Safari "),
+              downloadStep(`On ${device}`, reach, format, { how: "in Safari ", scan: true }),
               [
                 `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
               ],
@@ -591,7 +601,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
                 `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
               ],
             ]
-          : [downloadStep(`On ${device}`, reach, format), [androidInstall(format)]],
+          : [downloadStep(`On ${device}`, reach, format, { scan: true }), [androidInstall(format)]],
         notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
         alternatives: [carryOver],
       };

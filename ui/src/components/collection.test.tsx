@@ -39,6 +39,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   JsonRenderer: <collection.JsonRenderer text='{"a":1}' />,
   KeyValueRow: <collection.KeyValueRow name="host" value="example.com" />,
   MethodLabel: <collection.MethodLabel method="GET" />,
+  QrCode: <collection.QrCode value="http://192.168.1.24:7421/ca.cer" label="the certificate URL" />,
   Notice: <collection.Notice>nothing captured yet</collection.Notice>,
   Section: <collection.Section title="request">body</collection.Section>,
   SegmentedControl: (

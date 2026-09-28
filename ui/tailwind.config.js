@@ -97,6 +97,9 @@ export default {
       // A collapsed wire value shows three lines (text-body at leading-normal)
       // plus the room its focus ring needs inside the clipping cell.
       "value-clamp": "60px",
+      // A code a phone's camera opens from a laptop screen at arm's length: at
+      // this size a certificate URL's ~33 modules each get about 4px.
+      "scan-code": "128px",
     },
     // Heights a zone may take of the panel that hosts it. Everything else
     // derives from spacing; `zone-cap` is the one relationship the panel needs:

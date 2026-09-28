@@ -1569,3 +1569,47 @@ describe("make a request to example.com", () => {
     expect(screen.getByRole("button", { name: "the try-it command" })).toBeInTheDocument();
   });
 });
+
+// ── A code for the value a phone cannot paste (F28 · DEC-57) ────────────────
+
+describe("the certificate URL's scannable code", () => {
+  it.each([
+    ["iPhone or iPad", ARMED.ca_urls!.mobileconfig],
+    ["Android device", ARMED.ca_urls!.cer],
+  ])("on %s, sits under the step that prints the URL, and encodes exactly that URL", (device, url) => {
+    draw({ reach: ARMED });
+    pick(device);
+
+    const code = screen.getByRole("img", { name: "the certificate URL, as a code to scan" });
+    expect(code).toHaveAttribute("data-value", url);
+    const step = code.closest("li");
+    expect(step).toHaveTextContent(url);
+    expect(within(step as HTMLElement).getByRole("button", { name: "copy the certificate URL" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("scan-code")).toHaveLength(1);
+  });
+
+  it("is drawn for no value a scan cannot use — the proxy host and port stay typed", () => {
+    draw({ reach: ARMED });
+    pick("iPhone or iPad");
+
+    for (const code of screen.getAllByRole("img", { name: /as a code to scan/ }))
+      expect(code.getAttribute("data-value")).not.toBe(ARMED.proxy);
+  });
+
+  it("waits for an address — before reach is armed there is nothing to encode", () => {
+    draw({ reach: UNARMED });
+    pick("iPhone or iPad");
+
+    expect(screen.queryByTestId("scan-code")).toBeNull();
+  });
+
+  it.each(["Another Mac", "Another Windows PC", "Another Ubuntu machine", "Android emulator", "iOS Simulator"])(
+    "is not drawn for %s, which opens the URL without a camera",
+    (device) => {
+      draw({ reach: ARMED });
+      pick(device);
+
+      expect(screen.queryByTestId("scan-code")).toBeNull();
+    },
+  );
+});
