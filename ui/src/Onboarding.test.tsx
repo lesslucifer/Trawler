@@ -1518,3 +1518,54 @@ test("an Android device whose requests arrive and do not decrypt is told where i
     "something reached Trawler and did not decrypt — your Android device does not trust Trawler's certificate yet. The steps below install it. Already did? Trawler Proxy CA should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.",
   );
 });
+
+// ── The request the app makes of its own (F24 · DEC-56) ────────────────────
+
+describe("make a request to example.com", () => {
+  const REQUEST = "make a request to example.com";
+  const states = () => [1, 2, 3].map((n) => screen.getByTestId(`task-${n}`).textContent);
+
+  it("is This machine's third route, and nothing runs it but a click", () => {
+    const onMakeRequest = vi.fn(async () => {});
+    draw({ onMakeRequest });
+
+    expect(within(task(3)).getByRole("button", { name: REQUEST })).toBeInTheDocument();
+    expect(within(task(3)).getByText("or run this in a terminal")).toBeInTheDocument();
+    expect(onMakeRequest).not.toHaveBeenCalled();
+  });
+
+  it("is offered on no other device — its request travels through this host", () => {
+    draw({ onMakeRequest: vi.fn(async () => {}), reach: ARMED });
+    for (const device of ["iOS Simulator", "Android emulator", "iPhone or iPad", "Another Mac"]) {
+      pick(device);
+      expect(screen.queryByRole("button", { name: REQUEST })).toBeNull();
+    }
+  });
+
+  it("says the host answered, and leaves every task's state to what Trawler captured", async () => {
+    const onMakeRequest = vi.fn(async () => {});
+    draw({ onMakeRequest, trustProbe: "trusted", proxy: { status: "ours", address: null } });
+    const before = states();
+
+    fireEvent.click(screen.getByRole("button", { name: REQUEST }));
+
+    await waitFor(() => expect(screen.getByTestId("make-request-status")).toHaveTextContent("example.com answered."));
+    expect(onMakeRequest).toHaveBeenCalledOnce();
+    expect(states().map((t) => t?.replace(/example.com answered\./, ""))).toEqual(before);
+    expect(task(3)).toHaveTextContent("not done — waiting for the first request");
+  });
+
+  it("says a request that did not complete, and keeps the manual routes", async () => {
+    draw({ onMakeRequest: vi.fn(() => Promise.reject(new TypeError("Load failed"))) });
+
+    fireEvent.click(screen.getByRole("button", { name: REQUEST }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("make-request-status")).toHaveTextContent(
+        "the request to example.com didn't complete.",
+      ),
+    );
+    expect(screen.getByRole("button", { name: REQUEST })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "the try-it command" })).toBeInTheDocument();
+  });
+});

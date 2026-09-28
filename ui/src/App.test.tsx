@@ -2320,3 +2320,18 @@ test("a launch that moves the screen claims no focus", async () => {
 
   expect(document.activeElement).toBe(document.body);
 });
+
+// F26 · UC-4: the ⋮ menu's way into setup is the banner's, after the banner is gone.
+test("the list's menu sets up another device the way the banner does", async () => {
+  await setupSucceeds();
+  const banner = await screen.findByTestId("set-up-banner");
+  fireEvent.click(within(banner).getByRole("button", { name: "dismiss" }));
+  await waitFor(() => expect(screen.queryByTestId("set-up-banner")).toBeNull());
+
+  fireEvent.click(screen.getByRole("button", { name: "capture actions" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "set up another device" }));
+
+  await screen.findByText(QUESTION);
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("choose a device");
+  expect(screen.queryByTestId("steps")).toBeNull();
+});

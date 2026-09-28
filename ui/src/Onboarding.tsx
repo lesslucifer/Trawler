@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { REQUEST_HOST } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
@@ -145,6 +146,15 @@ const ARM_NOTE: ActionNotes = {
 const DISARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "stopping…" },
   failed: { tone: "warn", text: "couldn't stop listening." },
+};
+
+// The request's own outcome is whether it completed, never whether setup works:
+// that is the line above, read from what Trawler captured (DEC-56 rule 1). A
+// completed request still says so, or the click leaves the screen as it was.
+const MAKE_REQUEST_NOTE: ActionNotes = {
+  running: { tone: "pending", text: `waiting for ${REQUEST_HOST}…` },
+  done: { tone: "mute", text: `${REQUEST_HOST} answered.` },
+  failed: { tone: "warn", text: `the request to ${REQUEST_HOST} didn't complete.` },
 };
 
 const noAddress = (device: string) =>
@@ -731,6 +741,7 @@ interface SetupProps {
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
   onRereadReach?: () => void;
+  onMakeRequest?: () => Promise<void>;
   routeAct?: RouteAct;
   onRouteAct?: (act: RouteAct) => void;
 }
@@ -831,6 +842,7 @@ function PlatformSetup({
   onArmReach,
   onDisarmReach,
   onRereadReach,
+  onMakeRequest,
   routeAct = null,
   onRouteAct,
 }: SetupProps & { platform: PlatformId }) {
@@ -853,6 +865,9 @@ function PlatformSetup({
     onArmReach && chosen !== undefined ? () => onArmReach(chosen) : undefined,
   );
   const disarm = useAction(onDisarmReach);
+  // A request this app makes travels through this host, so it proves this
+  // host's setup and no other device's (DEC-56).
+  const request = useAction(platform === "this" ? onMakeRequest : undefined);
 
   const armed = reach.armed && reach.proxy !== null && reach.ca_urls !== null;
   const setup = setupFor(platform, {
@@ -1067,6 +1082,18 @@ function PlatformSetup({
               trustedOn: platform === "this" && trustDone ? here : null,
             }}
           />
+          {request.trigger && (
+            <div className="pt-2">
+              <Action
+                testId="make-request"
+                label={`make a request to ${REQUEST_HOST}`}
+                action={request}
+                note={MAKE_REQUEST_NOTE}
+                onClick={request.trigger}
+                frame="bare"
+              />
+            </div>
+          )}
           {setup.tryCommand && (
             <>
               <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>

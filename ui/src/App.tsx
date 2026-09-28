@@ -17,6 +17,7 @@ import { Composer } from "./Composer";
 import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
+import { makeRequest } from "./ownRequest";
 import {
   Button,
   Field,
@@ -549,6 +550,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onArmReach={armReach}
           onDisarmReach={disarmReach}
           onRereadReach={rereadReach}
+          onMakeRequest={makeRequest}
         />
       </Layout>
     );
@@ -622,6 +624,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             count={flows.length}
             onCleared={() => setClearedEmpty(true)}
             onNewRequest={() => compose(null)}
+            onSetUpDevice={setUpAnother}
           />
         </>
       }
