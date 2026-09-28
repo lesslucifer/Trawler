@@ -249,7 +249,7 @@ describe("the machine's words for itself are not on this screen", () => {
     /\bdecrypting\b/i,
   ];
 
-  // "arriving but not decrypting" is the traffic layer's own wording, kept by
+  // "not working — arriving but not decrypting" is the traffic layer's own wording, kept by
   // the design: it describes what the user's device is doing, not what the app
   // calls it. Everything else must be absent.
   const rendered = () => document.body.textContent ?? "";
@@ -291,7 +291,7 @@ describe("this machine — three tasks, and one button that does two of them", (
 
     expect(task(1)).toHaveTextContent("done — installed and trusted");
     expect(task(2)).toHaveTextContent("not done — the system proxy is off");
-    expect(task(3)).toHaveTextContent("waiting for the first request");
+    expect(task(3)).toHaveTextContent("not done — waiting for the first request");
   });
 
   it("a set proxy reads as this Mac routing through Trawler", () => {
@@ -319,7 +319,9 @@ describe("this machine — three tasks, and one button that does two of them", (
     await waitFor(() => expect(onSetUpThisMachine).toHaveBeenCalledOnce());
   });
 
-  it("while it runs, both tasks it covers say so and the button is out of reach", async () => {
+  // F19: the tasks say what is happening, the note says what the user must do,
+  // and neither says the other's sentence.
+  it("while it runs, both tasks it covers say so, the prompt is named once, and the button is out of reach", async () => {
     let release = () => {};
     const onSetUpThisMachine = vi.fn(
       () => new Promise<void>((resolve) => (release = resolve)),
@@ -328,8 +330,10 @@ describe("this machine — three tasks, and one button that does two of them", (
 
     fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
 
-    await waitFor(() => expect(task(1)).toHaveTextContent("setting up — approve the prompt…"));
-    expect(task(2)).toHaveTextContent("setting up — approve the prompt…");
+    await waitFor(() => expect(screen.getByTestId("task-1-state")).toHaveTextContent(/^⟳?setting up$/));
+    expect(screen.getByTestId("task-2-state")).toHaveTextContent(/^⟳?setting up$/);
+    expect(screen.getAllByText(/approve the prompt/)).toHaveLength(1);
+    expect(screen.getByTestId("set-up-status")).toHaveTextContent("approve the prompt that just opened");
     expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeDisabled();
     await act(async () => release());
   });
@@ -391,7 +395,7 @@ describe("this machine — three tasks, and one button that does two of them", (
       ).toBeInTheDocument(),
     );
     // And it does not claim the tasks are done — that is still the probes' word.
-    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first HTTPS request");
+    expect(task(1)).toHaveTextContent("can't check here — this Mac's first HTTPS request confirms it");
   });
 
   // Review round 4, important: the way out was kept alive by the action that
@@ -804,7 +808,7 @@ describe("the iOS Simulator", () => {
     simulator();
 
     expect(task(1)).toHaveTextContent("Trust Trawler's certificate in the Simulator");
-    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first HTTPS request");
+    expect(task(1)).toHaveTextContent("can't check here — the Simulator's first HTTPS request confirms it");
     expect(task(1)).not.toHaveTextContent("done — installed and trusted");
   });
 
@@ -906,7 +910,7 @@ describe("a phone, once it may connect", () => {
   it("says what is listening and offers the way to stop", () => {
     armedPhone();
 
-    expect(task(1)).toHaveTextContent("allowed — listening on 192.168.1.24 until Trawler quits");
+    expect(task(1)).toHaveTextContent("done — listening on 192.168.1.24 until Trawler quits");
     expect(within(task(1)).getByRole("button", { name: "stop listening" })).toBeInTheDocument();
   });
 
@@ -938,8 +942,8 @@ describe("a phone, once it may connect", () => {
   it("promises to confirm on the phone's own first request, and claims nothing now", () => {
     armedPhone();
 
-    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first HTTPS request");
-    expect(task(3)).toHaveTextContent("we'll confirm this on your iPhone's first request");
+    expect(task(2)).toHaveTextContent("can't check here — your iPhone's first HTTPS request confirms it");
+    expect(task(3)).toHaveTextContent("can't check here — your iPhone's first request confirms it");
     expect(task(2)).not.toHaveAttribute("data-dim");
   });
 
@@ -978,12 +982,12 @@ describe("a phone, once it may connect", () => {
     expect(task(3)).toHaveTextContent("done — requests reached Trawler");
     expect(within(task(3)).queryByText("2 steps")).toBeNull();
     expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
-    expect(task(2)).toHaveTextContent("not done — nothing decrypted");
+    expect(task(2)).toHaveTextContent("not working — nothing decrypted");
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
       "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it. Installed the profile already? Trust is a separate switch: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is the test.",
     );
     expect(open("On your iPhone, open")).toBe(true);
-    expect(task(4)).toHaveTextContent("arriving but not decrypting");
+    expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
   });
 });
@@ -1204,7 +1208,7 @@ describe("one reading of this machine, re-taken by one control", () => {
   it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
     draw({ os: "linux", proxy: { status: "unknown", address: null } });
 
-    expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
+    expect(task(2)).toHaveTextContent("can't check here — this machine's first request confirms it");
     expect(task(2)).not.toHaveTextContent("the system proxy is off");
   });
 
@@ -1236,7 +1240,7 @@ describe("the clock reaches the traffic reading and nothing else", () => {
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
 
     expect(zone("proven")).toBeNull();
-    expect(task(3)).toHaveTextContent("nothing arriving right now");
+    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
     expect(resolved).not.toHaveBeenCalled();
   });
 });
@@ -1245,9 +1249,9 @@ test("no step reports itself done — every state on the screen has a source", (
   draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null }, os: "linux" });
 
   // Nothing read either store on this host, so neither task may claim one was.
-  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first HTTPS request");
-  expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
-  expect(document.body.textContent).not.toMatch(/done — /);
+  expect(task(1)).toHaveTextContent("can't check here — this machine's first HTTPS request confirms it");
+  expect(task(2)).toHaveTextContent("can't check here — this machine's first request confirms it");
+  expect(document.body.textContent).not.toMatch(/(?<!not )done — /);
 });
 
 // ── What a command is, and where it sits ───────────────────────────────────

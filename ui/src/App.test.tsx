@@ -175,7 +175,7 @@ test.each(["imported", "sent"] as const)(
     const { api } = mockApi(() => [flow({ uri: "https://example.com/", source, started_at: new Date().toISOString() })]);
     render(<App api={api} />);
     expect(await screen.findByText(QUESTION)).toBeInTheDocument();
-    expect(screen.getByTestId("task-3")).toHaveTextContent("waiting for the first request");
+    expect(screen.getByTestId("task-3")).toHaveTextContent("not done — waiting for the first request");
     expect(screen.queryByTestId("flow-row")).toBeNull();
   },
 );
@@ -190,7 +190,7 @@ test("a request Trawler sent, arriving on the setup screen, neither proves setup
   fire();
   await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(1));
   expect(screen.getByText(QUESTION)).toBeInTheDocument();
-  expect(screen.getByTestId("task-3")).toHaveTextContent("waiting for the first request");
+  expect(screen.getByTestId("task-3")).toHaveTextContent("not done — waiting for the first request");
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -404,14 +404,14 @@ test("a connection event settles the last task, and warns once no request answer
     expect(screen.getByTestId("task-3")).toHaveTextContent("a connection just arrived"),
   );
   expect(screen.getByTestId("task-2")).toHaveTextContent(
-    "we'll confirm this on this Mac's first request",
+    "can't check here — this Mac's first request confirms it",
   );
 
   // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
   const realNow = Date.now;
   vi.spyOn(Date, "now").mockImplementation(() => realNow() + TUNNEL_GRACE_MS + 1_000);
   await waitFor(
-    () => expect(screen.getByTestId("task-3")).toHaveTextContent("arriving but not decrypting"),
+    () => expect(screen.getByTestId("task-3")).toHaveTextContent("not working — arriving but not decrypting"),
     { timeout: 3_000 },
   );
   // The refusal is the certificate task's to say, once its grace is spent.
@@ -627,7 +627,7 @@ test("re-entry is a new session: the first device's request opens nothing and pr
   rows = [...rows, flow({ id: "f2", uri: "https://second.test/", started_at: startedNow() })];
   fire();
   expect(await screen.findByTestId("proven")).toHaveTextContent("You're set up");
-  expect(screen.getByText("capturing traffic")).toBeInTheDocument();
+  expect(screen.getByText("done — capturing traffic")).toBeInTheDocument();
 });
 
 // P4 inverted (R7): the setup screen's reading obeyed the list's filter, so a
@@ -646,7 +646,7 @@ test("setup reads every captured row whatever the list is filtered to, and back 
   await screen.findByText(QUESTION);
   rows = [...rows, flow({ id: "f2", uri: "https://second.test/", started_at: startedNow() })];
   fire();
-  expect(await screen.findByText("capturing traffic")).toBeInTheDocument();
+  expect(await screen.findByText("done — capturing traffic")).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ q: "nomatch" }));

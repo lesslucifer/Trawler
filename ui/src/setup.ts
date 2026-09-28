@@ -258,13 +258,13 @@ function openWhere(id: PlatformId, os: HostOs): string {
 // words it will be settled by (F4). The screen never renders a verdict about a
 // machine it did not read.
 export function confirmOn(id: PlatformId, os: HostOs): string {
-  return `we'll confirm this on ${deviceName(id, os)}'s first request`;
+  return `${deviceName(id, os)}'s first request confirms it`;
 }
 
 // The certificate is settled by a request that could decrypt, and plain HTTP
 // never could, so its promise names the kind of request that will settle it.
 export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
-  return `we'll confirm this on ${deviceName(id, os)}'s first HTTPS request`;
+  return `${deviceName(id, os)}'s first HTTPS request confirms it`;
 }
 
 // The network task's title, needed before any instruction exists: it is the

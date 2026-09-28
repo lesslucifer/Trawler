@@ -338,7 +338,7 @@ function linuxThis(): Chapter[] {
         await w.script({ trust: "unreadable", proxy: "unreadable" });
         await w.recheck();
       },
-      expect: `task 2 reads "we'll confirm this on this machine's first request", not "the system proxy is off"; no "check again" row, since nothing on this host can be re-read`,
+      expect: `task 2 reads "can't check here — this machine's first request confirms it", not "the system proxy is off"; no "check again" row, since nothing on this host can be re-read`,
       findings: ["R19", "R20"],
       anchor: [task(2)],
     },
@@ -539,8 +539,8 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       },
       expect:
         platform === "ios"
-          ? `task 2 reads "not done — nothing decrypted" and its steps are open; the remedy says the profile's trust is a separate switch, names Settings → General → About → Certificate Trust Settings → Trawler Proxy CA, and makes a website in Safari the test. Step 3 says installing does not trust`
-          : `task 2 reads "not done — nothing decrypted" and its steps are open; the remedy names where Trawler Proxy CA sits in the User store, that most apps ignore a user certificate, and makes a website in Chrome the test`,
+          ? `task 2 reads "not working — nothing decrypted" and its steps are open; the remedy says the profile's trust is a separate switch, names Settings → General → About → Certificate Trust Settings → Trawler Proxy CA, and makes a website in Safari the test. Step 3 says installing does not trust`
+          : `task 2 reads "not working — nothing decrypted" and its steps are open; the remedy names where Trawler Proxy CA sits in the User store, that most apps ignore a user certificate, and makes a website in Chrome the test`,
       findings: platform === "ios" ? ["R29", "R30"] : ["R30"],
       anchor: ['[data-testid="traffic-remedy"]'],
     });

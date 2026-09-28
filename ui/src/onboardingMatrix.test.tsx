@@ -14,6 +14,7 @@ import {
 import {
   NO_TRAFFIC,
   RECENT_MS,
+  STATE_WORDS,
   TUNNEL_GRACE_MS,
   type ProxyProbe,
   type Traffic,
@@ -94,7 +95,7 @@ const ARMED: ReachState = {
 };
 const UNARMED: ReachState = { ...ARMED, armed: false, proxy: null, api: null, ca_urls: null };
 
-type Outcome = "done" | "nothing" | "failed" | "refused";
+type Outcome = "done" | "nothing" | "failed" | "refused" | "pending";
 const OUTCOMES: Outcome[] = ["done", "nothing", "failed", "refused"];
 
 const onboarding: OnbState = {
@@ -107,6 +108,7 @@ const onboarding: OnbState = {
 };
 
 const settle = (outcome: Outcome) => () => {
+  if (outcome === "pending") return new Promise<never>(() => {});
   if (outcome === "done") return Promise.resolve();
   if (outcome === "nothing") return Promise.resolve(null);
   return Promise.reject({ refused: outcome === "refused", detail: "scripted" });
@@ -179,7 +181,12 @@ interface Outline {
   tasks: TaskOutline[];
   between: string[];
   proven: string | null;
+  lines: string[];
+  notes: string[];
 }
+
+const GLYPH = /^[✓○⚠◐⟳]?\s*/;
+const textOf = (el: Element) => (el.textContent ?? "").replace(GLYPH, "").trim();
 
 const topLevel = (details: Element) => details.parentElement?.closest("details") === null;
 const summaryOf = (d: Element) =>
@@ -212,6 +219,10 @@ function outline(): Outline {
     }),
     between: children.filter((el) => !isTask(el)).map((el) => el.textContent ?? ""),
     proven: screen.queryByTestId("proven")?.textContent ?? null,
+    lines: [...steps.querySelectorAll('[data-testid$="-state"]')].map(textOf),
+    notes: [
+      ...steps.querySelectorAll('[data-testid$="-status"] > :first-child, [data-testid="traffic-remedy"]'),
+    ].map(textOf),
   };
 }
 
@@ -268,8 +279,8 @@ function expectedTrustState(s: State): RegExp {
       ? /^✓\s*done — installed and trusted$/
       : /^○\s*not done — the certificate isn't trusted$/;
   if (m.decrypted) return /^✓\s*done — a request decrypted$/;
-  if (m.refused) return /^⚠\s*not done — nothing decrypted$/;
-  return /^◐\s*we'll confirm this on .+'s first HTTPS request$/;
+  if (m.refused) return /^⚠\s*not working — nothing decrypted$/;
+  return /^◐\s*can't check here — .+'s first HTTPS request confirms it$/;
 }
 
 function expectedRouteState(s: State): RegExp {
@@ -277,14 +288,38 @@ function expectedRouteState(s: State): RegExp {
   if (!m.probesRoute)
     return m.reached
       ? /^✓\s*done — requests reached Trawler$/
-      : /^◐\s*we'll confirm this on .+'s first request$/;
+      : /^◐\s*can't check here — .+'s first request confirms it$/;
   if (s.proxy === "ours") return /^✓\s*done — .+ routes through Trawler$/;
   if (s.proxy === "foreign") return /^○\s*not done — another proxy is set$/;
   if (s.proxy === "none") return /^○\s*not done — the system proxy is off$/;
-  return /^◐\s*we'll confirm this on .+'s first request$/;
+  return /^◐\s*can't check here — .+'s first request confirms it$/;
 }
 
+// F19: a state line's reason and a note are each a sentence, and a sentence is
+// said once. A bare state word is a state, not a sentence — two tasks a write
+// covers may both read "setting up".
+function repeated(o: Outline): string[] {
+  const reasons = o.lines.map((line) => line.split(" — ").slice(1).join(" — ")).filter(Boolean);
+  const sentences = [...reasons, ...o.notes, ...o.notes.flatMap((n) => (o.lines.includes(n) ? [n] : []))];
+  return [...new Set(sentences.filter((x, i) => sentences.indexOf(x) !== i))];
+}
+
+const SAID_ONCE: Record<string, Rule> = {
+  "truth: every state line opens with a state word (F5)": (o) => {
+    const wordless = o.lines.filter(
+      (line) => !STATE_WORDS.some((w) => line === w || line.startsWith(`${w} — `)),
+    );
+    return wordless.length === 0 ? null : `lines without a state word: ${wordless.join(" | ")}`;
+  },
+
+  "place: no sentence is said twice (F19)": (o) => {
+    const twice = repeated(o);
+    return twice.length === 0 ? null : `said twice: ${twice.join(" | ")}`;
+  },
+};
+
 const RULES: Record<string, Rule> = {
+  ...SAID_ONCE,
   "truth: the certificate task reads what its reading says": (o, s) => {
     const m = model(s);
     if (m.blocked) return null;
@@ -412,9 +447,14 @@ const RULES: Record<string, Rule> = {
   },
 };
 
-function judge(s: State, extra: { reversal: boolean }, also: string[] = []) {
+function judge(
+  s: State,
+  extra: { reversal: boolean },
+  also: string[] = [],
+  rules: Record<string, Rule> = RULES,
+) {
   const o = outline();
-  const broken = Object.entries(RULES)
+  const broken = Object.entries(rules)
     .map(([name, rule]) => {
       const why = rule(o, s, extra);
       return why === null ? null : `${name} — ${why}`;
@@ -518,5 +558,25 @@ describe("every offered action, in every outcome", () => {
       if (!opened || opened.length === 0) also.push(`${a.status} points at steps it left shut`);
     }
     judge(s, { reversal }, also);
+  });
+});
+
+describe("every offered action, while it runs", () => {
+  const RUNNING = STATES.filter(
+    (s) => EVIDENCE_CLASSES.has(s.history) && !OFF_MACHINE.has(s.platform),
+  ).flatMap((s) => ACTIONS.map((a) => [`${name(s)} · ${a.label} → running`, s, a] as const));
+
+  test.each(RUNNING)("%s", async (_name, s, a) => {
+    draw(s, { [a.key]: "pending" });
+    const button = [...screen.getByTestId("steps").querySelectorAll("button")].find((b) =>
+      (b.textContent ?? "").trim().startsWith(a.label),
+    );
+    if (button === undefined) return;
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(screen.getByTestId(a.status)).toHaveAttribute("data-state", "running");
+    judge(s, { reversal: false }, [], SAID_ONCE);
   });
 });

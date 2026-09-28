@@ -469,7 +469,7 @@ describe("the words each platform is spoken about in", () => {
 
   it.each(PLATFORM_IDS)("%s promises when an unreadable state will be settled", (id) => {
     expect(confirmOn(id, "macos")).toBe(
-      `we'll confirm this on ${deviceName(id, "macos")}'s first request`,
+      `${deviceName(id, "macos")}'s first request confirms it`,
     );
   });
 

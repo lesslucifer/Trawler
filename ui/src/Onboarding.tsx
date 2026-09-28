@@ -54,6 +54,7 @@ import {
   trafficStatus,
   trustStatus,
   TUNNEL_GRACE_MS,
+  verdict,
   type ProxyReading,
   type Running,
   type StepStatusView,
@@ -102,8 +103,12 @@ const PROMPT_CANCELLED = "The password prompt was cancelled. Try again, or follo
 // still an act, and an act that leaves the screen identical to one nobody
 // performed is the outcome ARM_NOTE exists to refuse. Each names the halves it
 // did not do, because the combined action has two and the proxy one has one.
+// While a write runs, its task's state line says "setting up" and this note
+// says the one thing left to the user, so neither repeats the other (F19).
+const APPROVE = "approve the prompt that just opened";
+
 const SETUP_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "setting up — approve the prompt…" },
+  running: { tone: "pending", text: APPROVE },
   nothing: {
     tone: "mute",
     text: "nothing changed — the other proxy is still the one in use, and the certificate was not installed.",
@@ -112,7 +117,7 @@ const SETUP_NOTE: ActionNotes = {
 };
 
 const SETPROXY_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "setting the proxy — approve the prompt…" },
+  running: { tone: "pending", text: APPROVE },
   nothing: { tone: "mute", text: "nothing changed — the other proxy is still the one in use." },
   failed: { tone: "warn", text: "setting the proxy failed — the steps below do it by hand." },
 };
@@ -413,7 +418,9 @@ function TrafficState({
   const status = trafficStatus(traffic, now, certificate);
   return (
     <>
-      <StatusLine status={status} />
+      <div data-testid="traffic-state">
+        <StatusLine status={status} />
+      </div>
       {status.remedy !== undefined && (
         <div data-testid="traffic-remedy" className="pt-2">
           <Notice tone="mute">{status.remedy}</Notice>
@@ -536,11 +543,7 @@ function NetworkTask({
       <TaskStep
         n={n}
         title={title}
-        status={{
-          glyph: "✓",
-          tone: "ok",
-          short: `allowed — listening on ${host} until Trawler quits`,
-        }}
+        status={verdict("done", `listening on ${host} until Trawler quits`)}
       >
         {disarm.trigger && (
           <Action
@@ -562,11 +565,7 @@ function NetworkTask({
       n={n}
       title={title}
       why="Trawler answers on this machine only until you do"
-      status={{
-        glyph: "○",
-        tone: "muted",
-        short: "not done — Trawler answers on this machine only",
-      }}
+      status={verdict("not-done", "Trawler answers on this machine only")}
     >
       {network === undefined ? (
         <>
