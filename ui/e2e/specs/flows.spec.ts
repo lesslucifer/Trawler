@@ -525,7 +525,7 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
     expect(stated).toContain("The requests below are the last it sent.");
     // The rows were true when they arrived; the statement qualifies them.
     expect(await rowCount()).toBe(before);
-    expect(await band.$("button=retry").isExisting()).toBe(true);
+    expect(await band.$("button=try again").isExisting()).toBe(true);
   });
 
   // The in-flight window is too short to catch reliably against a dead socket —
@@ -533,8 +533,8 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
   // tests. What the real window proves is that the way out survives its own use.
   it("retry against a dead core leaves the statement standing and the button usable", async () => {
     const band = await $('[data-testid="band"]');
-    await band.$("button=retry").click();
-    await browser.waitUntil(async () => (await band.$("button=retry").isEnabled()) === true, {
+    await band.$("button=try again").click();
+    await browser.waitUntil(async () => (await band.$("button=try again").isEnabled()) === true, {
       timeout: 30_000,
       timeoutMsg: "retry never re-enabled after failing again",
     });
