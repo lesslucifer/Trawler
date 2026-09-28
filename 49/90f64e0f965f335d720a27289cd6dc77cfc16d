@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 4990f64e0f965f335d720a27289cd6dc77cfc16d
+base: 83df11b636008268450373cb4bf87c79a82e25b2
+tier: key
+signer: vuluu
+report: docs/work/2026-09-28-onboard-revamp-w1-switching-result.html
+report_sha256: ceb3810c3eef2e724c6ad691494eb7280bdac27405a78185da3c08a9f881c728
+date: 2026-09-28
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBjC7EBJ10cu08dBrG9rUVjqajeXqvC9gsJLWS2P2i3/n/tkB+NwXDRg0
+  60kcju9C2LIxjJSCnQ9p1wOzyx1KwA
+  -----END SSH SIGNATURE-----
