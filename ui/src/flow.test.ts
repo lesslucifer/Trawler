@@ -2,6 +2,7 @@ import {
   bodyText,
   hostOf,
   isDecryptedHttps,
+  lastCaptureAt,
   latestFlowTimes,
   sessionTraffic,
   statusTone,
@@ -197,6 +198,24 @@ test("latestFlowTimes reads captured rows only, of either scheme", () => {
       at("sent", "http://d.test/"),
     ]),
   ).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
+});
+
+// Q4: plain http counts for the dot, which asks only whether the proxy is in the path.
+test("lastCaptureAt is the newest captured row of either scheme, and null with none", () => {
+  const at = (iso: string, uri: string, source: FlowSummary["source"] = "captured"): FlowSummary => ({
+    ...flow,
+    started_at: iso,
+    uri,
+    source,
+  });
+
+  expect(lastCaptureAt([at("2026-07-12T10:00:00Z", "https://a.test/"), at("2026-07-12T10:00:05Z", "http://b.test/")])).toBe(
+    Date.parse("2026-07-12T10:00:05Z"),
+  );
+  expect(lastCaptureAt([at("2026-07-12T10:00:00Z", "http://a.test/")])).toBe(Date.parse("2026-07-12T10:00:00Z"));
+  expect(lastCaptureAt([at("2026-07-12T10:00:09Z", "https://a.test/")])).toBe(Date.parse("2026-07-12T10:00:09Z"));
+  expect(lastCaptureAt([at("2026-07-12T10:00:09Z", "https://a.test/", "sent")])).toBeNull();
+  expect(lastCaptureAt([])).toBeNull();
 });
 
 // hostOf answers from a memo keyed on the URI's authority, so what matters is

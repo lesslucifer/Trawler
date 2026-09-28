@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowList } from "./FlowList";
 import { apiAddr, defaultProxyAddr, type FlowSummary } from "./api";
@@ -96,6 +96,24 @@ test("an empty list with no filter names the act that fills it", () => {
   expect(screen.getByTestId("empty")).not.toHaveTextContent(
     "no flows match this filter",
   );
+});
+
+// P4: a window nothing has reached is the one empty whose remedy is setup.
+test("an empty list with nothing captured offers set up capture", () => {
+  const onSetUp = vi.fn();
+  render(<FlowList flows={[]} onSetUp={onSetUp} />);
+
+  fireEvent.click(within(screen.getByTestId("empty")).getByRole("button", { name: "set up capture" }));
+  expect(onSetUp).toHaveBeenCalledOnce();
+});
+
+test("a filtered, cleared, refused or silent empty offers no setup: none of them is a window nothing reached", () => {
+  const cases = [{ filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  for (const props of cases) {
+    const { unmount } = render(<FlowList flows={[]} onSetUp={() => {}} {...props} />);
+    expect(screen.queryByRole("button", { name: "set up capture" })).toBeNull();
+    unmount();
+  }
 });
 
 test("an empty list with a filter says the query excludes the traffic, not that none exists", () => {

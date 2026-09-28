@@ -3,11 +3,11 @@ import { afterEach, beforeAll, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import App, { LAUNCH_PATIENCE_MS } from "./App";
 import { ApiError, apiAddr, UNREACHABLE } from "./api";
-import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
+import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 import { CAPTURE_COPY } from "./CaptureControls";
 import * as files from "./body";
-import type { OnbState } from "./onboardingMachine";
+import { QUIET_AFTER_MS, type OnbState } from "./onboardingMachine";
 import { CA_FILES } from "./setup";
 import { TUNNEL_GRACE_MS } from "./verdicts";
 
@@ -21,7 +21,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 // Capture is proven only by a live decrypted flow (W4); until then App shows
 // onboarding. These list/filter tests force the proven phase to reach the list.
 const PROVEN: OnbState = {
-  phase: "proven",
+  phase: "list",
   step: "verify",
   everProven: true,
   since: null,
@@ -200,7 +200,7 @@ test("a decrypted HTTPS flow arriving live flips Verify green and reveals the li
   render(<App api={api} />);
   await screen.findByText("which device's traffic do you want to see"); // fresh launch → onboarding
 
-  rows = [flow({ uri: "https://example.com/" })];
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
   fire();
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
@@ -238,8 +238,8 @@ test("tapping the status dot re-opens setup and stays there despite the captured
   fireEvent.click(screen.getByTestId("status-dot"));
   expect(await screen.findByText("which device's traffic do you want to see")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
-  expect(screen.getByRole("button", { name: /back to flows/ })).toBeInTheDocument(); // Back to flows, since ever proven
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  expect(screen.getByRole("button", { name: "show traffic" })).toBeInTheDocument(); // Back to flows, since ever proven
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
 });
 
@@ -502,7 +502,7 @@ async function setupSucceeds() {
   render(<App api={api} initialState={ONBOARDING} />);
   await screen.findByText("which device's traffic do you want to see");
 
-  rows = [flow({ uri: "https://example.com/" })];
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
   fire();
   return api;
 }
@@ -547,7 +547,7 @@ test("re-entering setup retires the banner — leaving again is not a second suc
   fireEvent.click(screen.getByTestId("status-dot"));
   await screen.findByText("which device's traffic do you want to see");
 
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
 
   await screen.findByTestId("flow-row");
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
@@ -589,7 +589,7 @@ test("the dot opens setup on the last device chosen", async () => {
   fireEvent.click(within(banner).getByRole("button", { name: "set up another device" }));
   await screen.findByText(QUESTION);
   pickPlatform("Android emulator");
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   await screen.findByTestId("flow-row");
 
   fireEvent.click(screen.getByTestId("status-dot"));
@@ -648,7 +648,7 @@ test("setup reads every captured row whatever the list is filtered to, and back 
   fire();
   expect(await screen.findByText("capturing traffic")).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ q: "nomatch" }));
   expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.getByLabelText("filter")).toHaveValue("nomatch");
@@ -1334,6 +1334,7 @@ function shellApi(answer: () => Promise<FlowSummary[]>) {
   const listFlows = vi.fn((_filter: Filter) => answer());
   const api: TrawlerApi = apiStub({
     listFlows,
+    latestCapture: () => answer().then(() => null),
     caCertPem: async () => PEM,
     getFlow: async (id: string): Promise<FlowView> => ({
       ...flow({ id }),
@@ -1474,6 +1475,7 @@ function streamApi(answer: () => Promise<FlowSummary[]>) {
   const handlers: { current: StreamHandlers | null } = { current: null };
   const api = apiStub({
     listFlows: () => answer(),
+    latestCapture: () => answer().then(() => null),
     stream: (h: StreamHandlers) => {
       handlers.current = h;
       return () => {};
@@ -1649,21 +1651,45 @@ test("a stream that drops while the launch read hangs is the same silence", asyn
   expect(screen.queryByText(QUESTION)).toBeNull();
 });
 
-test("the setup screen states a core that stops answering above its steps", async () => {
+// P5 · S1: every task reads this machine or the core, so a silent core leaves
+// setup nothing true to instruct. Written before the fix, against the steps
+// that stayed on screen under the band.
+test("a core that stops answering blocks setup: the statement and a retry in place of every step", async () => {
   const { api, down } = streamApi(async () => []);
   render(<App api={api} />);
   await screen.findByText(QUESTION);
-  expect(screen.queryByTestId("band")).toBeNull();
 
   down();
 
-  const band = await screen.findByTestId("band");
-  expect(band).toHaveTextContent("trawler is not answering");
-  expect(band).toHaveTextContent(`no answer from ${apiAddr()}`);
-  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  const blocked = await screen.findByTestId("empty");
+  expect(blocked).toHaveTextContent("trawler is not answering");
+  expect(blocked).toHaveTextContent(`no answer from ${apiAddr()} — setup needs it running`);
+  expect(within(blocked).getByRole("button", { name: "retry" })).toBeEnabled();
+  expect(within(blocked).getByRole("button", { name: "show traffic" })).toBeEnabled();
+  expect(screen.queryByText(QUESTION)).toBeNull();
+  expect(screen.queryByTestId("steps")).toBeNull();
+  expect(screen.queryByTestId("band")).toBeNull();
 });
 
-test("a captured row that started before setup opened reveals the list, and announces nothing", async () => {
+test("retry on a blocked setup brings the steps back once the core answers", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [];
+  const { api, down } = streamApi(() => answer());
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+  answer = FAILED;
+  down();
+  await screen.findByTestId("empty");
+
+  answer = async () => [];
+  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText("trawler is not answering")).toBeNull();
+});
+
+// DEC-61: the list is a click away, so a row from before this session moves no
+// one out of a setup they are in, and proves nothing about it (DEC-60).
+test("a captured row that started before setup opened keeps setup open, and announces nothing", async () => {
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} />);
@@ -1671,8 +1697,10 @@ test("a captured row that started before setup opened reveals the list, and anno
 
   rows = [flow({ uri: "https://example.com/", started_at: new Date(Date.now() - 60_000).toISOString() })];
   fire();
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
 
-  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
+  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
@@ -2051,4 +2079,242 @@ test("new request over an open replay draft opens a fresh composer, with focus i
   const url = await screen.findByRole("textbox", { name: "url" });
   await waitFor(() => expect(url).toHaveValue(""));
   expect(url).toHaveFocus();
+});
+
+// --- E-ONBRVP.W1: moving between the list and setup --------------------------
+// One test per row of UC-ONBOARD's moves table and per problem the plan took.
+// Each problem's test was first written against the old app and failed there.
+
+const LIST_UNPROVEN: OnbState = { ...PROVEN, everProven: false };
+
+test("the dot during the launch check opens the list, and the check then moves no one (P1 · Q5 · S1)", async () => {
+  let open = () => {};
+  const gate = new Promise<void>((resolve) => (open = resolve));
+  const { api } = shellApi(() => gate.then(() => []));
+  render(<App api={api} />);
+  expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
+  expect(screen.getByRole("button", { name: "Checking… — click to show traffic" })).toBeEnabled();
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await act(async () => open());
+
+  expect(await screen.findByText("no flows yet")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "broken"));
+  expect(screen.queryByText(QUESTION)).toBeNull();
+});
+
+test("an empty list offers set up capture, which opens setup on the last device chosen (P4)", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={{ ...LIST_UNPROVEN, chosen: "ios" }} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up capture" }));
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("iPhone or iPad");
+});
+
+test("the list before anything is captured has a red dot that opens setup", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={LIST_UNPROVEN} />);
+
+  await screen.findByText("no flows yet");
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "broken"));
+  expect(screen.getByRole("button", { name: "Nothing captured yet — click to set up" })).toBeEnabled();
+});
+
+// S2: the dot in setup re-opened setup, restarting the session in place, so a
+// device that had just proved itself was no longer this session's news.
+test("the dot in setup opens the list: it never restarts the session it is in (S2)", async () => {
+  onLinuxHost();
+  let rows = [flow({ uri: "https://example.com/" })];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+  pickPlatform("iPhone or iPad");
+  rows = [...rows, flow({ id: "f2", uri: "https://phone.test/", started_at: startedNow() })];
+  fire();
+  expect(await screen.findByTestId("proven")).toHaveTextContent("You're set up");
+
+  fireEvent.click(screen.getByRole("button", { name: "Capturing — click to show traffic" }));
+
+  expect(await screen.findAllByTestId("flow-row")).toHaveLength(2);
+  expect(screen.queryByText(QUESTION)).toBeNull();
+});
+
+test("show traffic from a setup nothing has proven opens the list (Q3)", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+
+  expect(await screen.findByText("no flows yet")).toBeInTheDocument();
+});
+
+// P2 · Q1: a proxy turned off outside Trawler leaves only silence behind.
+test("the dot goes quiet 3 minutes after the newest capture, and green again on the next", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    let rows = [flow({ uri: "http://example.com/", started_at: new Date().toISOString() })];
+    const { api, fire } = mockApi(() => rows);
+    render(<App api={api} initialState={PROVEN} />);
+    await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+
+    await act(async () => vi.advanceTimersByTime(QUIET_AFTER_MS - 1_000));
+    expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected");
+    await act(async () => vi.advanceTimersByTime(1_000));
+    expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "quiet");
+    expect(screen.getByRole("button", { name: "Nothing captured in the last 3 minutes — click to set up" })).toBeEnabled();
+
+    rows = [...rows, flow({ id: "f2", uri: "http://example.com/2", started_at: new Date().toISOString() })];
+    fire();
+    await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// Q4: http proves the proxy is in the path, and nothing about the certificate.
+test("plain http turns the dot green and leaves the certificate task and setup where they are", async () => {
+  onLinuxHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+
+  rows = [flow({ uri: "http://example.com/", started_at: startedNow() })];
+  fire();
+
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText(/a request decrypted/)).toBeNull();
+  expect(screen.queryByTestId("proven")).toBeNull();
+});
+
+test("a capture the list's filter excludes still keeps the dot green", async () => {
+  const old = flow({ uri: "http://api.test/", started_at: new Date(Date.now() - 10 * QUIET_AFTER_MS).toISOString() });
+  const { api } = mockApi(() => [old]);
+  api.latestCapture = vi.fn(async () => flow({ id: "f2", uri: "http://other.test/", started_at: startedNow() }));
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.change(await screen.findByLabelText("filter"), { target: { value: "api.test" } });
+
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(1);
+});
+
+// S4: a core that restarted forgot the exposure, and the chip still claimed it.
+test("reach is read again when the core comes back: a restarted core's chip goes on its own (S4)", async () => {
+  let reachNow: ReachState = ARMED;
+  const reach = vi.fn(async () => reachNow);
+  const { api, down, up } = streamApi(async () => []);
+  api.reach = reach;
+  render(<App api={api} initialState={PROVEN} />);
+  expect(await screen.findByTestId("reach-chip")).toHaveTextContent("reachable on 192.168.1.24");
+
+  down();
+  reachNow = UNARMED;
+  up();
+
+  await waitFor(() => expect(screen.queryByTestId("reach-chip")).toBeNull());
+});
+
+// S3: a core that answered after the window read nothing for the network task.
+test("reach is read again each time setup opens (S3)", async () => {
+  const reach = vi.fn(async () => UNARMED);
+  const { api } = mockApi(() => []);
+  api.reach = reach;
+  render(<App api={api} initialState={LIST_UNPROVEN} />);
+  await screen.findByText("no flows yet");
+  const before = reach.mock.calls.length;
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+
+  await waitFor(() => expect(reach.mock.calls.length).toBe(before + 1));
+});
+
+// S5: the memory that Trawler just set the proxy lived in the setup screen, so
+// a trip to the list lost the only way out of a proxy nothing could read back.
+test("the way out of a proxy Trawler set survives a trip to the list while nothing can read it (S5)", async () => {
+  onMacHost();
+  let proxySet = false;
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "trusted";
+    if (name === "set_proxy") {
+      proxySet = true;
+      return undefined;
+    }
+    if (name === "proxy_status") {
+      if (proxySet) throw new Error("cannot read the proxy");
+      return { status: "none", address: null };
+    }
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Set the system proxy" }));
+  expect(await screen.findByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+  await screen.findByText("no flows yet");
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+
+  await waitFor(() => expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeEnabled());
+});
+
+// S6: setup re-entered on the last visit's reading with "stop routing" live,
+// though the user may have changed the setting since.
+test("setup opens in checking and holds its buttons until its own reading lands (S6)", async () => {
+  onMacHost();
+  let answerProxy: (r: unknown) => void = () => {};
+  let proxyNow: () => Promise<unknown> = async () => ({ status: "ours", address: "127.0.0.1:7420" });
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "trusted";
+    if (name === "proxy_status") return proxyNow();
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+  await screen.findByText("no flows yet");
+
+  proxyNow = () => new Promise((resolve) => (answerProxy = resolve));
+  fireEvent.click(screen.getByTestId("status-dot"));
+
+  expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeDisabled();
+  expect(screen.getByTestId("probe")).toHaveTextContent("checking this machine…");
+
+  await act(async () => answerProxy({ status: "none", address: null }));
+  expect(await screen.findByRole("button", { name: "Set the system proxy" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
+});
+
+// S7: a move left focus on a control that no longer existed.
+test("a move between the list and setup puts focus on the new screen's main area (S7)", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={LIST_UNPROVEN} />);
+  const dot = await screen.findByRole("button", { name: /click to set up/ });
+  dot.focus();
+
+  fireEvent.click(dot);
+  await screen.findByText(QUESTION);
+  expect(document.activeElement?.tagName).toBe("MAIN");
+
+  const back = screen.getByRole("button", { name: "show traffic" });
+  back.focus();
+  fireEvent.click(back);
+  await screen.findByText("no flows yet");
+  expect(document.activeElement?.tagName).toBe("MAIN");
+});
+
+test("a launch that moves the screen claims no focus", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+
+  expect(document.activeElement).toBe(document.body);
 });

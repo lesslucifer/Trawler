@@ -14,7 +14,7 @@ import { NotAnswering } from "./NotAnswering";
 import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Composer } from "./Composer";
-import { Onboarding } from "./Onboarding";
+import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
@@ -27,7 +27,16 @@ import {
   StatusDot,
   type SelectOption,
 } from "./components/index";
-import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
+import {
+  dotEvent,
+  dotOpens,
+  dotStatus,
+  initial,
+  QUIET_AFTER_MS,
+  reduce,
+  type OnbEvent,
+  type OnbState,
+} from "./onboardingMachine";
 
 // A core on this machine answers /flows in milliseconds. One that has not
 // answered the launch read in this long is silent, whether or not the read
@@ -56,6 +65,20 @@ function hostOptions(hosts: string[]): SelectOption[] {
   return [{ id: ANY, label: "any host" }, ...hosts.map((h) => ({ id: h, label: h }))];
 }
 
+// The dot changes on its own once after a capture, when it goes quiet, so the
+// shell re-renders at that edge rather than ticking.
+function useNowPast(edge: number | null): number {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (edge === null) return;
+    const left = edge - Date.now();
+    if (left <= 0) return;
+    const id = setTimeout(() => tick((n) => n + 1), left);
+    return () => clearTimeout(id);
+  }, [edge]);
+  return Date.now();
+}
+
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
@@ -65,13 +88,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     everything,
     hosts,
     lastConnectionAt,
+    lastCaptureAt,
     silent,
     answered,
     refused,
     retrying,
     retry,
     update,
-  } = useFlows(client, state.phase === "proven" ? "list" : "setup");
+  } = useFlows(client, state.phase === "list" ? "list" : "setup");
   // Which absence an empty list shows turns on WHY it is empty, and a clear is
   // the one reason no property of the list can carry. The flag disarms as soon
   // as rows return or the query moves, so it can only ever describe the emptiness
@@ -121,11 +145,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     };
   }, [client, state.phase]);
 
-  // Live check (W4): the first-ever decrypted HTTPS flow the stream brings in flips
-  // Verify green and reveals the list. Gated on !everProven so a deliberate
-  // re-invoke (help) isn't instantly bounced back by the already-captured flow;
-  // once proven, the dot and Back-to-flows drive navigation. `everything` refetches on
-  // every SSE event via useFlows, so observing it is the whole live check.
+  // Live check (W4): the first decrypted HTTPS flow of this setup session reveals
+  // the list. Gated on !everProven so setting up a second device stays in setup
+  // and says so there; `everything` refetches on every SSE event via useFlows,
+  // so observing it is the whole live check. A row from before the session
+  // proves nothing about it (DEC-60), and the list is a click away (DEC-61), so
+  // it moves no one out of a setup they asked for.
   // The moment setup succeeds used to be silent: the screen was replaced by a
   // list of one row and nothing said the thing the user had been working
   // towards had happened (F22). The banner says it on the list's first paint,
@@ -133,11 +158,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // capture already working is not news.
   const [justSetUp, setJustSetUp] = useState(false);
 
-  // A captured row that started before this setup opened still proves capture,
-  // but it is a success from before the session, and so not news (R2).
   useEffect(() => {
-    if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(everything)) {
-      setJustSetUp(isDecryptedHttps(everything, state.since ?? undefined));
+    if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(everything, state.since ?? undefined)) {
+      setJustSetUp(true);
       dispatch({ t: "captured" });
     }
   }, [state.phase, state.everProven, state.since, everything]);
@@ -222,6 +245,20 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [reachNonce, setReachNonce] = useState(0);
   const rereadReach = useCallback(() => setReachNonce((n) => n + 1), []);
 
+  // A core that restarts forgets an exposure, and one that started after the
+  // window answers addresses the launch read never got (S3, S4). So reach is
+  // re-read whenever the core comes back and whenever setup opens.
+  const wasSilent = useRef(silent);
+  useEffect(() => {
+    if (wasSilent.current && !silent) rereadReach();
+    wasSilent.current = silent;
+  }, [silent, rereadReach]);
+
+  const setupSession = state.phase === "onboarding" ? state.since : null;
+  useEffect(() => {
+    if (setupSession !== null) rereadReach();
+  }, [setupSession, rereadReach]);
+
   useEffect(() => {
     let live = true;
     client.reach().then(
@@ -276,6 +313,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const saveCa = async (format: CaFormat) => saveBody(await client.caFile(format), CA_FILES[format]);
 
+  // Held here and not by the setup screen, so leaving setup does not lose it (S5).
+  const [routeAct, setRouteAct] = useRouteMemory(proxyReading.status);
+
   // A proxy this machine already has is the user's, and replacing it is the
   // one setup action that takes something away — so it costs a confirm, the
   // same shape DEC-13 requires of every OS-touching change. A refusal resolves
@@ -323,9 +363,32 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     />
   );
 
-  const reInvoke = () => dispatch({ t: "re-invoke", at: Date.now() });
-  const setUpAnother = () => dispatch({ t: "re-invoke", at: Date.now(), another: true });
-  const dot = <StatusDot status={dotStatus(state)} onClick={reInvoke} />;
+  // A move between the list and setup leaves focus on a control that no longer
+  // exists, so the shell places it on the new screen's main area (S7). Only the
+  // user's own moves claim it: a launch or a capture moving the screen may not
+  // pull focus out of whatever the user was doing.
+  const mainRef = useRef<HTMLElement>(null);
+  const movedByUser = useRef(false);
+  const go = (e: OnbEvent) => {
+    if (reduce(state, e).phase !== state.phase) movedByUser.current = true;
+    dispatch(e);
+  };
+  useEffect(() => {
+    if (!movedByUser.current) return;
+    movedByUser.current = false;
+    mainRef.current?.focus();
+  }, [state.phase]);
+
+  const setUp = () => go({ t: "re-invoke", at: Date.now() });
+  const setUpAnother = () => go({ t: "re-invoke", at: Date.now(), another: true });
+  const now = useNowPast(lastCaptureAt == null ? null : lastCaptureAt + QUIET_AFTER_MS);
+  const dot = (
+    <StatusDot
+      status={dotStatus(lastCaptureAt, now)}
+      opens={dotOpens(state)}
+      onClick={() => go(dotEvent(state, Date.now()))}
+    />
+  );
 
   const setUpBanner = justSetUp && (
     <div data-testid="set-up-banner">
@@ -390,7 +453,6 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // stops existing — so the shell places it, keyed on the band actually leaving
   // rather than on which fetch cleared it. The list region is the target because
   // it exists whether or not the fresh listing has rows.
-  const mainRef = useRef<HTMLElement>(null);
   const retried = useRef(false);
   const retryConnection = useCallback(() => {
     retried.current = true;
@@ -442,23 +504,36 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     );
   }
 
+  // Every setup task reads this machine or the core, so a core that does not
+  // answer leaves setup nothing true to say: the statement stands in place of
+  // the steps, with the retry and the way back to the list (P5).
+  if (state.phase === "onboarding" && notAnswering) {
+    return (
+      <Layout mainRef={mainRef} header={setupHeader}>
+        {closeDialog}
+        <div data-testid="empty" className="flex flex-col items-center gap-6 p-12">
+          <NotAnswering trailing="setup needs it running" retrying={retrying} onRetry={retryConnection} />
+          <BackToFlows onBack={() => go({ t: "exit" })} />
+        </div>
+      </Layout>
+    );
+  }
+
   if (state.phase === "onboarding") {
     return (
-      <Layout
-        mainRef={mainRef}
-        header={setupHeader}
-        band={notAnswering ? <NotAnswering retrying={retrying} onRetry={retryConnection} /> : undefined}
-      >
+      <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
         <Onboarding
           state={state}
-          dispatch={dispatch}
+          dispatch={go}
           os={hostOs()}
           proxyAddr={proxyAddr}
           trustProbe={trustProbe}
           proxy={proxyReading}
           probing={probing}
           probedAt={probedAt}
+          routeAct={routeAct}
+          onRouteAct={setRouteAct}
           traffic={sessionTraffic(everything, state.since, lastConnectionAt)}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
@@ -579,6 +654,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         refused={refused}
         retrying={retrying}
         onRetry={retryConnection}
+        onSetUp={setUp}
       />
     </Layout>
   );

@@ -726,6 +726,25 @@ interface SetupProps {
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
   onRereadReach?: () => void;
+  routeAct?: RouteAct;
+  onRouteAct?: (act: RouteAct) => void;
+}
+
+export type RouteAct = "set" | "unset" | null;
+
+// Which act last changed this machine's proxy, until a probe answers for it.
+// DEC-13's inherited rule is that work which changed this host stays
+// reversible from the moment it ran, so an act that set the proxy opens the
+// way out before the re-read lands — and one that took it off closes it, since
+// until the re-read lands the old reading still says ours. A conclusive
+// reading replaces both; one that could not read replaces neither, because a
+// probe that never answers may not strand a machine this app just changed.
+export function useRouteMemory(status: ProxyReading["status"]): [RouteAct, (act: RouteAct) => void] {
+  const [act, setAct] = useState<RouteAct>(null);
+  useEffect(() => {
+    if (status !== "unknown") setAct(null);
+  }, [status]);
+  return [act, setAct];
 }
 
 // The screen asks which device before it instructs one. Asked to set up another
@@ -770,15 +789,21 @@ export function Onboarding({
           <PlatformSetup platform={platform} {...setup} />
         )}
 
-        {state.everProven && (
-          <div data-testid="back" className="px-4">
-            <Button onClick={() => dispatch({ t: "exit" })} frame="bare" tone="mute">
-              <span aria-hidden="true">‹ </span>
-              {COPY.back}
-            </Button>
-          </div>
-        )}
+        <BackToFlows onBack={() => dispatch({ t: "exit" })} />
       </div>
+    </div>
+  );
+}
+
+// The way out is on every setup screen, proven or not (DEC-61): the list is a
+// screen to switch to, not a reward for finishing.
+export function BackToFlows({ onBack }: { onBack: () => void }) {
+  return (
+    <div data-testid="back" className="px-4">
+      <Button onClick={onBack} frame="bare" tone="mute">
+        <span aria-hidden="true">‹ </span>
+        {COPY.back}
+      </Button>
     </div>
   );
 }
@@ -801,24 +826,15 @@ function PlatformSetup({
   onArmReach,
   onDisarmReach,
   onRereadReach,
+  routeAct = null,
+  onRouteAct,
 }: SetupProps & { platform: PlatformId }) {
   const [listenOn, setListenOn] = useState<string | null>(null);
 
-  // Which act last changed this machine's proxy, until a probe answers for it.
-  // DEC-13's inherited rule is that work which changed this host stays
-  // reversible from the moment it ran, so an act that set the proxy opens the
-  // way out before the re-read lands — and one that took it off closes it, since
-  // until the re-read lands the old reading still says ours. A conclusive
-  // reading replaces both; one that could not read replaces neither, because a
-  // probe that never answers may not strand a machine this app just changed.
-  const [lastRouteAct, setLastRouteAct] = useState<"set" | "unset" | null>(null);
-  useEffect(() => {
-    if (proxy.status !== "unknown") setLastRouteAct(null);
-  }, [proxy.status]);
   const routing =
     (act: "set" | "unset") =>
     <T,>(outcome: T): T => {
-      if (outcome !== null) setLastRouteAct(act);
+      if (outcome !== null) onRouteAct?.(act);
       return outcome;
     };
 
@@ -870,8 +886,8 @@ function PlatformSetup({
   const setProxyHere =
     routeHere && setUpHere === undefined && !routeDone ? setProxyAction.trigger : undefined;
   const reverseHere =
-    routeHere && unsetProxyAction.trigger && lastRouteAct !== "unset"
-      ? routeDone || lastRouteAct === "set"
+    routeHere && unsetProxyAction.trigger && routeAct !== "unset"
+      ? routeDone || routeAct === "set"
       : false;
 
   // The action the user just took outranks the re-read it triggers, and the one
@@ -974,6 +990,7 @@ function PlatformSetup({
             note={UNSETPROXY_NOTE}
             onClick={unsetProxyAction.trigger}
             frame="bare"
+            disabled={probing}
           />
         </div>
       )}

@@ -28,6 +28,48 @@ test("a live connection is stamped with its time", () => {
   expect(result.current.lastConnectionAt).toBeGreaterThanOrEqual(before);
 });
 
+// DEC-61: the dot reads the newest capture, which neither a filter nor a clear lowers.
+describe("the newest capture this window has heard of", () => {
+  const at = (id: string, iso: string, uri = "http://example.com/") => ({ ...summary(id, uri), started_at: iso });
+
+  it("is undefined until the core answers, then null with nothing captured", async () => {
+    const { result } = renderHook(() => useFlows(apiStub()));
+    expect(result.current.lastCaptureAt).toBeUndefined();
+    await waitFor(() => expect(result.current.lastCaptureAt).toBeNull());
+  });
+
+  it("reads the rows a listing brings, http or https", async () => {
+    const api = apiStub({
+      listFlows: async () => [at("f1", "2026-07-12T10:00:00Z", "https://a.test/"), at("f2", "2026-07-12T10:00:05Z")],
+    });
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T10:00:05Z")));
+  });
+
+  it("reads the core's own newest row, which a filtered listing does not bring", async () => {
+    const api = apiStub({
+      listFlows: async () => [at("f1", "2026-07-12T10:00:00Z")],
+      latestCapture: async () => at("f9", "2026-07-12T11:00:00Z", "http://other.test/"),
+    });
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T11:00:00Z")));
+  });
+
+  it("is never lowered by a later answer with less in it", async () => {
+    let rows = [at("f1", "2026-07-12T10:00:05Z")];
+    const f = fakeApi();
+    const api = apiStub({ ...f.api, listFlows: async () => rows });
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T10:00:05Z")));
+
+    rows = [];
+    await act(async () => {
+      await result.current.retry();
+    });
+    expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T10:00:05Z"));
+  });
+});
+
 // R7: the setup screen reads every captured row whatever the list is filtered
 // to, and the list, when the user comes back to it, shows only its own rows.
 describe("the setup scope reads unfiltered, and the list keeps its own rows", () => {

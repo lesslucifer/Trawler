@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { defaultProxyAddr, type FlowSource, type FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { NotAnswering } from "./NotAnswering";
-import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
+import { Button, DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
 
 const ROW_HEIGHT = 30;
 
@@ -53,6 +53,7 @@ function Absence({
   refused,
   retrying,
   onRetry,
+  onSetUp,
 }: {
   filtered: boolean;
   cleared: boolean;
@@ -60,6 +61,7 @@ function Absence({
   refused: string | null;
   retrying: boolean;
   onRetry: () => void;
+  onSetUp?: () => void;
 }) {
   const refill = `send traffic through the proxy — ${defaultProxyAddr()}`;
   return (
@@ -84,7 +86,11 @@ function Absence({
       ) : filtered ? (
         <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
       ) : (
-        <Notice detail={refill}>no flows yet</Notice>
+        // A window nothing has reached is the one empty whose remedy is setup,
+        // so it offers the way there beside the dot (P4).
+        <Notice detail={refill} action={onSetUp && <Button onClick={onSetUp}>set up capture</Button>}>
+          no flows yet
+        </Notice>
       )}
     </div>
   );
@@ -115,6 +121,7 @@ export function FlowList({
   refused = null,
   retrying = false,
   onRetry = () => {},
+  onSetUp,
 }: {
   flows: FlowSummary[];
   selectedId?: string | null;
@@ -125,6 +132,7 @@ export function FlowList({
   refused?: string | null;
   retrying?: boolean;
   onRetry?: () => void;
+  onSetUp?: () => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -180,6 +188,7 @@ export function FlowList({
           refused={refused}
           retrying={retrying}
           onRetry={onRetry}
+          onSetUp={onSetUp}
         />
       </div>
     );

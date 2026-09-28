@@ -59,7 +59,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   ),
   SourceSurface: <collection.SourceSurface text='{"a":1}' language={json()} testId="surface" />,
   Spinner: <collection.Spinner />,
-  StatusDot: <collection.StatusDot status="connected" onClick={() => {}} />,
+  StatusDot: <collection.StatusDot status="connected" opens="setup" onClick={() => {}} />,
   StatusLine: (
     <collection.StatusLine
       status={{ glyph: "✓", tone: "ok", short: "trusted" }}
@@ -150,7 +150,7 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
         <collection.Button onClick={() => {}}>send</collection.Button>
         <collection.CopyButton value="v" label="copy curl" />
         <collection.IconButton glyph="close" onClick={() => {}} />
-        <collection.StatusDot status="broken" onClick={() => {}} />
+        <collection.StatusDot status="broken" opens="setup" onClick={() => {}} />
       </>,
     );
 

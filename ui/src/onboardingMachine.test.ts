@@ -1,5 +1,15 @@
 import { expect, test } from "vitest";
-import { dotStatus, initial, opensOn, reduce, stepStatus, type OnbState } from "./onboardingMachine";
+import {
+  dotEvent,
+  dotOpens,
+  dotStatus,
+  initial,
+  opensOn,
+  QUIET_AFTER_MS,
+  reduce,
+  stepStatus,
+  type OnbState,
+} from "./onboardingMachine";
 
 const onboarding: OnbState = {
   phase: "onboarding",
@@ -41,7 +51,7 @@ test("goto jumps straight to a step, forwards or back", () => {
 
 test("captured proves capture and latches everProven", () => {
   const proven = reduce(onboarding, { t: "captured" });
-  expect(proven).toMatchObject({ phase: "proven", everProven: true });
+  expect(proven).toMatchObject({ phase: "list", everProven: true });
 });
 
 test("re-invoke re-opens onboarding from the first step", () => {
@@ -61,23 +71,41 @@ test("only opening setup moves since — a step, a proof and a way out keep it",
   expect(reduce(reduce(proven, { t: "re-invoke", at: 2_000 }), { t: "exit" }).since).toBe(2_000);
 });
 
-test("exit returns to proven only once ever proven, else no-op", () => {
-  expect(reduce(onboarding, { t: "exit" })).toBe(onboarding); // never proven → no-op
+// DEC-61: the list is a screen to switch to, not a reward for a proof.
+test("exit opens the list from setup and from the launch check, proven or not", () => {
+  expect(reduce(onboarding, { t: "exit" })).toMatchObject({ phase: "list", everProven: false });
+  expect(reduce(initial(), { t: "exit" }).phase).toBe("list");
   const reopened = reduce(reduce(onboarding, { t: "captured" }), { t: "re-invoke", at: 2_000 });
-  expect(reduce(reopened, { t: "exit" }).phase).toBe("proven");
+  expect(reduce(reopened, { t: "exit" }).phase).toBe("list");
 });
 
-test("dotStatus maps each phase", () => {
-  expect(dotStatus({ ...onboarding, phase: "checking" })).toBe("checking");
-  expect(dotStatus({ ...onboarding, phase: "onboarding" })).toBe("broken");
-  expect(dotStatus({ ...onboarding, phase: "proven" })).toBe("connected");
+// P1: the dot is a switch in every phase, so a click from setup can never
+// restart the session it is in (S2).
+test("the dot opens setup from the list, and the list from setup and the launch check", () => {
+  const list = reduce(onboarding, { t: "exit" });
+  expect(dotOpens(list)).toBe("setup");
+  expect(reduce(list, dotEvent(list, 7_000))).toMatchObject({ phase: "onboarding", since: 7_000, another: false });
+
+  expect(dotOpens(onboarding)).toBe("list");
+  expect(reduce(onboarding, dotEvent(onboarding, 7_000))).toMatchObject({ phase: "list", since: 1_000 });
+
+  expect(dotOpens(initial())).toBe("list");
+  expect(reduce(initial(), dotEvent(initial(), 7_000)).phase).toBe("list");
 });
 
-// R5: setting up a second device is not capture breaking on the first.
-test("dotStatus stays connected in setup once capture has been proven", () => {
-  const reopened = reduce(reduce(onboarding, { t: "captured" }), { t: "re-invoke", at: 2_000 });
-  expect(reopened.phase).toBe("onboarding");
-  expect(dotStatus(reopened)).toBe("connected");
+test("dotStatus is checking until the core answers, then broken with nothing captured", () => {
+  expect(dotStatus(undefined, 10_000)).toBe("checking");
+  expect(dotStatus(null, 10_000)).toBe("broken");
+});
+
+// P2 · Q1: a capture is proof for 3 minutes, and then the dot goes quiet.
+test("dotStatus is connected for 3 minutes after the newest capture, then quiet", () => {
+  const at = 1_000_000;
+  expect(dotStatus(at, at)).toBe("connected");
+  expect(dotStatus(at, at + QUIET_AFTER_MS - 1)).toBe("connected");
+  expect(dotStatus(at, at + QUIET_AFTER_MS)).toBe("quiet");
+  expect(dotStatus(at, at + 60 * QUIET_AFTER_MS)).toBe("quiet");
+  expect(QUIET_AFTER_MS).toBe(3 * 60 * 1000);
 });
 
 test("choose records the platform, and every other event keeps it", () => {

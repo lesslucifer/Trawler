@@ -311,7 +311,7 @@ function autoThis(host: Host): Chapter[] {
       id: "filtered-reentry",
       title: "Re-entry with the list filtered",
       act: async (w) => {
-        await w.click("‹ back to flows");
+        await w.click("‹ show traffic");
         await w.filter("nomatch");
         await w.dot();
         await w.hit();

@@ -6,6 +6,7 @@ import { UNREACHABLE, type TrawlerApi } from "./api";
 export function apiStub(over: Partial<TrawlerApi> = {}): TrawlerApi {
   return {
     listFlows: async () => [],
+    latestCapture: async () => null,
     exportHar: async () => ({ bytes: new Uint8Array(), filename: "trawler.har" }),
     importHar: async () => 0,
     importCurl: async () => 0,
