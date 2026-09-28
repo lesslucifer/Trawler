@@ -628,8 +628,8 @@
            statement is the whole region, so it takes Notice's region form. */
         mount("m-blocked",
           <Notice tone="warn" layout="region"
-                  detail="The app gets no answer from it at 127.0.0.1:7421. Setup needs it to read this machine and to see your requests."
-                  action={<Button onClick={noop}>retry</Button>}>Trawler's core is not answering</Notice>);
+                  detail="Setup can't check this computer or see your requests until it's back."
+                  action={<Button onClick={noop}>try again</Button>}>Trawler's capture service isn't answering</Notice>);
 
         /* The header's dot, one tenant per state and destination. It is
            StatusDot's own look, mounted: its @states own the quiet ring. */
@@ -639,8 +639,8 @@
         }
         mount("m-empty-list",
           <Notice layout="region"
-                  detail="Send a device's traffic through the proxy at 127.0.0.1:7420 and its requests show up here. Set up capture walks you through it."
-                  action={<Button onClick={noop}>set up capture</Button>}>No flows yet</Notice>);
+                  detail="Requests from your apps and devices show up here once they go through Trawler. Setup walks you through it, step by step."
+                  action={<Button onClick={noop}>set up capture</Button>}>Nothing captured yet</Notice>);
       </script>
       <p style="margin-top:16px">overflow: <strong>lead</strong>, <strong>platform</strong>, <strong>probe</strong>, <strong>done</strong>,
         <strong>blocked</strong> and <strong>back</strong> cannot overflow; <strong>steps</strong> grows with the platform and the column scrolls whole —
@@ -725,9 +725,9 @@
         <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>the Simulator</em>, …), with the steps open</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted</td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
-        <tr><td>the core not answering</td><td><em>Trawler's core is not answering</em> · <em>The app gets no answer from it at 127.0.0.1:7421. Setup needs it to read this machine and to see your requests.</em> · <em>retry</em>, then <em>Trying 127.0.0.1:7421 again…</em>. The list's own statement, centred as the whole region (<em>not answering</em>, never <em>offline</em> or <em>down</em>)</td></tr>
+        <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
-        <tr><td>the empty list</td><td><em>No flows yet</em> · <em>Send a device's traffic through the proxy at 127.0.0.1:7420 and its requests show up here. Set up capture walks you through it.</em> · <em>set up capture</em>, centred as the whole region</td></tr>
+        <tr><td>the empty list</td><td><em>Nothing captured yet</em> · <em>Requests from your apps and devices show up here once they go through Trawler. Setup walks you through it, step by step.</em> · <em>set up capture</em>, centred as the whole region</td></tr>
         <tr><td>never on this screen</td><td><em>flow</em> · <em>verdict</em> · <em>reach</em> · <em>platform</em> · <em>route</em> · <em>listen on</em></td></tr>
       </table>
     </div>
@@ -813,6 +813,7 @@
         <tr><td>Round 9, close — "LGTM as drawn", on the unanswered question with the end line and the way back beneath it, and on the dot opening on the last choice</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W3's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 10 — the owner's proposals on E-ONBRVP.W1's plan, 2026-09-28: "the dot is to switch between setup / list, user can use it to switch at any time"; a middle state for no flow captured recently (3 minutes, http included, never for the certificate); "an empty state for the flow which has a button to enter setup"; a core not running "block all setup with a retry button"; the way back before anything is captured</td><td>mockup — the way back on every screen, the core not answering in place of every task · the way in and out — the dot's four looks, each destination, and the empty list · rules · copy — <em>show traffic</em> everywhere, the blocked statement, the dot's words · given — <code>routeAct</code>, <code>everProven</code> unused · keyboard · blocked-on — the regression row closed</td><td><code>DEC-61</code> · <code>StatusDot</code> @states · lexicon <em>not answering</em> · lexicon: <em>flow</em> kept off this screen</td></tr>
         <tr><td>Round 10, on the draft — the owner, on the core not answering and the empty list: "please revise the UI, make it a clearer message &amp; centered. Same for the empty state of the list"</td><td>mockup — both take Notice's new region form, centred in their region · copy — the statement names the core and says what it blocks, the empty list says what to do and what set up capture does · proposals — <code>Notice layout="region"</code> · the list's other empties (filtered, cleared, refused) take the same form</td><td><code>Notice</code> @use · @avoid — region only where the notice is the whole region, never in the band over rows</td></tr>
+        <tr><td>Round 10, on the second draft — the owner: "rework the wording to be less technical and more user friendly"</td><td>copy — no address, port or <em>core</em> in any of them: <em>Trawler's capture service isn't answering</em>, <em>try again</em>, <em>Nothing captured yet</em>, <em>All cleared</em>, <em>Nothing matches your filter</em>, <em>“abc” isn't a status code</em> · a test holds every empty free of addresses and internals</td><td>lexicon — <em>capture service</em>, the user's word for the core</td></tr>
       </tbody>
     </table>
 

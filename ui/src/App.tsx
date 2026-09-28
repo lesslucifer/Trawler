@@ -513,7 +513,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         {closeDialog}
         <div data-testid="empty" className="flex h-full flex-col items-center justify-center gap-6 p-12">
           <NotAnswering
-            trailing="Setup needs it to read this machine and to see your requests."
+            trailing="Setup can't check this computer or see your requests until it's back."
             retrying={retrying}
             onRetry={retryConnection}
             region
@@ -567,7 +567,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         // banner is the one a user can come back to.
         notAnswering && (flows.length > 0 || refused !== null) ? (
           <NotAnswering
-            trailing={flows.length > 0 ? "The rows below are the last it sent." : undefined}
+            trailing={flows.length > 0 ? "The requests below are the last it sent. New ones will show up once it's back." : undefined}
             retrying={retrying}
             onRetry={retryConnection}
           />

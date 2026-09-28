@@ -604,7 +604,7 @@ function launchesOfThis(): Launch[] {
           id: "down",
           title: "Launch, the core not answering",
           act: (w) => w.pause(3_000),
-          expect: `"The app gets no answer from it at …" — the core is not running — and no setup steps`,
+          expect: `"Trawler's capture service isn't answering" — the core is not running — and no setup steps`,
           findings: ["R2"],
           anchor: ["header"],
         },

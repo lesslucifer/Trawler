@@ -1,4 +1,3 @@
-import { apiAddr } from "./api";
 import { Button, Notice } from "./components/index";
 
 // One statement for one cause, mounted in three places: the shell band while
@@ -21,20 +20,18 @@ export function NotAnswering({
   onRetry: () => void;
   region?: boolean;
 }) {
-  const addr = apiAddr();
-  const silence = `The app gets no answer from it at ${addr}.${trailing === undefined ? "" : ` ${trailing}`}`;
   return (
     <Notice
       tone="warn"
       layout={region ? "region" : "inline"}
-      detail={retrying ? `Trying ${addr} again…` : silence}
+      detail={retrying ? "Trying again…" : (trailing ?? "It usually comes back on its own in a moment.")}
       action={
         <Button onClick={onRetry} disabled={retrying}>
-          retry
+          try again
         </Button>
       }
     >
-      Trawler's core is not answering
+      Trawler's capture service isn't answering
     </Notice>
   );
 }
