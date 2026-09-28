@@ -2,7 +2,7 @@ schema: design/v1
 epic: E-ONBRVP
 wu: E-ONBRVP.W1
 base: 83df11b636008268450373cb4bf87c79a82e25b2
-design_sha256: 237279ee14a7357f85c59b61be634a81b9366c2b354250f4f09c499816fd974d
+design_sha256: c0f61c3c48f1abf3add15969111a0dfe0e20665760cf197386cb34068b92ec6b
 verdict: PASS
 artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
 implements:
