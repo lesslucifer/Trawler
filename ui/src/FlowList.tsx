@@ -63,13 +63,15 @@ function Absence({
   onRetry: () => void;
   onSetUp?: () => void;
 }) {
-  const refill = `send traffic through the proxy — ${defaultProxyAddr()}`;
+  const refill = `Send traffic through the proxy at ${defaultProxyAddr()} and it shows up here.`;
   return (
-    <div data-testid="empty" className="flex justify-center p-12">
+    <div data-testid="empty" className="flex flex-1 items-center justify-center p-12">
       {refused !== null ? (
         // A rejection, not a failure: the API answered and said no, so there is
         // no ⚠ and no retry — the correction is more typing.
-        <Notice detail="type a code (404) or a class (4xx)">{`${refused} is not a status`}</Notice>
+        <Notice layout="region" detail="Type a code, like 404, or a class, like 4xx.">
+          {`${refused} is not a status`}
+        </Notice>
       ) : silent ? (
         // The clause is a claim about why this region is empty, so it is made
         // only when it is this region's own truth. Neither a filter that
@@ -77,19 +79,28 @@ function Absence({
         // nothing has reached — in both the traffic arrived and something else
         // is why the region is bare.
         <NotAnswering
-          trailing={filtered || cleared ? undefined : "nothing has reached the window"}
+          trailing={filtered || cleared ? undefined : "Nothing has reached this window yet."}
+          region
           retrying={retrying}
           onRetry={onRetry}
         />
       ) : cleared ? (
-        <Notice detail={refill}>capture cleared</Notice>
+        <Notice layout="region" detail={refill}>
+          Capture cleared
+        </Notice>
       ) : filtered ? (
-        <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
+        <Notice layout="region" detail="Clear a field above to widen the search.">
+          No flows match this filter
+        </Notice>
       ) : (
         // A window nothing has reached is the one empty whose remedy is setup,
         // so it offers the way there beside the dot (P4).
-        <Notice detail={refill} action={onSetUp && <Button onClick={onSetUp}>set up capture</Button>}>
-          no flows yet
+        <Notice
+          layout="region"
+          detail={`Send a device's traffic through the proxy at ${defaultProxyAddr()} and its requests show up here. Set up capture walks you through it.`}
+          action={onSetUp && <Button onClick={onSetUp}>set up capture</Button>}
+        >
+          No flows yet
         </Notice>
       )}
     </div>

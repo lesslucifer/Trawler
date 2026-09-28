@@ -75,6 +75,7 @@
     .silent .a-st-silent{display:block}
     .silent [data-zone="lead"],.silent [data-zone="platform"],.silent [data-zone="steps"],
     .silent [data-zone="probe"],.silent [data-zone="done"]{display:none}
+    .silent [data-zone="back"]{text-align:center}
   </style>
 </head>
 <body>
@@ -623,9 +624,12 @@
            does not answer leaves nothing true to instruct: the list's own
            statement stands in place of the tasks, with its retry, and the way
            back stays under it. */
+        /* Round 10, on the draft: "make it a clearer message & centered". The
+           statement is the whole region, so it takes Notice's region form. */
         mount("m-blocked",
-          <Notice tone="warn" detail="no answer from 127.0.0.1:7421 — setup needs it running"
-                  action={<Button onClick={noop}>retry</Button>}>trawler is not answering</Notice>);
+          <Notice tone="warn" layout="region"
+                  detail="The app gets no answer from it at 127.0.0.1:7421. Setup needs it to read this machine and to see your requests."
+                  action={<Button onClick={noop}>retry</Button>}>Trawler's core is not answering</Notice>);
 
         /* The header's dot, one tenant per state and destination. It is
            StatusDot's own look, mounted: its @states own the quiet ring. */
@@ -634,8 +638,9 @@
           mount(`m-dot-${status}-list`, <StatusDot status={status} opens="list" onClick={noop} />);
         }
         mount("m-empty-list",
-          <Notice detail="send traffic through the proxy — 127.0.0.1:7420"
-                  action={<Button onClick={noop}>set up capture</Button>}>no flows yet</Notice>);
+          <Notice layout="region"
+                  detail="Send a device's traffic through the proxy at 127.0.0.1:7420 and its requests show up here. Set up capture walks you through it."
+                  action={<Button onClick={noop}>set up capture</Button>}>No flows yet</Notice>);
       </script>
       <p style="margin-top:16px">overflow: <strong>lead</strong>, <strong>platform</strong>, <strong>probe</strong>, <strong>done</strong>,
         <strong>blocked</strong> and <strong>back</strong> cannot overflow; <strong>steps</strong> grows with the platform and the column scrolls whole —
@@ -656,7 +661,7 @@
         <tr><td>capturing</td><td><span id="m-dot-connected-setup"></span></td><td><span id="m-dot-connected-list"></span></td><td>a request, http or https, in the last 3 minutes</td></tr>
       </table>
       <p class="kd">The list with nothing captured, the other way in:</p>
-      <div class="app"><div class="bg-canvas p-8 font-ui text-body text-ink-body" id="m-empty-list"></div></div>
+      <div class="app"><div class="flex justify-center bg-canvas p-12 font-ui text-body text-ink-body" id="m-empty-list"></div></div>
 
       <h3 id="rules">Rules</h3>
       <table data-c="rules-table">
@@ -720,9 +725,9 @@
         <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>the Simulator</em>, …), with the steps open</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted</td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
-        <tr><td>the core not answering</td><td><em>trawler is not answering</em> · <em>no answer from 127.0.0.1:7421 — setup needs it running</em> · <em>retry</em>, the list's own words (<em>not answering</em>, never <em>offline</em> or <em>down</em>)</td></tr>
+        <tr><td>the core not answering</td><td><em>Trawler's core is not answering</em> · <em>The app gets no answer from it at 127.0.0.1:7421. Setup needs it to read this machine and to see your requests.</em> · <em>retry</em>, then <em>Trying 127.0.0.1:7421 again…</em>. The list's own statement, centred as the whole region (<em>not answering</em>, never <em>offline</em> or <em>down</em>)</td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
-        <tr><td>the empty list</td><td><em>no flows yet</em> · <em>send traffic through the proxy — 127.0.0.1:7420</em> · <em>set up capture</em></td></tr>
+        <tr><td>the empty list</td><td><em>No flows yet</em> · <em>Send a device's traffic through the proxy at 127.0.0.1:7420 and its requests show up here. Set up capture walks you through it.</em> · <em>set up capture</em>, centred as the whole region</td></tr>
         <tr><td>never on this screen</td><td><em>flow</em> · <em>verdict</em> · <em>reach</em> · <em>platform</em> · <em>route</em> · <em>listen on</em></td></tr>
       </table>
     </div>
@@ -771,6 +776,7 @@
       <tr><td>component</td><td><code>CommandBlock</code> — one command on its own surface, with copy</td><td>built</td><td><code>ui/src/components/CommandBlock.tsx</code></td></tr>
       <tr><td>component extension</td><td><code>Notice tone="pending"</code></td><td>built</td><td><code>ui/src/components/Notice.tsx</code></td></tr>
       <tr><td>tokens</td><td><code>max-w-reading</code> · <code>w-picker</code></td><td>built</td><td><code>ui/tailwind.config.js</code></td></tr>
+      <tr><td>component extension</td><td><code>Notice layout="region"</code> — the same parts stacked and centred, a 14px sentence, for a notice that is the whole of its region (round 10)</td><td>built</td><td><code>ui/src/components/Notice.tsx</code></td></tr>
       <tr><td>component</td><td><code>ChoiceTiles</code></td><td>withdrawn in round 5 — the picker is a <code>Select</code></td><td>—</td></tr>
       <tr><td>lexicon</td><td><em>arriving</em> · <em>platform</em>, and <em>flow</em> kept off this screen</td><td>proposed</td><td>rulebook lexicon</td></tr>
     </table>
@@ -806,6 +812,7 @@
         <tr><td>Round 9 — the review of 2026-09-25: coming back to set up a second device opened no steps, said "You're set up" at once, turned the dot red, answered this machine and obeyed the list's filter (R4–R7). The epic plan's Q2 proposed what "set up another device" opens on</td><td>mockup — the question unanswered, with nothing below it but the end and the way back · rules — the session, the dot, the way in · copy — <em>choose a device</em> · given — <code>chosen</code> · <code>another</code>, and this session's traffic</td><td>UC-ONBOARD's re-entry row · <code>DEC-33</code> — a reading from before the session is not this session's evidence</td></tr>
         <tr><td>Round 9, close — "LGTM as drawn", on the unanswered question with the end line and the way back beneath it, and on the dot opening on the last choice</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W3's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 10 — the owner's proposals on E-ONBRVP.W1's plan, 2026-09-28: "the dot is to switch between setup / list, user can use it to switch at any time"; a middle state for no flow captured recently (3 minutes, http included, never for the certificate); "an empty state for the flow which has a button to enter setup"; a core not running "block all setup with a retry button"; the way back before anything is captured</td><td>mockup — the way back on every screen, the core not answering in place of every task · the way in and out — the dot's four looks, each destination, and the empty list · rules · copy — <em>show traffic</em> everywhere, the blocked statement, the dot's words · given — <code>routeAct</code>, <code>everProven</code> unused · keyboard · blocked-on — the regression row closed</td><td><code>DEC-61</code> · <code>StatusDot</code> @states · lexicon <em>not answering</em> · lexicon: <em>flow</em> kept off this screen</td></tr>
+        <tr><td>Round 10, on the draft — the owner, on the core not answering and the empty list: "please revise the UI, make it a clearer message &amp; centered. Same for the empty state of the list"</td><td>mockup — both take Notice's new region form, centred in their region · copy — the statement names the core and says what it blocks, the empty list says what to do and what set up capture does · proposals — <code>Notice layout="region"</code> · the list's other empties (filtered, cleared, refused) take the same form</td><td><code>Notice</code> @use · @avoid — region only where the notice is the whole region, never in the band over rows</td></tr>
       </tbody>
     </table>
 

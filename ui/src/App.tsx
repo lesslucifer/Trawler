@@ -496,8 +496,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
         {launchUnanswered && (
-          <div data-testid="empty" className="flex justify-center p-12">
-            <NotAnswering retrying={retrying} onRetry={retryConnection} />
+          <div data-testid="empty" className="flex h-full items-center justify-center p-12">
+            <NotAnswering retrying={retrying} onRetry={retryConnection} region />
           </div>
         )}
       </Layout>
@@ -511,8 +511,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
-        <div data-testid="empty" className="flex flex-col items-center gap-6 p-12">
-          <NotAnswering trailing="setup needs it running" retrying={retrying} onRetry={retryConnection} />
+        <div data-testid="empty" className="flex h-full flex-col items-center justify-center gap-6 p-12">
+          <NotAnswering
+            trailing="Setup needs it to read this machine and to see your requests."
+            retrying={retrying}
+            onRetry={retryConnection}
+            region
+          />
           <BackToFlows onBack={() => go({ t: "exit" })} />
         </div>
       </Layout>
@@ -562,7 +567,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         // banner is the one a user can come back to.
         notAnswering && (flows.length > 0 || refused !== null) ? (
           <NotAnswering
-            trailing={flows.length > 0 ? "the rows below are the last it sent" : undefined}
+            trailing={flows.length > 0 ? "The rows below are the last it sent." : undefined}
             retrying={retrying}
             onRetry={retryConnection}
           />

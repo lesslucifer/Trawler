@@ -122,8 +122,8 @@ describe("UC-4 — watch live traffic in the native app", () => {
     const empty = await $('[data-testid="empty"]');
     await empty.waitForExist({ timeout: 15_000 });
     const text = await empty.getText();
-    expect(text).toContain("no flows match this filter");
-    expect(text).not.toContain("no flows yet");
+    expect(text).toContain("No flows match this filter");
+    expect(text).not.toContain("No flows yet");
   });
 
   it("clearing the filter brings the rows back", async () => {
@@ -203,8 +203,8 @@ describe("UC-4 — watch live traffic in the native app", () => {
     await empty.waitForExist({ timeout: 15_000 });
     const stated = await empty.getText();
     expect(stated).toContain("4xz is not a status");
-    expect(stated).not.toContain("no flows match this filter");
-    expect(stated).not.toContain("trawler is not answering");
+    expect(stated).not.toContain("No flows match this filter");
+    expect(stated).not.toContain("Trawler's core is not answering");
 
     await $('[aria-label="status"]').clearValue();
     await browser.waitUntil(async () => (await rowCount()) >= 3, {
@@ -490,8 +490,8 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
     const empty = await $('[data-testid="empty"]');
     await empty.waitForExist({ timeout: 15_000 });
     const text = await empty.getText();
-    expect(text).toContain("no flows match this filter");
-    expect(text).not.toContain("trawler is not answering");
+    expect(text).toContain("No flows match this filter");
+    expect(text).not.toContain("Trawler's core is not answering");
 
     await $('[aria-label="filter"]').clearValue();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
@@ -514,15 +514,15 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
     // band to SAY this, never merely to exist — existence is satisfied by the
     // banner and would read it instead.
     const band = await $('[data-testid="band"]');
-    await browser.waitUntil(async () => (await band.getText()).includes("trawler is not answering"), {
+    await browser.waitUntil(async () => (await band.getText()).includes("Trawler's core is not answering"), {
       timeout: 30_000,
       timeoutMsg: "the band never stated that the core stopped answering",
     });
 
     const stated = await band.getText();
-    expect(stated).toContain("trawler is not answering");
-    expect(stated).toContain("no answer from");
-    expect(stated).toContain("the rows below are the last it sent");
+    expect(stated).toContain("Trawler's core is not answering");
+    expect(stated).toContain("The app gets no answer from it at");
+    expect(stated).toContain("The rows below are the last it sent.");
     // The rows were true when they arrived; the statement qualifies them.
     expect(await rowCount()).toBe(before);
     expect(await band.$("button=retry").isExisting()).toBe(true);
@@ -538,6 +538,6 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
       timeout: 30_000,
       timeoutMsg: "retry never re-enabled after failing again",
     });
-    expect(await band.getText()).toContain("trawler is not answering");
+    expect(await band.getText()).toContain("Trawler's core is not answering");
   });
 });

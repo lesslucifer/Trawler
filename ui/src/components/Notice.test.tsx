@@ -109,4 +109,32 @@ describe("Notice", () => {
     render(<Notice tone="warn">could not load</Notice>);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("region stacks and centres its parts, for a notice that is the whole of its region", () => {
+    render(
+      <Notice layout="region" tone="warn" detail="why, in a sentence" action={<Button onClick={() => {}}>retry</Button>}>
+        what happened
+      </Notice>,
+    );
+
+    const notice = screen.getByText("what happened").closest("[data-layout]")!;
+    expect(notice).toHaveAttribute("data-layout", "region");
+    expect(notice.className).toContain("items-center");
+    expect(notice.className).toContain("text-center");
+    expect(screen.getByText("what happened").className).toContain("text-note");
+    expect(screen.getByText("what happened")).toHaveTextContent("⚠");
+    expect(screen.getByText("why, in a sentence").className).toContain("max-w-reading");
+    expect(screen.getByRole("button", { name: "retry" }).parentElement!.className).toContain("justify-center");
+  });
+
+  it("region reads its mute sentence at ink, so a region's one statement reads first", () => {
+    render(<Notice layout="region">nothing here</Notice>);
+    expect(screen.getByText("nothing here").className).toContain("text-ink");
+    expect(screen.getByText("nothing here").className).not.toContain("text-ink-mute");
+  });
+
+  it("inline stays the default", () => {
+    render(<Notice>a line</Notice>);
+    expect(screen.getByText("a line").closest("[data-tone]")).not.toHaveAttribute("data-layout");
+  });
 });
