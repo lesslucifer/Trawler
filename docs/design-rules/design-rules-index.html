@@ -85,7 +85,7 @@ flowchart LR
     <table data-c="chromatic-meanings-table">
       <thead><tr><th>Token</th><th>Fixed meaning</th><th>Mapping owned by</th></tr></thead>
       <tbody>
-        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation · a request that only reads (GET) · <strong>a connection proven live</strong></td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone · <code>StatusDot</code> lifecycle→fill</td></tr>
+        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation · a request that only reads (GET) · <strong>a connection proven live</strong>, and as a ring with no fill, one proven earlier and quiet now (<a href="../decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html">DEC-61</a>)</td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone · <code>StatusDot</code> lifecycle→fill, and quiet→ring</td></tr>
         <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · a request that destroys (DELETE) · <strong>a connection that is not capturing</strong></td><td><code>StatusPill</code> · <code>MethodLabel</code> · <code>StatusDot</code></td></tr>
         <tr><td><code>create</code></td><td>a request that brings a resource into being (POST)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>replace</code></td><td>a request that overwrites a resource whole (PUT)</td><td><code>MethodLabel</code> verb→tone</td></tr>

@@ -371,7 +371,9 @@
       <strong>do the work for the user in the common case, tell the truth in every case, and prove success
       only by real capture.</strong></p>
       <p><strong>No promise narrowed in the rebuild.</strong> The probes still answer for this machine and
-      nothing else; a decrypted flow is still the only thing that reveals the list; the certificate save
+      nothing else; a decrypted flow is still the only thing that moves setup to the list on its own
+      (<a href="../decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html">DEC-61</a>: the user
+      can switch at any time); the certificate save
       still reports what actually happened; the quit dialog is untouched.
       <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>'s two layers and
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>'s one-confirm-per-host-change
@@ -387,19 +389,55 @@
         <tr><th>Moment</th><th>The screen</th></tr>
         <tr><td>the launch read is in flight</td><td>the shell and the checking dot, with no instruction</td></tr>
         <tr><td>the core does not answer</td><td>"no answer from &lt;address&gt;" and a retry, never setup
-          steps</td></tr>
+          steps. In setup, the statement stands in place of every task, with the way back</td></tr>
         <tr><td>the core answers with no captured https row</td><td>setup, answered <em>this machine</em>.
           Imported and sent rows count for nothing</td></tr>
-        <tr><td>a captured https row arrives</td><td>the list, and "You're set up" only for a row that started
-          after setup opened: a launch that finds capture already working is not news</td></tr>
-        <tr><td>the dot, once capture is proven</td><td>a new session, opened on the last platform chosen. The
-          dot stays <em>connected</em></td></tr>
+        <tr><td>a captured https row is there at launch</td><td>the list, and no announcement: a launch that finds
+          capture already working is not news</td></tr>
+        <tr><td>a captured https row that started in this session arrives, before capture was ever proven</td><td>the
+          list, with "You're set up". A row from before the session moves no one</td></tr>
+        <tr><td>the dot, or "set up capture" on an empty list</td><td>a new session, opened on the last platform
+          chosen</td></tr>
         <tr><td>"set up another device"</td><td>a new session, opened on the last platform chosen if it was not
           this machine. Otherwise the question is unanswered and no task shows until one is chosen</td></tr>
       </table>
       <p>A session reads only captured rows and tunnels that started after it opened, unfiltered by whatever
       the list is filtered to. So the first device's success is never the second device's, and the list's
       view is never the screen's evidence.</p>
+    </div>
+
+    <h3 id="uc-onboard-moves">Moving between the list and setup</h3>
+    <div data-c="uc-onboard-moves">
+      <p><strong>The header's dot is a switch, in every phase</strong>
+      (<a href="../decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html">DEC-61</a>): the list opens
+      setup, and setup or the launch check opens the list. It reads the newest request the proxy captured.</p>
+      <table>
+        <tr><th>Dot</th><th>When</th></tr>
+        <tr><td>checking (grey)</td><td>the core has not answered yet</td></tr>
+        <tr><td>not set up (red)</td><td>nothing captured since the app started</td></tr>
+        <tr><td>quiet (a hollow green ring)</td><td>captured before, nothing in the last 3 minutes</td></tr>
+        <tr><td>capturing (green)</td><td>a request, http or https, captured in the last 3 minutes. http never
+          settles the certificate task</td></tr>
+      </table>
+      <table>
+        <tr><th>You…</th><th>You see</th><th>Kept</th><th>Checked again</th><th>Starts fresh</th></tr>
+        <tr><td>start the app</td><td>a grey dot until the core answers. The dot already switches, and a click
+          ends the launch check</td><td>—</td><td>captured requests, network addresses</td><td>—</td></tr>
+        <tr><td>click the dot, or "set up capture" on an empty list</td><td>setup, on the last device chosen</td>
+          <td>filter, selection, draft, the last proxy act while no reading answers it</td><td>network addresses,
+          and this machine's readings, with the tasks checking until they land</td><td>setup's messages and open
+          guides, and the session</td></tr>
+        <tr><td>click "set up another device"</td><td>as the dot, with the question unanswered if the last device
+          was this machine</td><td>as the dot</td><td>as the dot</td><td>as the dot</td></tr>
+        <tr><td>click the dot or "show traffic" in setup</td><td>the list as it was left</td><td>filter, selection,
+          draft, the device chosen</td><td>the list</td><td>setup's messages</td></tr>
+        <tr><td>lose the core</td><td>"no answer" on the list, over its rows. In setup, the statement in place of
+          every task</td><td>everything else</td><td>—</td><td>—</td></tr>
+        <tr><td>get the core back</td><td>the statement goes, and the screen refreshes itself</td><td>everything
+          else</td><td>the list, network addresses</td><td>—</td></tr>
+      </table>
+      <p>After a move the user made, focus lands on the new screen's main area. A move the app made (the launch,
+        a first success) claims no focus.</p>
     </div>
 
     <div data-c="uc-onboard-platforms">
@@ -562,7 +600,7 @@ the client lacks the certificate"]
       <p><strong>What the rebuild kept, unchanged.</strong></p>
       <table>
         <tr><th>Guarantee</th><th>Still true because</th></tr>
-        <tr><td>Only a captured flow reveals the list</td><td>a probe-green task and a bare connection
+        <tr><td>Only a captured flow ends setup on its own</td><td>a probe-green task and a bare connection
           both refuse to end setup. The payoff fires solely on an <code>https://</code> row with
           <code>source: "captured"</code>: an imported or sent row never reveals the list or feeds the
           traffic reading. Capture latches once proven</td></tr>
