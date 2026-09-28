@@ -10,14 +10,15 @@
     <div class="inner">
       <h1>E-ONBRVP.W2 — the parked roadmap rows</h1>
       <p>Seven known setup problems, each re-checked at the epic tip, with a fix for you to rule on or a reason to close it.</p>
-      <div class="meta">v1 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W2</span> · branch <code>wu/onboard-revamp/roadmap-rows</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1</div>
+      <div class="meta">v2 · 2026-09-28 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W2</span> · branch <code>wu/onboard-revamp/roadmap-rows</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waiting for your rulings.</strong> Nine findings (R1–R9) and six questions (Q1–Q6) below. No code or
-      design work starts until you rule. Each proposed ruling is my recommendation.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("the rest looks good to me, let's do the work", 2026-09-28). Q1 A, Q2, Q3
+      and Q6 as proposed. Q4 answered with a fact that changed R8 and added R10: -60007 sometimes shows when the setup
+      actually worked. Q5 was not answered. Building.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -25,7 +26,7 @@
       <strong>Every setup status reads a fixed state word beside its glyph, and each fact on the setup screen is said
       once. This machine's last task offers a button that makes one request to example.com. The list's ⋮ menu leads
       into setup. A phone's certificate URL carries a scannable code. A prompt macOS could not show is never reported
-      as cancelled. A test holds each of these.</strong>
+      as cancelled, and a Mac's certificate reads done only when it verifies as trusted. A test holds each of these.</strong>
     </p>
 
     <h2 id="maps-to">Mapping</h2>
@@ -43,7 +44,7 @@
       <tr><td>F24</td><td>a user who neither opens a website nor runs curl is stuck</td><td>unchanged: only the two manual routes</td><td>R4</td></tr>
       <tr><td>F26</td><td>no way from the list to setup except the dot</td><td>W1 made the dot a switch and gave the empty list "set up capture". A list with flows still has only the dot.</td><td>R5</td></tr>
       <tr><td>F28</td><td>a phone must type values by hand</td><td>unchanged</td><td>R6</td></tr>
-      <tr><td>-60007</td><td>"Set up this Mac" sometimes fails, cause unknown</td><td>unchanged, and the screen blames the user for it</td><td>R7 · R8</td></tr>
+      <tr><td>-60007</td><td>"Set up this Mac" sometimes fails, cause unknown</td><td>unchanged, and the screen blames the user for it. The trust probe cannot tell "installed" from "trusted".</td><td>R7 · R8 · R10</td></tr>
       <tr><td>latch</td><td>the Simulator's "stop routing" stays after the proxy is off</td><td><strong>gone.</strong> The Simulator now uses the same route code as This machine.</td><td>R9</td></tr>
     </table>
 
@@ -57,8 +58,9 @@
       <tr><td><strong>R5</strong> · F26</td><td>You have 400 flows on screen and want to set up your phone. The only way is the 10px dot in the header, and nothing says it opens setup until you hover it.</td><td>The ⋮ menu gains "set up another device". It behaves exactly like the success banner's link, per W1's table: setup opens, and the device question is empty if you last chose This machine.</td><td>take</td></tr>
       <tr><td><strong>R6</strong> · F28</td><td>On your iPhone, step 2 says to open <code>http://192.168.1.24:7421/ca.mobileconfig</code> in Safari. You type it on the phone, one character is wrong, and it fails the same way an untrusted certificate would.</td><td>A scannable code beside the certificate URL, for iPhone and Android device only. Scanning it opens the URL in the phone's browser. It is drawn locally from a vendored, zero-dependency encoder (DEC-57), and it is a new registry component with its own design. There is no code for the proxy host and port: a scan cannot fill in Wi-Fi settings, and an iPhone camera does nothing with plain text.</td><td>take, scope by Q3</td></tr>
       <tr><td><strong>R7</strong> · -60007</td><td>You click "Set up this Mac" and see no prompt at all. The screen says "The password prompt was cancelled. Try again, or follow the manual steps." You cancelled nothing. This is the only case found where the screen says something false.</td><td>-60007 gets its own note: "macOS couldn't show its approval prompt. The steps below do it by hand." The OS's own text stays under "details". A real cancel keeps its current note.</td><td>take</td></tr>
-      <tr><td><strong>R8</strong> · -60007</td><td>Why the prompt can't show is still unknown. What the code shows: the combined action runs <code>security add-trusted-cert</code> as root inside osascript's admin prompt. macOS then needs a second approval, for trust settings, and a root process started that way sometimes has no screen to show it on.</td><td>See Q4. Recommended: ship R7 now, and restate the roadmap row with this cause and the two ways to fix it. Both fixes change what the one-prompt action is (F27), so each is a decision of its own, not a W2 edit.</td><td>restate on the roadmap</td></tr>
+      <tr><td><strong>R8</strong> · -60007</td><td>You enter your password, and the setup fails with -60007, yet sometimes the certificate works (your Q4 answer). The combined action runs <code>security add-trusted-cert</code> as root inside osascript's password prompt, which did show. The command then asks macOS for a second approval, to change trust settings, and a root process with no terminal has no way to show it. Its failure stops the proxy half too, because the two are joined by <code>&amp;&amp;</code>.</td><td>The script stops judging trust by that command's exit code. It reads trust back with <code>security verify-cert -p basic</code>, and it goes on to set the proxy only when the certificate is really trusted. If trust holds, the action succeeds. If not, R7's note shows and the proxy stays untouched, as today.</td><td>take (your Q4 answer)</td></tr>
       <tr><td><strong>R9</strong> · latch</td><td>no longer happens. The Simulator's "stop routing" is the shared route code, and W1's route memory clears on every read-back. The matrix's "every offered action, in every outcome" sweep checks that a reversal that succeeds hides the control and one that fails keeps it: 180 Simulator rows, green at <code>529113e</code>.</td><td>none. Close the roadmap row and cite the test.</td><td>close</td></tr>
+      <tr><td><strong>R10</strong> · new</td><td>On a Mac, the certificate task reads "✓ done — installed and trusted" whenever a certificate named "Trawler Proxy CA" is in any keychain. It never checks trust. So a certificate that was added but not trusted, as in R8's failure, reads as done. <code>security verify-cert -p basic</code> tells the two apart: checked on this Mac, it passes for Trawler's trusted CA and fails with <code>CSSMERR_TP_NOT_TRUSTED</code> for a CA that is present but untrusted.</td><td>The macOS probe reads trusted only when the installed copy verifies. It is the same check R8's script uses, so the probe and the action cannot disagree.</td><td>take</td></tr>
     </table>
 
     <h2 id="vocabulary">The status vocabulary (R1, R2)</h2>
@@ -76,7 +78,7 @@
     <table data-c="closure">
       <tr><th>Row</th><th>Ends as</th></tr>
       <tr><td>F5 · F19 · F24 · F26 · F28</td><td>closed, each citing the test that holds it</td></tr>
-      <tr><td>-60007</td><td>restated: the false note fixed (R7), the cause and its two fixes recorded (R8)</td></tr>
+      <tr><td>-60007</td><td>closed: the false note fixed (R7), trust read back instead of assumed (R8, R10), and the cause recorded in UC-ONBOARD</td></tr>
       <tr><td>latch</td><td>closed, citing the matrix sweep</td></tr>
     </table>
 
@@ -88,7 +90,7 @@
       <tr><td><code>ui/src/Onboarding.tsx</code></td><td>running notes say only what you must do. The request button sits in This machine's last task. -60007's note. The code beside the certificate URL.</td><td>R3 · R4 · R6 · R7</td></tr>
       <tr><td><code>ui/src/components/QrCode.tsx</code> (new)</td><td>a registry component that draws one value as a code, with its own component design</td><td>R6</td></tr>
       <tr><td><code>ui/src/CaptureControls.tsx</code> · <code>App.tsx</code></td><td>the ⋮ menu's "set up another device", wired to the banner's route</td><td>R5</td></tr>
-      <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>-60007 is classified as "prompt could not show", apart from a cancel</td><td>R7</td></tr>
+      <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>-60007 is classified as "prompt could not show", apart from a cancel. The combined script reads trust back before it sets the proxy. The macOS probe verifies trust instead of presence.</td><td>R7 · R8 · R10</td></tr>
       <tr><td>the request</td><td>depends on Q1: the window's own <code>fetch</code>, or a shell command</td><td>R4</td></tr>
       <tr><td><code>docs/use-cases/web-ui.html</code> · DEC-56 · DEC-57 · roadmap</td><td>UC-ONBOARD and UC-4 rows. The two DECs become built. The seven rows are closed or restated.</td><td>all</td></tr>
     </table>
@@ -104,7 +106,9 @@
       <tr><td>the same, with the proxy off</td><td>a note that the request did not complete, and the proxy task still "not done"</td></tr>
       <tr><td>open ⋮ on a list full of flows</td><td>"set up another device", which opens setup as the banner's link does</td></tr>
       <tr><td>choose iPhone and allow Wi-Fi devices</td><td>a code beside the certificate URL. Scanning it opens that exact URL.</td></tr>
-      <tr><td>"Set up this Mac" answered with -60007</td><td>"macOS couldn't show its approval prompt", never "cancelled"</td></tr>
+      <tr><td>"Set up this Mac" answered with -60007, and the certificate not trusted</td><td>"macOS couldn't show its approval prompt", never "cancelled", and the certificate task "not done"</td></tr>
+      <tr><td>the same, with the certificate trusted after all</td><td>the action succeeds, and the proxy is set too</td></tr>
+      <tr><td>a Trawler certificate in the keychain but not trusted</td><td>the certificate task reads "not done", never "done — installed and trusted"</td></tr>
       <tr><td>the roadmap</td><td>each of the seven rows closed or restated with its reason</td></tr>
     </table>
 
@@ -114,7 +118,7 @@
       <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code></td><td>every resolver returns one of the five states, plain http only is not done, and ⚠ is used only for a failure</td></tr>
       <tr><td>unit</td><td><code>ui/src/components/StatusLine.test.tsx</code></td><td>each state prints its word, and the word is in the accessible text</td></tr>
       <tr><td>unit</td><td><code>ui/src/components/QrCode.test.tsx</code></td><td>the drawn code decodes to exactly the value it was given, checked with a decoder dev dependency, and it has an accessible name</td></tr>
-      <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code> tests</td><td>-60007 is "could not show", -128 and the UAC cancel stay "cancelled", and any other failure stays a failure</td></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code> tests</td><td>-60007 is "could not show", -128 and the UAC cancel stay "cancelled", and any other failure stays a failure. The macOS script reads trust back before the proxy commands. The probe's verdict is built from both reads, present and verified.</td></tr>
       <tr><td>unit</td><td><code>ui/src/CaptureControls.test.tsx</code></td><td>the ⋮ menu lists "set up another device" and runs its handler</td></tr>
       <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>the running instruction appears once. The request button shows on This machine only, a click never changes a status by itself, and a failure gets its note. -60007's note. The code shows for iPhone and Android device only once reach is armed, beside the URL it encodes.</td></tr>
       <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>two new rules over every state and outcome: every status line starts with a state word, and no sentence appears twice in the steps</td></tr>
@@ -125,23 +129,23 @@
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
       <tr><th>#</th><th>Question</th><th>Proposed answer</th></tr>
-      <tr><td>Q1</td><td>How is the request made? <strong>A</strong>: the app window's own <code>fetch</code>. It uses this machine's system proxy and trust store, as a browser here does, and needs no new dependency. It can only tell "completed" from "did not". <strong>B</strong>: a shell command with its own HTTP client, sent to the proxy address the probe read. It can name the failure, but it adds a TLS and HTTP dependency to the shell, and it proves the address rather than the system setting.</td><td><strong>A.</strong> The status lines already say which step failed, so the button's note does not need to.</td></tr>
-      <tr><td>Q2</td><td>The five state words: done · not done · not working · can't check here · checking/setting up?</td><td>as proposed. The design round may re-word, and you read it there.</td></tr>
-      <tr><td>Q3</td><td>Which values get a code?</td><td>the certificate URL, on iPhone and Android device only</td></tr>
-      <tr><td>Q4</td><td>-60007's cause. <strong>(a)</strong> fix the note now and restate the cause on the roadmap. <strong>(b)</strong> install the certificate as you, not as root, so macOS shows its own trust prompt in your session: that is two prompts instead of one. <strong>(c)</strong> trust in your user domain only, which needs no admin but changes what the probe reads and which apps trust it.</td><td><strong>(a).</strong> (b) and (c) each undo F27's one prompt, or change what "trusted" means, so each needs its own DEC.</td></tr>
-      <tr><td>Q5</td><td>Where have you met -60007: the built app, <code>cargo xtask ui dev</code>, or the e2e run?</td><td>your answer goes into the roadmap row</td></tr>
-      <tr><td>Q6</td><td>The ⋮ item's label?</td><td>"set up another device", the banner's words</td></tr>
+      <tr><td>Q1</td><td>How is the request made? <strong>A</strong>: the app window's own <code>fetch</code>. It uses this machine's system proxy and trust store, as a browser here does, and needs no new dependency. It can only tell "completed" from "did not". <strong>B</strong>: a shell command with its own HTTP client, sent to the proxy address the probe read. It can name the failure, but it adds a TLS and HTTP dependency to the shell, and it proves the address rather than the system setting.</td><td><strong>ruled: A</strong></td></tr>
+      <tr><td>Q2</td><td>The five state words: done · not done · not working · can't check here · checking/setting up?</td><td><strong>ruled: as proposed</strong></td></tr>
+      <tr><td>Q3</td><td>Which values get a code?</td><td><strong>ruled: the certificate URL, on iPhone and Android device only</strong></td></tr>
+      <tr><td>Q4</td><td>-60007's cause. <strong>(a)</strong> fix the note now and restate the cause on the roadmap. <strong>(b)</strong> install the certificate as you, not as root, so macOS shows its own trust prompt in your session: that is two prompts instead of one. <strong>(c)</strong> trust in your user domain only, which needs no admin but changes what the probe reads and which apps trust it.</td><td><strong>answered:</strong> "sometimes it shows the error but it's actually working" — the password prompt did show, and the failing part is the command run without a terminal. That made R8 a fix, one prompt kept, and added R10</td></tr>
+      <tr><td>Q5</td><td>Where have you met -60007: the built app, <code>cargo xtask ui dev</code>, or the e2e run?</td><td>not answered. The fix does not depend on it</td></tr>
+      <tr><td>Q6</td><td>The ⋮ item's label?</td><td><strong>ruled: "set up another device"</strong></td></tr>
     </table>
 
     <h2 id="commits">Commits</h2>
     <table data-c="commits">
       <tr><th>#</th><th>Commit</th></tr>
-      <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
+      <tr><td>1</td><td>this plan (v1 <code>9ef110d</code>, v2 the rulings), and the epic plan's status line</td></tr>
       <tr><td>2</td><td>design round 11 and the QR code's component design, for you to review</td></tr>
       <tr><td>3</td><td>the status vocabulary and one fact once (R1, R2, R3), with their tests</td></tr>
       <tr><td>4</td><td>the request button (R4) and the ⋮ route (R5), with their tests</td></tr>
       <tr><td>5</td><td>the QR code (R6), with its tests</td></tr>
-      <tr><td>6</td><td>-60007's note (R7), with its tests</td></tr>
+      <tr><td>6</td><td>-60007: the note, trust read back, and the honest probe (R7, R8, R10), with their tests</td></tr>
       <tr><td>7</td><td>UC-ONBOARD, UC-4, DEC-56, DEC-57 and the roadmap rows</td></tr>
       <tr><td>8</td><td>the result report</td></tr>
     </table>
