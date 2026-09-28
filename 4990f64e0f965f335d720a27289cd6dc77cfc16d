@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W1
+base: 83df11b636008268450373cb4bf87c79a82e25b2
+design_sha256: 237279ee14a7357f85c59b61be634a81b9366c2b354250f4f09c499816fd974d
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 4a7e8466d8203c975bf74c7bdd1992a57dc7a1fc
+    built: [ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/NotAnswering.tsx, ui/src/Onboarding.tsx, ui/src/components/Notice.tsx, ui/src/components/StatusDot.tsx]
+date: 2026-09-28
