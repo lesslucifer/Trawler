@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W2
+base: 529113e7da1b44f9b623569acb7edf8e5021464e
+design_sha256: c9eaf569b5c9af805eb0bda6d91fc4f359b63dd3e56f5678dab1a3781c7d7c6f
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: eb20a608ae2151b979012b47b5af039be8eba187
+    built: [ui/src/components/QrCode.tsx, ui/src/App.tsx, ui/src/CaptureControls.tsx, ui/src/Onboarding.tsx]
+date: 2026-09-29
