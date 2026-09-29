@@ -13,10 +13,51 @@ import {
   stopRoutingNote,
   trafficStatus,
   trustStatus,
+  STATE_WORDS,
   TUNNEL_GRACE_MS,
+  verdict,
+  type SetupState,
   type StepStatusView,
   type Traffic,
 } from "./verdicts";
+
+const STATE_OF: Record<string, SetupState> = {
+  done: "done",
+  "not done": "not-done",
+  "not working": "not-working",
+  "can't check here": "cant-check",
+  checking: "checking",
+  "setting up": "setting-up",
+};
+
+describe("the closed vocabulary of a task's state (F5)", () => {
+  it.each([
+    ["done", "✓", "ok", "done"],
+    ["not-done", "○", "muted", "not done"],
+    ["not-working", "⚠", "warn", "not working"],
+    ["cant-check", "◐", "muted", "can't check here"],
+    ["checking", "⟳", "muted", "checking"],
+    ["setting-up", "⟳", "muted", "setting up"],
+  ] as const)("%s is %s, %s, and reads %s", (state, glyph, tone, word) => {
+    expect(verdict(state)).toEqual({ glyph, tone, short: word });
+    expect(verdict(state, "a reason").short).toBe(`${word} — a reason`);
+  });
+
+  it("a word is owned by one state, and a remedy rides beside the line, never in it", () => {
+    expect(new Set(STATE_WORDS).size).toBe(STATE_WORDS.length);
+    expect(verdict("not-done", "a reason", "do this")).toEqual({
+      glyph: "○",
+      tone: "muted",
+      short: "not done — a reason",
+      remedy: "do this",
+    });
+  });
+
+  it("only a failure is warn: not done and not working are two different states", () => {
+    expect(verdict("not-done").tone).toBe("muted");
+    expect(verdict("not-working").tone).toBe("warn");
+  });
+});
 
 // --- Two layers of truth (E-REDESIGN.W10, re-worded for its reader at W5) ---
 // Tasks 1 and 2 are this machine, from the probes, and take no traffic input at
@@ -25,8 +66,9 @@ import {
 // written for — the states now read as a person's job, not as a machine's
 // report, and the honesty rule is unmoved.
 
-const CONFIRM_ON = "we'll confirm this on your iPhone's first request";
-const HERE = { device: "this Mac", confirmOn: "we'll confirm this on this Mac's first request" };
+const CONFIRM_ON = "your iPhone's first request confirms it";
+const HERE = { device: "this Mac", confirmOn: "this Mac's first request confirms it" };
+const CANT_CHECK = (confirmOn: string) => `can't check here — ${confirmOn}`;
 
 test("trustStatus: the local probe is the whole state, said as done or not done", () => {
   expect(trustStatus("trusted", null, CONFIRM_ON)).toMatchObject({
@@ -44,17 +86,17 @@ test("trustStatus: the local probe is the whole state, said as done or not done"
 test("trustStatus: a store nothing read says when it will be settled, never that it is not", () => {
   const view = trustStatus("unknown", null, CONFIRM_ON);
 
-  expect(view).toMatchObject({ glyph: "◐", tone: "muted", short: CONFIRM_ON });
-  expect(view.short).not.toMatch(/not done|can't check/i);
+  expect(view).toMatchObject({ glyph: "◐", tone: "muted", short: CANT_CHECK(CONFIRM_ON) });
+  expect(view.short).not.toMatch(/not done/i);
 });
 
-test("trustStatus: a reading in progress names the reading; a write names what it waits on", () => {
+test("trustStatus: a reading in progress names the reading; a write only says it runs", () => {
   expect(trustStatus("trusted", "checking", CONFIRM_ON)).toMatchObject({
     glyph: "⟳",
-    short: "reading the certificate store…",
+    short: "checking — the certificate store",
   });
   expect(trustStatus("untrusted", "installing", CONFIRM_ON).short).toBe(
-    "setting up — approve the prompt…",
+    "setting up",
   );
 });
 
@@ -75,16 +117,16 @@ test("proxyStatus: a foreign proxy is not done, and does not carry the sentence 
 });
 
 test("proxyStatus: not-set and nothing-read are distinct states, both calm", () => {
-  expect(proxyStatus("unknown", null, HERE).short).toBe(HERE.confirmOn);
+  expect(proxyStatus("unknown", null, HERE).short).toBe(CANT_CHECK(HERE.confirmOn));
   expect(proxyStatus("unknown", null, HERE).short).not.toBe(proxyStatus("none", null, HERE).short);
 });
 
 test("proxyStatus: a reading in progress says which reading", () => {
   expect(proxyStatus("ours", "checking", HERE)).toMatchObject({
     glyph: "⟳",
-    short: "reading the proxy settings…",
+    short: "checking — the proxy settings",
   });
-  expect(proxyStatus("none", "setting", HERE).short).toBe("setting up — approve the prompt…");
+  expect(proxyStatus("none", "setting", HERE).short).toBe("setting up");
 });
 
 // The button is about to replace something the user set, and the sentence over
@@ -146,7 +188,7 @@ describe("trafficStatus reads recency, never history", () => {
     expect(at({})).toMatchObject({
       glyph: "○",
       tone: "muted",
-      short: "waiting for the first request",
+      short: "not done — waiting for the first request",
     });
   });
 
@@ -154,31 +196,31 @@ describe("trafficStatus reads recency, never history", () => {
     expect(at({ lastDecryptedAt: ago(RECENT_MS) })).toMatchObject({
       glyph: "✓",
       tone: "ok",
-      short: "capturing traffic",
+      short: "done — capturing traffic",
     });
   });
 
   it("a decrypted request past the window is quiet again — old evidence is not current", () => {
     const v = at({ lastDecryptedAt: ago(RECENT_MS + 1) });
-    expect(v).toMatchObject({ glyph: "○", tone: "muted", short: "nothing arriving right now" });
+    expect(v).toMatchObject({ glyph: "○", tone: "muted", short: "not done — nothing arriving right now" });
     expect(v.remedy).toBeUndefined();
   });
 
   it("anything this session saw, past the window, is quiet rather than waiting", () => {
-    expect(at({ lastPlainAt: ago(RECENT_MS + 1) }).short).toBe("nothing arriving right now");
-    expect(at({ lastTunnelAt: ago(RECENT_MS + 1) }).short).toBe("nothing arriving right now");
+    expect(at({ lastPlainAt: ago(RECENT_MS + 1) }).short).toBe("not done — nothing arriving right now");
+    expect(at({ lastTunnelAt: ago(RECENT_MS + 1) }).short).toBe("not done — nothing arriving right now");
   });
 
   it("a tunnel inside its grace is neither proof nor failure", () => {
     expect(at({ lastTunnelAt: ago(TUNNEL_GRACE_MS - 1) })).toMatchObject({
       glyph: "⟳",
-      short: "a connection just arrived…",
+      short: "checking — a connection just arrived",
     });
   });
 
   it("a tunnel that no request answered says whose certificate is missing, naming no device", () => {
     const v = at({ lastTunnelAt: ago(TUNNEL_GRACE_MS) });
-    expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "arriving but not decrypting" });
+    expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "not working — arriving but not decrypting" });
     expect(v.remedy).toBe(
       "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
     );
@@ -194,7 +236,7 @@ describe("trafficStatus reads recency, never history", () => {
       done: true,
       trustedOn: "this Mac",
     });
-    expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "arriving but not decrypting" });
+    expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "not working — arriving but not decrypting" });
     expect(v.remedy).toBe(
       "something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.",
     );
@@ -211,7 +253,7 @@ describe("trafficStatus reads recency, never history", () => {
 
   it("a tunnel answered by a decrypted request is capturing", () => {
     expect(at({ lastTunnelAt: ago(5_000), lastDecryptedAt: ago(4_000) }).short).toBe(
-      "capturing traffic",
+      "done — capturing traffic",
     );
   });
 
@@ -220,12 +262,12 @@ describe("trafficStatus reads recency, never history", () => {
   });
 
   it("an unanswered tunnel past the window is quiet, not a standing alarm", () => {
-    expect(at({ lastTunnelAt: ago(RECENT_MS + 1) }).short).toBe("nothing arriving right now");
+    expect(at({ lastTunnelAt: ago(RECENT_MS + 1) }).short).toBe("not done — nothing arriving right now");
   });
 
-  it("plain HTTP arriving is its own state, and asks for the request that would prove it", () => {
+  it("plain HTTP arriving is not done, and asks for the request that would prove it", () => {
     const v = at({ lastPlainAt: ago(1_000) });
-    expect(v).toMatchObject({ glyph: "◐", tone: "muted", short: "arriving — plain HTTP only" });
+    expect(v).toMatchObject({ glyph: "○", tone: "muted", short: "not done — only plain http so far" });
     expect(v.remedy).toBe("open a website whose address starts with https://");
   });
 
@@ -246,13 +288,13 @@ describe("the short form every state carries", () => {
     [
       "trust · reading",
       trustStatus("trusted", "checking", CONFIRM_ON),
-      "reading the certificate store…",
+      "checking — the certificate store",
       undefined,
     ],
     [
       "trust · setting up",
       trustStatus("unknown", "installing", CONFIRM_ON),
-      "setting up — approve the prompt…",
+      "setting up",
       undefined,
     ],
     ["trust · done", trustStatus("trusted", null, CONFIRM_ON), "done — installed and trusted", undefined],
@@ -262,54 +304,54 @@ describe("the short form every state carries", () => {
       "not done — the certificate isn't trusted",
       undefined,
     ],
-    ["trust · nothing read it", trustStatus("unknown", null, CONFIRM_ON), CONFIRM_ON, undefined],
+    ["trust · nothing read it", trustStatus("unknown", null, CONFIRM_ON), CANT_CHECK(CONFIRM_ON), undefined],
     [
       "proxy · reading",
       proxyStatus("ours", "checking", HERE),
-      "reading the proxy settings…",
+      "checking — the proxy settings",
       undefined,
     ],
     [
       "proxy · setting up",
       proxyStatus("unknown", "setting", HERE),
-      "setting up — approve the prompt…",
+      "setting up",
       undefined,
     ],
     ["proxy · done", proxyStatus("ours", null, HERE), "done — this Mac routes through Trawler", undefined],
     ["proxy · foreign", proxyStatus("foreign", null, HERE), "not done — another proxy is set", undefined],
-    ["proxy · nothing read it", proxyStatus("unknown", null, HERE), HERE.confirmOn, undefined],
+    ["proxy · nothing read it", proxyStatus("unknown", null, HERE), CANT_CHECK(HERE.confirmOn), undefined],
     ["proxy · off", proxyStatus("none", null, HERE), "not done — the system proxy is off", undefined],
     [
       "traffic · capturing",
       trafficStatus(seen({ lastDecryptedAt: NOW }), NOW),
-      "capturing traffic",
+      "done — capturing traffic",
       undefined,
     ],
     [
       "traffic · tunnel in grace",
       trafficStatus(seen({ lastTunnelAt: NOW }), NOW),
-      "a connection just arrived…",
+      "checking — a connection just arrived",
       undefined,
     ],
     [
       "traffic · tunnel unanswered",
       trafficStatus(seen({ lastTunnelAt: NOW - TUNNEL_GRACE_MS }), NOW),
-      "arriving but not decrypting",
+      "not working — arriving but not decrypting",
       "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
     ],
     [
       "traffic · plain only",
       trafficStatus(seen({ lastPlainAt: NOW }), NOW),
-      "arriving — plain HTTP only",
+      "not done — only plain http so far",
       "open a website whose address starts with https://",
     ],
     [
       "traffic · quiet",
       trafficStatus(seen({ lastPlainAt: NOW - RECENT_MS - 1 }), NOW),
-      "nothing arriving right now",
+      "not done — nothing arriving right now",
       undefined,
     ],
-    ["traffic · waiting", trafficStatus(NO_TRAFFIC, NOW), "waiting for the first request", undefined],
+    ["traffic · waiting", trafficStatus(NO_TRAFFIC, NOW), "not done — waiting for the first request", undefined],
   ];
 
   it("covers every state the three resolvers can return", () => {
@@ -321,25 +363,38 @@ describe("the short form every state carries", () => {
     expect(view.remedy).toBe(remedy);
   });
 
-  // StatusLine's ~40-char contract holds for every verdict the resolvers word.
-  // The one state above it is `awaiting`, whose text is a promise the design
-  // wrote out in full — a fragment would have to drop either the device or the
-  // moment, and both are the point of the sentence.
+  // StatusLine's ~40-char contract holds for every reason the resolvers word.
+  // The one reason above it is `awaiting`'s, a promise the design wrote out in
+  // full — a fragment would have to drop either the device or the moment, and
+  // both are the point of the sentence.
   it.each(STATES)("%s fits StatusLine's ~40-char contract", (_name, view) => {
-    if (view.short.startsWith("we'll confirm")) return;
-    expect(view.short.length).toBeLessThanOrEqual(40);
+    const reason = view.short.split(" — ")[1] ?? "";
+    if (view.glyph === "◐") return;
+    expect(reason.length).toBeLessThanOrEqual(40);
+  });
+
+  // F5: the state is read from its first word, so every line opens with one of
+  // the closed vocabulary's, and one glyph never carries two of them.
+  it.each(STATES)("%s opens with a state word its glyph owns", (_name, view) => {
+    const word = STATE_WORDS.find((w) => view.short === w || view.short.startsWith(`${w} — `));
+    expect(word).toBeDefined();
+    expect(verdict(STATE_OF[word!]!).glyph).toBe(view.glyph);
   });
 
   it("a state carries a reading and nothing else — the instruction is a separate field", () => {
     const arriving = trafficStatus(seen({ lastTunnelAt: NOW - TUNNEL_GRACE_MS }), NOW);
 
-    expect(arriving.short).toBe("arriving but not decrypting");
+    expect(arriving.short).toBe("not working — arriving but not decrypting");
     expect(arriving.short).not.toMatch(/Finish the certificate step/);
     expect(arriving.remedy).toMatch(/Finish the certificate step/);
   });
 
   it("no state is a claim about a machine nothing read", () => {
-    expect(awaiting(CONFIRM_ON)).toMatchObject({ glyph: "◐", tone: "muted", short: CONFIRM_ON });
+    expect(awaiting(CONFIRM_ON)).toMatchObject({
+      glyph: "◐",
+      tone: "muted",
+      short: CANT_CHECK(CONFIRM_ON),
+    });
     expect(awaiting(CONFIRM_ON).short).not.toMatch(/done/);
   });
 });
@@ -384,7 +439,7 @@ describe("evidence is what this setup's traffic has shown, not what it shows now
 });
 
 describe("a task no probe concludes reads its evidence", () => {
-  const CONFIRM_HTTPS = "we'll confirm this on your iPhone's first HTTPS request";
+  const CONFIRM_HTTPS = "your iPhone's first HTTPS request confirms it";
   const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({
     reached: false,
     decrypted: false,
@@ -402,7 +457,7 @@ describe("a task no probe concludes reads its evidence", () => {
     expect(trustStatus("unknown", null, CONFIRM_HTTPS, ev({ refused: true }))).toMatchObject({
       glyph: "⚠",
       tone: "warn",
-      short: "not done — nothing decrypted",
+      short: "not working — nothing decrypted",
     });
     expect(trustStatus("unknown", null, CONFIRM_HTTPS, ev({}))).toEqual(awaiting(CONFIRM_HTTPS));
   });
@@ -433,7 +488,7 @@ describe("a task no probe concludes reads its evidence", () => {
   it("the try task leaves a refusal to a certificate task that is not done", () => {
     const refused = { ...NO_TRAFFIC, lastTunnelAt: 1_000_000 - TUNNEL_GRACE_MS };
     const v = trafficStatus(refused, 1_000_000, { done: false, trustedOn: null });
-    expect(v.short).toBe("arriving but not decrypting");
+    expect(v.short).toBe("not working — arriving but not decrypting");
     expect(v.remedy).toBeUndefined();
   });
 });

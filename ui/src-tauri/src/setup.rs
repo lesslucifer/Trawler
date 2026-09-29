@@ -56,36 +56,54 @@ fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     }
 }
 
-// Why an elevated command did not run, split into the one fact the screen words
+// Why an elevated command did not run, split into the facts the screen words
 // for itself and the tool's own text. The OS installer's stderr is still the
 // only actionable signal on a real failure, so it travels whole — but a prompt
-// the user dismissed is not a failure to report in the OS's words, and `refused`
-// is what lets the screen say so (F18).
+// the user dismissed is not a failure to report in the OS's words (`refused`,
+// F18), and neither is one the OS could not show (`unshowable`), which the user
+// never saw and so cannot have dismissed.
 #[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct SetupError {
     refused: bool,
+    unshowable: bool,
     detail: String,
 }
 
-// macOS reports a dismissed authorization dialog as `User cancelled. (-128)` and
-// one it could not show at all as `(-60007)`; Windows' UAC refusal comes back as
-// "The operation was canceled by the user". All three are the same fact: nothing
-// on this machine changed, and the manual route is still there.
-fn refused_prompt(stderr: &str) -> bool {
+#[derive(Debug, PartialEq, Eq)]
+enum Prompt {
+    Answered,
+    Cancelled,
+    Unshowable,
+}
+
+// macOS reports a dismissed authorization dialog as `User cancelled. (-128)`;
+// Windows' UAC refusal comes back as "The operation was canceled by the user".
+// `(-60007)` is neither: the password prompt was answered, and the trust write
+// run under it asked for an approval of its own that a process with no terminal
+// has nowhere to show.
+fn prompt_outcome(stderr: &str) -> Prompt {
     let text = stderr.to_ascii_lowercase();
-    text.contains("-128") || text.contains("-60007") || text.contains("cancel")
+    if text.contains("-60007") {
+        Prompt::Unshowable
+    } else if text.contains("-128") || text.contains("cancel") {
+        Prompt::Cancelled
+    } else {
+        Prompt::Answered
+    }
 }
 
 pub(crate) fn command_failed(stderr: &str, no_detail: &str) -> SetupError {
     let detail = stderr.trim();
+    let prompt = prompt_outcome(detail);
     SetupError {
-        refused: refused_prompt(detail),
+        refused: prompt == Prompt::Cancelled,
+        unshowable: prompt == Prompt::Unshowable,
         detail: if detail.is_empty() { no_detail.to_string() } else { detail.to_string() },
     }
 }
 
 fn setup_error(detail: impl Into<String>) -> SetupError {
-    SetupError { refused: false, detail: detail.into() }
+    SetupError { refused: false, unshowable: false, detail: detail.into() }
 }
 
 fn run_elevated(argv: &[String], no_detail: &str) -> Result<(), SetupError> {
@@ -114,10 +132,39 @@ pub(crate) const NO_INSTALL_DETAIL: &str =
 // the same key W2's removal steps use.
 const CA_COMMON_NAME: &str = "Trawler Proxy CA";
 
-// Read-only probe: is Trawler's CA in this machine's system trust store? Feeds
-// the onboarding Trust step so the ~90% local case gets an instant, honest
-// status instead of waiting on a captured flow. macOS/Windows only — the same
-// systems that have an auto-install path; elsewhere we can't conclude.
+// A certificate in a macOS keychain is not a trusted one: `add-trusted-cert`
+// adds it first and writes its trust second, and the second half can fail on
+// its own (-60007). The trust itself is what `verify-cert` evaluates, locally.
+fn macos_verify_argv(cert: &Path) -> Vec<String> {
+    ["security", "verify-cert", "-c", &cert.to_string_lossy(), "-p", "basic", "-L", "-l", "-q"]
+        .iter()
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn pem_blocks(dump: &str) -> Vec<String> {
+    const END: &str = "-----END CERTIFICATE-----";
+    dump.split_inclusive(END)
+        .filter_map(|chunk| {
+            chunk.find("-----BEGIN CERTIFICATE-----").map(|at| chunk[at..].to_string())
+        })
+        .filter(|block| block.ends_with(END))
+        .collect()
+}
+
+fn macos_copy_verifies(pem: &str) -> bool {
+    let cert = std::env::temp_dir().join("trawler-ca-probe.pem");
+    if std::fs::write(&cert, pem).is_err() {
+        return false;
+    }
+    let argv = macos_verify_argv(&cert);
+    Command::new(&argv[0]).args(&argv[1..]).output().is_ok_and(|out| out.status.success())
+}
+
+// Read-only probe: does this machine trust Trawler's CA? Feeds the onboarding
+// Trust step so the ~90% local case gets an instant, honest status instead of
+// waiting on a captured flow. macOS/Windows only — the same systems that have
+// an auto-install path; elsewhere we can't conclude.
 //
 // ponytail: matches on the CA's Common Name, not a key fingerprint. A stale cert
 // left over from an earlier run with the same CN would read as trusted. Upgrade
@@ -127,10 +174,11 @@ fn ca_is_trusted(os: &str) -> Option<bool> {
     match os {
         "macos" => {
             let out = Command::new("security")
-                .args(["find-certificate", "-a", "-c", CA_COMMON_NAME])
+                .args(["find-certificate", "-a", "-c", CA_COMMON_NAME, "-p"])
                 .output()
                 .ok()?;
-            Some(out.status.success() && !out.stdout.is_empty())
+            let copies = pem_blocks(&String::from_utf8_lossy(&out.stdout));
+            Some(copies.iter().any(|pem| macos_copy_verifies(pem)))
         }
         "windows" => {
             let out = Command::new("certutil").args(["-store", "ROOT"]).output().ok()?;
@@ -364,8 +412,11 @@ pub fn unset_proxy() -> Result<(), SetupError> {
 
 // The one thing most users want, and the one prompt it is worth: on macOS the
 // trust write and the proxy write go inside a single `do shell script … with
-// administrator privileges`, joined so that a refused trust never leaves the
-// machine routing through a proxy it does not trust. On Windows only the store
+// administrator privileges`, joined so that a certificate left untrusted never
+// leaves the machine routing through a proxy it does not trust. The join reads
+// the trust back rather than the write's exit: the write can report -60007 for
+// an approval it could not show and still leave the certificate trusted, and
+// then the setup did happen. On Windows only the store
 // write is elevated — the proxy lives under HKCU — so one UAC prompt is already
 // the whole cost and the commands run in sequence (F27).
 fn set_up_commands(
@@ -378,8 +429,12 @@ fn set_up_commands(
     let install = install_command(os, cert)?;
     match os {
         "macos" => {
-            let script =
-                format!("{} && {}", quoted(&install), macos_proxy_script(services, host, port));
+            let script = format!(
+                "({} || {}) && {}",
+                quoted(&install),
+                quoted(&macos_verify_argv(cert)),
+                macos_proxy_script(services, host, port)
+            );
             Some(vec![elevated_script(&script)])
         }
         "windows" => {
@@ -709,6 +764,7 @@ mod tests {
             NO_INSTALL_DETAIL,
         );
         assert!(!err.refused);
+        assert!(!err.unshowable);
         assert!(err.detail.contains("authorization was denied"));
     }
 
@@ -720,16 +776,34 @@ mod tests {
     // The three ways the OS says "you were asked and nothing happened". Each
     // one buys the screen a sentence of its own instead of the tool's text.
     #[test]
-    fn a_dismissed_or_unshowable_prompt_is_a_refusal_in_every_wording_the_os_uses() {
+    fn a_dismissed_prompt_is_a_refusal_in_every_wording_the_os_uses() {
         for stderr in [
             "0:36: execution error: User cancelled. (-128)",
-            "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)",
             "Start-Process : The operation was canceled by the user.",
         ] {
             let err = command_failed(stderr, NO_INSTALL_DETAIL);
             assert!(err.refused, "{stderr}");
+            assert!(!err.unshowable, "{stderr}");
             assert_eq!(err.detail, stderr, "the tool's own text travels whole");
         }
+    }
+
+    // R7: the user answered the password prompt, and the approval the trust
+    // write then asked for never reached them — so it is not their cancel.
+    #[test]
+    fn an_approval_the_os_could_not_show_is_not_a_refusal() {
+        let stderr = "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)";
+        let err = command_failed(stderr, NO_INSTALL_DETAIL);
+
+        assert!(err.unshowable);
+        assert!(!err.refused);
+        assert_eq!(err.detail, stderr);
+    }
+
+    #[test]
+    fn the_unshowable_approval_survives_the_trust_read_back_that_follows_it() {
+        let stderr = "SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)\nCert Verify Result: CSSMERR_TP_NOT_TRUSTED";
+        assert!(command_failed(stderr, NO_INSTALL_DETAIL).unshowable);
     }
 
     #[test]
@@ -825,8 +899,8 @@ mod tests {
     }
 
     // F27: one prompt, not two. The trust write and the proxy write share a
-    // single elevation, and the `&&` is what keeps a refused trust from leaving
-    // the machine routing through a proxy it does not trust.
+    // single elevation, and the `&&` is what keeps an untrusted certificate from
+    // leaving the machine routing through a proxy it does not trust.
     #[test]
     fn macos_sets_up_the_whole_machine_under_one_elevation() {
         let svcs = ["Wi-Fi".into()];
@@ -840,7 +914,51 @@ mod tests {
         assert!(script.contains("'/tmp/trawler-ca.pem'"));
         assert!(script.contains("networksetup -setwebproxy 'Wi-Fi' 127.0.0.1 7420"));
         assert!(script.contains("networksetup -setsecurewebproxy 'Wi-Fi' 127.0.0.1 7420"));
-        assert!(script.contains("' && networksetup"), "the proxy write follows the trust write");
+        assert!(script.contains("') && networksetup"), "the proxy write follows the trust");
+    }
+
+    // R8: the proxy write waits on the certificate being trusted, read back,
+    // not on the trust write's own exit — which can report -60007 and still
+    // have left the certificate trusted.
+    #[test]
+    fn macos_sets_the_proxy_once_the_certificate_reads_back_trusted() {
+        let svcs = ["Wi-Fi".into()];
+        let script = &set_up_commands("macos", &cert(), &svcs, "127.0.0.1", 7420).unwrap()[0][2];
+
+        assert!(script.contains(
+            "('security' 'add-trusted-cert' '-d' '-r' 'trustRoot' '-k' '/Library/Keychains/System.keychain' '/tmp/trawler-ca.pem' || 'security' 'verify-cert' '-c' '/tmp/trawler-ca.pem' '-p' 'basic' '-L' '-l' '-q') && networksetup"
+        ));
+    }
+
+    // R10: the probe verifies each installed copy; a copy present and
+    // untrusted is exactly what a -60007 leaves behind.
+    #[test]
+    fn the_trust_probe_verifies_the_copy_rather_than_finding_it() {
+        assert_eq!(
+            macos_verify_argv(&cert()),
+            [
+                "security",
+                "verify-cert",
+                "-c",
+                "/tmp/trawler-ca.pem",
+                "-p",
+                "basic",
+                "-L",
+                "-l",
+                "-q"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_keychain_dump_splits_into_one_certificate_per_copy() {
+        let one = "-----BEGIN CERTIFICATE-----\nAAA\n-----END CERTIFICATE-----";
+        let two = "-----BEGIN CERTIFICATE-----\nBBB\n-----END CERTIFICATE-----";
+
+        assert_eq!(pem_blocks(&format!("{one}\n{two}\n")), [one, two]);
+        assert!(pem_blocks("").is_empty());
+        assert!(pem_blocks("security: SecKeychainSearchCopyNext: not found").is_empty());
+        assert!(pem_blocks("-----BEGIN CERTIFICATE-----\ntruncated").is_empty());
     }
 
     // On Windows the proxy lives under HKCU and needs no elevation at all, so

@@ -249,7 +249,7 @@ describe("the machine's words for itself are not on this screen", () => {
     /\bdecrypting\b/i,
   ];
 
-  // "arriving but not decrypting" is the traffic layer's own wording, kept by
+  // "not working — arriving but not decrypting" is the traffic layer's own wording, kept by
   // the design: it describes what the user's device is doing, not what the app
   // calls it. Everything else must be absent.
   const rendered = () => document.body.textContent ?? "";
@@ -291,7 +291,7 @@ describe("this machine — three tasks, and one button that does two of them", (
 
     expect(task(1)).toHaveTextContent("done — installed and trusted");
     expect(task(2)).toHaveTextContent("not done — the system proxy is off");
-    expect(task(3)).toHaveTextContent("waiting for the first request");
+    expect(task(3)).toHaveTextContent("not done — waiting for the first request");
   });
 
   it("a set proxy reads as this Mac routing through Trawler", () => {
@@ -319,7 +319,9 @@ describe("this machine — three tasks, and one button that does two of them", (
     await waitFor(() => expect(onSetUpThisMachine).toHaveBeenCalledOnce());
   });
 
-  it("while it runs, both tasks it covers say so and the button is out of reach", async () => {
+  // F19: the tasks say what is happening, the note says what the user must do,
+  // and neither says the other's sentence.
+  it("while it runs, both tasks it covers say so, the prompt is named once, and the button is out of reach", async () => {
     let release = () => {};
     const onSetUpThisMachine = vi.fn(
       () => new Promise<void>((resolve) => (release = resolve)),
@@ -328,8 +330,10 @@ describe("this machine — three tasks, and one button that does two of them", (
 
     fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
 
-    await waitFor(() => expect(task(1)).toHaveTextContent("setting up — approve the prompt…"));
-    expect(task(2)).toHaveTextContent("setting up — approve the prompt…");
+    await waitFor(() => expect(screen.getByTestId("task-1-state")).toHaveTextContent(/^⟳?setting up$/));
+    expect(screen.getByTestId("task-2-state")).toHaveTextContent(/^⟳?setting up$/);
+    expect(screen.getAllByText(/approve the prompt/)).toHaveLength(1);
+    expect(screen.getByTestId("set-up-status")).toHaveTextContent("approve the prompt that just opened");
     expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeDisabled();
     await act(async () => release());
   });
@@ -391,7 +395,7 @@ describe("this machine — three tasks, and one button that does two of them", (
       ).toBeInTheDocument(),
     );
     // And it does not claim the tasks are done — that is still the probes' word.
-    expect(task(1)).toHaveTextContent("we'll confirm this on this Mac's first HTTPS request");
+    expect(task(1)).toHaveTextContent("can't check here — this Mac's first HTTPS request confirms it");
   });
 
   // Review round 4, important: the way out was kept alive by the action that
@@ -765,6 +769,52 @@ describe("a password prompt the user dismissed", () => {
   });
 });
 
+// ── An approval the OS could not show (-60007) ─────────────────────────────
+// R7. The user answered the password prompt; the trust write's own approval
+// never reached them, so the screen may not say they cancelled it.
+
+describe("an approval macOS could not show", () => {
+  const unshowable = {
+    refused: false,
+    unshowable: true,
+    detail:
+      "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)",
+  };
+
+  it("says what happened, never that the user cancelled, with the tool's text one click away", async () => {
+    draw({
+      trustProbe: "untrusted",
+      proxy: { status: "none", address: null },
+      onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("set-up-status")).toHaveTextContent(
+        "macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.",
+      ),
+    );
+    expect(screen.queryByText(/cancelled/)).toBeNull();
+    fireEvent.click(screen.getByText("details"));
+    expect(disclosing(unshowable.detail)).toHaveAttribute("open");
+  });
+
+  it("opens the steps it points at, and leaves the task's state to the probe", async () => {
+    draw({
+      trustProbe: "untrusted",
+      proxy: { status: "none", address: null },
+      onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
+    expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
+    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+  });
+});
+
 // ── Another proxy ───────────────────────────────────────────────────────────
 // F17. The button is about to take something away, and the user is owed its name.
 
@@ -804,7 +854,7 @@ describe("the iOS Simulator", () => {
     simulator();
 
     expect(task(1)).toHaveTextContent("Trust Trawler's certificate in the Simulator");
-    expect(task(1)).toHaveTextContent("we'll confirm this on the Simulator's first HTTPS request");
+    expect(task(1)).toHaveTextContent("can't check here — the Simulator's first HTTPS request confirms it");
     expect(task(1)).not.toHaveTextContent("done — installed and trusted");
   });
 
@@ -906,7 +956,7 @@ describe("a phone, once it may connect", () => {
   it("says what is listening and offers the way to stop", () => {
     armedPhone();
 
-    expect(task(1)).toHaveTextContent("allowed — listening on 192.168.1.24 until Trawler quits");
+    expect(task(1)).toHaveTextContent("done — listening on 192.168.1.24 until Trawler quits");
     expect(within(task(1)).getByRole("button", { name: "stop listening" })).toBeInTheDocument();
   });
 
@@ -938,8 +988,8 @@ describe("a phone, once it may connect", () => {
   it("promises to confirm on the phone's own first request, and claims nothing now", () => {
     armedPhone();
 
-    expect(task(2)).toHaveTextContent("we'll confirm this on your iPhone's first HTTPS request");
-    expect(task(3)).toHaveTextContent("we'll confirm this on your iPhone's first request");
+    expect(task(2)).toHaveTextContent("can't check here — your iPhone's first HTTPS request confirms it");
+    expect(task(3)).toHaveTextContent("can't check here — your iPhone's first request confirms it");
     expect(task(2)).not.toHaveAttribute("data-dim");
   });
 
@@ -978,12 +1028,12 @@ describe("a phone, once it may connect", () => {
     expect(task(3)).toHaveTextContent("done — requests reached Trawler");
     expect(within(task(3)).queryByText("2 steps")).toBeNull();
     expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
-    expect(task(2)).toHaveTextContent("not done — nothing decrypted");
+    expect(task(2)).toHaveTextContent("not working — nothing decrypted");
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
       "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it. Installed the profile already? Trust is a separate switch: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is the test.",
     );
     expect(open("On your iPhone, open")).toBe(true);
-    expect(task(4)).toHaveTextContent("arriving but not decrypting");
+    expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
   });
 });
@@ -1204,7 +1254,7 @@ describe("one reading of this machine, re-taken by one control", () => {
   it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
     draw({ os: "linux", proxy: { status: "unknown", address: null } });
 
-    expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
+    expect(task(2)).toHaveTextContent("can't check here — this machine's first request confirms it");
     expect(task(2)).not.toHaveTextContent("the system proxy is off");
   });
 
@@ -1236,7 +1286,7 @@ describe("the clock reaches the traffic reading and nothing else", () => {
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
 
     expect(zone("proven")).toBeNull();
-    expect(task(3)).toHaveTextContent("nothing arriving right now");
+    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
     expect(resolved).not.toHaveBeenCalled();
   });
 });
@@ -1245,9 +1295,9 @@ test("no step reports itself done — every state on the screen has a source", (
   draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null }, os: "linux" });
 
   // Nothing read either store on this host, so neither task may claim one was.
-  expect(task(1)).toHaveTextContent("we'll confirm this on this machine's first HTTPS request");
-  expect(task(2)).toHaveTextContent("we'll confirm this on this machine's first request");
-  expect(document.body.textContent).not.toMatch(/done — /);
+  expect(task(1)).toHaveTextContent("can't check here — this machine's first HTTPS request confirms it");
+  expect(task(2)).toHaveTextContent("can't check here — this machine's first request confirms it");
+  expect(document.body.textContent).not.toMatch(/(?<!not )done — /);
 });
 
 // ── What a command is, and where it sits ───────────────────────────────────
@@ -1466,5 +1516,100 @@ test("an Android device whose requests arrive and do not decrypt is told where i
 
   expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
     "something reached Trawler and did not decrypt — your Android device does not trust Trawler's certificate yet. The steps below install it. Already did? Trawler Proxy CA should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.",
+  );
+});
+
+// ── The request the app makes of its own (F24 · DEC-56) ────────────────────
+
+describe("make a request to example.com", () => {
+  const REQUEST = "make a request to example.com";
+  const states = () => [1, 2, 3].map((n) => screen.getByTestId(`task-${n}`).textContent);
+
+  it("is This machine's third route, and nothing runs it but a click", () => {
+    const onMakeRequest = vi.fn(async () => {});
+    draw({ onMakeRequest });
+
+    expect(within(task(3)).getByRole("button", { name: REQUEST })).toBeInTheDocument();
+    expect(within(task(3)).getByText("or run this in a terminal")).toBeInTheDocument();
+    expect(onMakeRequest).not.toHaveBeenCalled();
+  });
+
+  it("is offered on no other device — its request travels through this host", () => {
+    draw({ onMakeRequest: vi.fn(async () => {}), reach: ARMED });
+    for (const device of ["iOS Simulator", "Android emulator", "iPhone or iPad", "Another Mac"]) {
+      pick(device);
+      expect(screen.queryByRole("button", { name: REQUEST })).toBeNull();
+    }
+  });
+
+  it("says the host answered, and leaves every task's state to what Trawler captured", async () => {
+    const onMakeRequest = vi.fn(async () => {});
+    draw({ onMakeRequest, trustProbe: "trusted", proxy: { status: "ours", address: null } });
+    const before = states();
+
+    fireEvent.click(screen.getByRole("button", { name: REQUEST }));
+
+    await waitFor(() => expect(screen.getByTestId("make-request-status")).toHaveTextContent("example.com answered."));
+    expect(onMakeRequest).toHaveBeenCalledOnce();
+    expect(states().map((t) => t?.replace(/example.com answered\./, ""))).toEqual(before);
+    expect(task(3)).toHaveTextContent("not done — waiting for the first request");
+  });
+
+  it("says a request that did not complete, and keeps the manual routes", async () => {
+    draw({ onMakeRequest: vi.fn(() => Promise.reject(new TypeError("Load failed"))) });
+
+    fireEvent.click(screen.getByRole("button", { name: REQUEST }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("make-request-status")).toHaveTextContent(
+        "the request to example.com didn't complete.",
+      ),
+    );
+    expect(screen.getByRole("button", { name: REQUEST })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "the try-it command" })).toBeInTheDocument();
+  });
+});
+
+// ── A code for the value a phone cannot paste (F28 · DEC-57) ────────────────
+
+describe("the certificate URL's scannable code", () => {
+  it.each([
+    ["iPhone or iPad", ARMED.ca_urls!.mobileconfig],
+    ["Android device", ARMED.ca_urls!.cer],
+  ])("on %s, sits under the step that prints the URL, and encodes exactly that URL", (device, url) => {
+    draw({ reach: ARMED });
+    pick(device);
+
+    const code = screen.getByRole("img", { name: "the certificate URL, as a code to scan" });
+    expect(code).toHaveAttribute("data-value", url);
+    const step = code.closest("li");
+    expect(step).toHaveTextContent(url);
+    expect(within(step as HTMLElement).getByRole("button", { name: "copy the certificate URL" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("scan-code")).toHaveLength(1);
+  });
+
+  it("is drawn for no value a scan cannot use — the proxy host and port stay typed", () => {
+    draw({ reach: ARMED });
+    pick("iPhone or iPad");
+
+    for (const code of screen.getAllByRole("img", { name: /as a code to scan/ }))
+      expect(code.getAttribute("data-value")).not.toBe(ARMED.proxy);
+  });
+
+  it("waits for an address — before reach is armed there is nothing to encode", () => {
+    draw({ reach: UNARMED });
+    pick("iPhone or iPad");
+
+    expect(screen.queryByTestId("scan-code")).toBeNull();
+  });
+
+  it.each(["Another Mac", "Another Windows PC", "Another Ubuntu machine", "Android emulator", "iOS Simulator"])(
+    "is not drawn for %s, which opens the URL without a camera",
+    (device) => {
+      draw({ reach: ARMED });
+      pick(device);
+
+      expect(screen.queryByTestId("scan-code")).toBeNull();
+    },
   );
 });

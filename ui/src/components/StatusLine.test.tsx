@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
 import { StatusLine } from "./StatusLine";
 
-const CONFIRM_ON = "we'll confirm this on this Mac's first request";
+const CONFIRM_ON = "this Mac's first request confirms it";
 
 const glyphClass = (status: StepStatusView) => {
   const { container } = render(<StatusLine status={status} />);
@@ -57,7 +57,7 @@ describe("StatusLine", () => {
   });
 
   it("wraps the message rather than truncating it — a cut reason is a wrong reason", () => {
-    const short = "arriving but not decrypting";
+    const short = "not working — arriving but not decrypting";
     render(
       <StatusLine status={{ glyph: "⚠", tone: "warn", short }} />,
     );
@@ -84,7 +84,7 @@ describe("StatusLine", () => {
     const status = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: 9_000 }, 10_000);
     render(<StatusLine status={status} />);
 
-    expect(screen.getByText("arriving — plain HTTP only")).toBeInTheDocument();
+    expect(screen.getByText("not done — only plain http so far")).toBeInTheDocument();
     expect(screen.queryByText(/starts with https/)).not.toBeInTheDocument();
   });
 
@@ -121,14 +121,14 @@ describe("StatusLine", () => {
       render(<StatusLine status={trustStatus("trusted", "installing", CONFIRM_ON)} />);
 
       expect(screen.getByTestId("status-line-spinner")).toBeInTheDocument();
-      expect(screen.getByText("setting up — approve the prompt…")).toBeInTheDocument();
+      expect(screen.getByText("setting up")).toBeInTheDocument();
     });
 
     it("shows a decrypted flow arriving now as the ok verdict of the traffic layer", () => {
       const status = trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: 9_000 }, 10_000);
       render(<StatusLine status={status} />);
 
-      expect(screen.getByText("capturing traffic")).toBeInTheDocument();
+      expect(screen.getByText("done — capturing traffic")).toBeInTheDocument();
       expect(glyphClass(status)).toContain("text-ok");
     });
 
@@ -139,7 +139,7 @@ describe("StatusLine", () => {
         />,
       );
 
-      expect(screen.getByText(CONFIRM_ON)).toBeInTheDocument();
+      expect(screen.getByText(`can't check here — ${CONFIRM_ON}`)).toBeInTheDocument();
       expect(screen.getByText("◐")).toBeInTheDocument();
     });
   });

@@ -54,25 +54,36 @@ export const TUNNEL_GRACE_MS = 3_000;
 
 export type Running = "installing" | "setting" | "checking" | null;
 
-// A reading in progress says which reading, because "checking…" over three
-// tasks tells the user nothing about any of them. A write in progress says
-// what it is waiting for, which is the user.
-const SETTING_UP: StepStatusView = {
-  glyph: "⟳",
-  tone: "muted",
-  short: "setting up — approve the prompt…",
+// The closed vocabulary of a setup task's state (F5): one glyph, one tone and
+// one word each, so the state is read from the word before the reason and no
+// glyph means two things. The reason after the dash is the resolver's.
+export type SetupState = "done" | "not-done" | "not-working" | "cant-check" | "checking" | "setting-up";
+
+const STATE_FACE: Record<SetupState, { glyph: string; tone: StepTone; word: string }> = {
+  done: { glyph: "✓", tone: "ok", word: "done" },
+  "not-done": { glyph: "○", tone: "muted", word: "not done" },
+  "not-working": { glyph: "⚠", tone: "warn", word: "not working" },
+  "cant-check": { glyph: "◐", tone: "muted", word: "can't check here" },
+  checking: { glyph: "⟳", tone: "muted", word: "checking" },
+  "setting-up": { glyph: "⟳", tone: "muted", word: "setting up" },
 };
 
-const reading = (what: string): StepStatusView => ({ glyph: "⟳", tone: "muted", short: what });
+export const STATE_WORDS = Object.values(STATE_FACE).map((face) => face.word);
+
+export function verdict(state: SetupState, reason?: string, remedy?: string): StepStatusView {
+  const { glyph, tone, word } = STATE_FACE[state];
+  const short = reason === undefined ? word : `${word} — ${reason}`;
+  return remedy === undefined ? { glyph, tone, short } : { glyph, tone, short, remedy };
+}
+
+// A write in progress says only that it runs: what it waits on is the user,
+// and the note under the button that started it says so, once (F19).
+const SETTING_UP = verdict("setting-up");
 
 // A task about something nothing here can read. Not a verdict about that
 // device — nobody looked at it — but the promise that its first request is
 // what will settle this.
-export const awaiting = (confirmOn: string): StepStatusView => ({
-  glyph: "◐",
-  tone: "muted",
-  short: confirmOn,
-});
+export const awaiting = (confirmOn: string): StepStatusView => verdict("cant-check", confirmOn);
 
 // What this setup's own traffic says about the two tasks, for wherever no probe
 // concludes them. It is evidence gathered, not a reading of now: a request that
@@ -120,22 +131,19 @@ export function trustStatus(
   confirmOn: string,
   evidence: Evidence = NO_EVIDENCE,
 ): StepStatusView {
-  if (running === "checking") return reading("reading the certificate store…");
+  if (running === "checking") return verdict("checking", "the certificate store");
   if (running) return SETTING_UP;
-  if (probe === "trusted") return { glyph: "✓", tone: "ok", short: "done — installed and trusted" };
-  if (probe === "untrusted")
-    return { glyph: "○", tone: "muted", short: "not done — the certificate isn't trusted" };
-  if (evidence.decrypted) return { glyph: "✓", tone: "ok", short: "done — a request decrypted" };
-  if (evidence.refused) return { glyph: "⚠", tone: "warn", short: "not done — nothing decrypted" };
+  if (probe === "trusted") return verdict("done", "installed and trusted");
+  if (probe === "untrusted") return verdict("not-done", "the certificate isn't trusted");
+  if (evidence.decrypted) return verdict("done", "a request decrypted");
+  if (evidence.refused) return verdict("not-working", "nothing decrypted");
   return awaiting(confirmOn);
 }
 
 // A device's route, where nothing on this machine reads it: the request it
 // sends is the only witness, and it promised to be.
 export function routeByTraffic(evidence: Evidence, confirmOn: string): StepStatusView {
-  return evidence.reached
-    ? { glyph: "✓", tone: "ok", short: "done — requests reached Trawler" }
-    : awaiting(confirmOn);
+  return evidence.reached ? verdict("done", "requests reached Trawler") : awaiting(confirmOn);
 }
 
 // The certificate task's own account of a refusal: the certificate is the step
@@ -149,14 +157,12 @@ export function proxyStatus(
   running: Running,
   words: { device: string; confirmOn: string },
 ): StepStatusView {
-  if (running === "checking") return reading("reading the proxy settings…");
+  if (running === "checking") return verdict("checking", "the proxy settings");
   if (running) return SETTING_UP;
-  if (probe === "ours")
-    return { glyph: "✓", tone: "ok", short: `done — ${words.device} routes through Trawler` };
+  if (probe === "ours") return verdict("done", `${words.device} routes through Trawler`);
   if (probe === "unknown") return awaiting(words.confirmOn);
-  if (probe === "foreign")
-    return { glyph: "○", tone: "muted", short: "not done — another proxy is set" };
-  return { glyph: "○", tone: "muted", short: "not done — the system proxy is off" };
+  if (probe === "foreign") return verdict("not-done", "another proxy is set");
+  return verdict("not-done", "the system proxy is off");
 }
 
 // What a user is owed before a button replaces something they set: which proxy
@@ -196,26 +202,23 @@ export function trafficReading(seen: Traffic, now: number): TrafficReading {
 }
 
 const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
-  capturing: { glyph: "✓", tone: "ok", short: "capturing traffic" },
-  "just-arrived": { glyph: "⟳", tone: "muted", short: "a connection just arrived…" },
-  "not-decrypting": {
-    glyph: "⚠",
-    tone: "warn",
-    short: "arriving but not decrypting",
-    // Nothing here knows which platform a tunnel came from — the app cannot
-    // attribute one — so the remedy names the device that is connecting and
-    // leaves the screen's own platform choice out of it.
-    remedy:
-      "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
-  },
-  "plain-only": {
-    glyph: "◐",
-    tone: "muted",
-    short: "arriving — plain HTTP only",
-    remedy: "open a website whose address starts with https://",
-  },
-  idle: { glyph: "○", tone: "muted", short: "nothing arriving right now" },
-  waiting: { glyph: "○", tone: "muted", short: "waiting for the first request" },
+  capturing: verdict("done", "capturing traffic"),
+  "just-arrived": verdict("checking", "a connection just arrived"),
+  // Nothing here knows which platform a tunnel came from — the app cannot
+  // attribute one — so the remedy names the device that is connecting and
+  // leaves the screen's own platform choice out of it.
+  "not-decrypting": verdict(
+    "not-working",
+    "arriving but not decrypting",
+    "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.",
+  ),
+  "plain-only": verdict(
+    "not-done",
+    "only plain http so far",
+    "open a website whose address starts with https://",
+  ),
+  idle: verdict("not-done", "nothing arriving right now"),
+  waiting: verdict("not-done", "waiting for the first request"),
 };
 
 // Where the chosen platform's own certificate probe reads trusted, a tunnel
@@ -232,12 +235,12 @@ export function trafficStatus(
   certificate: { done: boolean; trustedOn: string | null } = { done: true, trustedOn: null },
 ): StepStatusView {
   const reading = trafficReading(seen, now);
-  const verdict = TRAFFIC_VERDICT[reading];
-  if (reading !== "not-decrypting") return verdict;
-  if (!certificate.done) return { glyph: verdict.glyph, tone: verdict.tone, short: verdict.short };
+  const view = TRAFFIC_VERDICT[reading];
+  if (reading !== "not-decrypting") return view;
+  if (!certificate.done) return { glyph: view.glyph, tone: view.tone, short: view.short };
   return certificate.trustedOn === null
-    ? verdict
-    : { ...verdict, remedy: trustedNotDecrypting(certificate.trustedOn) };
+    ? view
+    : { ...view, remedy: trustedNotDecrypting(certificate.trustedOn) };
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A

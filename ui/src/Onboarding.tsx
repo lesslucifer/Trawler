@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { REQUEST_HOST } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
@@ -8,6 +9,7 @@ import {
   CopyText,
   Disclosure,
   Notice,
+  QrCode,
   Select,
   Spinner,
   StatusLine,
@@ -25,6 +27,7 @@ import {
   deviceName,
   isCommand,
   isSave,
+  isScan,
   needsReach,
   probesRoute,
   probesTrust,
@@ -54,6 +57,7 @@ import {
   trafficStatus,
   trustStatus,
   TUNNEL_GRACE_MS,
+  verdict,
   type ProxyReading,
   type Running,
   type StepStatusView,
@@ -97,13 +101,22 @@ interface ActionNote {
 // below it (F18). The tool's own text is still payload, and stays reachable.
 const PROMPT_CANCELLED = "The password prompt was cancelled. Try again, or follow the manual steps.";
 
+// An approval the OS could not show never reached the user, so it is not theirs
+// to have cancelled (-60007); the task's state line says what it left undone.
+const PROMPT_UNSHOWABLE =
+  "macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.";
+
 // Declining the replace-a-foreign-proxy confirm resolves nothing rather than
 // rejecting, so it is not a failure and may not be worded as one — but it is
 // still an act, and an act that leaves the screen identical to one nobody
 // performed is the outcome ARM_NOTE exists to refuse. Each names the halves it
 // did not do, because the combined action has two and the proxy one has one.
+// While a write runs, its task's state line says "setting up" and this note
+// says the one thing left to the user, so neither repeats the other (F19).
+const APPROVE = "approve the prompt that just opened";
+
 const SETUP_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "setting up — approve the prompt…" },
+  running: { tone: "pending", text: APPROVE },
   nothing: {
     tone: "mute",
     text: "nothing changed — the other proxy is still the one in use, and the certificate was not installed.",
@@ -112,7 +125,7 @@ const SETUP_NOTE: ActionNotes = {
 };
 
 const SETPROXY_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "setting the proxy — approve the prompt…" },
+  running: { tone: "pending", text: APPROVE },
   nothing: { tone: "mute", text: "nothing changed — the other proxy is still the one in use." },
   failed: { tone: "warn", text: "setting the proxy failed — the steps below do it by hand." },
 };
@@ -135,6 +148,15 @@ const ARM_NOTE: ActionNotes = {
 const DISARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "stopping…" },
   failed: { tone: "warn", text: "couldn't stop listening." },
+};
+
+// The request's own outcome is whether it completed, never whether setup works:
+// that is the line above, read from what Trawler captured (DEC-56 rule 1). A
+// completed request still says so, or the click leaves the screen as it was.
+const MAKE_REQUEST_NOTE: ActionNotes = {
+  running: { tone: "pending", text: `waiting for ${REQUEST_HOST}…` },
+  done: { tone: "mute", text: `${REQUEST_HOST} answered.` },
+  failed: { tone: "warn", text: `the request to ${REQUEST_HOST} didn't complete.` },
 };
 
 const noAddress = (device: string) =>
@@ -200,13 +222,14 @@ function ActionNote({
   action: ActionHandle;
   note: ActionNotes;
 }) {
-  const refused = action.state === "failed" && action.failure?.refused === true;
+  const failed = action.state === "failed" ? action.failure : undefined;
+  const prompt = failed?.refused ? PROMPT_CANCELLED : failed?.unshowable ? PROMPT_UNSHOWABLE : null;
   const entry = note[action.state];
   const shown = typeof entry === "function" ? entry(action.named) : entry;
-  if (!shown && !refused) return null;
+  if (!shown && prompt === null) return null;
   return (
     <div data-testid={`${testId}-status`} data-state={action.state} className="pt-chrome-y">
-      <Notice tone={refused ? "mute" : shown!.tone}>{refused ? PROMPT_CANCELLED : shown!.text}</Notice>
+      <Notice tone={prompt === null ? shown!.tone : "mute"}>{prompt ?? shown!.text}</Notice>
       {action.state === "failed" && action.failure !== undefined && (
         <div className="pt-2">
           <Disclosure summary="details">
@@ -276,6 +299,7 @@ function Value({ value, label, wire }: { value: string; label: string; wire: str
 function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
   const said = step.filter((part) => !isCommand(part));
   const commands = step.filter(isCommand);
+  const scans = step.filter(isScan);
   return (
     <>
       {said.length > 0 && (
@@ -300,6 +324,11 @@ function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
       )}
       {commands.map((part, i) => (
         <CommandBlock key={i} value={part.command} label={part.label} />
+      ))}
+      {scans.map((part, i) => (
+        <div key={i} data-testid="scan-code" className="pt-2">
+          <QrCode value={part.copy} label={part.label} />
+        </div>
       ))}
     </>
   );
@@ -413,7 +442,9 @@ function TrafficState({
   const status = trafficStatus(traffic, now, certificate);
   return (
     <>
-      <StatusLine status={status} />
+      <div data-testid="traffic-state">
+        <StatusLine status={status} />
+      </div>
       {status.remedy !== undefined && (
         <div data-testid="traffic-remedy" className="pt-2">
           <Notice tone="mute">{status.remedy}</Notice>
@@ -536,11 +567,7 @@ function NetworkTask({
       <TaskStep
         n={n}
         title={title}
-        status={{
-          glyph: "✓",
-          tone: "ok",
-          short: `allowed — listening on ${host} until Trawler quits`,
-        }}
+        status={verdict("done", `listening on ${host} until Trawler quits`)}
       >
         {disarm.trigger && (
           <Action
@@ -562,11 +589,7 @@ function NetworkTask({
       n={n}
       title={title}
       why="Trawler answers on this machine only until you do"
-      status={{
-        glyph: "○",
-        tone: "muted",
-        short: "not done — Trawler answers on this machine only",
-      }}
+      status={verdict("not-done", "Trawler answers on this machine only")}
     >
       {network === undefined ? (
         <>
@@ -726,6 +749,7 @@ interface SetupProps {
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
   onRereadReach?: () => void;
+  onMakeRequest?: () => Promise<void>;
   routeAct?: RouteAct;
   onRouteAct?: (act: RouteAct) => void;
 }
@@ -826,6 +850,7 @@ function PlatformSetup({
   onArmReach,
   onDisarmReach,
   onRereadReach,
+  onMakeRequest,
   routeAct = null,
   onRouteAct,
 }: SetupProps & { platform: PlatformId }) {
@@ -848,6 +873,9 @@ function PlatformSetup({
     onArmReach && chosen !== undefined ? () => onArmReach(chosen) : undefined,
   );
   const disarm = useAction(onDisarmReach);
+  // A request this app makes travels through this host, so it proves this
+  // host's setup and no other device's (DEC-56).
+  const request = useAction(platform === "this" ? onMakeRequest : undefined);
 
   const armed = reach.armed && reach.proxy !== null && reach.ca_urls !== null;
   const setup = setupFor(platform, {
@@ -1062,6 +1090,18 @@ function PlatformSetup({
               trustedOn: platform === "this" && trustDone ? here : null,
             }}
           />
+          {request.trigger && (
+            <div className="pt-2">
+              <Action
+                testId="make-request"
+                label={`make a request to ${REQUEST_HOST}`}
+                action={request}
+                note={MAKE_REQUEST_NOTE}
+                onClick={request.trigger}
+                frame="bare"
+              />
+            </div>
+          )}
           {setup.tryCommand && (
             <>
               <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
