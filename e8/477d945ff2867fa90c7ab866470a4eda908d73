@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU roadmap-rows -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W2
+branch: wu/onboard-revamp/roadmap-rows
+base: 529113e7da1b44f9b623569acb7edf8e5021464e
+head: e8477d945ff2867fa90c7ab866470a4eda908d73
+diff_sha256: a96238d4df037d40fa90d5a10cd3f459d0deb6b2015609825698327b8d224712
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 1
+    finders: 145
+    verifiers: 0
+    total: 380
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-09-29
