@@ -17,7 +17,7 @@ fleet:
     nit: 0
   stage_seconds:
     gate0: 1
-    finders: 145
+    finders: 365
     verifiers: 0
     total: 380
   by_finder:
