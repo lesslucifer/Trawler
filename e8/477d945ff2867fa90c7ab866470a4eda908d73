@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W2
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the P2 findings row (F5, F19, F24, F26, F28 by W2, F23 by W1), the Simulator latch row and the -60007 row closed, each citing the test that holds it; -60007's cause recorded"
+  - path: "docs/decisions/dec-56-the-app-may-prove-capture-itself.html"
+    tier: T2
+    action: updated
+    distills: "built: what the build settled - example.com, fixed and named in the label; the window's own fetch; This machine only; its three notes"
+  - path: "docs/decisions/dec-57-a-device-that-cannot-paste.html"
+    tier: T2
+    action: updated
+    distills: "built as QrCode: uqr bundled, the certificate URL only on iPhone and Android device, no code for the proxy host and port, dark on a light plate, its contract the TSDoc; light-on-dark rejected"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-56 and DEC-57 rows active, with what was built"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the state words and one fact once, the request row, the -60007 wording and the read-back, the macOS probe verifying trust, plain http only not done, the phone's code; UC-4: the capture menu's set up another device"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the setup screen's design of record, round 11 opened and closed archived with the owner's LGTM: the state words, the prompt named once, the request with its notes, the phone's code, an approval macOS could not show, the menu's way into setup"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1 landed, W2 on its branch"
+  - path: "docs/work/2026-09-28-onboard-revamp-w2-roadmap-rows-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's plan: the seven rows re-checked, findings R1-R10 with the owner's rulings, the vocabulary, the test plan"
+  - path: "docs/work/2026-09-29-onboard-revamp-w2-roadmap-rows-result.html"
+    tier: T3
+    action: added
+    distills: "W2's result: outcome per expected row, deviations, evidence, distillation, follow-ups"
