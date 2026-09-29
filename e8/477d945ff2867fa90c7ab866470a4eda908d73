@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: e8477d945ff2867fa90c7ab866470a4eda908d73
+base: 529113e7da1b44f9b623569acb7edf8e5021464e
+tier: key
+signer: vuluu
+report: docs/work/2026-09-29-onboard-revamp-w2-roadmap-rows-result.html
+report_sha256: f3b5f73ceccb3727da02dc355d0618402f0700ba5a516369e41324fe49976f17
+date: 2026-09-29
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECgmXQyNjj/0l/M8sQMtseaZilj2hVaqCg+UYVJdK0QTkfvA+bYf2Ani3
+  EiOGFNpysIuWoYlKNrNgM6gE7cZlcN
+  -----END SSH SIGNATURE-----
