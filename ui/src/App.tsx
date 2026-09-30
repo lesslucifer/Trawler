@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
 import { CA_FILES, hostOs, splitProxyAddr, type CaFormat } from "./setup";
-import { NO_PROXY_READING, setUpOn, type ProxyReading, type TrustProbe } from "./verdicts";
+import { NO_PROXY_READING, setUpOn, TUNNEL_GRACE_MS, type ProxyReading, type TrustProbe } from "./verdicts";
 import { saveBody } from "./body";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
@@ -17,7 +17,14 @@ import { Composer } from "./Composer";
 import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
-import { makeRequest } from "./ownRequest";
+import {
+  isOwnRequest,
+  makeRequest,
+  nextMark,
+  ownRequestProvedAt,
+  REQUEST_HOST,
+  type RequestRoute,
+} from "./ownRequest";
 import {
   Button,
   Field,
@@ -89,6 +96,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     everything,
     hosts,
     lastConnectionAt,
+    tunnelAt,
     lastCaptureAt,
     silent,
     answered,
@@ -357,6 +365,35 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     reprobe();
   };
 
+  // D9: which way this window's own request went is what the core saw of it -
+  // its marked row decrypted, a tunnel to its host and no row, or nothing - and
+  // the core's account lands a listing after the page's answer, so it is
+  // awaited for as long as a tunnel's grace.
+  const awaitingOwn = useRef<{ mark: string; seen: () => void } | null>(null);
+  useEffect(() => {
+    const waiting = awaitingOwn.current;
+    if (waiting !== null && everything.some((f) => isOwnRequest(f, waiting.mark))) waiting.seen();
+  }, [everything]);
+
+  const makeOwnRequest = async (): Promise<RequestRoute> => {
+    const mark = nextMark();
+    const sentAt = Date.now();
+    const through = new Promise<RequestRoute>((resolve) => {
+      awaitingOwn.current = { mark, seen: () => resolve("through") };
+    });
+    const answered = await makeRequest(mark).then(
+      () => true,
+      () => false,
+    );
+    const grace = new Promise<null>((resolve) => setTimeout(() => resolve(null), TUNNEL_GRACE_MS));
+    const route = await Promise.race([through, grace]);
+    if (awaitingOwn.current?.mark === mark) awaitingOwn.current = null;
+    if (route !== null) return route;
+    if ((tunnelAt(REQUEST_HOST) ?? 0) >= sentAt) return "undecrypted";
+    if (answered) return "around";
+    throw new Error(`the request to ${REQUEST_HOST} didn't complete`);
+  };
+
   const close = useProxyCloseConfirm(proxyAddr);
   const closeDialog = close.mode && (
     <ProxyCloseDialog
@@ -546,6 +583,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           routeAct={routeAct}
           onRouteAct={setRouteAct}
           traffic={sessionTraffic(everything, state.since, lastConnectionAt)}
+          ownProofAt={ownRequestProvedAt(everything, state.since)}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
@@ -555,7 +593,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onArmReach={armReach}
           onDisarmReach={disarmReach}
           onRereadReach={rereadReach}
-          onMakeRequest={makeRequest}
+          onMakeRequest={makeOwnRequest}
         />
       </Layout>
     );

@@ -134,6 +134,22 @@ test("stream routes a connection event to onConnection only, never onEvent", () 
   expect(onEvent).toHaveBeenCalledOnce();
 });
 
+// D9: the tunnel's host is the one thing a CONNECT names, and the route of the
+// app's own request is read from it.
+test("a connection event hands over the authority its tunnel named", () => {
+  const listeners = stubEventSource();
+  const onConnection = vi.fn();
+  createApi("http://x").stream({ onEvent: vi.fn(), onConnection });
+
+  const fire = (data: string) =>
+    listeners["connection"].forEach((fn) => fn(new MessageEvent("connection", { data })));
+  fire(JSON.stringify({ authority: "example.com:443" }));
+  fire("not json");
+  fire(JSON.stringify({ authority: 7 }));
+
+  expect(onConnection.mock.calls).toEqual([["example.com:443"], [""], [""]]);
+});
+
 test("getBody asks for the rendered view or the source, and keeps the content type", async () => {
   const bytes = new TextEncoder().encode("hi");
   const fetchMock = vi.fn().mockResolvedValue({

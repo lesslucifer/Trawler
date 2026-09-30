@@ -338,8 +338,8 @@ function linuxThis(): Chapter[] {
         await w.script({ trust: "unreadable", proxy: "unreadable" });
         await w.recheck();
       },
-      expect: `task 2 reads "can't check here — this machine's first request confirms it", not "the system proxy is off"; no "check again" row, since nothing on this host can be re-read`,
-      findings: ["R19", "R20"],
+      expect: `a desktop gsettings does not answer for: task 2 reads "can't check here — the same request confirms it", not "the system proxy is off", and the request in step 3 is what settles it; the "check again" row stays, since the CA bundle and GNOME's proxy are re-read`,
+      findings: ["R19", "D6", "D8"],
       anchor: [task(2)],
     },
     {

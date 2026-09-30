@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
+import { awaiting, NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
 import { StatusLine } from "./StatusLine";
 
 const CONFIRM_ON = "this Mac's first request confirms it";
@@ -111,14 +111,14 @@ describe("StatusLine", () => {
   // T2. Driven through the real resolvers so a re-ranking in either place reds.
   describe("the resolved verdict it is handed", () => {
     it("shows an authoritative positive as the resolved verdict it is", () => {
-      render(<StatusLine status={trustStatus("trusted", null, CONFIRM_ON)} />);
+      render(<StatusLine status={trustStatus("trusted", null, awaiting(CONFIRM_ON))} />);
 
       expect(screen.getByText("✓")).toBeInTheDocument();
       expect(screen.getByText("done — installed and trusted")).toBeInTheDocument();
     });
 
     it("shows a running action over every settled verdict", () => {
-      render(<StatusLine status={trustStatus("trusted", "installing", CONFIRM_ON)} />);
+      render(<StatusLine status={trustStatus("trusted", "installing", awaiting(CONFIRM_ON))} />);
 
       expect(screen.getByTestId("status-line-spinner")).toBeInTheDocument();
       expect(screen.getByText("setting up")).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe("StatusLine", () => {
     it("shows the can't-determine glyph where nothing read the state at all", () => {
       render(
         <StatusLine
-          status={proxyStatus("unknown", null, { device: "this Mac", confirmOn: CONFIRM_ON })}
+          status={proxyStatus("unknown", null, { device: "this Mac", unread: awaiting(CONFIRM_ON) })}
         />,
       );
 

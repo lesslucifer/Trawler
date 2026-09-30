@@ -90,7 +90,7 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 // narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
 function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
-  let onConnection = () => {};
+  let onConnection: (authority: string) => void = () => {};
   const api: TrawlerApi = apiStub({
     listFlows: vi.fn(async (filter: Filter) => {
       // Close enough to FlowFilter::matches (store.rs) for these tests: q really
@@ -135,7 +135,7 @@ function mockApi(store: () => FlowSummary[]) {
   return {
     api,
     fire: () => act(() => onEvent()),
-    fireConnection: () => act(() => onConnection()),
+    fireConnection: (authority = "a.test:443") => act(() => onConnection(authority)),
   };
 }
 
@@ -420,17 +420,20 @@ test("Stop routing invokes unset_proxy after the proxy was set", async () => {
 // tasks never hear about it: a tunnel says nothing about this machine's stores.
 test("a connection event settles the last task, and warns once no request answers it", async () => {
   onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "absent";
+    if (name === "proxy_in_use") return { status: "none", address: null };
+    return undefined;
+  });
   const { api, fireConnection } = mockApi(() => []); // no flows ever
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByTestId("task-3");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("not done — not installed"));
 
   fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
   await waitFor(() =>
     expect(screen.getByTestId("task-3")).toHaveTextContent("a connection just arrived"),
   );
-  expect(screen.getByTestId("task-2")).toHaveTextContent(
-    "can't check here — this Mac's first request confirms it",
-  );
+  expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off");
 
   // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
   const realNow = Date.now;
@@ -2359,4 +2362,92 @@ test("the list's menu sets up another device the way the banner does", async () 
   await screen.findByText(QUESTION);
   expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("choose a device");
   expect(screen.queryByTestId("steps")).toBeNull();
+});
+
+// ── This machine's own request: the route the core saw (D6 · D9 · DEC-62) ──
+
+describe("This machine's own request", () => {
+  const ANOTHER: OnbState = { ...ONBOARDING, everProven: true };
+  const REQUEST = "make a request to example.com";
+  const note = () => screen.getByTestId("make-request-status");
+
+  // The window's fetch is the request; whatever the core then records of it is
+  // the test's to script, as the real proxy would.
+  function onLinuxWith(answer: (url: string) => Promise<Response>) {
+    onLinuxHost();
+    let rows: FlowSummary[] = [];
+    const mock = mockApi(() => rows);
+    const fetch = vi.fn(answer);
+    vi.stubGlobal("fetch", fetch);
+    render(<App api={mock.api} initialState={ANOTHER} />);
+    return {
+      ...mock,
+      capture: (url: string) => {
+        rows = [flow({ id: "own", uri: url, started_at: new Date().toISOString() })];
+        mock.fire();
+      },
+      url: () => String(fetch.mock.calls[0]?.[0]),
+    };
+  }
+
+  it("marks its request, and reads it through Trawler once its decrypted row arrives", async () => {
+    const own = onLinuxWith(async (url) => {
+      own.capture(url);
+      return new Response(null);
+    });
+    await screen.findByText(QUESTION);
+
+    fireEvent.click(await screen.findByRole("button", { name: REQUEST }));
+
+    await waitFor(() => expect(note()).toHaveTextContent("example.com answered through Trawler."));
+    expect(own.url()).toMatch(/^https:\/\/example\.com\/\?trawler-check=[a-z0-9]+\.\d+$/);
+    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — step 3's request decrypted at \d\d:\d\d/);
+    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — step 3's request came through at \d\d:\d\d/);
+  });
+
+  const afterGrace = async (answer: (url: string, own: ReturnType<typeof onLinuxWith>) => Promise<Response>) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const own: ReturnType<typeof onLinuxWith> = onLinuxWith((url) => answer(url, own));
+    await screen.findByText(QUESTION);
+    fireEvent.click(await screen.findByRole("button", { name: REQUEST }));
+    await waitFor(() => expect(note()).toHaveTextContent("waiting for example.com…"));
+    await act(async () => vi.advanceTimersByTime(TUNNEL_GRACE_MS));
+    return own;
+  };
+
+  it("reads a tunnel to its host and no decrypted row as reaching Trawler and not decrypting", async () => {
+    try {
+      await afterGrace(async (_url, own) => {
+        own.fireConnection("example.com:443");
+        throw new TypeError("Load failed");
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("the request reached Trawler and didn't decrypt."));
+      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in step 3 confirms it");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reads a page that got its answer with nothing seen as going around Trawler", async () => {
+    try {
+      await afterGrace(async (_url, own) => {
+        own.fireConnection("other.test:443");
+        return new Response(null);
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("example.com answered, but not through Trawler."));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("says a request that neither completed nor reached Trawler did not complete", async () => {
+    try {
+      await afterGrace(async () => {
+        throw new TypeError("Load failed");
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("the request to example.com didn't complete."));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

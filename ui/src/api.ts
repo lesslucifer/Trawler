@@ -174,7 +174,8 @@ export interface StreamHandlers {
   onEvent: () => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
   // Onboarding stamps its arrival and judges it by recency; the flow list ignores it.
-  onConnection?: () => void;
+  // The authority is the tunnel's host:port, the one thing a CONNECT names.
+  onConnection?: (authority: string) => void;
   // The stream itself went down or came back. This is the only signal that
   // arrives without the user doing anything, so it is what lets the shell state
   // a core that died under an open window rather than waiting for the next
@@ -318,7 +319,8 @@ export function createApi(baseUrl?: string): TrawlerApi {
       for (const name of ["request", "response", "evicted", "lagged", "cleared"]) {
         source.addEventListener(name, onEvent);
       }
-      if (onConnection) source.addEventListener("connection", onConnection);
+      if (onConnection)
+        source.addEventListener("connection", (event) => onConnection(authorityOf(event)));
       // EventSource reconnects on its own, so `error` is "the stream is not up
       // right now" rather than "give up"; `open` is the recovery it pairs with.
       if (onDown) source.addEventListener("error", onDown);
@@ -326,6 +328,15 @@ export function createApi(baseUrl?: string): TrawlerApi {
       return () => source.close();
     },
   };
+}
+
+function authorityOf(event: Event): string {
+  try {
+    const { authority } = JSON.parse((event as MessageEvent<string>).data) as { authority?: unknown };
+    return typeof authority === "string" ? authority : "";
+  } catch {
+    return "";
+  }
 }
 
 // The server writes its refusals as one lowercase sentence naming what it did

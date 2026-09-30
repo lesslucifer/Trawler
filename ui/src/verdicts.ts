@@ -1,9 +1,11 @@
 // DEC-33's two layers of truth, resolved. THIS MACHINE: two read-only probes,
-// re-read on demand — does this host trust the CA, does its system proxy point
-// at Trawler. TRAFFIC: what has reached the proxy, timestamped. A verdict never
-// borrows from the other layer: a flow captured an hour ago says nothing about
-// the proxy now, and a probe says nothing about a phone pointed here. Pure data
-// → unit-tested; the probes live in Rust.
+// re-read whenever their answer can change — does this host trust the CA, does
+// its system proxy point at Trawler — and, where neither can answer, the one
+// request this app makes of its own (DEC-62). TRAFFIC: what has reached the
+// proxy, timestamped. A verdict never borrows from the other layer: a flow
+// captured an hour ago says nothing about the proxy now, and a phone pointed
+// here says nothing about this machine (D7). Pure data → unit-tested; the
+// probes live in Rust.
 
 // What the shell read of the live certificate: trusted; installed and not
 // trusted (a keychain copy nobody marked Always Trust); not installed; or
@@ -126,22 +128,43 @@ export function evidenceOf(seen: Traffic, now: number): Evidence {
 }
 
 // A probe that concludes is the whole state (DEC-33) - traffic, however much of
-// it, never turns it green. Where it cannot conclude, the task promised its
-// device's first HTTPS request as its reading, and the traffic is that reading.
-export function trustStatus(
-  probe: TrustProbe,
-  running: Running,
-  confirmOn: string,
-  evidence: Evidence = NO_EVIDENCE,
-): StepStatusView {
+// it, never turns it green. Where it cannot conclude, the reading is whatever
+// the caller names for that host: This machine's own request (DEC-62).
+export function trustStatus(probe: TrustProbe, running: Running, unread: StepStatusView): StepStatusView {
   if (running === "checking") return verdict("checking", "the certificate store");
   if (running) return SETTING_UP;
   if (probe === "trusted") return verdict("done", "installed and trusted");
   if (probe === "installed") return verdict("not-done", "installed, not trusted");
   if (probe === "absent") return verdict("not-done", "not installed");
+  return unread;
+}
+
+// A device no probe reads promised its first HTTPS request as its reading, and
+// the traffic is that reading.
+export function trustByTraffic(evidence: Evidence, confirmOn: string): StepStatusView {
   if (evidence.decrypted) return verdict("done", "a request decrypted");
   if (evidence.refused) return verdict("not-working", "nothing decrypted");
   return awaiting(confirmOn);
+}
+
+// The time a proof was made, as the line says it: 24 h, to the minute.
+export function clock(at: number): string {
+  const date = new Date(at);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// This machine, where no probe answers (DEC-62). Its own request - the button
+// in its step 3 - travels this host's system proxy and is checked against this
+// host's store, so one that came through decrypted settles both tasks, with the
+// time it did: the proof lasts the setup session. Until then each task names
+// that request, the second as the same one, so the two lines never say one
+// sentence twice.
+export function byOwnRequest(task: "trust" | "route", provedAt: number | null): StepStatusView {
+  if (provedAt === null)
+    return awaiting(task === "trust" ? "the request in step 3 confirms it" : "the same request confirms it");
+  const at = clock(provedAt);
+  return verdict("done", task === "trust" ? `step 3's request decrypted at ${at}` : `step 3's request came through at ${at}`);
 }
 
 // A device's route, where nothing on this machine reads it: the request it
@@ -159,12 +182,12 @@ export const notDecryptingHere = (device: string, check: string) =>
 export function proxyStatus(
   probe: ProxyProbe,
   running: Running,
-  words: { device: string; confirmOn: string },
+  words: { device: string; unread: StepStatusView },
 ): StepStatusView {
   if (running === "checking") return verdict("checking", "the proxy settings");
   if (running) return SETTING_UP;
   if (probe === "ours") return verdict("done", `${words.device} routes through Trawler`);
-  if (probe === "unknown") return awaiting(words.confirmOn);
+  if (probe === "unknown") return words.unread;
   if (probe === "foreign") return verdict("not-done", "another proxy is set");
   return verdict("not-done", "the system proxy is off");
 }
@@ -231,17 +254,18 @@ const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
 const trustedNotDecrypting = (device: string) =>
   `something is connecting and none of it is decrypting — ${device} trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.`;
 
-// The try task words a refusal only where the certificate task reads done and
-// so cannot own it; anywhere else the certificate task says it, once.
+// The try task words a refusal only where the certificate task does not own
+// it - it reads done, or it is This machine's and no probe read it, so the
+// refusal may be anyone's (D7); anywhere else the certificate task says it, once.
 export function trafficStatus(
   seen: Traffic,
   now: number,
-  certificate: { done: boolean; trustedOn: string | null } = { done: true, trustedOn: null },
+  certificate: { ownsRefusal: boolean; trustedOn: string | null } = { ownsRefusal: false, trustedOn: null },
 ): StepStatusView {
   const reading = trafficReading(seen, now);
   const view = TRAFFIC_VERDICT[reading];
   if (reading !== "not-decrypting") return view;
-  if (!certificate.done) return { glyph: view.glyph, tone: view.tone, short: view.short };
+  if (certificate.ownsRefusal) return { glyph: view.glyph, tone: view.tone, short: view.short };
   return certificate.trustedOn === null
     ? view
     : { ...view, remedy: trustedNotDecrypting(certificate.trustedOn) };

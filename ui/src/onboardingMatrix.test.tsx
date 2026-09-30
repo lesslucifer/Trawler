@@ -1,5 +1,5 @@
-import { describe, expect, test, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, test } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Onboarding, useRouteMemory } from "./Onboarding";
 import type { OnbState } from "./onboardingMachine";
 import type { ReachState } from "./api";
@@ -28,11 +28,14 @@ import {
 // what each task's reading is, written here independently of the screen:
 //
 //   certificate  a probe that concludes (trusted / installed / absent) is the reading;
-//                elsewhere the traffic is - a decrypted request is done, a
-//                refusal with none decrypted is not done, and nothing yet is a
-//                promise to confirm on the first HTTPS request
+//                on This machine where it does not, its own request is (D6),
+//                and no other device's traffic (D7); elsewhere the traffic is -
+//                a decrypted request is done, a refusal with none decrypted is
+//                not done, and nothing yet is a promise to confirm on the first
+//                HTTPS request
 //   proxy        where a probe exists (this machine, the Simulator) it is the
-//                reading; elsewhere any request that reached Trawler is done
+//                reading, and This machine's own request where it cannot
+//                answer; elsewhere any request that reached Trawler is done
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
@@ -125,9 +128,20 @@ interface State {
   trust: TrustProbe;
   proxy: ProxyProbe;
   history: History;
+  // This machine's own request came through, decrypted, in this session.
+  own: boolean;
 }
 
+const OWN_AT = Date.now() - 60_000;
+
 type Handlers = Partial<Record<"setUp" | "setProxy" | "unset", Outcome>>;
+
+// Nothing here asserts on a handler, so none is a mock: every mock is kept for
+// the whole file, and twenty thousand renders' worth outgrows a worker's heap.
+const nothing = () => {};
+const nothingSaved = async () => null;
+const nothingAsync = async () => {};
+const through = async () => "through" as const;
 
 // App holds what the shell last did to the proxy (S5); the host holds it the same way.
 function Host({ s, handlers }: { s: State; handlers: Handlers }) {
@@ -135,20 +149,22 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
   return (
     <Onboarding
       state={onboarding}
-      dispatch={vi.fn()}
+      dispatch={nothing}
       os={s.os}
       proxyAddr="127.0.0.1:9999"
       trustProbe={s.trust}
       proxy={{ status: s.proxy, address: s.proxy === "foreign" ? "10.1.1.1:8080" : null }}
       traffic={trafficOf(s.history)}
+      ownProofAt={s.own ? OWN_AT : null}
       reach={s.armed ? ARMED : UNARMED}
-      onRecheck={vi.fn()}
-      onSaveCa={vi.fn(async () => null)}
-      onSetUpThisMachine={vi.fn(settle(handlers.setUp ?? "done"))}
-      onSetProxy={vi.fn(settle(handlers.setProxy ?? "done"))}
-      onUnsetProxy={vi.fn(settle(handlers.unset ?? "done") as () => Promise<void>)}
-      onArmReach={vi.fn(async () => {})}
-      onDisarmReach={vi.fn(async () => {})}
+      onRecheck={nothing}
+      onSaveCa={nothingSaved}
+      onSetUpThisMachine={settle(handlers.setUp ?? "done")}
+      onSetProxy={settle(handlers.setProxy ?? "done")}
+      onUnsetProxy={settle(handlers.unset ?? "done") as () => Promise<void>}
+      onArmReach={nothingAsync}
+      onDisarmReach={nothingAsync}
+      onMakeRequest={through}
       routeAct={routeAct}
       onRouteAct={onRouteAct}
     />
@@ -243,8 +259,12 @@ function model(s: State) {
   const unanswered = h === "refused" || h === "refused-earlier" || h === "decrypted-then-refused";
   const refused = unanswered && !decrypted;
   const trustConcluded = probesTrust && s.trust !== "unknown";
-  const trustDone = trustConcluded ? s.trust === "trusted" : decrypted;
-  const routeDone = probesRoute ? s.proxy === "ours" : reached;
+  const trustDone = !probesTrust ? decrypted : trustConcluded ? s.trust === "trusted" : s.own;
+  const routeDone =
+    probesRoute && s.proxy !== "unknown" ? s.proxy === "ours" : s.platform === "this" ? s.own : reached;
+  // A refusal is the certificate task's while it is not done - except where
+  // This machine's store went unread, and the refusal may be anyone's (D7).
+  const certificateOwnsRefusal = !trustDone && !(probesTrust && !trustConcluded);
   const auto = canAutoSetup(s.os);
   const routeHere = probesRoute && auto;
   const oneAct = probesTrust && auto && !trustDone && !routeDone;
@@ -260,6 +280,7 @@ function model(s: State) {
     trustConcluded,
     trustDone,
     routeDone,
+    certificateOwnsRefusal,
     routeHere,
     oneAct,
     notDecryptingNow,
@@ -278,6 +299,10 @@ const same = (a: number[], b: number[]) => a.length === b.length && a.every((x, 
 
 function expectedTrustState(s: State): RegExp {
   const m = model(s);
+  if (m.probesTrust && !m.trustConcluded)
+    return s.own
+      ? /^✓\s*done — step 3's request decrypted at \d\d:\d\d$/
+      : /^◐\s*can't check here — the request in step 3 confirms it$/;
   if (m.trustConcluded)
     return {
       trusted: /^✓\s*done — installed and trusted$/,
@@ -291,13 +316,17 @@ function expectedTrustState(s: State): RegExp {
 
 function expectedRouteState(s: State): RegExp {
   const m = model(s);
-  if (!m.probesRoute)
+  if (!m.probesRoute || (s.proxy === "unknown" && s.platform !== "this"))
     return m.reached
       ? /^✓\s*done — requests reached Trawler$/
       : /^◐\s*can't check here — .+'s first request confirms it$/;
   if (s.proxy === "ours") return /^✓\s*done — .+ routes through Trawler$/;
   if (s.proxy === "foreign") return /^○\s*not done — another proxy is set$/;
   if (s.proxy === "none") return /^○\s*not done — the system proxy is off$/;
+  if (s.platform === "this")
+    return s.own
+      ? /^✓\s*done — step 3's request came through at \d\d:\d\d$/
+      : /^◐\s*can't check here — the same request confirms it$/;
   return /^◐\s*can't check here — .+'s first request confirms it$/;
 }
 
@@ -340,14 +369,14 @@ const RULES: Record<string, Rule> = {
     return expectedRouteState(s).test(line) ? null : `task ${m.routeN} reads "${line}"`;
   },
 
-  "place: a refusal is said once - in the certificate task while it is not done, else in the try task while nothing decrypts now":
+  "place: a refusal is said once - in the certificate task while it owns it, else in the try task while nothing decrypts now":
     (o, s) => {
       const m = model(s);
       const expected = m.blocked
         ? []
-        : !m.trustDone && m.unanswered
+        : m.certificateOwnsRefusal && m.unanswered
           ? [m.trustN]
-          : m.trustDone && m.notDecryptingNow
+          : !m.certificateOwnsRefusal && m.notDecryptingNow
             ? [m.tryN]
             : [];
       const found = o.tasks.flatMap((t) => Array(t.refusals).fill(t.n) as number[]);
@@ -472,9 +501,11 @@ function judge(
 const STATES: State[] = HOSTS.flatMap((os) =>
   platformChoices(os).flatMap(({ id: platform }) =>
     (OFF_MACHINE.has(platform) ? [true, false] : [false]).flatMap((armed) =>
-      TRUST.flatMap((trust) =>
-        PROXY.flatMap((proxy) =>
-          HISTORIES.map((history) => ({ os, platform, armed, trust, proxy, history })),
+      (platform === "this" ? [false, true] : [false]).flatMap((own) =>
+        TRUST.flatMap((trust) =>
+          PROXY.flatMap((proxy) =>
+            HISTORIES.map((history) => ({ os, platform, armed, trust, proxy, history, own })),
+          ),
         ),
       ),
     ),
@@ -483,13 +514,16 @@ const STATES: State[] = HOSTS.flatMap((os) =>
 
 const name = (s: State) =>
   `${s.os} · ${s.platform}${OFF_MACHINE.has(s.platform) ? (s.armed ? " armed" : " unarmed") : ""}` +
-  ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}`;
+  ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}${s.own ? " · own request" : ""}`;
 
 describe("every reading at rest", () => {
   test("the matrix is every host, the platforms it offers, reach, probe pair and traffic history", () => {
     const onMac = 3 + 5 * 2;
     const elsewhere = 2 + 5 * 2;
-    expect(STATES).toHaveLength((onMac + 3 * elsewhere) * TRUST.length * 4 * HISTORIES.length);
+    const withOwnRequest = HOSTS.length;
+    expect(STATES).toHaveLength(
+      (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length,
+    );
     expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });
 
@@ -520,7 +554,7 @@ const EVIDENCE_CLASSES = new Set<History>([
 ]);
 
 const ACTED = STATES.filter(
-  (s) => EVIDENCE_CLASSES.has(s.history) && !OFF_MACHINE.has(s.platform),
+  (s) => EVIDENCE_CLASSES.has(s.history) && !OFF_MACHINE.has(s.platform) && (!s.own || s.history === "none"),
 ).flatMap(
   (s) =>
     ACTIONS.flatMap((a) =>
@@ -569,7 +603,7 @@ describe("every offered action, in every outcome", () => {
 
 describe("every offered action, while it runs", () => {
   const RUNNING = STATES.filter(
-    (s) => EVIDENCE_CLASSES.has(s.history) && !OFF_MACHINE.has(s.platform),
+    (s) => EVIDENCE_CLASSES.has(s.history) && !OFF_MACHINE.has(s.platform) && (!s.own || s.history === "none"),
   ).flatMap((s) => ACTIONS.map((a) => [`${name(s)} · ${a.label} → running`, s, a] as const));
 
   test.each(RUNNING)("%s", async (_name, s, a) => {
@@ -584,5 +618,49 @@ describe("every offered action, while it runs", () => {
     });
     expect(screen.getByTestId(a.status)).toHaveAttribute("data-state", "running");
     judge(s, { reversal: false }, [], SAID_ONCE);
+  });
+});
+
+// ── Every promise names what settles it, and that evidence settles it ──────
+
+// A "can't check here" is a promise, so it must name something the screen can
+// be shown, and showing it must move the line. This machine's promise is its
+// own request in step 3 (D6); every other device's is its own first request.
+function settledBy(s: State, promise: string): { evidence: State; offered: (o: Outline) => boolean } | null {
+  const m = model(s);
+  if (/^(the request in step 3|the same request) confirms it$/.test(promise))
+    return {
+      evidence: { ...s, own: true },
+      offered: (o) => o.tasks.some((t) => t.n === m.tryN && t.text.includes("make a request to example.com")),
+    };
+  if (/'s first HTTPS request confirms it$/.test(promise))
+    return { evidence: { ...s, history: "capturing" }, offered: () => true };
+  if (/'s first request confirms it$/.test(promise))
+    return { evidence: { ...s, history: "plain" }, offered: () => true };
+  return null;
+}
+
+const PROMISED = STATES.filter((s) => s.history === "none" && !s.own && !model(s).blocked);
+
+describe("every can't check here names what settles it, and that evidence moves it", () => {
+  test.each(PROMISED.map((s) => [name(s), s] as const))("%s", (_name, s) => {
+    draw(s);
+    const promises = outline()
+      .tasks.map((t) => ({ n: t.n, line: t.state.replace(GLYPH, "").trim() }))
+      .filter(({ line }) => line.startsWith("can't check here — "))
+      .map(({ n, line }) => ({ n, promise: line.slice("can't check here — ".length) }));
+    const settled = promises.map(({ n, promise }) => ({ n, promise, by: settledBy(s, promise) }));
+
+    const unnamed = settled.filter((p) => p.by === null).map((p) => `task ${p.n}: "${p.promise}"`);
+    const absent = settled.filter((p) => p.by !== null && !p.by.offered(outline())).map((p) => `task ${p.n}`);
+    const unmoved: string[] = [];
+    for (const { n, by } of settled) {
+      if (by === null) continue;
+      cleanup();
+      draw(by.evidence);
+      const line = task(outline(), n).state;
+      if (/can't check here/.test(line)) unmoved.push(`task ${n} still reads "${line}"`);
+    }
+    expect([...unnamed.map((u) => `names nothing: ${u}`), ...absent.map((a) => `${a} names a request not offered`), ...unmoved]).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { REQUEST_HOST } from "./ownRequest";
+import { REQUEST_HOST, type RequestRoute } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
@@ -43,6 +43,7 @@ import {
   type Task,
 } from "./setup";
 import {
+  byOwnRequest,
   evidenceOf,
   foreignProxyNotice,
   NO_PROXY_READING,
@@ -55,6 +56,7 @@ import {
   stopRoutingNote,
   trafficReading,
   trafficStatus,
+  trustByTraffic,
   trustStatus,
   TUNNEL_GRACE_MS,
   verdict,
@@ -150,12 +152,19 @@ const DISARM_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't stop listening." },
 };
 
-// The request's own outcome is whether it completed, never whether setup works:
-// that is the line above, read from what Trawler captured (DEC-56 rule 1). A
-// completed request still says so, or the click leaves the screen as it was.
+// The request's note says which way it went, as the core saw it (D9) - never
+// whether setup works: that is each task's own line (DEC-56 rule 1). A page
+// that got its answer around Trawler is the one outcome that looked like
+// success and was not.
+const REQUEST_ROUTE: Record<RequestRoute, ActionNote> = {
+  through: { tone: "ok", text: `${REQUEST_HOST} answered through Trawler.` },
+  undecrypted: { tone: "warn", text: "the request reached Trawler and didn't decrypt." },
+  around: { tone: "warn", text: `${REQUEST_HOST} answered, but not through Trawler.` },
+};
+
 const MAKE_REQUEST_NOTE: ActionNotes = {
   running: { tone: "pending", text: `waiting for ${REQUEST_HOST}…` },
-  done: { tone: "mute", text: `${REQUEST_HOST} answered.` },
+  done: (route) => REQUEST_ROUTE[route as RequestRoute],
   failed: { tone: "warn", text: `the request to ${REQUEST_HOST} didn't complete.` },
 };
 
@@ -436,7 +445,7 @@ function TrafficState({
   certificate,
 }: {
   traffic: Traffic;
-  certificate: { done: boolean; trustedOn: string | null };
+  certificate: { ownsRefusal: boolean; trustedOn: string | null };
 }) {
   const now = useNow();
   const status = trafficStatus(traffic, now, certificate);
@@ -740,6 +749,7 @@ interface SetupProps {
   probing?: boolean;
   probedAt?: number | null;
   traffic?: Traffic;
+  ownProofAt?: number | null;
   reach?: ReachState;
   onSetUpThisMachine?: () => Promise<null | void>;
   onSaveCa?: (format: CaFormat) => Promise<string | null>;
@@ -749,7 +759,7 @@ interface SetupProps {
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
   onRereadReach?: () => void;
-  onMakeRequest?: () => Promise<void>;
+  onMakeRequest?: () => Promise<RequestRoute>;
   routeAct?: RouteAct;
   onRouteAct?: (act: RouteAct) => void;
 }
@@ -841,6 +851,7 @@ function PlatformSetup({
   probing = false,
   probedAt = null,
   traffic = NO_TRAFFIC,
+  ownProofAt = null,
   reach = UNREACHABLE,
   onSetUpThisMachine,
   onSaveCa,
@@ -892,17 +903,30 @@ function PlatformSetup({
   // machine's proxy is exactly what the Simulator routes through.
   const trustHere = probesTrust(platform) && autoHost;
   const routeHere = probesRoute(platform) && autoHost;
-  // Each task has one reading. A probe that concludes is it (DEC-33); where no
-  // probe concludes, this setup's own traffic is, because that is what the task
-  // promised to be confirmed by. This machine's route is the exception: its
-  // try-it command names the proxy itself, so a request that reached Trawler
-  // says nothing about the system proxy, and only the probe may.
+  // Each task has one reading. A probe that concludes is it (DEC-33). Where no
+  // probe concludes on This machine, its own request is (DEC-62): the try-it
+  // command names the proxy itself, and a request from any other device says
+  // nothing about this one (D7). Elsewhere - the Simulator's route included,
+  // when this Mac's proxy cannot be read - this setup's traffic is, because
+  // that is what the task promised to be confirmed by.
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
   const evidence = evidenceOf(traffic, useGraceEdge(traffic.lastTunnelAt));
-  const trustConcluded = probesTrust(platform) && trustProbe !== "unknown";
-  const trustDone = trustConcluded ? trustProbe === "trusted" : evidence.decrypted;
-  const routeDone = probesRoute(platform) ? proxy.status === "ours" : evidence.reached;
+  const ownProved = platform === "this" && ownProofAt !== null;
+  const trustUnread = probesTrust(platform) && trustProbe === "unknown";
+  const trustDone = !probesTrust(platform)
+    ? evidence.decrypted
+    : trustUnread
+      ? ownProved
+      : trustProbe === "trusted";
+  const routeUnread = probesRoute(platform) && proxy.status === "unknown";
+  const routeByOwnRequest = platform === "this";
+  const routeDone =
+    probesRoute(platform) && !routeUnread
+      ? proxy.status === "ours"
+      : routeByOwnRequest
+        ? ownProved
+        : evidence.reached;
   // One prompt for the one thing most users want, and only while both halves
   // are this machine's to change and neither reads done (F27). Once either
   // does, each task carries its own, and the certificate never gets an
@@ -924,18 +948,21 @@ function PlatformSetup({
     setUp.state === "running" || own.state === "running" ? r : probing ? "checking" : null;
 
   const trustState = probesTrust(platform)
-    ? trustStatus(trustProbe, busy(setUp, "installing"), confirmHttpsOn(platform, os), evidence)
-    : trustStatus("unknown", null, confirmHttpsOn(platform, os), evidence);
+    ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt))
+    : trustByTraffic(evidence, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
-        confirmOn: setup.confirmOn,
+        unread: routeByOwnRequest ? byOwnRequest("route", ownProofAt) : routeByTraffic(evidence, setup.confirmOn),
       })
     : routeByTraffic(evidence, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
-  // refusal is some other client's and the try task words it instead.
-  const refusedHere = !trustDone && evidence.unanswered;
+  // refusal is some other client's and the try task words it instead. So does
+  // the try task where This machine's store was not read: the refusal may be
+  // any device's, and the certificate task may not claim it (D7).
+  const certificateOwnsRefusal = !trustDone && !trustUnread;
+  const refusedHere = certificateOwnsRefusal && evidence.unanswered;
 
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
@@ -1086,7 +1113,7 @@ function PlatformSetup({
           <TrafficState
             traffic={traffic}
             certificate={{
-              done: trustDone,
+              ownsRefusal: certificateOwnsRefusal,
               trustedOn: platform === "this" && trustDone ? here : null,
             }}
           />

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
+import { tunnelHost, useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
 import { ApiError } from "./api";
 import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -13,7 +13,7 @@ function fakeApi() {
       return () => {};
     },
   });
-  return { api, fireConnection: () => handlers?.onConnection?.() };
+  return { api, fireConnection: (authority = "a.test:443") => handlers?.onConnection?.(authority) };
 }
 
 // Only a live event can say "now", which is what the setup screen's traffic
@@ -26,6 +26,28 @@ test("a live connection is stamped with its time", () => {
   const before = Date.now();
   act(() => f.fireConnection());
   expect(result.current.lastConnectionAt).toBeGreaterThanOrEqual(before);
+});
+
+// D9: a caller waiting on one request's route asks after the tunnel to its host.
+test("each host's newest tunnel is kept, and no other host's answers for it", () => {
+  const f = fakeApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  expect(result.current.tunnelAt("example.com")).toBeNull();
+
+  const before = Date.now();
+  act(() => f.fireConnection("example.com:443"));
+  act(() => f.fireConnection("other.test:443"));
+
+  expect(result.current.tunnelAt("example.com")).toBeGreaterThanOrEqual(before);
+  expect(result.current.tunnelAt("third.test")).toBeNull();
+});
+
+test("a tunnel's host is its authority without the port, in lowercase", () => {
+  expect(tunnelHost("Example.com:443")).toBe("example.com");
+  expect(tunnelHost("[::1]:7420")).toBe("[::1]");
+  expect(tunnelHost("[::1]")).toBe("[::1]");
+  expect(tunnelHost("example.com")).toBe("example.com");
+  expect(tunnelHost("")).toBe("");
 });
 
 // DEC-61: the dot reads the newest capture, which neither a filter nor a clear lowers.
