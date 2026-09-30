@@ -80,6 +80,25 @@
     .a-rq-ok,.a-rq-fail{display:none}
     .asked-ok .a-rq-ok{display:block}
     .asked-fail .a-rq-fail{display:block}
+    /* round 12 — the three ways the request can go, the certificate installed
+       and not trusted, This machine on a host where no probe answers, and the
+       try task once its proof is quiet. */
+    .a-rq-around,.a-rq-undecrypted{display:none}
+    .asked-around .a-rq-around{display:block}
+    .asked-undecrypted .a-rq-undecrypted{display:block}
+    .a-ct-installed,.a-ct-unread,.a-ct-own,.a-tq-kept{display:none}
+    .installed .a-ct-absent{display:none}
+    .installed .a-ct-installed{display:block}
+    .unread .a-ct-probed{display:none}
+    .unread .a-ct-unread{display:block}
+    .unread.own .a-ct-unread{display:none}
+    .unread.own .a-ct-own{display:block}
+    /* its own request came through: both tasks read done, so the layout is
+       both-done's, worded by the request; quiet after the proof, likewise. */
+    .unread.own .a-rd-none,.quiet .a-rd-none{display:none}
+    .unread.own .a-rd-both,.quiet .a-rd-both{display:block}
+    .quiet .a-st-proven,.quiet .a-st-wait{display:none}
+    .quiet .a-tq-kept{display:block}
   </style>
 </head>
 <body>
@@ -87,12 +106,12 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W2</strong> · branch <code>wu/onboard-revamp/roadmap-rows</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W3</strong> · branch <code>wu/onboard-revamp/this-machine-status</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="archived">
+  <main data-artifact="design-run" data-status="draft">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Mounted from the real <code>ui/src/components/</code>. The buttons under it switch platform and state — read each one alone.</p>
@@ -174,9 +193,21 @@
       <button class="statebtn" data-state-toggle="mock" data-state-class="silent"
               data-label-off="▶ the core not answering" data-label-on="◀ the core answering">▶ the core not answering</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="asked-ok"
-              data-label-off="▶ request: example.com answered" data-label-on="◀ hide the request's note">▶ request: example.com answered</button>
+              data-label-off="▶ request: through Trawler" data-label-on="◀ hide the request's note">▶ request: through Trawler</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="asked-undecrypted"
+              data-label-off="▶ request: reached Trawler, didn't decrypt" data-label-on="◀ hide the request's note">▶ request: reached Trawler, didn't decrypt</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="asked-around"
+              data-label-off="▶ request: around Trawler" data-label-on="◀ hide the request's note">▶ request: around Trawler</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="asked-fail"
               data-label-off="▶ request: didn't complete" data-label-on="◀ hide the request's note">▶ request: didn't complete</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="installed"
+              data-label-off="▶ certificate installed, not trusted" data-label-on="◀ certificate not installed">▶ certificate installed, not trusted</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="unread"
+              data-label-off="▶ no probe answers (Linux without one, or a read that failed)" data-label-on="◀ probes answer">▶ no probe answers (Linux without one, or a read that failed)</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="own"
+              data-label-off="▶ … and its own request came through" data-label-on="◀ … and no request yet">▶ … and its own request came through</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="quiet"
+              data-label-off="▶ capturing, then 30 s quiet" data-label-on="◀ hide the quiet">▶ capturing, then 30 s quiet</button>
       <script type="text/babel">
         const { React, createRoot, Notice, Section, StatusLine, Button, CommandBlock,
                 StepList, CopyText, Disclosure, Select, Spinner, StatusDot, TaskStep, TimestampText,
@@ -282,7 +313,18 @@
            keeps only its way back, and the reversal sits in the task it
            reverses. */
         const TRUSTED = { glyph: "✓", tone: "ok", short: "done — installed and trusted" };
-        const UNTRUSTED = { glyph: "○", tone: "muted", short: "not done — the certificate isn't trusted" };
+        /* Round 12 (D1 · D2): the live certificate, read in three answers. A
+           copy nobody marked Always Trust is its own state, apart from one that
+           is not there at all; a same-name copy never answers for it. */
+        const UNTRUSTED = { glyph: "○", tone: "muted", short: "not done — not installed" };
+        const INSTALLED = { glyph: "○", tone: "muted", short: "not done — installed, not trusted" };
+        /* Round 12 (D6): where no probe answers, This machine's own request is
+           the reading, with its time; until then each task names it, the second
+           as the same one. */
+        const TRUST_UNREAD = { glyph: "◐", tone: "muted", short: "can't check here — the request in step 3 confirms it" };
+        const ROUTE_UNREAD = { glyph: "◐", tone: "muted", short: "can't check here — the same request confirms it" };
+        const TRUST_OWN = { glyph: "✓", tone: "ok", short: "done — step 3's request decrypted at 14:02" };
+        const ROUTE_OWN = { glyph: "✓", tone: "ok", short: "done — step 3's request came through at 14:02" };
         const ROUTED = { glyph: "✓", tone: "ok", short: "done — this Mac routes through Trawler" };
         const UNROUTED = { glyph: "○", tone: "muted", short: "not done — the system proxy is off" };
         /* Round 11 (F5): every state opens with its word, and each glyph owns
@@ -318,9 +360,9 @@
           </>
         );
 
-        const trustTask = (done, children) => (
+        const trustTask = (done, children, doneAs = TRUSTED) => (
           <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted"
-                    status={done ? TRUSTED : UNTRUSTED}>
+                    status={done ? doneAs : UNTRUSTED}>
             {done ? <WayBack title="to remove it later" steps={TRUST_UNDO} /> : children}
           </TaskStep>
         );
@@ -331,9 +373,9 @@
                    undoTitle="to remove it later" undo={TRUST_UNDO} />
           </Steps>
         );
-        const routeTask = (done, trusted) => (
+        const routeTask = (done, trusted, doneAs = ROUTED) => (
           <TaskStep n={2} title="Send this Mac's traffic to Trawler" why="its system proxy points at Trawler while Trawler runs"
-                    status={done ? ROUTED : UNROUTED}>
+                    status={done ? doneAs : UNROUTED}>
             {done ? (
               <>
                 <Reversal trusted={trusted} />
@@ -352,14 +394,18 @@
           </TaskStep>
         );
         /* Round 11 (F24 · DEC-56): the third route. One request on a click, to
-           the host its label names; its note says only whether it completed,
-           and the line above it stays what Trawler captured. */
+           the host its label names; the line above it stays what Trawler
+           captured. Round 12 (D9): the note says which way it went, as the core
+           saw it within a tunnel's grace — a page that got its answer around
+           Trawler is the one outcome that looked like success and was not. */
         const tryTask = (lines) => (
           <TaskStep n={3} title="Open any website on this Mac" why="the first decrypted request is what proves setup works">
             {lines}
             <div className="pt-2">
               <Button frame="bare" tone="mute" onClick={noop}>make a request to example.com</Button>
-              <div className="a-rq-ok pt-chrome-y"><Notice tone="mute">example.com answered.</Notice></div>
+              <div className="a-rq-ok pt-chrome-y"><Notice tone="ok">example.com answered through Trawler.</Notice></div>
+              <div className="a-rq-undecrypted pt-chrome-y"><Notice tone="warn">the request reached Trawler and didn't decrypt.</Notice></div>
+              <div className="a-rq-around pt-chrome-y"><Notice tone="warn">example.com answered, but not through Trawler.</Notice></div>
               <div className="a-rq-fail pt-chrome-y"><Notice tone="warn">the request to example.com didn't complete.</Notice></div>
             </div>
             <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
@@ -376,12 +422,23 @@
            own steps. While the act is offered every guide is shut — the button
            is the route — until the act fails. */
         const MAC_TRUST = [
-          line("a-st-rest", UNTRUSTED),
+          state("a-st-rest", <>
+            <div className="a-ct-probed">
+              <div className="a-ct-absent"><StatusLine status={UNTRUSTED} /></div>
+              <div className="a-ct-installed"><StatusLine status={INSTALLED} /></div>
+            </div>
+            <div className="a-ct-unread"><StatusLine status={TRUST_UNREAD} /></div>
+            <div className="a-ct-own"><StatusLine status={TRUST_OWN} /></div>
+          </>),
           line("a-st-checking", { glyph: "⟳", tone: "muted", short: "checking — the certificate store" }),
           line("a-st-installing", { glyph: "⟳", tone: "muted", short: "setting up" }),
         ];
         const MAC_ROUTE = [
-          line("a-st-rest", UNROUTED),
+          state("a-st-rest", <>
+            <div className="a-ct-probed"><StatusLine status={UNROUTED} /></div>
+            <div className="a-ct-unread"><StatusLine status={ROUTE_UNREAD} /></div>
+            <div className="a-ct-own"><StatusLine status={ROUTE_OWN} /></div>
+          </>),
           line("a-st-checking", { glyph: "⟳", tone: "muted", short: "checking — the proxy settings" }),
           line("a-st-installing", { glyph: "⟳", tone: "muted", short: "setting up" }),
         ];
@@ -447,13 +504,22 @@
         /* Both done: nothing left to install, and a request is what ends it.
            The remedy for undecrypted traffic defers to the green probe above
            it — this Mac trusts the certificate, so the tunnel is someone else's. */
+        const bothDone = (trustAs, routeAs) => (
+          <div className="flex flex-col gap-4">
+            {trustTask(true, undefined, trustAs)}
+            {routeTask(true, true, routeAs)}
+          </div>
+        );
         mount("m-steps-machine-both", column(<>
-          {trustTask(true)}
-          {routeTask(true, true)}
+          <div className="a-ct-probed">{bothDone(TRUSTED, ROUTED)}</div>
+          <div className="a-ct-own">{bothDone(TRUST_OWN, ROUTE_OWN)}</div>
           {tryTask(<>
             {line("a-st-wait", WAITING)}
             {line("a-st-tunnel", { glyph: "⚠", tone: "warn", short: "not working — arriving but not decrypting" })}
             {line("a-st-proven", { glyph: "✓", tone: "ok", short: "done — capturing traffic" })}
+            {/* Round 12 (U5 · Q3): 30 s quiet after the proof, This machine's
+                try task keeps it, with its time, under two done tasks. */}
+            {line("a-tq-kept", { glyph: "✓", tone: "ok", short: "done — decrypted at 14:02, nothing since" })}
             <div className="a-st-tunnel pt-2">
               <Notice tone="mute">
                 something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate,
@@ -714,8 +780,8 @@
         <tr><td>The reversal sits in task 2 and names only what is installed</td><td>round 7 · R14 · R15</td></tr>
         <tr><td>One guide open: a failed action's, else the first task not done. Shut while a button can still do the job; none once a request decrypts</td><td>round 5 · round 7 · R16</td></tr>
         <tr><td>No sentence contradicts a reading beside it: the end names this Mac only when both probes read done; the remedy defers to a trusted certificate</td><td>round 7 · R17 · R18</td></tr>
-        <tr><td>Every task has one reading: a probe that concludes, else this setup's own traffic (the model below)</td><td>round 8 · DEC-33</td></tr>
-        <tr><td>A refusal is said once: in the certificate task while it is not done, else in the try task while nothing decrypts now</td><td>round 8</td></tr>
+        <tr><td>Every task has one reading: a probe that concludes, else — on This machine — its own request, else this setup's own traffic (the model below)</td><td>round 8 · DEC-33 · round 12 · DEC-62</td></tr>
+        <tr><td>A refusal is said once: in the certificate task while it is not done and its own, else in the try task while nothing decrypts now. This machine's is not its own where no probe read its store — it may be any device's</td><td>round 8 · round 12 · D7</td></tr>
         <tr><td>Every sentence that says "the steps below" has them open</td><td>rounds 7 · 8</td></tr>
         <tr><td>A setup session starts when setup opens. The tasks read from traffic, the open guide, the try task and the end read only what started after it, unfiltered by the list</td><td>round 9 · R4 · R7</td></tr>
         <tr><td>The header's dot switches screens in every phase: the list opens setup, setup and the launch check open the list. It reads the newest captured request, not the phase: red with none, green for 3 minutes after one, then a hollow ring. http counts for the dot and never for the certificate task</td><td>round 10 · DEC-61 · P1 · P2 · Q4</td></tr>
@@ -728,6 +794,12 @@
         <tr><td>This machine's try task offers <em>make a request to example.com</em> as a third route, on a click only; its note says whether it completed, never whether setup works</td><td>round 11 · F24 · DEC-56</td></tr>
         <tr><td>A phone's certificate URL carries a code under its sentence, once Wi-Fi devices are allowed; the URL stays printed. No code for the proxy host and port</td><td>round 11 · F28 · DEC-57</td></tr>
         <tr><td>An approval macOS could not show is never worded as the user's cancel</td><td>round 11 · -60007</td></tr>
+        <tr><td>This machine's probes read the live certificate — never a copy of the same name — and the proxy HTTPS goes through now</td><td>round 12 · D1–D5 · D8</td></tr>
+        <tr><td>Another device's traffic never settles This machine's certificate or proxy; only a probe or This machine's own marked request does</td><td>round 12 · D6 · D7</td></tr>
+        <tr><td>The request's note says which way it went: through Trawler, reached it and did not decrypt, or around it. It never moves a task</td><td>round 12 · D9 · DEC-56</td></tr>
+        <tr><td>Every <em>can't check here</em> names what settles it, and that evidence moves it</td><td>round 12</td></tr>
+        <tr><td>This machine is read again after every action, whatever its outcome; when the core comes back; on focus; and every 3 s while setup shows. Only a read the user asked for shows <em>checking</em></td><td>round 12 · U1–U4 · DEC-62</td></tr>
+        <tr><td>This machine's try task keeps its proof once the traffic goes quiet, with its time</td><td>round 12 · U5 · Q3</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
         <tr><td>The column is 60% of the window up to 880px; zones 24px apart, tasks 32px</td><td>rounds 5 · 6</td></tr>
       </table>
@@ -740,23 +812,23 @@
         <tr><td>proxy done</td><td><em>2 steps</em>, open</td><td>✓ · <em>stop routing through Trawler</em> · <em>to turn it off later</em></td></tr>
         <tr><td>both done</td><td>✓ · <em>to remove it later</em></td><td>✓ · <em>stop routing through Trawler</em> · <em>to turn it off later</em></td></tr>
       </table>
-      <p class="kd">Done = the certificate reads <code>trusted</code>, the proxy reads <code>ours</code>. Anything else, "can't check" included, is not done. A re-check in flight changes the state line, never the layout.</p>
+      <p class="kd">Done = the certificate reads <code>trusted</code>, the proxy reads <code>ours</code> — or, where the probe cannot answer, This machine's own request came through decrypted this session (round 12). Anything else, "can't check" included, is not done. A re-check in flight changes the state line, never the layout; a quiet re-read changes neither until its answer does.</p>
 
       <h3 id="model">Where each task's reading comes from</h3>
       <table data-c="model-table">
-        <tr><th>Task</th><th>Where a probe concludes</th><th>Everywhere else — this setup's traffic</th></tr>
-        <tr><td>certificate</td><td>this machine: <em>trusted</em> · <em>untrusted</em>, read on macOS as the installed copy verifying, never as its presence (round 11). Traffic never overrules it</td><td>a request decrypted → <em>done — a request decrypted</em> · a tunnel past its grace and nothing decrypted → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — …'s first HTTPS request confirms it</em></td></tr>
-        <tr><td>proxy</td><td>this machine and the Simulator: the probe, always — its <em>can't read</em> stays a promise, since this machine's try-it command names the proxy itself and cannot prove the system one</td><td>any request reached Trawler → <em>done — requests reached Trawler</em> · none → <em>can't check here — …'s first request confirms it</em></td></tr>
-        <tr><td>try it</td><td colspan="2">the traffic now, against a 30 s clock — unchanged</td></tr>
+        <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Everywhere else — this setup's traffic</th></tr>
+        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>a request decrypted → <em>done — a request decrypted</em> · a tunnel past its grace and nothing decrypted → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — …'s first HTTPS request confirms it</em></td></tr>
+        <tr><td>proxy</td><td>this machine and the Simulator: the proxy HTTPS goes through now — <code>scutil --proxy</code> on macOS, the <code>https=</code> entry or the one address on Windows, GNOME's HTTPS proxy on Linux. Any loopback name on Trawler's port is Trawler</td><td>the same request → <em>done — step 3's request came through at 14:02</em> · else <em>can't check here — the same request confirms it</em></td><td>any request reached Trawler → <em>done — requests reached Trawler</em> · none → <em>can't check here — …'s first request confirms it</em>. The Simulator's too, where this Mac's proxy cannot be read</td></tr>
+        <tr><td>try it</td><td colspan="3">the traffic now, against a 30 s clock. On This machine a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em> (round 12)</td></tr>
       </table>
-      <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. The screen infers the device from the platform chosen, so a request from this Mac would also count — the blocked-on attribution row stays open. The matrix test renders every host × platform × reach × probe pair × traffic history and judges each against this table.</p>
+      <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. The screen infers the device from the platform chosen, so a request from this Mac would also count — the blocked-on attribution row stays open — except on This machine, whose own request carries a mark (<code>?trawler-check=…</code>, visible in the list) and whose tasks read nothing else (round 12). The matrix test renders every host × platform × reach × probe pair × traffic history × own request and judges each against this table.</p>
 
       <h3 id="copy">The sentences</h3>
       <table data-c="copy-table">
         <tr><th>Where</th><th>What it says</th></tr>
         <tr><td>title · purpose</td><td><em>Set up capture</em> · <em>Trawler sits between a device and the internet. To show a device's HTTPS traffic, that device has to trust Trawler's certificate and send its traffic to Trawler.</em></td></tr>
         <tr><td>the question</td><td><em>which device's traffic do you want to see</em> · unanswered: <em>choose a device</em></td></tr>
-        <tr><td>states · this machine</td><td><em>done — installed and trusted</em> · <em>not done — the certificate isn't trusted</em> · <em>done — this Mac routes through Trawler</em> · <em>not done — the system proxy is off</em> · <em>not done — another proxy is set</em> · <em>not done — waiting for the first request</em> · <em>not done — nothing arriving right now</em> · <em>not done — only plain http so far</em> · <em>checking — a connection just arrived</em> · <em>not working — arriving but not decrypting</em> · <em>done — capturing traffic</em> · <em>checking — the certificate store</em> · <em>checking — the proxy settings</em> · <em>setting up</em></td></tr>
+        <tr><td>states · this machine</td><td><em>done — installed and trusted</em> · <em>not done — installed, not trusted</em> · <em>not done — not installed</em> · where no probe answers: <em>can't check here — the request in step 3 confirms it</em> · <em>can't check here — the same request confirms it</em>, then <em>done — step 3's request decrypted at 14:02</em> · <em>done — step 3's request came through at 14:02</em> · once quiet after its proof: <em>done — decrypted at 14:02, nothing since</em> · <em>done — this Mac routes through Trawler</em> · <em>not done — the system proxy is off</em> · <em>not done — another proxy is set</em> · <em>not done — waiting for the first request</em> · <em>not done — nothing arriving right now</em> · <em>not done — only plain http so far</em> · <em>checking — a connection just arrived</em> · <em>not working — arriving but not decrypting</em> · <em>done — capturing traffic</em> · <em>checking — the certificate store</em> · <em>checking — the proxy settings</em> · <em>setting up</em></td></tr>
         <tr><td>states · a device</td><td>the proxy task: <em>can't check here — your iPhone's first request confirms it</em>, then <em>done — requests reached Trawler</em> · the certificate task: <em>can't check here — your iPhone's first HTTPS request confirms it</em>, then <em>done — a request decrypted</em> or <em>not working — nothing decrypted</em> · the network task: <em>not done — Trawler answers on this machine only</em>, then <em>done — listening on 192.168.1.24 until Trawler quits</em></td></tr>
         <tr><td>the one act</td><td><em>Set up this Mac</em> · <em>one password prompt — it installs the certificate and sets the proxy</em></td></tr>
         <tr><td>the proxy's own action</td><td><em>Set the system proxy</em></td></tr>
@@ -766,14 +838,14 @@
         <tr><td>a failed action — opens its steps</td><td><em>setting up failed — the steps below do it by hand.</em> · <em>setting the proxy failed — the steps below do it by hand.</em> · <em>couldn't turn the proxy off — the steps below do it by hand.</em> · the tool's text under <em>details</em></td></tr>
         <tr><td>a cancelled prompt</td><td><em>The password prompt was cancelled. Try again, or follow the manual steps.</em></td></tr>
         <tr><td>an approval macOS could not show (-60007) — opens its steps</td><td><em>macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.</em> · the tool's text under <em>details</em></td></tr>
-        <tr><td>the request of its own</td><td><em>make a request to example.com</em> · <em>waiting for example.com…</em> · <em>example.com answered.</em> · <em>the request to example.com didn't complete.</em></td></tr>
+        <tr><td>the request of its own</td><td><em>make a request to example.com</em> · <em>waiting for example.com…</em> · the way it went (round 12): <em>example.com answered through Trawler.</em> · <em>the request reached Trawler and didn't decrypt.</em> · <em>example.com answered, but not through Trawler.</em> · <em>the request to example.com didn't complete.</em></td></tr>
         <tr><td>the code</td><td>no words of its own; named <em>the certificate URL, as a code to scan</em></td></tr>
         <tr><td>the list's ⋮</td><td><em>set up another device</em></td></tr>
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.</em></td></tr>
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
         <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>the Simulator</em>, …), with the steps open</td></tr>
-        <tr><td>undecrypted traffic, in the try task (once the certificate task is done)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted</td></tr>
+        <tr><td>undecrypted traffic, in the try task (once the certificate task is done, or on This machine where no probe read its store)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted</td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
         <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
@@ -792,9 +864,10 @@
       <tr><td><code>state.step</code></td><td>deliberately unused</td><td>tasks are numbered and all shown; none is "current"</td></tr>
       <tr><td><code>os</code></td><td>used</td><td>This machine's label, and which host's commands</td></tr>
       <tr><td><code>proxyAddr</code></td><td>used</td><td>every command this machine runs</td></tr>
-      <tr><td><code>trustProbe</code> — trusted · untrusted · unknown</td><td>used</td><td>task 1's reading, on this machine only</td></tr>
-      <tr><td><code>proxy</code> — ours · foreign · none · unknown, and the address</td><td>used</td><td>task 2's reading, on this machine and the Simulator; the address names a proxy about to be replaced</td></tr>
-      <tr><td><code>probing</code> · <code>probedAt</code> · <code>onRecheck</code></td><td>used</td><td>probe — one dated re-read of both</td></tr>
+      <tr><td><code>trustProbe</code> — trusted · installed · absent · unknown, of the live certificate</td><td>used</td><td>task 1's reading, on this machine only</td></tr>
+      <tr><td><code>proxy</code> — ours · foreign · none · unknown, and the address: the proxy HTTPS goes through now</td><td>used</td><td>task 2's reading, on this machine and the Simulator; the address names a proxy about to be replaced</td></tr>
+      <tr><td><code>probing</code> · <code>probedAt</code> · <code>onRecheck</code></td><td>used</td><td>probe — one dated re-read of both. <code>probing</code> is true only for a read the user asked for; a quiet one moves <code>probedAt</code> alone</td></tr>
+      <tr><td><code>ownProofAt</code> — when This machine's marked request last came through decrypted, this session</td><td>used</td><td>tasks 1 and 2 on This machine where no probe answers (round 12, DEC-62)</td></tr>
       <tr><td><code>traffic</code> — decrypted · tunnel · plain, this session's only: captured, since setup opened, unfiltered</td><td>used</td><td>try — the only proof; a tunnel cannot be tied to a platform (blocked-on)</td></tr>
       <tr><td><code>reach.armed</code> · <code>interfaces</code> · <code>proxy</code> · <code>ca_urls</code></td><td>used</td><td>task 1 off-machine, the values a device types in, and the phone's code</td></tr>
       <tr><td><code>reach.api</code></td><td>deliberately unused</td><td>no step points at it</td></tr>
@@ -802,7 +875,7 @@
       <tr><td><code>onSetProxy</code> · <code>onUnsetProxy</code></td><td>used</td><td>task 2's own action, and the reversal</td></tr>
       <tr><td><code>onSaveCa</code></td><td>used</td><td>the first step of every certificate route</td></tr>
       <tr><td><code>onArmReach</code> · <code>onDisarmReach</code></td><td>used</td><td>task 1 off-machine; the shell's confirm sits behind it (DEC-55)</td></tr>
-      <tr><td><code>onMakeRequest</code></td><td>used</td><td>This machine's try task, the third route (DEC-56)</td></tr>
+      <tr><td><code>onMakeRequest</code> — resolves the way the request went: through · undecrypted · around</td><td>used</td><td>This machine's try task, the third route (DEC-56); its note (round 12)</td></tr>
       <tr><td>an action's failure — <code>refused</code> · <code>unshowable</code> · <code>detail</code></td><td>used</td><td>its note: a cancel, an approval macOS could not show, or the tool's own text</td></tr>
     </table>
     <p class="kd">Not given: which device a request came from · whether a device reached the address · any step done on another device · the chosen platform across launches.</p>
@@ -846,7 +919,7 @@
       <tr><td>CLOSED — the address of a proxy already set</td><td>was: the shell's probe</td><td>closed: the probe reports it, and the notice names it</td></tr>
       <tr><td>CLOSED — one elevated act for both halves</td><td>was: the shell</td><td>closed: <code>set_up_this_machine</code></td></tr>
       <tr><td>which device an undecrypted connection came from</td><td>control API</td><td>the remedy names no platform</td></tr>
-      <tr><td>a certificate probe off macOS and Windows</td><td>control API</td><td>those tasks say how they will be confirmed (◐)</td></tr>
+      <tr><td>CLOSED for Linux — a certificate probe off macOS and Windows</td><td>was: the shell</td><td>closed by round 12: the live certificate in the host's CA bundle, and GNOME's HTTPS proxy; any other host says how it will be confirmed (◐)</td></tr>
       <tr><td>CLOSED — whether a user who proved capture once may leave setup after a regression</td><td>was: product · UC-ONBOARD</td><td>closed by DEC-61: the way out is always open, and the dot goes quiet 3 minutes after the last capture</td></tr>
     </table>
 
@@ -874,6 +947,7 @@
         <tr><td>Round 10, close — "LGTM", on the dot's four looks, the empty list's way in, the capture service not answering in place of every task, and the plain wording</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W1's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 11 — the owner's rulings on E-ONBRVP.W2's plan, 2026-09-28: five state words (Q2); one fact once (R3); the request through the window's own fetch (Q1); a code for the certificate URL on iPhone and Android device only (Q3); set up another device in ⋮ (Q6); and, on -60007, "sometimes it shows the error but it's actually working"</td><td>mockup — every state line reworded to the vocabulary, the running note alone naming the prompt, the request button with its two notes, the phone's code under its URL, the failed set-up as an approval macOS could not show · the way in and out — the ⋮ item · rules · model · copy · given · keyboard · proposals — <code>QrCode</code>, <code>scan-code</code></td><td><code>StatusLine</code> @avoid (the domain words the state) · <code>DEC-56</code> · <code>DEC-57</code> · <code>CaptureMenu</code>'s separator kept for irreversible acts</td></tr>
         <tr><td>Round 11, close — "ok, LGTM", on the state words, the prompt named once, the request of its own with its two notes, the phone's code under its URL, the approval macOS could not show, and the menu's way into setup</td><td>nothing further. Six items filled, <code>verify-doc</code> green on twelve hard rules, then archived; W2's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 12 — the owner's rulings on E-ONBRVP.W3's plan, 2026-09-30: "The plan looks good, please build WU 3" — D1–D9 and U1–U5 taken, Q1–Q4 A: both Linux probes, the watch every 3 s, the try task done with its time, the own request's proof for the session</td><td>mockup — the certificate in three answers, a host where no probe answers and its own request, the request's four notes, the try task quiet after its proof · rules · per reading · model — a column for This machine's own request · copy · given — <code>ownProofAt</code>, the four trust words, quiet reads · blocked-on — the Linux probe row closed. The new promise rule found the Simulator's route promising a request that could not move it where this Mac's proxy is unread; that route falls back to its traffic, as its words say</td><td><code>StatusLine</code> ~40-char contract — the proof lines name the request by its step · <code>DEC-62</code> · <code>DEC-56</code> rule 1 kept: the note moves no task</td></tr>
       </tbody>
     </table>
 
