@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6abb59379f34851f0dfad74f" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6abb59379f34851f0dfad74f" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,13 +15,14 @@
     <div class="inner">
       <h1>E-ONBRVP.W3 — status: This machine</h1>
       <p>How each step's exact state is detected, and when it is read again.</p>
-      <div class="meta">v2 · 2026-09-29 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W3</span> · branch <code>wu/onboard-revamp/this-machine-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2</div>
+      <div class="meta">v3 · 2026-09-30 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W3</span> · branch <code>wu/onboard-revamp/this-machine-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waiting for your rulings:</strong> 9 detection fixes (D1–D9), 5 update fixes (U1–U5), 4 questions (Q1–Q4). No code until they are ruled.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("The plan looks good, please build WU 3", 2026-09-30). D1–D9 and U1–U5
+      taken; Q1–Q4 all A. Building.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -101,7 +102,7 @@
       <tr><td><strong>D5</strong></td><td>Mac · PC</td><td>A proxy of <code>localhost:7420</code> is Trawler, yet reads "another proxy is set" and warns it will be replaced.</td><td>any loopback name on port 7420 is Trawler</td><td>take</td></tr>
       <tr><td><strong>D6</strong></td><td>Linux</td><td>② promises "the first request confirms it", but no request ever can. The curl names the proxy itself, so it proves nothing about the system setting.</td><td>the request button's request goes through the system proxy. Mark it (<code>?trawler-check=…</code>, visible in the list) and let it settle ① and ②. DEC-62</td><td>take</td></tr>
       <tr><td><strong>D7</strong></td><td>Linux</td><td>A phone still pointed at Trawler decrypts → ① "done" for this machine.</td><td>only a probe or the own request settles This machine's ①</td><td>take</td></tr>
-      <tr><td><strong>D8</strong></td><td>Linux</td><td>Both steps read "can't check here", though both are readable.</td><td>two read-only probes: the CA bundle and GNOME's proxy</td><td>by Q1</td></tr>
+      <tr><td><strong>D8</strong></td><td>Linux</td><td>Both steps read "can't check here", though both are readable.</td><td>two read-only probes: the CA bundle and GNOME's proxy</td><td>take (Q1 A)</td></tr>
       <tr><td><strong>D9</strong></td><td>all</td><td>With the proxy off, the request button says "example.com answered.", although the request went around Trawler.</td><td>the note says which way it went (below)</td><td>take</td></tr>
     </table>
 
@@ -178,9 +179,9 @@
       <tr><th>#</th><th>What goes wrong today</th><th>Fix</th><th>Ruling</th></tr>
       <tr><td><strong>U1</strong></td><td>A failed or cancelled action never re-reads. -60007 can leave the certificate trusted, and Windows can install it and then fail on the proxy, yet the screen keeps the old reading.</td><td>re-read after every outcome</td><td>take</td></tr>
       <tr><td><strong>U2</strong></td><td>The core restarts with a new certificate. ① keeps "done" for the old one.</td><td>re-read when the core comes back</td><td>take</td></tr>
-      <tr><td><strong>U3</strong></td><td>You change the proxy in System Settings with Trawler visible beside it. Trawler shows the old reading until you click it.</td><td>the watch</td><td>by Q2</td></tr>
+      <tr><td><strong>U3</strong></td><td>You change the proxy in System Settings with Trawler visible beside it. Trawler shows the old reading until you click it.</td><td>the watch</td><td>take (Q2 A)</td></tr>
       <tr><td><strong>U4</strong></td><td>Every focus flashes both lines "⟳ checking" and disables "Set up this Mac".</td><td>focus and watch reads are quiet. Only "checked 14:02" moves</td><td>take</td></tr>
-      <tr><td><strong>U5</strong></td><td>30 s after success, ③ reads "not done" under two done steps.</td><td>done, with the time</td><td>by Q3</td></tr>
+      <tr><td><strong>U5</strong></td><td>30 s after success, ③ reads "not done" under two done steps.</td><td>done, with the time</td><td>take (Q3 A)</td></tr>
     </table>
 
     <h3 id="expiry">How old proof reads</h3>
@@ -193,11 +194,11 @@
 
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
-      <tr><th>#</th><th>Question</th><th>Proposed</th></tr>
-      <tr><td>Q1</td><td>Add the Linux probes? <strong>A</strong> both (CA bundle + GNOME proxy) · <strong>B</strong> the certificate only · <strong>C</strong> none</td><td>A</td></tr>
-      <tr><td>Q2</td><td>The watch: <strong>A</strong> every 3 s while setup is visible · <strong>B</strong> no watch, focus only</td><td>A</td></tr>
-      <tr><td>Q3</td><td>③ after success and 30 s quiet: <strong>A</strong> "✓ done — decrypted at 14:02, nothing since" · <strong>B</strong> "○ not done" as today</td><td>A</td></tr>
-      <tr><td>Q4</td><td>The own request's proof lasts: <strong>A</strong> the session · <strong>B</strong> 3 min, like the dot</td><td>A</td></tr>
+      <tr><th>#</th><th>Question</th><th>Ruling</th></tr>
+      <tr><td>Q1</td><td>Add the Linux probes? <strong>A</strong> both (CA bundle + GNOME proxy) · <strong>B</strong> the certificate only · <strong>C</strong> none</td><td><strong>ruled: A</strong></td></tr>
+      <tr><td>Q2</td><td>The watch: <strong>A</strong> every 3 s while setup is visible · <strong>B</strong> no watch, focus only</td><td><strong>ruled: A</strong></td></tr>
+      <tr><td>Q3</td><td>③ after success and 30 s quiet: <strong>A</strong> "✓ done — decrypted at 14:02, nothing since" · <strong>B</strong> "○ not done" as today</td><td><strong>ruled: A</strong></td></tr>
+      <tr><td>Q4</td><td>The own request's proof lasts: <strong>A</strong> the session · <strong>B</strong> 3 min, like the dot</td><td><strong>ruled: A</strong></td></tr>
     </table>
 
     <h2 id="expected">Expected result</h2>
@@ -242,7 +243,7 @@
     <h2 id="commits">Commits</h2>
     <table data-c="commits">
       <tr><th>#</th><th>Commit</th></tr>
-      <tr><td>1</td><td>this plan (v1 <code>60768cf</code>, v2 part 1 and part 2), and the epic plan's status line</td></tr>
+      <tr><td>1</td><td>this plan (v1 <code>60768cf</code>, v2 <code>9b056a1</code>, v3 the rulings), and the epic plan's status line</td></tr>
       <tr><td>2</td><td>design round 12, for you to review</td></tr>
       <tr><td>3</td><td>the detectors (D1–D5, D8)</td></tr>
       <tr><td>4</td><td>the own request as evidence, and its note (D6, D7, D9)</td></tr>
