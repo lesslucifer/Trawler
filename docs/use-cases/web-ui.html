@@ -23,7 +23,8 @@
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
       + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
       UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
-      way into setup, by <span class="badge id">E-ONBRVP.W2</span></div>    </div>
+      way into setup, by <span class="badge id">E-ONBRVP.W2</span> · This machine's status by
+      <span class="badge id">E-ONBRVP.W3</span></div>    </div>
   </header>
   <main>
 
@@ -454,9 +455,11 @@
       <table>
         <tr><th>Platform</th><th>Offered on</th><th>Probed?</th><th>Needs reach?</th><th>Certificate file</th><th>What it may promise</th></tr>
         <tr><td>This machine</td><td>every host</td><td>trust + proxy, where a probe can read (macOS,
-          Windows)</td><td>no</td><td><code>trawler-ca.pem</code></td>
-          <td>a read state for both tasks. The success line names <em>this machine</em> only when both probes
-            read done</td></tr>
+          Windows, Linux with a CA bundle and GNOME)</td><td>no</td><td><code>trawler-ca.pem</code></td>
+          <td>a read state for both tasks — and where no probe answers, the request it makes of its own
+            settles both (<a href="../decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>);
+            another device's traffic never does. The success line names <em>this machine</em> only when both
+            probes read done</td></tr>
         <tr><td>iOS Simulator</td><td>macOS only</td><td>proxy only</td><td>no</td><td><code>trawler-ca.pem</code></td>
           <td>it routes through this machine's proxy, but keeps a trust store of its own — so the
             certificate is installed with <code>simctl</code> and the trust half is never claimed from the
@@ -495,26 +498,38 @@
       A task's number is a reading order; its state is a reading something took.</p>
       <table>
         <tr><th>Layer</th><th>Answers for</th><th>Readings</th></tr>
-        <tr><td><strong>The probes</strong> — a dated snapshot, re-taken on demand</td>
-          <td>this machine only: does it trust the CA, does its system proxy point at Trawler</td>
-          <td>trusted / not trusted / <code>unknown</code>. A probe that cannot read answers
-            <code>unknown</code>, never "off", on every host. On macOS, trusted means the installed copy
-            verifies, never only that a certificate of Trawler's name is in a keychain. Traffic, however much
-            of it, never turns them green</td></tr>
+        <tr><td><strong>The probes</strong> — a dated snapshot, re-taken wherever its answer can change</td>
+          <td>this machine only: does it trust the certificate the core serves now, does the proxy HTTPS goes
+            through now point at Trawler</td>
+          <td>trusted / installed, not trusted / not installed / <code>unknown</code>, matched on the live
+            certificate's bytes — never on a name another run's certificate shares: verified on macOS, its
+            thumbprint in the machine or user root store on Windows, in the CA bundle on Linux. The proxy is
+            macOS's resolved one, Windows's <code>https=</code> entry or single address, GNOME's HTTPS proxy;
+            any loopback name on Trawler's port is Trawler. A probe that cannot read answers
+            <code>unknown</code>, never "off", on every host. Traffic, however much of it, never turns them
+            green</td></tr>
         <tr><td><strong>The traffic layer</strong> — judged against a clock, from timestamps</td>
           <td>the wire, now</td>
           <td>a decrypted flow inside the window reads <em>capturing</em>; a tunnel no flow answered reads
             <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
             certificate; plain HTTP only reads not done, with the remedy asking for an https site; traffic seen
-            earlier but nothing recent reads <em>idle</em>. An old flow can only ever produce idle</td></tr>
+            earlier but nothing recent reads <em>idle</em>. An old flow can only ever produce idle — except on
+            This machine, whose try task keeps a decrypted proof once quiet: <em>done — decrypted at 14:02,
+            nothing since</em></td></tr>
       </table>
-      <p><strong>Each task has one reading:</strong> a probe that concludes, else this session's traffic.
-      A decrypted request settles the certificate task, and any request that reached Trawler settles the
-      route task. This machine's route is the exception: its try-it command names the proxy itself, so only
-      its probe may settle it. Where a probe can't conclude, the wording says so and points at the traffic
-      task — never a false "not set up". The dated row and its re-read show only on a host where a probe can
-      answer. A phone that trusts the certificate and points here reads as two true facts side by side: not
-      trusted on this machine, and capturing traffic.</p>
+      <p><strong>Each task has one reading:</strong> a probe that concludes, else — on This machine — the
+      request it makes of its own, else this session's traffic. A decrypted request settles the certificate
+      task, and any request that reached Trawler settles the route task. This machine is the exception: its
+      try-it command names the proxy itself, and any other device's request says nothing about it, so only a
+      probe or its own request — marked <code>?trawler-check=…</code>, captured decrypted this session — may
+      settle its tasks. Where nothing has, the line says what will — <em>the request in step 3 confirms it</em>
+      — never a false "not set up", and a refusal nothing can place is the try task's to word. The dated row
+      and its re-read show wherever a probe can answer. A phone that trusts the certificate and points here
+      reads as two true facts side by side: not trusted on this machine, and capturing traffic.</p>
+      <p><strong>This machine is read again wherever its answer can change</strong>: as setup opens, after
+      every action whatever its outcome, on <em>check again</em>, on focus, when the core comes back, and
+      every 3 s while setup is on screen, its core answering and the window visible. Only a read the user
+      asked for shows <em>checking</em> and holds the buttons; the others move only the dated row.</p>
     </div>
 
     <div data-c="uc-onboard-states">
@@ -526,7 +541,7 @@
         <tr><td>✓</td><td>done</td><td>something read it done</td><td>done — installed and trusted</td></tr>
         <tr><td>○</td><td>not done</td><td>read, not done yet, nothing failed</td><td>not done — only plain http so far</td></tr>
         <tr><td>⚠</td><td>not working</td><td>tried, and failed</td><td>not working — nothing decrypted</td></tr>
-        <tr><td>◐</td><td>can't check here</td><td>nothing here can read it; its first request settles it</td><td>can't check here — your iPhone's first request confirms it</td></tr>
+        <tr><td>◐</td><td>can't check here</td><td>nothing here can read it; the line names the request that settles it, and that request does</td><td>can't check here — your iPhone's first request confirms it</td></tr>
         <tr><td>⟳</td><td>checking · setting up</td><td>a reading or a write is running</td><td>checking — the proxy settings</td></tr>
       </table>
       <p><strong>Each fact is said once</strong> (F19). While a write runs, the state lines of the tasks it
@@ -566,8 +581,10 @@
         <tr><td>Make a request to example.com — This machine's try task only, beside opening a website and the
           curl command (<a href="../decisions/dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>)</td>
           <td>none — one request changes nothing on this host. It runs on a click only, never on its own</td>
-          <td>whether example.com answered. The tasks still read only what Trawler captured of it, so a click
-          never makes a task done</td></tr>
+          <td>which way it went, as the core saw it: <em>through Trawler</em>, <em>reached Trawler and didn't
+            decrypt</em>, or <em>answered, but not through Trawler</em> — or that it did not complete. The note
+            never moves a task; where no probe answers, the marked row it produced, captured decrypted, is This
+            machine's reading (DEC-62) — a click alone never makes a task done</td></tr>
         <tr><td>Stop routing through Trawler — inside the proxy task</td><td>none — reversing is not a new
           exposure</td>
           <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
@@ -615,7 +632,7 @@ the rest are dimmed, not given steps that fail"]
 a certificate URL to type or scan"]
   H --> PR["probe this machine: CA trusted? proxy set?"]
   PR --> ST["the probed tasks' states, stamped 'checked at'"]
-  ST -. "check again · window focus" .-> PR
+  ST -. "every action · check again · focus · the core's return · every 3 s" .-> PR
   H --> W["watch traffic: flow timestamps + live connection events"]
   A --> W
   D --> W
@@ -628,7 +645,7 @@ the client lacks the certificate"]
   C -- "nothing recent" --> ID["idle, or waiting for the first request"]
       </pre>
       <div class="caption">The platform answer governs everything below it. The probes answer for this
-        machine and are re-read on demand; the traffic reading answers for the wire, against a clock, over
+        machine and are re-read wherever their answer can change; the traffic reading answers for the wire, against a clock, over
         this session's captured rows only. Neither borrows from the other, and only a captured https row ends
         setup. Once capture is proven, a new session shows its success line in place and does not reveal the
         list again.</div>
@@ -649,10 +666,10 @@ the client lacks the certificate"]
           confirmed under the name that landed with the mismatch named outright. Where trust is a separate act
           from installing, as on an iPhone, the step says so. Traffic that arrives and doesn't decrypt gets
           the check that platform's users most often miss</td></tr>
-        <tr><td>A probe reading is a dated snapshot, re-taken on demand</td><td>nothing pushes when the user
-          changes a setting outside Trawler, so one row above the tasks dates the reading and re-runs both
-          probes; so does the window regaining focus. While a re-read runs the control is disabled and both
-          probed tasks show the in-flight state</td></tr>
+        <tr><td>A probe reading is a dated snapshot</td><td>nothing pushes when the user changes a setting
+          outside Trawler, so one row above the tasks dates the reading and re-runs both probes. E-ONBRVP.W3
+          widened when it re-runs (above); while a re-read the user asked for runs, the control is disabled and
+          both probed tasks show the in-flight state</td></tr>
         <tr><td>A copied command says whether it copied</td><td>the copy affordance confirms at the value,
           and a clipboard write the browser refuses says so rather than doing nothing visible</td></tr>
         <tr><td>Quitting with a proxy still set asks first, and can fix it</td><td>unchanged by this epic:
@@ -683,7 +700,9 @@ the client lacks the certificate"]
       <p><strong>Pinned by</strong>
       <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed handshake
       bumps <code>/stats</code> + emits <code>connection</code>, records no flow); the reach seam's
-      integration tests over ephemeral ports; the state-derivation and probe-parser unit tests; and the
+      integration tests over ephemeral ports; the state-derivation and probe-parser unit tests — This
+      machine's detectors from recorded tool output in <code>ui/src-tauri/src/setup.rs</code>, their
+      triggers and the watch in <code>App.test.tsx</code>; and the
       UC-ONBOARD e2e spine (<code>ui/e2e/specs/onboarding.spec.ts</code>): a launch over a core holding only a
       sent row, which still shows setup; <em>an off-machine platform</em>, which asserts that an unmet
       precondition is stated once and dims what depends on it; <em>this machine</em> through to a decrypted
