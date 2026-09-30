@@ -255,7 +255,7 @@ describe("the machine's words for itself are not on this screen", () => {
   const rendered = () => document.body.textContent ?? "";
 
   it.each(PLATFORM_IDS)("%s renders none of them", (id) => {
-    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null } });
+    draw({ reach: ARMED, trustProbe: "absent", proxy: { status: "none", address: null } });
     pick(setup.platformLabel(id as PlatformId, "macos"));
 
     for (const word of MACHINE_WORDS) {
@@ -326,7 +326,7 @@ describe("this machine — three tasks, and one button that does two of them", (
     const onSetUpThisMachine = vi.fn(
       () => new Promise<void>((resolve) => (release = resolve)),
     );
-    draw({ onSetUpThisMachine, trustProbe: "untrusted", proxy: { status: "none", address: null } });
+    draw({ onSetUpThisMachine, trustProbe: "absent", proxy: { status: "none", address: null } });
 
     fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
 
@@ -537,7 +537,7 @@ describe("each task holds its own route, under the one button", () => {
 // What the host can do decides which actions exist; what each probe reads
 // decides which the screen offers, and where. Done is the probe's reading.
 
-const readings = (trust: "trusted" | "untrusted", proxy: "ours" | "none"): Props => ({
+const readings = (trust: "trusted" | "absent", proxy: "ours" | "none"): Props => ({
   trustProbe: trust,
   proxy: { status: proxy, address: null },
 });
@@ -565,7 +565,7 @@ describe.each(["macos", "windows"] as const)("on %s, the layout is a reading", (
   });
 
   it("proxy set, certificate not trusted: the certificate's steps are open in task 1", () => {
-    draw({ os, ...readings("untrusted", "ours") });
+    draw({ os, ...readings("absent", "ours") });
 
     expect(screen.queryByRole("button", { name: `Set up ${here}` })).toBeNull();
     expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
@@ -646,7 +646,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
   // the certificate task while its refusal still said "the steps below".
   it("a failure elsewhere leaves open the steps a refusal points at", async () => {
     draw({
-      ...readings("untrusted", "ours"),
+      ...readings("absent", "ours"),
       traffic: arriving,
       onUnsetProxy: vi.fn(() => Promise.reject(failure)),
     });
@@ -673,7 +673,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
 
 describe("the reversal sits in the task it reverses", () => {
   it("on the Simulator, a proxy that is ours offers the way out and not the action again (R15)", () => {
-    draw(readings("untrusted", "ours"));
+    draw(readings("absent", "ours"));
     pick("iOS Simulator");
 
     expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
@@ -756,7 +756,7 @@ describe("a password prompt the user dismissed", () => {
 
   it("leaves the task states to the probes — an action never reports them", async () => {
     draw({
-      trustProbe: "untrusted",
+      trustProbe: "absent",
       proxy: { status: "none", address: null },
       onSetUpThisMachine: vi.fn(() => Promise.reject(cancelled)),
     });
@@ -764,7 +764,7 @@ describe("a password prompt the user dismissed", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
 
     await waitFor(() => expect(screen.getByText(/password prompt was cancelled/)).toBeInTheDocument());
-    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+    expect(task(1)).toHaveTextContent("not done — not installed");
     expect(task(2)).toHaveTextContent("not done — the system proxy is off");
   });
 });
@@ -783,7 +783,7 @@ describe("an approval macOS could not show", () => {
 
   it("says what happened, never that the user cancelled, with the tool's text one click away", async () => {
     draw({
-      trustProbe: "untrusted",
+      trustProbe: "absent",
       proxy: { status: "none", address: null },
       onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
     });
@@ -802,7 +802,7 @@ describe("an approval macOS could not show", () => {
 
   it("opens the steps it points at, and leaves the task's state to the probe", async () => {
     draw({
-      trustProbe: "untrusted",
+      trustProbe: "absent",
       proxy: { status: "none", address: null },
       onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
     });
@@ -811,7 +811,7 @@ describe("an approval macOS could not show", () => {
 
     await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
     expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
-    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+    expect(task(1)).toHaveTextContent("not done — not installed");
   });
 });
 
@@ -1164,9 +1164,9 @@ describe("the end", () => {
 
   // R17: the probes beside it say the request cannot have come from this Mac.
   it.each([
-    ["untrusted", "none"],
+    ["absent", "none"],
     ["trusted", "none"],
-    ["untrusted", "ours"],
+    ["absent", "ours"],
   ] as const)("names no device where this Mac reads certificate %s and proxy %s", (trust, proxy) => {
     draw({ traffic: capturing, ...readings(trust, proxy) });
 
@@ -1241,15 +1241,21 @@ describe("one reading of this machine, re-taken by one control", () => {
     expect(zone("probe")).toBeInTheDocument();
   });
 
-  it.each(["linux", "other"] as const)(
-    "is absent for this machine on %s, where no probe can answer (R20)",
-    (os) => {
-      draw({ os, trustProbe: "unknown", proxy: { status: "unknown", address: null } });
+  it("is absent for this machine on a host with no reader, where no probe can answer (R20)", () => {
+    draw({ os: "other", trustProbe: "unknown", proxy: { status: "unknown", address: null } });
 
-      expect(zone("probe")).toBeNull();
-      expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
-    },
-  );
+    expect(zone("probe")).toBeNull();
+    expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
+  });
+
+  // D8: Linux reads its CA bundle and GNOME's proxy, so it can re-read them.
+  it("is offered on Linux, which reads its CA bundle and GNOME's proxy (D8)", () => {
+    draw({ os: "linux", trustProbe: "absent", proxy: { status: "none", address: null } });
+
+    expect(zone("probe")).toBeInTheDocument();
+    expect(task(1)).toHaveTextContent("not done — not installed");
+    expect(task(2)).toHaveTextContent("not done — the system proxy is off");
+  });
 
   it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
     draw({ os: "linux", proxy: { status: "unknown", address: null } });
@@ -1384,7 +1390,7 @@ describe("one guide open, whatever the user picked", () => {
   const opened = () => guides().filter((entry) => entry.hasAttribute("open"));
 
   const atPlatform = (id: PlatformId, props: Props = {}) => {
-    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null }, ...props });
+    draw({ reach: ARMED, trustProbe: "absent", proxy: { status: "none", address: null }, ...props });
     pick(setup.platformLabel(id, "macos"));
   };
 

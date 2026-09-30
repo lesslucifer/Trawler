@@ -76,11 +76,21 @@ test("trustStatus: the local probe is the whole state, said as done or not done"
     tone: "ok",
     short: "done — installed and trusted",
   });
-  expect(trustStatus("untrusted", null, CONFIRM_ON)).toMatchObject({
+  expect(trustStatus("absent", null, CONFIRM_ON)).toMatchObject({
     glyph: "○",
     tone: "muted",
-    short: "not done — the certificate isn't trusted",
+    short: "not done — not installed",
   });
+});
+
+// D2: a copy in the keychain nobody marked Always Trust is its own answer.
+test("trustStatus: a certificate installed and not trusted says so, apart from one not installed", () => {
+  expect(trustStatus("installed", null, CONFIRM_ON)).toMatchObject({
+    glyph: "○",
+    tone: "muted",
+    short: "not done — installed, not trusted",
+  });
+  expect(trustStatus("installed", null, CONFIRM_ON).short).not.toBe(trustStatus("absent", null, CONFIRM_ON).short);
 });
 
 test("trustStatus: a store nothing read says when it will be settled, never that it is not", () => {
@@ -95,7 +105,7 @@ test("trustStatus: a reading in progress names the reading; a write only says it
     glyph: "⟳",
     short: "checking — the certificate store",
   });
-  expect(trustStatus("untrusted", "installing", CONFIRM_ON).short).toBe(
+  expect(trustStatus("absent", "installing", CONFIRM_ON).short).toBe(
     "setting up",
   );
 });
@@ -160,9 +170,9 @@ test.each([
   ["trusted", "none", null],
   ["trusted", "foreign", null],
   ["trusted", "unknown", null],
-  ["untrusted", "ours", null],
+  ["absent", "ours", null],
   ["unknown", "ours", null],
-  ["untrusted", "none", null],
+  ["absent", "none", null],
 ] as const)("the end names this machine for trust %s and proxy %s: %s", (trust, proxy, named) => {
   expect(provenDevice("this Mac", trust, proxy)).toBe(named);
 });
@@ -300,8 +310,8 @@ describe("the short form every state carries", () => {
     ["trust · done", trustStatus("trusted", null, CONFIRM_ON), "done — installed and trusted", undefined],
     [
       "trust · not done",
-      trustStatus("untrusted", null, CONFIRM_ON),
-      "not done — the certificate isn't trusted",
+      trustStatus("absent", null, CONFIRM_ON),
+      "not done — not installed",
       undefined,
     ],
     ["trust · nothing read it", trustStatus("unknown", null, CONFIRM_ON), CANT_CHECK(CONFIRM_ON), undefined],
@@ -463,8 +473,8 @@ describe("a task no probe concludes reads its evidence", () => {
   });
 
   it("a probe that concludes is never overruled by traffic (DEC-33)", () => {
-    expect(trustStatus("untrusted", null, CONFIRM_HTTPS, ev({ decrypted: true })).short).toBe(
-      "not done — the certificate isn't trusted",
+    expect(trustStatus("absent", null, CONFIRM_HTTPS, ev({ decrypted: true })).short).toBe(
+      "not done — not installed",
     );
     expect(trustStatus("trusted", null, CONFIRM_HTTPS, ev({ refused: true })).short).toBe(
       "done — installed and trusted",

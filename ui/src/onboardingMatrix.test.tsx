@@ -27,7 +27,7 @@ import {
 // anything drawn between tasks - and the outline is judged against a model of
 // what each task's reading is, written here independently of the screen:
 //
-//   certificate  a probe that concludes (trusted / untrusted) is the reading;
+//   certificate  a probe that concludes (trusted / installed / absent) is the reading;
 //                elsewhere the traffic is - a decrypted request is done, a
 //                refusal with none decrypted is not done, and nothing yet is a
 //                promise to confirm on the first HTTPS request
@@ -39,7 +39,7 @@ import {
 // read done; TRUTH, no sentence contradicts a reading on the same screen.
 
 const HOSTS: HostOs[] = ["macos", "windows", "linux", "other"];
-const TRUST: TrustProbe[] = ["trusted", "untrusted", "unknown"];
+const TRUST: TrustProbe[] = ["trusted", "installed", "absent", "unknown"];
 const PROXY: ProxyProbe[] = ["ours", "foreign", "none", "unknown"];
 
 // Traffic is a history, not a moment: the eight shapes the evidence can take.
@@ -279,9 +279,11 @@ const same = (a: number[], b: number[]) => a.length === b.length && a.every((x, 
 function expectedTrustState(s: State): RegExp {
   const m = model(s);
   if (m.trustConcluded)
-    return s.trust === "trusted"
-      ? /^✓\s*done — installed and trusted$/
-      : /^○\s*not done — the certificate isn't trusted$/;
+    return {
+      trusted: /^✓\s*done — installed and trusted$/,
+      installed: /^○\s*not done — installed, not trusted$/,
+      absent: /^○\s*not done — not installed$/,
+    }[s.trust as "trusted" | "installed" | "absent"];
   if (m.decrypted) return /^✓\s*done — a request decrypted$/;
   if (m.refused) return /^⚠\s*not working — nothing decrypted$/;
   return /^◐\s*can't check here — .+'s first HTTPS request confirms it$/;
@@ -487,7 +489,7 @@ describe("every reading at rest", () => {
   test("the matrix is every host, the platforms it offers, reach, probe pair and traffic history", () => {
     const onMac = 3 + 5 * 2;
     const elsewhere = 2 + 5 * 2;
-    expect(STATES).toHaveLength((onMac + 3 * elsewhere) * 3 * 4 * HISTORIES.length);
+    expect(STATES).toHaveLength((onMac + 3 * elsewhere) * TRUST.length * 4 * HISTORIES.length);
     expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });
 

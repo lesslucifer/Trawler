@@ -302,9 +302,10 @@ export function platformChoices(os: HostOs): { id: PlatformId; label: string }[]
 
 // Whether this host has a reader for its own trust store and system proxy. A
 // platform that shares a store asks it; a host with no reader answers unknown,
-// and a re-read of nothing is not offered.
+// and a re-read of nothing is not offered. Linux reads its CA bundle and
+// GNOME's proxy (D8), and says unknown wherever either is not there.
 export function canProbe(os: HostOs): boolean {
-  return os === "macos" || os === "windows";
+  return os !== "other";
 }
 
 export function probesTrust(id: PlatformId): boolean {

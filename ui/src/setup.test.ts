@@ -104,10 +104,10 @@ test("only macOS and Windows have a one-click setup path", () => {
   expect(canAutoSetup("other")).toBe(false);
 });
 
-test("only macOS and Windows have a reader for their own trust store and proxy", () => {
+test("macOS, Windows and Linux have a reader for their own trust store and proxy (D8)", () => {
   expect(canProbe("macos")).toBe(true);
   expect(canProbe("windows")).toBe(true);
-  expect(canProbe("linux")).toBe(false);
+  expect(canProbe("linux")).toBe(true);
   expect(canProbe("other")).toBe(false);
 });
 

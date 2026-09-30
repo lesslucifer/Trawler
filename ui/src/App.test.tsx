@@ -262,10 +262,35 @@ test("Set up this Mac fetches the PEM and invokes the one combined command", asy
       port: 7999,
     }),
   );
-  expect(api.caCertPem).toHaveBeenCalledOnce();
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1);
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
   expect(screen.getByText("which device's traffic do you want to see")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// D1: a store holding an older certificate under the same name answers
+// nothing, so the probe is asked about the bytes the core serves now.
+test("the trust probe asks about the certificate the core serves now, and setup reads the proxy in use", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: PEM }));
+  expect(invoke).toHaveBeenCalledWith("proxy_in_use", { host: "127.0.0.1", port: 7999 });
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_status")).toHaveLength(0);
+});
+
+test("a core that cannot serve its certificate leaves the trust probe unread, never trusted", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "ca_trusted" ? "trusted" : undefined));
+  const { api } = mockApi(() => []);
+  vi.mocked(api.caCertPem).mockRejectedValue(new Error("GET /ca.pem failed: 500"));
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "ca_trusted")).toHaveLength(0);
+  expect(screen.getByTestId("task-1")).not.toHaveTextContent("done — installed and trusted");
 });
 
 // The manual steps tell the user to run commands against a file by name. The
@@ -433,7 +458,7 @@ test("replacing another proxy costs a confirm, and a refusal writes nothing", as
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
-    if (name === "proxy_status") return { status: "foreign", address: "10.1.1.1:8080" };
+    if (name === "proxy_in_use") return { status: "foreign", address: "10.1.1.1:8080" };
     if (name === "confirm_replace_proxy") return false;
     return undefined;
   });
@@ -457,7 +482,7 @@ test("an allowed replacement goes through, once", async () => {
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
-    if (name === "proxy_status") return { status: "foreign", address: "10.1.1.1:8080" };
+    if (name === "proxy_in_use") return { status: "foreign", address: "10.1.1.1:8080" };
     if (name === "confirm_replace_proxy") return true;
     return undefined;
   });
@@ -476,7 +501,7 @@ test("setting the proxy where none is set asks no second question", async () => 
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) =>
-    name === "proxy_status" ? { status: "none", address: null } : undefined,
+    name === "proxy_in_use" ? { status: "none", address: null } : undefined,
   );
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
@@ -687,7 +712,7 @@ test("check again and window focus each re-read both probes, and the reading is 
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
   await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
-  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_status").length;
+  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
   expect(probes()).toBe(2);
 
   fireEvent.click(screen.getByRole("button", { name: "check again" }));
@@ -2248,7 +2273,7 @@ test("the way out of a proxy Trawler set survives a trip to the list while nothi
       proxySet = true;
       return undefined;
     }
-    if (name === "proxy_status") {
+    if (name === "proxy_in_use") {
       if (proxySet) throw new Error("cannot read the proxy");
       return { status: "none", address: null };
     }
@@ -2275,7 +2300,7 @@ test("setup opens in checking and holds its buttons until its own reading lands 
   let proxyNow: () => Promise<unknown> = async () => ({ status: "ours", address: "127.0.0.1:7420" });
   vi.mocked(invoke).mockImplementation(async (name: string) => {
     if (name === "ca_trusted") return "trusted";
-    if (name === "proxy_status") return proxyNow();
+    if (name === "proxy_in_use") return proxyNow();
     return undefined;
   });
   const { api } = mockApi(() => []);

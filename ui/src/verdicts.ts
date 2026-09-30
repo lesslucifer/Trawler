@@ -5,7 +5,10 @@
 // the proxy now, and a probe says nothing about a phone pointed here. Pure data
 // → unit-tested; the probes live in Rust.
 
-export type TrustProbe = "trusted" | "untrusted" | "unknown";
+// What the shell read of the live certificate: trusted; installed and not
+// trusted (a keychain copy nobody marked Always Trust); not installed; or
+// nothing on this host could read a store.
+export type TrustProbe = "trusted" | "installed" | "absent" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
 
 // What the shell read of this machine's system proxy: the classification, and
@@ -134,7 +137,8 @@ export function trustStatus(
   if (running === "checking") return verdict("checking", "the certificate store");
   if (running) return SETTING_UP;
   if (probe === "trusted") return verdict("done", "installed and trusted");
-  if (probe === "untrusted") return verdict("not-done", "the certificate isn't trusted");
+  if (probe === "installed") return verdict("not-done", "installed, not trusted");
+  if (probe === "absent") return verdict("not-done", "not installed");
   if (evidence.decrypted) return verdict("done", "a request decrypted");
   if (evidence.refused) return verdict("not-working", "nothing decrypted");
   return awaiting(confirmOn);

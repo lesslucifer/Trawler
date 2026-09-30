@@ -20,6 +20,7 @@ pub fn run() {
         setup::set_up_this_machine,
         setup::unset_proxy,
         setup::proxy_status,
+        setup::proxy_in_use,
         setup::interface_names,
         setup::notice_dismissed,
         setup::dismiss_notice,

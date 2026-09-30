@@ -210,11 +210,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     let live = true;
     setProbing(true);
     Promise.allSettled([
-      invoke<TrustProbe>("ca_trusted").then(
-        (p) => live && setTrustProbe(p),
-        () => live && setTrustProbe("unknown"),
-      ),
-      invoke<ProxyReading | undefined>("proxy_status", { host, port }).then(
+      // The certificate the core serves now is the one asked about: a store
+      // holding an older one under the same name answers nothing (D1).
+      client
+        .caCertPem()
+        .then((pem) => invoke<TrustProbe | undefined>("ca_trusted", { pem }))
+        .then(
+          (p) => live && setTrustProbe(p ?? "unknown"),
+          () => live && setTrustProbe("unknown"),
+        ),
+      invoke<ProxyReading | undefined>("proxy_in_use", { host, port }).then(
         // A shell that answers with nothing has read nothing, which is what
         // "unknown" means — and the screen may not crash on the difference.
         (reading) => live && setProxyReading(reading ?? NO_PROXY_READING),
@@ -228,7 +233,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return () => {
       live = false;
     };
-  }, [state.phase, proxyAddr, probeNonce]);
+  }, [client, state.phase, proxyAddr, probeNonce]);
 
   useEffect(() => {
     if (state.phase !== "onboarding") return;
