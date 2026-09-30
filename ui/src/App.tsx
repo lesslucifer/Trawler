@@ -51,6 +51,10 @@ import {
 // ever settles.
 export const LAUNCH_PATIENCE_MS = 5_000;
 
+// How often setup re-reads this machine while it is on screen (U3 · DEC-62):
+// a setting changed in System Settings beside the window shows within it.
+export const WATCH_MS = 3_000;
+
 // Select holds at most one option and never returns to unselected, so "any" is a
 // real choice that happens to mean no filter — not a clear affordance the
 // component's contract rules out.
@@ -202,52 +206,90 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   // Local probes (W6): does *this machine* trust the CA / route its proxy through
   // Trawler? A probe is a snapshot, and nothing pushes when the user changes a
-  // setting in System Settings — so it re-runs after an action, on "check again",
-  // and whenever the window regains focus, and the reading carries its time.
+  // setting in System Settings — so it is read again wherever its answer can
+  // change (DEC-62): as setup opens, after every action whatever its outcome,
+  // on "check again", when the window regains focus, when the core comes back
+  // serving a certificate that may be new, and on a watch while setup shows. A
+  // read the user asked for shows itself; one they did not is quiet, and moves
+  // only the time the reading carries (U4). Only the newest read may land.
   // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
-  const [probeNonce, setProbeNonce] = useState(0);
-  const reprobe = useCallback(() => setProbeNonce((n) => n + 1), []);
+  const reads = useRef({ newest: 0, inFlight: false });
 
-  useEffect(() => {
-    if (state.phase !== "onboarding") return;
-    const { host, port } = splitProxyAddr(proxyAddr);
-    let live = true;
-    setProbing(true);
-    Promise.allSettled([
+  const readMachine = useCallback(
+    (mode: "shown" | "quiet") => {
+      if (mode === "quiet" && reads.current.inFlight) return;
+      const read = ++reads.current.newest;
+      reads.current.inFlight = true;
+      if (mode === "shown") setProbing(true);
+      const { host, port } = splitProxyAddr(proxyAddr);
       // The certificate the core serves now is the one asked about: a store
       // holding an older one under the same name answers nothing (D1).
-      client
+      const trust = client
         .caCertPem()
         .then((pem) => invoke<TrustProbe | undefined>("ca_trusted", { pem }))
         .then(
-          (p) => live && setTrustProbe(p ?? "unknown"),
-          () => live && setTrustProbe("unknown"),
-        ),
-      invoke<ProxyReading | undefined>("proxy_in_use", { host, port }).then(
-        // A shell that answers with nothing has read nothing, which is what
-        // "unknown" means — and the screen may not crash on the difference.
-        (reading) => live && setProxyReading(reading ?? NO_PROXY_READING),
-        () => live && setProxyReading(NO_PROXY_READING),
-      ),
-    ]).then(() => {
-      if (!live) return;
-      setProbing(false);
-      setProbedAt(Date.now());
-    });
-    return () => {
-      live = false;
-    };
-  }, [client, state.phase, proxyAddr, probeNonce]);
+          (p): TrustProbe => p ?? "unknown",
+          (): TrustProbe => "unknown",
+        );
+      // A shell that answers with nothing has read nothing, which is what
+      // "unknown" means — and the screen may not crash on the difference.
+      const route = invoke<ProxyReading | undefined>("proxy_in_use", { host, port }).then(
+        (reading) => reading ?? NO_PROXY_READING,
+        () => NO_PROXY_READING,
+      );
+      void Promise.all([trust, route]).then(([t, r]) => {
+        if (read !== reads.current.newest) return;
+        reads.current.inFlight = false;
+        setTrustProbe(t);
+        setProxyReading(r);
+        setProbing(false);
+        setProbedAt(Date.now());
+      });
+    },
+    [client, proxyAddr],
+  );
+
+  const inSetup = state.phase === "onboarding";
+  useEffect(() => {
+    if (inSetup) readMachine("shown");
+  }, [inSetup, readMachine]);
 
   useEffect(() => {
-    if (state.phase !== "onboarding") return;
-    window.addEventListener("focus", reprobe);
-    return () => window.removeEventListener("focus", reprobe);
-  }, [state.phase, reprobe]);
+    if (!inSetup) return;
+    const quietly = () => readMachine("quiet");
+    window.addEventListener("focus", quietly);
+    return () => window.removeEventListener("focus", quietly);
+  }, [inSetup, readMachine]);
+
+  // U3: the watch runs while setup is on screen, its core answering, and the
+  // window visible, and nowhere else: each tick is a few shell commands.
+  const watching = inSetup && !silent;
+  useEffect(() => {
+    if (!watching) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      timer ??= setInterval(() => readMachine("quiet"), WATCH_MS);
+    };
+    const stop = () => {
+      clearInterval(timer);
+      timer = undefined;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return stop();
+      readMachine("quiet");
+      start();
+    };
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [watching, readMachine]);
 
   // Reach is a fact about this process, never a stored preference (DEC-55): it
   // is read once the app has a core and re-read from whatever the core answers
@@ -261,12 +303,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   // A core that restarts forgets an exposure, and one that started after the
   // window answers addresses the launch read never got (S3, S4). So reach is
-  // re-read whenever the core comes back and whenever setup opens.
+  // re-read whenever the core comes back and whenever setup opens. So is this
+  // machine, in setup: a core started again may serve a new certificate (U2).
   const wasSilent = useRef(silent);
   useEffect(() => {
-    if (wasSilent.current && !silent) rereadReach();
+    if (wasSilent.current && !silent) {
+      rereadReach();
+      if (inSetup) readMachine("quiet");
+    }
     wasSilent.current = silent;
-  }, [silent, rereadReach]);
+  }, [silent, rereadReach, inSetup, readMachine]);
 
   const setupSession = state.phase === "onboarding" ? state.since : null;
   useEffect(() => {
@@ -341,29 +387,39 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     }).catch(() => false);
   };
 
-  const setProxy = async () => {
+  // U1: every outcome re-reads, a failure's too. A write can fail half done —
+  // -60007 after the trust was written, a store written and a proxy not — and
+  // a cancelled one may still have run a step before the prompt it stopped at.
+  const thenRead =
+    <T,>(act: () => Promise<T>) =>
+    async (): Promise<T> => {
+      try {
+        return await act();
+      } finally {
+        readMachine("shown");
+      }
+    };
+
+  const setProxy = thenRead(async () => {
     if (!(await replaceAllowed())) return null;
     const { host, port } = splitProxyAddr(proxyAddr);
     await invoke("set_proxy", { host, port });
-    reprobe();
     return undefined;
-  };
+  });
 
   // The one thing most users want, in one prompt: the shell runs both elevated
   // commands under a single authorization (F27).
-  const setUpThisMachine = async () => {
+  const setUpThisMachine = thenRead(async () => {
     if (!(await replaceAllowed())) return null;
     const { host, port } = splitProxyAddr(proxyAddr);
     const pem = await client.caCertPem();
     await invoke("set_up_this_machine", { pem, host, port });
-    reprobe();
     return undefined;
-  };
+  });
 
-  const unsetProxy = async () => {
+  const unsetProxy = thenRead(async () => {
     await invoke("unset_proxy");
-    reprobe();
-  };
+  });
 
   // D9: which way this window's own request went is what the core saw of it -
   // its marked row decrypted, a tunnel to its host and no row, or nothing - and
@@ -588,7 +644,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
-          onRecheck={reprobe}
+          onRecheck={() => readMachine("shown")}
           reach={named}
           onArmReach={armReach}
           onDisarmReach={disarmReach}

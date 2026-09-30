@@ -254,21 +254,34 @@ const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {
 const trustedNotDecrypting = (device: string) =>
   `something is connecting and none of it is decrypting — ${device} trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.`;
 
+// What the try task's reading depends on beyond the traffic itself.
+// `ownsRefusal`: the certificate task words a refusal, so this one does not.
+// `trustedOn`: the device whose own probe reads its certificate trusted.
+// `proofStays`: a decrypted request proved this setup, and quiet does not
+// unprove it (U5) - This machine's, whose other two tasks re-read themselves.
+export interface TrafficContext {
+  ownsRefusal: boolean;
+  trustedOn: string | null;
+  proofStays: boolean;
+}
+
+const NO_CONTEXT: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: false };
+
 // The try task words a refusal only where the certificate task does not own
 // it - it reads done, or it is This machine's and no probe read it, so the
 // refusal may be anyone's (D7); anywhere else the certificate task says it, once.
-export function trafficStatus(
-  seen: Traffic,
-  now: number,
-  certificate: { ownsRefusal: boolean; trustedOn: string | null } = { ownsRefusal: false, trustedOn: null },
-): StepStatusView {
+export function trafficStatus(seen: Traffic, now: number, around: TrafficContext = NO_CONTEXT): StepStatusView {
   const reading = trafficReading(seen, now);
+  const decryptedAt = seen.lastDecryptedAt;
+  if (reading === "idle" && around.proofStays && decryptedAt !== null) {
+    const after = (at: number | null) => at !== null && at > decryptedAt;
+    const since = after(seen.lastPlainAt) || after(seen.lastTunnelAt) ? "" : ", nothing since";
+    return verdict("done", `decrypted at ${clock(decryptedAt)}${since}`);
+  }
   const view = TRAFFIC_VERDICT[reading];
   if (reading !== "not-decrypting") return view;
-  if (certificate.ownsRefusal) return { glyph: view.glyph, tone: view.tone, short: view.short };
-  return certificate.trustedOn === null
-    ? view
-    : { ...view, remedy: trustedNotDecrypting(certificate.trustedOn) };
+  if (around.ownsRefusal) return { glyph: view.glyph, tone: view.tone, short: view.short };
+  return around.trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(around.trustedOn) };
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A

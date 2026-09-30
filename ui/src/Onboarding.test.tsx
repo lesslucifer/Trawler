@@ -1286,15 +1286,43 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
   it("updates the reading without re-running the instructions", () => {
     const resolved = vi.mocked(setup.setupFor);
-    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now() } });
+    const at = Date.now();
+    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
     expect(zone("proven")).toBeInTheDocument();
 
     resolved.mockClear();
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
 
     expect(zone("proven")).toBeNull();
-    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
     expect(resolved).not.toHaveBeenCalled();
+  });
+
+  // U5 · Q3: 30 s after "You're set up" the try task fell back to "not done"
+  // under two done tasks. On This machine the proof stays, with its time.
+  it("keeps This machine's proof once the traffic goes quiet, and nowhere else's", () => {
+    const at = Date.now();
+    draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
+    act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
+
+    pick("iPhone or iPad");
+    expect(task(4)).toHaveTextContent("not done — nothing arriving right now");
+  });
+});
+
+// ── U4: a read nobody asked for is quiet ────────────────────────────────────
+
+describe("a reading that lands without being asked for", () => {
+  it("changes the lines it changes, and never shows them checking or holds a button", () => {
+    const { rerender } = draw({ trustProbe: "absent", proxy: { status: "none", address: null } });
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeEnabled();
+
+    rerender(screenAt({ trustProbe: "absent", proxy: { status: "ours", address: "127.0.0.1:9999" } }));
+
+    expect(task(1)).toHaveTextContent("not done — not installed");
+    expect(task(2)).toHaveTextContent("done — this Mac routes through Trawler");
+    expect(document.body.textContent).not.toMatch(/checking/);
   });
 });
 

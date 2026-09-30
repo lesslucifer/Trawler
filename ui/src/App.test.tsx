@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
-import { afterEach, beforeAll, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import App, { LAUNCH_PATIENCE_MS } from "./App";
+import App, { LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
 import { ApiError, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -91,6 +91,8 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
   let onConnection: (authority: string) => void = () => {};
+  let onDown = () => {};
+  let onUp = () => {};
   const api: TrawlerApi = apiStub({
     listFlows: vi.fn(async (filter: Filter) => {
       // Close enough to FlowFilter::matches (store.rs) for these tests: q really
@@ -129,6 +131,8 @@ function mockApi(store: () => FlowSummary[]) {
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onConnection = handlers.onConnection ?? (() => {});
+      onDown = handlers.onDown ?? (() => {});
+      onUp = handlers.onUp ?? (() => {});
       return () => {};
     }),
   });
@@ -136,6 +140,8 @@ function mockApi(store: () => FlowSummary[]) {
     api,
     fire: () => act(() => onEvent()),
     fireConnection: (authority = "a.test:443") => act(() => onConnection(authority)),
+    fireDown: () => act(() => onDown()),
+    fireUp: () => act(() => onUp()),
   };
 }
 
@@ -712,17 +718,204 @@ test("a launch straight into the list says nothing — the moment it announces i
 // which is when the user has just been in System Settings.
 test("check again and window focus each re-read both probes, and the reading is stamped", async () => {
   onMacHost();
+  watchPaused();
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
   await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
-  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
   expect(probes()).toBe(2);
 
   fireEvent.click(screen.getByRole("button", { name: "check again" }));
   await waitFor(() => expect(probes()).toBe(4));
+  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
 
   fireEvent(window, new Event("focus"));
   await waitFor(() => expect(probes()).toBe(6));
+});
+
+const probes = () =>
+  vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
+
+// A hidden window runs no watch, so a test counting reads counts only the
+// trigger it is about, however slowly the suite runs.
+function watchPaused() {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+}
+
+afterEach(() => {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+});
+
+// ── When this machine is read again (U1–U4 · DEC-62) ────────────────────────
+
+describe("this machine is read again wherever its answer can change", () => {
+  beforeEach(watchPaused);
+
+  const answering = (over: Record<string, (args?: unknown) => unknown> = {}) =>
+    vi.mocked(invoke).mockImplementation(async (name: string, args?: unknown) => {
+      if (name in over) return over[name](args);
+      if (name === "ca_trusted") return "absent";
+      if (name === "proxy_in_use") return { status: "none", address: null };
+      return undefined;
+    });
+
+  const settled = async () => {
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+    return probes();
+  };
+
+  // U1: a failure can leave the machine half changed (-60007 after the trust
+  // write; the store written and the proxy not), so it re-reads like a success.
+  it.each([
+    ["cancelled", { refused: true, unshowable: false, detail: "User cancelled. (-128)" }],
+    ["an approval macOS could not show", { refused: false, unshowable: true, detail: "(-60007)" }],
+    ["failed", { refused: false, unshowable: false, detail: "SecTrustSettingsSetTrustSettings: denied" }],
+  ])("after Set up this Mac %s", async (_outcome, failure) => {
+    onMacHost();
+    answering({
+      set_up_this_machine: () => {
+        throw failure;
+      },
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
+    await waitFor(() => expect(probes()).toBe(before + 2));
+  });
+
+  it("after a replacement the user declined, which changed nothing but was still an act", async () => {
+    onMacHost();
+    answering({
+      proxy_in_use: () => ({ status: "foreign", address: "10.1.1.1:8080" }),
+      confirm_replace_proxy: () => false,
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "nothing"));
+    await waitFor(() => expect(probes()).toBe(before + 2));
+  });
+
+  // U2: a core started again, from another folder, serves another certificate.
+  it("when the core comes back, asking about the certificate it serves now", async () => {
+    onMacHost();
+    answering();
+    const { api, fireDown, fireUp } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await settled();
+
+    fireDown();
+    await screen.findByText("Trawler's capture service isn't answering");
+    const renewed = "-----BEGIN CERTIFICATE-----\nnew\n-----END CERTIFICATE-----\n";
+    vi.mocked(api.caCertPem).mockResolvedValue(renewed);
+    fireUp();
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: renewed }));
+  });
+
+  // U4: a read the user did not ask for moves only the time the reading carries.
+  it("on focus, quietly: nothing shows checking and no button is held", async () => {
+    onMacHost();
+    answering();
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await settled();
+    answering({ proxy_in_use: () => new Promise(() => {}) });
+
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_in_use").length).toBe(2));
+    expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
+    expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking");
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeEnabled();
+  });
+
+  it("but never twice at once: a quiet read waits out the one in flight", async () => {
+    onMacHost();
+    answering();
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+    answering({ proxy_in_use: () => new Promise(() => {}) });
+
+    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(probes()).toBe(before + 2));
+    expect(probes()).toBe(before + 2);
+  });
+});
+
+// U3: the watch - a setting changed in System Settings beside the window.
+describe("the watch", () => {
+  const visibility = (state: DocumentVisibilityState) => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  };
+
+  afterEach(() => vi.useRealTimers());
+
+  const opened = async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onMacHost();
+    let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "ca_trusted") return "trusted";
+      if (name === "proxy_in_use") return proxy;
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — this Mac routes through Trawler"));
+    return { turnOff: () => (proxy = { status: "none", address: null }) };
+  };
+
+  const tick = () => act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+  it("reads a proxy turned off beside the window within one tick, without a click and without checking", async () => {
+    const { turnOff } = await opened();
+    turnOff();
+
+    await tick();
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
+    expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
+  });
+
+  it("pauses while the window is hidden, and reads at once when it shows again", async () => {
+    await opened();
+    visibility("hidden");
+    const hidden = probes();
+
+    await tick();
+    await tick();
+    expect(probes()).toBe(hidden);
+
+    visibility("visible");
+    await waitFor(() => expect(probes()).toBe(hidden + 2));
+    await tick();
+    await waitFor(() => expect(probes()).toBe(hidden + 4));
+  });
+
+  it("stops once setup is left", async () => {
+    await opened();
+    fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+    await screen.findByText("Nothing captured yet");
+    const left = probes();
+
+    await tick();
+    await tick();
+
+    expect(probes()).toBe(left);
+  });
 });
 
 // --- the reach seam (E-ONBOARD.W3) -------------------------------------------

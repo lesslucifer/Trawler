@@ -64,6 +64,7 @@ import {
   type Running,
   type StepStatusView,
   type Traffic,
+  type TrafficContext,
   type TrustProbe,
 } from "./verdicts";
 
@@ -440,15 +441,9 @@ function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Tr
 // leaf a tick may re-render, rather than above the tasks that no clock can
 // change. StatusLine renders the verdict and refuses the instruction that goes
 // with it (its @avoid), so the remedy is the Notice beside it.
-function TrafficState({
-  traffic,
-  certificate,
-}: {
-  traffic: Traffic;
-  certificate: { ownsRefusal: boolean; trustedOn: string | null };
-}) {
+function TrafficState({ traffic, around }: { traffic: Traffic; around: TrafficContext }) {
   const now = useNow();
-  const status = trafficStatus(traffic, now, certificate);
+  const status = trafficStatus(traffic, now, around);
   return (
     <>
       <div data-testid="traffic-state">
@@ -1112,9 +1107,10 @@ function PlatformSetup({
         <GuidedTask n={first + 3} task={setup.try} dim={blocked} waitsOn={waitsOn}>
           <TrafficState
             traffic={traffic}
-            certificate={{
+            around={{
               ownsRefusal: certificateOwnsRefusal,
               trustedOn: platform === "this" && trustDone ? here : null,
+              proofStays: platform === "this",
             }}
           />
           {request.trigger && (

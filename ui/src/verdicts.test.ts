@@ -249,6 +249,7 @@ describe("trafficStatus reads recency, never history", () => {
     const v = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS) }, NOW, {
       ownsRefusal: false,
       trustedOn: "this Mac",
+      proofStays: false,
     });
     expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "not working — arriving but not decrypting" });
     expect(v.remedy).toBe(
@@ -261,6 +262,7 @@ describe("trafficStatus reads recency, never history", () => {
     const quiet = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: ago(1) }, NOW, {
       ownsRefusal: false,
       trustedOn: "this Mac",
+      proofStays: false,
     });
     expect(quiet).toEqual(at({ lastPlainAt: ago(1) }));
   });
@@ -398,10 +400,20 @@ describe("the short form every state carries", () => {
       undefined,
     ],
     ["traffic · waiting", trafficStatus(NO_TRAFFIC, NOW), "not done — waiting for the first request", undefined],
+    [
+      "traffic · quiet after its proof, on This machine",
+      trafficStatus(seen({ lastDecryptedAt: AT_1402 }), AT_1402 + RECENT_MS + 1, {
+        ownsRefusal: false,
+        trustedOn: null,
+        proofStays: true,
+      }),
+      "done — decrypted at 14:02, nothing since",
+      undefined,
+    ],
   ];
 
   it("covers every state the three resolvers can return", () => {
-    expect(STATES).toHaveLength(22);
+    expect(STATES).toHaveLength(23);
   });
 
   it.each(STATES)("%s", (_name, view, short, remedy) => {
@@ -539,7 +551,7 @@ describe("a task no probe concludes reads its evidence", () => {
 
   it("the try task leaves a refusal to a certificate task that is not done", () => {
     const refused = { ...NO_TRAFFIC, lastTunnelAt: 1_000_000 - TUNNEL_GRACE_MS };
-    const v = trafficStatus(refused, 1_000_000, { ownsRefusal: true, trustedOn: null });
+    const v = trafficStatus(refused, 1_000_000, { ownsRefusal: true, trustedOn: null, proofStays: false });
     expect(v.short).toBe("not working — arriving but not decrypting");
     expect(v.remedy).toBeUndefined();
   });
@@ -565,5 +577,38 @@ describe("This machine's own request stands in for a probe that cannot answer", 
   it("once it came through decrypted, both tasks are done with the time it did", () => {
     expect(byOwnRequest("trust", AT_1402)).toEqual(verdict("done", "step 3's request decrypted at 14:02"));
     expect(byOwnRequest("route", AT_1402)).toEqual(verdict("done", "step 3's request came through at 14:02"));
+  });
+});
+
+// ── U5 · Q3: This machine's proof does not expire with the traffic window ──
+
+describe("the try task once a decrypted request proved this setup", () => {
+  const STAYS = { ownsRefusal: false, trustedOn: null, proofStays: true };
+  const quiet = AT_1402 + RECENT_MS + 1;
+
+  it("stays done on This machine when traffic goes quiet, with the time it was proven", () => {
+    expect(trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, quiet, STAYS)).toEqual(
+      verdict("done", "decrypted at 14:02, nothing since"),
+    );
+  });
+
+  it("says nothing of since where something arrived after the proof", () => {
+    const later = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, lastPlainAt: AT_1402 + 1_000 };
+    expect(trafficStatus(later, quiet + 1_000, STAYS).short).toBe("done — decrypted at 14:02");
+  });
+
+  it("is quiet again anywhere the proof does not stay", () => {
+    expect(trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, quiet).short).toBe(
+      "not done — nothing arriving right now",
+    );
+  });
+
+  it("changes no reading while traffic is still arriving, or before any decrypt", () => {
+    const capturing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 };
+    expect(trafficStatus(capturing, AT_1402 + 1_000, STAYS).short).toBe("done — capturing traffic");
+    const plainOnly = { ...NO_TRAFFIC, lastPlainAt: AT_1402 };
+    expect(trafficStatus(plainOnly, quiet, STAYS).short).toBe("not done — nothing arriving right now");
+    const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 - RECENT_MS, lastTunnelAt: quiet - TUNNEL_GRACE_MS };
+    expect(trafficStatus(refusing, quiet, STAYS).short).toBe("not working — arriving but not decrypting");
   });
 });
