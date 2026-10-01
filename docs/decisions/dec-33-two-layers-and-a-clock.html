@@ -50,8 +50,9 @@
         </tr>
         <tr>
           <td><strong>traffic</strong></td>
-          <td>timestamps — the newest decrypted flow, the newest plain flow, the newest live tunnel; plus
-              whether the core saw anything before the app subscribed</td>
+          <td>timestamps — the newest decrypted flow, the newest plain flow, the newest live tunnel and the
+              oldest one no decrypted flow has followed; plus whether the core saw anything before the app
+              subscribed</td>
           <td>what is reaching Trawler <em>now</em>, from any client</td>
           <td>which device sent it · whether this machine is configured · anything about a flow older than the window</td>
           <td>step 3, judged against a clock: <em>capturing</em> inside 30 s · a tunnel <em>just arrived</em>
@@ -65,8 +66,8 @@
 flowchart LR
   T["traffic timestamps + now"] --> D{"decrypted flow within 30 s?"}
   D -- yes --> OK["✓ capturing traffic"]
-  D -- no --> U{"tunnel within 30 s, no flow after it?"}
-  U -- "younger than 3 s" --> G["⟳ a connection just arrived…"]
+  D -- no --> U{"tunnel within 30 s, and one no flow followed?"}
+  U -- "the oldest such younger than 3 s" --> G["⟳ a connection just arrived…"]
   U -- "older than 3 s" --> W["⚠ arriving but not decrypting"]
   U -- no --> P{"plain flow within 30 s?"}
   P -- yes --> PL["◐ arriving — plain HTTP only"]
@@ -80,7 +81,9 @@ flowchart LR
       <thead><tr><th>Constant</th><th>Value</th><th>Why this and not another</th></tr></thead>
       <tbody>
         <tr><td>recency window</td><td>30 s</td><td>long enough to read the screen after one <code>curl</code>; short enough that a browser left alone stops reading as captured. The tone flips at the boundary; the time itself is shown absolute (DEC-22), never as a ticking "3 s ago"</td></tr>
-        <tr><td>tunnel grace</td><td>3 s</td><td>a handshake that will succeed produces its flow within a moment; until then the tunnel is neither proof nor failure, and a warning flashed for the 100 ms before every good flow would be noise</td></tr>
+        <tr><td>tunnel grace</td><td>3 s</td><td>a handshake that will succeed produces its flow within a moment; until then the tunnel is neither proof nor failure, and a warning flashed for the 100 ms before every good flow would be noise. It is timed from the oldest
+          tunnel nothing has answered: from the newest, a client retrying every few seconds restarts it and the
+          warning blinks (E-ONBRVP.W3)</td></tr>
         <tr><td>the <code>/stats</code> tally</td><td>time-less</td><td>it counts tunnels since the core started and carries no clock, so it can only separate <em>idle</em> (something, once) from <em>waiting</em> (nothing, ever) — never say "now"</td></tr>
       </tbody>
     </table>

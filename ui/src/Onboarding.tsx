@@ -205,9 +205,9 @@ function useNow(): number {
   return now;
 }
 
-// Evidence needs a clock only at one edge: a tunnel becomes a refusal when its
-// grace passes with nothing decrypted after it. So the screen re-reads once, at
-// that edge, rather than ticking every task the way the traffic line does.
+// Evidence needs a clock only at one edge: the open tunnel becomes a refusal
+// when its grace passes with nothing decrypted after it. So the screen re-reads
+// once, at that edge, rather than ticking every task the way the traffic line does.
 function useGraceEdge(tunnelAt: number | null): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -906,7 +906,7 @@ function PlatformSetup({
   // that is what the task promised to be confirmed by.
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
-  const evidence = evidenceOf(traffic, useGraceEdge(traffic.lastTunnelAt));
+  const evidence = evidenceOf(traffic, useGraceEdge(traffic.openTunnelAt));
   const ownProved = platform === "this" && ownProofAt !== null;
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = !probesTrust(platform)

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { tunnelHost, useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
+import { TUNNEL_TIMES_MAX, tunnelHost, useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
 import { ApiError } from "./api";
 import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -18,14 +18,28 @@ function fakeApi() {
 
 // Only a live event can say "now", which is what the setup screen's traffic
 // verdict reads.
-test("a live connection is stamped with its time", () => {
+test("every live connection is stamped with its time, oldest first", () => {
   const f = fakeApi();
   const { result } = renderHook(() => useFlows(f.api));
-  expect(result.current.lastConnectionAt).toBeNull();
+  expect(result.current.tunnelTimes).toEqual([]);
 
   const before = Date.now();
   act(() => f.fireConnection());
-  expect(result.current.lastConnectionAt).toBeGreaterThanOrEqual(before);
+  act(() => f.fireConnection());
+  const [first, second] = result.current.tunnelTimes;
+  expect(result.current.tunnelTimes).toHaveLength(2);
+  expect(first).toBeGreaterThanOrEqual(before);
+  expect(second).toBeGreaterThanOrEqual(first!);
+});
+
+test("the tunnel times keep the newest ones past their bound", () => {
+  const f = fakeApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  act(() => {
+    for (let n = 0; n <= TUNNEL_TIMES_MAX; n++) f.fireConnection();
+  });
+
+  expect(result.current.tunnelTimes).toHaveLength(TUNNEL_TIMES_MAX);
 });
 
 // D9: a caller waiting on one request's route asks after the tunnel to its host.

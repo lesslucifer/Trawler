@@ -37,17 +37,21 @@ export interface StepStatusView {
 }
 
 // When each kind of traffic last reached Trawler, as epoch ms; null = not in
-// this setup session.
+// this setup session. `openTunnelAt` is the oldest tunnel no decrypted request
+// has followed: a refusal is timed from it, so a client that retries every few
+// seconds never restarts a grace the tunnel before it already used up.
 export interface Traffic {
   lastDecryptedAt: number | null;
   lastPlainAt: number | null;
   lastTunnelAt: number | null;
+  openTunnelAt: number | null;
 }
 
 export const NO_TRAFFIC: Traffic = {
   lastDecryptedAt: null,
   lastPlainAt: null,
   lastTunnelAt: null,
+  openTunnelAt: null,
 };
 
 // "Now" is the last 30 s: long enough to read the screen after one curl, short
@@ -114,13 +118,9 @@ export const NO_EVIDENCE: Evidence = {
 
 export function evidenceOf(seen: Traffic, now: number): Evidence {
   const decrypted = seen.lastDecryptedAt;
-  const tunnel = seen.lastTunnelAt;
-  const unanswered =
-    tunnel !== null &&
-    (decrypted === null || decrypted < tunnel) &&
-    now - tunnel >= TUNNEL_GRACE_MS;
+  const unanswered = seen.openTunnelAt !== null && now - seen.openTunnelAt >= TUNNEL_GRACE_MS;
   return {
-    reached: decrypted !== null || seen.lastPlainAt !== null || tunnel !== null,
+    reached: decrypted !== null || seen.lastPlainAt !== null || seen.lastTunnelAt !== null,
     decrypted: decrypted !== null,
     unanswered,
     refused: unanswered && decrypted === null,
@@ -218,13 +218,11 @@ export type TrafficReading =
 export function trafficReading(seen: Traffic, now: number): TrafficReading {
   const recent = (at: number | null): at is number => at !== null && now - at <= RECENT_MS;
   if (recent(seen.lastDecryptedAt)) return "capturing";
-  const tunnel = seen.lastTunnelAt;
-  const unanswered =
-    tunnel !== null && (seen.lastDecryptedAt === null || seen.lastDecryptedAt < tunnel);
-  if (recent(tunnel) && unanswered)
-    return now - tunnel < TUNNEL_GRACE_MS ? "just-arrived" : "not-decrypting";
+  const open = seen.openTunnelAt;
+  if (recent(seen.lastTunnelAt) && open !== null)
+    return now - open < TUNNEL_GRACE_MS ? "just-arrived" : "not-decrypting";
   if (recent(seen.lastPlainAt)) return "plain-only";
-  const anything = seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || tunnel !== null;
+  const anything = seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || seen.lastTunnelAt !== null;
   return anything ? "idle" : "waiting";
 }
 

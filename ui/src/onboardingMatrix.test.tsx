@@ -45,12 +45,13 @@ const HOSTS: HostOs[] = ["macos", "windows", "linux", "other"];
 const TRUST: TrustProbe[] = ["trusted", "installed", "absent", "unknown"];
 const PROXY: ProxyProbe[] = ["ours", "foreign", "none", "unknown"];
 
-// Traffic is a history, not a moment: the eight shapes the evidence can take.
+// Traffic is a history, not a moment: the nine shapes the evidence can take.
 const HISTORIES = [
   "none",
   "plain",
   "tunnel-in-grace",
   "refused",
+  "refused-and-retrying",
   "capturing",
   "decrypted-earlier",
   "refused-earlier",
@@ -69,17 +70,24 @@ function trafficOf(history: History): Traffic {
     case "plain":
       return { ...NO_TRAFFIC, lastPlainAt: ago(1_000) };
     case "tunnel-in-grace":
-      return { ...NO_TRAFFIC, lastTunnelAt: ago(0) };
+      return { ...NO_TRAFFIC, lastTunnelAt: ago(0), openTunnelAt: ago(0) };
     case "refused":
-      return { ...NO_TRAFFIC, lastTunnelAt: ago(PAST_GRACE) };
+      return { ...NO_TRAFFIC, lastTunnelAt: ago(PAST_GRACE), openTunnelAt: ago(PAST_GRACE) };
+    case "refused-and-retrying":
+      return { ...NO_TRAFFIC, lastTunnelAt: ago(0), openTunnelAt: ago(PAST_GRACE) };
     case "capturing":
       return { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
     case "decrypted-earlier":
       return { ...NO_TRAFFIC, lastDecryptedAt: ago(EARLIER) };
     case "refused-earlier":
-      return { ...NO_TRAFFIC, lastTunnelAt: ago(EARLIER) };
+      return { ...NO_TRAFFIC, lastTunnelAt: ago(EARLIER), openTunnelAt: ago(EARLIER) };
     case "decrypted-then-refused":
-      return { ...NO_TRAFFIC, lastDecryptedAt: ago(EARLIER), lastTunnelAt: ago(PAST_GRACE) };
+      return {
+        ...NO_TRAFFIC,
+        lastDecryptedAt: ago(EARLIER),
+        lastTunnelAt: ago(PAST_GRACE),
+        openTunnelAt: ago(PAST_GRACE),
+      };
   }
 }
 
@@ -256,7 +264,8 @@ function model(s: State) {
   const h = s.history;
   const reached = h !== "none";
   const decrypted = h === "capturing" || h === "decrypted-earlier" || h === "decrypted-then-refused";
-  const unanswered = h === "refused" || h === "refused-earlier" || h === "decrypted-then-refused";
+  const unanswered =
+    h === "refused" || h === "refused-and-retrying" || h === "refused-earlier" || h === "decrypted-then-refused";
   const refused = unanswered && !decrypted;
   const trustConcluded = probesTrust && s.trust !== "unknown";
   const trustDone = !probesTrust ? decrypted : trustConcluded ? s.trust === "trusted" : s.own;
@@ -269,8 +278,8 @@ function model(s: State) {
   const routeHere = probesRoute && auto;
   const oneAct = probesTrust && auto && !trustDone && !routeDone;
   // What the try task's clock says now: a refusal inside the window is "not
-  // decrypting"; one before it is quiet.
-  const notDecryptingNow = h === "refused" || h === "decrypted-then-refused";
+  // decrypting", however new the tunnel after it; one before it is quiet.
+  const notDecryptingNow = h === "refused" || h === "refused-and-retrying" || h === "decrypted-then-refused";
   return {
     ...{ probesTrust, probesRoute, first, reached, decrypted, unanswered, refused },
     trustN: first + 1,

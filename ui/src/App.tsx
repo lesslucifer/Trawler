@@ -99,7 +99,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     flows,
     everything,
     hosts,
-    lastConnectionAt,
+    tunnelTimes,
     tunnelAt,
     lastCaptureAt,
     silent,
@@ -638,7 +638,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           probedAt={probedAt}
           routeAct={routeAct}
           onRouteAct={setRouteAct}
-          traffic={sessionTraffic(everything, state.since, lastConnectionAt)}
+          traffic={sessionTraffic(everything, state.since, tunnelTimes)}
           ownProofAt={ownRequestProvedAt(everything, state.since)}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}

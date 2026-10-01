@@ -502,7 +502,7 @@
           <td>this machine only: does it trust the certificate the core serves now, does the proxy HTTPS goes
             through now point at Trawler</td>
           <td>trusted / installed, not trusted / not installed / <code>unknown</code>, matched on the live
-            certificate's bytes — never on a name another run's certificate shares: verified on macOS, its
+            certificate's bytes — never on a name another run's certificate shares: held in a keychain and verified on macOS, its
             thumbprint in the machine or user root store on Windows, in the CA bundle on Linux. The proxy is
             macOS's resolved one, Windows's <code>https=</code> entry or single address, GNOME's HTTPS proxy;
             any loopback name on Trawler's port is Trawler. A probe that cannot read answers

@@ -80,34 +80,44 @@ describe("sessionTraffic reads only what started once the session opened", () =>
   const at = Date.parse(flow.started_at);
 
   it("counts a captured row that started at the session's start, and none before it", () => {
-    expect(sessionTraffic([flow, https], at, null)).toEqual({
+    expect(sessionTraffic([flow, https], at, [])).toEqual({
       lastDecryptedAt: at,
       lastPlainAt: at,
       lastTunnelAt: null,
+      openTunnelAt: null,
     });
-    expect(sessionTraffic([flow, https], at + 1, null)).toEqual({
+    expect(sessionTraffic([flow, https], at + 1, [])).toEqual({
       lastDecryptedAt: null,
       lastPlainAt: null,
       lastTunnelAt: null,
+      openTunnelAt: null,
     });
   });
 
   it("ignores imported and sent rows inside the session", () => {
     const rows = [{ ...https, source: "imported" as const }, { ...flow, source: "sent" as const }];
-    expect(sessionTraffic(rows, at, null)).toMatchObject({ lastDecryptedAt: null, lastPlainAt: null });
+    expect(sessionTraffic(rows, at, [])).toMatchObject({ lastDecryptedAt: null, lastPlainAt: null });
   });
 
   it("keeps a tunnel from the session's start on, and drops an earlier one", () => {
-    expect(sessionTraffic([], at, at).lastTunnelAt).toBe(at);
-    expect(sessionTraffic([], at, at - 1).lastTunnelAt).toBeNull();
+    expect(sessionTraffic([], at, [at])).toMatchObject({ lastTunnelAt: at, openTunnelAt: at });
+    expect(sessionTraffic([], at, [at - 1])).toMatchObject({ lastTunnelAt: null, openTunnelAt: null });
   });
 
   it("bounds nothing before a session has opened", () => {
-    expect(sessionTraffic([https], null, at - 5)).toEqual({
+    expect(sessionTraffic([https], null, [at - 5])).toEqual({
       lastDecryptedAt: at,
       lastPlainAt: null,
       lastTunnelAt: at - 5,
+      openTunnelAt: null,
     });
+  });
+
+  it("holds open the oldest tunnel no decrypted request started after", () => {
+    const tunnels = [at - 10, at + 5, at + 10, at + 15];
+    expect(sessionTraffic([https], at - 20, tunnels)).toMatchObject({ lastTunnelAt: at + 15, openTunnelAt: at + 5 });
+    expect(sessionTraffic([https], at - 20, [at - 10, at])).toMatchObject({ lastTunnelAt: at, openTunnelAt: null });
+    expect(sessionTraffic([flow], at - 20, tunnels)).toMatchObject({ openTunnelAt: at - 10 });
   });
 });
 

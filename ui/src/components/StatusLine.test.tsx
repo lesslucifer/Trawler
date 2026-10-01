@@ -89,7 +89,7 @@ describe("StatusLine", () => {
   });
 
   it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
-    const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0 }, 10_000);
+    const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0, openTunnelAt: 0 }, 10_000);
     render(<StatusLine status={status} />);
 
     expect(status.remedy).toMatch(/does not trust Trawler's certificate yet/);

@@ -50,7 +50,7 @@ const ARMED: ReachState = {
 
 const ago = (ms: number): number => Date.now() - ms;
 const capturing: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
-const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000) };
+const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) };
 
 type Props = Partial<Parameters<typeof Onboarding>[0]>;
 
@@ -1658,7 +1658,7 @@ describe("This machine where no probe answers", () => {
   });
 
   it("leaves a refusal nobody can place to the try task, and never pins it on this machine", () => {
-    draw({ os: "linux", ...unread, onMakeRequest, traffic: { ...NO_TRAFFIC, lastTunnelAt: Date.now() - TUNNEL_GRACE_MS - 1_000 } });
+    draw({ os: "linux", ...unread, onMakeRequest, traffic: { ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS + 1_000), openTunnelAt: ago(TUNNEL_GRACE_MS + 1_000) } });
 
     expect(task(1)).toHaveTextContent("can't check here — the request in step 3 confirms it");
     expect(task(1)).not.toHaveTextContent("does not trust Trawler's certificate");
