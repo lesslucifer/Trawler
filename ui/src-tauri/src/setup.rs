@@ -178,20 +178,21 @@ pub(crate) enum Trust {
     Absent,
 }
 
-// Trust is asked of the live certificate first, because that is the only
-// answer a browser acts on. Only a certificate that does not verify costs the
-// keychain dump, which tells installed-and-untrusted (a -60007, a double-click
-// that never chose Always Trust) apart from nothing installed at all (D2).
+// A browser is sent only the leaf, so it must find the CA in a keychain before
+// any trust applies — and a trust setting is keyed on a hash and outlives its
+// certificate: deleted from the keychain, the bytes handed to `verify-cert`
+// still pass. So the keychain answers first, and only a certificate it holds is
+// verified, which tells installed-and-untrusted (a -60007, a double-click that
+// never chose Always Trust) apart from trusted (D2).
 fn macos_trust(
     live: &str,
-    verifies: impl FnOnce() -> Option<bool>,
     keychain: impl FnOnce() -> Option<Ran>,
+    verifies: impl FnOnce() -> Option<bool>,
 ) -> Option<Trust> {
-    if verifies()? {
-        return Some(Trust::Trusted);
+    if !holds(&keychain()?.stdout, live) {
+        return Some(Trust::Absent);
     }
-    let dump = keychain()?;
-    Some(if holds(&dump.stdout, live) { Trust::Installed } else { Trust::Absent })
+    Some(if verifies()? { Trust::Trusted } else { Trust::Installed })
 }
 
 static PROBE_FILES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -257,8 +258,8 @@ fn ca_trust(os: &str, pem: &str) -> Option<Trust> {
     match os {
         "macos" => macos_trust(
             &live,
-            || macos_live_verifies(pem),
             || ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-p"]),
+            || macos_live_verifies(pem),
         ),
         "windows" => windows_trust(
             &thumbprint(&live)?,
@@ -1481,37 +1482,42 @@ mod tests {
         assert_eq!(live_body("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"), None);
     }
 
+    fn never_verified() -> Option<bool> {
+        unreachable!("a certificate no keychain holds is not verified")
+    }
+
     #[test]
-    fn a_mac_that_verifies_the_live_certificate_trusts_it_and_is_not_searched_further() {
-        let never =
-            || -> Option<Ran> { unreachable!("a verified certificate needs no keychain dump") };
-        assert_eq!(macos_trust(&live(), || Some(true), never), Some(Trust::Trusted));
+    fn a_mac_holding_the_live_certificate_and_verifying_it_trusts_it() {
+        let dump = format!("{STALE}\n{LIVE}");
+        assert_eq!(macos_trust(&live(), || answered(&dump), || Some(true)), Some(Trust::Trusted));
     }
 
     // D2: a double-click that never chose Always Trust, or a -60007, leaves the
     // certificate in a keychain and untrusted.
     #[test]
     fn a_mac_holding_the_live_certificate_untrusted_reads_installed() {
-        let dump = format!("{STALE}\n{LIVE}");
-        assert_eq!(
-            macos_trust(&live(), || Some(false), || answered(&dump)),
-            Some(Trust::Installed)
-        );
+        assert_eq!(macos_trust(&live(), || answered(LIVE), || Some(false)), Some(Trust::Installed));
+    }
+
+    // Recorded on the owner's Mac: the certificate deleted from the System
+    // keychain, its Always Trust left behind — `verify-cert` passed the live
+    // bytes while a browser, sent only the leaf, refused it.
+    #[test]
+    fn a_trust_setting_that_outlived_its_certificate_trusts_nothing_a_browser_is_sent() {
+        let not_found = || exited_non_zero("");
+        assert_eq!(macos_trust(&live(), not_found, never_verified), Some(Trust::Absent));
     }
 
     // D1: the old same-name certificate verifies, and the live one is nowhere.
     #[test]
     fn a_same_name_certificate_never_answers_for_the_live_one() {
-        assert_eq!(macos_trust(&live(), || Some(false), || answered(STALE)), Some(Trust::Absent));
-        let not_found = || exited_non_zero("");
-        assert_eq!(macos_trust(&live(), || Some(false), not_found), Some(Trust::Absent));
+        assert_eq!(macos_trust(&live(), || answered(STALE), never_verified), Some(Trust::Absent));
     }
 
     #[test]
     fn a_mac_whose_tools_did_not_run_cannot_say() {
-        let never = || -> Option<Ran> { unreachable!("nothing to search without a verdict") };
-        assert_eq!(macos_trust(&live(), || None, never), None);
-        assert_eq!(macos_trust(&live(), || Some(false), || None), None);
+        assert_eq!(macos_trust(&live(), || None, never_verified), None);
+        assert_eq!(macos_trust(&live(), || answered(LIVE), || None), None);
     }
 
     #[test]

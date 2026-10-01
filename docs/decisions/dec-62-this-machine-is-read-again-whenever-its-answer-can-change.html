@@ -12,7 +12,7 @@
       <p>This machine's two tasks read the live certificate and the proxy in use now, are re-read on every
         moment their answer can move — a watch included — and, where no probe can answer, take the one
         request this app makes of its own as their reading.</p>
-      <div class="meta">v1 · 2026-09-30 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W3</strong> from its
+      <div class="meta">v2 · 2026-10-01 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W3</strong> from its
         plan's D1–D9 and U1–U5, ruled by the owner · amends
         <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> · relates to
         <a href="dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>,
@@ -47,10 +47,12 @@
     <h2 id="rules">The rules a build owes</h2>
     <table data-c="rules">
       <tr><th>#</th><th>Rule</th><th>Why</th></tr>
-      <tr><td>1</td><td>The certificate is matched on its bytes, never its name: macOS verifies the live certificate
-        and tells installed-not-trusted from absent; Windows looks for its thumbprint in the machine and the user
-        root store; Linux looks in the host's CA bundle</td><td>a browser trusts bytes; a name is what a stale
-        copy shares</td></tr>
+      <tr><td>1</td><td>The certificate is matched on its bytes, never its name: macOS looks for the live
+        certificate in a keychain and verifies only one it holds, which tells trusted from installed-not-trusted
+        from absent; Windows looks for its thumbprint in the machine and the user root store; Linux looks in the
+        host's CA bundle</td><td>a browser trusts bytes; a name is what a stale copy shares. A browser is sent
+        only the leaf, so it must find the CA first — and a trust setting outlives its certificate, so the live
+        bytes still verify after the certificate is deleted</td></tr>
       <tr><td>2</td><td>The proxy is the one HTTPS goes through now: macOS's resolved dictionary, Windows's
         <code>https=</code> entry or its one address, GNOME's HTTPS proxy. Any loopback name on Trawler's port is
         Trawler. Quit keeps its wider question — anything on this system still pointing here</td><td>a proxy
