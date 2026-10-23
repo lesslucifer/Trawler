@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: adeb4d9d75f7a9be5fd9e21f532d3a7a08a667ed
+base: 82eb7b7ab96f2eb610d4d102251a6623810a07e4
+tier: key
+signer: vuluu
+report: docs/work/2026-10-23-onboard-revamp-w3-this-machine-status-result.html
+report_sha256: b3d7261758838df9c41f342295c495223b286b1c503595dd9172a7ffa94a04be
+date: 2026-10-23
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBIYzV+B/BoLTDDSNO1iCFrK3cAoevfaRKGSx5fzrFOgD1ZRcxyVbgUzs
+  Ys00m8WsBCb1TLzqLLzoN+W0WRVawJ
+  -----END SSH SIGNATURE-----
