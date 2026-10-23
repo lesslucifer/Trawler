@@ -1,0 +1,47 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: 4bbdaf750ccc02c7ab0012937cd0a8545cff4c4c
+diff_sha256: f1827e0210ba49cd98060ac089e56f013b5542edf8f2d79179136947e6aae3f0
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 8
+    nit: 4
+  stage_seconds:
+    gate0: 97
+    finders: 350
+    verifiers: 409
+    total: 932
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency:  { found: 2, verified: 1 }
+    altitude:    { found: 7, verified: 6 }
+findings: { found: 12, verified: 9, waived: 0 }
+waivers: []
+blockers:
+  - "App.tsx takeReach: one failed reach read sets armedSince to null and the next read re-stamps it, so a proven device's marked request falls before deviceSince and its tasks revert to can't check here - DEC-63 rules 1 and 4"
+  - "Onboarding.tsx mixed / App.tsx traffic: once this machine's proxy reading flips from ours or unknown to none or foreign, rows this machine sent while mixed count as the device's unmarked evidence and settle its tasks - DEC-63 rule 3"
+importants:
+  - "App.tsx reach chip says reachable on X for an address lostAddress reads as no longer held"
+  - "setup.ts: which platforms scan is decided twice - PLATFORMS[id].scans and deviceSetup's hard-coded scan: true"
+  - "verdicts.ts deviceRouteStatus re-derives the reached time beside evidenceOf's reached rule; deviceTrustStatus re-checks decrypted against seen"
+  - "Onboarding.tsx: the try task's step number is carried twice (checkStep and GuidedTask n), and byOwnRequest hard-codes step 3"
+nits:
+  - finding: "every 3 s tick bumps reachNonce, re-rendering App before the answer is known"
+    waived: "not fixed in this range; the next round's reach-read change addresses it, and this FAIL binds none of it"
+  - finding: "sameReach and the armedSince state live in App rather than beside ReachState"
+    waived: "App alone holds reach (DEC-20: logic lives with its inputs); sameReach is a render skip, not a domain rule"
+  - finding: "mixed is decided inline in PlatformSetup's render"
+    waived: "not fixed in this range; the next round moves the rule beside the other readings, and this FAIL binds none of it"
+refuted: "the unconditional reach re-read (DEC-63 specifies it, and the header chip reads it); the first reveal of the list on any decrypted row (W1's rule, DEC-61, kept by the plan's A4); App and Onboarding reading the platform from two sources (they cannot diverge)"
+verdict: FAIL
+date: 2026-10-23
