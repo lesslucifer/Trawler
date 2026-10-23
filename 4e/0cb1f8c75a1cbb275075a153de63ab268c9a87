@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU this-machine-status -> epic/onboard-revamp; the finders also judged ui/src-tauri/src (the detectors), outside the binding"
+epic: E-ONBRVP
+wu: E-ONBRVP.W3
+branch: wu/onboard-revamp/this-machine-status
+base: 82eb7b7ab96f2eb610d4d102251a6623810a07e4
+head: 4e0cb1f8c75a1cbb275075a153de63ab268c9a87
+diff_sha256: f1123430c7ed3e0f610a267b2ed1c50b60c15d85a700e9aa73cdea6de9407e25
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 2
+    nit: 3
+  stage_seconds:
+    gate0: 169
+    finders: 105
+    verifiers: 30
+    total: 209
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency:  { found: 2, verified: 1 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 6, verified: 3, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-10-23
