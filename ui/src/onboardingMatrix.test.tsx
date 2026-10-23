@@ -38,7 +38,8 @@ import {
 //                answer; elsewhere any request that reached Trawler is done
 //   another device  its marked request settles both, named; other traffic
 //                counts only where this machine's proxy cannot be sending its
-//                own here too - read off, or another proxy (DEC-63)
+//                own here too - read off, or another proxy (DEC-63). Each
+//                proof carries its time (P2)
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
@@ -366,6 +367,7 @@ function expectedTrustState(s: State): RegExp {
     }[s.trust as "trusted" | "installed" | "absent"];
   if (s.marked) return /^✓\s*done — .+'s request decrypted at \d\d:\d\d$/;
   if (m.mixed) return /^◐\s*can't check here — the address in step 4 confirms it$/;
+  if (m.decrypted && OFF_MACHINE.has(s.platform)) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
   if (m.decrypted) return /^✓\s*done — a request decrypted$/;
   if (m.refused) return /^⚠\s*not working — nothing decrypted$/;
   return /^◐\s*can't check here — .+'s first HTTPS request confirms it$/;
@@ -375,6 +377,7 @@ function expectedRouteState(s: State): RegExp {
   const m = model(s);
   if (s.marked) return /^✓\s*done — .+'s request came through at \d\d:\d\d$/;
   if (m.mixed) return /^◐\s*can't check here — the same request confirms it$/;
+  if (m.reached && OFF_MACHINE.has(s.platform)) return /^✓\s*done — a request reached Trawler at \d\d:\d\d$/;
   if (!m.probesRoute || (s.proxy === "unknown" && s.platform !== "this"))
     return m.reached
       ? /^✓\s*done — requests reached Trawler$/

@@ -189,17 +189,33 @@ export interface DeviceReading {
 export const markedTraffic = (provedAt: number | null): Traffic =>
   provedAt === null ? NO_TRAFFIC : { ...NO_TRAFFIC, lastDecryptedAt: provedAt };
 
-export function deviceTrustStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
+// Nothing here can read that device again, so a proof says when it was made
+// and lasts the session (P2): the reader sees how old it is.
+export function deviceTrustStatus(
+  seen: Traffic,
+  evidence: Evidence,
+  reading: DeviceReading,
+  confirmOn: string,
+): StepStatusView {
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
   if (reading.mixed) return awaiting(`the address in step ${reading.checkStep} confirms it`);
+  if (evidence.decrypted && seen.lastDecryptedAt !== null)
+    return verdict("done", `a request decrypted at ${clock(seen.lastDecryptedAt)}`);
   return trustByTraffic(evidence, confirmOn);
 }
 
-export function deviceRouteStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
+export function deviceRouteStatus(
+  seen: Traffic,
+  evidence: Evidence,
+  reading: DeviceReading,
+  confirmOn: string,
+): StepStatusView {
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request came through at ${clock(reading.provedAt)}`);
   if (reading.mixed) return awaiting("the same request confirms it");
+  const reachedAt = Math.max(seen.lastDecryptedAt ?? 0, seen.lastPlainAt ?? 0, seen.lastTunnelAt ?? 0);
+  if (evidence.reached && reachedAt > 0) return verdict("done", `a request reached Trawler at ${clock(reachedAt)}`);
   return routeByTraffic(evidence, confirmOn);
 }
 
@@ -292,7 +308,8 @@ const trustedNotDecrypting = (device: string) =>
 // `ownsRefusal`: the certificate task words a refusal, so this one does not.
 // `trustedOn`: the device whose own probe reads its certificate trusted.
 // `proofStays`: a decrypted request proved this setup, and quiet does not
-// unprove it (U5) - This machine's, whose other two tasks re-read themselves.
+// unprove it - This machine's, whose other two tasks re-read themselves (U5),
+// and another device's, whose two tasks keep their proof's time (P1).
 export interface TrafficContext {
   ownsRefusal: boolean;
   trustedOn: string | null;

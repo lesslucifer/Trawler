@@ -986,7 +986,7 @@ function PlatformSetup({
   const trustState = probesTrust(platform)
     ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt))
     : offMachine
-      ? deviceTrustStatus(evidence, device, confirmHttpsOn(platform, os))
+      ? deviceTrustStatus(seen, evidence, device, confirmHttpsOn(platform, os))
       : trustByTraffic(evidence, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
@@ -994,7 +994,7 @@ function PlatformSetup({
         unread: routeByOwnRequest ? byOwnRequest("route", ownProofAt) : routeByTraffic(evidence, setup.confirmOn),
       })
     : offMachine
-      ? deviceRouteStatus(evidence, device, setup.confirmOn)
+      ? deviceRouteStatus(seen, evidence, device, setup.confirmOn)
       : routeByTraffic(evidence, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
@@ -1151,7 +1151,7 @@ function PlatformSetup({
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
-                    proofStays: platform === "this",
+                    proofStays: platform === "this" || offMachine,
                   })
             }
           />

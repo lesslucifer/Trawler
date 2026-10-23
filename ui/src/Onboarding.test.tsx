@@ -1018,8 +1018,8 @@ describe("a phone, once it may connect", () => {
     pick("iPhone or iPad");
 
     expect(document.querySelectorAll("details[open]")).toHaveLength(0);
-    expect(task(2)).toHaveTextContent("done — a request decrypted");
-    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(capturing.lastDecryptedAt!)}`);
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(capturing.lastDecryptedAt!)}`);
   });
 
   // The owner's report: an iPhone pointed here without the certificate. Its
@@ -1029,7 +1029,7 @@ describe("a phone, once it may connect", () => {
     draw({ reach: ARMED, proxy: NOT_ROUTED, traffic: arriving });
     pick("iPhone or iPad");
 
-    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(arriving.lastTunnelAt!)}`);
     expect(within(task(3)).queryByText("2 steps")).toBeNull();
     expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
     expect(task(2)).toHaveTextContent("not working — nothing decrypted");
@@ -1111,8 +1111,8 @@ describe("another device, where this machine's own traffic may be arriving too",
       draw({ reach: ARMED, proxy: { status, address: null }, traffic: capturing, deviceMark: MARK });
       pick("Another Mac");
 
-      expect(task(2)).toHaveTextContent("done — a request decrypted");
-      expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+      expect(task(2)).toHaveTextContent("done — a request decrypted at");
+      expect(task(3)).toHaveTextContent("done — a request reached Trawler at");
       expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
       expect(zone("proven")).not.toHaveTextContent(/that Mac/);
     },
@@ -1419,16 +1419,21 @@ describe("the clock reaches the traffic reading and nothing else", () => {
     expect(resolved).not.toHaveBeenCalled();
   });
 
-  // U5 · Q3: 30 s after "You're set up" the try task fell back to "not done"
-  // under two done tasks. On This machine the proof stays, with its time.
-  it("keeps This machine's proof once the traffic goes quiet, and nowhere else's", () => {
+  // U5 · Q3 · P1: 30 s after "You're set up" the try task fell back to "not
+  // done" under two done tasks. On This machine and on another device the
+  // proof stays, with its time; their other two tasks keep theirs.
+  it("keeps the proof on This machine and on another device once the traffic goes quiet, and nowhere else", () => {
     const at = Date.now();
     draw({ reach: ARMED, proxy: NOT_ROUTED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
     expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
 
     pick("iPhone or iPad");
-    expect(task(4)).toHaveTextContent("not done — nothing arriving right now");
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
+
+    pick("Android emulator");
+    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
   });
 });
 

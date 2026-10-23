@@ -651,10 +651,10 @@ describe("another device's two tasks read what could have come from it", () => {
   it("its marked request settles both, named and timed, whatever else arrived (A1)", () => {
     for (const mixed of [false, true]) {
       const marked = { ...THAT_MAC, provedAt: AT_1402, mixed };
-      expect(deviceTrustStatus(ev({ refused: true }), marked, FIRST_HTTPS)).toEqual(
+      expect(deviceTrustStatus(NO_TRAFFIC, ev({ refused: true }), marked, FIRST_HTTPS)).toEqual(
         verdict("done", "that Mac's request decrypted at 14:02"),
       );
-      expect(deviceRouteStatus(ev({}), marked, FIRST)).toEqual(
+      expect(deviceRouteStatus(NO_TRAFFIC, ev({}), marked, FIRST)).toEqual(
         verdict("done", "that Mac's request came through at 14:02"),
       );
     }
@@ -662,23 +662,35 @@ describe("another device's two tasks read what could have come from it", () => {
 
   it("where this machine's traffic may be arriving too, nothing else settles them, and each names what will", () => {
     const mixed = { ...THAT_MAC, mixed: true };
-    const trust = deviceTrustStatus(ev({ decrypted: true, reached: true }), mixed, FIRST_HTTPS);
-    const route = deviceRouteStatus(ev({ decrypted: true, reached: true }), mixed, FIRST);
+    const wire = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 };
+    const trust = deviceTrustStatus(wire, ev({ decrypted: true, reached: true }), mixed, FIRST_HTTPS);
+    const route = deviceRouteStatus(wire, ev({ decrypted: true, reached: true }), mixed, FIRST);
 
     expect(trust).toEqual(awaiting("the address in step 4 confirms it"));
     expect(route).toEqual(awaiting("the same request confirms it"));
     expect(trust.short).not.toBe(route.short);
   });
 
-  it("elsewhere its traffic reads as any device's traffic does", () => {
-    expect(deviceTrustStatus(ev({ decrypted: true }), THAT_MAC, FIRST_HTTPS)).toEqual(
-      trustByTraffic(ev({ decrypted: true }), FIRST_HTTPS),
+  // P2: nothing here can read that device again, so the proof says its age.
+  it("elsewhere its traffic settles them with the time of the newest proof", () => {
+    const decrypted = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 };
+    const plainLater = { ...decrypted, lastPlainAt: AT_1402 + 60_000 };
+
+    expect(deviceTrustStatus(plainLater, ev({ decrypted: true, reached: true }), THAT_MAC, FIRST_HTTPS)).toEqual(
+      verdict("done", "a request decrypted at 14:02"),
     );
-    expect(deviceTrustStatus(ev({ refused: true }), THAT_MAC, FIRST_HTTPS).short).toBe(
+    expect(deviceRouteStatus(plainLater, ev({ decrypted: true, reached: true }), THAT_MAC, FIRST)).toEqual(
+      verdict("done", "a request reached Trawler at 14:03"),
+    );
+  });
+
+  it("and reads a refusal, or nothing yet, as any device's traffic does", () => {
+    const refusing = { ...NO_TRAFFIC, ...openTunnel(AT_1402) };
+    expect(deviceTrustStatus(refusing, ev({ refused: true, reached: true }), THAT_MAC, FIRST_HTTPS).short).toBe(
       "not working — nothing decrypted",
     );
-    expect(deviceRouteStatus(ev({ reached: true }), THAT_MAC, FIRST)).toEqual(routeByTraffic(ev({ reached: true }), FIRST));
-    expect(deviceRouteStatus(ev({}), THAT_MAC, FIRST)).toEqual(awaiting(FIRST));
+    expect(deviceTrustStatus(NO_TRAFFIC, ev({}), THAT_MAC, FIRST_HTTPS)).toEqual(awaiting(FIRST_HTTPS));
+    expect(deviceRouteStatus(NO_TRAFFIC, ev({}), THAT_MAC, FIRST)).toEqual(awaiting(FIRST));
   });
 
   it("the marked request alone is the traffic where nothing else counts", () => {
