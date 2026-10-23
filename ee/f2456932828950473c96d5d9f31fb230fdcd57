@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: eef2456932828950473c96d5d9f31fb230fdcd57
+diff_sha256: 86e6b053a269c646abe258cf4ad3c1188ad5315c1cd7545900fdc241398ec4f9
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 7
+  stage_seconds:
+    gate0: 37
+    finders: 776
+    verifiers: 399
+    total: 1175
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 7, verified: 4 }
+findings: { found: 9, verified: 5, waived: 0 }
+waivers: []
+importants:
+  - "ownRequest.ts READINGS_APART_MAX_MS is a second, unlinked statement of App.tsx's WATCH_MS cadence; nothing pins the relation, so a slower watch would leave every run a single reading and no unmarked traffic would ever count, with the suite green"
+  - "App.tsx readReach hand-copies readMachine's newest-read protocol (a quiet read yields to the one in flight, only the newest lands) with its own guard, and round 4's fix was already a port from one copy to the other"
+nits:
+  - finding: "past CLEAR_SPANS_MAX runs the oldest go with any proof only they held, which DEC-63 rule 4 does not name"
+    waived: "not fixed in this range; the next round names the cap in DEC-63 rule 4, and this FAIL binds none of it"
+  - finding: "readMachine takes a second Date.now() for probedAt beside the landed time the clear readings get"
+    waived: "not fixed in this range; the next round gives the landing one time, and this FAIL binds none of it"
+  - finding: "an IPv6 address reads bracketed while armed and bare once lost"
+    waived: "the lost line names the address as the interface list and the picker write it (pinned by setup.test.ts); the bracketed form is the proxy address's host, unchanged since before this diff"
+refuted: "deviceTraffic's passes (2 ms at 10k flows, once per tick on one screen); the UNMIXED default (App passes the device whenever the platform needs reach); ownRequest.ts holding device attribution (markOf is its, and a move would cycle with flow.ts); device and traffic as two channels (AnotherDevice carries no traffic)"
+verdict: FAIL
+date: 2026-10-23
