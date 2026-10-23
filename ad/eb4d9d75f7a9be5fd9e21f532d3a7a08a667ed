@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-ONBRVP
 wu: E-ONBRVP.W3
-branch: wu/onboard-revamp/this-machine-status
 base: 82eb7b7ab96f2eb610d4d102251a6623810a07e4
 tip: adeb4d9d75f7a9be5fd9e21f532d3a7a08a667ed
 diff_sha256: dd106e82a6b42605f0b90a15d77b1f95dc6f6048f7f06675ab7a95a729d7e7e1
