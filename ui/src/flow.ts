@@ -63,12 +63,20 @@ export function lastCaptureAt(flows: FlowSummary[]): number | null {
 // The setup screen reads one setup session: what was captured, and the
 // tunnels, from the moment that session opened. Traffic from before it is some
 // earlier session's evidence (DEC-60). A null `since` bounds nothing. A tunnel
-// is open until a decrypted request starts after it.
-export function sessionTraffic(flows: FlowSummary[], since: number | null, tunnels: readonly number[]): Traffic {
+// is open until a decrypted request on the wire starts after it - `wire`,
+// where only some of its rows are read, since a tunnel and the request it
+// carries are one connection that a reading may place apart.
+export function sessionTraffic(
+  flows: FlowSummary[],
+  since: number | null,
+  tunnels: readonly number[],
+  wire: FlowSummary[] = flows,
+): Traffic {
   const from = since ?? undefined;
   const times = latestFlowTimes(flows, from);
+  const answeredAt = wire === flows ? times.lastDecryptedAt : latestFlowTimes(wire, from).lastDecryptedAt;
   const inSession = tunnels.filter((at) => from === undefined || at >= from);
-  const open = inSession.filter((at) => times.lastDecryptedAt === null || at > times.lastDecryptedAt);
+  const open = inSession.filter((at) => answeredAt === null || at > answeredAt);
   return {
     ...times,
     lastTunnelAt: inSession.length === 0 ? null : Math.max(...inSession),

@@ -143,16 +143,17 @@ export interface AnotherDevice {
   wire: Traffic;
 }
 
-// From the moment its address was allowed (A2), that device's marked rows are
-// its own whatever this machine's proxy read, and an unmarked row or a tunnel is
-// its only where it arrived inside a clear span. So a proof, once read, lasts
-// the session (rule 4): a later reading neither moves nor widens a closed span.
+// From the moment its address was allowed (A2) - and nothing while none is -
+// that device's marked rows are its own whatever this machine's proxy read, and
+// an unmarked row or a tunnel is its only where it arrived inside a clear span.
+// So a proof, once read, lasts the session (rule 4): a later reading neither
+// moves nor widens a closed span.
 export function deviceTraffic(
   flows: FlowSummary[],
-  device: { since: number | null; mark: string; clear: ClearReadings },
+  device: { allowedSince: number | null; mark: string; clear: ClearReadings },
   tunnels: readonly number[],
 ): AnotherDevice & { traffic: Traffic } {
-  const { since, mark, clear } = device;
+  const { allowedSince: since, mark, clear } = device;
   const mixed = !clear.open;
   if (since === null) return { traffic: NO_TRAFFIC, wire: NO_TRAFFIC, provedAt: null, mixed };
   const inClear = (at: number) => clear.spans.some((span) => at >= span.from && at <= span.to);
@@ -161,7 +162,7 @@ export function deviceTraffic(
     return marked === null ? inClear(Date.parse(flow.started_at)) : marked === mark;
   });
   return {
-    traffic: sessionTraffic(its, since, tunnels.filter(inClear)),
+    traffic: sessionTraffic(its, since, tunnels.filter(inClear), flows),
     wire: mixed ? sessionTraffic(flows, since, tunnels) : NO_TRAFFIC,
     provedAt: lastProvedAt(flows, since, (seen) => seen === mark),
     mixed,

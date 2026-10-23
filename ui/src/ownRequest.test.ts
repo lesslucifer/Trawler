@@ -183,7 +183,7 @@ describe("the proof another device's marked request leaves", () => {
   const SESSION = Date.parse("2026-10-23T07:00:00Z");
   const mark = deviceMark(SESSION, "mac");
   const allowed = Date.parse("2026-10-23T07:02:00Z");
-  const provedAt = (flows: FlowSummary[]) => deviceTraffic(flows, { since: allowed, mark, clear: NO_CLEAR_READINGS }, []).provedAt;
+  const provedAt = (flows: FlowSummary[]) => deviceTraffic(flows, { allowedSince: allowed, mark, clear: NO_CLEAR_READINGS }, []).provedAt;
 
   it("is the newest decrypted row carrying its mark since its address was allowed", () => {
     const flows = [
@@ -319,7 +319,9 @@ describe("another device's traffic", () => {
   const at = (second: number) => Date.parse("2026-10-23T07:02:00Z") + second * 1_000;
   const decrypted = (second: number, id = `d${second}`) =>
     row("https://example.org/", { id, started_at: new Date(at(second)).toISOString() });
-  const allowed = { since: at(2), mark };
+  const rowAt = (startedAt: number) =>
+    row("https://example.org/", { id: `r${startedAt}`, started_at: new Date(startedAt).toISOString() });
+  const allowed = { allowedSince: at(2), mark };
 
   const readAt = (second: number) => ({ sent: at(second), landed: at(second) });
   const readings = (...runs: { clear: boolean; second: number }[]) =>
@@ -369,6 +371,17 @@ describe("another device's traffic", () => {
     expect(deviceTraffic([decrypted(4)], { ...allowed, clear }, []).traffic).toEqual(NO_TRAFFIC);
   });
 
+  // A tunnel and the request it carries are one connection, seen at two times:
+  // a reading's edge between them leaves the tunnel answered.
+  it("answers a tunnel of its with the decrypted request after it on the wire, wherever a reading's edge falls", () => {
+    const clear = readings({ clear: true, second: 3 }, { clear: true, second: 5 }, { clear: false, second: 6 });
+    const tunnel = at(5) - 50;
+    const read = deviceTraffic([rowAt(at(5) + 100)], { ...allowed, clear }, [tunnel]);
+
+    expect(read.traffic.lastTunnelAt).toBe(tunnel);
+    expect(read.traffic.openTunnelAt).toBeNull();
+  });
+
   // Rule 4: no later reading moves or widens a run a proof arrived in.
   it("keeps a proof from a run through a reading that failed after it", () => {
     const clear = readings(
@@ -403,7 +416,7 @@ describe("another device's traffic", () => {
     const flows = [decrypted(4), row(markedUrl(mark), { id: "m", started_at: new Date(at(4)).toISOString() })];
     const clear = readings({ clear: true, second: 1 }, { clear: true, second: 9 });
 
-    expect(deviceTraffic(flows, { since: null, mark, clear }, [at(4)])).toEqual({
+    expect(deviceTraffic(flows, { allowedSince: null, mark, clear }, [at(4)])).toEqual({
       traffic: NO_TRAFFIC,
       wire: NO_TRAFFIC,
       provedAt: null,

@@ -427,7 +427,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const device = useMemo(
     () =>
       state.phase === "onboarding" && mark !== undefined
-        ? deviceTraffic(everything, { since: deviceSince, mark, clear: clearReadings }, tunnelTimes)
+        ? deviceTraffic(everything, { allowedSince: deviceSince, mark, clear: clearReadings }, tunnelTimes)
         : undefined,
     [state.phase, everything, mark, deviceSince, clearReadings, tunnelTimes],
   );
