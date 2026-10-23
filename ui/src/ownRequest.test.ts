@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FlowSummary } from "./api";
-import { isOwnRequest, makeRequest, markedUrl, nextMark, ownRequestProvedAt, REQUEST_HOST } from "./ownRequest";
+import {
+  isOwnRequest,
+  makeRequest,
+  markedUrl,
+  nextMark,
+  ownRequestProvedAt,
+  REQUEST_HOST,
+  requestRoute,
+} from "./ownRequest";
 
 function row(uri: string, over: Partial<FlowSummary> = {}): FlowSummary {
   return {
@@ -111,5 +119,29 @@ describe("the proof this window's own request leaves", () => {
     vi.unstubAllGlobals();
 
     expect(parsed).toBe(0);
+  });
+});
+
+// D9: the route is what the core saw of the request, never the page's answer alone.
+describe("which way the request went", () => {
+  const sentAt = Date.parse("2026-09-30T07:02:00Z");
+  const seen = { decrypted: false, tunnelAt: null, sentAt, answered: true };
+
+  it("went through Trawler when its marked row was decrypted, whatever else was seen", () => {
+    expect(requestRoute({ ...seen, decrypted: true, tunnelAt: sentAt, answered: false })).toBe("through");
+  });
+
+  it("reached Trawler and did not decrypt when a tunnel to its host opened after it was sent", () => {
+    expect(requestRoute({ ...seen, tunnelAt: sentAt })).toBe("undecrypted");
+    expect(requestRoute({ ...seen, tunnelAt: sentAt + 5, answered: false })).toBe("undecrypted");
+  });
+
+  it("went around Trawler when the page answered and the only tunnel is older than the request", () => {
+    expect(requestRoute(seen)).toBe("around");
+    expect(requestRoute({ ...seen, tunnelAt: sentAt - 1 })).toBe("around");
+  });
+
+  it("went nowhere when nothing was seen and nothing answered", () => {
+    expect(requestRoute({ ...seen, answered: false })).toBeNull();
   });
 });

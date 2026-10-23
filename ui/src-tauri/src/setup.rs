@@ -189,7 +189,8 @@ fn macos_trust(
     keychain: impl FnOnce() -> Option<Ran>,
     verifies: impl FnOnce() -> Option<bool>,
 ) -> Option<Trust> {
-    if !holds(&keychain()?.stdout, live) {
+    let keychain = keychain().filter(|out| out.ok)?;
+    if !holds(&keychain.stdout, live) {
         return Some(Trust::Absent);
     }
     Some(if verifies()? { Trust::Trusted } else { Trust::Installed })
@@ -1530,8 +1531,15 @@ mod tests {
     // bytes while a browser, sent only the leaf, refused it.
     #[test]
     fn a_trust_setting_that_outlived_its_certificate_trusts_nothing_a_browser_is_sent() {
-        let not_found = || exited_non_zero("");
+        let not_found = || answered("");
         assert_eq!(macos_trust(&live(), not_found, never_verified), Some(Trust::Absent));
+    }
+
+    // `find-certificate -a` exits 0 when nothing matches, so a non-zero exit is
+    // a keychain search that failed, not an empty keychain.
+    #[test]
+    fn a_keychain_search_that_failed_cannot_say() {
+        assert_eq!(macos_trust(&live(), || exited_non_zero(""), never_verified), None);
     }
 
     // D1: the old same-name certificate verifies, and the live one is nowhere.

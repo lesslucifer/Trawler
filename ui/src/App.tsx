@@ -23,6 +23,7 @@ import {
   nextMark,
   ownRequestProvedAt,
   REQUEST_HOST,
+  requestRoute,
   type RequestRoute,
 } from "./ownRequest";
 import {
@@ -439,20 +440,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const makeOwnRequest = async (): Promise<RequestRoute> => {
     const mark = nextMark();
     const sentAt = Date.now();
-    const through = new Promise<RequestRoute>((resolve) => {
-      awaitingOwn.current = { mark, seen: () => resolve("through") };
+    const seen = new Promise<boolean>((resolve) => {
+      awaitingOwn.current = { mark, seen: () => resolve(true) };
     });
     const answered = await makeRequest(mark).then(
       () => true,
       () => false,
     );
-    const grace = new Promise<null>((resolve) => setTimeout(() => resolve(null), TUNNEL_GRACE_MS));
-    const route = await Promise.race([through, grace]);
+    const grace = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), TUNNEL_GRACE_MS));
+    const decrypted = await Promise.race([seen, grace]);
     if (awaitingOwn.current?.mark === mark) awaitingOwn.current = null;
-    if (route !== null) return route;
-    if ((tunnelAt(REQUEST_HOST) ?? 0) >= sentAt) return "undecrypted";
-    if (answered) return "around";
-    throw new Error(`the request to ${REQUEST_HOST} didn't complete`);
+    const route = requestRoute({ decrypted, tunnelAt: tunnelAt(REQUEST_HOST), sentAt, answered });
+    if (route === null) throw new Error(`the request to ${REQUEST_HOST} didn't complete`);
+    return route;
   };
 
   const close = useProxyCloseConfirm(proxyAddr);

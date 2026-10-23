@@ -60,3 +60,17 @@ export function ownRequestProvedAt(flows: FlowSummary[], since: number | null): 
 // tunnel to the host and nothing decrypted, or nothing at all while the page
 // still got its answer.
 export type RequestRoute = "through" | "undecrypted" | "around";
+
+export interface RequestSeen {
+  decrypted: boolean;
+  tunnelAt: number | null;
+  sentAt: number;
+  answered: boolean;
+}
+
+// Null is a request that went nowhere at all: no row, no tunnel, no answer.
+export function requestRoute({ decrypted, tunnelAt, sentAt, answered }: RequestSeen): RequestRoute | null {
+  if (decrypted) return "through";
+  if ((tunnelAt ?? 0) >= sentAt) return "undecrypted";
+  return answered ? "around" : null;
+}
