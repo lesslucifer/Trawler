@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adb636d9f34851f0dfad971" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W4 result: status, Another Mac</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W4 — result: status, Another Mac</h1>
+      <p>Another device's steps now read only what could have come from it: traffic since its address was allowed, its own marked request always, and other traffic only while this Mac's proxy cannot be sending its own. Every proof carries its time, and an allowed address this Mac has left reads not working. All five off-machine platforms share it.</p>
+      <div class="meta">v1 · 2026-10-23 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W4</span> · branch <code>wu/onboard-revamp/another-mac-status</code> · <a href="2026-10-23-onboard-revamp-w4-another-mac-status-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 13</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>this Mac routed through Trawler, Another Mac allowed, nothing done on that Mac → ② ③ ④ "can't check here", no success line</td><td>where this Mac's proxy reads ours or unknown, nothing unmarked counts: ② "the address in step 4 confirms it" · ③ "the same request confirms it" · ④ "the address below confirms it"; no success line (A1, A4)</td><td>delivered</td></tr>
+      <tr><td>open step 4's address on that Mac → ② ③ named and timed, ④ done, "… from that Mac"</td><td>④ offers <code>https://example.com/?trawler-check=&lt;code&gt;</code>, one code per session and platform, with a code to scan on a phone. Its decrypted row: "done — that Mac's request decrypted at 14:02" · "… came through at 14:02" · ④ "done — decrypted at 14:02" · "You're set up — Trawler is capturing traffic from that Mac" (A1, A4)</td><td>delivered, integration-tested; not run with a second device</td></tr>
+      <tr><td>this Mac's proxy off, any website on that Mac → ② ③ ④ done, each timed</td><td>"done — a request decrypted at 14:02" · "done — a request reached Trawler at 14:02" (P2)</td><td>delivered</td></tr>
+      <tr><td>requests before the address was allowed → count for nothing</td><td>another device's traffic and marked proof are read from the later of the session's start and the moment its current address was first seen armed (A2)</td><td>delivered</td></tr>
+      <tr><td>a pinned app on this Mac refuses while this Mac routes here → ② never blames that Mac</td><td>where nothing unmarked counts, a refusal is the try task's and names no device (A3)</td><td>delivered</td></tr>
+      <tr><td>this Mac moves to another Wi-Fi → ① "not working — this Mac no longer holds 192.168.1.24" within 3 s, ②–④ dimmed</td><td>an armed address the core's interface list no longer holds is lost; ① offers the address held now. Reach is read again on focus and by the 3 s watch, and an unchanged answer changes nothing on screen (R1, R2)</td><td>delivered</td></tr>
+      <tr><td>40 s after that Mac's request → ④ "done — decrypted at 14:02, nothing since"</td><td>another device's try task keeps its proof once quiet (P1)</td><td>delivered</td></tr>
+      <tr><td>allow a new address → ② ③ back to "can't check here"</td><td>a new address starts the evidence again (A2)</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>② ③ ④ "can't check here — the address in step 4 confirms it"</td><td>③ says "the same request confirms it" and ④ "the address below confirms it"</td><td>each fact is said once (F19); ④ holds the address</td></tr>
+      <tr><td>③ "done — requests reached Trawler", with its time</td><td>"done — a request reached Trawler at 14:02": the newest request's time</td><td>a time belongs to one request</td></tr>
+      <tr><td>the moment the address was allowed</td><td>the moment this window first saw it armed: on its own allow, or on its first read of reach</td><td>the core reports no arm time, and core changes are outside the epic; setup opening re-reads reach, so the cut is never later than the session needs</td></tr>
+      <tr><td>—</td><td>the matrix sweeps the marked request only with this machine's trust probe unread, and drains jsdom's queued <code>&lt;details&gt;</code> toggle after each synchronous test (<code>cf164c4</code>)</td><td>no off-machine task reads the trust probe. The drain: jsdom fires a details element's toggle from a timer that holds the whole rendered tree, and a synchronous sweep never yields to it. The sweep had reached 3.9 GB of a 4.3 GB worker heap before this WU, and the new states ran it out. It now ends near 430 MB</td></tr>
+      <tr><td>—</td><td>the design run's mockup shows the rules on the iPhone, the run's off-machine platform</td><td>the five platforms share the code (Q3); the iPhone also shows the address's code to scan</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code> (the device chain: the mark named and timed, the mixed promises, dated unmarked proof, the marked-only try task, the end's device) · <code>ui/src/ownRequest.test.ts</code> (the device mark per session and platform; its proof from the allowed address) · <code>ui/src/setup.test.ts</code> (the lost address, IPv6 included; the address step, scanned on phones only)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code> (traffic before the allow settles nothing and after it does; the marked address round-trips from screen to row; reach re-read on focus and by the watch, a lost address shown within one tick) · <code>ui/src/Onboarding.test.tsx</code> (A1, A3, A4, R1, P1, P2 on screen) · <code>ui/src/onboardingMatrix.test.tsx</code> (the model gains this machine's proxy × the mark for every off-machine platform; every can't-check-here names what settles it and that evidence moves it; another device's end reads only its evidence; 22,145 cases)</td></tr>
+      <tr><td>e2e</td><td>waived at WU: allowing a device opens a native confirm no WebDriver reaches (UC-ONBOARD), and a second machine is not hermetic. The per-platform traffic journey is W20's</td></tr>
+      <tr><td>suites</td><td>at <code>481c231</code>, 2026-10-23: UI 61 files and 23,801 tests green · <code>tsc -b</code> and <code>pnpm lint</code> green. The shell and the core are unchanged</td></tr>
+      <tr><td>design</td><td>round 13 of the setup screen's design run, closed and archived with your LGTM (<code>b58f52e</code>)</td></tr>
+      <tr><td>commits</td><td>plan <code>1b7f81f</code> · <code>1b12ff4</code> · <code>a2a2f3a</code> · A2 R1 R2 <code>50b4f3d</code> · A1 A3 A4 <code>cf164c4</code> · P1 P2 <code>481c231</code> · round 13 <code>3e052b4</code>, closed <code>b58f52e</code> · T2 <code>5752f9f</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> carries another device's rows: the platform table, the lost address in the reach callout, the try task keeping its proof, and a paragraph on reading only what could have come from it. Its index row says the same. <a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> is new and active, with its index row. It amends <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>, whose record and index row now say so, and <a href="../decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>'s open "how other platforms' proof ages" row points at it. No component contract changed.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W20: the walkthrough films none of the new states (this Mac's traffic mixed in, the marked address, the lost address), and the real-device check is still owed: with this Mac routed through Trawler, a second Mac and a phone each open their marked address, the phone by scanning it. W5–W10 inherit DEC-63 and keep each platform's own review. W13: N1 (the macOS route command sets Wi-Fi only) and N2 (nothing says what to check when a device cannot reach the address). A flow records neither its listener nor its client, so a tunnel and an unmarked request stay unattributed; a listener tag in the core would close that, as the device-attribution roadmap epic. A program on this machine with a proxy of its own still counts while the system proxy reads off (the owner's Q1).</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
