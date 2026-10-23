@@ -1,5 +1,6 @@
 import type { FlowSummary } from "./api";
 import { isCaptured } from "./flow";
+import type { PlatformId } from "./setup";
 
 // DEC-56: one request, on the user's click, to a destination the sentence
 // names and Trawler does not own. The window's own fetch goes the way a browser
@@ -42,18 +43,41 @@ export function isOwnRequest(flow: FlowSummary, mark: string): boolean {
   return markOf(flow) === mark;
 }
 
-// When this window's own request last came through, decrypted, since the setup
-// session opened: the proof lasts the session (Q4), and a row from before it is
-// some earlier session's.
-export function ownRequestProvedAt(flows: FlowSummary[], since: number | null): number | null {
+// DEC-63: another device's request carries a mark too, typed or scanned on that
+// device, so the row it produces is known to be that device's. One per setup
+// session and platform, short enough to type, and derived rather than held, so
+// the screen that shows it and the reading that finds it cannot disagree.
+export function deviceMark(session: number | null, platform: PlatformId): string {
+  let hash = 0x811c9dc5;
+  for (const char of `${WINDOW_MARK}:${session}:${platform}`) {
+    hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193);
+  }
+  return ((hash >>> 0) % 36 ** 4).toString(36).padStart(4, "0");
+}
+
+function lastProvedAt(flows: FlowSummary[], since: number | null, mine: (mark: string) => boolean): number | null {
   let proved: number | null = null;
   for (const flow of flows) {
-    if (!markOf(flow)?.startsWith(`${WINDOW_MARK}.`)) continue;
+    const mark = markOf(flow);
+    if (mark === null || !mine(mark)) continue;
     const at = Date.parse(flow.started_at);
     if (Number.isNaN(at) || (since !== null && at < since)) continue;
     proved = Math.max(proved ?? at, at);
   }
   return proved;
+}
+
+// When this window's own request last came through, decrypted, since the setup
+// session opened: the proof lasts the session (Q4), and a row from before it is
+// some earlier session's.
+export function ownRequestProvedAt(flows: FlowSummary[], since: number | null): number | null {
+  return lastProvedAt(flows, since, (mark) => mark.startsWith(`${WINDOW_MARK}.`));
+}
+
+// When that device's marked request last came through, decrypted, since `since`
+// - the moment its address was allowed, in this session (A2).
+export function deviceProvedAt(flows: FlowSummary[], since: number, mark: string): number | null {
+  return lastProvedAt(flows, since, (seen) => seen === mark);
 }
 
 // Which way one request went, as far as the core saw it (D9): decrypted, a

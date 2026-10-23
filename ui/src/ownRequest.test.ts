@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FlowSummary } from "./api";
 import {
+  deviceMark,
+  deviceProvedAt,
   isOwnRequest,
   makeRequest,
   markedUrl,
@@ -143,5 +145,61 @@ describe("which way the request went", () => {
 
   it("went nowhere when nothing was seen and nothing answered", () => {
     expect(requestRoute({ ...seen, answered: false })).toBeNull();
+  });
+});
+
+// DEC-63: another device's request carries a mark that only this screen shows.
+describe("another device's mark", () => {
+  const SESSION = Date.parse("2026-10-23T07:00:00Z");
+
+  it("is short enough to type, and the same wherever the same session and platform ask", () => {
+    const mark = deviceMark(SESSION, "mac");
+
+    expect(mark).toMatch(/^[0-9a-z]{4}$/);
+    expect(deviceMark(SESSION, "mac")).toBe(mark);
+  });
+
+  it("is another mark for another platform, or another session", () => {
+    const mark = deviceMark(SESSION, "mac");
+
+    expect(deviceMark(SESSION, "windows")).not.toBe(mark);
+    expect(deviceMark(SESSION + 1, "mac")).not.toBe(mark);
+  });
+
+  it("is never one of this window's own marks", () => {
+    expect(deviceMark(SESSION, "mac")).not.toContain(".");
+  });
+});
+
+describe("the proof another device's marked request leaves", () => {
+  const SESSION = Date.parse("2026-10-23T07:00:00Z");
+  const mark = deviceMark(SESSION, "mac");
+  const allowed = Date.parse("2026-10-23T07:02:00Z");
+
+  it("is the newest decrypted row carrying its mark since its address was allowed", () => {
+    const flows = [
+      row(markedUrl(mark), { started_at: "2026-10-23T07:03:00Z" }),
+      row(markedUrl(mark), { started_at: "2026-10-23T07:05:00Z" }),
+    ];
+
+    expect(deviceProvedAt(flows, allowed, mark)).toBe(Date.parse("2026-10-23T07:05:00Z"));
+  });
+
+  it("is nothing from before the address was allowed (A2)", () => {
+    expect(deviceProvedAt([row(markedUrl(mark), { started_at: "2026-10-23T07:01:00Z" })], allowed, mark)).toBeNull();
+  });
+
+  it("is never this window's own request, another platform's, or one that did not decrypt", () => {
+    const flows = [
+      row(markedUrl(nextMark()), { started_at: "2026-10-23T07:03:00Z" }),
+      row(markedUrl(deviceMark(SESSION, "windows")), { started_at: "2026-10-23T07:03:00Z" }),
+      row(`http://example.com/?trawler-check=${mark}`, { started_at: "2026-10-23T07:03:00Z" }),
+    ];
+
+    expect(deviceProvedAt(flows, allowed, mark)).toBeNull();
+  });
+
+  it("leaves this window's own proof to this window's marks", () => {
+    expect(ownRequestProvedAt([row(markedUrl(mark), { started_at: "2026-10-23T07:03:00Z" })], SESSION)).toBeNull();
   });
 });

@@ -1085,6 +1085,34 @@ describe("another device's evidence starts when its address is allowed", () => {
   });
 });
 
+// DEC-63: the address the try task shows is the one whose row settles that
+// Mac's tasks, while this Mac's own proxy cannot be ruled out.
+test("another device's marked request settles its tasks, where nothing else of the wire can", async () => {
+  onMacHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Another Mac");
+  const shown = await screen.findByRole("button", { name: /copy the address to open/i });
+  const address = shown.textContent!.match(/https:\/\/example\.com\/\?trawler-check=[0-9a-z]{4}/)![0];
+  const later = new Date(Date.now() + 1_000).toISOString();
+
+  rows = [flow({ uri: "https://example.com/", started_at: later })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("traffic-state")).toBeInTheDocument());
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+
+  rows = [...rows, flow({ id: "f2", uri: address, started_at: later })];
+  fire();
+
+  await waitFor(() =>
+    expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at"),
+  );
+  expect(screen.getByTestId("task-3")).toHaveTextContent("done — that Mac's request came through at");
+});
+
 // R2: a network change beside the window is read like a setting changed there.
 describe("the allowed address is read again with this machine", () => {
   afterEach(() => vi.useRealTimers());

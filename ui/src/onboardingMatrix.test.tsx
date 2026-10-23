@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Onboarding, useRouteMemory } from "./Onboarding";
 import type { OnbState } from "./onboardingMachine";
@@ -36,10 +36,19 @@ import {
 //   proxy        where a probe exists (this machine, the Simulator) it is the
 //                reading, and This machine's own request where it cannot
 //                answer; elsewhere any request that reached Trawler is done
+//   another device  its marked request settles both, named; other traffic
+//                counts only where this machine's proxy cannot be sending its
+//                own here too - read off, or another proxy (DEC-63)
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
 // read done; TRUTH, no sentence contradicts a reading on the same screen.
+
+// jsdom fires a <details> element's toggle from a timer it queues when the
+// element opens, and the timer holds the element's whole rendered tree until it
+// runs. A synchronous test never yields to it, so a sweep of them keeps every
+// open guide it drew, and outgrows a worker's heap unless each test drains it.
+const drainingToggles = () => afterEach(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
 const HOSTS: HostOs[] = ["macos", "windows", "linux", "other"];
 const TRUST: TrustProbe[] = ["trusted", "installed", "absent", "unknown"];
@@ -138,9 +147,29 @@ interface State {
   history: History;
   // This machine's own request came through, decrypted, in this session.
   own: boolean;
+  // Another device's marked request came through, decrypted, since its
+  // address was allowed (DEC-63).
+  marked: boolean;
 }
 
 const OWN_AT = Date.now() - 60_000;
+const MARK = "k3m9";
+// Older than the window of "now", newer than a refusal from earlier: so a mark
+// answers that tunnel, and never one that opened after it.
+const MARKED_AGO = 45_000;
+
+// The wire as the screen is handed it: the marked request is a decrypted row
+// like any other, taken at render time so a long sweep never ages it past the
+// tunnels it is ordered against.
+function wireOf(s: State): { traffic: Traffic; markedAt: number | null } {
+  const traffic = trafficOf(s.history);
+  if (!s.marked) return { traffic, markedAt: null };
+  const markedAt = Date.now() - MARKED_AGO;
+  const lastDecryptedAt = Math.max(traffic.lastDecryptedAt ?? markedAt, markedAt);
+  const openTunnelAt =
+    traffic.openTunnelAt !== null && traffic.openTunnelAt > lastDecryptedAt ? traffic.openTunnelAt : null;
+  return { traffic: { ...traffic, lastDecryptedAt, openTunnelAt }, markedAt };
+}
 
 type Handlers = Partial<Record<"setUp" | "setProxy" | "unset", Outcome>>;
 
@@ -154,6 +183,7 @@ const through = async () => "through" as const;
 // App holds what the shell last did to the proxy (S5); the host holds it the same way.
 function Host({ s, handlers }: { s: State; handlers: Handlers }) {
   const [routeAct, onRouteAct] = useRouteMemory(s.proxy);
+  const { traffic, markedAt } = wireOf(s);
   return (
     <Onboarding
       state={onboarding}
@@ -162,8 +192,10 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       proxyAddr="127.0.0.1:9999"
       trustProbe={s.trust}
       proxy={{ status: s.proxy, address: s.proxy === "foreign" ? "10.1.1.1:8080" : null }}
-      traffic={trafficOf(s.history)}
+      traffic={traffic}
       ownProofAt={s.own ? OWN_AT : null}
+      deviceMark={MARK}
+      deviceProofAt={markedAt}
       reach={s.armed ? ARMED : UNARMED}
       onRecheck={nothing}
       onSaveCa={nothingSaved}
@@ -262,18 +294,32 @@ function model(s: State) {
   const needsReach = OFF_MACHINE.has(s.platform);
   const first = needsReach ? 1 : 0;
   const h = s.history;
-  const reached = h !== "none";
-  const decrypted = h === "capturing" || h === "decrypted-earlier" || h === "decrypted-then-refused";
-  const unanswered =
-    h === "refused" || h === "refused-and-retrying" || h === "refused-earlier" || h === "decrypted-then-refused";
+  // The wire, the marked request in it: the mark answers a refusal from before
+  // it, never one after it.
+  const onWire = {
+    reached: s.marked || h !== "none",
+    decrypted: s.marked || h === "capturing" || h === "decrypted-earlier" || h === "decrypted-then-refused",
+    unanswered:
+      h === "refused" ||
+      h === "refused-and-retrying" ||
+      h === "decrypted-then-refused" ||
+      (h === "refused-earlier" && !s.marked),
+  };
+  // DEC-63: where this machine's own traffic may be arriving too, only the
+  // marked request is another device's evidence.
+  const mixed = needsReach && (s.proxy === "ours" || s.proxy === "unknown");
+  const reached = mixed ? s.marked : onWire.reached;
+  const decrypted = mixed ? s.marked : onWire.decrypted;
+  const unanswered = mixed ? false : onWire.unanswered;
   const refused = unanswered && !decrypted;
   const trustConcluded = probesTrust && s.trust !== "unknown";
   const trustDone = !probesTrust ? decrypted : trustConcluded ? s.trust === "trusted" : s.own;
   const routeDone =
     probesRoute && s.proxy !== "unknown" ? s.proxy === "ours" : s.platform === "this" ? s.own : reached;
   // A refusal is the certificate task's while it is not done - except where
-  // This machine's store went unread, and the refusal may be anyone's (D7).
-  const certificateOwnsRefusal = !trustDone && !(probesTrust && !trustConcluded);
+  // the refusal may be anyone's: This machine's store unread (D7), another
+  // device's traffic mixed with this machine's (A3).
+  const certificateOwnsRefusal = !trustDone && !(probesTrust && !trustConcluded) && !mixed;
   const auto = canAutoSetup(s.os);
   const routeHere = probesRoute && auto;
   const oneAct = probesTrust && auto && !trustDone && !routeDone;
@@ -281,7 +327,7 @@ function model(s: State) {
   // decrypting", however new the tunnel after it; one before it is quiet.
   const notDecryptingNow = h === "refused" || h === "refused-and-retrying" || h === "decrypted-then-refused";
   return {
-    ...{ probesTrust, probesRoute, first, reached, decrypted, unanswered, refused },
+    ...{ probesTrust, probesRoute, first, reached, decrypted, unanswered, refused, mixed },
     trustN: first + 1,
     routeN: first + 2,
     tryN: first + 3,
@@ -318,6 +364,8 @@ function expectedTrustState(s: State): RegExp {
       installed: /^○\s*not done — installed, not trusted$/,
       absent: /^○\s*not done — not installed$/,
     }[s.trust as "trusted" | "installed" | "absent"];
+  if (s.marked) return /^✓\s*done — .+'s request decrypted at \d\d:\d\d$/;
+  if (m.mixed) return /^◐\s*can't check here — the address in step 4 confirms it$/;
   if (m.decrypted) return /^✓\s*done — a request decrypted$/;
   if (m.refused) return /^⚠\s*not working — nothing decrypted$/;
   return /^◐\s*can't check here — .+'s first HTTPS request confirms it$/;
@@ -325,6 +373,8 @@ function expectedTrustState(s: State): RegExp {
 
 function expectedRouteState(s: State): RegExp {
   const m = model(s);
+  if (s.marked) return /^✓\s*done — .+'s request came through at \d\d:\d\d$/;
+  if (m.mixed) return /^◐\s*can't check here — the same request confirms it$/;
   if (!m.probesRoute || (s.proxy === "unknown" && s.platform !== "this"))
     return m.reached
       ? /^✓\s*done — requests reached Trawler$/
@@ -474,6 +524,13 @@ const RULES: Record<string, Rule> = {
     return named === expected ? null : `the end: ${o.proven}`;
   },
 
+  "truth: another device's end reads only what could have come from it (A4)": (o, s) => {
+    const m = model(s);
+    if (!OFF_MACHINE.has(s.platform) || m.blocked) return null;
+    const expected = !m.mixed && s.history === "capturing";
+    return (o.proven !== null) === expected ? null : `the end: ${o.proven ?? "absent"}`;
+  },
+
   "truth: nothing sends a trusted certificate back to its step": (o, s) => {
     const m = model(s);
     if (!m.trustDone) return null;
@@ -512,8 +569,12 @@ const STATES: State[] = HOSTS.flatMap((os) =>
     (OFF_MACHINE.has(platform) ? [true, false] : [false]).flatMap((armed) =>
       (platform === "this" ? [false, true] : [false]).flatMap((own) =>
         TRUST.flatMap((trust) =>
-          PROXY.flatMap((proxy) =>
-            HISTORIES.map((history) => ({ os, platform, armed, trust, proxy, history, own })),
+          // The trust probe reads this machine, and no off-machine task reads
+          // it, so the mark is swept once against the probe that decides it.
+          (armed && trust === "unknown" ? [false, true] : [false]).flatMap((marked) =>
+            PROXY.flatMap((proxy) =>
+              HISTORIES.map((history) => ({ os, platform, armed, trust, proxy, history, own, marked })),
+            ),
           ),
         ),
       ),
@@ -523,15 +584,18 @@ const STATES: State[] = HOSTS.flatMap((os) =>
 
 const name = (s: State) =>
   `${s.os} · ${s.platform}${OFF_MACHINE.has(s.platform) ? (s.armed ? " armed" : " unarmed") : ""}` +
-  ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}${s.own ? " · own request" : ""}`;
+  ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}${s.own ? " · own request" : ""}${s.marked ? " · marked" : ""}`;
 
 describe("every reading at rest", () => {
+  drainingToggles();
+
   test("the matrix is every host, the platforms it offers, reach, probe pair and traffic history", () => {
     const onMac = 3 + 5 * 2;
     const elsewhere = 2 + 5 * 2;
     const withOwnRequest = HOSTS.length;
+    const marked = HOSTS.length * OFF_MACHINE.size * PROXY.length * HISTORIES.length;
     expect(STATES).toHaveLength(
-      (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length,
+      (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length + marked,
     );
     expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });
@@ -637,6 +701,11 @@ describe("every offered action, while it runs", () => {
 // own request in step 3 (D6); every other device's is its own first request.
 function settledBy(s: State, promise: string): { evidence: State; offered: (o: Outline) => boolean } | null {
   const m = model(s);
+  if (OFF_MACHINE.has(s.platform) && /^(the address in step 4|the same request) confirms it$/.test(promise))
+    return {
+      evidence: { ...s, marked: true },
+      offered: (o) => o.tasks.some((t) => t.n === m.tryN && t.text.includes(`trawler-check=${MARK}`)),
+    };
   if (/^(the request in step 3|the same request) confirms it$/.test(promise))
     return {
       evidence: { ...s, own: true },
@@ -649,9 +718,11 @@ function settledBy(s: State, promise: string): { evidence: State; offered: (o: O
   return null;
 }
 
-const PROMISED = STATES.filter((s) => s.history === "none" && !s.own && !model(s).blocked);
+const PROMISED = STATES.filter((s) => s.history === "none" && !s.own && !s.marked && !model(s).blocked);
 
 describe("every can't check here names what settles it, and that evidence moves it", () => {
+  drainingToggles();
+
   test.each(PROMISED.map((s) => [name(s), s] as const))("%s", (_name, s) => {
     draw(s);
     const promises = outline()

@@ -3,8 +3,13 @@ import {
   awaiting,
   byOwnRequest,
   clock,
+  deviceRouteStatus,
+  deviceTrustStatus,
   evidenceOf,
   foreignProxyNotice,
+  markedDevice,
+  markedTraffic,
+  markedTryStatus,
   notDecryptingHere,
   routeByTraffic,
   NO_TRAFFIC,
@@ -626,5 +631,87 @@ describe("the try task once a decrypted request proved this setup", () => {
     expect(trafficStatus(plainOnly, quiet, STAYS).short).toBe("not done — nothing arriving right now");
     const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 - RECENT_MS, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
     expect(trafficStatus(refusing, quiet, STAYS).short).toBe("not working — arriving but not decrypting");
+  });
+});
+
+// ── Another device's evidence (DEC-63) ─────────────────────────────────────
+
+describe("another device's two tasks read what could have come from it", () => {
+  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({
+    reached: false,
+    decrypted: false,
+    unanswered: false,
+    refused: false,
+    ...e,
+  });
+  const THAT_MAC = { device: "that Mac", provedAt: null, mixed: false, checkStep: 4 };
+  const FIRST = "that Mac's first request confirms it";
+  const FIRST_HTTPS = "that Mac's first HTTPS request confirms it";
+
+  it("its marked request settles both, named and timed, whatever else arrived (A1)", () => {
+    for (const mixed of [false, true]) {
+      const marked = { ...THAT_MAC, provedAt: AT_1402, mixed };
+      expect(deviceTrustStatus(ev({ refused: true }), marked, FIRST_HTTPS)).toEqual(
+        verdict("done", "that Mac's request decrypted at 14:02"),
+      );
+      expect(deviceRouteStatus(ev({}), marked, FIRST)).toEqual(
+        verdict("done", "that Mac's request came through at 14:02"),
+      );
+    }
+  });
+
+  it("where this machine's traffic may be arriving too, nothing else settles them, and each names what will", () => {
+    const mixed = { ...THAT_MAC, mixed: true };
+    const trust = deviceTrustStatus(ev({ decrypted: true, reached: true }), mixed, FIRST_HTTPS);
+    const route = deviceRouteStatus(ev({ decrypted: true, reached: true }), mixed, FIRST);
+
+    expect(trust).toEqual(awaiting("the address in step 4 confirms it"));
+    expect(route).toEqual(awaiting("the same request confirms it"));
+    expect(trust.short).not.toBe(route.short);
+  });
+
+  it("elsewhere its traffic reads as any device's traffic does", () => {
+    expect(deviceTrustStatus(ev({ decrypted: true }), THAT_MAC, FIRST_HTTPS)).toEqual(
+      trustByTraffic(ev({ decrypted: true }), FIRST_HTTPS),
+    );
+    expect(deviceTrustStatus(ev({ refused: true }), THAT_MAC, FIRST_HTTPS).short).toBe(
+      "not working — nothing decrypted",
+    );
+    expect(deviceRouteStatus(ev({ reached: true }), THAT_MAC, FIRST)).toEqual(routeByTraffic(ev({ reached: true }), FIRST));
+    expect(deviceRouteStatus(ev({}), THAT_MAC, FIRST)).toEqual(awaiting(FIRST));
+  });
+
+  it("the marked request alone is the traffic where nothing else counts", () => {
+    expect(markedTraffic(null)).toEqual(NO_TRAFFIC);
+    expect(markedTraffic(AT_1402)).toEqual({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 });
+  });
+
+  it("the end names the device only while its marked request is the newest proof (A4)", () => {
+    const seen = (at: number) => ({ ...NO_TRAFFIC, lastDecryptedAt: at });
+
+    expect(markedDevice("that Mac", AT_1402, seen(AT_1402))).toBe("that Mac");
+    expect(markedDevice("that Mac", AT_1402, seen(AT_1402 + 1))).toBeNull();
+    expect(markedDevice("that Mac", null, seen(AT_1402))).toBeNull();
+  });
+});
+
+describe("another device's try task, where nothing unmarked is its", () => {
+  const quiet = AT_1402 + RECENT_MS + 1;
+
+  it("names the address until its marked request came through, then says when", () => {
+    expect(markedTryStatus(NO_TRAFFIC, quiet, null)).toEqual(awaiting("the address below confirms it"));
+    expect(markedTryStatus(NO_TRAFFIC, quiet, AT_1402)).toEqual(verdict("done", "decrypted at 14:02"));
+  });
+
+  it("reads none of the wire's capture as its own", () => {
+    const capturing = { ...NO_TRAFFIC, lastDecryptedAt: quiet - 1_000 };
+    expect(markedTryStatus(capturing, quiet, null).short).toBe("can't check here — the address below confirms it");
+  });
+
+  it("still says nothing decrypts, naming no device (A3)", () => {
+    const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    const v = markedTryStatus(refusing, quiet, AT_1402);
+    expect(v.short).toBe("not working — arriving but not decrypting");
+    expect(v.remedy).toMatch(/the device it comes from does not trust/);
   });
 });

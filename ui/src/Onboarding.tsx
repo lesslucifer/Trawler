@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { REQUEST_HOST, type RequestRoute } from "./ownRequest";
+import { markedUrl, REQUEST_HOST, type RequestRoute } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
@@ -23,6 +23,7 @@ import {
   canProbe,
   CA_FILES,
   caFormatFor,
+  checkStep,
   confirmHttpsOn,
   deviceName,
   isCommand,
@@ -45,8 +46,13 @@ import {
 } from "./setup";
 import {
   byOwnRequest,
+  deviceRouteStatus,
+  deviceTrustStatus,
   evidenceOf,
   foreignProxyNotice,
+  markedDevice,
+  markedTraffic,
+  markedTryStatus,
   NO_PROXY_READING,
   NO_TRAFFIC,
   notDecryptingHere,
@@ -64,8 +70,8 @@ import {
   type ProxyReading,
   type Running,
   type StepStatusView,
+  type DeviceReading,
   type Traffic,
-  type TrafficContext,
   type TrustProbe,
 } from "./verdicts";
 
@@ -442,9 +448,9 @@ function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Tr
 // leaf a tick may re-render, rather than above the tasks that no clock can
 // change. StatusLine renders the verdict and refuses the instruction that goes
 // with it (its @avoid), so the remedy is the Notice beside it.
-function TrafficState({ traffic, around }: { traffic: Traffic; around: TrafficContext }) {
+function TrafficState({ read }: { read: (now: number) => StepStatusView }) {
   const now = useNow();
-  const status = trafficStatus(traffic, now, around);
+  const status = read(now);
   return (
     <>
       <div data-testid="traffic-state">
@@ -756,6 +762,10 @@ interface SetupProps {
   probedAt?: number | null;
   traffic?: Traffic;
   ownProofAt?: number | null;
+  // Another device's own request (DEC-63): the mark its address carries, and
+  // when a row carrying it last came through decrypted since it was allowed.
+  deviceMark?: string;
+  deviceProofAt?: number | null;
   reach?: ReachState;
   onSetUpThisMachine?: () => Promise<null | void>;
   onSaveCa?: (format: CaFormat) => Promise<string | null>;
@@ -858,6 +868,8 @@ function PlatformSetup({
   probedAt = null,
   traffic = NO_TRAFFIC,
   ownProofAt = null,
+  deviceMark,
+  deviceProofAt = null,
   reach = UNREACHABLE,
   onSetUpThisMachine,
   onSaveCa,
@@ -913,12 +925,17 @@ function PlatformSetup({
   // Each task has one reading. A probe that concludes is it (DEC-33). Where no
   // probe concludes on This machine, its own request is (DEC-62): the try-it
   // command names the proxy itself, and a request from any other device says
-  // nothing about this one (D7). Elsewhere - the Simulator's route included,
-  // when this Mac's proxy cannot be read - this setup's traffic is, because
-  // that is what the task promised to be confirmed by.
+  // nothing about this one (D7). Another device's is what could have come from
+  // it (DEC-63): where this machine's own proxy may be sending its traffic here
+  // too, only that device's marked request. Elsewhere - the Simulator's route
+  // included, when this Mac's proxy cannot be read - this setup's traffic is,
+  // because that is what the task promised to be confirmed by.
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
-  const evidence = evidenceOf(traffic, useGraceEdge(traffic.openTunnelAt));
+  const offMachine = needsReach(platform);
+  const mixed = offMachine && proxy.status !== "none" && proxy.status !== "foreign";
+  const seen = mixed ? markedTraffic(deviceProofAt) : traffic;
+  const evidence = evidenceOf(seen, useGraceEdge(seen.openTunnelAt));
   const ownProved = platform === "this" && ownProofAt !== null;
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = !probesTrust(platform)
@@ -954,28 +971,38 @@ function PlatformSetup({
   const busy = (own: ActionHandle, r: Running): Running =>
     setUp.state === "running" || own.state === "running" ? r : probing ? "checking" : null;
 
+  // Off-machine, every task after the network one needs an address that does
+  // not exist yet — so they keep their numbers and say which step comes first.
+  const blocked = offMachine && !allowed;
+  const waitsOn = chosen === undefined ? undefined : "after step 1";
+  const first = offMachine ? 1 : 0;
+
+  const device: DeviceReading = {
+    device: deviceName(platform, os),
+    provedAt: deviceProofAt,
+    mixed,
+    checkStep: first + 3,
+  };
   const trustState = probesTrust(platform)
     ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt))
-    : trustByTraffic(evidence, confirmHttpsOn(platform, os));
+    : offMachine
+      ? deviceTrustStatus(evidence, device, confirmHttpsOn(platform, os))
+      : trustByTraffic(evidence, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
         unread: routeByOwnRequest ? byOwnRequest("route", ownProofAt) : routeByTraffic(evidence, setup.confirmOn),
       })
-    : routeByTraffic(evidence, setup.confirmOn);
+    : offMachine
+      ? deviceRouteStatus(evidence, device, setup.confirmOn)
+      : routeByTraffic(evidence, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
   // refusal is some other client's and the try task words it instead. So does
-  // the try task where This machine's store was not read: the refusal may be
-  // any device's, and the certificate task may not claim it (D7).
-  const certificateOwnsRefusal = !trustDone && !trustUnread;
+  // the try task wherever the refusal may be any device's: This machine's
+  // store unread (D7), and another device's traffic mixed with this one's (A3).
+  const certificateOwnsRefusal = !trustDone && !trustUnread && !mixed;
   const refusedHere = certificateOwnsRefusal && evidence.unanswered;
-
-  // Off-machine, every task after the network one needs an address that does
-  // not exist yet — so they keep their numbers and say which step comes first.
-  const blocked = needsReach(platform) && !allowed;
-  const waitsOn = chosen === undefined ? undefined : "after step 1";
-  const first = needsReach(platform) ? 1 : 0;
 
   const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
   const routeUnderButton = setUpHere !== undefined || setProxyHere !== undefined;
@@ -1001,7 +1028,7 @@ function PlatformSetup({
   const trustPointed = failedRoute === "trust" || refusedHere;
   const routePointed = failedRoute === "route";
   const byReading = !trustPointed && !routePointed;
-  const guidesOpen = !blocked && traffic.lastDecryptedAt === null;
+  const guidesOpen = !blocked && seen.lastDecryptedAt === null;
   const trustGuideOpen =
     trustPointed ||
     (byReading && guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined);
@@ -1118,12 +1145,15 @@ function PlatformSetup({
 
         <GuidedTask n={first + 3} task={setup.try} dim={blocked} waitsOn={waitsOn}>
           <TrafficState
-            traffic={traffic}
-            around={{
-              ownsRefusal: certificateOwnsRefusal,
-              trustedOn: platform === "this" && trustDone ? here : null,
-              proofStays: platform === "this",
-            }}
+            read={(now) =>
+              mixed
+                ? markedTryStatus(traffic, now, deviceProofAt)
+                : trafficStatus(traffic, now, {
+                    ownsRefusal: certificateOwnsRefusal,
+                    trustedOn: platform === "this" && trustDone ? here : null,
+                    proofStays: platform === "this",
+                  })
+            }
           />
           {request.trigger && (
             <div className="pt-2">
@@ -1145,6 +1175,11 @@ function PlatformSetup({
               </div>
             </>
           )}
+          {offMachine && deviceMark !== undefined && (
+            <div data-testid="check-address" className="pt-2 font-ui text-chrome text-ink-mute">
+              <StepParts step={checkStep(platform, os, markedUrl(deviceMark))} />
+            </div>
+          )}
         </GuidedTask>
       </div>
 
@@ -1153,8 +1188,14 @@ function PlatformSetup({
       )}
 
       <ProvenOutcome
-        device={platform === "this" ? provenDevice(here, trustProbe, proxy.status) : null}
-        traffic={traffic}
+        device={
+          platform === "this"
+            ? provenDevice(here, trustProbe, proxy.status)
+            : offMachine
+              ? markedDevice(deviceName(platform, os), deviceProofAt, seen)
+              : null
+        }
+        traffic={seen}
       />
     </>
   );

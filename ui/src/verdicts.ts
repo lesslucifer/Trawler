@@ -173,6 +173,42 @@ export function routeByTraffic(evidence: Evidence, confirmOn: string): StepStatu
   return evidence.reached ? verdict("done", "requests reached Trawler") : awaiting(confirmOn);
 }
 
+// DEC-63: another device's two tasks. Its marked request is that device's by
+// construction - only this screen shows the mark - so it settles both, named
+// and timed. Other traffic is that device's only where this machine's own proxy
+// cannot be sending its traffic here too (`mixed` false); until then nothing
+// unmarked can be told apart, and each task names the request that will.
+export interface DeviceReading {
+  device: string;
+  provedAt: number | null;
+  mixed: boolean;
+  checkStep: number;
+}
+
+// The marked request as the only traffic there is, where nothing else counts.
+export const markedTraffic = (provedAt: number | null): Traffic =>
+  provedAt === null ? NO_TRAFFIC : { ...NO_TRAFFIC, lastDecryptedAt: provedAt };
+
+export function deviceTrustStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
+  if (reading.provedAt !== null)
+    return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
+  if (reading.mixed) return awaiting(`the address in step ${reading.checkStep} confirms it`);
+  return trustByTraffic(evidence, confirmOn);
+}
+
+export function deviceRouteStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
+  if (reading.provedAt !== null)
+    return verdict("done", `${reading.device}'s request came through at ${clock(reading.provedAt)}`);
+  if (reading.mixed) return awaiting("the same request confirms it");
+  return routeByTraffic(evidence, confirmOn);
+}
+
+// The device the end may name: the one whose marked request is the newest
+// decrypted proof the screen reads.
+export function markedDevice(device: string, provedAt: number | null, seen: Traffic): string | null {
+  return provedAt !== null && provedAt >= (seen.lastDecryptedAt ?? provedAt) ? device : null;
+}
+
 // The certificate task's own account of a refusal: the certificate is the step
 // left, so the sentence says whose store, points at the steps under it, and
 // gives the user who already took them the check their platform's users miss.
@@ -280,6 +316,14 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
   if (reading !== "not-decrypting") return view;
   if (around.ownsRefusal) return { glyph: view.glyph, tone: view.tone, short: view.short };
   return around.trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(around.trustedOn) };
+}
+
+// Another device's try task where nothing unmarked is its (DEC-63). The wire may
+// still say nothing decrypts, naming no device, as This machine's try task does
+// where its store went unread (D7); otherwise only the marked request is read.
+export function markedTryStatus(seen: Traffic, now: number, provedAt: number | null): StepStatusView {
+  if (trafficReading(seen, now) === "not-decrypting") return TRAFFIC_VERDICT["not-decrypting"];
+  return provedAt === null ? awaiting("the address below confirms it") : verdict("done", `decrypted at ${clock(provedAt)}`);
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A

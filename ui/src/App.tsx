@@ -25,6 +25,8 @@ import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
+  deviceMark,
+  deviceProvedAt,
   isOwnRequest,
   makeRequest,
   nextMark,
@@ -389,6 +391,20 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     [state.phase, everything, state.since],
   );
 
+  // This machine's evidence is the session's. Another device's is only what
+  // arrived since the address it uses was allowed (A2), and its own request is
+  // the row carrying its mark (DEC-63).
+  const offMachine = needsReach(state.chosen);
+  const deviceSince = armedSince === null ? null : Math.max(state.since ?? 0, armedSince.at);
+  const mark = offMachine ? deviceMark(state.since, state.chosen) : undefined;
+  const deviceProofAt = useMemo(
+    () =>
+      state.phase === "onboarding" && mark !== undefined && deviceSince !== null
+        ? deviceProvedAt(everything, deviceSince, mark)
+        : null,
+    [state.phase, everything, mark, deviceSince],
+  );
+
   // The confirm comes first and the bind only on a yes — the shell asks,
   // because arming changes what this machine exposes (DEC-13). A dialog that
   // cannot be shown is a question nobody answered, so nothing is armed — and
@@ -657,10 +673,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }
 
   if (state.phase === "onboarding") {
-    // This machine's evidence is the session's; another device's is only what
-    // arrived since the address it uses was allowed (A2).
-    const deviceSince = armedSince === null ? null : Math.max(state.since ?? 0, armedSince.at);
-    const traffic = !needsReach(state.chosen)
+    const traffic = !offMachine
       ? sessionTraffic(everything, state.since, tunnelTimes)
       : deviceSince === null
         ? NO_TRAFFIC
@@ -681,6 +694,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onRouteAct={setRouteAct}
           traffic={traffic}
           ownProofAt={ownProofAt}
+          deviceMark={mark}
+          deviceProofAt={deviceProofAt}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
