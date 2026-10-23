@@ -1,0 +1,45 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-33-two-layers-and-a-clock.html"
+    tier: T2
+    action: updated
+    distills: "amended by DEC-62; the clock layer's 3 s tunnel grace is timed from the oldest tunnel no decrypted flow has followed, so a client retrying a refused tunnel never makes the warning blink; the traffic layer carries that oldest tunnel"
+  - path: "docs/decisions/dec-56-the-app-may-prove-capture-itself.html"
+    tier: T2
+    action: updated
+    distills: "the request's mark ?trawler-check=<window>.<n>, visible in the list; where no probe answers, the marked row decrypted this session is This machine's reading (DEC-62); the note re-worded to the route the core saw - through Trawler, reached and not decrypted, around Trawler - and still moving no task"
+  - path: "docs/decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html"
+    tier: T2
+    action: added
+    distills: "This machine's tasks read the live certificate on its bytes (a keychain then verify on macOS, the thumbprint in the machine or user store on Windows, the CA bundle on Linux) and the proxy HTTPS goes through now, localhost and no other loopback address being Trawler; read again after every action, on the core's return, focus, check again and a 3 s watch while setup shows, quiet unless asked; the own marked request where no probe answers; the try task keeps its proof; amends DEC-33; rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-62 row, active, localhost as Trawler; the DEC-33 row amended by DEC-62"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: This machine reads the live certificate and the proxy in use, is read again wherever its answer can change, and takes its own marked request where no probe answers"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's This machine rows - platforms, layers, reading, states, acts, flow and kept rows: the live certificate in three answers (held in a keychain before it verifies on macOS), the proxy in use with localhost as Trawler, the re-read triggers and the watch, the own marked request and its route note, the try task's kept proof"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the setup screen's design of record, round 12 opened and closed archived with the owner's LGTM: the certificate in three answers, This machine's own request where no probe answers, the request's route as its note, quiet re-reads, the try task keeping its proof, what the build found on the owner's Mac, and the review's amendment of the proxy row to localhost"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1 and W2 landed, W3 ruled and on its branch; W3's summary block links its plan"
+  - path: "docs/work/2026-09-29-onboard-revamp-w3-this-machine-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's plan: detection fixes D1-D9 and re-read fixes U1-U5 with the owner's rulings on Q1-Q4, the triggers, the watch, the test plan"
+  - path: "docs/work/2026-10-23-onboard-revamp-w3-this-machine-status-result.html"
+    tier: T3
+    action: added
+    distills: "W3's result: outcome per expected row, deviations, evidence, distillation, follow-ups"
