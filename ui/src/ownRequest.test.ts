@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { UNREACHABLE, type FlowSummary } from "./api";
 import {
   CLEAR_SPANS_MAX,
+  deviceEvidenceSince,
   deviceMark,
   deviceTraffic,
   isOwnRequest,
@@ -12,6 +13,7 @@ import {
   nextMark,
   NO_CLEAR_READINGS,
   ownRequestProvedAt,
+  READINGS_APART_MAX_MS,
   REQUEST_HOST,
   requestRoute,
 } from "./ownRequest";
@@ -231,6 +233,13 @@ describe("when another device's evidence starts", () => {
   it("is gone once nothing is armed", () => {
     expect(nextArmedSince(first, UNREACHABLE, 9)).toBeNull();
   });
+
+  it("is the later of that moment and the setup session's start", () => {
+    expect(deviceEvidenceSince(10, null)).toBeNull();
+    expect(deviceEvidenceSince(1, first)).toBe(5);
+    expect(deviceEvidenceSince(9, first)).toBe(9);
+    expect(deviceEvidenceSince(null, first)).toBe(5);
+  });
 });
 
 // DEC-63 rule 3: a reading of this machine's proxy speaks for its own moment,
@@ -265,15 +274,40 @@ describe("the runs in which this machine's own traffic could not arrive", () => 
     expect(nextClearReadings(NO_CLEAR_READINGS, false, read(3))).toBe(NO_CLEAR_READINGS);
   });
 
+  // A window hidden, or setup left, between two readings: the proxy may have
+  // pointed here and back with nobody reading it.
+  it("start anew where two readings are too far apart to vouch for what came between", () => {
+    const later = 5 + READINGS_APART_MAX_MS + 1;
+    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1));
+    readings = nextClearReadings(readings, true, read(5));
+    readings = nextClearReadings(readings, true, read(later));
+
+    expect(readings).toEqual({
+      spans: [
+        { from: 2, to: 5 },
+        { from: later + 1, to: later },
+      ],
+      open: true,
+    });
+  });
+
+  it("leave nothing behind for a run of one reading, which vouches for no time at all", () => {
+    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1));
+    readings = nextClearReadings(readings, false, read(5));
+
+    expect(readings).toEqual({ spans: [], open: false });
+  });
+
   it("keep the newest runs only, however often the reading flips", () => {
     let readings = NO_CLEAR_READINGS;
     for (let run = 0; run < CLEAR_SPANS_MAX + 3; run += 1) {
-      readings = nextClearReadings(readings, true, read(run * 4));
-      readings = nextClearReadings(readings, false, read(run * 4 + 2));
+      readings = nextClearReadings(readings, true, read(run * 6));
+      readings = nextClearReadings(readings, true, read(run * 6 + 2));
+      readings = nextClearReadings(readings, false, read(run * 6 + 4));
     }
 
     expect(readings.spans).toHaveLength(CLEAR_SPANS_MAX);
-    expect(readings.spans[0]).toEqual({ from: 3 * 4 + 1, to: 3 * 4 });
+    expect(readings.spans[0]).toEqual({ from: 3 * 6 + 1, to: 3 * 6 + 2 });
   });
 });
 
@@ -281,14 +315,14 @@ describe("the runs in which this machine's own traffic could not arrive", () => 
 describe("another device's traffic", () => {
   const SESSION = Date.parse("2026-10-23T07:00:00Z");
   const mark = deviceMark(SESSION, "mac");
-  const at = (minute: number) => Date.parse(`2026-10-23T07:${String(minute).padStart(2, "0")}:00Z`);
-  const decrypted = (minute: number, id = `d${minute}`) =>
-    row("https://example.org/", { id, started_at: new Date(at(minute)).toISOString() });
+  const at = (second: number) => Date.parse("2026-10-23T07:02:00Z") + second * 1_000;
+  const decrypted = (second: number, id = `d${second}`) =>
+    row("https://example.org/", { id, started_at: new Date(at(second)).toISOString() });
   const allowed = { since: at(2), mark };
 
-  const readAt = (minute: number) => ({ sent: at(minute), landed: at(minute) });
-  const readings = (...runs: { clear: boolean; minute: number }[]) =>
-    runs.reduce((was, run) => nextClearReadings(was, run.clear, readAt(run.minute)), NO_CLEAR_READINGS);
+  const readAt = (second: number) => ({ sent: at(second), landed: at(second) });
+  const readings = (...runs: { clear: boolean; second: number }[]) =>
+    runs.reduce((was, run) => nextClearReadings(was, run.clear, readAt(run.second)), NO_CLEAR_READINGS);
 
   it("is its marked rows whatever this machine's proxy read, and nothing unmarked while it may be arriving", () => {
     const flows = [decrypted(3), row(markedUrl(mark), { id: "m", started_at: new Date(at(4)).toISOString() })];
@@ -301,11 +335,11 @@ describe("another device's traffic", () => {
 
   it("is an unmarked row or a tunnel only where it arrived between two readings of off or another", () => {
     const clear = readings(
-      { clear: true, minute: 3 },
-      { clear: true, minute: 5 },
-      { clear: false, minute: 6 },
-      { clear: true, minute: 7 },
-      { clear: true, minute: 9 },
+      { clear: true, second: 3 },
+      { clear: true, second: 5 },
+      { clear: false, second: 6 },
+      { clear: true, second: 7 },
+      { clear: true, second: 9 },
     );
     const read = deviceTraffic([decrypted(4), decrypted(6)], { ...allowed, clear }, [at(6), at(8), at(10)]);
 
@@ -318,7 +352,7 @@ describe("another device's traffic", () => {
   // reading that said it did not.
   it("is never what arrived after the last reading of off, whatever the next says", () => {
     const flows = [decrypted(6)];
-    const open = readings({ clear: true, minute: 3 }, { clear: true, minute: 5 });
+    const open = readings({ clear: true, second: 3 }, { clear: true, second: 5 });
 
     expect(deviceTraffic(flows, { ...allowed, clear: open }, []).traffic).toEqual(NO_TRAFFIC);
     const pointed = nextClearReadings(open, false, readAt(7));
@@ -327,13 +361,20 @@ describe("another device's traffic", () => {
     expect(deviceTraffic(flows, { ...allowed, clear: offAgain }, []).traffic).toEqual(NO_TRAFFIC);
   });
 
+  it("is never what arrived between two readings too far apart to vouch for it", () => {
+    const apart = READINGS_APART_MAX_MS / 1_000 + 4;
+    const clear = readings({ clear: true, second: 3 }, { clear: true, second: apart });
+
+    expect(deviceTraffic([decrypted(4)], { ...allowed, clear }, []).traffic).toEqual(NO_TRAFFIC);
+  });
+
   // Rule 4: no later reading moves or widens a run a proof arrived in.
   it("keeps a proof from a run through a reading that failed after it", () => {
     const clear = readings(
-      { clear: true, minute: 3 },
-      { clear: true, minute: 5 },
-      { clear: false, minute: 6 },
-      { clear: true, minute: 7 },
+      { clear: true, second: 3 },
+      { clear: true, second: 5 },
+      { clear: false, second: 6 },
+      { clear: true, second: 7 },
     );
 
     expect(deviceTraffic([decrypted(4)], { ...allowed, clear }, []).traffic.lastDecryptedAt).toBe(at(4));
@@ -344,7 +385,7 @@ describe("another device's traffic", () => {
       row(markedUrl(nextMark()), { started_at: new Date(at(4)).toISOString() }),
       row(markedUrl(deviceMark(SESSION, "windows")), { started_at: new Date(at(4)).toISOString() }),
     ];
-    const clear = readings({ clear: true, minute: 3 }, { clear: true, minute: 5 });
+    const clear = readings({ clear: true, second: 3 }, { clear: true, second: 5 });
 
     expect(deviceTraffic(flows, { ...allowed, clear }, []).traffic).toEqual(NO_TRAFFIC);
   });
@@ -359,7 +400,7 @@ describe("another device's traffic", () => {
 
   it("is nothing at all before an address is allowed", () => {
     const flows = [decrypted(4), row(markedUrl(mark), { id: "m", started_at: new Date(at(4)).toISOString() })];
-    const clear = readings({ clear: true, minute: 1 }, { clear: true, minute: 9 });
+    const clear = readings({ clear: true, second: 1 }, { clear: true, second: 9 });
 
     expect(deviceTraffic(flows, { since: null, mark, clear }, [at(4)])).toEqual({
       traffic: NO_TRAFFIC,

@@ -88,6 +88,11 @@ export function nextArmedSince(was: ArmedSince, reach: ReachState, at: number): 
   return was?.proxy === proxy ? was : { proxy, at };
 }
 
+// A row from before the setup session opened is an earlier session's (DEC-60).
+export function deviceEvidenceSince(session: number | null, armed: ArmedSince): number | null {
+  return armed === null ? null : Math.max(session ?? 0, armed.at);
+}
+
 // This window's readings of this machine's proxy as off or another, as runs
 // from the first such reading to the last: between two of them nothing this
 // machine sent through its system proxy reached Trawler. A reading speaks only
@@ -111,16 +116,23 @@ export const NO_CLEAR_READINGS: ClearReadings = { spans: [], open: false };
 // that only they held.
 export const CLEAR_SPANS_MAX = 64;
 
+// The watch reads every 3 s while setup is on screen; two readings further apart
+// than this had a hidden window or a closed setup between them, and vouch for
+// nothing in that gap.
+export const READINGS_APART_MAX_MS = 10_000;
+
 export function nextClearReadings(
   was: ClearReadings,
   clear: boolean,
   read: { sent: number; landed: number },
 ): ClearReadings {
-  if (!clear) return was.open ? { ...was, open: false } : was;
-  const spans = was.open
-    ? [...was.spans.slice(0, -1), { from: was.spans[was.spans.length - 1].from, to: read.sent }]
-    : [...was.spans.slice(1 - CLEAR_SPANS_MAX), { from: read.landed, to: read.sent }];
-  return { spans, open: true };
+  const last = was.spans[was.spans.length - 1];
+  if (was.open && clear && read.sent - last.to <= READINGS_APART_MAX_MS)
+    return { spans: [...was.spans.slice(0, -1), { from: last.from, to: read.sent }], open: true };
+  // A run of one reading vouches for no time at all, so it keeps no place.
+  const closed = was.open && last.from > last.to ? was.spans.slice(0, -1) : was.spans;
+  if (!clear) return was.open ? { spans: closed, open: false } : was;
+  return { spans: [...closed.slice(1 - CLEAR_SPANS_MAX), { from: read.landed, to: read.sent }], open: true };
 }
 
 // What another device's tasks read, beside the traffic that is its (DEC-63):

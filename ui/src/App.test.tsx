@@ -1289,15 +1289,15 @@ test("what arrives after the last reading of this machine's proxy as off is no o
 
 // Only the newest answer lands: a read sent before an allow or a stop, and
 // answered after it, is older than that call's own answer.
-describe("a reach read in flight across an allow or a stop lands nothing", () => {
-  const held = () => {
-    let release: (answer: ReachState) => void = () => {};
-    const pending = new Promise<ReachState>((resolve) => {
-      release = resolve;
-    });
-    return { pending, release: (answer: ReachState) => act(async () => release(answer)) };
-  };
+const held = () => {
+  let release: (answer: ReachState) => void = () => {};
+  const pending = new Promise<ReachState>((resolve) => {
+    release = resolve;
+  });
+  return { pending, release: (answer: ReachState) => act(async () => release(answer)) };
+};
 
+describe("a reach read in flight across an allow or a stop lands nothing", () => {
   it("an allow", async () => {
     watchPaused();
     vi.mocked(invoke).mockImplementation(async (name: string) => (name === "confirm_reach" ? true : undefined));
@@ -1349,6 +1349,26 @@ describe("the allowed address is read again with this machine", () => {
     fireEvent(window, new Event("focus"));
 
     await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+  });
+
+  // A core slower to answer than the watch ticks would otherwise see every
+  // answer superseded before it lands.
+  it("once the read in flight has answered, which then lands", async () => {
+    watchPaused();
+    const reach = vi.fn<() => Promise<ReachState>>(async () => ARMED);
+    await offMachine({ reach });
+    await waitFor(() => expect(reach).toHaveBeenCalledOnce());
+    const slow = held();
+    reach.mockReturnValueOnce(slow.pending);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+
+    fireEvent(window, new Event("focus"));
+    await act(() => new Promise((settle) => setTimeout(settle, 0)));
+    expect(reach).toHaveBeenCalledTimes(2);
+    await slow.release({ ...ARMED, interfaces: [{ name: "Wi-Fi", address: "10.0.4.9" }] });
+
+    expect(screen.getByTestId("task-1")).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24");
   });
 
   it("on the watch, so an address this machine left shows within one tick, without a click", async () => {

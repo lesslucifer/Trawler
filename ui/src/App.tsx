@@ -25,6 +25,7 @@ import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
+  deviceEvidenceSince,
   deviceMark,
   deviceTraffic,
   isOwnRequest,
@@ -294,24 +295,33 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, []);
 
   // Only the newest answer lands - an allow's and a stop's included, so a read
-  // sent before one and answered after it says nothing. A read that failed
-  // armed nothing anew, so it never moves the evidence clock (DEC-63 rule 1);
-  // and one nobody asked for says nothing at all - a core that stopped
+  // sent before one and answered after it says nothing - and a read nobody
+  // asked for waits for the one in flight, as this machine's do, so a core
+  // slower than the watch still gets an answer onto the screen. A read that
+  // failed armed nothing anew, so it never moves the evidence clock (DEC-63
+  // rule 1); and one nobody asked for says nothing at all - a core that stopped
   // answering is the silent band's to say, not a reason for the tasks to flicker.
-  const reachReads = useRef(0);
+  const reachReads = useRef({ newest: 0, inFlight: false });
   const readReach = useCallback(
     (mode: "shown" | "quiet") => {
-      const read = ++reachReads.current;
+      if (mode === "quiet" && reachReads.current.inFlight) return;
+      const read = ++reachReads.current.newest;
+      reachReads.current.inFlight = true;
+      const landed = () => {
+        if (read !== reachReads.current.newest) return false;
+        reachReads.current.inFlight = false;
+        return true;
+      };
       client.reach().then(
-        (answer) => read === reachReads.current && takeReach(answer),
-        () => mode === "shown" && read === reachReads.current && setReach(UNREACHABLE),
+        (answer) => landed() && takeReach(answer),
+        () => landed() && mode === "shown" && setReach(UNREACHABLE),
       );
     },
     [client, takeReach],
   );
   const rereadReach = useCallback(() => readReach("shown"), [readReach]);
   const landReach = (answer: ReachState) => {
-    reachReads.current += 1;
+    reachReads.current = { newest: reachReads.current.newest + 1, inFlight: false };
     takeReach(answer);
   };
 
@@ -414,7 +424,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // This machine's evidence is the session's. Another device's starts when the
   // address it uses was allowed (A2), and is what could have come from it (DEC-63).
   const offMachine = needsReach(state.chosen);
-  const deviceSince = armedSince === null ? null : Math.max(state.since ?? 0, armedSince.at);
+  const deviceSince = deviceEvidenceSince(state.since, armedSince);
   const mark = offMachine ? deviceMark(state.since, state.chosen) : undefined;
   const device = useMemo(
     () =>
