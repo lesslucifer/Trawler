@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: edd99e840bfe64065f2d1ab6e7e9c6fd188d90f9
+diff_sha256: c31c7fdadbf91b641d07312f5ff9f18304a4810906cdfaa40090c58473e665a0
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 5
+  stage_seconds:
+    gate0: 38
+    finders: 590
+    verifiers: 318
+    total: 908
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency:  { found: 3, verified: 1 }
+    altitude:    { found: 3, verified: 2 }
+findings: { found: 9, verified: 4, waived: 0 }
+waivers: []
+blockers:
+  - "ownRequest.ts deviceTraffic: a tunnel is placed by its CONNECT time and its decrypted row by the row's later start, so a run's edge between them counts the tunnel as the device's and not the request that answered it; once this machine's proxy reads off again the certificate task reads not working - nothing decrypted for a request that decrypted"
+nits:
+  - finding: "inClear scans every span and parses every unmarked row's start, and markOf runs twice per marked row"
+    waived: "bounded by the 64-run cap and the flow list, 3.5 ms at 20k rows once per tick on one screen, beside the list's own refetch and parse"
+  - finding: "deviceTraffic's since: null means nothing counts where its neighbours read null as unbounded"
+    waived: "not fixed in this range; the next round names the parameter for what it is, and this FAIL binds none of it"
+  - finding: "the arm clock and the readings' runs sit in ownRequest.ts, where the plan named flow.ts for the evidence from the arm"
+    waived: "both exist only to feed deviceTraffic, which needs the module's private markOf; one module holds another device's attribution whole, and moving half of it would split one rule's inputs from their consumer (DEC-20)"
+refuted: "a system proxy at this machine's own LAN address, and an HTTP-only or PAC system proxy (neither introduced nor worsened: at the base all of another device's traffic counted, and the probes are W3's, untouched); deviceTraffic recomputing every tick (the extension is what places rows a reading now vouches for); lostAddress against the offer list (only the UI arms, from the list; Config.reach is set by no flag); reach read for every platform (the chip is platform-independent, R2 ruled it)"
+verdict: FAIL
+date: 2026-10-24
