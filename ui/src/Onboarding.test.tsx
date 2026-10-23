@@ -1039,6 +1039,39 @@ describe("a phone, once it may connect", () => {
   });
 });
 
+// R1: a network change leaves the listener on an address this Mac no longer
+// holds, and every address the tasks below print with it.
+describe("an allowed address this machine has left", () => {
+  const left: ReachState = { ...ARMED, interfaces: [{ name: "Wi-Fi", address: "10.0.4.9" }] };
+
+  it("is not working, and named", () => {
+    draw({ reach: left });
+    pick("Another Mac");
+
+    expect(task(1)).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24");
+    expect(task(1)).not.toHaveTextContent(/listening on/);
+  });
+
+  it("offers the address this machine holds now", async () => {
+    const onArmReach = vi.fn(async () => {});
+    draw({ reach: left, onArmReach });
+    pick("Another Mac");
+
+    expect(zone("listen-on")).toHaveTextContent("Wi-Fi · 10.0.4.9");
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+    await waitFor(() => expect(onArmReach).toHaveBeenCalledWith("10.0.4.9"));
+  });
+
+  it("dims what depends on it, so no step prints an address nothing answers at", () => {
+    draw({ reach: left, traffic: capturing });
+    pick("Another Mac");
+
+    for (const n of [2, 3, 4]) expect(task(n)).toHaveAttribute("data-dim");
+    expect(zone("device-address")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/192\.168\.1\.24:7421/);
+  });
+});
+
 // ── The address the device is pointed at ────────────────────────────────────
 
 describe("the address is an offer, not a menu", () => {

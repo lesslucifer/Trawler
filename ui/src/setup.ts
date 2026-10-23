@@ -5,7 +5,7 @@
 // platform's OS is only ever an implementation detail of its instructions.
 // Pure data and pure functions; no I/O, no React.
 
-import type { CaFormat } from "./api";
+import type { CaFormat, ReachState } from "./api";
 import type { ProxyTarget } from "./proxyTargets";
 import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
 
@@ -29,6 +29,15 @@ export function canAutoSetup(os: HostOs): boolean {
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");
   return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
+}
+
+// The address reach is armed on, where this machine no longer holds it (R1): a
+// network change leaves the listener bound to an address no device routes to,
+// and the core reports the two without comparing them.
+export function lostAddress(reach: ReachState): string | null {
+  if (!reach.armed || reach.proxy === null) return null;
+  const host = splitProxyAddr(reach.proxy).host.replace(/^\[(.*)\]$/, "$1");
+  return reach.interfaces.some((i) => i.address === host) ? null : host;
 }
 
 // One file per format a platform's installer opens, each under the name its

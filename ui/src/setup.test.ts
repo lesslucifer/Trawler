@@ -9,6 +9,7 @@ import {
   hostOs,
   isCommand,
   isSave,
+  lostAddress,
   reachTaskTitle,
   needsReach,
   probesRoute,
@@ -114,6 +115,33 @@ test("macOS, Windows and Linux have a reader for their own trust store and proxy
 test("splitProxyAddr splits host and port on the last colon", () => {
   expect(splitProxyAddr("127.0.0.1:7420")).toEqual({ host: "127.0.0.1", port: 7420 });
   expect(splitProxyAddr("192.168.1.5:8080")).toEqual({ host: "192.168.1.5", port: 8080 });
+});
+
+// R1: the core lists the addresses this machine holds on every read, and keeps
+// the one it armed whether or not it still does.
+describe("an armed address this machine no longer holds is lost", () => {
+  const reach = (proxy: string | null, addresses: string[]) => ({
+    armed: proxy !== null,
+    proxy,
+    api: null,
+    ca_urls: null,
+    interfaces: addresses.map((address) => ({ name: "Wi-Fi", address })),
+  });
+
+  it("is the armed host, once the list no longer holds it", () => {
+    expect(lostAddress(reach("192.168.1.24:7420", ["10.0.0.7"]))).toBe("192.168.1.24");
+    expect(lostAddress(reach("192.168.1.24:7420", []))).toBe("192.168.1.24");
+  });
+
+  it("is nothing while the list holds it, or while nothing is armed", () => {
+    expect(lostAddress(reach("192.168.1.24:7420", ["10.0.0.7", "192.168.1.24"]))).toBeNull();
+    expect(lostAddress(reach(null, []))).toBeNull();
+  });
+
+  it("matches an IPv6 address the way the list writes it, without brackets", () => {
+    expect(lostAddress(reach("[2001:db8::7]:7420", ["2001:db8::7"]))).toBeNull();
+    expect(lostAddress(reach("[2001:db8::7]:7420", ["2001:db8::8"]))).toBe("2001:db8::7");
+  });
 });
 
 // The screen's one axis. The order is what the user reads in the picker, and

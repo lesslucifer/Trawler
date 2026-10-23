@@ -28,6 +28,7 @@ import {
   isCommand,
   isSave,
   isScan,
+  lostAddress,
   needsReach,
   probesRoute,
   probesTrust,
@@ -548,7 +549,9 @@ function NetworkTask({
   n,
   title,
   device,
+  here,
   reach,
+  lost,
   chosen,
   onChoose,
   onReread,
@@ -558,14 +561,16 @@ function NetworkTask({
   n: number;
   title: string;
   device: string;
+  here: string;
   reach: ReachState;
+  lost: string | null;
   chosen: string | undefined;
   onChoose: (address: string) => void;
   onReread?: () => void;
   arm: ActionHandle;
   disarm: ActionHandle;
 }) {
-  if (reach.armed && reach.proxy !== null) {
+  if (reach.armed && reach.proxy !== null && lost === null) {
     const { host } = splitProxyAddr(reach.proxy);
     return (
       <TaskStep
@@ -587,13 +592,19 @@ function NetworkTask({
     );
   }
 
+  // An address this machine left is still listened on and reaches nothing, so
+  // the task is offered again on the address it holds now (R1).
   const network = reach.interfaces.find((i) => i.address === chosen);
   return (
     <TaskStep
       n={n}
       title={title}
-      why="Trawler answers on this machine only until you do"
-      status={verdict("not-done", "Trawler answers on this machine only")}
+      why={lost === null ? "Trawler answers on this machine only until you do" : undefined}
+      status={
+        lost === null
+          ? verdict("not-done", "Trawler answers on this machine only")
+          : verdict("not-working", `${here} no longer holds ${lost}`)
+      }
     >
       {network === undefined ? (
         <>
@@ -883,11 +894,12 @@ function PlatformSetup({
   // host's setup and no other device's (DEC-56).
   const request = useAction(platform === "this" ? onMakeRequest : undefined);
 
-  const armed = reach.armed && reach.proxy !== null && reach.ca_urls !== null;
+  const lost = lostAddress(reach);
+  const allowed = reach.armed && reach.proxy !== null && reach.ca_urls !== null && lost === null;
   const setup = setupFor(platform, {
     os,
     proxyAddr,
-    reach: armed ? { proxy: reach.proxy!, caUrls: reach.ca_urls! } : null,
+    reach: allowed ? { proxy: reach.proxy!, caUrls: reach.ca_urls! } : null,
   });
   const here = deviceName("this", os);
 
@@ -961,7 +973,7 @@ function PlatformSetup({
 
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
-  const blocked = needsReach(platform) && !armed;
+  const blocked = needsReach(platform) && !allowed;
   const waitsOn = chosen === undefined ? undefined : "after step 1";
   const first = needsReach(platform) ? 1 : 0;
 
@@ -1057,7 +1069,9 @@ function PlatformSetup({
             n={1}
             title={reachTaskTitle(platform, os)}
             device={deviceName(platform, os)}
+            here={here}
             reach={reach}
+            lost={lost}
             chosen={chosen}
             onChoose={setListenOn}
             onReread={onRereadReach}
@@ -1099,9 +1113,7 @@ function PlatformSetup({
               <Notice tone="mute">{foreignProxyNotice(here, proxy.address)}</Notice>
             </div>
           )}
-          {needsReach(platform) && armed && reach.proxy !== null && (
-            <ServerAndPort proxy={reach.proxy} />
-          )}
+          {needsReach(platform) && allowed && <ServerAndPort proxy={reach.proxy!} />}
         </GuidedTask>
 
         <GuidedTask n={first + 3} task={setup.try} dim={blocked} waitsOn={waitsOn}>

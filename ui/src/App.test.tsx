@@ -1046,6 +1046,75 @@ test("stop listening takes the exposure away without asking again", async () => 
   );
 });
 
+// A2: nothing off this machine reaches Trawler before an address is allowed, so
+// what arrived before it is this machine's, whoever the screen is set up for.
+describe("another device's evidence starts when its address is allowed", () => {
+  const AGAIN: OnbState = { ...ONBOARDING, everProven: true };
+
+  const opened = async (rows: () => FlowSummary[]) => {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) =>
+      name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+    );
+    const { api, fire } = mockApi(rows);
+    api.reach = vi.fn(async () => ARMED);
+    render(<App api={api} initialState={AGAIN} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Another Mac");
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    return fire;
+  };
+
+  it("a request from before it settles nothing", async () => {
+    await opened(() => [flow({ uri: "https://example.com/" })]);
+
+    expect(screen.getByTestId("task-2")).toHaveTextContent(
+      "can't check here — that Mac's first HTTPS request confirms it",
+    );
+    expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — that Mac's first request confirms it");
+  });
+
+  it("one from after it does", async () => {
+    let rows: FlowSummary[] = [];
+    const fire = await opened(() => rows);
+
+    rows = [flow({ uri: "https://example.com/", started_at: new Date(Date.now() + 1_000).toISOString() })];
+    fire();
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted"));
+  });
+});
+
+// R2: a network change beside the window is read like a setting changed there.
+describe("the allowed address is read again with this machine", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("on focus", async () => {
+    watchPaused();
+    const reach = vi.fn(async () => ARMED);
+    await offMachine({ reach });
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(1));
+
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+  });
+
+  it("on the watch, so an address this machine left shows within one tick, without a click", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let answer: ReachState = ARMED;
+    await offMachine({ reach: vi.fn(async () => answer) });
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+
+    answer = { ...ARMED, interfaces: [{ name: "Wi-Fi", address: "10.0.4.9" }] };
+    await act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("task-1")).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24"),
+    );
+  });
+});
+
 // F20: choosing "this machine" hid the exposure entirely, and the flow list -
 // where a user spends the rest of the session - never showed it at all.
 test("an armed reach is stated in the header, in setup and in the list alike", async () => {
@@ -2349,8 +2418,12 @@ test("the list before anything is captured has a red dot that opens setup", asyn
 // device that had just proved itself was no longer this session's news.
 test("the dot in setup opens the list: it never restarts the session it is in (S2)", async () => {
   onLinuxHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+  );
   let rows = [flow({ uri: "https://example.com/" })];
   const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
   fireEvent.click(screen.getByTestId("status-dot"));
