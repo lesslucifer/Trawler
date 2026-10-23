@@ -1,0 +1,45 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-33-two-layers-and-a-clock.html"
+    tier: T2
+    action: updated
+    distills: "amended by DEC-63: another device reads only traffic from after its address was allowed, and only its marked request where this machine's proxy points here or is unread; each proof carries its time and lasts the session"
+  - path: "docs/decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html"
+    tier: T2
+    action: updated
+    distills: "the open row on how other platforms' proof ages points at DEC-63 for the five off-machine platforms, and at W7 and W8 for the Simulator and the emulator"
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: added
+    distills: "another device's evidence starts when its address was allowed; its marked address, one code per session and platform and scannable on a phone, settles both tasks named and timed; unmarked traffic counts only while this machine's proxy reads off or another; every proof dated for the session, the try task keeping it; the end naming the device only on its mark; an allowed address this machine left reads not working, reach re-read on focus and by the watch; amends DEC-33, extends DEC-62; what it leaves open; rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-63 row, active; the DEC-33 row amended by DEC-63"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: another device reads only traffic from after its address was allowed and its own marked request where this machine's may be mixed in, every proof dated, and an allowed address this machine has left reads not working"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's off-machine rows: the platform table, the lost address and its re-reads in the reach callout, the try task keeping its proof on another device, a paragraph on reading only what could have come from it, and what pins it"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the setup screen's design of record, round 13 opened and closed archived with the owner's LGTM: another device with this Mac's traffic possibly mixed in, its marked address with a code under it, the end naming it, its proof dated and kept once quiet, an allowed address this Mac has left; rules, model, copy, given, keyboard and blocked-on amended"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1-W3 landed, W4 ruled, built and on its branch; W4's summary block links its plan"
+  - path: "docs/work/2026-10-23-onboard-revamp-w4-another-mac-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W4's plan: attribution fixes A1-A4, reach fixes R1-R2 and proof-age fixes P1-P2 with the owner's rulings on Q1-Q3, N1 and N2 deferred to W13, the test plan"
+  - path: "docs/work/2026-10-23-onboard-revamp-w4-another-mac-status-result.html"
+    tier: T3
+    action: added
+    distills: "W4's result: outcome per expected row, deviations, evidence, distillation, follow-ups"
