@@ -7,11 +7,14 @@ import {
   deviceTrustStatus,
   evidenceOf,
   foreignProxyNotice,
+  lastReachedAt,
   markedDevice,
   markedTraffic,
   markedTryStatus,
+  mayCarryOwnTraffic,
   notDecryptingHere,
   routeByTraffic,
+  NO_EVIDENCE,
   NO_TRAFFIC,
   provenDevice,
   proxyStatus,
@@ -345,13 +348,13 @@ describe("the short form every state carries", () => {
     ],
     [
       "trust · this machine, awaiting its own request",
-      trustStatus("unknown", null, byOwnRequest("trust", null)),
+      trustStatus("unknown", null, byOwnRequest("trust", null, 3)),
       "can't check here — the request in step 3 confirms it",
       undefined,
     ],
     [
       "trust · this machine, its own request decrypted",
-      trustStatus("unknown", null, byOwnRequest("trust", AT_1402)),
+      trustStatus("unknown", null, byOwnRequest("trust", AT_1402, 3)),
       "done — step 3's request decrypted at 14:02",
       undefined,
     ],
@@ -373,13 +376,13 @@ describe("the short form every state carries", () => {
     ["proxy · off", proxyStatus("none", null, HERE), "not done — the system proxy is off", undefined],
     [
       "proxy · this machine, awaiting its own request",
-      proxyStatus("unknown", null, { device: "this machine", unread: byOwnRequest("route", null) }),
+      proxyStatus("unknown", null, { device: "this machine", unread: byOwnRequest("route", null, 3) }),
       "can't check here — the same request confirms it",
       undefined,
     ],
     [
       "proxy · this machine, its own request came through",
-      proxyStatus("unknown", null, { device: "this machine", unread: byOwnRequest("route", AT_1402) }),
+      proxyStatus("unknown", null, { device: "this machine", unread: byOwnRequest("route", AT_1402, 3) }),
       "done — step 3's request came through at 14:02",
       undefined,
     ],
@@ -479,7 +482,7 @@ describe("evidence is what this setup's traffic has shown, not what it shows now
   const of = (seen: Partial<Traffic>) => evidenceOf({ ...NO_TRAFFIC, ...seen }, NOW);
 
   it("nothing yet is no evidence", () => {
-    expect(of({})).toEqual({ reached: false, decrypted: false, unanswered: false, refused: false });
+    expect(of({})).toEqual(NO_EVIDENCE);
   });
 
   it("any request that reached Trawler shows the route, however long ago", () => {
@@ -519,13 +522,7 @@ describe("evidence is what this setup's traffic has shown, not what it shows now
 
 describe("a task no probe concludes reads its evidence", () => {
   const CONFIRM_HTTPS = "your iPhone's first HTTPS request confirms it";
-  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({
-    reached: false,
-    decrypted: false,
-    unanswered: false,
-    refused: false,
-    ...e,
-  });
+  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({ ...NO_EVIDENCE, ...e });
 
   it("the certificate: decrypted is done, refused is not done, nothing is a promise", () => {
     expect(trustByTraffic(ev({ decrypted: true }), CONFIRM_HTTPS)).toMatchObject({
@@ -548,10 +545,10 @@ describe("a task no probe concludes reads its evidence", () => {
     expect(trustStatus("trusted", null, trustByTraffic(ev({ refused: true }), CONFIRM_HTTPS)).short).toBe(
       "done — installed and trusted",
     );
-    expect(trustStatus("installed", null, byOwnRequest("trust", 1_000)).short).toBe(
+    expect(trustStatus("installed", null, byOwnRequest("trust", 1_000, 3)).short).toBe(
       "not done — installed, not trusted",
     );
-    expect(proxyStatus("none", null, { device: "this machine", unread: byOwnRequest("route", 1_000) }).short).toBe(
+    expect(proxyStatus("none", null, { device: "this machine", unread: byOwnRequest("route", 1_000, 3) }).short).toBe(
       "not done — the system proxy is off",
     );
   });
@@ -587,8 +584,8 @@ describe("This machine's own request stands in for a probe that cannot answer", 
   });
 
   it("names the request that settles each task until it has, and never one sentence twice", () => {
-    const trust = byOwnRequest("trust", null);
-    const route = byOwnRequest("route", null);
+    const trust = byOwnRequest("trust", null, 3);
+    const route = byOwnRequest("route", null, 3);
 
     expect(trust).toEqual(awaiting("the request in step 3 confirms it"));
     expect(route).toEqual(awaiting("the same request confirms it"));
@@ -596,8 +593,8 @@ describe("This machine's own request stands in for a probe that cannot answer", 
   });
 
   it("once it came through decrypted, both tasks are done with the time it did", () => {
-    expect(byOwnRequest("trust", AT_1402)).toEqual(verdict("done", "step 3's request decrypted at 14:02"));
-    expect(byOwnRequest("route", AT_1402)).toEqual(verdict("done", "step 3's request came through at 14:02"));
+    expect(byOwnRequest("trust", AT_1402, 3)).toEqual(verdict("done", "step 3's request decrypted at 14:02"));
+    expect(byOwnRequest("route", AT_1402, 3)).toEqual(verdict("done", "step 3's request came through at 14:02"));
   });
 });
 
@@ -637,24 +634,18 @@ describe("the try task once a decrypted request proved this setup", () => {
 // ── Another device's evidence (DEC-63) ─────────────────────────────────────
 
 describe("another device's two tasks read what could have come from it", () => {
-  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({
-    reached: false,
-    decrypted: false,
-    unanswered: false,
-    refused: false,
-    ...e,
-  });
-  const THAT_MAC = { device: "that Mac", provedAt: null, mixed: false, checkStep: 4 };
+  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({ ...NO_EVIDENCE, ...e });
+  const THAT_MAC = { device: "that Mac", provedAt: null, mixed: false, tryStep: 4 };
   const FIRST = "that Mac's first request confirms it";
   const FIRST_HTTPS = "that Mac's first HTTPS request confirms it";
 
   it("its marked request settles both, named and timed, whatever else arrived (A1)", () => {
     for (const mixed of [false, true]) {
       const marked = { ...THAT_MAC, provedAt: AT_1402, mixed };
-      expect(deviceTrustStatus(NO_TRAFFIC, ev({ refused: true }), marked, FIRST_HTTPS)).toEqual(
+      expect(deviceTrustStatus(ev({ refused: true }), marked, FIRST_HTTPS)).toEqual(
         verdict("done", "that Mac's request decrypted at 14:02"),
       );
-      expect(deviceRouteStatus(NO_TRAFFIC, ev({}), marked, FIRST)).toEqual(
+      expect(deviceRouteStatus(ev({}), marked, FIRST)).toEqual(
         verdict("done", "that Mac's request came through at 14:02"),
       );
     }
@@ -662,9 +653,9 @@ describe("another device's two tasks read what could have come from it", () => {
 
   it("where this machine's traffic may be arriving too, nothing else settles them, and each names what will", () => {
     const mixed = { ...THAT_MAC, mixed: true };
-    const wire = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 };
-    const trust = deviceTrustStatus(wire, ev({ decrypted: true, reached: true }), mixed, FIRST_HTTPS);
-    const route = deviceRouteStatus(wire, ev({ decrypted: true, reached: true }), mixed, FIRST);
+    const seen = evidenceOf({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, AT_1402);
+    const trust = deviceTrustStatus(seen, mixed, FIRST_HTTPS);
+    const route = deviceRouteStatus(seen, mixed, FIRST);
 
     expect(trust).toEqual(awaiting("the address in step 4 confirms it"));
     expect(route).toEqual(awaiting("the same request confirms it"));
@@ -673,24 +664,17 @@ describe("another device's two tasks read what could have come from it", () => {
 
   // P2: nothing here can read that device again, so the proof says its age.
   it("elsewhere its traffic settles them with the time of the newest proof", () => {
-    const decrypted = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 };
-    const plainLater = { ...decrypted, lastPlainAt: AT_1402 + 60_000 };
+    const plainLater = evidenceOf({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402, lastPlainAt: AT_1402 + 60_000 }, AT_1402);
 
-    expect(deviceTrustStatus(plainLater, ev({ decrypted: true, reached: true }), THAT_MAC, FIRST_HTTPS)).toEqual(
-      verdict("done", "a request decrypted at 14:02"),
-    );
-    expect(deviceRouteStatus(plainLater, ev({ decrypted: true, reached: true }), THAT_MAC, FIRST)).toEqual(
-      verdict("done", "a request reached Trawler at 14:03"),
-    );
+    expect(deviceTrustStatus(plainLater, THAT_MAC, FIRST_HTTPS)).toEqual(verdict("done", "a request decrypted at 14:02"));
+    expect(deviceRouteStatus(plainLater, THAT_MAC, FIRST)).toEqual(verdict("done", "a request reached Trawler at 14:03"));
   });
 
   it("and reads a refusal, or nothing yet, as any device's traffic does", () => {
-    const refusing = { ...NO_TRAFFIC, ...openTunnel(AT_1402) };
-    expect(deviceTrustStatus(refusing, ev({ refused: true, reached: true }), THAT_MAC, FIRST_HTTPS).short).toBe(
-      "not working — nothing decrypted",
-    );
-    expect(deviceTrustStatus(NO_TRAFFIC, ev({}), THAT_MAC, FIRST_HTTPS)).toEqual(awaiting(FIRST_HTTPS));
-    expect(deviceRouteStatus(NO_TRAFFIC, ev({}), THAT_MAC, FIRST)).toEqual(awaiting(FIRST));
+    const refusing = evidenceOf({ ...NO_TRAFFIC, ...openTunnel(AT_1402) }, AT_1402 + TUNNEL_GRACE_MS);
+    expect(deviceTrustStatus(refusing, THAT_MAC, FIRST_HTTPS).short).toBe("not working — nothing decrypted");
+    expect(deviceTrustStatus(NO_EVIDENCE, THAT_MAC, FIRST_HTTPS)).toEqual(awaiting(FIRST_HTTPS));
+    expect(deviceRouteStatus(NO_EVIDENCE, THAT_MAC, FIRST)).toEqual(awaiting(FIRST));
   });
 
   it("the marked request alone is the traffic where nothing else counts", () => {
@@ -726,4 +710,34 @@ describe("another device's try task, where nothing unmarked is its", () => {
     expect(v.short).toBe("not working — arriving but not decrypting");
     expect(v.remedy).toMatch(/the device it comes from does not trust/);
   });
+});
+
+// One owner for "when did anything last reach Trawler": the route's done line,
+// the evidence and the idle reading all read it.
+describe("when anything last reached Trawler", () => {
+  it("is the newest of a decrypted request, a plain one and a tunnel", () => {
+    expect(lastReachedAt(NO_TRAFFIC)).toBeNull();
+    expect(lastReachedAt({ ...NO_TRAFFIC, lastDecryptedAt: 1, lastPlainAt: 3, lastTunnelAt: 2 })).toBe(3);
+    expect(lastReachedAt({ ...NO_TRAFFIC, lastTunnelAt: 7 })).toBe(7);
+  });
+
+  it("is the time the evidence carries, beside the decrypted one", () => {
+    const seen = { ...NO_TRAFFIC, lastDecryptedAt: 5, lastPlainAt: 9 };
+    expect(evidenceOf(seen, 10)).toMatchObject({ reached: true, reachedAt: 9, decrypted: true, decryptedAt: 5 });
+    expect(evidenceOf(NO_TRAFFIC, 10)).toEqual(NO_EVIDENCE);
+  });
+});
+
+describe("whether this machine's own traffic may be arriving (DEC-63)", () => {
+  it("may while its proxy points here or cannot be read, and may not while it is off or another", () => {
+    expect(mayCarryOwnTraffic("ours")).toBe(true);
+    expect(mayCarryOwnTraffic("unknown")).toBe(true);
+    expect(mayCarryOwnTraffic("none")).toBe(false);
+    expect(mayCarryOwnTraffic("foreign")).toBe(false);
+  });
+});
+
+test("This machine's own request is named by the step its try task is", () => {
+  expect(byOwnRequest("trust", null, 4)).toEqual(awaiting("the request in step 4 confirms it"));
+  expect(byOwnRequest("trust", AT_1402, 4)).toEqual(verdict("done", "step 4's request decrypted at 14:02"));
 });

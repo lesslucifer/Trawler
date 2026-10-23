@@ -623,7 +623,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              downloadStep(`On ${device}`, reach, format, { how: "in Safari ", scan: true }),
+              downloadStep(`On ${device}`, reach, format, { how: "in Safari ", scan: PLATFORMS[id].scans }),
               [
                 `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
               ],
@@ -631,7 +631,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
                 `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
               ],
             ]
-          : [downloadStep(`On ${device}`, reach, format, { scan: true }), [androidInstall(format)]],
+          : [downloadStep(`On ${device}`, reach, format, { scan: PLATFORMS[id].scans }), [androidInstall(format)]],
         notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
         alternatives: [carryOver],
       };

@@ -1113,6 +1113,93 @@ test("another device's marked request settles its tasks, where nothing else of t
   expect(screen.getByTestId("task-3")).toHaveTextContent("done — that Mac's request came through at");
 });
 
+// DEC-63 rules 1 and 4: a proof lasts the session, and only an address allowed
+// anew starts the evidence again - a reach read that failed allowed nothing.
+describe("a reach read that fails takes back no proof", () => {
+  const AGAIN: OnbState = { ...ONBOARDING, everProven: true };
+
+  const proven = async () => {
+    watchPaused();
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) =>
+      name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+    );
+    let rows: FlowSummary[] = [];
+    const harness = mockApi(() => rows);
+    const reach = vi.fn<() => Promise<ReachState>>(async () => ARMED);
+    harness.api.reach = reach;
+    render(<App api={harness.api} initialState={AGAIN} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Another Mac");
+    const shown = await screen.findByRole("button", { name: /copy the address to open/i });
+    const address = shown.textContent!.match(/https:\/\/example\.com\/\?trawler-check=[0-9a-z]{4}/)![0];
+    rows = [flow({ uri: address, started_at: startedNow() })];
+    harness.fire();
+    await waitFor(() =>
+      expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at"),
+    );
+    return { ...harness, reach };
+  };
+
+  it("when nobody asked for it", async () => {
+    const { reach } = await proven();
+
+    reach.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(3));
+
+    expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at");
+  });
+
+  it("when the core's return asked for it", async () => {
+    const { reach, fireDown, fireUp } = await proven();
+
+    reach.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    fireDown();
+    await screen.findByText("Trawler's capture service isn't answering");
+    fireUp();
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(3));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at"),
+    );
+  });
+});
+
+// DEC-63 rule 3: what arrived while this Mac's proxy pointed here may be this
+// Mac's, and turning the proxy off does not make it another device's.
+test("requests from while this machine's proxy pointed here stay unplaced once it is turned off", async () => {
+  watchPaused();
+  onMacHost();
+  let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "proxy_in_use" ? proxy : undefined));
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Another Mac");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+
+  proxy = { status: "none", address: null };
+  fireEvent(window, new Event("focus"));
+
+  await waitFor(() =>
+    expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it"),
+  );
+  rows = [...rows, flow({ id: "f2", uri: "https://example.org/", started_at: new Date(Date.now() + 5_000).toISOString() })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
+});
+
 // R2: a network change beside the window is read like a setting changed there.
 describe("the allowed address is read again with this machine", () => {
   afterEach(() => vi.useRealTimers());
@@ -1140,6 +1227,8 @@ describe("the allowed address is read again with this machine", () => {
     await waitFor(() =>
       expect(screen.getByTestId("task-1")).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24"),
     );
+    expect(screen.getByTestId("reach-chip")).toHaveTextContent("no longer reachable on 192.168.1.24");
+    expect(screen.getByTestId("reach-chip")).not.toHaveTextContent(/^reachable/);
   });
 });
 

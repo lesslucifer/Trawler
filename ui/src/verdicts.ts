@@ -107,6 +107,8 @@ export interface Evidence {
   decrypted: boolean;
   unanswered: boolean;
   refused: boolean;
+  reachedAt: number | null;
+  decryptedAt: number | null;
 }
 
 export const NO_EVIDENCE: Evidence = {
@@ -114,16 +116,27 @@ export const NO_EVIDENCE: Evidence = {
   decrypted: false,
   unanswered: false,
   refused: false,
+  reachedAt: null,
+  decryptedAt: null,
 };
+
+// When anything last reached Trawler, of every kind the traffic layer keeps.
+export function lastReachedAt(seen: Traffic): number | null {
+  const times = [seen.lastDecryptedAt, seen.lastPlainAt, seen.lastTunnelAt].filter((at) => at !== null);
+  return times.length === 0 ? null : Math.max(...times);
+}
 
 export function evidenceOf(seen: Traffic, now: number): Evidence {
   const decrypted = seen.lastDecryptedAt;
+  const reachedAt = lastReachedAt(seen);
   const unanswered = seen.openTunnelAt !== null && now - seen.openTunnelAt >= TUNNEL_GRACE_MS;
   return {
-    reached: decrypted !== null || seen.lastPlainAt !== null || seen.lastTunnelAt !== null,
+    reached: reachedAt !== null,
     decrypted: decrypted !== null,
     unanswered,
     refused: unanswered && decrypted === null,
+    reachedAt,
+    decryptedAt: decrypted,
   };
 }
 
@@ -155,16 +168,19 @@ export function clock(at: number): string {
 }
 
 // This machine, where no probe answers (DEC-62). Its own request - the button
-// in its step 3 - travels this host's system proxy and is checked against this
-// host's store, so one that came through decrypted settles both tasks, with the
-// time it did: the proof lasts the setup session. Until then each task names
-// that request, the second as the same one, so the two lines never say one
-// sentence twice.
-export function byOwnRequest(task: "trust" | "route", provedAt: number | null): StepStatusView {
+// in its try task, step `tryStep` - travels this host's system proxy and is
+// checked against this host's store, so one that came through decrypted settles
+// both tasks, with the time it did: the proof lasts the setup session. Until
+// then each task names that request, the second as the same one, so the two
+// lines never say one sentence twice.
+export function byOwnRequest(task: "trust" | "route", provedAt: number | null, tryStep: number): StepStatusView {
   if (provedAt === null)
-    return awaiting(task === "trust" ? "the request in step 3 confirms it" : "the same request confirms it");
+    return awaiting(task === "trust" ? `the request in step ${tryStep} confirms it` : "the same request confirms it");
   const at = clock(provedAt);
-  return verdict("done", task === "trust" ? `step 3's request decrypted at ${at}` : `step 3's request came through at ${at}`);
+  return verdict(
+    "done",
+    task === "trust" ? `step ${tryStep}'s request decrypted at ${at}` : `step ${tryStep}'s request came through at ${at}`,
+  );
 }
 
 // A device's route, where nothing on this machine reads it: the request it
@@ -182,8 +198,13 @@ export interface DeviceReading {
   device: string;
   provedAt: number | null;
   mixed: boolean;
-  checkStep: number;
+  tryStep: number;
 }
+
+// Whether this machine's own traffic may be reaching Trawler, as its proxy
+// reads: pointing here, or unread. Where it may, nothing unmarked is another
+// device's (DEC-63).
+export const mayCarryOwnTraffic = (probe: ProxyProbe): boolean => probe === "ours" || probe === "unknown";
 
 // The marked request as the only traffic there is, where nothing else counts.
 export const markedTraffic = (provedAt: number | null): Traffic =>
@@ -191,31 +212,19 @@ export const markedTraffic = (provedAt: number | null): Traffic =>
 
 // Nothing here can read that device again, so a proof says when it was made
 // and lasts the session (P2): the reader sees how old it is.
-export function deviceTrustStatus(
-  seen: Traffic,
-  evidence: Evidence,
-  reading: DeviceReading,
-  confirmOn: string,
-): StepStatusView {
+export function deviceTrustStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
-  if (reading.mixed) return awaiting(`the address in step ${reading.checkStep} confirms it`);
-  if (evidence.decrypted && seen.lastDecryptedAt !== null)
-    return verdict("done", `a request decrypted at ${clock(seen.lastDecryptedAt)}`);
+  if (reading.mixed) return awaiting(`the address in step ${reading.tryStep} confirms it`);
+  if (evidence.decryptedAt !== null) return verdict("done", `a request decrypted at ${clock(evidence.decryptedAt)}`);
   return trustByTraffic(evidence, confirmOn);
 }
 
-export function deviceRouteStatus(
-  seen: Traffic,
-  evidence: Evidence,
-  reading: DeviceReading,
-  confirmOn: string,
-): StepStatusView {
+export function deviceRouteStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request came through at ${clock(reading.provedAt)}`);
   if (reading.mixed) return awaiting("the same request confirms it");
-  const reachedAt = Math.max(seen.lastDecryptedAt ?? 0, seen.lastPlainAt ?? 0, seen.lastTunnelAt ?? 0);
-  if (evidence.reached && reachedAt > 0) return verdict("done", `a request reached Trawler at ${clock(reachedAt)}`);
+  if (evidence.reachedAt !== null) return verdict("done", `a request reached Trawler at ${clock(evidence.reachedAt)}`);
   return routeByTraffic(evidence, confirmOn);
 }
 
@@ -274,8 +283,7 @@ export function trafficReading(seen: Traffic, now: number): TrafficReading {
   if (recent(seen.lastTunnelAt) && open !== null)
     return now - open < TUNNEL_GRACE_MS ? "just-arrived" : "not-decrypting";
   if (recent(seen.lastPlainAt)) return "plain-only";
-  const anything = seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || seen.lastTunnelAt !== null;
-  return anything ? "idle" : "waiting";
+  return lastReachedAt(seen) === null ? "waiting" : "idle";
 }
 
 const TRAFFIC_VERDICT: Record<TrafficReading, StepStatusView> = {

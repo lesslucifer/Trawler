@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
-import { CA_FILES, hostOs, needsReach, splitProxyAddr, type CaFormat } from "./setup";
+import { CA_FILES, hostOs, lostAddress, needsReach, splitProxyAddr, type CaFormat } from "./setup";
 import {
+  mayCarryOwnTraffic,
   NO_PROXY_READING,
   NO_TRAFFIC,
   setUpOn,
@@ -231,6 +232,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
+  // When this machine's proxy last stopped possibly sending its own traffic
+  // here, and null while it may: what arrived before it may be this machine's,
+  // so another device's unmarked evidence starts after it (DEC-63 rule 3).
+  const [ownTrafficEndedAt, setOwnTrafficEndedAt] = useState<number | null>(null);
   const reads = useRef({ newest: 0, inFlight: false });
 
   const readMachine = useCallback(
@@ -260,6 +265,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         reads.current.inFlight = false;
         setTrustProbe(t);
         setProxyReading(r);
+        setOwnTrafficEndedAt((was) => (mayCarryOwnTraffic(r.status) ? null : (was ?? Date.now())));
         setProbing(false);
         setProbedAt(Date.now());
       });
@@ -274,8 +280,6 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // not say. It is read in every phase because an exposure this machine is
   // under is not a fact about the setup screen.
   const [reach, setReach] = useState<ReachState>(UNREACHABLE);
-  const [reachNonce, setReachNonce] = useState(0);
-  const rereadReach = useCallback(() => setReachNonce((n) => n + 1), []);
 
   // When the address reach holds now was first seen armed. Nothing off this
   // machine could reach Trawler there before it, and a device pointed at an
@@ -288,12 +292,29 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     setArmedSince((was) => (proxy === null ? null : was?.proxy === proxy ? was : { proxy, at: Date.now() }));
   }, []);
 
+  // Only the newest read lands. A read that failed armed nothing anew, so it
+  // never moves the evidence clock (DEC-63 rule 1); and one nobody asked for
+  // says nothing at all - a core that stopped answering is the silent band's
+  // to say, not a reason for the tasks to flicker.
+  const reachReads = useRef(0);
+  const readReach = useCallback(
+    (mode: "shown" | "quiet") => {
+      const read = ++reachReads.current;
+      client.reach().then(
+        (answer) => read === reachReads.current && takeReach(answer),
+        () => mode === "shown" && read === reachReads.current && setReach(UNREACHABLE),
+      );
+    },
+    [client, takeReach],
+  );
+  const rereadReach = useCallback(() => readReach("shown"), [readReach]);
+
   // Whatever can change this machine's answers can change its addresses too,
   // so the reads nobody asked for take both (R2).
   const rereadQuietly = useCallback(() => {
     readMachine("quiet");
-    rereadReach();
-  }, [readMachine, rereadReach]);
+    readReach("quiet");
+  }, [readMachine, readReach]);
 
   const inSetup = state.phase === "onboarding";
   useEffect(() => {
@@ -351,15 +372,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, [setupSession, rereadReach]);
 
   useEffect(() => {
-    let live = true;
-    client.reach().then(
-      (r) => live && takeReach(r),
-      () => live && takeReach(UNREACHABLE),
-    );
-    return () => {
-      live = false;
-    };
-  }, [client, reachNonce, takeReach]);
+    rereadReach();
+  }, [rereadReach]);
 
   // The core answers with the kernel's device names, because asking the host
   // what its owner calls `en1` means running one of the host's own tools and
@@ -392,10 +406,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   );
 
   // This machine's evidence is the session's. Another device's is only what
-  // arrived since the address it uses was allowed (A2), and its own request is
-  // the row carrying its mark (DEC-63).
+  // arrived since the address it uses was allowed (A2) - and, unmarked, since
+  // this machine's own traffic stopped arriving - and its own request is the
+  // row carrying its mark (DEC-63).
   const offMachine = needsReach(state.chosen);
   const deviceSince = armedSince === null ? null : Math.max(state.since ?? 0, armedSince.at);
+  const unmarkedSince = deviceSince === null ? null : Math.max(deviceSince, ownTrafficEndedAt ?? deviceSince);
   const mark = offMachine ? deviceMark(state.since, state.chosen) : undefined;
   const deviceProofAt = useMemo(
     () =>
@@ -560,16 +576,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // list as much as in setup, where choosing "this machine" used to hide it
   // entirely. The chip carries the address a device is pointed at and the
   // control that ends it, because a warning nobody can act on is decoration.
+  // An address this machine has left is still listened on and reaches no one,
+  // and the chip says so as step 1 does (R1).
   // The control runs through useAction for the reason Button's fork D4 states:
   // a stop that failed must not read like a stop that worked, and the exposure
   // it could not end is still on this machine.
   const disarm = useAction(disarmReach);
+  const lost = lostAddress(reach);
   const reachChip = reach.armed && reach.proxy !== null && (
     <div
       data-testid="reach-chip"
       className="flex items-center gap-control-gap rounded-button border border-hairline px-chrome-x font-ui text-chrome text-ink-mute"
     >
-      <span>reachable on {splitProxyAddr(reach.proxy).host}</span>
+      <span>{lost === null ? `reachable on ${splitProxyAddr(reach.proxy).host}` : `no longer reachable on ${lost}`}</span>
       {disarm.trigger && (
         <Button
           frame="bare"
@@ -675,9 +694,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   if (state.phase === "onboarding") {
     const traffic = !offMachine
       ? sessionTraffic(everything, state.since, tunnelTimes)
-      : deviceSince === null
+      : unmarkedSince === null
         ? NO_TRAFFIC
-        : sessionTraffic(everything, deviceSince, tunnelTimes);
+        : sessionTraffic(everything, unmarkedSince, tunnelTimes);
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}

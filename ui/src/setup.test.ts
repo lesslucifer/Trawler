@@ -136,6 +136,12 @@ describe("another device's own request is one address, opened where it is", () =
 
     expect(scans).toEqual(["ios", "android"]);
   });
+
+  it("a platform scans its certificate URL exactly where it scans this address", () => {
+    const scansCertificate = (id: PlatformId) => guides(setup(id)).some((step) => step.some(isScan));
+
+    expect(OFF.filter(scansCertificate)).toEqual(OFF.filter((id) => checkStep(id, "macos", ADDRESS).some(isScan)));
+  });
 });
 
 // R1: the core lists the addresses this machine holds on every read, and keeps

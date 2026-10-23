@@ -52,6 +52,7 @@ import {
   foreignProxyNotice,
   markedDevice,
   markedTraffic,
+  mayCarryOwnTraffic,
   markedTryStatus,
   NO_PROXY_READING,
   NO_TRAFFIC,
@@ -933,7 +934,7 @@ function PlatformSetup({
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
   const offMachine = needsReach(platform);
-  const mixed = offMachine && proxy.status !== "none" && proxy.status !== "foreign";
+  const mixed = offMachine && mayCarryOwnTraffic(proxy.status);
   const seen = mixed ? markedTraffic(deviceProofAt) : traffic;
   const evidence = evidenceOf(seen, useGraceEdge(seen.openTunnelAt));
   const ownProved = platform === "this" && ownProofAt !== null;
@@ -976,25 +977,28 @@ function PlatformSetup({
   const blocked = offMachine && !allowed;
   const waitsOn = chosen === undefined ? undefined : "after step 1";
   const first = offMachine ? 1 : 0;
+  const tryStep = first + 3;
 
   const device: DeviceReading = {
     device: deviceName(platform, os),
     provedAt: deviceProofAt,
     mixed,
-    checkStep: first + 3,
+    tryStep,
   };
   const trustState = probesTrust(platform)
-    ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt))
+    ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
     : offMachine
-      ? deviceTrustStatus(seen, evidence, device, confirmHttpsOn(platform, os))
+      ? deviceTrustStatus(evidence, device, confirmHttpsOn(platform, os))
       : trustByTraffic(evidence, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
-        unread: routeByOwnRequest ? byOwnRequest("route", ownProofAt) : routeByTraffic(evidence, setup.confirmOn),
+        unread: routeByOwnRequest
+          ? byOwnRequest("route", ownProofAt, tryStep)
+          : routeByTraffic(evidence, setup.confirmOn),
       })
     : offMachine
-      ? deviceRouteStatus(seen, evidence, device, setup.confirmOn)
+      ? deviceRouteStatus(evidence, device, setup.confirmOn)
       : routeByTraffic(evidence, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
@@ -1143,7 +1147,7 @@ function PlatformSetup({
           {needsReach(platform) && allowed && <ServerAndPort proxy={reach.proxy!} />}
         </GuidedTask>
 
-        <GuidedTask n={first + 3} task={setup.try} dim={blocked} waitsOn={waitsOn}>
+        <GuidedTask n={tryStep} task={setup.try} dim={blocked} waitsOn={waitsOn}>
           <TrafficState
             read={(now) =>
               mixed
