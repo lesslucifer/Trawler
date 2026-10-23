@@ -1,0 +1,43 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: e654c682d543b73380607863c44a763dd9afac00
+diff_sha256: 33a20a8aeaef1ae1277016c92acc2a9b490c61c8670055bfd297ee01aaab1b5e
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 7
+    nit: 6
+  stage_seconds:
+    gate0: 50
+    finders: 511
+    verifiers: 548
+    total: 1116
+  by_finder:
+    correctness: { found: 5, verified: 3 }
+    efficiency:  { found: 3, verified: 0 }
+    altitude:    { found: 5, verified: 4 }
+findings: { found: 11, verified: 6, waived: 0 }
+waivers: []
+blockers:
+  - "Onboarding.tsx seen / App.tsx unmarkedSince: after another device's marked request proved it, this machine's proxy reading going to none or foreign windows the marked row out of traffic; the try task falls to not done, the end goes, the certificate guide reopens and a refusal remedy can print under a done task - DEC-63 rule 4, the plan's P1"
+  - "App.tsx armReach / disarmReach: a GET /reach in flight across an allow or disallow lands after it (reachReads is not bumped), reverting step 1 and re-stamping or clearing armedSince until the next read"
+importants:
+  - "App.tsx ownTrafficEndedAt latch: a reading of none, then unknown (a failed probe), then none re-stamps the latch, so unmarked proof made in the first none period is lost for the session - DEC-63 rule 4"
+  - "mayCarryOwnTraffic is applied twice over the same reading with different memory (App's latch, PlatformSetup's mixed), and which traffic counts for another device is decided across App, PlatformSetup and verdicts.ts; the copies disagree on every reading transition"
+nits:
+  - finding: "proofStays is decided inline in PlatformSetup while its sibling per-platform rules are PlatformFacts fields"
+    waived: "not fixed in this range; the next round's fix gives the device's evidence one owner, and this FAIL binds none of it"
+  - finding: "ui/e2e/specs/onboarding.spec.ts says App reads reach once on mount and only from its own calls, now false in setup"
+    waived: "not fixed in this range; the next round corrects the comment, and this FAIL binds none of it"
+refuted: "lostAddress against the offer list (the UI arms only offered addresses; DEC-63 rule 6 defines lost by the list); GET /reach's interfaces() on the runtime thread (core unchanged, ~40us per 3 s); deviceProvedAt's extra scan (sub-ms beside the list's parse); the chip outside setup (reads scoped to setup by DEC-62 rule 4, pre-existing); readReach's missing in-flight guard (a lock read, stale answers already dropped); the e2e waiver's premise (it rests on the native confirm and hermeticity)"
+verdict: FAIL
+date: 2026-10-23
