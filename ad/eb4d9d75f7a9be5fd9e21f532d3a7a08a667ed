@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU this-machine-status -> epic/onboard-revamp; the finders also judged ui/src-tauri/src (the detectors), outside the binding"
+epic: E-ONBRVP
+wu: E-ONBRVP.W3
+branch: wu/onboard-revamp/this-machine-status
+base: 82eb7b7ab96f2eb610d4d102251a6623810a07e4
+head: adeb4d9d75f7a9be5fd9e21f532d3a7a08a667ed
+diff_sha256: 5fe05ece3813c80ce911bec012aa69a884200174c0926872a27b0dfc69bfd270
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 6
+  stage_seconds:
+    gate0: 36
+    finders: 112
+    verifiers: 31
+    total: 214
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 3, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 7, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "names_trawler expands only a system proxy of localhost, so a configured proxy host named localhost against a system proxy of 127.0.0.1 on Trawler's port reads as another proxy"
+    waived: "the configured host is the core's proxy bind, a SocketAddr that can never be the name localhost (src/config.rs); only the dev and test overrides __TRAWLER_PROXY__ and VITE_TRAWLER_PROXY can name it, and the shipped 127.0.0.1:7420 classifies every loopback spelling correctly"
+verdict: PASS
+date: 2026-10-23
