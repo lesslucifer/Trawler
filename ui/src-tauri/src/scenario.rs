@@ -11,8 +11,8 @@ use std::sync::Mutex;
 use serde::Deserialize;
 
 use crate::setup::{
-    command_failed, read_proxy, trust_word, ProxyRead, ProxyReading, SetupError, NO_INSTALL_DETAIL,
-    NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
+    command_failed, read_proxy, trust_word, ProxyRead, ProxyReading, SetupError, Trust,
+    NO_INSTALL_DETAIL, NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -22,8 +22,9 @@ const SCRIPT_VAR: &str = "TRAWLER_SCENARIO_SCRIPT";
 #[serde(rename_all = "lowercase")]
 pub enum TrustOs {
     Trusted,
+    Installed,
     #[default]
-    Untrusted,
+    Absent,
     Unreadable,
 }
 
@@ -114,8 +115,9 @@ impl Scenario {
 
     fn trust_reading(&self) -> &'static str {
         trust_word(match self.trust {
-            TrustOs::Trusted => Some(true),
-            TrustOs::Untrusted => Some(false),
+            TrustOs::Trusted => Some(Trust::Trusted),
+            TrustOs::Installed => Some(Trust::Installed),
+            TrustOs::Absent => Some(Trust::Absent),
             TrustOs::Unreadable => None,
         })
     }
@@ -174,6 +176,13 @@ pub fn ca_trusted(state: Shared<'_>) -> String {
 
 #[tauri::command]
 pub fn proxy_status(state: Shared<'_>, host: String, port: u16) -> ProxyReading {
+    with(&state, |s| s.proxy_reading(&host, port))
+}
+
+// One scripted proxy answers both questions: the walkthrough films a machine
+// whose only service is the one in use.
+#[tauri::command]
+pub fn proxy_in_use(state: Shared<'_>, host: String, port: u16) -> ProxyReading {
     with(&state, |s| s.proxy_reading(&host, port))
 }
 
@@ -262,6 +271,7 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             set_up_this_machine,
             unset_proxy,
             proxy_status,
+            proxy_in_use,
             interface_names,
             crate::setup::notice_dismissed,
             crate::setup::dismiss_notice,
@@ -282,9 +292,9 @@ mod tests {
     }
 
     #[test]
-    fn a_fresh_scenario_is_an_untrusted_machine_with_no_proxy_that_refuses_every_confirm() {
+    fn a_fresh_scenario_is_a_machine_with_no_certificate_and_no_proxy_that_refuses_every_confirm() {
         let s = Scenario::default();
-        assert_eq!(s.trust_reading(), "untrusted");
+        assert_eq!(s.trust_reading(), "absent");
         assert_eq!(
             s.proxy_reading("127.0.0.1", 7420),
             read_proxy(&ProxyRead::Off, "127.0.0.1", 7420)
@@ -310,9 +320,15 @@ mod tests {
 
     #[test]
     fn each_trust_reading_is_worded_by_the_shells_own_trust_word() {
-        assert_eq!(patched(r#"{"trust":"trusted"}"#).trust_reading(), trust_word(Some(true)));
-        assert_eq!(patched(r#"{"trust":"untrusted"}"#).trust_reading(), trust_word(Some(false)));
-        assert_eq!(patched(r#"{"trust":"unreadable"}"#).trust_reading(), trust_word(None));
+        for (word, reading) in [
+            ("trusted", Some(Trust::Trusted)),
+            ("installed", Some(Trust::Installed)),
+            ("absent", Some(Trust::Absent)),
+            ("unreadable", None),
+        ] {
+            let s = patched(&format!(r#"{{"trust":"{word}"}}"#));
+            assert_eq!(s.trust_reading(), trust_word(reading), "{word}");
+        }
     }
 
     #[test]
@@ -354,7 +370,7 @@ mod tests {
             s.set_up("127.0.0.1".into(), 7420),
             Err(command_failed("User cancelled. (-128)", NO_INSTALL_DETAIL))
         );
-        assert_eq!(s.trust_reading(), "untrusted", "a refused set-up changed nothing");
+        assert_eq!(s.trust_reading(), "absent", "a refused set-up changed nothing");
     }
 
     #[test]

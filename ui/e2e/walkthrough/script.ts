@@ -19,7 +19,7 @@ export type Platform =
   | "ios"
   | "android";
 
-export type TrustOs = "trusted" | "untrusted" | "unreadable";
+export type TrustOs = "trusted" | "installed" | "absent" | "unreadable";
 export type ProxyOs = "unset" | "unreadable" | { set: { host: string; port: number } };
 export type Outcome = "ok" | { fails: { stderr: string } };
 
@@ -178,7 +178,7 @@ function autoThis(host: Host): Chapter[] {
       title: "Nothing done yet",
       act: async (w) => {
         await w.closePicker();
-        await reread({ trust: "untrusted", proxy: "unset" })(w);
+        await reread({ trust: "absent", proxy: "unset" })(w);
       },
       expect: `one "${setUp}" button under the tasks with "one password prompt"; its manual steps collapsed; task 3 waiting for the first request`,
       findings: [],
@@ -195,7 +195,7 @@ function autoThis(host: Host): Chapter[] {
     {
       id: "proxy-done",
       title: "The proxy ours, the certificate not trusted",
-      act: reread({ trust: "untrusted", proxy: OURS }),
+      act: reread({ trust: "absent", proxy: OURS }),
       expect: `no combined button; task 1's certificate steps are open; no proxy steps are offered as work. The reversal sits inside task 2 and names only the proxy, not a certificate that is not installed`,
       findings: ["R12", "R14"],
       anchor: [task(2)],
@@ -212,7 +212,7 @@ function autoThis(host: Host): Chapter[] {
       id: "prompt-cancelled",
       title: "The password prompt cancelled",
       act: async (w) => {
-        await reread({ trust: "untrusted", proxy: "unset", set_up: { fails: { stderr: CANCELLED[host] } } })(w);
+        await reread({ trust: "absent", proxy: "unset", set_up: { fails: { stderr: CANCELLED[host] } } })(w);
         await w.click(setUp);
       },
       expect: `"The password prompt was cancelled. Try again, or follow the manual steps."; nothing changed and "${setUp}" is still offered`,
@@ -288,7 +288,7 @@ function autoThis(host: Host): Chapter[] {
       id: "another-device",
       title: "Set up another device",
       act: async (w) => {
-        await w.script({ trust: "untrusted", proxy: "unset" });
+        await w.script({ trust: "absent", proxy: "unset" });
         await w.click("set up another device");
       },
       expect: `the dot stays connected; "${thisLabel(host)}" is not preselected — the question reads "choose a device" and no task is drawn; no "You're set up" line before a new captured request`,
@@ -338,8 +338,8 @@ function linuxThis(): Chapter[] {
         await w.script({ trust: "unreadable", proxy: "unreadable" });
         await w.recheck();
       },
-      expect: `task 2 reads "can't check here — this machine's first request confirms it", not "the system proxy is off"; no "check again" row, since nothing on this host can be re-read`,
-      findings: ["R19", "R20"],
+      expect: `a desktop gsettings does not answer for: task 2 reads "can't check here — the same request confirms it", not "the system proxy is off", and the request in step 3 is what settles it; the "check again" row stays, since the CA bundle and GNOME's proxy are re-read`,
+      findings: ["R19", "D6", "D8"],
       anchor: [task(2)],
     },
     {

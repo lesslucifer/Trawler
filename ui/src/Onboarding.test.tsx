@@ -4,7 +4,8 @@ import { Onboarding, useRouteMemory } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
 import { PLATFORM_IDS, type PlatformId } from "./setup";
-import { NO_TRAFFIC, RECENT_MS, type Traffic } from "./verdicts";
+import { clock, NO_TRAFFIC, RECENT_MS, TUNNEL_GRACE_MS, type Traffic } from "./verdicts";
+import type { RequestRoute } from "./ownRequest";
 import type { ReachState } from "./api";
 
 vi.mock("./setup", async (importOriginal) => {
@@ -49,7 +50,7 @@ const ARMED: ReachState = {
 
 const ago = (ms: number): number => Date.now() - ms;
 const capturing: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
-const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000) };
+const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) };
 
 type Props = Partial<Parameters<typeof Onboarding>[0]>;
 
@@ -255,7 +256,7 @@ describe("the machine's words for itself are not on this screen", () => {
   const rendered = () => document.body.textContent ?? "";
 
   it.each(PLATFORM_IDS)("%s renders none of them", (id) => {
-    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null } });
+    draw({ reach: ARMED, trustProbe: "absent", proxy: { status: "none", address: null } });
     pick(setup.platformLabel(id as PlatformId, "macos"));
 
     for (const word of MACHINE_WORDS) {
@@ -326,7 +327,7 @@ describe("this machine — three tasks, and one button that does two of them", (
     const onSetUpThisMachine = vi.fn(
       () => new Promise<void>((resolve) => (release = resolve)),
     );
-    draw({ onSetUpThisMachine, trustProbe: "untrusted", proxy: { status: "none", address: null } });
+    draw({ onSetUpThisMachine, trustProbe: "absent", proxy: { status: "none", address: null } });
 
     fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
 
@@ -395,7 +396,7 @@ describe("this machine — three tasks, and one button that does two of them", (
       ).toBeInTheDocument(),
     );
     // And it does not claim the tasks are done — that is still the probes' word.
-    expect(task(1)).toHaveTextContent("can't check here — this Mac's first HTTPS request confirms it");
+    expect(task(1)).toHaveTextContent("can't check here — the request in step 3 confirms it");
   });
 
   // Review round 4, important: the way out was kept alive by the action that
@@ -537,7 +538,7 @@ describe("each task holds its own route, under the one button", () => {
 // What the host can do decides which actions exist; what each probe reads
 // decides which the screen offers, and where. Done is the probe's reading.
 
-const readings = (trust: "trusted" | "untrusted", proxy: "ours" | "none"): Props => ({
+const readings = (trust: "trusted" | "absent", proxy: "ours" | "none"): Props => ({
   trustProbe: trust,
   proxy: { status: proxy, address: null },
 });
@@ -565,7 +566,7 @@ describe.each(["macos", "windows"] as const)("on %s, the layout is a reading", (
   });
 
   it("proxy set, certificate not trusted: the certificate's steps are open in task 1", () => {
-    draw({ os, ...readings("untrusted", "ours") });
+    draw({ os, ...readings("absent", "ours") });
 
     expect(screen.queryByRole("button", { name: `Set up ${here}` })).toBeNull();
     expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
@@ -646,7 +647,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
   // the certificate task while its refusal still said "the steps below".
   it("a failure elsewhere leaves open the steps a refusal points at", async () => {
     draw({
-      ...readings("untrusted", "ours"),
+      ...readings("absent", "ours"),
       traffic: arriving,
       onUnsetProxy: vi.fn(() => Promise.reject(failure)),
     });
@@ -673,7 +674,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
 
 describe("the reversal sits in the task it reverses", () => {
   it("on the Simulator, a proxy that is ours offers the way out and not the action again (R15)", () => {
-    draw(readings("untrusted", "ours"));
+    draw(readings("absent", "ours"));
     pick("iOS Simulator");
 
     expect(screen.queryByRole("button", { name: "Set the system proxy" })).toBeNull();
@@ -756,7 +757,7 @@ describe("a password prompt the user dismissed", () => {
 
   it("leaves the task states to the probes — an action never reports them", async () => {
     draw({
-      trustProbe: "untrusted",
+      trustProbe: "absent",
       proxy: { status: "none", address: null },
       onSetUpThisMachine: vi.fn(() => Promise.reject(cancelled)),
     });
@@ -764,7 +765,7 @@ describe("a password prompt the user dismissed", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
 
     await waitFor(() => expect(screen.getByText(/password prompt was cancelled/)).toBeInTheDocument());
-    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+    expect(task(1)).toHaveTextContent("not done — not installed");
     expect(task(2)).toHaveTextContent("not done — the system proxy is off");
   });
 });
@@ -783,7 +784,7 @@ describe("an approval macOS could not show", () => {
 
   it("says what happened, never that the user cancelled, with the tool's text one click away", async () => {
     draw({
-      trustProbe: "untrusted",
+      trustProbe: "absent",
       proxy: { status: "none", address: null },
       onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
     });
@@ -802,7 +803,7 @@ describe("an approval macOS could not show", () => {
 
   it("opens the steps it points at, and leaves the task's state to the probe", async () => {
     draw({
-      trustProbe: "untrusted",
+      trustProbe: "absent",
       proxy: { status: "none", address: null },
       onSetUpThisMachine: vi.fn(() => Promise.reject(unshowable)),
     });
@@ -811,7 +812,7 @@ describe("an approval macOS could not show", () => {
 
     await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
     expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
-    expect(task(1)).toHaveTextContent("not done — the certificate isn't trusted");
+    expect(task(1)).toHaveTextContent("not done — not installed");
   });
 });
 
@@ -1164,9 +1165,9 @@ describe("the end", () => {
 
   // R17: the probes beside it say the request cannot have come from this Mac.
   it.each([
-    ["untrusted", "none"],
+    ["absent", "none"],
     ["trusted", "none"],
-    ["untrusted", "ours"],
+    ["absent", "ours"],
   ] as const)("names no device where this Mac reads certificate %s and proxy %s", (trust, proxy) => {
     draw({ traffic: capturing, ...readings(trust, proxy) });
 
@@ -1196,7 +1197,7 @@ describe("the end", () => {
   });
 
   it("an arriving connection that will not decrypt is said in the certificate task, with its steps open", () => {
-    draw({ traffic: arriving });
+    draw({ traffic: arriving, trustProbe: "absent" });
 
     expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
       "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.",
@@ -1241,20 +1242,26 @@ describe("one reading of this machine, re-taken by one control", () => {
     expect(zone("probe")).toBeInTheDocument();
   });
 
-  it.each(["linux", "other"] as const)(
-    "is absent for this machine on %s, where no probe can answer (R20)",
-    (os) => {
-      draw({ os, trustProbe: "unknown", proxy: { status: "unknown", address: null } });
+  it("is absent for this machine on a host with no reader, where no probe can answer (R20)", () => {
+    draw({ os: "other", trustProbe: "unknown", proxy: { status: "unknown", address: null } });
 
-      expect(zone("probe")).toBeNull();
-      expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
-    },
-  );
+    expect(zone("probe")).toBeNull();
+    expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
+  });
+
+  // D8: Linux reads its CA bundle and GNOME's proxy, so it can re-read them.
+  it("is offered on Linux, which reads its CA bundle and GNOME's proxy (D8)", () => {
+    draw({ os: "linux", trustProbe: "absent", proxy: { status: "none", address: null } });
+
+    expect(zone("probe")).toBeInTheDocument();
+    expect(task(1)).toHaveTextContent("not done — not installed");
+    expect(task(2)).toHaveTextContent("not done — the system proxy is off");
+  });
 
   it("on Linux, a proxy that could not be read is a promise, never \"off\" (R19)", () => {
     draw({ os: "linux", proxy: { status: "unknown", address: null } });
 
-    expect(task(2)).toHaveTextContent("can't check here — this machine's first request confirms it");
+    expect(task(2)).toHaveTextContent("can't check here — the same request confirms it");
     expect(task(2)).not.toHaveTextContent("the system proxy is off");
   });
 
@@ -1279,15 +1286,43 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
   it("updates the reading without re-running the instructions", () => {
     const resolved = vi.mocked(setup.setupFor);
-    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: Date.now() } });
+    const at = Date.now();
+    draw({ traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
     expect(zone("proven")).toBeInTheDocument();
 
     resolved.mockClear();
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
 
     expect(zone("proven")).toBeNull();
-    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
     expect(resolved).not.toHaveBeenCalled();
+  });
+
+  // U5 · Q3: 30 s after "You're set up" the try task fell back to "not done"
+  // under two done tasks. On This machine the proof stays, with its time.
+  it("keeps This machine's proof once the traffic goes quiet, and nowhere else's", () => {
+    const at = Date.now();
+    draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
+    act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
+
+    pick("iPhone or iPad");
+    expect(task(4)).toHaveTextContent("not done — nothing arriving right now");
+  });
+});
+
+// ── U4: a read nobody asked for is quiet ────────────────────────────────────
+
+describe("a reading that lands without being asked for", () => {
+  it("changes the lines it changes, and never shows them checking or holds a button", () => {
+    const { rerender } = draw({ trustProbe: "absent", proxy: { status: "none", address: null } });
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeEnabled();
+
+    rerender(screenAt({ trustProbe: "absent", proxy: { status: "ours", address: "127.0.0.1:9999" } }));
+
+    expect(task(1)).toHaveTextContent("not done — not installed");
+    expect(task(2)).toHaveTextContent("done — this Mac routes through Trawler");
+    expect(document.body.textContent).not.toMatch(/checking/);
   });
 });
 
@@ -1295,8 +1330,8 @@ test("no step reports itself done — every state on the screen has a source", (
   draw({ trustProbe: "unknown", proxy: { status: "unknown", address: null }, os: "linux" });
 
   // Nothing read either store on this host, so neither task may claim one was.
-  expect(task(1)).toHaveTextContent("can't check here — this machine's first HTTPS request confirms it");
-  expect(task(2)).toHaveTextContent("can't check here — this machine's first request confirms it");
+  expect(task(1)).toHaveTextContent("can't check here — the request in step 3 confirms it");
+  expect(task(2)).toHaveTextContent("can't check here — the same request confirms it");
   expect(document.body.textContent).not.toMatch(/(?<!not )done — /);
 });
 
@@ -1384,7 +1419,7 @@ describe("one guide open, whatever the user picked", () => {
   const opened = () => guides().filter((entry) => entry.hasAttribute("open"));
 
   const atPlatform = (id: PlatformId, props: Props = {}) => {
-    draw({ reach: ARMED, trustProbe: "untrusted", proxy: { status: "none", address: null }, ...props });
+    draw({ reach: ARMED, trustProbe: "absent", proxy: { status: "none", address: null }, ...props });
     pick(setup.platformLabel(id, "macos"));
   };
 
@@ -1523,10 +1558,12 @@ test("an Android device whose requests arrive and do not decrypt is told where i
 
 describe("make a request to example.com", () => {
   const REQUEST = "make a request to example.com";
-  const states = () => [1, 2, 3].map((n) => screen.getByTestId(`task-${n}`).textContent);
+  const states = () =>
+    ["task-1-state", "task-2-state", "traffic-state"].map((id) => screen.getByTestId(id).textContent);
+  const through = () => vi.fn(async (): Promise<RequestRoute> => "through");
 
   it("is This machine's third route, and nothing runs it but a click", () => {
-    const onMakeRequest = vi.fn(async () => {});
+    const onMakeRequest = through();
     draw({ onMakeRequest });
 
     expect(within(task(3)).getByRole("button", { name: REQUEST })).toBeInTheDocument();
@@ -1535,24 +1572,39 @@ describe("make a request to example.com", () => {
   });
 
   it("is offered on no other device — its request travels through this host", () => {
-    draw({ onMakeRequest: vi.fn(async () => {}), reach: ARMED });
+    draw({ onMakeRequest: through(), reach: ARMED });
     for (const device of ["iOS Simulator", "Android emulator", "iPhone or iPad", "Another Mac"]) {
       pick(device);
       expect(screen.queryByRole("button", { name: REQUEST })).toBeNull();
     }
   });
 
-  it("says the host answered, and leaves every task's state to what Trawler captured", async () => {
-    const onMakeRequest = vi.fn(async () => {});
+  // D9: the note says which way the request went, and only a task's own
+  // reading moves that task (DEC-56).
+  it.each([
+    ["through", "example.com answered through Trawler."],
+    ["undecrypted", "the request reached Trawler and didn't decrypt."],
+    ["around", "example.com answered, but not through Trawler."],
+  ] as const)("says the request went %s, and leaves every task's state to its own reading", async (route, note) => {
+    const onMakeRequest = vi.fn(async (): Promise<RequestRoute> => route);
     draw({ onMakeRequest, trustProbe: "trusted", proxy: { status: "ours", address: null } });
     const before = states();
 
     fireEvent.click(screen.getByRole("button", { name: REQUEST }));
 
-    await waitFor(() => expect(screen.getByTestId("make-request-status")).toHaveTextContent("example.com answered."));
+    await waitFor(() => expect(screen.getByTestId("make-request-status")).toHaveTextContent(note));
     expect(onMakeRequest).toHaveBeenCalledOnce();
-    expect(states().map((t) => t?.replace(/example.com answered\./, ""))).toEqual(before);
+    expect(states()).toEqual(before);
     expect(task(3)).toHaveTextContent("not done — waiting for the first request");
+  });
+
+  it("names nothing that went well where the request went around Trawler", async () => {
+    draw({ onMakeRequest: vi.fn(async (): Promise<RequestRoute> => "around") });
+
+    fireEvent.click(screen.getByRole("button", { name: REQUEST }));
+
+    await waitFor(() => expect(screen.getByTestId("make-request-status")).toHaveTextContent("not through Trawler"));
+    expect(screen.getByTestId("make-request-status")).not.toHaveTextContent(/^example.com answered\.$/);
   });
 
   it("says a request that did not complete, and keeps the manual routes", async () => {
@@ -1567,6 +1619,82 @@ describe("make a request to example.com", () => {
     );
     expect(screen.getByRole("button", { name: REQUEST })).toBeEnabled();
     expect(screen.getByRole("button", { name: "the try-it command" })).toBeInTheDocument();
+  });
+});
+
+// ── This machine where no probe answers: its own request (D6 · D7 · DEC-62) ──
+
+describe("This machine where no probe answers", () => {
+  const unread = { trustProbe: "unknown", proxy: { status: "unknown", address: null } } as const;
+  const onMakeRequest = vi.fn(async (): Promise<RequestRoute> => "through");
+
+  it("names the request in step 3 as what settles both tasks", () => {
+    draw({ os: "linux", ...unread, onMakeRequest });
+
+    expect(task(1)).toHaveTextContent("can't check here — the request in step 3 confirms it");
+    expect(task(2)).toHaveTextContent("can't check here — the same request confirms it");
+    expect(within(task(3)).getByRole("button", { name: "make a request to example.com" })).toBeInTheDocument();
+  });
+
+  // D6: the request travels this host's system proxy and is checked against
+  // this host's store, so one that came through decrypted settles both.
+  it("reads both tasks done once its own request came through, with the time it did", () => {
+    const at = Date.now() - 60_000;
+    draw({ os: "linux", ...unread, onMakeRequest, ownProofAt: at });
+
+    expect(task(1)).toHaveTextContent(`done — step 3's request decrypted at ${clock(at)}`);
+    expect(task(2)).toHaveTextContent(`done — step 3's request came through at ${clock(at)}`);
+    expect(within(task(1)).queryByText("3 steps")).toBeNull();
+    expect(within(task(2)).queryByText("1 step")).toBeNull();
+  });
+
+  // D7: a phone still pointed here decrypts, and says nothing about this machine.
+  it("is not settled by another device's decrypted request", () => {
+    draw({ os: "linux", ...unread, onMakeRequest, traffic: capturing });
+
+    expect(task(3)).toHaveTextContent("done — capturing traffic");
+    expect(task(1)).toHaveTextContent("can't check here — the request in step 3 confirms it");
+    expect(task(2)).toHaveTextContent("can't check here — the same request confirms it");
+  });
+
+  it("leaves a refusal nobody can place to the try task, and never pins it on this machine", () => {
+    draw({ os: "linux", ...unread, onMakeRequest, traffic: { ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS + 1_000), openTunnelAt: ago(TUNNEL_GRACE_MS + 1_000) } });
+
+    expect(task(1)).toHaveTextContent("can't check here — the request in step 3 confirms it");
+    expect(task(1)).not.toHaveTextContent("does not trust Trawler's certificate");
+    expect(task(3)).toHaveTextContent("not working — arriving but not decrypting");
+    expect(within(task(3)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "the device it comes from does not trust Trawler's certificate yet",
+    );
+  });
+
+  it("is outranked by any probe that answers", () => {
+    draw({
+      os: "linux",
+      trustProbe: "absent",
+      proxy: { status: "none", address: null },
+      onMakeRequest,
+      ownProofAt: Date.now(),
+    });
+
+    expect(task(1)).toHaveTextContent("not done — not installed");
+    expect(task(2)).toHaveTextContent("not done — the system proxy is off");
+  });
+
+  it("stands for This machine only: the Simulator's proxy still promises its own first request", () => {
+    draw({ ...unread, ownProofAt: Date.now() });
+    pick("iOS Simulator");
+
+    expect(task(2)).toHaveTextContent("can't check here — the Simulator's first request confirms it");
+  });
+
+  // The promise rule's find: that request used to move nothing where this Mac's
+  // proxy could not be read.
+  it("keeps the Simulator's promise: a request reaching Trawler settles its route", () => {
+    draw({ ...unread, traffic: { ...NO_TRAFFIC, lastPlainAt: Date.now() } });
+    pick("iOS Simulator");
+
+    expect(task(2)).toHaveTextContent("done — requests reached Trawler");
   });
 });
 

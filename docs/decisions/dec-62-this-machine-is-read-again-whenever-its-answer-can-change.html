@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6abcbc1b9f34851f0dfad7c0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-62: This machine is read again whenever its answer can change</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-62 — This machine is read again whenever its answer can change, and where no probe answers, its own request is its reading</h1>
+      <p>This machine's two tasks read the live certificate and the proxy in use now, are re-read on every
+        moment their answer can move — a watch included — and, where no probe can answer, take the one
+        request this app makes of its own as their reading.</p>
+      <div class="meta">v3 · 2026-10-23 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W3</strong> from its
+        plan's D1–D9 and U1–U5, ruled by the owner · amends
+        <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> · relates to
+        <a href="dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>,
+        <a href="dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a> · UC-ONBOARD ·
+        status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>DEC-33 said</th><th>What E-ONBRVP.W3 found</th></tr>
+      <tr><td>steps 1 and 2 take no traffic input</td><td>on a host where no probe answers (Linux before this record,
+        any read that fails) step 2 promised "the first request confirms it", and no request ever could</td></tr>
+      <tr><td>re-read on the action, on demand and on focus; an interval was rejected — two shell commands per tick
+        at 270 ms</td><td>a failed action re-read nothing, a core restarted with a new certificate kept the old
+        answer, and a proxy turned off beside a visible window read "done" until it was clicked. The new
+        readers take about 20 ms</td></tr>
+      <tr><td>—</td><td>the probes read a name and a service list: a same-name certificate from another run read
+        trusted, and Wi-Fi's proxy read done while Ethernet carried the traffic</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> This machine's certificate task reads the live certificate the core serves, and
+        its proxy task reads the proxy HTTPS goes through now. Both are read again after every action whatever
+        its outcome, when the core comes back, on focus, on <em>check again</em>, and every 3 s while setup is on
+        screen, its core answering and the window visible. A read the user did not ask for is quiet. Where no
+        probe answers, a request this app made — marked, and captured decrypted in this setup session — settles
+        both tasks; no other device's traffic does.</p>
+    </div>
+
+    <h2 id="rules">The rules a build owes</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The certificate is matched on its bytes, never its name: macOS looks for the live
+        certificate in a keychain and verifies only one it holds, which tells trusted from installed-not-trusted
+        from absent; Windows looks for its thumbprint in the machine and the user root store; Linux looks in the
+        host's CA bundle</td><td>a browser trusts bytes; a name is what a stale copy shares. A browser is sent
+        only the leaf, so it must find the CA first — and a trust setting outlives its certificate, so the live
+        bytes still verify after the certificate is deleted</td></tr>
+      <tr><td>2</td><td>The proxy is the one HTTPS goes through now: macOS's resolved dictionary, Windows's
+        <code>https=</code> entry or its one address, GNOME's HTTPS proxy. <code>localhost</code> on Trawler's port is
+        Trawler, as 127.0.0.1 is; no other loopback address is. Quit keeps its wider question — anything on this system still pointing here</td><td>a proxy
+        on an idle service routes nothing now, and strands the machine later. localhost resolves to the
+        address the core binds; 127.0.0.2 and ::1 reach nothing it listens on</td></tr>
+      <tr><td>3</td><td>A read shows <em>checking</em> only when the user asked for it: setup opening, an action's
+        outcome, <em>check again</em>. Focus, the watch and the core's return are quiet. Only the newest read
+        lands</td><td>a line that flashes on every focus says nothing changed, loudly</td></tr>
+      <tr><td>4</td><td>The watch runs only while setup is on screen, its core answering and the window visible</td>
+        <td>its cost is paid only where its answer is read</td></tr>
+      <tr><td>5</td><td>The request the app makes carries a mark visible in the list. Where no probe answers, a
+        marked row decrypted in this session settles both tasks, with its time. The request's note reports the
+        route the core saw — through, reached and not decrypted, around — and never moves a task</td><td>the
+        mark is what makes the row this machine's; DEC-56 rule 1 holds — the flow, not the click, is the
+        evidence</td></tr>
+      <tr><td>6</td><td>This machine's try task keeps its proof once traffic goes quiet: <em>done — decrypted at
+        14:02, nothing since</em></td><td>its two other tasks re-read themselves, so the proof cannot hide a
+        change</td></tr>
+    </table>
+
+    <h2 id="scope">What this does not decide</h2>
+    <table data-c="scope">
+      <tr><th>Not decided here</th><th>Left to</th></tr>
+      <tr><td>how any other platform's proof ages</td><td>that platform's status WU (E-ONBRVP.W4–W10)</td></tr>
+      <tr><td>a probe for KDE or any desktop but GNOME, or a PAC proxy</td><td>they read as unknown, and the own
+        request settles them</td></tr>
+      <tr><td>which device an unmarked request came from</td><td>still the control API's blocked-on row</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Let any decrypted request settle This machine where no probe answers</td><td>a phone still pointed
+        here would read as this machine's certificate (D7)</td></tr>
+      <tr><td>Match the certificate on its fingerprint in the core</td><td>the shell already holds the store
+        readers, and the core is kept out of the host's tools (DEC-13)</td></tr>
+      <tr><td>One reader for setup and quit</td><td>setup asks what routes HTTPS now; quit asks what is left
+        pointing here. Merging them either misses an idle service at quit or reads it done in setup</td></tr>
+      <tr><td>The own request's proof for 3 minutes, like the dot</td><td>the owner's Q4: the session, with its
+        time in the line</td></tr>
+      <tr><td>No watch, focus only</td><td>the owner's Q2: a window beside System Settings never regains focus</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -128,8 +128,9 @@ fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
 pub(crate) const NO_INSTALL_DETAIL: &str =
     "install failed — the OS reported no detail; use the steps below";
 
-// Trawler's CA is issued with this CN; the store dumps below are matched on it,
-// the same key W2's removal steps use.
+// Trawler's CA is issued with this CN. A name narrows a keychain search and
+// never settles one: a core started from another folder mints a new CA under
+// the same name (D1), so every store below is matched on the bytes.
 const CA_COMMON_NAME: &str = "Trawler Proxy CA";
 
 // A certificate in a macOS keychain is not a trusted one: `add-trusted-cert`
@@ -152,53 +153,140 @@ fn pem_blocks(dump: &str) -> Vec<String> {
         .collect()
 }
 
-fn macos_copy_verifies(pem: &str) -> bool {
-    let cert = std::env::temp_dir().join("trawler-ca-probe.pem");
-    if std::fs::write(&cert, pem).is_err() {
-        return false;
-    }
-    let argv = macos_verify_argv(&cert);
-    Command::new(&argv[0]).args(&argv[1..]).output().is_ok_and(|out| out.status.success())
+// One DER has one base64 text once the line breaks are gone, so two PEM blocks
+// are the same certificate exactly when their bodies are equal.
+fn pem_body(block: &str) -> String {
+    block
+        .lines()
+        .filter(|line| !line.starts_with("-----"))
+        .flat_map(str::split_whitespace)
+        .collect()
 }
 
-// Read-only probe: does this machine trust Trawler's CA? Feeds the onboarding
-// Trust step so the ~90% local case gets an instant, honest status instead of
-// waiting on a captured flow. macOS/Windows only — the same systems that have
-// an auto-install path; elsewhere we can't conclude.
-//
-// ponytail: matches on the CA's Common Name, not a key fingerprint. A stale cert
-// left over from an earlier run with the same CN would read as trusted. Upgrade
-// path if that bites: compute the SHA-256 of the live /ca.crt DER (add `sha2`)
-// and match the store's fingerprint line instead of the CN.
-fn ca_is_trusted(os: &str) -> Option<bool> {
+fn live_body(pem: &str) -> Option<String> {
+    pem_blocks(pem).first().map(|block| pem_body(block)).filter(|body| !body.is_empty())
+}
+
+fn holds(store: &str, live: &str) -> bool {
+    pem_blocks(store).iter().any(|block| pem_body(block) == live)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Trust {
+    Trusted,
+    Installed,
+    Absent,
+}
+
+// A browser is sent only the leaf, so it must find the CA in a keychain before
+// any trust applies — and a trust setting is keyed on a hash and outlives its
+// certificate: deleted from the keychain, the bytes handed to `verify-cert`
+// still pass. So the keychain answers first, and only a certificate it holds is
+// verified, which tells installed-and-untrusted (a -60007, a double-click that
+// never chose Always Trust) apart from trusted (D2).
+fn macos_trust(
+    live: &str,
+    keychain: impl FnOnce() -> Option<Ran>,
+    verifies: impl FnOnce() -> Option<bool>,
+) -> Option<Trust> {
+    let keychain = keychain().filter(|out| out.ok)?;
+    if !holds(&keychain.stdout, live) {
+        return Some(Trust::Absent);
+    }
+    Some(if verifies()? { Trust::Trusted } else { Trust::Installed })
+}
+
+static PROBE_FILES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+// Reads overlap — the window's watch and a click can both be in flight — so
+// each gets a file of its own.
+fn macos_live_verifies(pem: &str) -> Option<bool> {
+    let n = PROBE_FILES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let cert =
+        std::env::temp_dir().join(format!("trawler-ca-probe-{}-{n}.pem", std::process::id()));
+    std::fs::write(&cert, pem).ok()?;
+    let argv = macos_verify_argv(&cert);
+    let verified =
+        Command::new(&argv[0]).args(&argv[1..]).output().ok().map(|out| out.status.success());
+    let _ = std::fs::remove_file(&cert);
+    verified
+}
+
+// Windows names a certificate by its SHA-1 thumbprint in every store listing,
+// in lowercase or upper, spaced or not, and in every display language.
+fn thumbprint(live: &str) -> Option<String> {
+    use base64::Engine as _;
+    let der = base64::engine::general_purpose::STANDARD.decode(live).ok()?;
+    Some(sha1_smol::Sha1::from(der).digest().to_string())
+}
+
+fn lists_thumbprint(listing: &str, thumbprint: &str) -> bool {
+    listing.split_whitespace().collect::<String>().to_ascii_lowercase().contains(thumbprint)
+}
+
+// A browser trusts a root from the machine's store or the user's (D4). Absent
+// needs both read; a store that did not answer cannot vouch for itself.
+fn windows_trust(thumbprint: &str, machine: Option<&Ran>, user: Option<&Ran>) -> Option<Trust> {
+    let read: Vec<&Ran> = [machine, user].into_iter().flatten().filter(|out| out.ok).collect();
+    if read.iter().any(|out| lists_thumbprint(&out.stdout, thumbprint)) {
+        Some(Trust::Trusted)
+    } else if read.len() == 2 {
+        Some(Trust::Absent)
+    } else {
+        None
+    }
+}
+
+// Where each distribution family compiles its trust store; the first one this
+// host has is the one its TLS libraries read (D8).
+const CA_BUNDLES: [&str; 4] = [
+    "/etc/ssl/certs/ca-certificates.crt",
+    "/etc/pki/tls/certs/ca-bundle.crt",
+    "/etc/ssl/ca-bundle.pem",
+    "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+];
+
+fn first_readable(paths: &[&str]) -> Option<String> {
+    paths.iter().find_map(|path| std::fs::read_to_string(path).ok())
+}
+
+fn bundle_trust(live: &str, bundle: Option<&str>) -> Option<Trust> {
+    Some(if holds(bundle?, live) { Trust::Trusted } else { Trust::Absent })
+}
+
+fn ca_trust(os: &str, pem: &str) -> Option<Trust> {
+    let live = live_body(pem)?;
     match os {
-        "macos" => {
-            let out = Command::new("security")
-                .args(["find-certificate", "-a", "-c", CA_COMMON_NAME, "-p"])
-                .output()
-                .ok()?;
-            let copies = pem_blocks(&String::from_utf8_lossy(&out.stdout));
-            Some(copies.iter().any(|pem| macos_copy_verifies(pem)))
-        }
-        "windows" => {
-            let out = Command::new("certutil").args(["-store", "ROOT"]).output().ok()?;
-            Some(String::from_utf8_lossy(&out.stdout).contains(CA_COMMON_NAME))
-        }
+        "macos" => macos_trust(
+            &live,
+            || ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-p"]),
+            || macos_live_verifies(pem),
+        ),
+        "windows" => windows_trust(
+            &thumbprint(&live)?,
+            ran("certutil", &["-store", "ROOT"]).as_ref(),
+            ran("certutil", &["-user", "-store", "ROOT"]).as_ref(),
+        ),
+        "linux" => bundle_trust(&live, first_readable(&CA_BUNDLES).as_deref()),
         _ => None,
     }
 }
 
-// "trusted" / "untrusted" ⇒ probed this machine and concluded; "unknown" ⇒ no
-// reliable probe on this OS, so the UI falls back to capture-will-confirm wording.
-#[cfg_attr(not(feature = "scenario"), tauri::command)]
-pub fn ca_trusted() -> String {
-    trust_word(ca_is_trusted(std::env::consts::OS)).into()
+// Read-only probe: does this machine trust the certificate the core serves
+// now? The webview passes that certificate, so a stale one of the same name
+// can never answer for it. "unknown" ⇒ nothing here could read a store, and
+// the screen falls back to the request it can make of its own (DEC-62).
+// Run off the main thread: the window re-reads it every few seconds.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn ca_trusted(pem: String) -> String {
+    trust_word(ca_trust(std::env::consts::OS, &pem)).into()
 }
 
-pub(crate) fn trust_word(reading: Option<bool>) -> &'static str {
+pub(crate) fn trust_word(reading: Option<Trust>) -> &'static str {
     match reading {
-        Some(true) => "trusted",
-        Some(false) => "untrusted",
+        Some(Trust::Trusted) => "trusted",
+        Some(Trust::Installed) => "installed",
+        Some(Trust::Absent) => "absent",
         None => "unknown",
     }
 }
@@ -529,19 +617,35 @@ fn parse_active_proxy(out: &str) -> Option<(String, u16)> {
     }
 }
 
+// localhost resolves to 127.0.0.1 and ::1 and a client tries each, so a proxy
+// typed as localhost reaches Trawler's loopback listener. Any other loopback
+// address is a listener of its own, which Trawler never binds (D5).
+fn localhost_reaches(host: &str) -> bool {
+    host.trim_start_matches('[')
+        .trim_end_matches(']')
+        .parse::<std::net::IpAddr>()
+        .is_ok_and(|ip| ip == std::net::Ipv4Addr::LOCALHOST || ip == std::net::Ipv6Addr::LOCALHOST)
+}
+
+fn names_trawler(set: &str, host: &str) -> bool {
+    set.eq_ignore_ascii_case(host)
+        || (set.eq_ignore_ascii_case("localhost") && localhost_reaches(host))
+}
+
 fn classify(read: &ProxyRead, host: &str, port: u16) -> ProxyStatus {
     match read {
-        ProxyRead::Set(s, p) if s == host && *p == port => ProxyStatus::Ours,
+        ProxyRead::Set(s, p) if *p == port && names_trawler(s, host) => ProxyStatus::Ours,
         ProxyRead::Set(..) => ProxyStatus::Foreign,
         ProxyRead::Off => ProxyStatus::None,
         ProxyRead::Unreadable => ProxyStatus::Unknown,
     }
 }
 
-// HTTPS (securewebproxy) is read before HTTP — Trawler sets both, but a
-// hand-configured proxy or one externally half-cleared could have only one on,
-// and catching either keeps a routing proxy from being missed. A read that
-// failed means the services that did answer cannot vouch for a clean system.
+// Quit's reader, and deliberately wider than setup's: any service, HTTPS then
+// HTTP. A service not in use now that still points at Trawler strands the
+// machine the day it becomes the one in use, so quit may not miss it. A read
+// that failed means the services that did answer cannot vouch for a clean
+// system.
 fn macos_proxy(
     listing: Option<&Ran>,
     mut read: impl FnMut(&str, &str) -> Option<Ran>,
@@ -575,8 +679,9 @@ fn macos_proxy(
 
 // `reg query` exits non-zero for a value never written, and a ProxyEnable never
 // written is a proxy never enabled — so only `reg` failing to run leaves the
-// switch unread. A server not in the one shape the setter writes (host:port),
-// such as a per-scheme list, is one this reader cannot place.
+// switch unread. The server is one host:port for every scheme, or a
+// per-scheme list, where HTTPS goes wherever its own entry says and nowhere
+// through a proxy when the list has none (D4).
 fn windows_proxy(enable: Option<&Ran>, server: impl FnOnce() -> Option<Ran>) -> ProxyRead {
     let Some(enable) = enable else { return ProxyRead::Unreadable };
     let on = enable
@@ -593,10 +698,34 @@ fn windows_proxy(enable: Option<&Ran>, server: impl FnOnce() -> Option<Ran>) -> 
             out.stdout
                 .lines()
                 .find(|l| l.contains("ProxyServer"))
-                .and_then(|l| l.split_whitespace().last())
-                .and_then(host_and_port)
+                .and_then(reg_value)
+                .and_then(https_server)
         })
-        .map_or(ProxyRead::Unreadable, |(host, port)| ProxyRead::Set(host, port))
+        .unwrap_or(ProxyRead::Unreadable)
+}
+
+// A `reg query` line is the name, the type and the value, and the value may
+// itself hold spaces.
+fn reg_value(line: &str) -> Option<&str> {
+    let (_name, rest) = line.trim().split_once(char::is_whitespace)?;
+    let (_kind, value) = rest.trim_start().split_once(char::is_whitespace)?;
+    Some(value.trim())
+}
+
+// WinINET separates a per-scheme list's entries by `;` or by whitespace.
+fn https_server(server: &str) -> Option<ProxyRead> {
+    if !server.contains('=') {
+        return host_and_port(server).map(|(host, port)| ProxyRead::Set(host, port));
+    }
+    let entry = server.split(|c: char| c == ';' || c.is_whitespace()).find_map(|entry| {
+        let (scheme, address) = entry.split_once('=')?;
+        scheme.trim().eq_ignore_ascii_case("https").then_some(address.trim())
+    });
+    match entry {
+        None => Some(ProxyRead::Off),
+        Some(address) => host_and_port(address.strip_prefix("http://").unwrap_or(address))
+            .map(|(host, port)| ProxyRead::Set(host, port)),
+    }
 }
 
 fn host_and_port(server: &str) -> Option<(String, u16)> {
@@ -605,6 +734,92 @@ fn host_and_port(server: &str) -> Option<(String, u16)> {
         return None;
     }
     Some((host.to_string(), port.parse().ok()?))
+}
+
+// `scutil --proxy` prints the dictionary macOS resolves for the service it
+// routes through now, which a per-service read cannot know: Wi-Fi proxied
+// while Ethernet carries the traffic routes nothing (D3). Nested dictionaries
+// (exceptions, scoped per-interface copies) are not what applies, so only the
+// top level is read, and HTTPS decides — every HTTPS request is one Trawler
+// has to decrypt.
+fn scutil_proxy(out: Option<&Ran>) -> ProxyRead {
+    let Some(out) = out.filter(|out| out.ok && out.stdout.contains("<dictionary>")) else {
+        return ProxyRead::Unreadable;
+    };
+    let entries = top_level_entries(&out.stdout);
+    let https = |key: &str| entries.get(key).copied().unwrap_or_default();
+    if https("HTTPSEnable") != "1" {
+        return ProxyRead::Off;
+    }
+    match (https("HTTPSProxy"), https("HTTPSPort").parse()) {
+        (host, Ok(port)) if !host.is_empty() => ProxyRead::Set(host.to_string(), port),
+        _ => ProxyRead::Off,
+    }
+}
+
+fn top_level_entries(dump: &str) -> HashMap<&str, &str> {
+    let mut depth = 0usize;
+    let mut entries = HashMap::new();
+    for line in dump.lines().map(str::trim) {
+        if line == "}" {
+            depth = depth.saturating_sub(1);
+        } else if let Some((key, value)) = line.split_once(" : ") {
+            if value.ends_with('{') {
+                depth += 1;
+            } else if depth == 1 {
+                entries.insert(key, value);
+            }
+        } else if line.ends_with('{') {
+            depth += 1;
+        }
+    }
+    entries
+}
+
+// GNOME's own proxy settings, which WebKitGTK and GNOME's apps follow. Another
+// desktop keeps its proxy elsewhere, so there gsettings answers for nothing.
+// An automatic (PAC) proxy decides per request and is not read here.
+fn gnome_proxy(desktop: Option<&str>, mut get: impl FnMut(&str, &str) -> Option<Ran>) -> ProxyRead {
+    if !desktop.is_some_and(|d| d.to_ascii_lowercase().contains("gnome")) {
+        return ProxyRead::Unreadable;
+    }
+    let mut value = |schema: &str, key: &str| {
+        get(schema, key)
+            .filter(|out| out.ok)
+            .map(|out| out.stdout.trim().trim_matches('\'').to_string())
+    };
+    match value("org.gnome.system.proxy", "mode").as_deref() {
+        Some("none") => ProxyRead::Off,
+        Some("manual") => {
+            let host = value("org.gnome.system.proxy.https", "host");
+            let port =
+                value("org.gnome.system.proxy.https", "port").and_then(|p| p.parse::<u16>().ok());
+            match (host, port) {
+                (Some(host), Some(port)) if !host.is_empty() && port != 0 => {
+                    ProxyRead::Set(host, port)
+                }
+                (Some(_), Some(_)) => ProxyRead::Off,
+                _ => ProxyRead::Unreadable,
+            }
+        }
+        _ => ProxyRead::Unreadable,
+    }
+}
+
+// The proxy each host applies to HTTPS now — what setup's route task reads.
+// Quit asks a wider question (anything left pointing here) and keeps its own
+// reader below.
+fn proxy_in_use_now(os: &str) -> ProxyRead {
+    match os {
+        "macos" => scutil_proxy(ran("scutil", &["--proxy"]).as_ref()),
+        "windows" => active_system_proxy(os),
+        "linux" => {
+            gnome_proxy(std::env::var("XDG_CURRENT_DESKTOP").ok().as_deref(), |schema, key| {
+                ran("gsettings", &["get", schema, key])
+            })
+        }
+        _ => ProxyRead::Unreadable,
+    }
 }
 
 fn active_system_proxy(os: &str) -> ProxyRead {
@@ -623,12 +838,12 @@ fn active_system_proxy(os: &str) -> ProxyRead {
     }
 }
 
-// One read, both readers. The quit-time confirm calls this with Trawler's
-// configured address to decide which of the three quit paths to take; the setup
-// screen needs the same reading plus the address it found, because a button
-// that replaces a proxy the user set may not hide which one (F17). Read-only,
-// no elevation, and the address is None wherever nothing is set or this build
-// cannot read the host's settings.
+// One reading, two questions. The quit-time confirm asks whether anything on
+// this system still points at Trawler, and takes one of its three paths; the
+// setup screen asks which proxy HTTPS goes through now, and needs the address
+// it found, because a button that replaces a proxy the user set may not hide
+// which one (F17). Read-only, no elevation, and the address is None wherever
+// nothing is set or this build cannot read the host's settings.
 #[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct ProxyReading {
     status: &'static str,
@@ -646,6 +861,12 @@ pub(crate) fn read_proxy(read: &ProxyRead, host: &str, port: u16) -> ProxyReadin
 #[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn proxy_status(host: String, port: u16) -> ProxyReading {
     read_proxy(&active_system_proxy(std::env::consts::OS), &host, port)
+}
+
+// Run off the main thread: the window re-reads it every few seconds.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn proxy_in_use(host: String, port: u16) -> ProxyReading {
+    read_proxy(&proxy_in_use_now(std::env::consts::OS), &host, port)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1123,7 +1344,7 @@ mod tests {
     }
 
     #[test]
-    fn windows_cannot_read_when_reg_cannot_run_or_the_server_is_not_one_address() {
+    fn windows_cannot_read_when_reg_cannot_run_or_the_server_names_no_address() {
         let never = || -> Option<Ran> { unreachable!("an unread switch names no server") };
         assert_eq!(windows_proxy(None, never), ProxyRead::Unreadable);
         assert_eq!(windows_proxy(answered(WIN_ENABLED).as_ref(), || None), ProxyRead::Unreadable);
@@ -1131,15 +1352,56 @@ mod tests {
             windows_proxy(answered(WIN_ENABLED).as_ref(), || exited_non_zero("ERROR")),
             ProxyRead::Unreadable
         );
-        let per_scheme = || win_server("http=127.0.0.1:7420;https=127.0.0.1:7420");
-        assert_eq!(
-            windows_proxy(answered(WIN_ENABLED).as_ref(), per_scheme),
-            ProxyRead::Unreadable
-        );
         assert_eq!(
             windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server("7420")),
             ProxyRead::Unreadable
         );
+        assert_eq!(
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server("https=7420")),
+            ProxyRead::Unreadable
+        );
+    }
+
+    // D4: a per-scheme list sends HTTPS wherever its own entry says.
+    #[test]
+    fn windows_reads_the_https_entry_of_a_per_scheme_list() {
+        let read = |server: &'static str| {
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server(server))
+        };
+
+        assert_eq!(
+            read("http=127.0.0.1:7420;https=127.0.0.1:7420"),
+            ProxyRead::Set("127.0.0.1".into(), 7420)
+        );
+        assert_eq!(
+            read("ftp=10.0.0.1:21;HTTPS=10.0.0.9:3128"),
+            ProxyRead::Set("10.0.0.9".into(), 3128)
+        );
+        assert_eq!(read("https=http://127.0.0.1:7420"), ProxyRead::Set("127.0.0.1".into(), 7420));
+    }
+
+    #[test]
+    fn windows_reads_the_https_entry_of_a_whitespace_separated_list() {
+        let read = |server: &'static str| {
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server(server))
+        };
+
+        assert_eq!(
+            read("https=127.0.0.1:7420 http=10.0.0.1:80"),
+            ProxyRead::Set("127.0.0.1".into(), 7420)
+        );
+        assert_eq!(
+            read("http=10.0.0.1:80 https=10.0.0.9:3128 ftp=10.0.0.2:21"),
+            ProxyRead::Set("10.0.0.9".into(), 3128)
+        );
+        assert_eq!(read("http=10.0.0.1:80 ftp=10.0.0.2:21"), ProxyRead::Off);
+    }
+
+    #[test]
+    fn a_per_scheme_list_with_no_https_entry_proxies_no_https() {
+        let read =
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server("http=127.0.0.1:7420"));
+        assert_eq!(read, ProxyRead::Off);
     }
 
     #[test]
@@ -1226,5 +1488,271 @@ mod tests {
         assert!(NoticeKey::try_from("other").is_err());
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // ── The live certificate, read from each store (D1 · D2 · D4 · D8) ──────
+
+    const LIVE: &str = "-----BEGIN CERTIFICATE-----\nMIIBLIVE\nAAAA\n-----END CERTIFICATE-----\n";
+    const STALE: &str = "-----BEGIN CERTIFICATE-----\nMIIBSTALE\nBBBB\n-----END CERTIFICATE-----\n";
+
+    fn live() -> String {
+        live_body(LIVE).unwrap()
+    }
+
+    #[test]
+    fn one_certificate_reads_as_one_body_however_its_lines_are_wrapped() {
+        let rewrapped =
+            "-----BEGIN CERTIFICATE-----\r\nMIIB\r\nLIVEAAAA\r\n-----END CERTIFICATE-----";
+        assert_eq!(live_body(rewrapped), Some(live()));
+        assert_ne!(live_body(STALE), Some(live()));
+        assert_eq!(live_body("not a certificate"), None);
+        assert_eq!(live_body("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"), None);
+    }
+
+    fn never_verified() -> Option<bool> {
+        unreachable!("a certificate no keychain holds is not verified")
+    }
+
+    #[test]
+    fn a_mac_holding_the_live_certificate_and_verifying_it_trusts_it() {
+        let dump = format!("{STALE}\n{LIVE}");
+        assert_eq!(macos_trust(&live(), || answered(&dump), || Some(true)), Some(Trust::Trusted));
+    }
+
+    // D2: a double-click that never chose Always Trust, or a -60007, leaves the
+    // certificate in a keychain and untrusted.
+    #[test]
+    fn a_mac_holding_the_live_certificate_untrusted_reads_installed() {
+        assert_eq!(macos_trust(&live(), || answered(LIVE), || Some(false)), Some(Trust::Installed));
+    }
+
+    // Recorded on the owner's Mac: the certificate deleted from the System
+    // keychain, its Always Trust left behind — `verify-cert` passed the live
+    // bytes while a browser, sent only the leaf, refused it.
+    #[test]
+    fn a_trust_setting_that_outlived_its_certificate_trusts_nothing_a_browser_is_sent() {
+        let not_found = || answered("");
+        assert_eq!(macos_trust(&live(), not_found, never_verified), Some(Trust::Absent));
+    }
+
+    // `find-certificate -a` exits 0 when nothing matches, so a non-zero exit is
+    // a keychain search that failed, not an empty keychain.
+    #[test]
+    fn a_keychain_search_that_failed_cannot_say() {
+        assert_eq!(macos_trust(&live(), || exited_non_zero(""), never_verified), None);
+    }
+
+    // D1: the old same-name certificate verifies, and the live one is nowhere.
+    #[test]
+    fn a_same_name_certificate_never_answers_for_the_live_one() {
+        assert_eq!(macos_trust(&live(), || answered(STALE), never_verified), Some(Trust::Absent));
+    }
+
+    #[test]
+    fn a_mac_whose_tools_did_not_run_cannot_say() {
+        assert_eq!(macos_trust(&live(), || None, never_verified), None);
+        assert_eq!(macos_trust(&live(), || answered(LIVE), || None), None);
+    }
+
+    #[test]
+    fn the_thumbprint_is_the_sha1_of_the_certificates_der() {
+        assert_eq!(thumbprint("YWJj").as_deref(), Some("a9993e364706816aba3e25717850c26c9cd0d89d"));
+        assert_eq!(thumbprint("not base64!"), None);
+    }
+
+    const THUMB: &str = "a9993e364706816aba3e25717850c26c9cd0d89d";
+
+    #[test]
+    fn a_store_listing_names_the_thumbprint_in_any_case_spacing_or_language() {
+        for listing in [
+            "Cert Hash(sha1): a9993e364706816aba3e25717850c26c9cd0d89d\r\n",
+            "Cert Hash(sha1): A9 99 3E 36 47 06 81 6A BA 3E 25 71 78 50 C2 6C 9C D0 D8 9D\r\n",
+            "Zertifikathash(sha1): a9993e364706816aba3e25717850c26c9cd0d89d\r\n",
+        ] {
+            assert!(lists_thumbprint(listing, THUMB), "{listing}");
+        }
+        assert!(!lists_thumbprint(
+            "Cert Hash(sha1): 0000000000000000000000000000000000000000",
+            THUMB
+        ));
+    }
+
+    #[test]
+    fn windows_trusts_a_root_in_the_machine_store_or_the_users() {
+        let listing = answered(&format!("Cert Hash(sha1): {THUMB}"));
+        let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
+        assert_eq!(windows_trust(THUMB, listing.as_ref(), other.as_ref()), Some(Trust::Trusted));
+        assert_eq!(windows_trust(THUMB, other.as_ref(), listing.as_ref()), Some(Trust::Trusted));
+        assert_eq!(windows_trust(THUMB, None, listing.as_ref()), Some(Trust::Trusted));
+    }
+
+    #[test]
+    fn windows_reads_absent_only_once_both_stores_answered() {
+        let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
+        assert_eq!(windows_trust(THUMB, other.as_ref(), other.as_ref()), Some(Trust::Absent));
+        assert_eq!(windows_trust(THUMB, other.as_ref(), None), None);
+        assert_eq!(windows_trust(THUMB, exited_non_zero("").as_ref(), other.as_ref()), None);
+    }
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("trawler-test-bundle-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join(name)
+    }
+
+    // D8: the first bundle this host has is the store its TLS libraries read.
+    #[test]
+    fn a_linux_bundle_holding_the_live_certificate_trusts_it() {
+        let bundle = scratch("with-live.crt");
+        std::fs::write(&bundle, format!("{STALE}{LIVE}")).unwrap();
+        let missing = scratch("missing.crt");
+        let paths = [missing.to_str().unwrap(), bundle.to_str().unwrap()];
+
+        assert_eq!(bundle_trust(&live(), first_readable(&paths).as_deref()), Some(Trust::Trusted));
+        std::fs::write(&bundle, STALE).unwrap();
+        assert_eq!(bundle_trust(&live(), first_readable(&paths).as_deref()), Some(Trust::Absent));
+        let _ = std::fs::remove_file(&bundle);
+    }
+
+    #[test]
+    fn a_host_with_no_bundle_cannot_say() {
+        let missing = scratch("none-here.crt");
+        assert_eq!(first_readable(&[missing.to_str().unwrap()]), None);
+        assert_eq!(bundle_trust(&live(), None), None);
+    }
+
+    #[test]
+    fn what_is_not_a_certificate_reads_unknown_on_every_host() {
+        for os in ["macos", "windows", "linux", "freebsd"] {
+            assert_eq!(ca_trust(os, "BEGIN RSA PRIVATE KEY"), None, "{os}");
+        }
+        assert_eq!(ca_trust("freebsd", LIVE), None);
+    }
+
+    #[test]
+    fn each_reading_has_its_own_word() {
+        assert_eq!(trust_word(Some(Trust::Trusted)), "trusted");
+        assert_eq!(trust_word(Some(Trust::Installed)), "installed");
+        assert_eq!(trust_word(Some(Trust::Absent)), "absent");
+        assert_eq!(trust_word(None), "unknown");
+    }
+
+    // ── The proxy HTTPS goes through now (D3 · D5 · D8) ─────────────────────
+
+    const SCUTIL_ON: &str = "<dictionary> {\n  ExceptionsList : <array> {\n    0 : *.local\n    1 : 169.254/16\n  }\n  FTPPassive : 1\n  HTTPEnable : 1\n  HTTPPort : 7420\n  HTTPProxy : 127.0.0.1\n  HTTPSEnable : 1\n  HTTPSPort : 7420\n  HTTPSProxy : 127.0.0.1\n}\n";
+    const SCUTIL_OFF: &str = "<dictionary> {\n  ExceptionsList : <array> {\n    0 : *.local\n  }\n  FTPPassive : 1\n  HTTPEnable : 0\n  HTTPSEnable : 0\n}\n";
+    const SCUTIL_HTTP_ONLY: &str = "<dictionary> {\n  HTTPEnable : 1\n  HTTPPort : 7420\n  HTTPProxy : 127.0.0.1\n  HTTPSEnable : 0\n}\n";
+    const SCUTIL_SCOPED: &str = "<dictionary> {\n  HTTPSEnable : 0\n  __SCOPED__ : <dictionary> {\n    en1 : <dictionary> {\n      HTTPSEnable : 1\n      HTTPSPort : 7420\n      HTTPSProxy : 127.0.0.1\n    }\n  }\n}\n";
+
+    #[test]
+    fn macos_reads_the_https_proxy_it_applies_now() {
+        assert_eq!(
+            scutil_proxy(answered(SCUTIL_ON).as_ref()),
+            ProxyRead::Set("127.0.0.1".into(), 7420)
+        );
+        assert_eq!(scutil_proxy(answered(SCUTIL_OFF).as_ref()), ProxyRead::Off);
+    }
+
+    // D3: HTTPS decides, and only what applies now counts.
+    #[test]
+    fn neither_an_http_proxy_nor_an_idle_services_proxy_routes_https() {
+        assert_eq!(scutil_proxy(answered(SCUTIL_HTTP_ONLY).as_ref()), ProxyRead::Off);
+        assert_eq!(scutil_proxy(answered(SCUTIL_SCOPED).as_ref()), ProxyRead::Off);
+        let no_port = "<dictionary> {\n  HTTPSEnable : 1\n  HTTPSProxy : 127.0.0.1\n}\n";
+        assert_eq!(scutil_proxy(answered(no_port).as_ref()), ProxyRead::Off);
+    }
+
+    #[test]
+    fn macos_cannot_say_when_scutil_did_not_answer() {
+        assert_eq!(scutil_proxy(None), ProxyRead::Unreadable);
+        assert_eq!(scutil_proxy(exited_non_zero(SCUTIL_ON).as_ref()), ProxyRead::Unreadable);
+        assert_eq!(scutil_proxy(answered("").as_ref()), ProxyRead::Unreadable);
+    }
+
+    fn gsettings(
+        values: &'static [(&'static str, &'static str)],
+    ) -> impl FnMut(&str, &str) -> Option<Ran> {
+        move |schema, key| {
+            let asked = format!("{schema} {key}");
+            values
+                .iter()
+                .find(|(k, _)| *k == asked)
+                .map(|(_, v)| Ran { ok: true, stdout: format!("{v}\n") })
+        }
+    }
+
+    #[test]
+    fn gnome_reads_its_manual_https_proxy() {
+        let read = gnome_proxy(
+            Some("ubuntu:GNOME"),
+            gsettings(&[
+                ("org.gnome.system.proxy mode", "'manual'"),
+                ("org.gnome.system.proxy.https host", "'127.0.0.1'"),
+                ("org.gnome.system.proxy.https port", "7420"),
+            ]),
+        );
+        assert_eq!(read, ProxyRead::Set("127.0.0.1".into(), 7420));
+    }
+
+    #[test]
+    fn gnome_with_no_https_proxy_is_off() {
+        assert_eq!(
+            gnome_proxy(Some("GNOME"), gsettings(&[("org.gnome.system.proxy mode", "'none'")])),
+            ProxyRead::Off
+        );
+        let manual_without_https = gsettings(&[
+            ("org.gnome.system.proxy mode", "'manual'"),
+            ("org.gnome.system.proxy.https host", "''"),
+            ("org.gnome.system.proxy.https port", "0"),
+        ]);
+        assert_eq!(gnome_proxy(Some("GNOME"), manual_without_https), ProxyRead::Off);
+    }
+
+    #[test]
+    fn gnome_cannot_say_for_an_automatic_proxy_a_failed_read_or_another_desktop() {
+        assert_eq!(
+            gnome_proxy(Some("GNOME"), gsettings(&[("org.gnome.system.proxy mode", "'auto'")])),
+            ProxyRead::Unreadable
+        );
+        assert_eq!(gnome_proxy(Some("GNOME"), gsettings(&[])), ProxyRead::Unreadable);
+        let never = |_: &str, _: &str| -> Option<Ran> {
+            unreachable!("another desktop keeps its proxy elsewhere")
+        };
+        assert_eq!(gnome_proxy(Some("KDE"), never), ProxyRead::Unreadable);
+        assert_eq!(gnome_proxy(None, never), ProxyRead::Unreadable);
+    }
+
+    #[test]
+    fn a_host_with_no_reader_cannot_say_which_proxy_is_in_use() {
+        assert_eq!(proxy_in_use_now("freebsd"), ProxyRead::Unreadable);
+    }
+
+    // D5: localhost resolves to the address Trawler listens on.
+    #[test]
+    fn localhost_on_trawlers_port_is_trawler() {
+        for set in ["localhost", "LOCALHOST", "127.0.0.1"] {
+            let read = ProxyRead::Set(set.into(), 7420);
+            assert_eq!(classify(&read, "127.0.0.1", 7420), ProxyStatus::Ours, "{set}");
+        }
+        assert_eq!(
+            classify(&ProxyRead::Set("localhost".into(), 8080), "127.0.0.1", 7420),
+            ProxyStatus::Foreign
+        );
+        assert_eq!(
+            classify(&ProxyRead::Set("localhost.evil".into(), 7420), "127.0.0.1", 7420),
+            ProxyStatus::Foreign
+        );
+        assert_eq!(
+            classify(&ProxyRead::Set("192.168.1.24".into(), 7420), "127.0.0.1", 7420),
+            ProxyStatus::Foreign
+        );
+    }
+
+    #[test]
+    fn another_loopback_address_reaches_nothing_trawler_listens_on() {
+        for set in ["127.0.0.2", "::1", "[::1]"] {
+            let read = ProxyRead::Set(set.into(), 7420);
+            assert_eq!(classify(&read, "127.0.0.1", 7420), ProxyStatus::Foreign, "{set}");
+        }
     }
 }

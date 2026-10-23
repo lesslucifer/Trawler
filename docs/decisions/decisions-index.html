@@ -289,7 +289,8 @@
             was turned off kept every step green. Rejected: a recency window on the borrowed positive (a phone's
             flow still says nothing about this host), relative time on the verdict (DEC-22), re-probing on an
             interval, timestamping the tunnel tally in the core. Supersedes DEC-13's "proxy step goes green on any
-            tunnel" clause; the signal itself is unchanged</td>
+            tunnel" clause; the signal itself is unchanged. Amended by DEC-62: This machine's own marked request
+            where no probe answers, and a 3 s watch</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -756,6 +757,20 @@
             capture", and setup's way back is always shown. Only a decrypted https request from this session moves
             setup to the list on its own. Replaces DEC-60 rule 5. Rejected: a dot green forever, red after quiet
             minutes, https-only, a second button, blocking the list on a silent core</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html"><code>dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html</code></a></td>
+          <td><span class="badge id">DEC-62</span></td>
+          <td><strong>This machine's tasks read the live certificate and the proxy HTTPS goes through now, are read
+            again wherever their answer can change, and — where no probe answers — take the app's own marked
+            request as their reading.</strong> The certificate is matched on its bytes on macOS, Windows and Linux;
+            the proxy is the one in use, and localhost on Trawler's port is Trawler. Re-read after every
+            action whatever its outcome, when the core comes back, on focus, and every 3 s while setup shows; only a
+            read the user asked for shows checking. Another device's traffic never settles This machine. The
+            request's note reports its route, and This machine's try task keeps its proof once quiet. Amends
+            DEC-33. Rejected: any decrypted request as This machine's, a fingerprint in the core, one reader for
+            setup and quit, a 3-minute proof, no watch</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

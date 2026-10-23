@@ -42,10 +42,14 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
   // what the hook starts with, so this is what tells "the core said nothing is
   // captured" apart from "nothing has answered yet".
   const [answered, setAnswered] = useState(0);
-  // The moment the newest CONNECT tunnel was seen — every HTTPS attempt, whether
-  // or not it later decrypts into a flow (an untrusted-CA handshake produces a
-  // tunnel but no flow). Onboarding reads it; the flow list ignores it.
-  const [lastConnectionAt, setLastConnectionAt] = useState<number | null>(null);
+  // When each CONNECT tunnel was seen — every HTTPS attempt, whether or not it
+  // later decrypts into a flow (an untrusted-CA handshake produces a tunnel but
+  // no flow). Onboarding reads them; the flow list ignores them.
+  const [tunnelTimes, setTunnelTimes] = useState<readonly number[]>([]);
+  // The newest tunnel to each host, for a caller waiting on one request's
+  // route (D9). Read when asked rather than rendered, so it costs no render.
+  const tunnels = useRef(new Map<string, number>());
+  const tunnelAt = useCallback((host: string) => tunnels.current.get(host) ?? null, []);
   // The newest captured request this window has heard of, from any listing and
   // from the core's own newest row, so neither a filter nor a clear can lower
   // it. Undefined until the core has answered either.
@@ -142,7 +146,12 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
   useEffect(() => {
     const close = api.stream({
       onEvent: debouncedRefresh,
-      onConnection: () => setLastConnectionAt(Date.now()),
+      onConnection: (authority) => {
+        const at = Date.now();
+        if (tunnels.current.size >= TUNNEL_HOSTS_MAX) tunnels.current = new Map();
+        tunnels.current.set(tunnelHost(authority), at);
+        setTunnelTimes((times) => [...times.slice(1 - TUNNEL_TIMES_MAX), at]);
+      },
       // A core that dies under an open window sends nothing — so the dropped
       // stream is the only thing that can say so before the next keystroke. It
       // says only that: a refusal the core already gave is a separate fact and
@@ -164,7 +173,8 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
     flows,
     everything,
     hosts,
-    lastConnectionAt,
+    tunnelTimes,
+    tunnelAt,
     lastCaptureAt,
     silent,
     answered,
@@ -173,6 +183,20 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
     retry,
     update,
   };
+}
+
+// A remembered tunnel is only ever asked about seconds after it opened, so a
+// reset loses nothing a caller is waiting on.
+const TUNNEL_HOSTS_MAX = 1024;
+// Setup reads the oldest tunnel nothing answered. A thousand tunnels never open
+// inside one grace, so the oldest one kept past this many is a refusal already,
+// and dropping older ones changes no reading.
+export const TUNNEL_TIMES_MAX = 1024;
+
+export function tunnelHost(authority: string): string {
+  const port = authority.lastIndexOf(":");
+  const host = port > authority.lastIndexOf("]") ? authority.slice(0, port) : authority;
+  return host.toLowerCase();
 }
 
 export function merge(known: string[], list: FlowSummary[]): string[] {

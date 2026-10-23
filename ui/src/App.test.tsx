@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
-import { afterEach, beforeAll, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import App, { LAUNCH_PATIENCE_MS } from "./App";
+import App, { LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
 import { ApiError, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -90,7 +90,9 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 // narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
 function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
-  let onConnection = () => {};
+  let onConnection: (authority: string) => void = () => {};
+  let onDown = () => {};
+  let onUp = () => {};
   const api: TrawlerApi = apiStub({
     listFlows: vi.fn(async (filter: Filter) => {
       // Close enough to FlowFilter::matches (store.rs) for these tests: q really
@@ -129,13 +131,17 @@ function mockApi(store: () => FlowSummary[]) {
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onConnection = handlers.onConnection ?? (() => {});
+      onDown = handlers.onDown ?? (() => {});
+      onUp = handlers.onUp ?? (() => {});
       return () => {};
     }),
   });
   return {
     api,
     fire: () => act(() => onEvent()),
-    fireConnection: () => act(() => onConnection()),
+    fireConnection: (authority = "a.test:443") => act(() => onConnection(authority)),
+    fireDown: () => act(() => onDown()),
+    fireUp: () => act(() => onUp()),
   };
 }
 
@@ -262,10 +268,35 @@ test("Set up this Mac fetches the PEM and invokes the one combined command", asy
       port: 7999,
     }),
   );
-  expect(api.caCertPem).toHaveBeenCalledOnce();
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1);
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
   expect(screen.getByText("which device's traffic do you want to see")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// D1: a store holding an older certificate under the same name answers
+// nothing, so the probe is asked about the bytes the core serves now.
+test("the trust probe asks about the certificate the core serves now, and setup reads the proxy in use", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: PEM }));
+  expect(invoke).toHaveBeenCalledWith("proxy_in_use", { host: "127.0.0.1", port: 7999 });
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_status")).toHaveLength(0);
+});
+
+test("a core that cannot serve its certificate leaves the trust probe unread, never trusted", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "ca_trusted" ? "trusted" : undefined));
+  const { api } = mockApi(() => []);
+  vi.mocked(api.caCertPem).mockRejectedValue(new Error("GET /ca.pem failed: 500"));
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "ca_trusted")).toHaveLength(0);
+  expect(screen.getByTestId("task-1")).not.toHaveTextContent("done — installed and trusted");
 });
 
 // The manual steps tell the user to run commands against a file by name. The
@@ -395,17 +426,20 @@ test("Stop routing invokes unset_proxy after the proxy was set", async () => {
 // tasks never hear about it: a tunnel says nothing about this machine's stores.
 test("a connection event settles the last task, and warns once no request answers it", async () => {
   onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "absent";
+    if (name === "proxy_in_use") return { status: "none", address: null };
+    return undefined;
+  });
   const { api, fireConnection } = mockApi(() => []); // no flows ever
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByTestId("task-3");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("not done — not installed"));
 
   fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
   await waitFor(() =>
     expect(screen.getByTestId("task-3")).toHaveTextContent("a connection just arrived"),
   );
-  expect(screen.getByTestId("task-2")).toHaveTextContent(
-    "can't check here — this Mac's first request confirms it",
-  );
+  expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off");
 
   // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
   const realNow = Date.now;
@@ -433,7 +467,7 @@ test("replacing another proxy costs a confirm, and a refusal writes nothing", as
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
-    if (name === "proxy_status") return { status: "foreign", address: "10.1.1.1:8080" };
+    if (name === "proxy_in_use") return { status: "foreign", address: "10.1.1.1:8080" };
     if (name === "confirm_replace_proxy") return false;
     return undefined;
   });
@@ -457,7 +491,7 @@ test("an allowed replacement goes through, once", async () => {
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
-    if (name === "proxy_status") return { status: "foreign", address: "10.1.1.1:8080" };
+    if (name === "proxy_in_use") return { status: "foreign", address: "10.1.1.1:8080" };
     if (name === "confirm_replace_proxy") return true;
     return undefined;
   });
@@ -476,7 +510,7 @@ test("setting the proxy where none is set asks no second question", async () => 
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) =>
-    name === "proxy_status" ? { status: "none", address: null } : undefined,
+    name === "proxy_in_use" ? { status: "none", address: null } : undefined,
   );
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
@@ -684,17 +718,204 @@ test("a launch straight into the list says nothing — the moment it announces i
 // which is when the user has just been in System Settings.
 test("check again and window focus each re-read both probes, and the reading is stamped", async () => {
   onMacHost();
+  watchPaused();
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
   await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
-  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_status").length;
   expect(probes()).toBe(2);
 
   fireEvent.click(screen.getByRole("button", { name: "check again" }));
   await waitFor(() => expect(probes()).toBe(4));
+  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
 
   fireEvent(window, new Event("focus"));
   await waitFor(() => expect(probes()).toBe(6));
+});
+
+const probes = () =>
+  vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
+
+// A hidden window runs no watch, so a test counting reads counts only the
+// trigger it is about, however slowly the suite runs.
+function watchPaused() {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+}
+
+afterEach(() => {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+});
+
+// ── When this machine is read again (U1–U4 · DEC-62) ────────────────────────
+
+describe("this machine is read again wherever its answer can change", () => {
+  beforeEach(watchPaused);
+
+  const answering = (over: Record<string, (args?: unknown) => unknown> = {}) =>
+    vi.mocked(invoke).mockImplementation(async (name: string, args?: unknown) => {
+      if (name in over) return over[name](args);
+      if (name === "ca_trusted") return "absent";
+      if (name === "proxy_in_use") return { status: "none", address: null };
+      return undefined;
+    });
+
+  const settled = async () => {
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+    return probes();
+  };
+
+  // U1: a failure can leave the machine half changed (-60007 after the trust
+  // write; the store written and the proxy not), so it re-reads like a success.
+  it.each([
+    ["cancelled", { refused: true, unshowable: false, detail: "User cancelled. (-128)" }],
+    ["an approval macOS could not show", { refused: false, unshowable: true, detail: "(-60007)" }],
+    ["failed", { refused: false, unshowable: false, detail: "SecTrustSettingsSetTrustSettings: denied" }],
+  ])("after Set up this Mac %s", async (_outcome, failure) => {
+    onMacHost();
+    answering({
+      set_up_this_machine: () => {
+        throw failure;
+      },
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
+    await waitFor(() => expect(probes()).toBe(before + 2));
+  });
+
+  it("after a replacement the user declined, which changed nothing but was still an act", async () => {
+    onMacHost();
+    answering({
+      proxy_in_use: () => ({ status: "foreign", address: "10.1.1.1:8080" }),
+      confirm_replace_proxy: () => false,
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "nothing"));
+    await waitFor(() => expect(probes()).toBe(before + 2));
+  });
+
+  // U2: a core started again, from another folder, serves another certificate.
+  it("when the core comes back, asking about the certificate it serves now", async () => {
+    onMacHost();
+    answering();
+    const { api, fireDown, fireUp } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await settled();
+
+    fireDown();
+    await screen.findByText("Trawler's capture service isn't answering");
+    const renewed = "-----BEGIN CERTIFICATE-----\nnew\n-----END CERTIFICATE-----\n";
+    vi.mocked(api.caCertPem).mockResolvedValue(renewed);
+    fireUp();
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: renewed }));
+  });
+
+  // U4: a read the user did not ask for moves only the time the reading carries.
+  it("on focus, quietly: nothing shows checking and no button is held", async () => {
+    onMacHost();
+    answering();
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await settled();
+    answering({ proxy_in_use: () => new Promise(() => {}) });
+
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_in_use").length).toBe(2));
+    expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
+    expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking");
+    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeEnabled();
+  });
+
+  it("but never twice at once: a quiet read waits out the one in flight", async () => {
+    onMacHost();
+    answering();
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+    answering({ proxy_in_use: () => new Promise(() => {}) });
+
+    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(probes()).toBe(before + 2));
+    expect(probes()).toBe(before + 2);
+  });
+});
+
+// U3: the watch - a setting changed in System Settings beside the window.
+describe("the watch", () => {
+  const visibility = (state: DocumentVisibilityState) => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  };
+
+  afterEach(() => vi.useRealTimers());
+
+  const opened = async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onMacHost();
+    let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "ca_trusted") return "trusted";
+      if (name === "proxy_in_use") return proxy;
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — this Mac routes through Trawler"));
+    return { turnOff: () => (proxy = { status: "none", address: null }) };
+  };
+
+  const tick = () => act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+  it("reads a proxy turned off beside the window within one tick, without a click and without checking", async () => {
+    const { turnOff } = await opened();
+    turnOff();
+
+    await tick();
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
+    expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
+  });
+
+  it("pauses while the window is hidden, and reads at once when it shows again", async () => {
+    await opened();
+    visibility("hidden");
+    const hidden = probes();
+
+    await tick();
+    await tick();
+    expect(probes()).toBe(hidden);
+
+    visibility("visible");
+    await waitFor(() => expect(probes()).toBe(hidden + 2));
+    await tick();
+    await waitFor(() => expect(probes()).toBe(hidden + 4));
+  });
+
+  it("stops once setup is left", async () => {
+    await opened();
+    fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+    await screen.findByText("Nothing captured yet");
+    const left = probes();
+
+    await tick();
+    await tick();
+
+    expect(probes()).toBe(left);
+  });
 });
 
 // --- the reach seam (E-ONBOARD.W3) -------------------------------------------
@@ -2248,7 +2469,7 @@ test("the way out of a proxy Trawler set survives a trip to the list while nothi
       proxySet = true;
       return undefined;
     }
-    if (name === "proxy_status") {
+    if (name === "proxy_in_use") {
       if (proxySet) throw new Error("cannot read the proxy");
       return { status: "none", address: null };
     }
@@ -2275,7 +2496,7 @@ test("setup opens in checking and holds its buttons until its own reading lands 
   let proxyNow: () => Promise<unknown> = async () => ({ status: "ours", address: "127.0.0.1:7420" });
   vi.mocked(invoke).mockImplementation(async (name: string) => {
     if (name === "ca_trusted") return "trusted";
-    if (name === "proxy_status") return proxyNow();
+    if (name === "proxy_in_use") return proxyNow();
     return undefined;
   });
   const { api } = mockApi(() => []);
@@ -2334,4 +2555,92 @@ test("the list's menu sets up another device the way the banner does", async () 
   await screen.findByText(QUESTION);
   expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("choose a device");
   expect(screen.queryByTestId("steps")).toBeNull();
+});
+
+// ── This machine's own request: the route the core saw (D6 · D9 · DEC-62) ──
+
+describe("This machine's own request", () => {
+  const ANOTHER: OnbState = { ...ONBOARDING, everProven: true };
+  const REQUEST = "make a request to example.com";
+  const note = () => screen.getByTestId("make-request-status");
+
+  // The window's fetch is the request; whatever the core then records of it is
+  // the test's to script, as the real proxy would.
+  function onLinuxWith(answer: (url: string) => Promise<Response>) {
+    onLinuxHost();
+    let rows: FlowSummary[] = [];
+    const mock = mockApi(() => rows);
+    const fetch = vi.fn(answer);
+    vi.stubGlobal("fetch", fetch);
+    render(<App api={mock.api} initialState={ANOTHER} />);
+    return {
+      ...mock,
+      capture: (url: string) => {
+        rows = [flow({ id: "own", uri: url, started_at: new Date().toISOString() })];
+        mock.fire();
+      },
+      url: () => String(fetch.mock.calls[0]?.[0]),
+    };
+  }
+
+  it("marks its request, and reads it through Trawler once its decrypted row arrives", async () => {
+    const own = onLinuxWith(async (url) => {
+      own.capture(url);
+      return new Response(null);
+    });
+    await screen.findByText(QUESTION);
+
+    fireEvent.click(await screen.findByRole("button", { name: REQUEST }));
+
+    await waitFor(() => expect(note()).toHaveTextContent("example.com answered through Trawler."));
+    expect(own.url()).toMatch(/^https:\/\/example\.com\/\?trawler-check=[a-z0-9]+\.\d+$/);
+    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — step 3's request decrypted at \d\d:\d\d/);
+    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — step 3's request came through at \d\d:\d\d/);
+  });
+
+  const afterGrace = async (answer: (url: string, own: ReturnType<typeof onLinuxWith>) => Promise<Response>) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const own: ReturnType<typeof onLinuxWith> = onLinuxWith((url) => answer(url, own));
+    await screen.findByText(QUESTION);
+    fireEvent.click(await screen.findByRole("button", { name: REQUEST }));
+    await waitFor(() => expect(note()).toHaveTextContent("waiting for example.com…"));
+    await act(async () => vi.advanceTimersByTime(TUNNEL_GRACE_MS));
+    return own;
+  };
+
+  it("reads a tunnel to its host and no decrypted row as reaching Trawler and not decrypting", async () => {
+    try {
+      await afterGrace(async (_url, own) => {
+        own.fireConnection("example.com:443");
+        throw new TypeError("Load failed");
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("the request reached Trawler and didn't decrypt."));
+      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in step 3 confirms it");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reads a page that got its answer with nothing seen as going around Trawler", async () => {
+    try {
+      await afterGrace(async (_url, own) => {
+        own.fireConnection("other.test:443");
+        return new Response(null);
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("example.com answered, but not through Trawler."));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("says a request that neither completed nor reached Trawler did not complete", async () => {
+    try {
+      await afterGrace(async () => {
+        throw new TypeError("Load failed");
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("the request to example.com didn't complete."));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
