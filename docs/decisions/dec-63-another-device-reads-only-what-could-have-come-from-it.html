@@ -54,7 +54,8 @@
     <table data-c="rules">
       <tr><th>#</th><th>Rule</th><th>Why</th></tr>
       <tr><td>1</td><td>Another device's evidence starts at the later of the setup session's start and the moment
-        the address it uses was allowed — first seen armed. An address allowed anew starts it again</td><td>nothing
+        the address it uses was allowed — first seen armed. An address allowed anew starts it again; a reach read
+        that failed allowed nothing, and moves nothing</td><td>nothing
         off this machine reaches Trawler before an address is allowed, and a device pointed at the old address is
         not pointed at the new one</td></tr>
       <tr><td>2</td><td>Its try task offers <code>https://example.com/?trawler-check=&lt;code&gt;</code> to open on that
@@ -65,9 +66,10 @@
       <tr><td>3</td><td>Where this machine's proxy reads <code>ours</code> or <code>unknown</code>, nothing unmarked
         counts: the tasks read <em>can't check here — the address in step 4 confirms it</em> · <em>the same request
         confirms it</em> · <em>the address below confirms it</em>, a refusal is the try task's and names no device,
-        and the end does not show. Where it reads <code>none</code> or <code>foreign</code>, unmarked traffic since
-        the allow counts</td><td>this machine's own traffic cannot be told apart from the device's, and only this
-        machine's probe can rule it out</td></tr>
+        and the end does not show. Where it reads <code>none</code> or <code>foreign</code>, unmarked traffic counts
+        from the later of the allow and the moment it stopped pointing here</td><td>this machine's own traffic cannot
+        be told apart from the device's, and only this machine's probe can rule it out — what arrived while it
+        pointed here stays unplaced</td></tr>
       <tr><td>4</td><td>Every proof says when it was made — <em>done — a request decrypted at 14:02</em> · <em>a
         request reached Trawler at 14:02</em> — and lasts the session. The try task keeps its proof once quiet:
         <em>done — decrypted at 14:02, nothing since</em></td><td>nothing here can read that device again; the time
@@ -76,8 +78,8 @@
         Mac</em> — only while its marked request is the newest decrypted proof read</td><td>anything else
         decrypting is unattributed</td></tr>
       <tr><td>6</td><td>An armed address the core's interface list no longer holds reads <em>not working — this Mac
-        no longer holds 192.168.1.24</em>, offers the address held now, and dims the tasks that print the old one.
-        Reach is read again on focus and on the watch, quietly</td><td>the listener stays bound to an address no
+        no longer holds 192.168.1.24</em>, offers the address held now, and dims the tasks that print the old one;
+        the header's chip says it is no longer reachable. Reach is read again on focus and on the watch, quietly</td><td>the listener stays bound to an address no
         device routes to, and only the list says so</td></tr>
     </table>
 
