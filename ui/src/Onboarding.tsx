@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { markedUrl, REQUEST_HOST, type RequestRoute } from "./ownRequest";
+import { markedUrl, REQUEST_HOST, type AnotherDevice, type RequestRoute } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
@@ -51,9 +51,7 @@ import {
   evidenceOf,
   foreignProxyNotice,
   markedDevice,
-  markedTraffic,
-  mayCarryOwnTraffic,
-  markedTryStatus,
+  mixedTryStatus,
   NO_PROXY_READING,
   NO_TRAFFIC,
   notDecryptingHere,
@@ -763,10 +761,10 @@ interface SetupProps {
   probedAt?: number | null;
   traffic?: Traffic;
   ownProofAt?: number | null;
-  // Another device's own request (DEC-63): the mark its address carries, and
-  // when a row carrying it last came through decrypted since it was allowed.
+  // Another device (DEC-63): the mark its address carries, and what its tasks
+  // read beside the traffic that is its.
   deviceMark?: string;
-  deviceProofAt?: number | null;
+  device?: AnotherDevice;
   reach?: ReachState;
   onSetUpThisMachine?: () => Promise<null | void>;
   onSaveCa?: (format: CaFormat) => Promise<string | null>;
@@ -859,6 +857,10 @@ export function BackToFlows({ onBack }: { onBack: () => void }) {
   );
 }
 
+// Another device's tasks read the traffic they are handed unless told this
+// machine's own may be in it.
+const UNMIXED: AnotherDevice = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
+
 function PlatformSetup({
   platform,
   os = "other",
@@ -870,7 +872,7 @@ function PlatformSetup({
   traffic = NO_TRAFFIC,
   ownProofAt = null,
   deviceMark,
-  deviceProofAt = null,
+  device = UNMIXED,
   reach = UNREACHABLE,
   onSetUpThisMachine,
   onSaveCa,
@@ -926,17 +928,15 @@ function PlatformSetup({
   // Each task has one reading. A probe that concludes is it (DEC-33). Where no
   // probe concludes on This machine, its own request is (DEC-62): the try-it
   // command names the proxy itself, and a request from any other device says
-  // nothing about this one (D7). Another device's is what could have come from
-  // it (DEC-63): where this machine's own proxy may be sending its traffic here
-  // too, only that device's marked request. Elsewhere - the Simulator's route
-  // included, when this Mac's proxy cannot be read - this setup's traffic is,
-  // because that is what the task promised to be confirmed by.
+  // nothing about this one (D7). Elsewhere - the Simulator's route included,
+  // when this Mac's proxy cannot be read - this setup's traffic is, because
+  // that is what the task promised to be confirmed by; another device's is
+  // only what could have come from it (DEC-63).
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
   const offMachine = needsReach(platform);
-  const mixed = offMachine && mayCarryOwnTraffic(proxy.status);
-  const seen = mixed ? markedTraffic(deviceProofAt) : traffic;
-  const evidence = evidenceOf(seen, useGraceEdge(seen.openTunnelAt));
+  const mixed = offMachine && device.mixed;
+  const evidence = evidenceOf(traffic, useGraceEdge(traffic.openTunnelAt));
   const ownProved = platform === "this" && ownProofAt !== null;
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = !probesTrust(platform)
@@ -979,16 +979,16 @@ function PlatformSetup({
   const first = offMachine ? 1 : 0;
   const tryStep = first + 3;
 
-  const device: DeviceReading = {
+  const reading: DeviceReading = {
     device: deviceName(platform, os),
-    provedAt: deviceProofAt,
+    provedAt: device.provedAt,
     mixed,
     tryStep,
   };
   const trustState = probesTrust(platform)
     ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
     : offMachine
-      ? deviceTrustStatus(evidence, device, confirmHttpsOn(platform, os))
+      ? deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os))
       : trustByTraffic(evidence, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
@@ -998,7 +998,7 @@ function PlatformSetup({
           : routeByTraffic(evidence, setup.confirmOn),
       })
     : offMachine
-      ? deviceRouteStatus(evidence, device, setup.confirmOn)
+      ? deviceRouteStatus(evidence, reading, setup.confirmOn)
       : routeByTraffic(evidence, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
@@ -1032,7 +1032,7 @@ function PlatformSetup({
   const trustPointed = failedRoute === "trust" || refusedHere;
   const routePointed = failedRoute === "route";
   const byReading = !trustPointed && !routePointed;
-  const guidesOpen = !blocked && seen.lastDecryptedAt === null;
+  const guidesOpen = !blocked && traffic.lastDecryptedAt === null;
   const trustGuideOpen =
     trustPointed ||
     (byReading && guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined);
@@ -1151,7 +1151,7 @@ function PlatformSetup({
           <TrafficState
             read={(now) =>
               mixed
-                ? markedTryStatus(traffic, now, deviceProofAt)
+                ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt)
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
@@ -1196,10 +1196,10 @@ function PlatformSetup({
           platform === "this"
             ? provenDevice(here, trustProbe, proxy.status)
             : offMachine
-              ? markedDevice(deviceName(platform, os), deviceProofAt, seen)
+              ? markedDevice(deviceName(platform, os), device.provedAt, traffic)
               : null
         }
-        traffic={seen}
+        traffic={traffic}
       />
     </>
   );

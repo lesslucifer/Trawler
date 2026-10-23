@@ -1200,6 +1200,119 @@ test("requests from while this machine's proxy pointed here stay unplaced once i
   await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
 });
 
+const rereadOnFocus = async () => {
+  const before = probes();
+  fireEvent(window, new Event("focus"));
+  await waitFor(() => expect(probes()).toBe(before + 2));
+  await act(() => new Promise((settle) => setTimeout(settle, 0)));
+};
+
+const anotherMacWith = async (proxy: () => unknown) => {
+  watchPaused();
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "proxy_in_use" ? proxy() : undefined));
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Another Mac");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+  await waitFor(() => expect(probes()).toBeGreaterThan(0));
+  await act(() => new Promise((settle) => setTimeout(settle, 0)));
+  return (next: FlowSummary[]) => {
+    rows = next;
+    fire();
+  };
+};
+
+// DEC-63 rule 4: that Mac's marked request is its own whatever this Mac's proxy
+// reads after it, so turning the proxy off moves none of its tasks back.
+test("another device's marked request keeps its proof once this machine's proxy is turned off", async () => {
+  let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+  const show = await anotherMacWith(() => proxy);
+  const shown = await screen.findByRole("button", { name: /copy the address to open/i });
+  const address = shown.textContent!.match(/https:\/\/example\.com\/\?trawler-check=[0-9a-z]{4}/)![0];
+  show([flow({ uri: address, started_at: startedNow() })]);
+  await waitFor(() => expect(screen.getByTestId("task-4")).toHaveTextContent("done — decrypted at"));
+
+  proxy = { status: "none", address: null };
+  await rereadOnFocus();
+
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at");
+  expect(screen.getByTestId("task-4")).toHaveTextContent(/done — (capturing traffic|decrypted at)/);
+  expect(screen.getByTestId("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic from that Mac");
+});
+
+// DEC-63 rule 4: what arrived while this Mac's proxy read off was that device's
+// then, and a reading that failed since does not unmake it.
+test("a proof made while this machine's proxy read off outlasts a reading that failed", async () => {
+  let proxy: () => unknown = () => ({ status: "none", address: null });
+  const show = await anotherMacWith(() => proxy());
+  show([flow({ uri: "https://example.com/", started_at: startedNow() })]);
+  await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
+
+  proxy = () => {
+    throw new Error("scutil failed");
+  };
+  await rereadOnFocus();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at");
+
+  proxy = () => ({ status: "none", address: null });
+  await rereadOnFocus();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at");
+  expect(screen.getByTestId("task-3")).toHaveTextContent("done — a request reached Trawler at");
+});
+
+// Only the newest answer lands: a read sent before an allow or a stop, and
+// answered after it, is older than that call's own answer.
+describe("a reach read in flight across an allow or a stop lands nothing", () => {
+  const held = () => {
+    let release: (answer: ReachState) => void = () => {};
+    const pending = new Promise<ReachState>((resolve) => {
+      release = resolve;
+    });
+    return { pending, release: (answer: ReachState) => act(async () => release(answer)) };
+  };
+
+  it("an allow", async () => {
+    watchPaused();
+    vi.mocked(invoke).mockImplementation(async (name: string) => (name === "confirm_reach" ? true : undefined));
+    const reach = vi.fn<() => Promise<ReachState>>(async () => UNARMED);
+    await offMachine({ reach, armReach: vi.fn(async () => ARMED) });
+    await waitFor(() => expect(reach).toHaveBeenCalledOnce());
+    const stale = held();
+    reach.mockReturnValueOnce(stale.pending);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    await stale.release(UNARMED);
+
+    expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24");
+  });
+
+  it("a stop", async () => {
+    watchPaused();
+    const reach = vi.fn<() => Promise<ReachState>>(async () => ARMED);
+    await offMachine({ reach, disarmReach: vi.fn(async () => UNARMED) });
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    const stale = held();
+    reach.mockReturnValueOnce(stale.pending);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "stop listening" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this machine only"),
+    );
+    await stale.release(ARMED);
+
+    expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this machine only");
+  });
+});
+
 // R2: a network change beside the window is read like a setting changed there.
 describe("the allowed address is read again with this machine", () => {
   afterEach(() => vi.useRealTimers());

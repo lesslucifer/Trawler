@@ -12,6 +12,7 @@ import {
   type PlatformId,
 } from "./setup";
 import {
+  mayCarryOwnTraffic,
   NO_TRAFFIC,
   RECENT_MS,
   STATE_WORDS,
@@ -182,9 +183,14 @@ const nothingAsync = async () => {};
 const through = async () => "through" as const;
 
 // App holds what the shell last did to the proxy (S5); the host holds it the same way.
+// It hands another device what could have come from it (DEC-63): while this
+// machine's own traffic may be arriving, which is when the sweep's wire arrived,
+// that is the marked request alone.
 function Host({ s, handlers }: { s: State; handlers: Handlers }) {
   const [routeAct, onRouteAct] = useRouteMemory(s.proxy);
   const { traffic, markedAt } = wireOf(s);
+  const mixed = OFF_MACHINE.has(s.platform) && mayCarryOwnTraffic(s.proxy);
+  const its = !mixed ? traffic : markedAt === null ? NO_TRAFFIC : { ...NO_TRAFFIC, lastDecryptedAt: markedAt };
   return (
     <Onboarding
       state={onboarding}
@@ -193,10 +199,10 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       proxyAddr="127.0.0.1:9999"
       trustProbe={s.trust}
       proxy={{ status: s.proxy, address: s.proxy === "foreign" ? "10.1.1.1:8080" : null }}
-      traffic={traffic}
+      traffic={its}
       ownProofAt={s.own ? OWN_AT : null}
       deviceMark={MARK}
-      deviceProofAt={markedAt}
+      device={{ provedAt: markedAt, mixed, wire: traffic }}
       reach={s.armed ? ARMED : UNARMED}
       onRecheck={nothing}
       onSaveCa={nothingSaved}

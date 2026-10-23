@@ -1,6 +1,7 @@
 import type { FlowSummary } from "./api";
-import { isCaptured } from "./flow";
+import { isCaptured, sessionTraffic } from "./flow";
 import type { PlatformId } from "./setup";
+import { NO_TRAFFIC, type Traffic } from "./verdicts";
 
 // DEC-56: one request, on the user's click, to a destination the sentence
 // names and Trawler does not own. The window's own fetch goes the way a browser
@@ -74,10 +75,55 @@ export function ownRequestProvedAt(flows: FlowSummary[], since: number | null): 
   return lastProvedAt(flows, since, (mark) => mark.startsWith(`${WINDOW_MARK}.`));
 }
 
-// When that device's marked request last came through, decrypted, since `since`
-// - the moment its address was allowed, in this session (A2).
-export function deviceProvedAt(flows: FlowSummary[], since: number, mark: string): number | null {
-  return lastProvedAt(flows, since, (seen) => seen === mark);
+// A stretch in which this machine's proxy read off or another, as this window
+// read it: nothing this machine sent through its system proxy then reached
+// Trawler. The newest is open while that is still the reading.
+export interface ClearSpan {
+  from: number;
+  to: number | null;
+}
+
+const isOpen = (spans: readonly ClearSpan[]) => spans.length > 0 && spans[spans.length - 1].to === null;
+
+export function nextClearSpans(spans: readonly ClearSpan[], clear: boolean, at: number): readonly ClearSpan[] {
+  if (clear === isOpen(spans)) return spans;
+  return clear
+    ? [...spans, { from: at, to: null }]
+    : [...spans.slice(0, -1), { from: spans[spans.length - 1].from, to: at }];
+}
+
+// What another device's tasks read, beside the traffic that is its (DEC-63):
+// the newest of its marked requests, whether this machine's own traffic may be
+// arriving now, and the wire since its address was allowed, which is nobody's.
+export interface AnotherDevice {
+  provedAt: number | null;
+  mixed: boolean;
+  wire: Traffic;
+}
+
+// From the moment its address was allowed (A2), that device's marked rows are
+// its own whatever this machine's proxy read, and an unmarked row or a tunnel is
+// its only where it arrived in a clear span. So a proof, once read, lasts the
+// session (rule 4): no later reading moves the span it arrived in.
+export function deviceTraffic(
+  flows: FlowSummary[],
+  device: { since: number | null; mark: string; clear: readonly ClearSpan[] },
+  tunnels: readonly number[],
+): AnotherDevice & { traffic: Traffic } {
+  const { since, mark, clear } = device;
+  const mixed = !isOpen(clear);
+  if (since === null) return { traffic: NO_TRAFFIC, wire: NO_TRAFFIC, provedAt: null, mixed };
+  const inClear = (at: number) => clear.some((span) => at >= span.from && (span.to === null || at < span.to));
+  const its = flows.filter((flow) => {
+    const marked = markOf(flow);
+    return marked === null ? inClear(Date.parse(flow.started_at)) : marked === mark;
+  });
+  return {
+    traffic: sessionTraffic(its, since, tunnels.filter(inClear)),
+    wire: sessionTraffic(flows, since, tunnels),
+    provedAt: lastProvedAt(flows, since, (seen) => seen === mark),
+    mixed,
+  };
 }
 
 // Which way one request went, as far as the core saw it (D9): decrypted, a

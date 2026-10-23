@@ -191,9 +191,10 @@ export function routeByTraffic(evidence: Evidence, confirmOn: string): StepStatu
 
 // DEC-63: another device's two tasks. Its marked request is that device's by
 // construction - only this screen shows the mark - so it settles both, named
-// and timed. Other traffic is that device's only where this machine's own proxy
-// cannot be sending its traffic here too (`mixed` false); until then nothing
-// unmarked can be told apart, and each task names the request that will.
+// and timed. Other traffic is that device's only where it arrived while this
+// machine's own proxy could not be sending here too; while it may (`mixed`),
+// nothing arriving can be told apart, and each task with no proof yet names
+// the request that will.
 export interface DeviceReading {
   device: string;
   provedAt: number | null;
@@ -206,25 +207,21 @@ export interface DeviceReading {
 // device's (DEC-63).
 export const mayCarryOwnTraffic = (probe: ProxyProbe): boolean => probe === "ours" || probe === "unknown";
 
-// The marked request as the only traffic there is, where nothing else counts.
-export const markedTraffic = (provedAt: number | null): Traffic =>
-  provedAt === null ? NO_TRAFFIC : { ...NO_TRAFFIC, lastDecryptedAt: provedAt };
-
 // Nothing here can read that device again, so a proof says when it was made
 // and lasts the session (P2): the reader sees how old it is.
 export function deviceTrustStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
-  if (reading.mixed) return awaiting(`the address in step ${reading.tryStep} confirms it`);
   if (evidence.decryptedAt !== null) return verdict("done", `a request decrypted at ${clock(evidence.decryptedAt)}`);
+  if (reading.mixed) return awaiting(`the address in step ${reading.tryStep} confirms it`);
   return trustByTraffic(evidence, confirmOn);
 }
 
 export function deviceRouteStatus(evidence: Evidence, reading: DeviceReading, confirmOn: string): StepStatusView {
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request came through at ${clock(reading.provedAt)}`);
-  if (reading.mixed) return awaiting("the same request confirms it");
   if (evidence.reachedAt !== null) return verdict("done", `a request reached Trawler at ${clock(evidence.reachedAt)}`);
+  if (reading.mixed) return awaiting("the same request confirms it");
   return routeByTraffic(evidence, confirmOn);
 }
 
@@ -343,12 +340,15 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
   return around.trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(around.trustedOn) };
 }
 
-// Another device's try task where nothing unmarked is its (DEC-63). The wire may
-// still say nothing decrypts, naming no device, as This machine's try task does
-// where its store went unread (D7); otherwise only the marked request is read.
-export function markedTryStatus(seen: Traffic, now: number, provedAt: number | null): StepStatusView {
-  if (trafficReading(seen, now) === "not-decrypting") return TRAFFIC_VERDICT["not-decrypting"];
-  return provedAt === null ? awaiting("the address below confirms it") : verdict("done", `decrypted at ${clock(provedAt)}`);
+// Another device's try task while nothing arriving is told apart from this
+// machine's (DEC-63). The wire may still say nothing decrypts, naming no device,
+// as This machine's try task does where its store went unread (D7); otherwise
+// only a proof already that device's is read.
+export function mixedTryStatus(wire: Traffic, now: number, decryptedAt: number | null): StepStatusView {
+  if (trafficReading(wire, now) === "not-decrypting") return TRAFFIC_VERDICT["not-decrypting"];
+  return decryptedAt === null
+    ? awaiting("the address below confirms it")
+    : verdict("done", `decrypted at ${clock(decryptedAt)}`);
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A

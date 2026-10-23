@@ -5,7 +5,6 @@ import { CA_FILES, hostOs, lostAddress, needsReach, splitProxyAddr, type CaForma
 import {
   mayCarryOwnTraffic,
   NO_PROXY_READING,
-  NO_TRAFFIC,
   setUpOn,
   TUNNEL_GRACE_MS,
   type ProxyReading,
@@ -27,13 +26,15 @@ import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
   deviceMark,
-  deviceProvedAt,
+  deviceTraffic,
   isOwnRequest,
   makeRequest,
+  nextClearSpans,
   nextMark,
   ownRequestProvedAt,
   REQUEST_HOST,
   requestRoute,
+  type ClearSpan,
   type RequestRoute,
 } from "./ownRequest";
 import {
@@ -232,10 +233,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
-  // When this machine's proxy last stopped possibly sending its own traffic
-  // here, and null while it may: what arrived before it may be this machine's,
-  // so another device's unmarked evidence starts after it (DEC-63 rule 3).
-  const [ownTrafficEndedAt, setOwnTrafficEndedAt] = useState<number | null>(null);
+  // When this machine's proxy read off or another, so nothing of its own could
+  // be arriving: another device's unmarked evidence is only what arrived then
+  // (DEC-63 rule 3), and whatever the reading does later leaves it there.
+  const [clearSpans, setClearSpans] = useState<readonly ClearSpan[]>([]);
   const reads = useRef({ newest: 0, inFlight: false });
 
   const readMachine = useCallback(
@@ -265,7 +266,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         reads.current.inFlight = false;
         setTrustProbe(t);
         setProxyReading(r);
-        setOwnTrafficEndedAt((was) => (mayCarryOwnTraffic(r.status) ? null : (was ?? Date.now())));
+        setClearSpans((spans) => nextClearSpans(spans, !mayCarryOwnTraffic(r.status), Date.now()));
         setProbing(false);
         setProbedAt(Date.now());
       });
@@ -292,10 +293,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     setArmedSince((was) => (proxy === null ? null : was?.proxy === proxy ? was : { proxy, at: Date.now() }));
   }, []);
 
-  // Only the newest read lands. A read that failed armed nothing anew, so it
-  // never moves the evidence clock (DEC-63 rule 1); and one nobody asked for
-  // says nothing at all - a core that stopped answering is the silent band's
-  // to say, not a reason for the tasks to flicker.
+  // Only the newest answer lands - an allow's and a stop's included, so a read
+  // sent before one and answered after it says nothing. A read that failed
+  // armed nothing anew, so it never moves the evidence clock (DEC-63 rule 1);
+  // and one nobody asked for says nothing at all - a core that stopped
+  // answering is the silent band's to say, not a reason for the tasks to flicker.
   const reachReads = useRef(0);
   const readReach = useCallback(
     (mode: "shown" | "quiet") => {
@@ -308,6 +310,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     [client, takeReach],
   );
   const rereadReach = useCallback(() => readReach("shown"), [readReach]);
+  const landReach = (answer: ReachState) => {
+    reachReads.current += 1;
+    takeReach(answer);
+  };
 
   // Whatever can change this machine's answers can change its addresses too,
   // so the reads nobody asked for take both (R2).
@@ -405,20 +411,17 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     [state.phase, everything, state.since],
   );
 
-  // This machine's evidence is the session's. Another device's is only what
-  // arrived since the address it uses was allowed (A2) - and, unmarked, since
-  // this machine's own traffic stopped arriving - and its own request is the
-  // row carrying its mark (DEC-63).
+  // This machine's evidence is the session's. Another device's starts when the
+  // address it uses was allowed (A2), and is what could have come from it (DEC-63).
   const offMachine = needsReach(state.chosen);
   const deviceSince = armedSince === null ? null : Math.max(state.since ?? 0, armedSince.at);
-  const unmarkedSince = deviceSince === null ? null : Math.max(deviceSince, ownTrafficEndedAt ?? deviceSince);
   const mark = offMachine ? deviceMark(state.since, state.chosen) : undefined;
-  const deviceProofAt = useMemo(
+  const device = useMemo(
     () =>
-      state.phase === "onboarding" && mark !== undefined && deviceSince !== null
-        ? deviceProvedAt(everything, deviceSince, mark)
-        : null,
-    [state.phase, everything, mark, deviceSince],
+      state.phase === "onboarding" && mark !== undefined
+        ? deviceTraffic(everything, { since: deviceSince, mark, clear: clearSpans }, tunnelTimes)
+        : undefined,
+    [state.phase, everything, mark, deviceSince, clearSpans, tunnelTimes],
   );
 
   // The confirm comes first and the bind only on a yes — the shell asks,
@@ -429,12 +432,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const armReach = async (address: string) => {
     const allowed = await invoke<boolean>("confirm_reach", { address }).catch(() => false);
     if (!allowed) return null;
-    takeReach(await client.armReach(address));
+    landReach(await client.armReach(address));
     return undefined;
   };
 
   const disarmReach = async () => {
-    takeReach(await client.disarmReach());
+    landReach(await client.disarmReach());
   };
 
   const saveCa = async (format: CaFormat) => saveBody(await client.caFile(format), CA_FILES[format]);
@@ -692,11 +695,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }
 
   if (state.phase === "onboarding") {
-    const traffic = !offMachine
-      ? sessionTraffic(everything, state.since, tunnelTimes)
-      : unmarkedSince === null
-        ? NO_TRAFFIC
-        : sessionTraffic(everything, unmarkedSince, tunnelTimes);
+    const traffic = device?.traffic ?? sessionTraffic(everything, state.since, tunnelTimes);
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
@@ -714,7 +713,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           traffic={traffic}
           ownProofAt={ownProofAt}
           deviceMark={mark}
-          deviceProofAt={deviceProofAt}
+          device={device}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}

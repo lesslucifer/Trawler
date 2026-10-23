@@ -9,9 +9,8 @@ import {
   foreignProxyNotice,
   lastReachedAt,
   markedDevice,
-  markedTraffic,
-  markedTryStatus,
   mayCarryOwnTraffic,
+  mixedTryStatus,
   notDecryptingHere,
   routeByTraffic,
   NO_EVIDENCE,
@@ -651,15 +650,23 @@ describe("another device's two tasks read what could have come from it", () => {
     }
   });
 
-  it("where this machine's traffic may be arriving too, nothing else settles them, and each names what will", () => {
+  it("where this machine's traffic may be arriving too and nothing is that device's yet, each names what will", () => {
     const mixed = { ...THAT_MAC, mixed: true };
-    const seen = evidenceOf({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, AT_1402);
-    const trust = deviceTrustStatus(seen, mixed, FIRST_HTTPS);
-    const route = deviceRouteStatus(seen, mixed, FIRST);
+    const trust = deviceTrustStatus(NO_EVIDENCE, mixed, FIRST_HTTPS);
+    const route = deviceRouteStatus(NO_EVIDENCE, mixed, FIRST);
 
     expect(trust).toEqual(awaiting("the address in step 4 confirms it"));
     expect(route).toEqual(awaiting("the same request confirms it"));
     expect(trust.short).not.toBe(route.short);
+  });
+
+  // Rule 4: a proof that was that device's when it arrived stays its.
+  it("a proof already that device's outranks this machine's traffic arriving now", () => {
+    const mixed = { ...THAT_MAC, mixed: true };
+    const its = evidenceOf({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, AT_1402);
+
+    expect(deviceTrustStatus(its, mixed, FIRST_HTTPS)).toEqual(verdict("done", "a request decrypted at 14:02"));
+    expect(deviceRouteStatus(its, mixed, FIRST)).toEqual(verdict("done", "a request reached Trawler at 14:02"));
   });
 
   // P2: nothing here can read that device again, so the proof says its age.
@@ -677,11 +684,6 @@ describe("another device's two tasks read what could have come from it", () => {
     expect(deviceRouteStatus(NO_EVIDENCE, THAT_MAC, FIRST)).toEqual(awaiting(FIRST));
   });
 
-  it("the marked request alone is the traffic where nothing else counts", () => {
-    expect(markedTraffic(null)).toEqual(NO_TRAFFIC);
-    expect(markedTraffic(AT_1402)).toEqual({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 });
-  });
-
   it("the end names the device only while its marked request is the newest proof (A4)", () => {
     const seen = (at: number) => ({ ...NO_TRAFFIC, lastDecryptedAt: at });
 
@@ -691,22 +693,22 @@ describe("another device's two tasks read what could have come from it", () => {
   });
 });
 
-describe("another device's try task, where nothing unmarked is its", () => {
+describe("another device's try task, while nothing arriving is told apart from this machine's", () => {
   const quiet = AT_1402 + RECENT_MS + 1;
 
-  it("names the address until its marked request came through, then says when", () => {
-    expect(markedTryStatus(NO_TRAFFIC, quiet, null)).toEqual(awaiting("the address below confirms it"));
-    expect(markedTryStatus(NO_TRAFFIC, quiet, AT_1402)).toEqual(verdict("done", "decrypted at 14:02"));
+  it("names the address until a proof is that device's, then says when", () => {
+    expect(mixedTryStatus(NO_TRAFFIC, quiet, null)).toEqual(awaiting("the address below confirms it"));
+    expect(mixedTryStatus(NO_TRAFFIC, quiet, AT_1402)).toEqual(verdict("done", "decrypted at 14:02"));
   });
 
   it("reads none of the wire's capture as its own", () => {
     const capturing = { ...NO_TRAFFIC, lastDecryptedAt: quiet - 1_000 };
-    expect(markedTryStatus(capturing, quiet, null).short).toBe("can't check here — the address below confirms it");
+    expect(mixedTryStatus(capturing, quiet, null).short).toBe("can't check here — the address below confirms it");
   });
 
   it("still says nothing decrypts, naming no device (A3)", () => {
     const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
-    const v = markedTryStatus(refusing, quiet, AT_1402);
+    const v = mixedTryStatus(refusing, quiet, AT_1402);
     expect(v.short).toBe("not working — arriving but not decrypting");
     expect(v.remedy).toMatch(/the device it comes from does not trust/);
   });

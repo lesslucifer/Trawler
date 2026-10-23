@@ -60,10 +60,11 @@ async function shellIsUp() {
 // What journey 2 does NOT drive, and why. Arming reach is an authorization act
 // (DEC-55) and the shell asks before it binds — confirm_reach opens a native
 // message dialog, which WebDriver cannot reach from inside the WKWebView. Nor
-// can the arming be staged around it: App reads reach once on mount and re-reads
-// it only from the two calls that change it, so a POST /reach from here would
-// bind a listener this window never learns of, and the suite runs one core and
-// one window, so there is no second launch that could come up already armed.
+// is the arming staged around it: a POST /reach from here would bind a listener
+// on a real interface of the machine running the suite and expose the control
+// API on its network (DEC-55), which a hermetic suite never does, and the suite
+// runs one core and one window, so there is no second launch that could come up
+// already armed.
 // Stubbing the confirm under the e2e feature was refused: that feature adds the
 // wdio plugins and changes no behaviour, and an e2e that proved arming by
 // removing its authorization would be proving the wrong thing. So journey 2
