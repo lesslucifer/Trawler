@@ -11,6 +11,7 @@ import {
   type TrustProbe,
 } from "./verdicts";
 import { saveBody } from "./body";
+import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
@@ -70,6 +71,11 @@ export const LAUNCH_PATIENCE_MS = 5_000;
 // How often setup re-reads this machine while it is on screen (U3 · DEC-62):
 // a setting changed in System Settings beside the window shows within it.
 export const WATCH_MS = 3_000;
+// Two readings of this machine's proxy further apart than this had a hidden
+// window or a closed setup between them, and vouch for nothing in that gap
+// (DEC-63 rule 3); a quiet read that waited out three ticks in flight still
+// joins its run.
+const READINGS_APART_MAX_MS = 4 * WATCH_MS;
 
 // Select holds at most one option and never returns to unselected, so "any" is a
 // real choice that happens to mean no filter — not a clear affordance the
@@ -241,14 +247,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // be arriving: another device's unmarked evidence is only what arrived then
   // (DEC-63 rule 3), and whatever the reading does later leaves it there.
   const [clearReadings, setClearReadings] = useState<ClearReadings>(NO_CLEAR_READINGS);
-  const reads = useRef({ newest: 0, inFlight: false });
+  const [machineReads] = useState(newestRead);
 
   const readMachine = useCallback(
     (mode: "shown" | "quiet") => {
-      if (mode === "quiet" && reads.current.inFlight) return;
-      const read = ++reads.current.newest;
+      const landing = machineReads.begin(mode);
+      if (landing === null) return;
       const sent = Date.now();
-      reads.current.inFlight = true;
       if (mode === "shown") setProbing(true);
       const { host, port } = splitProxyAddr(proxyAddr);
       // The certificate the core serves now is the one asked about: a store
@@ -267,17 +272,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         () => NO_PROXY_READING,
       );
       void Promise.all([trust, route]).then(([t, r]) => {
-        if (read !== reads.current.newest) return;
-        reads.current.inFlight = false;
+        if (!landing()) return;
+        const landed = Date.now();
         setTrustProbe(t);
         setProxyReading(r);
-        const landed = Date.now();
-        setClearReadings((was) => nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }));
+        setClearReadings((was) =>
+          nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }, READINGS_APART_MAX_MS),
+        );
         setProbing(false);
-        setProbedAt(Date.now());
+        setProbedAt(landed);
       });
     },
-    [client, proxyAddr],
+    [client, proxyAddr, machineReads],
   );
 
   // Reach is a fact about this process, never a stored preference (DEC-55): it
@@ -294,34 +300,26 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     setArmedSince((was) => nextArmedSince(was, next, Date.now()));
   }, []);
 
-  // Only the newest answer lands - an allow's and a stop's included, so a read
-  // sent before one and answered after it says nothing - and a read nobody
-  // asked for waits for the one in flight, as this machine's do, so a core
-  // slower than the watch still gets an answer onto the screen. A read that
-  // failed armed nothing anew, so it never moves the evidence clock (DEC-63
-  // rule 1); and one nobody asked for says nothing at all - a core that stopped
-  // answering is the silent band's to say, not a reason for the tasks to flicker.
-  const reachReads = useRef({ newest: 0, inFlight: false });
+  // An allow's and a stop's own answer overtakes any read sent before it. A
+  // read that failed armed nothing anew, so it never moves the evidence clock
+  // (DEC-63 rule 1); and one nobody asked for says nothing at all - a core that
+  // stopped answering is the silent band's to say, not a reason for the tasks
+  // to flicker.
+  const [reachReads] = useState(newestRead);
   const readReach = useCallback(
     (mode: "shown" | "quiet") => {
-      if (mode === "quiet" && reachReads.current.inFlight) return;
-      const read = ++reachReads.current.newest;
-      reachReads.current.inFlight = true;
-      const landed = () => {
-        if (read !== reachReads.current.newest) return false;
-        reachReads.current.inFlight = false;
-        return true;
-      };
+      const landing = reachReads.begin(mode);
+      if (landing === null) return;
       client.reach().then(
-        (answer) => landed() && takeReach(answer),
-        () => landed() && mode === "shown" && setReach(UNREACHABLE),
+        (answer) => landing() && takeReach(answer),
+        () => landing() && mode === "shown" && setReach(UNREACHABLE),
       );
     },
-    [client, takeReach],
+    [client, takeReach, reachReads],
   );
   const rereadReach = useCallback(() => readReach("shown"), [readReach]);
   const landReach = (answer: ReachState) => {
-    reachReads.current = { newest: reachReads.current.newest + 1, inFlight: false };
+    reachReads.supersede();
     takeReach(answer);
   };
 

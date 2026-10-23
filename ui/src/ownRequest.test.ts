@@ -13,11 +13,12 @@ import {
   nextMark,
   NO_CLEAR_READINGS,
   ownRequestProvedAt,
-  READINGS_APART_MAX_MS,
   REQUEST_HOST,
   requestRoute,
 } from "./ownRequest";
 import { NO_TRAFFIC } from "./verdicts";
+
+const APART = 10_000;
 
 function row(uri: string, over: Partial<FlowSummary> = {}): FlowSummary {
   return {
@@ -248,18 +249,18 @@ describe("the runs in which this machine's own traffic could not arrive", () => 
   const read = (sent: number, landed = sent + 1) => ({ sent, landed });
 
   it("run from the first reading of off or another to land to the last to be sent", () => {
-    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1));
-    readings = nextClearReadings(readings, true, read(5));
-    readings = nextClearReadings(readings, true, read(9));
+    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1), APART);
+    readings = nextClearReadings(readings, true, read(5), APART);
+    readings = nextClearReadings(readings, true, read(9), APART);
 
     expect(readings).toEqual({ spans: [{ from: 2, to: 9 }], open: true });
   });
 
   it("end with a reading that is not, and start anew with the next that is", () => {
-    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1));
-    readings = nextClearReadings(readings, true, read(5));
-    readings = nextClearReadings(readings, false, read(9));
-    readings = nextClearReadings(readings, true, read(13));
+    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1), APART);
+    readings = nextClearReadings(readings, true, read(5), APART);
+    readings = nextClearReadings(readings, false, read(9), APART);
+    readings = nextClearReadings(readings, true, read(13), APART);
 
     expect(readings).toEqual({
       spans: [
@@ -271,16 +272,16 @@ describe("the runs in which this machine's own traffic could not arrive", () => 
   });
 
   it("are untouched by a reading that is not, where none is open", () => {
-    expect(nextClearReadings(NO_CLEAR_READINGS, false, read(3))).toBe(NO_CLEAR_READINGS);
+    expect(nextClearReadings(NO_CLEAR_READINGS, false, read(3), APART)).toBe(NO_CLEAR_READINGS);
   });
 
   // A window hidden, or setup left, between two readings: the proxy may have
   // pointed here and back with nobody reading it.
   it("start anew where two readings are too far apart to vouch for what came between", () => {
-    const later = 5 + READINGS_APART_MAX_MS + 1;
-    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1));
-    readings = nextClearReadings(readings, true, read(5));
-    readings = nextClearReadings(readings, true, read(later));
+    const later = 5 + APART + 1;
+    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1), APART);
+    readings = nextClearReadings(readings, true, read(5), APART);
+    readings = nextClearReadings(readings, true, read(later), APART);
 
     expect(readings).toEqual({
       spans: [
@@ -292,8 +293,8 @@ describe("the runs in which this machine's own traffic could not arrive", () => 
   });
 
   it("leave nothing behind for a run of one reading, which vouches for no time at all", () => {
-    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1));
-    readings = nextClearReadings(readings, false, read(5));
+    let readings = nextClearReadings(NO_CLEAR_READINGS, true, read(1), APART);
+    readings = nextClearReadings(readings, false, read(5), APART);
 
     expect(readings).toEqual({ spans: [], open: false });
   });
@@ -301,9 +302,9 @@ describe("the runs in which this machine's own traffic could not arrive", () => 
   it("keep the newest runs only, however often the reading flips", () => {
     let readings = NO_CLEAR_READINGS;
     for (let run = 0; run < CLEAR_SPANS_MAX + 3; run += 1) {
-      readings = nextClearReadings(readings, true, read(run * 6));
-      readings = nextClearReadings(readings, true, read(run * 6 + 2));
-      readings = nextClearReadings(readings, false, read(run * 6 + 4));
+      readings = nextClearReadings(readings, true, read(run * 6), APART);
+      readings = nextClearReadings(readings, true, read(run * 6 + 2), APART);
+      readings = nextClearReadings(readings, false, read(run * 6 + 4), APART);
     }
 
     expect(readings.spans).toHaveLength(CLEAR_SPANS_MAX);
@@ -322,7 +323,7 @@ describe("another device's traffic", () => {
 
   const readAt = (second: number) => ({ sent: at(second), landed: at(second) });
   const readings = (...runs: { clear: boolean; second: number }[]) =>
-    runs.reduce((was, run) => nextClearReadings(was, run.clear, readAt(run.second)), NO_CLEAR_READINGS);
+    runs.reduce((was, run) => nextClearReadings(was, run.clear, readAt(run.second), APART), NO_CLEAR_READINGS);
 
   it("is its marked rows whatever this machine's proxy read, and nothing unmarked while it may be arriving", () => {
     const flows = [decrypted(3), row(markedUrl(mark), { id: "m", started_at: new Date(at(4)).toISOString() })];
@@ -355,14 +356,14 @@ describe("another device's traffic", () => {
     const open = readings({ clear: true, second: 3 }, { clear: true, second: 5 });
 
     expect(deviceTraffic(flows, { ...allowed, clear: open }, []).traffic).toEqual(NO_TRAFFIC);
-    const pointed = nextClearReadings(open, false, readAt(7));
+    const pointed = nextClearReadings(open, false, readAt(7), APART);
     expect(deviceTraffic(flows, { ...allowed, clear: pointed }, []).traffic).toEqual(NO_TRAFFIC);
-    const offAgain = nextClearReadings(pointed, true, readAt(8));
+    const offAgain = nextClearReadings(pointed, true, readAt(8), APART);
     expect(deviceTraffic(flows, { ...allowed, clear: offAgain }, []).traffic).toEqual(NO_TRAFFIC);
   });
 
   it("is never what arrived between two readings too far apart to vouch for it", () => {
-    const apart = READINGS_APART_MAX_MS / 1_000 + 4;
+    const apart = APART / 1_000 + 4;
     const clear = readings({ clear: true, second: 3 }, { clear: true, second: apart });
 
     expect(deviceTraffic([decrypted(4)], { ...allowed, clear }, []).traffic).toEqual(NO_TRAFFIC);

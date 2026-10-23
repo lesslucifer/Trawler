@@ -1287,6 +1287,37 @@ test("what arrives after the last reading of this machine's proxy as off is no o
   expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — the same request confirms it");
 });
 
+// DEC-63 rule 3: the watch's own readings bracket what arrives between them, so
+// another device's unmarked request settles its tasks within a tick, without a
+// click, at whatever pace the watch keeps.
+test("another device's unmarked request settles its tasks within a tick of the watch", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) =>
+      name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+    );
+    let rows: FlowSummary[] = [];
+    const { api, fire } = mockApi(() => rows);
+    api.reach = vi.fn(async () => ARMED);
+    render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Another Mac");
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    await act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+    rows = [flow({ uri: "https://example.org/", started_at: startedNow() })];
+    fire();
+    await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+    expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it");
+    await act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 // Only the newest answer lands: a read sent before an allow or a stop, and
 // answered after it, is older than that call's own answer.
 const held = () => {

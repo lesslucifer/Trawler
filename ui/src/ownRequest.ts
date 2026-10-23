@@ -116,18 +116,16 @@ export const NO_CLEAR_READINGS: ClearReadings = { spans: [], open: false };
 // that only they held.
 export const CLEAR_SPANS_MAX = 64;
 
-// The watch reads every 3 s while setup is on screen; two readings further apart
-// than this had a hidden window or a closed setup between them, and vouch for
-// nothing in that gap.
-export const READINGS_APART_MAX_MS = 10_000;
 
+// Two readings further apart than `apartMax` vouch for nothing between them.
 export function nextClearReadings(
   was: ClearReadings,
   clear: boolean,
   read: { sent: number; landed: number },
+  apartMax: number,
 ): ClearReadings {
   const last = was.spans[was.spans.length - 1];
-  if (was.open && clear && read.sent - last.to <= READINGS_APART_MAX_MS)
+  if (was.open && clear && read.sent - last.to <= apartMax)
     return { spans: [...was.spans.slice(0, -1), { from: last.from, to: read.sent }], open: true };
   // A run of one reading vouches for no time at all, so it keeps no place.
   const closed = was.open && last.from > last.to ? was.spans.slice(0, -1) : was.spans;
