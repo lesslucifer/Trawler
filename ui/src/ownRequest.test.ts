@@ -94,4 +94,22 @@ describe("the proof this window's own request leaves", () => {
 
     expect(ownRequestProvedAt(flows, since)).toBeNull();
   });
+
+  it("parses no row that carries no mark, since the whole list is read on every refresh", () => {
+    let parsed = 0;
+    vi.stubGlobal(
+      "URL",
+      class extends URL {
+        constructor(...args: ConstructorParameters<typeof URL>) {
+          super(...args);
+          parsed += 1;
+        }
+      },
+    );
+
+    ownRequestProvedAt([row("https://example.com/"), row("https://example.org/a?b=c")], since);
+    vi.unstubAllGlobals();
+
+    expect(parsed).toBe(0);
+  });
 });

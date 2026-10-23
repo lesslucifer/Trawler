@@ -27,7 +27,7 @@ export async function makeRequest(mark: string): Promise<void> {
 }
 
 function markOf(flow: FlowSummary): string | null {
-  if (!isCaptured(flow)) return null;
+  if (!isCaptured(flow) || !flow.uri.includes(`${MARK}=`)) return null;
   try {
     const url = new URL(flow.uri);
     return url.protocol === "https:" && url.hostname === REQUEST_HOST ? url.searchParams.get(MARK) : null;

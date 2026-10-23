@@ -355,6 +355,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     [reach, portNames],
   );
 
+  const ownProofAt = useMemo(
+    () => (state.phase === "onboarding" ? ownRequestProvedAt(everything, state.since) : null),
+    [state.phase, everything, state.since],
+  );
+
   // The confirm comes first and the bind only on a yes — the shell asks,
   // because arming changes what this machine exposes (DEC-13). A dialog that
   // cannot be shown is a question nobody answered, so nothing is armed — and
@@ -639,7 +644,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           routeAct={routeAct}
           onRouteAct={setRouteAct}
           traffic={sessionTraffic(everything, state.since, tunnelTimes)}
-          ownProofAt={ownRequestProvedAt(everything, state.since)}
+          ownProofAt={ownProofAt}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}

@@ -616,19 +616,19 @@ fn parse_active_proxy(out: &str) -> Option<(String, u16)> {
     }
 }
 
-// Every loopback name reaches the one listener Trawler has there, so a proxy
-// typed as localhost is Trawler's as surely as one typed as 127.0.0.1 (D5).
-fn is_loopback(host: &str) -> bool {
-    host.eq_ignore_ascii_case("localhost")
-        || host
-            .trim_start_matches('[')
-            .trim_end_matches(']')
-            .parse::<std::net::IpAddr>()
-            .is_ok_and(|ip| ip.is_loopback())
+// localhost resolves to 127.0.0.1 and ::1 and a client tries each, so a proxy
+// typed as localhost reaches Trawler's loopback listener. Any other loopback
+// address is a listener of its own, which Trawler never binds (D5).
+fn localhost_reaches(host: &str) -> bool {
+    host.trim_start_matches('[')
+        .trim_end_matches(']')
+        .parse::<std::net::IpAddr>()
+        .is_ok_and(|ip| ip == std::net::Ipv4Addr::LOCALHOST || ip == std::net::Ipv6Addr::LOCALHOST)
 }
 
 fn names_trawler(set: &str, host: &str) -> bool {
-    set.eq_ignore_ascii_case(host) || (is_loopback(set) && is_loopback(host))
+    set.eq_ignore_ascii_case(host)
+        || (set.eq_ignore_ascii_case("localhost") && localhost_reaches(host))
 }
 
 fn classify(read: &ProxyRead, host: &str, port: u16) -> ProxyStatus {
@@ -697,17 +697,26 @@ fn windows_proxy(enable: Option<&Ran>, server: impl FnOnce() -> Option<Ran>) -> 
             out.stdout
                 .lines()
                 .find(|l| l.contains("ProxyServer"))
-                .and_then(|l| l.split_whitespace().last())
+                .and_then(reg_value)
                 .and_then(https_server)
         })
         .unwrap_or(ProxyRead::Unreadable)
 }
 
+// A `reg query` line is the name, the type and the value, and the value may
+// itself hold spaces.
+fn reg_value(line: &str) -> Option<&str> {
+    let (_name, rest) = line.trim().split_once(char::is_whitespace)?;
+    let (_kind, value) = rest.trim_start().split_once(char::is_whitespace)?;
+    Some(value.trim())
+}
+
+// WinINET separates a per-scheme list's entries by `;` or by whitespace.
 fn https_server(server: &str) -> Option<ProxyRead> {
     if !server.contains('=') {
         return host_and_port(server).map(|(host, port)| ProxyRead::Set(host, port));
     }
-    let entry = server.split(';').find_map(|entry| {
+    let entry = server.split(|c: char| c == ';' || c.is_whitespace()).find_map(|entry| {
         let (scheme, address) = entry.split_once('=')?;
         scheme.trim().eq_ignore_ascii_case("https").then_some(address.trim())
     });
@@ -1371,6 +1380,23 @@ mod tests {
     }
 
     #[test]
+    fn windows_reads_the_https_entry_of_a_whitespace_separated_list() {
+        let read = |server: &'static str| {
+            windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server(server))
+        };
+
+        assert_eq!(
+            read("https=127.0.0.1:7420 http=10.0.0.1:80"),
+            ProxyRead::Set("127.0.0.1".into(), 7420)
+        );
+        assert_eq!(
+            read("http=10.0.0.1:80 https=10.0.0.9:3128 ftp=10.0.0.2:21"),
+            ProxyRead::Set("10.0.0.9".into(), 3128)
+        );
+        assert_eq!(read("http=10.0.0.1:80 ftp=10.0.0.2:21"), ProxyRead::Off);
+    }
+
+    #[test]
     fn a_per_scheme_list_with_no_https_entry_proxies_no_https() {
         let read =
             windows_proxy(answered(WIN_ENABLED).as_ref(), || win_server("http=127.0.0.1:7420"));
@@ -1693,10 +1719,10 @@ mod tests {
         assert_eq!(proxy_in_use_now("freebsd"), ProxyRead::Unreadable);
     }
 
-    // D5: every loopback name reaches the one listener Trawler has there.
+    // D5: localhost resolves to the address Trawler listens on.
     #[test]
-    fn any_loopback_name_on_trawlers_port_is_trawler() {
-        for set in ["localhost", "LOCALHOST", "127.0.0.1", "127.0.0.2", "::1", "[::1]"] {
+    fn localhost_on_trawlers_port_is_trawler() {
+        for set in ["localhost", "LOCALHOST", "127.0.0.1"] {
             let read = ProxyRead::Set(set.into(), 7420);
             assert_eq!(classify(&read, "127.0.0.1", 7420), ProxyStatus::Ours, "{set}");
         }
@@ -1712,5 +1738,13 @@ mod tests {
             classify(&ProxyRead::Set("192.168.1.24".into(), 7420), "127.0.0.1", 7420),
             ProxyStatus::Foreign
         );
+    }
+
+    #[test]
+    fn another_loopback_address_reaches_nothing_trawler_listens_on() {
+        for set in ["127.0.0.2", "::1", "[::1]"] {
+            let read = ProxyRead::Set(set.into(), 7420);
+            assert_eq!(classify(&read, "127.0.0.1", 7420), ProxyStatus::Foreign, "{set}");
+        }
     }
 }
