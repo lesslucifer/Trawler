@@ -1,0 +1,48 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: 0e151ec590a4ee66b39c59f10869e118cede4f62
+diff_sha256: 984a90536da48de0c026bd1ba0276646a7b58f79359941eaba4609542e573078
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 6
+  stage_seconds:
+    gate0: 38
+    finders: 575
+    verifiers: 587
+    total: 1162
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency:  { found: 2, verified: 2 }
+    altitude:    { found: 7, verified: 6 }
+findings: { found: 9, verified: 8, waived: 0 }
+waivers: []
+blockers:
+  - "ownRequest.ts nextClearSpans / App.tsx: a clear span closes when the next ours-or-unknown reading lands, so this machine's own unmarked rows between the proxy turning to point here and that reading stay another device's proof for the session - DEC-63 rule 3, made permanent by rule 4"
+importants:
+  - "the clear spans grow by one per flip of the reading and are never pruned or capped, and deviceTraffic scans them for every flow and tunnel on each refresh"
+  - "App.tsx takeReach: DEC-63 rule 1's evidence clock (restart on a new address, clear on a stop) is inline in a setState updater with no unit seam, and two of its three branches survive mutation across the whole suite"
+nits:
+  - finding: "deviceTraffic computes the wire on every refresh though only the mixed branch reads it"
+    waived: "not fixed in this range; the next round computes it only while mixed, and this FAIL binds none of it"
+  - finding: "PlatformSetup's device prop defaults to UNMIXED, failing open for a caller that omits it"
+    waived: "Onboarding renders only from App, which passes the device and its mark whenever the platform needs reach; the default serves screen tests that exercise traffic, not attribution"
+  - finding: "'the address is allowed' is spelled in App's takeReach, the chip, NetworkTask and PlatformSetup's allowed"
+    waived: "the core fills armed, proxy and ca_urls from one Option, so the spellings cannot diverge; the lost address is kept apart on purpose - it hides the tasks and keeps the evidence clock (DEC-63 rules 1 and 6)"
+  - finding: "ownRequest.ts now holds another device's attribution beside this window's own request"
+    waived: "DEC-63 extends DEC-62's mark; markOf is private to the module, and moving device attribution out would export it or cycle with flow.ts"
+  - finding: "Evidence carries reached and decrypted beside reachedAt and decryptedAt"
+    waived: "the booleans predate this diff beside unanswered and refused, and every consumer reads one or the other; evidenceOf is the only constructor"
+refuted: "lostAddress against the core's offer list (the UI arms only listed addresses, DEC-63 rule 6 defines lost by the list, and link-local IPv6 cannot be armed at all)"
+verdict: FAIL
+date: 2026-10-23
