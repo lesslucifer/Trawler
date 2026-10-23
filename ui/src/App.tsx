@@ -29,12 +29,15 @@ import {
   deviceTraffic,
   isOwnRequest,
   makeRequest,
-  nextClearSpans,
+  nextArmedSince,
+  nextClearReadings,
   nextMark,
+  NO_CLEAR_READINGS,
   ownRequestProvedAt,
   REQUEST_HOST,
   requestRoute,
-  type ClearSpan,
+  type ArmedSince,
+  type ClearReadings,
   type RequestRoute,
 } from "./ownRequest";
 import {
@@ -236,13 +239,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // When this machine's proxy read off or another, so nothing of its own could
   // be arriving: another device's unmarked evidence is only what arrived then
   // (DEC-63 rule 3), and whatever the reading does later leaves it there.
-  const [clearSpans, setClearSpans] = useState<readonly ClearSpan[]>([]);
+  const [clearReadings, setClearReadings] = useState<ClearReadings>(NO_CLEAR_READINGS);
   const reads = useRef({ newest: 0, inFlight: false });
 
   const readMachine = useCallback(
     (mode: "shown" | "quiet") => {
       if (mode === "quiet" && reads.current.inFlight) return;
       const read = ++reads.current.newest;
+      const sent = Date.now();
       reads.current.inFlight = true;
       if (mode === "shown") setProbing(true);
       const { host, port } = splitProxyAddr(proxyAddr);
@@ -266,7 +270,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         reads.current.inFlight = false;
         setTrustProbe(t);
         setProxyReading(r);
-        setClearSpans((spans) => nextClearSpans(spans, !mayCarryOwnTraffic(r.status), Date.now()));
+        const landed = Date.now();
+        setClearReadings((was) => nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }));
         setProbing(false);
         setProbedAt(Date.now());
       });
@@ -282,15 +287,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // under is not a fact about the setup screen.
   const [reach, setReach] = useState<ReachState>(UNREACHABLE);
 
-  // When the address reach holds now was first seen armed. Nothing off this
-  // machine could reach Trawler there before it, and a device pointed at an
-  // address armed earlier is not pointed at this one, so another device's
-  // evidence starts here (A2).
-  const [armedSince, setArmedSince] = useState<{ proxy: string; at: number } | null>(null);
+  const [armedSince, setArmedSince] = useState<ArmedSince>(null);
   const takeReach = useCallback((next: ReachState) => {
     setReach((held) => (sameReach(held, next) ? held : next));
-    const proxy = next.armed ? next.proxy : null;
-    setArmedSince((was) => (proxy === null ? null : was?.proxy === proxy ? was : { proxy, at: Date.now() }));
+    setArmedSince((was) => nextArmedSince(was, next, Date.now()));
   }, []);
 
   // Only the newest answer lands - an allow's and a stop's included, so a read
@@ -419,9 +419,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const device = useMemo(
     () =>
       state.phase === "onboarding" && mark !== undefined
-        ? deviceTraffic(everything, { since: deviceSince, mark, clear: clearSpans }, tunnelTimes)
+        ? deviceTraffic(everything, { since: deviceSince, mark, clear: clearReadings }, tunnelTimes)
         : undefined,
-    [state.phase, everything, mark, deviceSince, clearSpans, tunnelTimes],
+    [state.phase, everything, mark, deviceSince, clearReadings, tunnelTimes],
   );
 
   // The confirm comes first and the bind only on a yes — the shell asks,

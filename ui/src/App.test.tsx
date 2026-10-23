@@ -735,6 +735,16 @@ test("check again and window focus each re-read both probes, and the reading is 
 const probes = () =>
   vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
 
+// A reading vouches only for what started before it was sent (DEC-63 rule 3),
+// so a row that started this millisecond waits one more before it.
+const rereadOnFocus = async () => {
+  await act(() => new Promise((settle) => setTimeout(settle, 2)));
+  const before = probes();
+  fireEvent(window, new Event("focus"));
+  await waitFor(() => expect(probes()).toBe(before + 2));
+  await act(() => new Promise((settle) => setTimeout(settle, 0)));
+};
+
 // A hidden window runs no watch, so a test counting reads counts only the
 // trigger it is about, however slowly the suite runs.
 function watchPaused() {
@@ -1052,6 +1062,7 @@ describe("another device's evidence starts when its address is allowed", () => {
   const AGAIN: OnbState = { ...ONBOARDING, everProven: true };
 
   const opened = async (rows: () => FlowSummary[]) => {
+    watchPaused();
     onMacHost();
     vi.mocked(invoke).mockImplementation(async (name: string) =>
       name === "proxy_in_use" ? { status: "none", address: null } : undefined,
@@ -1078,8 +1089,9 @@ describe("another device's evidence starts when its address is allowed", () => {
     let rows: FlowSummary[] = [];
     const fire = await opened(() => rows);
 
-    rows = [flow({ uri: "https://example.com/", started_at: new Date(Date.now() + 1_000).toISOString() })];
+    rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
     fire();
+    await rereadOnFocus();
 
     await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted"));
   });
@@ -1195,17 +1207,11 @@ test("requests from while this machine's proxy pointed here stay unplaced once i
   await waitFor(() =>
     expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it"),
   );
-  rows = [...rows, flow({ id: "f2", uri: "https://example.org/", started_at: new Date(Date.now() + 5_000).toISOString() })];
+  rows = [...rows, flow({ id: "f2", uri: "https://example.org/", started_at: startedNow() })];
   fire();
+  await rereadOnFocus();
   await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
 });
-
-const rereadOnFocus = async () => {
-  const before = probes();
-  fireEvent(window, new Event("focus"));
-  await waitFor(() => expect(probes()).toBe(before + 2));
-  await act(() => new Promise((settle) => setTimeout(settle, 0)));
-};
 
 const anotherMacWith = async (proxy: () => unknown) => {
   watchPaused();
@@ -1250,6 +1256,7 @@ test("a proof made while this machine's proxy read off outlasts a reading that f
   let proxy: () => unknown = () => ({ status: "none", address: null });
   const show = await anotherMacWith(() => proxy());
   show([flow({ uri: "https://example.com/", started_at: startedNow() })]);
+  await rereadOnFocus();
   await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
 
   proxy = () => {
@@ -1262,6 +1269,22 @@ test("a proof made while this machine's proxy read off outlasts a reading that f
   await rereadOnFocus();
   expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at");
   expect(screen.getByTestId("task-3")).toHaveTextContent("done — a request reached Trawler at");
+});
+
+// DEC-63 rule 3: a reading speaks for the moment it was read, so what arrives
+// after the last that read this machine's proxy off is no one's until another
+// reads it off too - and no one's for good if the next reads it pointing here.
+test("what arrives after the last reading of this machine's proxy as off is no one's until the next reads it off", async () => {
+  let proxy: { status: string; address: string | null } = { status: "none", address: null };
+  const show = await anotherMacWith(() => proxy);
+  proxy = { status: "ours", address: "127.0.0.1:7420" };
+  show([flow({ uri: "https://example.org/", started_at: startedNow() })]);
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it");
+  await rereadOnFocus();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — the same request confirms it");
 });
 
 // Only the newest answer lands: a read sent before an allow or a stop, and
@@ -2647,6 +2670,7 @@ test("the list before anything is captured has a red dot that opens setup", asyn
 // S2: the dot in setup re-opened setup, restarting the session in place, so a
 // device that had just proved itself was no longer this session's news.
 test("the dot in setup opens the list: it never restarts the session it is in (S2)", async () => {
+  watchPaused();
   onLinuxHost();
   vi.mocked(invoke).mockImplementation(async (name: string) =>
     name === "proxy_in_use" ? { status: "none", address: null } : undefined,
@@ -2661,6 +2685,7 @@ test("the dot in setup opens the list: it never restarts the session it is in (S
   pickPlatform("iPhone or iPad");
   rows = [...rows, flow({ id: "f2", uri: "https://phone.test/", started_at: startedNow() })];
   fire();
+  await rereadOnFocus();
   expect(await screen.findByTestId("proven")).toHaveTextContent("You're set up");
 
   fireEvent.click(screen.getByRole("button", { name: "Capturing — click to show traffic" }));

@@ -1,4 +1,4 @@
-import type { FlowSummary } from "./api";
+import type { FlowSummary, ReachState } from "./api";
 import { isCaptured, sessionTraffic } from "./flow";
 import type { PlatformId } from "./setup";
 import { NO_TRAFFIC, type Traffic } from "./verdicts";
@@ -75,26 +75,58 @@ export function ownRequestProvedAt(flows: FlowSummary[], since: number | null): 
   return lastProvedAt(flows, since, (mark) => mark.startsWith(`${WINDOW_MARK}.`));
 }
 
-// A stretch in which this machine's proxy read off or another, as this window
-// read it: nothing this machine sent through its system proxy then reached
-// Trawler. The newest is open while that is still the reading.
-export interface ClearSpan {
-  from: number;
-  to: number | null;
+// When the address reach holds now was first seen armed. Nothing off this
+// machine could reach Trawler there before it, and a device pointed at an
+// address armed earlier is not pointed at this one, so another device's
+// evidence starts here (A2): the same address keeps its moment, another starts
+// anew, and none clears it.
+export type ArmedSince = { proxy: string; at: number } | null;
+
+export function nextArmedSince(was: ArmedSince, reach: ReachState, at: number): ArmedSince {
+  const proxy = reach.armed ? reach.proxy : null;
+  if (proxy === null) return null;
+  return was?.proxy === proxy ? was : { proxy, at };
 }
 
-const isOpen = (spans: readonly ClearSpan[]) => spans.length > 0 && spans[spans.length - 1].to === null;
+// This window's readings of this machine's proxy as off or another, as runs
+// from the first such reading to the last: between two of them nothing this
+// machine sent through its system proxy reached Trawler. A reading speaks only
+// for its own moment - somewhere between being sent and landing - so a run
+// starts when its first landed and ends when its last was sent, and what
+// arrives after that is no one's until the next reading says the same.
+export interface ClearSpan {
+  from: number;
+  to: number;
+}
 
-export function nextClearSpans(spans: readonly ClearSpan[], clear: boolean, at: number): readonly ClearSpan[] {
-  if (clear === isOpen(spans)) return spans;
-  return clear
-    ? [...spans, { from: at, to: null }]
-    : [...spans.slice(0, -1), { from: spans[spans.length - 1].from, to: at }];
+export interface ClearReadings {
+  spans: readonly ClearSpan[];
+  open: boolean;
+}
+
+export const NO_CLEAR_READINGS: ClearReadings = { spans: [], open: false };
+
+// The reading flips only when this machine's proxy changes or stops answering,
+// so a session reads few runs; past this many, the oldest go, with any proof
+// that only they held.
+export const CLEAR_SPANS_MAX = 64;
+
+export function nextClearReadings(
+  was: ClearReadings,
+  clear: boolean,
+  read: { sent: number; landed: number },
+): ClearReadings {
+  if (!clear) return was.open ? { ...was, open: false } : was;
+  const spans = was.open
+    ? [...was.spans.slice(0, -1), { from: was.spans[was.spans.length - 1].from, to: read.sent }]
+    : [...was.spans.slice(1 - CLEAR_SPANS_MAX), { from: read.landed, to: read.sent }];
+  return { spans, open: true };
 }
 
 // What another device's tasks read, beside the traffic that is its (DEC-63):
 // the newest of its marked requests, whether this machine's own traffic may be
-// arriving now, and the wire since its address was allowed, which is nobody's.
+// arriving now, and - only while it may - the wire since its address was
+// allowed, which is nobody's.
 export interface AnotherDevice {
   provedAt: number | null;
   mixed: boolean;
@@ -103,24 +135,24 @@ export interface AnotherDevice {
 
 // From the moment its address was allowed (A2), that device's marked rows are
 // its own whatever this machine's proxy read, and an unmarked row or a tunnel is
-// its only where it arrived in a clear span. So a proof, once read, lasts the
-// session (rule 4): no later reading moves the span it arrived in.
+// its only where it arrived inside a clear span. So a proof, once read, lasts
+// the session (rule 4): a later reading neither moves nor widens a closed span.
 export function deviceTraffic(
   flows: FlowSummary[],
-  device: { since: number | null; mark: string; clear: readonly ClearSpan[] },
+  device: { since: number | null; mark: string; clear: ClearReadings },
   tunnels: readonly number[],
 ): AnotherDevice & { traffic: Traffic } {
   const { since, mark, clear } = device;
-  const mixed = !isOpen(clear);
+  const mixed = !clear.open;
   if (since === null) return { traffic: NO_TRAFFIC, wire: NO_TRAFFIC, provedAt: null, mixed };
-  const inClear = (at: number) => clear.some((span) => at >= span.from && (span.to === null || at < span.to));
+  const inClear = (at: number) => clear.spans.some((span) => at >= span.from && at <= span.to);
   const its = flows.filter((flow) => {
     const marked = markOf(flow);
     return marked === null ? inClear(Date.parse(flow.started_at)) : marked === mark;
   });
   return {
     traffic: sessionTraffic(its, since, tunnels.filter(inClear)),
-    wire: sessionTraffic(flows, since, tunnels),
+    wire: mixed ? sessionTraffic(flows, since, tunnels) : NO_TRAFFIC,
     provedAt: lastProvedAt(flows, since, (seen) => seen === mark),
     mixed,
   };
