@@ -13,14 +13,14 @@
     <div class="inner">
       <h1>E-ONBRVP.W4 — status: Another Mac</h1>
       <p>Whose traffic each step reads, how old its proof may be, and whether the address that Mac uses still answers.</p>
-      <div class="meta">v1 · 2026-10-23 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W4</span> · branch <code>wu/onboard-revamp/another-mac-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · reuses W3's mark (DEC-62)</div>
+      <div class="meta">v2 · 2026-10-23 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W4</span> · branch <code>wu/onboard-revamp/another-mac-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · reuses W3's mark (DEC-62)</div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Waiting for your rulings.</strong> Eight findings (A1–A4, R1–R2, P1–P2), two notes for W13 and three
-      questions. Nothing is built yet.
+      <strong>Every point is ruled</strong> ("LGTM, let's proceed the work", 2026-10-23). A1–A4, R1–R2 and P1–P2
+      taken; Q1–Q3 all A; N1 and N2 deferred to W13. Building.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -34,8 +34,8 @@
     <p data-item="maps-to">
       <span class="badge id">E-ONBRVP</span> · epic W4 block · UC-ONBOARD: Another Mac's status rows · the owner's
       "proof expires" rule, decided for Another Mac · DEC-63 (new, amends DEC-33, extends DEC-62's mark to another
-      device) · step ① and the evidence are shared code, so Q3 asks whether the other four off-machine platforms get
-      the same rules now.
+      device) · step ① and the evidence are shared code, so the other four off-machine platforms get the same rules
+      now, the phones with the address as a code to scan (Q3 A).
     </p>
 
     <h2 id="steps">The four steps and what reads them</h2>
@@ -96,10 +96,10 @@
     <h3 id="whose-findings">Findings</h3>
     <table data-c="whose-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr><td>A1</td><td>This Mac's own traffic settles that Mac's steps. With this Mac routed through Trawler, its background requests turn ② ③ ④ done and show "You're set up" before that Mac is touched.</td><td>step ④ offers a marked address to open on that Mac, and its row settles ② ③ ④ with that Mac's name. Unmarked traffic counts only while this Mac's proxy does not point here (Q1)</td><td>open</td></tr>
-      <tr><td>A2</td><td>Traffic from before step ① counts. Nothing off this Mac can reach Trawler until then, yet the moment you allow that Mac, ② and ③ read done from this Mac's earlier requests. After you allow a new address, proof from the old one stays.</td><td>evidence counts from the later of the session's start and the moment the current address was allowed (the app records when it armed it, or first saw it armed)</td><td>open</td></tr>
-      <tr><td>A3</td><td>A refusal from this Mac is blamed on that Mac: "that Mac does not trust Trawler's certificate yet", when an app on this Mac that pins its certificate refused.</td><td>a refusal is that Mac's only under the same rule as A1. Anywhere else the try task words it without naming a device, as on This machine (D7)</td><td>open</td></tr>
-      <tr><td>A4</td><td>The success line reads all traffic. Before step ① it can only be this Mac's, and it still says "You're set up" on Another Mac's screen.</td><td>on an off-machine platform the line reads the same evidence as ④, and names that Mac when the marked request proved it. The first-ever reveal of the list is W1's rule and stays</td><td>open</td></tr>
+      <tr><td>A1</td><td>This Mac's own traffic settles that Mac's steps. With this Mac routed through Trawler, its background requests turn ② ③ ④ done and show "You're set up" before that Mac is touched.</td><td>step ④ offers a marked address to open on that Mac, and its row settles ② ③ ④ with that Mac's name. Unmarked traffic counts only while this Mac's proxy does not point here (Q1)</td><td>take</td></tr>
+      <tr><td>A2</td><td>Traffic from before step ① counts. Nothing off this Mac can reach Trawler until then, yet the moment you allow that Mac, ② and ③ read done from this Mac's earlier requests. After you allow a new address, proof from the old one stays.</td><td>evidence counts from the later of the session's start and the moment the current address was allowed (the app records when it armed it, or first saw it armed)</td><td>take</td></tr>
+      <tr><td>A3</td><td>A refusal from this Mac is blamed on that Mac: "that Mac does not trust Trawler's certificate yet", when an app on this Mac that pins its certificate refused.</td><td>a refusal is that Mac's only under the same rule as A1. Anywhere else the try task words it without naming a device, as on This machine (D7)</td><td>take</td></tr>
+      <tr><td>A4</td><td>The success line reads all traffic. Before step ① it can only be this Mac's, and it still says "You're set up" on Another Mac's screen.</td><td>on an off-machine platform the line reads the same evidence as ④, and names that Mac when the marked request proved it. The first-ever reveal of the list is W1's rule and stays</td><td>take</td></tr>
     </table>
 
     <h2 id="reach">Part 2 — step ①: does the address still answer</h2>
@@ -119,8 +119,8 @@
     </div>
     <table data-c="reach-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr><td>R1</td><td>This Mac moves to another Wi-Fi, or its lease changes. ① still reads "listening on 192.168.1.24" and ③ prints that server, though this Mac no longer holds it. GET /reach already lists the addresses held now; the screen never compares.</td><td>armed on an address the list no longer holds reads ⚠ not working, and offers the address held now</td><td>open</td></tr>
-      <tr><td>R2</td><td>Reach is read at launch, when setup opens, when the core returns, and on allow or stop. A network change shows only on the next opening.</td><td>read reach quietly with this Mac's probes: on focus and on the 3 s watch (U4's quiet rule: only a changed answer moves a line). One local GET; the core's address list sends no packet</td><td>open</td></tr>
+      <tr><td>R1</td><td>This Mac moves to another Wi-Fi, or its lease changes. ① still reads "listening on 192.168.1.24" and ③ prints that server, though this Mac no longer holds it. GET /reach already lists the addresses held now; the screen never compares.</td><td>armed on an address the list no longer holds reads ⚠ not working, and offers the address held now</td><td>take</td></tr>
+      <tr><td>R2</td><td>Reach is read at launch, when setup opens, when the core returns, and on allow or stop. A network change shows only on the next opening.</td><td>read reach quietly with this Mac's probes: on focus and on the 3 s watch (U4's quiet rule: only a changed answer moves a line). One local GET; the core's address list sends no packet</td><td>take</td></tr>
     </table>
 
     <h2 id="age">Part 3 — how old proof reads</h2>
@@ -131,23 +131,23 @@
     </table>
     <table data-c="age-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr><td>P1</td><td>30 s after that Mac's request, ④ reads "not done" under two done steps, and the success line goes.</td><td>④ keeps its proof, with the time</td><td>open</td></tr>
-      <tr><td>P2</td><td>② ③ never say how old their proof is. An hour after the request, with the certificate since removed on that Mac, ② still reads "done — a request decrypted". Nothing here can re-read that Mac.</td><td>the line carries its time, so the reader sees what it is (Q2)</td><td>open</td></tr>
+      <tr><td>P1</td><td>30 s after that Mac's request, ④ reads "not done" under two done steps, and the success line goes.</td><td>④ keeps its proof, with the time</td><td>take</td></tr>
+      <tr><td>P2</td><td>② ③ never say how old their proof is. An hour after the request, with the certificate since removed on that Mac, ② still reads "done — a request decrypted". Nothing here can re-read that Mac.</td><td>the line carries its time, so the reader sees what it is (Q2)</td><td>take</td></tr>
     </table>
 
     <h2 id="w13">Noticed outside status — for W13</h2>
     <table data-c="w13">
       <tr><th>#</th><th>What</th><th>Why not here</th><th>Ruling</th></tr>
-      <tr><td>N1</td><td>The route command sets the Wi-Fi service only. That Mac on Ethernet routes nothing, and ③ waits.</td><td>③ already says it cannot check, which is true. The guide's words are W13's</td><td>open: defer to W13</td></tr>
-      <tr><td>N2</td><td>Nothing tells a user whose Mac never reaches Trawler what to check: the same network on both, this machine's firewall.</td><td>① "listening" stays true. The shell does not run the core, so a firewall reading cannot be tied to the listening process. Help text is W13's</td><td>open: defer to W13</td></tr>
+      <tr><td>N1</td><td>The route command sets the Wi-Fi service only. That Mac on Ethernet routes nothing, and ③ waits.</td><td>③ already says it cannot check, which is true. The guide's words are W13's</td><td>defer to W13</td></tr>
+      <tr><td>N2</td><td>Nothing tells a user whose Mac never reaches Trawler what to check: the same network on both, this machine's firewall.</td><td>① "listening" stays true. The shell does not run the core, so a firewall reading cannot be tied to the listening process. Help text is W13's</td><td>defer to W13</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
-      <tr><th>#</th><th>Question</th><th>Proposed</th></tr>
-      <tr><td>Q1</td><td>What settles that Mac's steps? <strong>A</strong> the marked request always, and other traffic since the address was allowed while this Mac's proxy does not point here · <strong>B</strong> the marked request only, as This machine's D7: other traffic shows in ④ and never moves ② ③ · <strong>C</strong> no mark: A2's cut only, and this Mac's traffic keeps counting</td><td>A: the user who just opens a website on that Mac still sees green, and the mark covers the case where this Mac's traffic is mixed in. Its one gap: a program on this Mac with its own proxy setting (<code>curl -x</code>, an emulator) still counts</td></tr>
-      <tr><td>Q2</td><td>How long does a traffic proof last? <strong>A</strong> the session, with its time in the line · <strong>B</strong> 3 minutes, like the dot, then "can't check here — that Mac's next request confirms it" · <strong>C</strong> as today, no time</td><td>A: as W3's Q4. A removed certificate shows only when that Mac sends again, under either option</td></tr>
-      <tr><td>Q3</td><td>Who gets these rules now? <strong>A</strong> all five off-machine platforms: they share step ① and the evidence code, and the phones get the address as a scannable code (DEC-57's component) · <strong>B</strong> Another Mac only, the rest at their own WUs</td><td>A: as W3 gave the Simulator D3 and D5. W5–W10 keep each platform's own review (Windows' route, Ubuntu's NSS, iPhone's trust switch, Android's user CAs)</td></tr>
+      <tr><th>#</th><th>Question</th><th>Proposed · ruling</th></tr>
+      <tr><td>Q1</td><td>What settles that Mac's steps? <strong>A</strong> the marked request always, and other traffic since the address was allowed while this Mac's proxy does not point here · <strong>B</strong> the marked request only, as This machine's D7: other traffic shows in ④ and never moves ② ③ · <strong>C</strong> no mark: A2's cut only, and this Mac's traffic keeps counting</td><td>A: the user who just opens a website on that Mac still sees green, and the mark covers the case where this Mac's traffic is mixed in. Its one gap: a program on this Mac with its own proxy setting (<code>curl -x</code>, an emulator) still counts. <strong>Ruled: A</strong></td></tr>
+      <tr><td>Q2</td><td>How long does a traffic proof last? <strong>A</strong> the session, with its time in the line · <strong>B</strong> 3 minutes, like the dot, then "can't check here — that Mac's next request confirms it" · <strong>C</strong> as today, no time</td><td>A: as W3's Q4. A removed certificate shows only when that Mac sends again, under either option. <strong>Ruled: A</strong></td></tr>
+      <tr><td>Q3</td><td>Who gets these rules now? <strong>A</strong> all five off-machine platforms: they share step ① and the evidence code, and the phones get the address as a scannable code (DEC-57's component) · <strong>B</strong> Another Mac only, the rest at their own WUs</td><td>A: as W3 gave the Simulator D3 and D5. W5–W10 keep each platform's own review (Windows' route, Ubuntu's NSS, iPhone's trust switch, Android's user CAs). <strong>Ruled: A</strong></td></tr>
     </table>
 
     <h2 id="expected">Expected result</h2>
