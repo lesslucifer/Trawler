@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: e196bb4683e6a5567dbfceb367900f34e3288023
+diff_sha256: 7b45c1dda438faccace2553d1d68a4dc668694bf78f986b1d037b9933f952059
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 8
+  stage_seconds:
+    gate0: 37
+    finders: 614
+    verifiers: 840
+    total: 1454
+  by_finder:
+    correctness: { found: 4, verified: 2 }
+    efficiency:  { found: 1, verified: 1 }
+    altitude:    { found: 6, verified: 2 }
+findings: { found: 11, verified: 5, waived: 0 }
+waivers: []
+importants:
+  - "ownRequest.ts nextClearReadings: an open run is extended to the newest clear reading however long ago the one before it was, so a window hidden mid-session bridges a gap in which this machine's proxy may have pointed here and back, and its own unmarked rows count as another device's"
+  - "App.tsx: another device's evidence start, the later of the session start and the allow, is composed inline with no unit seam, and every mutation of it survives the suite"
+  - "App.tsx readReach: a quiet reach read has no in-flight guard, so a /reach slower than the 3 s watch is superseded every tick and never lands"
+nits:
+  - finding: "a run of one clear reading is empty yet takes a slot under CLEAR_SPANS_MAX"
+    waived: "not fixed in this range; the next round drops a run that closes empty, and this FAIL binds none of it"
+  - finding: "'the address is in force' is spelled in the chip, NetworkTask and PlatformSetup's allowed"
+    waived: "the core fills armed, proxy and ca_urls from one Option; the repeated proxy check is what narrows the type for splitProxyAddr; lost has one owner in lostAddress"
+refuted: "the foreign proxy at this machine's own LAN address (at the base all its traffic counted; nothing the product sets reads so); the chip outside setup (reads scoped to setup by DEC-62 rule 4 and UC-ONBOARD); ownRequest.ts as a layer join (DEC-63 amends DEC-33 to make it); the UNMIXED default (App passes the device whenever the platform needs reach); the timed device lines beside the untimed ones (one constructor, the simulators left to W7 and W8); plan-local ids in comments (the codebase's idiom since D7, U3, S5, F27)"
+verdict: FAIL
+date: 2026-10-23
