@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU another-ubuntu-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W6
+branch: wu/onboard-revamp/another-ubuntu-status
+base: 4df86d67de4bf9ce930a11b9634dc69ed5262ab8
+head: 11fca0df4281a28c45813e8de1c33c99e987ec5b
+diff_sha256: 3969d74aa97ba42a114208b396c08a6b27cbba9fcb09e7d7869945eb3beb968c
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 36
+    finders: 17
+    verifiers: 0
+    total: 51
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+rounds: 2
+history:
+  - round: 1
+    tip: dfbb3e923374f58d3576142dea147c13302c6f16
+    verdict: FAIL
+    verified: 1
+    what: "a Chrome installed and never opened has made neither NSS database, so Linux's Chrome command failed after installing libnss3-tools; fixed in ad7d88f with its regression test"
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-10-24
