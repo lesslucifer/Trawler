@@ -114,6 +114,11 @@
     .marked .a-mx-marked{display:block}
     .lost .a-rch-off,.lost .a-rch-on{display:none}
     .lost .a-rch-lost{display:block}
+    /* round 14 — another device after its proof: what follows that does not
+       decrypt leaves the try task done, a refusal as a note under it. */
+    .a-op-late{display:none}
+    .late .a-op-wait,.late .a-op-rest,.late .a-op-tunnel,.late .a-op-proven{display:none}
+    .late .a-op-late{display:block}
     .p-off.mixed [data-zone="done"]{display:none}
     .p-off.marked [data-zone="done"]{display:block}
   </style>
@@ -123,12 +128,12 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W4</strong> · branch <code>wu/onboard-revamp/another-mac-status</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W5</strong> · branch <code>wu/onboard-revamp/another-windows-status</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="archived">
+  <main data-artifact="design-run" data-status="draft">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Mounted from the real <code>ui/src/components/</code>. The buttons under it switch platform and state — read each one alone.</p>
@@ -166,6 +171,7 @@
                   <div class="a-op-wait" id="m-steps-off-reached"></div>
                   <div class="a-op-tunnel" id="m-steps-off-tunnel"></div>
                   <div class="a-op-proven" id="m-steps-off-proven"></div>
+                  <div class="a-op-late" id="m-steps-off-late"></div>
                 </div>
                 <div class="a-mx-mixed">
                   <div class="a-op-rest" id="m-steps-off-mixed"></div>
@@ -239,6 +245,8 @@
               data-label-off="▶ a device: its marked address came through" data-label-on="◀ a device: no marked request">▶ a device: its marked address came through</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="lost"
               data-label-off="▶ a device: this Mac left the allowed address" data-label-on="◀ a device: the address held">▶ a device: this Mac left the allowed address</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="late"
+              data-label-off="▶ a device: after its proof, a connection nothing decrypts" data-label-on="◀ a device: nothing after its proof">▶ a device: after its proof, a connection nothing decrypts</button>
       <script type="text/babel">
         const { React, createRoot, Notice, Section, StatusLine, Button, CommandBlock,
                 StepList, CopyText, Disclosure, Select, Spinner, StatusDot, TaskStep, TimestampText,
@@ -637,7 +645,18 @@
             route: sv("✓", "ok", "done — your iPhone's request came through at 14:02"),
             try: sv("✓", "ok", "done — decrypted at 14:02"),
           },
+          /* Round 14 (S1): nothing here reads the phone again, so its proof
+             stands past what follows it. A refusal after it cannot be the
+             certificate the proof showed working: an app that pins, one with a
+             store of its own, or another device - a note, not a step to redo. */
+          late: {
+            trust: sv("✓", "ok", "done — a request decrypted at 14:02"),
+            route: REACHED_AT,
+            try: sv("✓", "ok", "done — decrypted at 14:02"),
+          },
         };
+        const LATE_REFUSAL =
+          "something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.";
         const UNPLACED =
           "something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.";
         const PROXY_UNDO = ["Settings → Wi-Fi → the network → Configure Proxy → Off."];
@@ -670,7 +689,7 @@
         const phoneTasks = (variant) => {
           const armed = variant !== "unreached" && variant !== "lost";
           const lines = PHONE[variant];
-          const trustDone = variant === "proven" || variant === "marked";
+          const trustDone = variant === "proven" || variant === "marked" || variant === "late";
           const routeDone = trustDone || variant === "tunnel";
           return (
           <Section variant="band" title="">
@@ -764,6 +783,9 @@
                   {variant === "mixed-tunnel" && (
                     <div className="pt-2"><Notice tone="mute">{UNPLACED}</Notice></div>
                   )}
+                  {variant === "late" && (
+                    <div className="pt-2"><Notice tone="mute">{LATE_REFUSAL}</Notice></div>
+                  )}
                   {checkAddress}
                 </>
               )}
@@ -780,6 +802,7 @@
         mount("m-steps-off-mixed-tunnel", phoneTasks("mixed-tunnel"));
         mount("m-steps-off-marked", phoneTasks("marked"));
         mount("m-steps-off-lost", phoneTasks("lost"));
+        mount("m-steps-off-late", phoneTasks("late"));
 
         mount("m-probe-rest",
           <span className="font-ui text-control text-ink-mute">
@@ -875,7 +898,7 @@
         <tr><td>One guide open: a failed action's, else the first task not done. Shut while a button can still do the job; none once a request decrypts</td><td>round 5 · round 7 · R16</td></tr>
         <tr><td>No sentence contradicts a reading beside it: the end names this Mac only when both probes read done; the remedy defers to a trusted certificate</td><td>round 7 · R17 · R18</td></tr>
         <tr><td>Every task has one reading: a probe that concludes, else — on This machine — its own request, else — on another device — what could have come from it, else this setup's own traffic (the model below)</td><td>round 8 · DEC-33 · round 12 · DEC-62 · round 13 · DEC-63</td></tr>
-        <tr><td>A refusal is said once: in the certificate task while it is not done and its own, else in the try task while nothing decrypts now. This machine's is not its own where no probe read its store — it may be any device's</td><td>round 8 · round 12 · D7</td></tr>
+        <tr><td>A refusal is said once: in the certificate task while it is not done and its own, else in the try task while nothing decrypts now. This machine's is not its own where no probe read its store — it may be any device's. On another device after its proof, it is a note under the proof (round 14)</td><td>round 8 · round 12 · D7 · round 14 · S1</td></tr>
         <tr><td>Every sentence that says "the steps below" has them open</td><td>rounds 7 · 8</td></tr>
         <tr><td>A setup session starts when setup opens. The tasks read from traffic, the open guide, the try task and the end read only what started after it, unfiltered by the list</td><td>round 9 · R4 · R7</td></tr>
         <tr><td>The header's dot switches screens in every phase: the list opens setup, setup and the launch check open the list. It reads the newest captured request, not the phase: red with none, green for 3 minutes after one, then a hollow ring. http counts for the dot and never for the certificate task</td><td>round 10 · DEC-61 · P1 · P2 · Q4</td></tr>
@@ -896,6 +919,9 @@
         <tr><td>This machine's try task keeps its proof once the traffic goes quiet, with its time</td><td>round 12 · U5 · Q3</td></tr>
         <tr><td>Another device's tasks read only what could have come from it: its marked request — the address in its try task — always, and other traffic since its address was allowed only where it arrived between two readings of this Mac's proxy as off or another — what no two such readings bracket stays unplaced, and a proof stays whatever that proxy reads after it. Until something is that device's, each names what will settle it, and a refusal is the try task's, naming no device. The end names the device only on its marked request</td><td>round 13 · A1–A4 · DEC-63</td></tr>
         <tr><td>Another device's proof says when it was made and lasts the session; its try task keeps it once quiet</td><td>round 13 · P1 · P2 · Q2</td></tr>
+        <tr><td>Another device's try task keeps its proof past anything after it that does not decrypt: plain http adds nothing, a refusal is a muted note under the proof, never ⚠ and never a step to redo. Every off-machine platform</td><td>round 14 · S1 · Q1</td></tr>
+        <tr><td>A note is true of the system it is shown on: Firefox's own store is named on Linux only, where Firefox keeps one; on macOS and Windows it reads the system's store</td><td>round 14 · S2 · Q2</td></tr>
+        <tr><td>A command runs as written in the shell its sentence names, and reads the file where the step before it left it: Windows' sentences name PowerShell; another computer's trust command reads the download from Downloads</td><td>round 14 · C1 · C2 · Q3</td></tr>
         <tr><td>An allowed address this Mac no longer holds reads not working, offers the one it holds now, and dims the tasks that would print it. Reach is read again with this machine: on focus and every 3 s</td><td>round 13 · R1 · R2</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
         <tr><td>The column is 60% of the window up to 880px; zones 24px apart, tasks 32px</td><td>rounds 5 · 6</td></tr>
@@ -916,7 +942,7 @@
         <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Another device — what could have come from it (round 13)</th><th>The Simulator and the emulator — this setup's traffic</th></tr>
         <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em></td><td>a request decrypted → <em>done — a request decrypted</em> · a tunnel past its grace and nothing decrypted → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — …'s first HTTPS request confirms it</em></td></tr>
         <tr><td>proxy</td><td>this machine and the Simulator: the proxy HTTPS goes through now — <code>scutil --proxy</code> on macOS, the <code>https=</code> entry or the one address on Windows, GNOME's HTTPS proxy on Linux. <code>localhost</code> on Trawler's port is Trawler, no other loopback address is</td><td>the same request → <em>done — step 3's request came through at 14:02</em> · else <em>can't check here — the same request confirms it</em></td><td>the same request → <em>done — your iPhone's request came through at 14:02</em> · where this Mac's traffic may be arriving too → <em>can't check here — the same request confirms it</em> · else any request since its address was allowed → <em>done — a request reached Trawler at 14:02</em> · none → <em>can't check here — your iPhone's first request confirms it</em></td><td>any request reached Trawler → <em>done — requests reached Trawler</em> · none → <em>can't check here — …'s first request confirms it</em>. The Simulator's too, where this Mac's proxy cannot be read</td></tr>
-        <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named</td></tr>
+        <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named. On another device (round 14) the proof also stays past plain http and past a refusal, which is a note under it</td></tr>
       </table>
       <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. On the Simulator and the emulator the screen infers the device from the platform chosen, so a request from this Mac would also count — the blocked-on attribution row stays open. This machine's own request carries a mark (<code>?trawler-check=…</code>, visible in the list) and its tasks read nothing else (round 12). Another device's carries one too, opened there, and its tasks read unmarked traffic only from after its address was allowed and while this Mac's proxy does not point here (round 13). The matrix test renders every host × platform × reach × probe pair × traffic history × own request × marked request and judges each against this table.</p>
 
@@ -943,7 +969,8 @@
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
         <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>the Simulator</em>, …), with the steps open</td></tr>
-        <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted</td></tr>
+        <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted · another device after its proof (round 14), under <em>done — decrypted at 14:02</em>: <em>something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.</em></td></tr>
+        <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's and Ubuntu machine's trust commands read <span class="font-mono">~/Downloads/trawler-ca.pem</span> · <em>Firefox keeps its own store — import it there too.</em> on Linux only · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
         <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
@@ -1058,6 +1085,7 @@
         <tr><td>Round 13, after the close — the code review, round 4: two readings of this Mac's proxy as off with a hidden window between them vouched for everything in that gap; a reach answer slower than the watch never landed; and the evidence's start had no test of its own</td><td>rules · model — readings more than 10 s apart vouch for nothing between them; a reach read nobody asked for waits for the one in flight. Nothing drawn moved. W4's <code>design/v1</code> note cites the blob this amendment leaves</td><td><code>DEC-63</code> rules 1 and 3</td></tr>
         <tr><td>Round 13, after the close — the code review, round 5: the bound on how far apart two readings may be was a second statement of the watch's pace, and the reads of this machine and of reach each kept their own copy of which answer lands</td><td>rules · model — the bound is four watch ticks, set from the watch itself; DEC-63 rule 4 names the cap on runs. Nothing drawn moved. W4's <code>design/v1</code> note cites the blob this amendment leaves</td><td><code>DEC-63</code> rules 3 and 4</td></tr>
         <tr><td>Round 13, after the close — the code review, round 6: a reading's edge between a tunnel and the request it carried counted the tunnel as the device's and not its answer, so the certificate task could read not working for a request that decrypted</td><td>rules · model — a decrypted request after a tunnel on the wire answers it, wherever a reading falls. Nothing drawn moved. W4's <code>design/v1</code> note cites the blob this amendment leaves</td><td><code>DEC-63</code> rule 3 · <code>DEC-33</code> — the clock layer's open tunnel</td></tr>
+        <tr><td>Round 14 — the owner's rulings on E-ONBRVP.W5's plan, 2026-10-24: "ok, let's proceed it" — S1–S2 and C1–C2 taken, Q1–Q3 A: every off-machine platform keeps its try task's proof, Firefox's own store named on Linux only, the commands fixed on all three desktops</td><td>mockup — a device after its proof, a connection nothing decrypts: the try task done with a note under it · rules — the proof past what follows it, a note true of its system, a command that runs where its sentence says · model — the try row · copy — the note; a computer's commands and notes</td><td><code>DEC-63</code> — a refusal after a proof · <code>Notice</code> tone mute — a note, not a remedy · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
       </tbody>
     </table>
 
