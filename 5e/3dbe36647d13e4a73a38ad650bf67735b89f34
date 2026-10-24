@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 5e3dbe36647d13e4a73a38ad650bf67735b89f34
+base: 265adfaed53523bd519c780e3d08a3041aa307ad
+tier: key
+signer: vuluu
+report: docs/work/2026-10-24-onboard-revamp-w7-ios-simulator-status-result.html
+report_sha256: 313f9952b11b254a5f520e47a7ae39aecdb371ee73e25accaf93c00a64bdd381
+date: 2026-10-24
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECQNN+7RoTQNGX6s3ftGiAi+xrC3m57qLL2zu7l2XHFXzRUhgy8CBUDXr
+  FJ3654SdoFDtf2Xu+T5EDhOHgCtYAD
+  -----END SSH SIGNATURE-----
