@@ -1514,7 +1514,7 @@ describe("another Ubuntu machine", () => {
     pick("Another Ubuntu machine");
 
     expect(commandNamed("the Chrome command")).toHaveTextContent(
-      'sudo apt install -y libnss3-tools && certutil -d "sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"',
+      'sudo apt install -y libnss3-tools && { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } && certutil -d "sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"',
     );
     expect(commandNamed("the trust command")).toHaveTextContent('sudo cp "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem" ');
   });

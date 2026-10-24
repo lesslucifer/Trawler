@@ -768,7 +768,7 @@ describe("Linux's certificate task installs into every store, each a step of its
     const [chrome] = commands([trustOf(id, os).steps[2]]);
     const [chromeRemoval] = commands([trustOf(id, os).undo![1]]);
 
-    expect(chrome).toMatch(/^sudo apt install -y libnss3-tools && certutil /);
+    expect(chrome).toMatch(/^sudo apt install -y libnss3-tools && /);
     expect(chrome).toContain(`-d ${NSS_DB} -A -t C,, -n trawler -i `);
     expect(chromeRemoval).toBe(`certutil -d ${NSS_DB} -D -n trawler`);
   });
@@ -797,4 +797,15 @@ describe("Linux's certificate task installs into every store, each a step of its
       }
     }
   });
+});
+
+// Review round 1: a Chrome installed and never opened has made neither NSS
+// database, and certutil adds only to a database it was asked to create.
+test("Linux's Chrome command creates the database a Chrome since M146 reads where none exists, before adding to it", () => {
+  const chrome = commands([setup("ubuntu").trust.guide!.steps[2]])[0];
+  const create =
+    "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
+
+  expect(chrome).toContain(`libnss3-tools && ${create} && certutil -d `);
+  expect(chrome.indexOf(" -N ")).toBeLessThan(chrome.indexOf(" -A "));
 });

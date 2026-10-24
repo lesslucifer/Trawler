@@ -372,9 +372,13 @@ const REFUSED_AFTER_PROOF_LINUX =
 // Firefox keeps its own, Chrome the NSS database, and curl and the system's
 // tools the system bundle. Each is a step, browsers first, because the try task
 // opens a browser (C1). Chromium moved the NSS database at M146 and keeps an
-// older one where it exists (C3), and certutil is not on a stock Ubuntu (C2).
+// older one where it exists (C3); a Chrome never opened has made neither, and
+// certutil adds only to a database it was asked to create. certutil is not on
+// a stock Ubuntu (C2).
 const FIREFOX_AUTHORITIES = "In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities";
 const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
+const NSS_DB_MADE =
+  "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
 const FOR_CHROME = "For Chrome, run:";
 const FOR_SYSTEM_TOOLS = "For curl and the system's tools, run:";
 
@@ -434,7 +438,7 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
       [
         FOR_CHROME,
         {
-          command: `sudo apt install -y libnss3-tools && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
+          command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
           label: "the Chrome command",
         },
       ],
