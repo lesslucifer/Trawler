@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8ba0e72869f2b24af37f43c72e69911a5f3ce994
+base: 1815021e7045898674320b536844e6e0b250262c
+tier: key
+signer: vuluu
+report: docs/work/2026-10-23-onboard-revamp-w4-another-mac-status-result.html
+report_sha256: 8474b8a27dcd3143f6125b6aabe823f72282b2f646a3ac1e2f6cbc74e488ac0b
+date: 2026-10-24
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAIHGCHm+JeyxXVBk0YIOP9SYbuxkcsC2/puHc8INWD0N/9oCnJyscVNF
+  Oqf1JxqpZTwtxvAoE9Rh95kkU3AIYF
+  -----END SSH SIGNATURE-----
