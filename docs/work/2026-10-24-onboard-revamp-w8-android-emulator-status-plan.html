@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6adc78969f34851f0dfadaca" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6adc78969f34851f0dfadaca" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,16 +10,16 @@
     <div class="inner">
       <h1>E-ONBRVP.W8 — status: Android emulator</h1>
       <p>The emulator's tasks read what is the emulator's — its own proxy and store where adb can read them, else its marked request — and its steps route it, as written, to Trawler.</p>
-      <div class="meta">v1 · 2026-10-24 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W8</span> · branch <code>wu/onboard-revamp/android-emulator-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · takes up what DEC-63 left to this WU</div>
+      <div class="meta">v2 · 2026-10-24 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W8</span> · branch <code>wu/onboard-revamp/android-emulator-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · takes up what DEC-63 left to this WU</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waits for your ruling.</strong> Ten findings (S1–S4, C1–C5) and three questions. Every C-row and the
-      store, network and refusal facts below were reproduced on this Mac on two throwaway AVDs (Android 15, API 35,
-      <code>google_apis</code> arm64, the image of your <code>Pixel_7_API_35</code>), against a scratch core on spare ports,
-      both deleted after. Your AVD and your running Trawler were not touched.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("ok, go and implement it", 2026-10-24). S1–S4 and C1–C5 taken; Q1–Q3 all A;
+      N1–N2 deferred to W17, N3 to the roadmap, N4 carried to W10. Every C-row and the store, network and refusal facts below
+      were reproduced on this Mac on two throwaway AVDs (Android 15, API 35, <code>google_apis</code> arm64, the image of your
+      <code>Pixel_7_API_35</code>), against a scratch core on spare ports, both deleted after.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -91,7 +91,7 @@
           request settles both, named and timed — <em>the emulator's request decrypted at 14:02</em> — and unmarked
           traffic counts only between two readings of this machine's proxy as off or another (rule 3), from the session's
           start, since it needs no allow. Its proxy is its own, so that span is one in which this machine's system proxy
-          sends nothing here; <code>curl -x</code> stays accepted, as DEC-63 already says.</td><td>—</td></tr>
+          sends nothing here; <code>curl -x</code> stays accepted, as DEC-63 already says.</td><td>take</td></tr>
       <tr data-item="S2"><td>S2</td>
         <td><strong>Android's own refusals are blamed on the certificate.</strong> An idle emulator whose proxy points
           at Trawler opens a few tunnels a second that never decrypt, CA installed or not (reproduced): its services ignore
@@ -99,7 +99,7 @@
           does the same.</td>
         <td>On the emulator a refusal is never ①'s. It is ③'s, and names no device (rule 3's mixed try task). Where ① reads
           its store trusted (Q1), ③'s remedy names that store: <em>the emulator trusts Trawler's certificate — Android's
-          own services ignore a user certificate, so a website in Chrome is the test.</em></td><td>—</td></tr>
+          own services ignore a user certificate, so a website in Chrome is the test.</em></td><td>take</td></tr>
       <tr data-item="S3"><td>S3</td>
         <td><strong>A proof does not last.</strong> ③ keeps a decrypted request for 30 s, then reads <em>not working</em>
           under the services' refusals — "Finish the certificate step", under a done ① — or <em>not done — nothing
@@ -107,7 +107,7 @@
         <td>③ offers the marked address — "or open this one in the emulator" — and keeps its proof past anything that does
           not decrypt: <em>done — decrypted at 14:02</em>, a refusal after it a muted note (rule 7). The end names the
           device on its marked request only: "You're set up — Trawler is capturing traffic from the emulator" (rule 5).
-          Every proof is timed (rule 4).</td><td>—</td></tr>
+          Every proof is timed (rule 4).</td><td>take</td></tr>
       <tr data-item="S4"><td>S4</td>
         <td><strong>② cannot tell a proxy the emulator ignores.</strong> With the Wi-Fi proxy set and the emulator sending
           over mobile data (C4), ② waits for traffic that never comes, or reads done on this machine's (S1). Nothing on the
@@ -115,7 +115,7 @@
         <td>② reads the emulator's own proxy (Q2): <em>done — the emulator's proxy points at Trawler</em> ·
           <em>not done — the Wi-Fi proxy is set, but the emulator sends over mobile data</em> · <em>not done — another
           proxy is set</em>. A proxy the guest cannot see (the start-up flag, C3) never reads <em>not done</em>: where the
-          probe reads none, ② falls to S1's readings.</td><td>—</td></tr>
+          probe reads none, ② falls to S1's readings.</td><td>take</td></tr>
     </table>
 
     <h2 id="commands">Part 2 — steps that cannot be done as written</h2>
@@ -127,43 +127,43 @@
           save wrote to (reproduced). W7's Q2 ruled A — every guide where a save step comes before a command — and this
           guide was missed.</td>
         <td>As W7's C1: the path the save returned, quoted for the host's shell; <code>~/Downloads</code> (or the host's
-          equivalent) before a save.</td><td>—</td></tr>
+          equivalent) before a save.</td><td>take</td></tr>
       <tr data-item="C2"><td>C2</td>
         <td><strong>The push fails with two of anything.</strong> Two emulators, or an emulator and a phone on USB:
           <em>more than one device/emulator</em>; <code>-e</code> fails on two emulators (reproduced).</td>
         <td>The command pushes to every running emulator, as W7's C2 does for Simulators — POSIX:
           <code>for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d push &lt;file&gt; /sdcard/Download/; done</code>;
-          PowerShell on Windows. With Q1, ① names any running emulator still without it.</td><td>—</td></tr>
+          PowerShell on Windows. With Q1, ① names any running emulator still without it.</td><td>take</td></tr>
       <tr data-item="C3"><td>C3</td>
         <td><strong>The start-up flag names an address this machine does not have.</strong> <code>-http-proxy</code> is
           read by the emulator process on this machine, where <code>10.0.2.2</code> is nothing: it times out, ignores the
           proxy, and boots with none (reproduced).</td>
         <td><code>emulator -avd &lt;name&gt; -http-proxy http://127.0.0.1:&lt;port&gt;</code> — reproduced routing and
-          decrypting. Its place among the routes: Q3.</td><td>—</td></tr>
+          decrypting. Its place among the routes: Q3.</td><td>take</td></tr>
       <tr data-item="C4"><td>C4</td>
         <td><strong>The Wi-Fi proxy routes nothing</strong> where the emulator's default network is its mobile one — on
           both fresh API 35 AVDs here: Chrome loaded an HTTPS page directly with the proxy set (reproduced).</td>
-        <td>The route is one that holds on every network: Q3.</td><td>—</td></tr>
+        <td>The route is one that holds on every network: Q3.</td><td>take</td></tr>
       <tr data-item="C5"><td>C5</td>
         <td><strong>The menu paths are not there.</strong> On API 35 <em>Settings → Security</em> and <em>Settings →
           Wi-Fi → the network → Proxy</em> do not exist, and the picker opens where a pushed file is not
           (reproduced). The same <em>Security</em> path is printed for an Android device and its removal.</td>
         <td>The emulator's install and removal name API 35's path, and the picker's <em>☰ → Downloads</em>. The Android
-          device's paths go to W10, whose phones vary by maker (N4).</td><td>—</td></tr>
+          device's paths go to W10, whose phones vary by maker (N4).</td><td>take</td></tr>
     </table>
 
     <h2 id="noticed">Noticed outside status — for later WUs</h2>
     <table data-c="noticed">
-      <tr><th>#</th><th>What</th><th>Why not here</th><th>Proposed</th></tr>
-      <tr data-item="N1"><td>N1</td><td>Android Studio does not put <code>adb</code> or <code>emulator</code> on the PATH; a terminal without it fails with <em>command not found</em>. Not reproduced: your shell profile adds both</td><td>the commands are right where the SDK is on the PATH. Saying where it is when not is help text</td><td>defer to W17</td></tr>
-      <tr data-item="N2"><td>N2</td><td>The shell could run the push and the proxy itself — "Install in the emulator" · "Route the emulator" buttons — since adb needs no password; and <code>am start</code> can open the right Settings screen</td><td>interactive routes are the epic's Q11, W17's</td><td>defer to W17</td></tr>
-      <tr data-item="N3"><td>N3</td><td>Core: the emulator's start-up proxy forwards some plain-http requests in origin form (<code>GET /edgedl/…</code>, <code>Host:</code> only). Trawler records each twice — a bare path with no status, and <code>http://127.0.0.1:17420/…</code> answered <code>502</code> — so the request fails, and each tunnel also shows a connection to <code>127.0.0.1:17420</code></td><td>core changes are this epic's non-goal</td><td>a roadmap row</td></tr>
-      <tr data-item="N4"><td>N4</td><td>An Android device shares S2 (its services refuse a user CA) and C5's paths</td><td>its own status WU</td><td>carry to W10</td></tr>
+      <tr><th>#</th><th>What</th><th>Why not here</th><th>Ruling</th></tr>
+      <tr data-item="N1"><td>N1</td><td>Android Studio does not put <code>adb</code> or <code>emulator</code> on the PATH; a terminal without it fails with <em>command not found</em>. Not reproduced: your shell profile adds both</td><td>the commands are right where the SDK is on the PATH. Saying where it is when not is help text</td><td>ruled: defer to W17</td></tr>
+      <tr data-item="N2"><td>N2</td><td>The shell could run the push and the proxy itself — "Install in the emulator" · "Route the emulator" buttons — since adb needs no password; and <code>am start</code> can open the right Settings screen</td><td>interactive routes are the epic's Q11, W17's</td><td>ruled: defer to W17</td></tr>
+      <tr data-item="N3"><td>N3</td><td>Core: the emulator's start-up proxy forwards some plain-http requests in origin form (<code>GET /edgedl/…</code>, <code>Host:</code> only). Trawler records each twice — a bare path with no status, and <code>http://127.0.0.1:17420/…</code> answered <code>502</code> — so the request fails, and each tunnel also shows a connection to <code>127.0.0.1:17420</code></td><td>core changes are this epic's non-goal</td><td>ruled: a roadmap row</td></tr>
+      <tr data-item="N4"><td>N4</td><td>An Android device shares S2 (its services refuse a user CA) and C5's paths</td><td>its own status WU</td><td>ruled: carry to W10</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
-      <tr><th>#</th><th>Question</th><th>Proposed</th></tr>
+      <tr><th>#</th><th>Question</th><th>Proposed · ruling</th></tr>
       <tr data-item="Q1"><td>Q1</td>
         <td>What reads ①?
           <strong>A</strong> a shell-side probe (epic Q8): for each running emulator, list
@@ -175,7 +175,7 @@
         <td>A. It re-reads, so a removed certificate or a wiped emulator reads <em>not done</em> on the next tick (the
           epic's "a proof is not permanent"), and it is what lets S2's remedy say the store trusts it. Risks: an
           undocumented path, read only — a moved store reads unread, never not installed; <code>adb devices</code> starts
-          adb's server where none runs, as Android Studio does anyway</td></tr>
+          adb's server where none runs, as Android Studio does anyway. Ruled: A</td></tr>
       <tr data-item="Q2"><td>Q2</td>
         <td>What reads ②?
           <strong>A</strong> a shell-side probe, as the shell user, every image: the global proxy
@@ -185,7 +185,7 @@
           worded as not done ·
           <strong>B</strong> no probe: S1's readings only</td>
         <td>A. It is the one reading that can say why a set proxy routes nothing (C4), and it costs ~35 ms. It cannot see
-          the start-up flag, which is why <em>none</em> stays silent</td></tr>
+          the start-up flag, which is why <em>none</em> stays silent. Ruled: A</td></tr>
       <tr data-item="Q3"><td>Q3</td>
         <td>How does ② route the emulator?
           <strong>A</strong> one command: <code>adb shell settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>, looped
@@ -194,7 +194,7 @@
           <strong>B</strong> keep the Settings steps first, with a step that turns off mobile data ·
           <strong>C</strong> the fixed start-up flag first, which reaches every app but needs a restart</td>
         <td>A. It holds on every network (reproduced), needs no menu path, and Q2 reads it back. B leaves the path
-          that broke and depends on a setting the user must remember to restore</td></tr>
+          that broke and depends on a setting the user must remember to restore. Ruled: A</td></tr>
     </table>
 
     <h2 id="expected">Expected result</h2>
