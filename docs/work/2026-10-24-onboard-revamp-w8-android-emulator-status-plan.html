@@ -17,7 +17,7 @@
 
     <div class="callout" data-c="status">
       <strong>Every point is ruled</strong> ("ok, go and implement it", 2026-10-24). S1–S4 and C1–C5 taken; Q1–Q3 all A;
-      N1–N2 deferred to W17, N3 to the roadmap, N4 carried to W10. Every C-row and the store, network and refusal facts below
+      N1–N2 deferred to W17, N3 to the roadmap, N4 carried to W10. Built; round 17 of the setup screen's design run waits for your review. Every C-row and the store, network and refusal facts below
       were reproduced on this Mac on two throwaway AVDs (Android 15, API 35, <code>google_apis</code> arm64, the image of your
       <code>Pixel_7_API_35</code>), against a scratch core on spare ports, both deleted after.
     </div>
@@ -168,7 +168,7 @@
         <td>What reads ①?
           <strong>A</strong> a shell-side probe (epic Q8): for each running emulator, list
           <code>/data/misc/user/0/cacerts-added</code> through <code>su 0</code> and compare each file's bytes with the
-          live certificate's DER — <em>done — trusted in Pixel_7_API_35</em> · <em>not done — not in …</em>. Unread
+          live certificate's DER — <em>done — trusted in Pixel 7 API 35</em> · <em>not done — not in …</em>. Unread
           where no emulator runs, adb is not found, or the image has no <code>su</code> (Google Play images are
           <code>user</code> builds — not reproduced, none on this Mac); then S1's readings settle ① ·
           <strong>B</strong> no probe: S1's readings only</td>
@@ -200,8 +200,8 @@
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
       <tr><th>Try this…</th><th>…and see</th></tr>
-      <tr><td>set up This machine, browse on it, then choose Android emulator, with an emulator running</td><td>① <em>not done — not in Pixel_7_API_35</em> (or, unread, <em>can't check here — the address in step 3 confirms it</em>) · ② <em>can't check here — the same request confirms it</em>, since its probe reads no proxy · ③ <em>can't check here — the address below confirms it</em> · no success line</td></tr>
-      <tr><td>run ②'s command, install ①, leave the emulator idle</td><td>① <em>done — trusted in Pixel_7_API_35</em> · ② <em>done — the emulator's proxy points at Trawler</em> · its services' refusals never turn ① <em>not working</em></td></tr>
+      <tr><td>set up This machine, browse on it, then choose Android emulator, with an emulator running</td><td>① <em>not done — not in Pixel 7 API 35</em> (or, unread, <em>can't check here — the address in step 3 confirms it</em>) · ② <em>can't check here — the same request confirms it</em>, since its probe reads no proxy · ③ <em>can't check here — the address below confirms it</em> · no success line</td></tr>
+      <tr><td>run ②'s command, install ①, leave the emulator idle</td><td>① <em>done — trusted in Pixel 7 API 35</em> · ② <em>done — the emulator's proxy points at Trawler</em> · its services' refusals never turn ① <em>not working</em></td></tr>
       <tr><td>save the certificate anywhere, two emulators running, run ①'s push as printed</td><td>it finds the file and reaches both; ① names any still without it</td></tr>
       <tr><td>set only the Wi-Fi proxy</td><td>② <em>not done — the Wi-Fi proxy is set, but the emulator sends over mobile data</em></td></tr>
       <tr><td>open the marked address in the emulator</td><td>③ <em>done — decrypted at 14:02</em>, kept past later refusals · "You're set up — Trawler is capturing traffic from the emulator"</td></tr>
