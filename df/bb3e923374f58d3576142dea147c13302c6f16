@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU another-ubuntu-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W6
+branch: wu/onboard-revamp/another-ubuntu-status
+base: 4df86d67de4bf9ce930a11b9634dc69ed5262ab8
+head: dfbb3e923374f58d3576142dea147c13302c6f16
+diff_sha256: e1816969c855668b5afb815b5c1d021689b03aff18e300b130283ff99f972112
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 86
+    finders: 29
+    verifiers: 22
+    total: 105
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+findings_verified:
+  - severity: important
+    location: "ui/src/setup.ts NSS_DB and Linux's Chrome install command"
+    finding: "where neither ~/.pki/nssdb nor ~/.local/share/pki/nssdb exists - a Chrome installed and never opened, likely on a fresh Ubuntu - the command falls back to a database that does not exist and certutil -A fails after libnss3-tools installs, so the step promising Chrome's trust cannot be done as written"
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-10-24
