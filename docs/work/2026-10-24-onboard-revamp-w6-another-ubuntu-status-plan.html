@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adc49039f34851f0dfad9ee" data-artifact="wu-plan" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W6 plan: status, Another Ubuntu machine</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W6 — status: Another Ubuntu machine</h1>
+      <p>A certificate step that reaches the browser the try task opens, advice that names Ubuntu's three stores, and commands that run on a stock Ubuntu.</p>
+      <div class="meta">v1 · 2026-10-24 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W6</span> · branch <code>wu/onboard-revamp/another-ubuntu-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · inherits W4's and W5's rules (DEC-63)</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout warn" data-c="status">
+      <strong>Waiting for your rulings</strong> on S1–S2, C1–C4 and Q1–Q3. N1–N4 are proposed for later WUs. Nothing is built yet.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong>Another Ubuntu machine's certificate step installs into every store the try task's browser can read, so
+      following it as written lets step ④ decrypt. Each status line's advice names the store that is still missing. Each
+      command runs as written on a stock Ubuntu desktop and finds the file the step before it downloaded. A test holds
+      each rule.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-ONBRVP</span> · epic W6 block · UC-ONBOARD: Another Ubuntu machine's status rows ·
+      DEC-63 rule 7's note gains a Linux wording (S2) · the guide's trust route is keyed by operating system, so a Linux
+      fix also reaches This machine on a Linux host and on an unknown one (Q1).
+    </p>
+
+    <h2 id="steps">The four steps and what reads them</h2>
+    <div class="diagram" data-c="steps-diagram">
+<pre class="mermaid">flowchart LR
+  S1["① Allow that machine to connect"] --- R["the core's reach<br/>(GET /reach)"]
+  S2["② On that machine, install the certificate<br/>update-ca-certificates"] --- T["traffic since the allow<br/>(DEC-63)"]
+  S3["③ On that machine, send its traffic<br/>gsettings … GNOME proxy"] --- T
+  S4["④ Open any website on that machine"] --- T
+</pre>
+      <div class="caption">As on Another Mac and Another Windows PC, nothing here reads that machine. What is particular to Ubuntu: three certificate stores, and the browsers read none of the one step ② writes.</div>
+    </div>
+
+    <h3 id="stores">Who reads which store on Ubuntu</h3>
+    <table data-c="stores">
+      <tr><th>Client</th><th>Store it reads</th><th>Written by today's ②</th><th>Source</th></tr>
+      <tr><td>Firefox — Ubuntu's default browser</td><td>its own profile store</td><td>no · a note says "import it there too", with no path</td><td>W5's Q2 ruling · <a href="https://wiki.debian.org/Firefox/PrivateCertificateAuthority">Debian wiki</a></td></tr>
+      <tr><td>Chrome</td><td>the NSS shared DB: <code>~/.local/share/pki/nssdb</code> since M146, <code>~/.pki/nssdb</code> where that already exists</td><td>under "other ways", into <code>~/.pki/nssdb</code> only</td><td><a href="https://chromium.googlesource.com/chromium/src/+/main/docs/linux/cert_management.md">Chromium: Linux cert management</a></td></tr>
+      <tr><td>curl, wget, apt, GNOME apps</td><td>the system bundle <code>/etc/ssl/certs</code></td><td>yes, the one numbered command</td><td>—</td></tr>
+    </table>
+
+    <h3 id="sweep">What the screen says today</h3>
+    <p>Composed from <code>ui/src/setup.ts</code> and <code>ui/src/verdicts.ts</code> at the epic tip, with that machine's address allowed and this machine's proxy off, so all traffic counts as that machine's.</p>
+    <table data-c="sweep">
+      <tr><th>State</th><th>②</th><th>③</th><th>④ and the success line</th></tr>
+      <tr><td>nothing yet</td><td>◐ can't check here — that machine's first HTTPS request confirms it</td><td>◐ can't check here</td><td>○ not done — waiting · no success line</td></tr>
+      <tr><td>② done as numbered, then a website in Firefox</td><td>⚠ not working — nothing decrypted · "… Already did? <strong>A browser keeps the store it started with until it restarts</strong>, and Firefox keeps its own. Apps that pin their own certificate never decrypt."</td><td>✓ done — a request reached Trawler at 14:02</td><td>⚠ arriving but not decrypting</td></tr>
+      <tr><td>a GNOME app decrypted at 14:02, Firefox refuses after</td><td>✓ done — a request decrypted at 14:02</td><td>✓ done</td><td>✓ done — decrypted at 14:02 · note "… so it is an app that pins its certificate or keeps a store of its own, or another device." · <strong>"You're set up"</strong>, while the user's browser shows a certificate error</td></tr>
+      <tr><td>the step texts</td><td>"Run it in a terminal: <code>sudo cp ~/Downloads/trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt &amp;&amp; sudo update-ca-certificates</code>" · note "Firefox keeps its own store — import it there too." · other ways "Chrome reads the NSS store instead: <code>certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ~/Downloads/trawler-ca.pem</code>"</td><td>"GNOME — run: <code>gsettings set org.gnome.system.proxy mode 'manual' &amp;&amp; …</code>"</td><td>—</td></tr>
+    </table>
+
+    <h2 id="status-lines">Part 1 — what the status lines say</h2>
+    <table data-c="status-findings">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>S1</td><td>②'s ⚠ advice sends the user the wrong way. A user who ran the numbered command and opened Firefox or Chrome is told a browser "keeps the store it started with until it restarts". Restarting changes nothing: neither browser reads the store that command wrote.</td><td>Linux's advice reads: "Already did? The terminal command covers curl and the system's tools, not browsers — Firefox and Chrome each keep a store of their own, and step 2 imports into both. Apps that pin their own certificate never decrypt."</td><td>—</td></tr>
+      <tr><td>S2</td><td>After a proof, ④'s note does not name the likeliest cause. On Ubuntu one client decrypting says little about the browser: a GNOME app reading the system store, or Chrome after its import, makes the proof while Firefox still refuses. The screen reads done and "You're set up", and the note names a pinning app, "a store of its own" or another device, never the browser the user is looking at.</td><td>On Another Ubuntu machine, rule 7's note reads: "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device." ④ stays done, as DEC-63 rule 7 says</td><td>—</td></tr>
+    </table>
+
+    <h2 id="commands">Part 2 — steps that cannot be done as written</h2>
+    <p>As in W5, each of these leaves a step waiting for a request the step as written can never produce.</p>
+
+    <h3 id="c1-proposed">② as proposed (C1, Q3 A)</h3>
+    <div class="diagram" data-c="c1-shape">
+<pre class="mermaid">flowchart TB
+  D["1 · open the certificate URL — downloads trawler-ca.pem"] --> F
+  F["2 · Firefox: Settings → Privacy &amp; Security → Certificates →<br/>View Certificates → Authorities → Import → the file →<br/>tick Trust this CA to identify websites"] --> C
+  C["3 · Chrome: run the NSS command<br/>installs certutil, picks Chrome's database"] --> S
+  S["4 · curl and the system's tools: run the system command"]
+</pre>
+      <div class="caption">Today the browsers' routes are a note and an "other way". Each store is its own step, because each one is a different end, not a second route to the same end. Emphasis and length are W15's.</div>
+    </div>
+
+    <table data-c="command-findings">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>C1</td><td>The only numbered route reaches no browser. ② numbers one command, which writes the system store. Step ④ asks for a website, and neither Firefox nor Chrome reads that store, so ② done as written ends in a refusal every time. Firefox's import is a note with no path. Chrome's sits under "other ways", which the guide model reserves for a second route to the same end.</td><td>② numbers one step per store, as drawn above: Firefox's import path, Chrome's NSS command, then the system command, led "for curl and the system's own tools". The Firefox note goes, because it becomes a step</td><td>—</td></tr>
+      <tr><td>C2</td><td>Chrome's command fails on a stock Ubuntu: <code>certutil</code> is not installed. It comes from <code>libnss3-tools</code>, which Chromium's own Linux guide installs first. The shell says "certutil: command not found". The NSS removal under "to remove it later" fails the same way.</td><td>the command installs it first: <code>sudo apt install -y libnss3-tools &amp;&amp; certutil …</code></td><td>—</td></tr>
+      <tr><td>C3</td><td>Chrome's command writes a database a new Chrome does not open. Since M146, Chromium's NSS DB is <code>~/.local/share/pki/nssdb</code>, and <code>~/.pki/nssdb</code> only where an older Chrome already made it. On a machine whose Chrome first ran at M146 or later, <code>-d sql:$HOME/.pki/nssdb</code> names no database and certutil fails. The removal names the same path.</td><td>both commands pick whichever database exists: <code>db=$HOME/.pki/nssdb; [ -d "$db" ] || db=$HOME/.local/share/pki/nssdb; certutil -d "sql:$db" …</code></td><td>—</td></tr>
+      <tr><td>C4</td><td>The download path is English only. W5's C2 made the trust command read <code>~/Downloads/trawler-ca.pem</code>. Ubuntu names that folder in the session's language (<code>~/Téléchargements</code>, <code>~/Descargas</code>), and the browser saves there, so cp and certutil find no file.</td><td>Linux's commands read <code>"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</code>. <code>xdg-user-dir</code> ships with the Ubuntu desktop. The path stays one constant with the download step's file, as W5 made it</td><td>—</td></tr>
+    </table>
+
+    <h2 id="later">Noticed outside status — for later WUs</h2>
+    <table data-c="later">
+      <tr><th>#</th><th>What</th><th>Why not here</th><th>Proposed</th></tr>
+      <tr><td>N1</td><td>③'s <code>gsettings</code> needs that machine's desktop session. Run over SSH, it has no session bus and sets nothing.</td><td>the command works where the step implies, a terminal on that machine. Saying where to run it is wording</td><td>defer to W15</td></tr>
+      <tr><td>N2</td><td>The GNOME proxy reaches only apps that read it. Firefox (its default is "use system proxy settings") and Chrome do. curl, apt and snap do not.</td><td>③ "can't check here" stays true, and ④ asks for a website. Which apps follow it is help text, as W5's N1 is W14's</td><td>defer to W15</td></tr>
+      <tr><td>N3</td><td>Chromium on Ubuntu is a snap, and its NSS DB lives under <code>~/snap/chromium/</code>. C3's command does not reach it.</td><td>the step names Chrome, and does what it says for Chrome. Whether to name Chromium too is wording</td><td>defer to W15</td></tr>
+      <tr><td>N4</td><td>This machine on Linux reads only the system bundle, then says ② is "done — installed and trusted" while both browsers may still refuse.</td><td>the probe is W3's, ruled and landed. What its done line claims is This machine's wording</td><td>defer to W12</td></tr>
+    </table>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Proposed · ruling</th></tr>
+      <tr><td>Q1</td><td>Who gets S1 and C1–C3? <strong>A</strong> the Linux route wherever it is printed: Another Ubuntu machine, This machine on Linux, and This machine on an unknown host, which gets the Linux route · <strong>B</strong> Another Ubuntu machine only, with This machine left to W12</td><td>A, as W5's Q2 and Q3: the same store facts and the same failing commands, fixed once. C4 is Another Ubuntu machine's only, because This machine saves the file with its own control</td></tr>
+      <tr><td>Q2</td><td>Who gets S2? <strong>A</strong> Another Ubuntu machine only: it is the one off-machine platform whose browsers keep their own stores · <strong>B</strong> every off-machine platform, each naming its own browsers</td><td>A. On macOS and Windows the browsers read the system's store (W5's Q2), and a phone's own browser reads the one store the steps install into</td></tr>
+      <tr><td>Q3</td><td>Which store leads ②? <strong>A</strong> Firefox, Chrome, then the system: the try task opens a browser, and Firefox is Ubuntu's default · <strong>B</strong> the system first, as today, with the browsers after it</td><td>A, until W15 rules ②'s emphasis. Only the order is settled here</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>Try this…</th><th>…and see</th></tr>
+      <tr><td>follow ② as written on a stock Ubuntu, then open a website in Firefox, then in Chrome</td><td>both decrypt. Every command runs, including Chrome's on a machine without <code>libnss3-tools</code> and with a Chrome first run at M146 or later</td></tr>
+      <tr><td>an Ubuntu set to French, after the download step</td><td>the trust commands find <code>trawler-ca.pem</code> in <code>~/Téléchargements</code></td></tr>
+      <tr><td>only tunnels nothing decrypted</td><td>② ⚠ advice says the terminal command does not reach the browsers, and never tells you to restart one</td></tr>
+      <tr><td>a GNOME app decrypted, then Firefox refuses</td><td>④ "done — decrypted at 14:02", and a muted note naming a browser with a store of its own first</td></tr>
+      <tr><td>This machine on a Linux host, "do it manually"</td><td>the same three-store ②, if Q1 is ruled A</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code></td><td>④ off-machine with a decrypted proof: a later refusal yields the note the platform supplies, and W5's note where it supplies none</td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>Linux's ② numbers a Firefox step, a Chrome step and a system step, in Q3's order, and carries no Firefox note. Chrome's install and removal commands install <code>libnss3-tools</code> and choose between the two databases. Another Ubuntu machine's paths read <code>xdg-user-dir DOWNLOAD</code> and end in the file the download step names. Linux's advice tells no one to restart a browser</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>S1, S2 and C1 on Another Ubuntu machine's screen. C1 on This machine — Linux, if Q1 is ruled A</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>a new invariant across every platform and host: no guide sends the user to import into a store without a step that does it</td></tr>
+      <tr><td>e2e</td><td>—</td><td>waived at the WU, as in W4 and W5: allowing a device opens a native confirm that no WebDriver reaches, and a second machine is not hermetic. Running ② on a real Ubuntu is the owner's check</td></tr>
+    </table>
+
+    <h2 id="changes">Where the changes land</h2>
+    <table data-c="changes">
+      <tr><th>Where</th><th>For</th></tr>
+      <tr><td><code>ui/src/setup.ts</code> — Linux's trust route, its advice and its download path</td><td>S1 · C1–C4</td></tr>
+      <tr><td><code>ui/src/verdicts.ts</code> · <code>ui/src/Onboarding.tsx</code> — rule 7's note, supplied by the platform</td><td>S2</td></tr>
+      <tr><td>UC-ONBOARD · DEC-63 (rule 7's Linux wording) · design run round 15 (②'s three steps, ④'s note)</td><td>all</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
+      <tr><td>2</td><td>design round 15, for you to review</td></tr>
+      <tr><td>3</td><td>Linux's ② installs into every store, with commands that run on a stock Ubuntu (C1–C4)</td></tr>
+      <tr><td>4</td><td>Linux's advice and ④'s note name the browsers' own stores (S1, S2)</td></tr>
+      <tr><td>5</td><td>UC-ONBOARD's rows and DEC-63</td></tr>
+      <tr><td>6</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
