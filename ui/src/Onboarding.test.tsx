@@ -1119,6 +1119,16 @@ describe("another device, where this machine's own traffic may be arriving too",
     expect(document.body.textContent).not.toMatch(/that Mac does not trust/);
   });
 
+  it("a proof already that Mac's outlasts the refusal, which is a note under it (S1)", () => {
+    const at = ago(40_000);
+    draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at }, device: mixedIn(arriving, at), deviceMark: MARK });
+    pick("Another Mac");
+
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent("one request already did");
+    expect(document.body.textContent).not.toMatch(/Finish the certificate step/);
+  });
+
   it("where it cannot be arriving, unmarked traffic is that Mac's, and the end names no one", () => {
     draw({ reach: ARMED, traffic: capturing, deviceMark: MARK });
     pick("Another Mac");
@@ -1450,6 +1460,28 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
     pick("Android emulator");
     expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
+  });
+
+  // S1: Windows starts its own HTTPS the moment its proxy is set, and an app of
+  // it that pins its certificate refused - turning step 4 red under a done
+  // certificate step, and telling the user to redo it.
+  it("keeps another device's proof past a refusal and past plain http, the refusal a note", () => {
+    const at = ago(40_000);
+    const clear = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
+    const refused = { ...NO_TRAFFIC, lastDecryptedAt: at, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) };
+    const { rerender } = draw({ reach: ARMED, traffic: refused, device: clear, deviceMark: "k3m9" });
+    pick("Another Windows PC");
+
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something else is connecting and not decrypting — one request already did",
+    );
+    expect(document.body.textContent).not.toMatch(/not working|Finish the certificate step/);
+
+    rerender(screenAt({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at, lastPlainAt: ago(5_000) }, device: clear, deviceMark: "k3m9" }));
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(document.body.textContent).not.toMatch(/only plain http/);
   });
 });
 

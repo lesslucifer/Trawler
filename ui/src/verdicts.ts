@@ -312,16 +312,34 @@ const trustedNotDecrypting = (device: string) =>
 // What the try task's reading depends on beyond the traffic itself.
 // `ownsRefusal`: the certificate task words a refusal, so this one does not.
 // `trustedOn`: the device whose own probe reads its certificate trusted.
-// `proofStays`: a decrypted request proved this setup, and quiet does not
-// unprove it - This machine's, whose other two tasks re-read themselves (U5),
-// and another device's, whose two tasks keep their proof's time (P1).
+// `proofStays`: how far a decrypted request that proved this setup outlasts
+// what follows it - not at all; once quiet, on This machine, whose other two
+// tasks re-read themselves (U5); or past anything after it that does not
+// decrypt, on another device, which nothing here reads again (P1, S1).
+export type ProofStays = "never" | "once-quiet" | "past-anything";
+
 export interface TrafficContext {
   ownsRefusal: boolean;
   trustedOn: string | null;
-  proofStays: boolean;
+  proofStays: ProofStays;
 }
 
-const NO_CONTEXT: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: false };
+const NO_CONTEXT: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: "never" };
+
+const OUTLASTED: Record<ProofStays, readonly TrafficReading[]> = {
+  never: [],
+  "once-quiet": ["idle"],
+  "past-anything": ["idle", "just-arrived", "not-decrypting", "plain-only"],
+};
+
+// A refusal after a proof is not the certificate the proof showed working, so
+// it sends no one back to that step (S1).
+export const REFUSED_AFTER_PROOF =
+  "something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.";
+
+function keptProof(decryptedAt: number, refused: boolean, since = ""): StepStatusView {
+  return verdict("done", `decrypted at ${clock(decryptedAt)}${since}`, refused ? REFUSED_AFTER_PROOF : undefined);
+}
 
 // The try task words a refusal only where the certificate task does not own
 // it - it reads done, or it is This machine's and no probe read it, so the
@@ -329,10 +347,10 @@ const NO_CONTEXT: TrafficContext = { ownsRefusal: false, trustedOn: null, proofS
 export function trafficStatus(seen: Traffic, now: number, around: TrafficContext = NO_CONTEXT): StepStatusView {
   const reading = trafficReading(seen, now);
   const decryptedAt = seen.lastDecryptedAt;
-  if (reading === "idle" && around.proofStays && decryptedAt !== null) {
+  if (decryptedAt !== null && OUTLASTED[around.proofStays].includes(reading)) {
     const after = (at: number | null) => at !== null && at > decryptedAt;
     const since = after(seen.lastPlainAt) || after(seen.lastTunnelAt) ? "" : ", nothing since";
-    return verdict("done", `decrypted at ${clock(decryptedAt)}${since}`);
+    return keptProof(decryptedAt, reading === "not-decrypting", since);
   }
   const view = TRAFFIC_VERDICT[reading];
   if (reading !== "not-decrypting") return view;
@@ -343,12 +361,11 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
 // Another device's try task while nothing arriving is told apart from this
 // machine's (DEC-63). The wire may still say nothing decrypts, naming no device,
 // as This machine's try task does where its store went unread (D7); otherwise
-// only a proof already that device's is read.
+// only a proof already that device's is read, and it outlasts the wire (S1).
 export function mixedTryStatus(wire: Traffic, now: number, decryptedAt: number | null): StepStatusView {
-  if (trafficReading(wire, now) === "not-decrypting") return TRAFFIC_VERDICT["not-decrypting"];
-  return decryptedAt === null
-    ? awaiting("the address below confirms it")
-    : verdict("done", `decrypted at ${clock(decryptedAt)}`);
+  const refused = trafficReading(wire, now) === "not-decrypting";
+  if (decryptedAt !== null) return keptProof(decryptedAt, refused);
+  return refused ? TRAFFIC_VERDICT["not-decrypting"] : awaiting("the address below confirms it");
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A

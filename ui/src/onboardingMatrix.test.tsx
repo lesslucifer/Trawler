@@ -40,7 +40,8 @@ import {
 //   another device  its marked request settles both, named; other traffic
 //                counts only where this machine's proxy cannot be sending its
 //                own here too - read off, or another proxy (DEC-63). Each
-//                proof carries its time (P2)
+//                proof carries its time (P2), and its try task keeps it past
+//                whatever follows that does not decrypt (S1)
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
@@ -542,11 +543,21 @@ const RULES: Record<string, Rule> = {
 
   "truth: nothing sends a trusted certificate back to its step": (o, s) => {
     const m = model(s);
-    if (!m.trustDone) return null;
+    if (!m.trustDone || m.blocked) return null;
     const wrong = o.tasks.filter((t) => /Finish the certificate step|The steps below install it/.test(t.text));
-    return s.platform === "this" && wrong.length > 0
-      ? `tasks [${wrong.map((t) => t.n)}] send this machine back to its certificate step`
+    return (s.platform === "this" || OFF_MACHINE.has(s.platform)) && wrong.length > 0
+      ? `tasks [${wrong.map((t) => t.n)}] send ${s.platform} back to its certificate step`
       : null;
+  },
+
+  "truth: another device's try task keeps its proof past whatever follows it (S1)": (o, s) => {
+    const m = model(s);
+    if (!OFF_MACHINE.has(s.platform) || m.blocked || !m.decrypted) return null;
+    if (!m.mixed && s.history === "capturing") return null;
+    const line = task(o, m.tryN).text;
+    return /done — decrypted at \d\d:\d\d/.test(line) && !/not working|not done/.test(line)
+      ? null
+      : `task ${m.tryN} reads "${line}"`;
   },
 
   "one guide open at most, beyond those a sentence points at": (o) => {
