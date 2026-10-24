@@ -467,13 +467,15 @@
         <tr><td>Android emulator</td><td>every host</td><td>neither</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
           <td>its tasks read this session's traffic, since no probe can read it</td></tr>
         <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code></td>
-          <td>nothing about that machine. The tasks say what <em>will</em> settle them, in the words they
-            will be settled by</td></tr>
+          <td>nothing read off that machine — only what could have come from it, since its address was
+            allowed: its own marked request, named and timed, and other traffic only while this machine's
+            proxy does not point here (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>). Until then each task says what
+            <em>will</em> settle it, in the words it will be settled by. The end names the device only on its
+            marked request</td></tr>
         <tr><td>iPhone or iPad · Android device</td><td>every host</td><td>neither</td><td>yes</td>
           <td><code>trawler-ca.mobileconfig</code> (a configuration profile) · <code>trawler-ca.cer</code> (DER)</td>
-          <td>as above — and the traffic layer cannot say which device a decrypted request came from, so
-            the end of setup promises a confirmation rather than reporting one. Their certificate URL also
-            has a code a phone's camera opens, under the printed URL
+          <td>as above. Their certificate URL and their marked address each carry a code a phone's camera
+            opens, under the printed value
             (<a href="../decisions/dec-57-a-device-that-cannot-paste.html">DEC-57</a>). The proxy host and port stay
             typed</td></tr>
       </table>
@@ -488,7 +490,11 @@
       that need it, this is task 1, and until it is done the tasks that depend on it are dimmed rather than
       given steps that cannot work. The task names the address it will arm before it is armed, even when
       there is only one, and its button and warning name that address's interface. With no reachable
-      address, it says to join the network the device is on and offers a re-read. The CORS grant does not widen with the bind; the opt-in is this
+      address, it says to join the network the device is on and offers a re-read. An armed address this
+      machine no longer holds — a network change — reads <em>not working — this Mac no longer holds
+      192.168.1.24</em>, offers the address it holds now, and dims the tasks that would print the old one, and the
+      header's chip says <em>no longer reachable on 192.168.1.24</em>; reach is read again on focus and every 3 s
+      while setup shows (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>). The CORS grant does not widen with the bind; the opt-in is this
       contract's whole authorization boundary.</p>
     </div>
 
@@ -514,18 +520,30 @@
             <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
             certificate; plain HTTP only reads not done, with the remedy asking for an https site; traffic seen
             earlier but nothing recent reads <em>idle</em>. An old flow can only ever produce idle — except on
-            This machine, whose try task keeps a decrypted proof once quiet: <em>done — decrypted at 14:02,
-            nothing since</em></td></tr>
+            This machine and another device, whose try task keeps a decrypted proof once quiet: <em>done —
+            decrypted at 14:02, nothing since</em></td></tr>
       </table>
       <p><strong>Each task has one reading:</strong> a probe that concludes, else — on This machine — the
-      request it makes of its own, else this session's traffic. A decrypted request settles the certificate
-      task, and any request that reached Trawler settles the route task. This machine is the exception: its
+      request it makes of its own, else — on another device — what could have come from it, else this
+      session's traffic. A decrypted request settles the certificate task, and any request that reached
+      Trawler settles the route task. This machine is the exception: its
       try-it command names the proxy itself, and any other device's request says nothing about it, so only a
       probe or its own request — marked <code>?trawler-check=…</code>, captured decrypted this session — may
       settle its tasks. Where nothing has, the line says what will — <em>the request in step 3 confirms it</em>
       — never a false "not set up", and a refusal nothing can place is the try task's to word. The dated row
       and its re-read show wherever a probe can answer. A phone that trusts the certificate and points here
       reads as two true facts side by side: not trusted on this machine, and capturing traffic.</p>
+      <p><strong>Another device reads only what could have come from it</strong>
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>): traffic that started after its address was allowed. Its try
+      task offers an address to open there — <code>https://example.com/?trawler-check=k3m9</code>, marked anew
+      for each session and device, with a code to scan on a phone — and that row settles both of its tasks: <em>done —
+      that Mac's request decrypted at 14:02</em> · <em>came through at 14:02</em>. Other traffic counts only where
+      it arrived between two readings of this machine's proxy as off or another proxy, taken by the watch — so within one 3 s
+      tick of arriving, and nothing that arrived while the window was hidden — with its time — <em>done — a request
+      decrypted at 14:02</em>. Where it points here or cannot be read and nothing is that device's yet, the tasks
+      read <em>can't check here — the address in step 4 confirms it</em>, a refusal is the try task's and names no
+      device, and no success line shows. Every proof lasts the session, whatever this machine's proxy reads after
+      it; a reach read that failed takes none back.</p>
       <p><strong>This machine is read again wherever its answer can change</strong>: as setup opens, after
       every action whatever its outcome, on <em>check again</em>, on focus, when the core comes back, and
       every 3 s while setup is on screen, its core answering and the window visible. Only a read the user
@@ -708,7 +726,10 @@ the client lacks the certificate"]
       precondition is stated once and dims what depends on it; <em>this machine</em> through to a decrypted
       flow and the list's first paint; a second device's session, which keeps the dot connected and shows no
       success line until its own request; and a re-entry with the list filtered to nothing, which still reads
-      the new request. Arming reach is driven at integration rather than e2e: it opens a native dialog no
+      the new request. Another device's evidence — the cut at its allowed address, its marked request, this
+      machine's proxy deciding what else counts, the lost address and its re-reads — is pinned in
+      <code>verdicts.test.ts</code>, <code>ownRequest.test.ts</code>, <code>Onboarding.test.tsx</code>,
+      <code>App.test.tsx</code> and the matrix's marked sweep. Arming reach is driven at integration rather than e2e: it opens a native dialog no
       WebDriver can reach, and stubbing that confirm would prove the act by removing the authorization DEC-55
       requires. Three more are pinned below e2e for the same kind of reason: the launch's checking paint
       (<code>App.test.tsx</code>: WebDriver cannot see a paint shorter than its poll), the one act's four

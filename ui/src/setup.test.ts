@@ -4,11 +4,14 @@ import {
   canAutoSetup,
   canProbe,
   caFormatFor,
+  checkStep,
   confirmOn,
   deviceName,
   hostOs,
   isCommand,
   isSave,
+  isScan,
+  lostAddress,
   reachTaskTitle,
   needsReach,
   probesRoute,
@@ -114,6 +117,58 @@ test("macOS, Windows and Linux have a reader for their own trust store and proxy
 test("splitProxyAddr splits host and port on the last colon", () => {
   expect(splitProxyAddr("127.0.0.1:7420")).toEqual({ host: "127.0.0.1", port: 7420 });
   expect(splitProxyAddr("192.168.1.5:8080")).toEqual({ host: "192.168.1.5", port: 8080 });
+});
+
+// DEC-63: the address another device opens so its request is known to be its.
+describe("another device's own request is one address, opened where it is", () => {
+  const ADDRESS = "https://example.com/?trawler-check=k3m9";
+  const OFF = ["mac", "windows", "ubuntu", "ios", "android"] as const;
+
+  it.each(OFF)("%s: the address is a value, said where it is opened", (id) => {
+    const [said, value] = checkStep(id, "macos", ADDRESS);
+
+    expect(said).toMatch(/^or open this one (on|in) /);
+    expect(value).toMatchObject({ copy: ADDRESS, label: "the address to open" });
+  });
+
+  it("a phone scans it, and a computer does not (DEC-57)", () => {
+    const scans = OFF.filter((id) => checkStep(id, "macos", ADDRESS).some(isScan));
+
+    expect(scans).toEqual(["ios", "android"]);
+  });
+
+  it("a platform scans its certificate URL exactly where it scans this address", () => {
+    const scansCertificate = (id: PlatformId) => guides(setup(id)).some((step) => step.some(isScan));
+
+    expect(OFF.filter(scansCertificate)).toEqual(OFF.filter((id) => checkStep(id, "macos", ADDRESS).some(isScan)));
+  });
+});
+
+// R1: the core lists the addresses this machine holds on every read, and keeps
+// the one it armed whether or not it still does.
+describe("an armed address this machine no longer holds is lost", () => {
+  const reach = (proxy: string | null, addresses: string[]) => ({
+    armed: proxy !== null,
+    proxy,
+    api: null,
+    ca_urls: null,
+    interfaces: addresses.map((address) => ({ name: "Wi-Fi", address })),
+  });
+
+  it("is the armed host, once the list no longer holds it", () => {
+    expect(lostAddress(reach("192.168.1.24:7420", ["10.0.0.7"]))).toBe("192.168.1.24");
+    expect(lostAddress(reach("192.168.1.24:7420", []))).toBe("192.168.1.24");
+  });
+
+  it("is nothing while the list holds it, or while nothing is armed", () => {
+    expect(lostAddress(reach("192.168.1.24:7420", ["10.0.0.7", "192.168.1.24"]))).toBeNull();
+    expect(lostAddress(reach(null, []))).toBeNull();
+  });
+
+  it("matches an IPv6 address the way the list writes it, without brackets", () => {
+    expect(lostAddress(reach("[2001:db8::7]:7420", ["2001:db8::7"]))).toBeNull();
+    expect(lostAddress(reach("[2001:db8::7]:7420", ["2001:db8::8"]))).toBe("2001:db8::7");
+  });
 });
 
 // The screen's one axis. The order is what the user reads in the picker, and

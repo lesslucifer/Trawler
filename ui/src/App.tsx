@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
-import { CA_FILES, hostOs, splitProxyAddr, type CaFormat } from "./setup";
-import { NO_PROXY_READING, setUpOn, TUNNEL_GRACE_MS, type ProxyReading, type TrustProbe } from "./verdicts";
+import { CA_FILES, hostOs, lostAddress, needsReach, splitProxyAddr, type CaFormat } from "./setup";
+import {
+  mayCarryOwnTraffic,
+  NO_PROXY_READING,
+  setUpOn,
+  TUNNEL_GRACE_MS,
+  type ProxyReading,
+  type TrustProbe,
+} from "./verdicts";
 import { saveBody } from "./body";
+import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
@@ -18,12 +26,20 @@ import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
+  deviceEvidenceSince,
+  deviceMark,
+  deviceTraffic,
   isOwnRequest,
   makeRequest,
+  nextArmedSince,
+  nextClearReadings,
   nextMark,
+  NO_CLEAR_READINGS,
   ownRequestProvedAt,
   REQUEST_HOST,
   requestRoute,
+  type ArmedSince,
+  type ClearReadings,
   type RequestRoute,
 } from "./ownRequest";
 import {
@@ -55,6 +71,11 @@ export const LAUNCH_PATIENCE_MS = 5_000;
 // How often setup re-reads this machine while it is on screen (U3 · DEC-62):
 // a setting changed in System Settings beside the window shows within it.
 export const WATCH_MS = 3_000;
+// Two readings of this machine's proxy further apart than this had a hidden
+// window or a closed setup between them, and vouch for nothing in that gap
+// (DEC-63 rule 3); a quiet read that waited out three ticks in flight still
+// joins its run.
+const READINGS_APART_MAX_MS = 4 * WATCH_MS;
 
 // Select holds at most one option and never returns to unselected, so "any" is a
 // real choice that happens to mean no filter — not a clear affordance the
@@ -73,6 +94,10 @@ const METHOD_OPTIONS: SelectOption[] = [
 // The detail pane shows one flow's inspector or the composer, in place of each
 // other (epic decision 7): the list stays beside it, where a sent row lands.
 type Pane = { kind: "inspector"; id: string } | { kind: "composer" } | null;
+
+// The watch re-reads reach every few seconds, and an answer the screen already
+// holds may move nothing on it (U4).
+const sameReach = (a: ReachState, b: ReachState) => JSON.stringify(a) === JSON.stringify(b);
 
 function hostOptions(hosts: string[]): SelectOption[] {
   return [{ id: ANY, label: "any host" }, ...hosts.map((h) => ({ id: h, label: h }))];
@@ -218,13 +243,17 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
-  const reads = useRef({ newest: 0, inFlight: false });
+  // When this machine's proxy read off or another, so nothing of its own could
+  // be arriving: another device's unmarked evidence is only what arrived then
+  // (DEC-63 rule 3), and whatever the reading does later leaves it there.
+  const [clearReadings, setClearReadings] = useState<ClearReadings>(NO_CLEAR_READINGS);
+  const [machineReads] = useState(newestRead);
 
   const readMachine = useCallback(
     (mode: "shown" | "quiet") => {
-      if (mode === "quiet" && reads.current.inFlight) return;
-      const read = ++reads.current.newest;
-      reads.current.inFlight = true;
+      const landing = machineReads.begin(mode);
+      if (landing === null) return;
+      const sent = Date.now();
       if (mode === "shown") setProbing(true);
       const { host, port } = splitProxyAddr(proxyAddr);
       // The certificate the core serves now is the one asked about: a store
@@ -243,54 +272,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         () => NO_PROXY_READING,
       );
       void Promise.all([trust, route]).then(([t, r]) => {
-        if (read !== reads.current.newest) return;
-        reads.current.inFlight = false;
+        if (!landing()) return;
+        const landed = Date.now();
         setTrustProbe(t);
         setProxyReading(r);
+        setClearReadings((was) =>
+          nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }, READINGS_APART_MAX_MS),
+        );
         setProbing(false);
-        setProbedAt(Date.now());
+        setProbedAt(landed);
       });
     },
-    [client, proxyAddr],
+    [client, proxyAddr, machineReads],
   );
-
-  const inSetup = state.phase === "onboarding";
-  useEffect(() => {
-    if (inSetup) readMachine("shown");
-  }, [inSetup, readMachine]);
-
-  useEffect(() => {
-    if (!inSetup) return;
-    const quietly = () => readMachine("quiet");
-    window.addEventListener("focus", quietly);
-    return () => window.removeEventListener("focus", quietly);
-  }, [inSetup, readMachine]);
-
-  // U3: the watch runs while setup is on screen, its core answering, and the
-  // window visible, and nowhere else: each tick is a few shell commands.
-  const watching = inSetup && !silent;
-  useEffect(() => {
-    if (!watching) return;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const start = () => {
-      timer ??= setInterval(() => readMachine("quiet"), WATCH_MS);
-    };
-    const stop = () => {
-      clearInterval(timer);
-      timer = undefined;
-    };
-    const onVisibility = () => {
-      if (document.visibilityState !== "visible") return stop();
-      readMachine("quiet");
-      start();
-    };
-    if (document.visibilityState === "visible") start();
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [watching, readMachine]);
 
   // Reach is a fact about this process, never a stored preference (DEC-55): it
   // is read once the app has a core and re-read from whatever the core answers
@@ -299,8 +293,79 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // not say. It is read in every phase because an exposure this machine is
   // under is not a fact about the setup screen.
   const [reach, setReach] = useState<ReachState>(UNREACHABLE);
-  const [reachNonce, setReachNonce] = useState(0);
-  const rereadReach = useCallback(() => setReachNonce((n) => n + 1), []);
+
+  const [armedSince, setArmedSince] = useState<ArmedSince>(null);
+  const takeReach = useCallback((next: ReachState) => {
+    setReach((held) => (sameReach(held, next) ? held : next));
+    setArmedSince((was) => nextArmedSince(was, next, Date.now()));
+  }, []);
+
+  // An allow's and a stop's own answer overtakes any read sent before it. A
+  // read that failed armed nothing anew, so it never moves the evidence clock
+  // (DEC-63 rule 1); and one nobody asked for says nothing at all - a core that
+  // stopped answering is the silent band's to say, not a reason for the tasks
+  // to flicker.
+  const [reachReads] = useState(newestRead);
+  const readReach = useCallback(
+    (mode: "shown" | "quiet") => {
+      const landing = reachReads.begin(mode);
+      if (landing === null) return;
+      client.reach().then(
+        (answer) => landing() && takeReach(answer),
+        () => landing() && mode === "shown" && setReach(UNREACHABLE),
+      );
+    },
+    [client, takeReach, reachReads],
+  );
+  const rereadReach = useCallback(() => readReach("shown"), [readReach]);
+  const landReach = (answer: ReachState) => {
+    reachReads.supersede();
+    takeReach(answer);
+  };
+
+  // Whatever can change this machine's answers can change its addresses too,
+  // so the reads nobody asked for take both (R2).
+  const rereadQuietly = useCallback(() => {
+    readMachine("quiet");
+    readReach("quiet");
+  }, [readMachine, readReach]);
+
+  const inSetup = state.phase === "onboarding";
+  useEffect(() => {
+    if (inSetup) readMachine("shown");
+  }, [inSetup, readMachine]);
+
+  useEffect(() => {
+    if (!inSetup) return;
+    window.addEventListener("focus", rereadQuietly);
+    return () => window.removeEventListener("focus", rereadQuietly);
+  }, [inSetup, rereadQuietly]);
+
+  // U3: the watch runs while setup is on screen, its core answering, and the
+  // window visible, and nowhere else: each tick is a few shell commands.
+  const watching = inSetup && !silent;
+  useEffect(() => {
+    if (!watching) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      timer ??= setInterval(rereadQuietly, WATCH_MS);
+    };
+    const stop = () => {
+      clearInterval(timer);
+      timer = undefined;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return stop();
+      rereadQuietly();
+      start();
+    };
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [watching, rereadQuietly]);
 
   // A core that restarts forgets an exposure, and one that started after the
   // window answers addresses the launch read never got (S3, S4). So reach is
@@ -321,15 +386,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, [setupSession, rereadReach]);
 
   useEffect(() => {
-    let live = true;
-    client.reach().then(
-      (r) => live && setReach(r),
-      () => live && setReach(UNREACHABLE),
-    );
-    return () => {
-      live = false;
-    };
-  }, [client, reachNonce]);
+    rereadReach();
+  }, [rereadReach]);
 
   // The core answers with the kernel's device names, because asking the host
   // what its owner calls `en1` means running one of the host's own tools and
@@ -361,6 +419,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     [state.phase, everything, state.since],
   );
 
+  // This machine's evidence is the session's. Another device's starts when the
+  // address it uses was allowed (A2), and is what could have come from it (DEC-63).
+  const offMachine = needsReach(state.chosen);
+  const deviceSince = deviceEvidenceSince(state.since, armedSince);
+  const mark = offMachine ? deviceMark(state.since, state.chosen) : undefined;
+  const device = useMemo(
+    () =>
+      state.phase === "onboarding" && mark !== undefined
+        ? deviceTraffic(everything, { allowedSince: deviceSince, mark, clear: clearReadings }, tunnelTimes)
+        : undefined,
+    [state.phase, everything, mark, deviceSince, clearReadings, tunnelTimes],
+  );
+
   // The confirm comes first and the bind only on a yes — the shell asks,
   // because arming changes what this machine exposes (DEC-13). A dialog that
   // cannot be shown is a question nobody answered, so nothing is armed — and
@@ -369,12 +440,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const armReach = async (address: string) => {
     const allowed = await invoke<boolean>("confirm_reach", { address }).catch(() => false);
     if (!allowed) return null;
-    setReach(await client.armReach(address));
+    landReach(await client.armReach(address));
     return undefined;
   };
 
   const disarmReach = async () => {
-    setReach(await client.disarmReach());
+    landReach(await client.disarmReach());
   };
 
   const saveCa = async (format: CaFormat) => saveBody(await client.caFile(format), CA_FILES[format]);
@@ -516,16 +587,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // list as much as in setup, where choosing "this machine" used to hide it
   // entirely. The chip carries the address a device is pointed at and the
   // control that ends it, because a warning nobody can act on is decoration.
+  // An address this machine has left is still listened on and reaches no one,
+  // and the chip says so as step 1 does (R1).
   // The control runs through useAction for the reason Button's fork D4 states:
   // a stop that failed must not read like a stop that worked, and the exposure
   // it could not end is still on this machine.
   const disarm = useAction(disarmReach);
+  const lost = lostAddress(reach);
   const reachChip = reach.armed && reach.proxy !== null && (
     <div
       data-testid="reach-chip"
       className="flex items-center gap-control-gap rounded-button border border-hairline px-chrome-x font-ui text-chrome text-ink-mute"
     >
-      <span>reachable on {splitProxyAddr(reach.proxy).host}</span>
+      <span>{lost === null ? `reachable on ${splitProxyAddr(reach.proxy).host}` : `no longer reachable on ${lost}`}</span>
       {disarm.trigger && (
         <Button
           frame="bare"
@@ -629,6 +703,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }
 
   if (state.phase === "onboarding") {
+    const traffic = device?.traffic ?? sessionTraffic(everything, state.since, tunnelTimes);
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
@@ -643,8 +718,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           probedAt={probedAt}
           routeAct={routeAct}
           onRouteAct={setRouteAct}
-          traffic={sessionTraffic(everything, state.since, tunnelTimes)}
+          traffic={traffic}
           ownProofAt={ownProofAt}
+          deviceMark={mark}
+          device={device}
           onSetUpThisMachine={setUpThisMachine}
           onSaveCa={saveCa}
           onSetProxy={setProxy}

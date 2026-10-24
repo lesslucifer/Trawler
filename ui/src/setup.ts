@@ -5,7 +5,7 @@
 // platform's OS is only ever an implementation detail of its instructions.
 // Pure data and pure functions; no I/O, no React.
 
-import type { CaFormat } from "./api";
+import type { CaFormat, ReachState } from "./api";
 import type { ProxyTarget } from "./proxyTargets";
 import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
 
@@ -29,6 +29,15 @@ export function canAutoSetup(os: HostOs): boolean {
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");
   return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
+}
+
+// The address reach is armed on, where this machine no longer holds it (R1): a
+// network change leaves the listener bound to an address no device routes to,
+// and the core reports the two without comparing them.
+export function lostAddress(reach: ReachState): string | null {
+  if (!reach.armed || reach.proxy === null) return null;
+  const host = splitProxyAddr(reach.proxy).host.replace(/^\[(.*)\]$/, "$1");
+  return reach.interfaces.some((i) => i.address === host) ? null : host;
 }
 
 // One file per format a platform's installer opens, each under the name its
@@ -170,6 +179,8 @@ interface PlatformFacts {
   probesRoute: boolean;
   // Do this platform's instructions need an address beyond loopback?
   needsReach: boolean;
+  // A device that cannot paste opens a value by scanning it (DEC-57).
+  scans: boolean;
   // The one host this platform runs beside, where it cannot run on every host.
   onlyBeside?: HostOs;
 }
@@ -182,6 +193,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: true,
     probesRoute: true,
     needsReach: false,
+    scans: false,
   },
   mac: {
     label: "Another Mac",
@@ -190,6 +202,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: false,
     needsReach: true,
+    scans: false,
   },
   windows: {
     label: "Another Windows PC",
@@ -198,6 +211,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: false,
     needsReach: true,
+    scans: false,
   },
   ubuntu: {
     label: "Another Ubuntu machine",
@@ -206,6 +220,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: false,
     needsReach: true,
+    scans: false,
   },
   "ios-sim": {
     label: "iOS Simulator",
@@ -214,6 +229,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: true,
     needsReach: false,
+    scans: false,
     onlyBeside: "macos",
   },
   "android-sim": {
@@ -223,6 +239,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: false,
     needsReach: false,
+    scans: false,
   },
   ios: {
     label: "iPhone or iPad",
@@ -231,6 +248,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: false,
     needsReach: true,
+    scans: true,
   },
   android: {
     label: "Android device",
@@ -239,6 +257,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesTrust: false,
     probesRoute: false,
     needsReach: true,
+    scans: true,
   },
 };
 
@@ -270,6 +289,16 @@ export function confirmOn(id: PlatformId, os: HostOs): string {
 // never could, so its promise names the kind of request that will settle it.
 export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
   return `${deviceName(id, os)}'s first HTTPS request confirms it`;
+}
+
+// Another device's own request, for when its traffic cannot be told from this
+// machine's (DEC-63): an address carrying its mark, opened on that device. The
+// try task's title already says to open a website there, so this is the one.
+export function checkStep(id: PlatformId, os: HostOs, url: string): GuideStep {
+  return [
+    `or open this one ${openWhere(id, os)}`,
+    { copy: url, label: "the address to open", wire: "check url", scan: PLATFORMS[id].scans },
+  ];
 }
 
 // The network task's title, needed before any instruction exists: it is the
@@ -594,7 +623,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              downloadStep(`On ${device}`, reach, format, { how: "in Safari ", scan: true }),
+              downloadStep(`On ${device}`, reach, format, { how: "in Safari ", scan: PLATFORMS[id].scans }),
               [
                 `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
               ],
@@ -602,7 +631,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
                 `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
               ],
             ]
-          : [downloadStep(`On ${device}`, reach, format, { scan: true }), [androidInstall(format)]],
+          : [downloadStep(`On ${device}`, reach, format, { scan: PLATFORMS[id].scans }), [androidInstall(format)]],
         notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
         alternatives: [carryOver],
       };

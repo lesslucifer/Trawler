@@ -50,6 +50,8 @@ const ARMED: ReachState = {
 
 const ago = (ms: number): number => Date.now() - ms;
 const capturing: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: ago(1_000) };
+// This machine's proxy does not point here, so nothing it sends can be mistaken
+// for another device's (DEC-63).
 const arriving: Traffic = { ...NO_TRAFFIC, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) };
 
 type Props = Partial<Parameters<typeof Onboarding>[0]>;
@@ -1015,8 +1017,8 @@ describe("a phone, once it may connect", () => {
     pick("iPhone or iPad");
 
     expect(document.querySelectorAll("details[open]")).toHaveLength(0);
-    expect(task(2)).toHaveTextContent("done — a request decrypted");
-    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(capturing.lastDecryptedAt!)}`);
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(capturing.lastDecryptedAt!)}`);
   });
 
   // The owner's report: an iPhone pointed here without the certificate. Its
@@ -1026,7 +1028,7 @@ describe("a phone, once it may connect", () => {
     draw({ reach: ARMED, traffic: arriving });
     pick("iPhone or iPad");
 
-    expect(task(3)).toHaveTextContent("done — requests reached Trawler");
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(arriving.lastTunnelAt!)}`);
     expect(within(task(3)).queryByText("2 steps")).toBeNull();
     expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
     expect(task(2)).toHaveTextContent("not working — nothing decrypted");
@@ -1036,6 +1038,141 @@ describe("a phone, once it may connect", () => {
     expect(open("On your iPhone, open")).toBe(true);
     expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
+  });
+});
+
+// A1 · A3 · A4 (DEC-63): with this Mac routed through Trawler, its own
+// requests arrive beside that Mac's, and nothing unmarked tells them apart.
+describe("another device, where this machine's own traffic may be arriving too", () => {
+  const MARK = "k3m9";
+  const mixedIn = (wire: Traffic, provedAt: number | null = null) => ({ provedAt, mixed: true, wire });
+
+  it("nothing arriving settles a task, and each names what will", () => {
+    draw({ reach: ARMED, device: mixedIn(capturing), deviceMark: MARK });
+    pick("Another Mac");
+
+    expect(task(2)).toHaveTextContent("can't check here — the address in step 4 confirms it");
+    expect(task(3)).toHaveTextContent("can't check here — the same request confirms it");
+    expect(task(4)).toHaveTextContent("can't check here — the address below confirms it");
+    expect(zone("proven")).toBeNull();
+  });
+
+  it("offers that address in the try task, carrying its mark", () => {
+    draw({ reach: ARMED, deviceMark: MARK });
+    pick("Another Mac");
+
+    const address = within(task(4)).getByTestId("check-address");
+    expect(address).toHaveTextContent("or open this one on that Mac");
+    expect(within(address).getByRole("button", { name: /copy the address to open/i })).toHaveTextContent(
+      `https://example.com/?trawler-check=${MARK}`,
+    );
+    expect(within(address).queryByTestId("scan-code")).toBeNull();
+  });
+
+  it("gives a phone the address as a code to scan as well (DEC-57)", () => {
+    draw({ reach: ARMED, deviceMark: MARK });
+    pick("iPhone or iPad");
+
+    expect(within(task(4)).getByTestId("check-address")).toHaveTextContent("or open this one on your iPhone");
+    expect(within(task(4)).getByTestId("scan-code")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["may be arriving", true],
+    ["cannot be arriving", false],
+  ])(
+    "its marked request settles every task, named and timed, and the end names that Mac, where this Mac's own traffic %s",
+    (_how, mixed) => {
+      const at = Date.now() - 1_000;
+      const marked = { ...NO_TRAFFIC, lastDecryptedAt: at };
+      draw({ reach: ARMED, traffic: marked, device: { provedAt: at, mixed, wire: capturing }, deviceMark: MARK });
+      pick("Another Mac");
+
+      expect(task(2)).toHaveTextContent(`done — that Mac's request decrypted at ${clock(at)}`);
+      expect(task(3)).toHaveTextContent(`done — that Mac's request came through at ${clock(at)}`);
+      expect(task(4)).toHaveTextContent(mixed ? `done — decrypted at ${clock(at)}` : "done — capturing traffic");
+      expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic from that Mac");
+    },
+  );
+
+  // Rule 4: what arrived while this Mac's own could not was that Mac's then.
+  it("a proof already that Mac's stays, with its time", () => {
+    const at = ago(40_000);
+    draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at }, device: mixedIn(capturing), deviceMark: MARK });
+    pick("Another Mac");
+
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(at)}`);
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+  });
+
+  it("a refusal is not that Mac's to own: the try task says it and names no device (A3)", () => {
+    draw({ reach: ARMED, device: mixedIn(arriving), deviceMark: MARK });
+    pick("Another Mac");
+
+    expect(task(2)).toHaveTextContent("can't check here — the address in step 4 confirms it");
+    expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "the device it comes from does not trust Trawler's certificate yet",
+    );
+    expect(document.body.textContent).not.toMatch(/that Mac does not trust/);
+  });
+
+  it("where it cannot be arriving, unmarked traffic is that Mac's, and the end names no one", () => {
+    draw({ reach: ARMED, traffic: capturing, deviceMark: MARK });
+    pick("Another Mac");
+
+    expect(task(2)).toHaveTextContent("done — a request decrypted at");
+    expect(task(3)).toHaveTextContent("done — a request reached Trawler at");
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic");
+    expect(zone("proven")).not.toHaveTextContent(/that Mac/);
+  });
+
+  it("names that Mac at the end only while its marked request is the newest proof", () => {
+    draw({
+      reach: ARMED,
+      traffic: capturing,
+      device: { provedAt: ago(20_000), mixed: false, wire: capturing },
+      deviceMark: MARK,
+    });
+    pick("Another Mac");
+
+    expect(task(2)).toHaveTextContent("done — that Mac's request decrypted at");
+    expect(zone("proven")).not.toHaveTextContent(/that Mac/);
+  });
+});
+
+// R1: a network change leaves the listener on an address this Mac no longer
+// holds, and every address the tasks below print with it.
+describe("an allowed address this machine has left", () => {
+  const left: ReachState = { ...ARMED, interfaces: [{ name: "Wi-Fi", address: "10.0.4.9" }] };
+
+  it("is not working, and named", () => {
+    draw({ reach: left });
+    pick("Another Mac");
+
+    expect(task(1)).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24");
+    expect(task(1)).not.toHaveTextContent(/listening on/);
+  });
+
+  it("offers the address this machine holds now", async () => {
+    const onArmReach = vi.fn(async () => {});
+    draw({ reach: left, onArmReach });
+    pick("Another Mac");
+
+    expect(zone("listen-on")).toHaveTextContent("Wi-Fi · 10.0.4.9");
+    fireEvent.click(screen.getByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+    await waitFor(() => expect(onArmReach).toHaveBeenCalledWith("10.0.4.9"));
+  });
+
+  it("dims what depends on it, so no step prints an address nothing answers at", () => {
+    draw({ reach: left, traffic: capturing });
+    pick("Another Mac");
+
+    for (const n of [2, 3, 4]) expect(task(n)).toHaveAttribute("data-dim");
+    expect(zone("device-address")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/192\.168\.1\.24:7421/);
   });
 });
 
@@ -1298,16 +1435,21 @@ describe("the clock reaches the traffic reading and nothing else", () => {
     expect(resolved).not.toHaveBeenCalled();
   });
 
-  // U5 · Q3: 30 s after "You're set up" the try task fell back to "not done"
-  // under two done tasks. On This machine the proof stays, with its time.
-  it("keeps This machine's proof once the traffic goes quiet, and nowhere else's", () => {
+  // U5 · Q3 · P1: 30 s after "You're set up" the try task fell back to "not
+  // done" under two done tasks. On This machine and on another device the
+  // proof stays, with its time; their other two tasks keep theirs.
+  it("keeps the proof on This machine and on another device once the traffic goes quiet, and nowhere else", () => {
     const at = Date.now();
     draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
     expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
 
     pick("iPhone or iPad");
-    expect(task(4)).toHaveTextContent("not done — nothing arriving right now");
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
+
+    pick("Android emulator");
+    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
   });
 });
 

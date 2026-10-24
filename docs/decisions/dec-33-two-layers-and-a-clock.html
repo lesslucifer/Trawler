@@ -17,7 +17,7 @@
       <p>A probe knows the machine at the moment it ran. A captured flow knows the wire at the moment it
          was captured. Neither knows the other, and neither knows <em>now</em> unless it carries a time.</p>
       <div class="meta">DEC-33 · 2026-09-06 · Trawler · E-REDESIGN.W10 · from the owner's review of the running
-        setup screen, distilled with design run #9's amendment · status: active · amends DEC-13's connection-signal clause · amended by <a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a></div>
+        setup screen, distilled with design run #9's amendment · status: active · amends DEC-13's connection-signal clause · amended by <a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a> · <a href="dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a></div>
     </div>
   </header>
   <main>
@@ -105,6 +105,7 @@ flowchart LR
     <ul>
       <li><a href="dec-13-onboarding-capabilities.html">DEC-13</a>'s connection-signal clause — "so the proxy step can go green on any tunnel" — is superseded; the record carries a dated note. The signal, the endpoint and the event are unchanged.</li>
       <li><em>Amended 2026-09-30 by <a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>:</em> where no probe answers, This machine's two tasks read the one request the app made of its own, marked and captured decrypted this session — never any other traffic. The probes are re-read on a 3 s watch while setup shows, the interval this record rejected at 270 ms a read; the readers now take about 20 ms.</li>
+      <li><em>Amended 2026-10-23 by <a href="dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>:</em> another device's tasks read only traffic that started after its address was allowed, and only its own marked request wherever this machine's proxy points here or cannot be read. Each proof carries its time and lasts the session.</li>
       <li><code>trustStatus</code> and <code>proxyStatus</code> take no traffic input; there is no argument through which old evidence could reach them. <code>trafficStatus</code> replaces <code>verifyStatus</code> and takes the timestamps and <code>now</code>. A future surface that wants a step to go green on traffic argues with this record first.</li>
       <li>UC-ONBOARD's contract reads "two layers of status, never blended" in place of "two-truths status per step".</li>
       <li>Design run #9 was amended inside the build WU under DEC-24/25: its Frame gained three constraints, its Layout a zone, and its <code>short</code> table went from sixteen to nineteen. The amended blob is what the build cites.</li>

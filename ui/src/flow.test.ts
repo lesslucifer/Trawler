@@ -119,6 +119,16 @@ describe("sessionTraffic reads only what started once the session opened", () =>
     expect(sessionTraffic([https], at - 20, [at - 10, at])).toMatchObject({ lastTunnelAt: at, openTunnelAt: null });
     expect(sessionTraffic([flow], at - 20, tunnels)).toMatchObject({ openTunnelAt: at - 10 });
   });
+
+  it("answers a tunnel with a decrypted request on the wire, where only some of its rows are read", () => {
+    expect(sessionTraffic([], at - 20, [at - 10], [https])).toEqual({
+      lastDecryptedAt: null,
+      lastPlainAt: null,
+      lastTunnelAt: at - 10,
+      openTunnelAt: null,
+    });
+    expect(sessionTraffic([], at - 20, [at + 5], [https])).toMatchObject({ openTunnelAt: at + 5 });
+  });
 });
 
 test("latestFlowTimes: since is the earliest start that counts", () => {
