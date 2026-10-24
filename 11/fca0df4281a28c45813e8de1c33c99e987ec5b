@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W6
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v3: rule 7 gains another Ubuntu machine's wording - a refusal after a proof names a browser with a store of its own first - and why: Firefox and Chrome keep stores the system command does not reach, so a GNOME app or Chrome can make the proof while Firefox refuses"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-63 row: on another Ubuntu machine the note after a proof names a browser with a store of its own first (E-ONBRVP.W6)"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: commands run on a stock install, and Linux's certificate task installs into every store a browser reads, a step each"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: a paragraph - Linux's certificate task installs into Firefox's store, Chrome's NSS database (made first where no Chrome has opened one) and the system bundle, a step each, browsers first, none a note or another way, its advice saying the system command reaches no browser; the commands paragraph - a tool the system lacks is installed first, a folder or database found wherever version and language put it; the traffic layer's row - another Ubuntu machine's note after a proof names a browser first"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the setup screen's design of record, round 15 opened and closed archived with the owner's LGTM: another Ubuntu machine's certificate task with its four steps, a refusal before a proof with Linux's advice, its try task after a proof with its note; rules for every store a step, a command that runs on a stock install and advice that names the missing store; Linux's certificate copy; the macOS mockup's stale Firefox note removed; after the close, the code review's round 1 - Chrome's command makes the database where no Chrome has"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1-W5 landed, W6 ruled, built and on its branch; W6's summary block links its plan"
+  - path: "docs/work/2026-10-24-onboard-revamp-w6-another-ubuntu-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W6's plan: who reads which store on Ubuntu, the screen today, status fixes S1-S2 and command fixes C1-C4 with the owner's rulings on Q1-Q3, N1-N3 deferred to W15 and N4 to W12, the test plan"
+  - path: "docs/work/2026-10-24-onboard-revamp-w6-another-ubuntu-status-result.html"
+    tier: T3
+    action: added
+    distills: "W6's result: outcome per expected row, deviations, evidence, distillation, follow-ups"
