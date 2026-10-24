@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+base: 1815021e7045898674320b536844e6e0b250262c
+design_sha256: 3ad88714a26e15bd6327950e73cef4f0a2cdba4db45700f315bc913ac923f676
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: ac0afd407d7a546a78099d53ee39597c0eb611cf
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "the header's reach chip, in its existing layout, gains one wording - 'no longer reachable on 192.168.1.24' for an allowed address this machine has left, the chip's half of step 1's not-working line (DEC-63 rule 6); the rest of the edit is the evidence windows, this machine's and reach's reads and the props handed to Onboarding, which render nothing new"
+date: 2026-10-24
