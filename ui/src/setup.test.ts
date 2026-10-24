@@ -451,8 +451,7 @@ describe("a guide's steps are the route, and everything else says what it is", (
     for (const note of notes(s)) expect(said).not.toContain(note);
   });
 
-  it("the browser caveats are notes — a reader cannot perform 'Firefox keeps its own store'", () => {
-    expect(notes(setup("this", { os: "linux" }))).toContain("Firefox keeps its own store — import it there too.");
+  it("the browser caveats are notes — a reader cannot perform 'apps ignore user CAs'", () => {
     expect(notes(setup("android"))).toContain(
       "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
     );
@@ -468,9 +467,7 @@ describe("a guide's steps are the route, and everything else says what it is", (
     expect(commands(alternatives("android-sim"))).toContain(
       "emulator -avd <name> -http-proxy http://10.0.2.2:9999",
     );
-    expect(commands(alternatives("ubuntu"))).toContain(
-      "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ~/Downloads/trawler-ca.pem",
-    );
+    expect(alternatives("ubuntu")).toEqual([]);
     expect(
       alternatives("android").flatMap((step) => step.filter((p) => typeof p === "string")),
     ).toContain("No browser on it?");
@@ -666,14 +663,19 @@ describe("each platform says what to check when its traffic does not decrypt", (
     expect(notes(setup(id, { os })).join("\n")).not.toMatch(/Firefox/);
   });
 
+  // S1: on Linux the system command reaches no browser, so a restart fixes
+  // nothing and the advice names the stores the browsers keep instead.
   it.each([
     ["this", "linux"],
+    ["this", "other"],
     ["ubuntu", "macos"],
-  ] as const)("%s on %s: a browser restart, Firefox's own store and pinning", (id, os) => {
+  ] as const)("%s on %s: the system command reaches no browser, each has its own step", (id, os) => {
     const check = setup(id, { os }).notDecrypting;
-    expect(check).toMatch(/restarts, and Firefox keeps its own/);
+    expect(check).toMatch(/The system command covers curl and the system's tools, not browsers/);
+    expect(check).toMatch(/Firefox and Chrome each keep a store of their own, and each has its own step below/);
     expect(check).toMatch(/pin their own certificate/);
-    expect(notes(setup(id, { os }))).toContain("Firefox keeps its own store — import it there too.");
+    expect(check).not.toMatch(/restart/);
+    expect(notes(setup(id, { os }))).toEqual([]);
   });
 
   it("the iPhone's trust step says installing does not trust, and what Safari says until it does", () => {
@@ -718,12 +720,92 @@ describe("another computer's trust command reads the file its download step name
   it.each([
     ["mac", "~/Downloads/trawler-ca.pem"],
     ["windows", '"$HOME\\Downloads\\trawler-ca.pem"'],
-    ["ubuntu", "~/Downloads/trawler-ca.pem"],
+    ["ubuntu", '"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"'],
   ] as const)("%s", (id, path) => {
     const file = downloaded(id).match(/it downloads (\S+)\.$/)![1];
-    const [install] = commands(setup(id).trust.guide!.steps);
+    const installs = commands(setup(id).trust.guide!.steps);
 
     expect(path).toContain(file);
-    expect(install.endsWith(path) || install.includes(`${path} `)).toBe(true);
+    expect(installs.length).toBeGreaterThan(0);
+    for (const install of installs) expect(install.endsWith(path) || install.includes(`${path} `)).toBe(true);
   });
+});
+
+// C1-C4: Linux keeps three certificate stores, and the browsers read neither
+// of the other two, so a step that writes one cannot make another decrypt.
+describe("Linux's certificate task installs into every store, each a step of its own", () => {
+  const LINUX = [
+    ["this", "linux"],
+    ["this", "other"],
+    ["ubuntu", "macos"],
+  ] as const;
+  const trustOf = (id: PlatformId, os: HostOs) => setup(id, { os }).trust.guide!;
+  const leads = (steps: GuideStep[]) => steps.map((step) => step.find((p) => typeof p === "string"));
+
+  it.each(LINUX)("%s on %s: Firefox, then Chrome, then the system's tools", (id, os) => {
+    const [, ...stores] = trustOf(id, os).steps;
+
+    expect(leads(stores)).toEqual([
+      'In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".',
+      "For Chrome, run:",
+      "For curl and the system's tools, run:",
+    ]);
+    expect(trustOf(id, os).alternatives).toBeUndefined();
+  });
+
+  it.each(LINUX)("%s on %s: the way back undoes each store, in the same order", (id, os) => {
+    const { undo } = trustOf(id, os);
+
+    expect(leads(undo!)).toEqual([
+      "In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities → Trawler Proxy CA → Delete or Distrust.",
+      "For Chrome, run:",
+      "For curl and the system's tools, run:",
+    ]);
+  });
+
+  it.each(LINUX)("%s on %s: Chrome's command installs certutil, then finds whichever database Chrome made", (id, os) => {
+    const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
+    const [chrome] = commands([trustOf(id, os).steps[2]]);
+    const [chromeRemoval] = commands([trustOf(id, os).undo![1]]);
+
+    expect(chrome).toMatch(/^sudo apt install -y libnss3-tools && /);
+    expect(chrome).toContain(`-d ${NSS_DB} -A -t C,, -n trawler -i `);
+    expect(chromeRemoval).toBe(`certutil -d ${NSS_DB} -D -n trawler`);
+  });
+
+  it("this machine's commands read the file it saved, another Ubuntu machine's the one it downloaded", () => {
+    const [, ...thisMachine] = commands(trustOf("this", "linux").steps);
+    const [, ...ubuntu] = commands(trustOf("ubuntu", "macos").steps);
+
+    expect(thisMachine).toEqual([
+      "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+    ]);
+    expect(ubuntu).toEqual([
+      'sudo cp "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem" /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates',
+    ]);
+  });
+
+  // S2: another Ubuntu machine's browsers keep stores of their own, so after a
+  // proof a refusal is first one of them; elsewhere the platform says nothing.
+  it("only another Ubuntu machine names a browser's own store after a proof", () => {
+    expect(setup("ubuntu").refusedAfterProof).toBe(
+      "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.",
+    );
+    for (const id of PLATFORM_IDS.filter((p) => p !== "ubuntu")) {
+      for (const os of ["macos", "windows", "linux", "other"] as const) {
+        expect(setup(id, { os }).refusedAfterProof).toBeUndefined();
+      }
+    }
+  });
+});
+
+// Review round 1: a Chrome installed and never opened has made neither NSS
+// database, and certutil adds only to a database it was asked to create.
+test("Linux's Chrome command creates the database a Chrome since M146 reads where none exists, before adding to it", () => {
+  const chrome = commands([setup("ubuntu").trust.guide!.steps[2]])[0];
+  const create =
+    "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
+
+  expect(chrome).toContain(`libnss3-tools && ${create} && certutil -d `);
+  expect(chrome.indexOf(" -N ")).toBeLessThan(chrome.indexOf(" -A "));
 });

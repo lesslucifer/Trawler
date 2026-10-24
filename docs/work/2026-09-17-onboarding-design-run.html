@@ -119,6 +119,14 @@
     .a-op-late{display:none}
     .late .a-op-wait,.late .a-op-rest,.late .a-op-tunnel,.late .a-op-proven{display:none}
     .late .a-op-late{display:block}
+    /* round 15 — another Ubuntu machine: its certificate task, a refusal
+       before any proof, and its try task after one. */
+    .a-pf-ubuntu,.a-ub-tunnel,.a-ub-late{display:none}
+    .p-ubuntu .a-pf-machine,.p-ubuntu .a-pf-probed,.p-ubuntu [data-zone="done"]{display:none}
+    .p-ubuntu .a-pf-ubuntu{display:block}
+    .tunnel .a-ub-wait,.late .a-ub-wait{display:none}
+    .tunnel .a-ub-tunnel{display:block}
+    .late .a-ub-late{display:block}
     .p-off.mixed [data-zone="done"]{display:none}
     .p-off.marked [data-zone="done"]{display:block}
   </style>
@@ -128,8 +136,8 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W5</strong> · branch <code>wu/onboard-revamp/another-windows-status</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W6</strong> · branch <code>wu/onboard-revamp/another-ubuntu-status</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
@@ -154,6 +162,7 @@
             <div class="a-pf-sim" id="m-picker-sim"></div>
             <div class="a-pf-off" id="m-picker-off"></div>
             <div class="a-pf-none" id="m-picker-none"></div>
+            <div class="a-pf-ubuntu" id="m-picker-ubuntu"></div>
           </div>
 
           <div class="a-zone" data-zone="steps">
@@ -181,6 +190,11 @@
               </div>
               <div class="a-rch-lost" id="m-steps-off-lost"></div>
             </div>
+            <div class="a-pf-ubuntu">
+              <div class="a-ub-wait" id="m-steps-ubuntu-waiting"></div>
+              <div class="a-ub-tunnel" id="m-steps-ubuntu-tunnel"></div>
+              <div class="a-ub-late" id="m-steps-ubuntu-late"></div>
+            </div>
           </div>
 
           <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4" data-zone="probe">
@@ -201,6 +215,8 @@
               data-label-off="▶ platform: iOS Simulator" data-label-on="◀ back to this machine">▶ platform: iOS Simulator</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="p-off"
               data-label-off="▶ platform: iPhone or iPad" data-label-on="◀ back to this machine">▶ platform: iPhone or iPad</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-ubuntu"
+              data-label-off="▶ platform: Another Ubuntu machine" data-label-on="◀ back to this machine">▶ platform: Another Ubuntu machine</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="reached"
               data-label-off="▶ reach armed" data-label-on="◀ reach not armed">▶ reach armed</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="r-trust"
@@ -335,7 +351,6 @@
         const line = (cls, status) => state(cls, <StatusLine status={status} />);
 
         const saveStep = <>Save Trawler's certificate as trawler-ca.pem <Button frame="bare" tone="mute" onClick={noop}>save…</Button></>;
-        const FIREFOX = "Firefox keeps its own store — import it there too.";
         const MAC_ROUTE_CMD = "networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420";
 
         mount("m-picker-machine", picker("this"));
@@ -407,7 +422,7 @@
         );
         const trustSteps = (
           <Steps n={2} open>
-            <Guide steps={[saveStep, TRUST_STEP]} notes={[FIREFOX]}
+            <Guide steps={[saveStep, TRUST_STEP]}
                    alternatives={["Or double-click the file and set the Trawler CA to Always Trust."]}
                    undoTitle="to remove it later" undo={TRUST_UNDO} />
           </Steps>
@@ -483,7 +498,7 @@
         ];
         const trustByHand = (open) => (
           <Disclosure summary="do it manually" defaultOpen={open}>
-            <Guide steps={[saveStep, TRUST_STEP]} notes={[FIREFOX]}
+            <Guide steps={[saveStep, TRUST_STEP]}
                    alternatives={["Or double-click the file and set the Trawler CA to Always Trust."]}
                    undoTitle="to remove it later" undo={TRUST_UNDO} />
           </Disclosure>
@@ -804,6 +819,92 @@
         mount("m-steps-off-lost", phoneTasks("lost"));
         mount("m-steps-off-late", phoneTasks("late"));
 
+        /* ---- another Ubuntu machine: three stores, a step each ----------- */
+        /* Round 15 (C1 · Q3): Firefox keeps its own store, Chrome reads the NSS
+           database, and curl and the system's tools read the system bundle -
+           three ends, not one end by three ways, so each is a numbered step,
+           led by the browser the try task opens. Chrome's command installs the
+           tool it needs and finds whichever database this Chrome made (C2 ·
+           C3); the download is read from the folder Ubuntu named in its own
+           language (C4). The advice and the note after a proof name the
+           browsers' own stores (S1 · S2). */
+        const DOWNLOADED_PEM = '"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"';
+        const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
+        const NSS_DB_MADE = "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
+        const FIREFOX_PATH = "Settings → Privacy & Security → Certificates → View Certificates → Authorities";
+        const UBUNTU_TRUST = [
+          <>On that machine, open {copyable("http://192.168.1.24:7421/ca.pem", "the certificate URL", "certificate url")} — it downloads trawler-ca.pem.</>,
+          `In Firefox: ${FIREFOX_PATH} → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".`,
+          <>For Chrome, run:{command(`sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${DOWNLOADED_PEM}`, "the Chrome command")}</>,
+          <>For curl and the system's tools, run:{command(`sudo cp ${DOWNLOADED_PEM} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`, "the trust command")}</>,
+        ];
+        const UBUNTU_UNDO = [
+          `In Firefox: ${FIREFOX_PATH} → Trawler Proxy CA → Delete or Distrust.`,
+          <>For Chrome, run:{command(`certutil -d ${NSS_DB} -D -n trawler`, "the Chrome removal command")}</>,
+          <>For curl and the system's tools, run:{command("sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh", "the removal command")}</>,
+        ];
+        const UBUNTU_ROUTE_CMD = "gsettings set org.gnome.system.proxy mode 'manual' && gsettings set org.gnome.system.proxy.http host '192.168.1.24' && gsettings set org.gnome.system.proxy.http port 7420 && gsettings set org.gnome.system.proxy.https host '192.168.1.24' && gsettings set org.gnome.system.proxy.https port 7420";
+        const LINUX_ADVICE =
+          "Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.";
+        const UBUNTU_LATE_REFUSAL =
+          "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.";
+        const UBUNTU = {
+          waiting: { trust: sv("◐", "muted", "can't check here — that machine's first HTTPS request confirms it"), route: sv("◐", "muted", "can't check here — that machine's first request confirms it"), try: WAITING },
+          tunnel: { trust: sv("⚠", "warn", "not working — nothing decrypted"), route: REACHED_AT, try: ARRIVING },
+          late: { trust: sv("✓", "ok", "done — a request decrypted at 14:02"), route: REACHED_AT, try: sv("✓", "ok", "done — decrypted at 14:02") },
+        };
+        const ubuntuTasks = (variant) => {
+          const lines = UBUNTU[variant];
+          const trustDone = variant === "late";
+          const routeDone = variant !== "waiting";
+          return (
+          <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="Allow that machine to connect"
+                      status={sv("✓", "ok", "done — listening on 192.168.1.24 until Trawler quits")}>
+              <Button frame="bare" tone="mute" onClick={noop}>stop listening</Button>
+            </TaskStep>
+            <TaskStep n={2} title="On that machine, install Trawler's certificate" why="so that machine's HTTPS can be decrypted"
+                      status={lines.trust}>
+              {variant === "tunnel" && (
+                <div className="pb-2">
+                  <Notice tone="mute">
+                    something reached Trawler and did not decrypt — that machine does not trust Trawler's
+                    certificate yet. The steps below install it. {LINUX_ADVICE}
+                  </Notice>
+                </div>
+              )}
+              {trustDone
+                ? <WayBack title="to remove it later" steps={UBUNTU_UNDO} />
+                : <Steps n={4} open><Guide steps={UBUNTU_TRUST} undoTitle="to remove it later" undo={UBUNTU_UNDO} /></Steps>}
+            </TaskStep>
+            <TaskStep n={3} title="On that machine, send its traffic to Trawler" status={lines.route}>
+              <div className="pb-2 font-ui text-body text-ink-body">server 192.168.1.24 · port 7420</div>
+              {routeDone
+                ? <WayBack title="to turn it off later" steps={[<>GNOME — back to no proxy:{command("gsettings set org.gnome.system.proxy mode 'none'", "the proxy-off command")}</>]} />
+                : <Steps n={1}><Guide steps={[<>GNOME — run:{command(UBUNTU_ROUTE_CMD, "the proxy command")}</>]} /></Steps>}
+            </TaskStep>
+            <TaskStep n={4} title="Open any website on that machine" why="the first decrypted request is what proves setup works">
+              <StatusLine status={lines.try} />
+              {variant === "late" && (
+                <div className="pt-2"><Notice tone="mute">{UBUNTU_LATE_REFUSAL}</Notice></div>
+              )}
+              <div className="pt-2 font-ui text-chrome text-ink-mute">
+                <span className="flex flex-wrap items-center gap-chrome-gap">
+                  <span>or open this one on that machine</span>
+                  {copyable(CHECK_URL, "the address to open", "check url")}
+                </span>
+              </div>
+            </TaskStep>
+            </div>
+          </Section>
+          );
+        };
+        mount("m-picker-ubuntu", picker("ubuntu"));
+        mount("m-steps-ubuntu-waiting", ubuntuTasks("waiting"));
+        mount("m-steps-ubuntu-tunnel", ubuntuTasks("tunnel"));
+        mount("m-steps-ubuntu-late", ubuntuTasks("late"));
+
         mount("m-probe-rest",
           <span className="font-ui text-control text-ink-mute">
             checked <TimestampText timestamp={MINUTES_AGO} format="relative" />
@@ -920,7 +1021,10 @@
         <tr><td>Another device's tasks read only what could have come from it: its marked request — the address in its try task — always, and other traffic since its address was allowed only where it arrived between two readings of this Mac's proxy as off or another — what no two such readings bracket stays unplaced, and a proof stays whatever that proxy reads after it. Until something is that device's, each names what will settle it, and a refusal is the try task's, naming no device. The end names the device only on its marked request</td><td>round 13 · A1–A4 · DEC-63</td></tr>
         <tr><td>Another device's proof says when it was made and lasts the session; its try task keeps it once quiet</td><td>round 13 · P1 · P2 · Q2</td></tr>
         <tr><td>Another device's try task keeps its proof past anything after it that does not decrypt: plain http adds nothing, a refusal is a muted note under the proof, never ⚠ and never a step to redo. Every off-machine platform</td><td>round 14 · S1 · Q1</td></tr>
-        <tr><td>A note is true of the system it is shown on: Firefox's own store is named on Linux only, where Firefox keeps one; on macOS and Windows it reads the system's store</td><td>round 14 · S2 · Q2</td></tr>
+        <tr><td>A note is true of the system it is shown on: Firefox's own store is named on Linux only, where Firefox keeps one; on macOS and Windows it reads the system's store. On Linux it is a step, not a note (round 15)</td><td>round 14 · S2 · Q2 · round 15 · C1</td></tr>
+        <tr><td>A certificate task installs into every store the try task's client may read, each store a numbered step of its own — a store is a different end, never "another way". On Linux: Firefox's own, Chrome's NSS database, then the system's, the browsers first because the try task opens one</td><td>round 15 · C1 · Q1 · Q3</td></tr>
+        <tr><td>A command runs on a stock install: it installs a tool the system does not ship before using it, and finds a database or a folder wherever this version and this language put it</td><td>round 15 · C2 · C3 · C4</td></tr>
+        <tr><td>Advice names the store still missing: on Linux the system command reaches no browser, and on another Ubuntu machine a refusal after its proof is first a browser with a store of its own</td><td>round 15 · S1 · S2 · Q2</td></tr>
         <tr><td>A command runs as written in the shell its sentence names, and reads the file where the step before it left it: Windows' sentences name PowerShell; another computer's trust command reads the download from Downloads</td><td>round 14 · C1 · C2 · Q3</td></tr>
         <tr><td>An allowed address this Mac no longer holds reads not working, offers the one it holds now, and dims the tasks that would print it. Reach is read again with this machine: on focus and every 3 s</td><td>round 13 · R1 · R2</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
@@ -970,7 +1074,8 @@
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
         <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>the Simulator</em>, …), with the steps open</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted · another device after its proof (round 14), under <em>done — decrypted at 14:02</em>: <em>something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.</em></td></tr>
-        <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's and Ubuntu machine's trust commands read <span class="font-mono">~/Downloads/trawler-ca.pem</span> · <em>Firefox keeps its own store — import it there too.</em> on Linux only · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
+        <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's trust command reads <span class="font-mono">~/Downloads/trawler-ca.pem</span>, another Ubuntu machine's <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> (round 15) · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
+        <tr><td>Linux's certificate steps (round 15)</td><td><em>In Firefox: Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".</em> · <em>For Chrome, run:</em> <span class="font-mono">sudo apt install -y libnss3-tools &amp;&amp; { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb &amp;&amp; certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } &amp;&amp; certutil -d "sql:$([ -d ~/.pki/nssdb ] &amp;&amp; echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i …</span> · <em>For curl and the system's tools, run:</em> the system command · the same three under <em>to remove it later</em>, Firefox's ending <em>→ Trawler Proxy CA → Delete or Distrust.</em> · the refusal's advice: <em>Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.</em> · another Ubuntu machine after its proof: <em>something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.</em></td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
         <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
@@ -1087,6 +1192,9 @@
         <tr><td>Round 13, after the close — the code review, round 6: a reading's edge between a tunnel and the request it carried counted the tunnel as the device's and not its answer, so the certificate task could read not working for a request that decrypted</td><td>rules · model — a decrypted request after a tunnel on the wire answers it, wherever a reading falls. Nothing drawn moved. W4's <code>design/v1</code> note cites the blob this amendment leaves</td><td><code>DEC-63</code> rule 3 · <code>DEC-33</code> — the clock layer's open tunnel</td></tr>
         <tr><td>Round 14 — the owner's rulings on E-ONBRVP.W5's plan, 2026-10-24: "ok, let's proceed it" — S1–S2 and C1–C2 taken, Q1–Q3 A: every off-machine platform keeps its try task's proof, Firefox's own store named on Linux only, the commands fixed on all three desktops</td><td>mockup — a device after its proof, a connection nothing decrypts: the try task done with a note under it · rules — the proof past what follows it, a note true of its system, a command that runs where its sentence says · model — the try row · copy — the note; a computer's commands and notes</td><td><code>DEC-63</code> — a refusal after a proof · <code>Notice</code> tone mute — a note, not a remedy · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
         <tr><td>Round 14, close — "LGTM", on another device's try task keeping its proof past what follows it with a refusal as a note under it, a note true of its system, and a command that runs where its sentence says</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W5's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 15 — the owner's rulings on E-ONBRVP.W6's plan, 2026-10-24: "all good, just go with the proposed" — S1–S2 and C1–C4 taken, Q1–Q3 A: the Linux route fixed wherever it is printed, the note after a proof naming the browsers on another Ubuntu machine only, Firefox then Chrome then the system</td><td>mockup — another Ubuntu machine: its certificate task's four steps, a refusal before any proof with Linux's advice, its try task after a proof with Ubuntu's note; This machine on macOS loses the Firefox note round 14 removed from macOS · rules — every store a step, a command that runs on a stock install, advice that names the missing store · copy — Linux's certificate steps, the advice and the note</td><td><code>DEC-63</code> rule 7 — the note's Linux wording · <code>StepList</code> — a step is one act, so three stores are three steps · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
+        <tr><td>Round 15, close — "LGTM", on Linux's certificate task installing into every store a browser reads, a step each, commands that run on a stock Ubuntu, and advice and a note after a proof that name the browsers' own stores</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W6's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 15, after the close — the code review, round 1: a Chrome installed and never opened has made neither NSS database, and certutil adds to none it was not asked to create, so Chrome's step failed on a fresh Ubuntu</td><td>copy — Chrome's command creates the database a Chrome since M146 reads where none exists, before adding to it. Nothing drawn moved. W6's <code>design/v1</code> note cites the blob this amendment leaves</td><td>the rule — a command finds a database wherever this version put it, and makes it where none exists</td></tr>
       </tbody>
     </table>
 

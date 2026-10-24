@@ -312,6 +312,7 @@ const trustedNotDecrypting = (device: string) =>
 // What the try task's reading depends on beyond the traffic itself.
 // `ownsRefusal`: the certificate task words a refusal, so this one does not.
 // `trustedOn`: the device whose own probe reads its certificate trusted.
+// `refusedAfterProof`: the platform's own account of a refusal after its proof.
 // `proofStays`: how far a decrypted request that proved this setup outlasts
 // what follows it - not at all; once quiet, on This machine, whose other two
 // tasks re-read themselves (U5); or past anything after it that does not
@@ -322,6 +323,7 @@ export interface TrafficContext {
   ownsRefusal: boolean;
   trustedOn: string | null;
   proofStays: ProofStays;
+  refusedAfterProof?: string;
 }
 
 const NO_CONTEXT: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: "never" };
@@ -337,8 +339,8 @@ const OUTLASTED: Record<ProofStays, readonly TrafficReading[]> = {
 export const REFUSED_AFTER_PROOF =
   "something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.";
 
-function keptProof(decryptedAt: number, refused: boolean, since = ""): StepStatusView {
-  return verdict("done", `decrypted at ${clock(decryptedAt)}${since}`, refused ? REFUSED_AFTER_PROOF : undefined);
+function keptProof(decryptedAt: number, refusal: string | undefined, since = ""): StepStatusView {
+  return verdict("done", `decrypted at ${clock(decryptedAt)}${since}`, refusal);
 }
 
 // The try task words a refusal only where the certificate task does not own
@@ -350,7 +352,8 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
   if (decryptedAt !== null && OUTLASTED[around.proofStays].includes(reading)) {
     const after = (at: number | null) => at !== null && at > decryptedAt;
     const since = after(seen.lastPlainAt) || after(seen.lastTunnelAt) ? "" : ", nothing since";
-    return keptProof(decryptedAt, reading === "not-decrypting", since);
+    const refusal = reading === "not-decrypting" ? (around.refusedAfterProof ?? REFUSED_AFTER_PROOF) : undefined;
+    return keptProof(decryptedAt, refusal, since);
   }
   const view = TRAFFIC_VERDICT[reading];
   if (reading !== "not-decrypting") return view;
@@ -362,9 +365,14 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
 // machine's (DEC-63). The wire may still say nothing decrypts, naming no device,
 // as This machine's try task does where its store went unread (D7); otherwise
 // only a proof already that device's is read, and it outlasts the wire (S1).
-export function mixedTryStatus(wire: Traffic, now: number, decryptedAt: number | null): StepStatusView {
+export function mixedTryStatus(
+  wire: Traffic,
+  now: number,
+  decryptedAt: number | null,
+  refusedAfterProof = REFUSED_AFTER_PROOF,
+): StepStatusView {
   const refused = trafficReading(wire, now) === "not-decrypting";
-  if (decryptedAt !== null) return keptProof(decryptedAt, refused);
+  if (decryptedAt !== null) return keptProof(decryptedAt, refused ? refusedAfterProof : undefined);
   return refused ? TRAFFIC_VERDICT["not-decrypting"] : awaiting("the address below confirms it");
 }
 

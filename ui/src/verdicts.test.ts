@@ -662,6 +662,17 @@ describe("another device's try task once a decrypted request proved it", () => {
     expect(trafficStatus(refused, quiet, PAST).remedy).toMatch(/Finish the certificate step/);
   });
 
+  it("says the platform's own account of the refusal where it has one (W6 S2)", () => {
+    const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    const plain = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, lastPlainAt: quiet - 1_000 };
+    const own: TrafficContext = { ...PAST, refusedAfterProof: "a browser with a store of its own" };
+
+    expect(trafficStatus(refusing, quiet, own)).toEqual(
+      verdict("done", "decrypted at 14:02", "a browser with a store of its own"),
+    );
+    expect(trafficStatus(plain, quiet, own)).toEqual(verdict("done", "decrypted at 14:02"));
+  });
+
   it("is This machine's once-quiet rule nowhere else: past a refusal, This machine still reads it", () => {
     const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
     const once: TrafficContext = { ...PAST, proofStays: "once-quiet" };
@@ -757,6 +768,14 @@ describe("another device's try task, while nothing arriving is told apart from t
     expect(mixedTryStatus(refusing, quiet, AT_1402)).toEqual(
       verdict("done", "decrypted at 14:02", REFUSED_AFTER_PROOF),
     );
+  });
+
+  it("says the platform's own account of a refusal after the proof, and only after one (W6 S2)", () => {
+    const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    const own = "a browser with a store of its own";
+
+    expect(mixedTryStatus(refusing, quiet, AT_1402, own)).toEqual(verdict("done", "decrypted at 14:02", own));
+    expect(mixedTryStatus(refusing, quiet, null, own).remedy).toMatch(/the device it comes from does not trust/);
   });
 });
 

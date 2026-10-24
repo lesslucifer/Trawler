@@ -520,13 +520,19 @@ describe("each task holds its own route, under the one button", () => {
     expect(within(task(2)).getByText("to turn it off later")).toBeInTheDocument();
   });
 
-  // S2: Firefox reads the system's store on macOS and Windows, so only Linux's
-  // guide sends anyone to import it there.
-  it("names Firefox's own store on Linux only", () => {
+  // W6 C1: Linux keeps three certificate stores, and the browsers read neither
+  // of the other two, so each store is a step - browsers first - and none is a
+  // note or another way. Firefox reads the system's store on macOS and Windows.
+  it("gives each of Linux's three stores a step, browsers first, and names Firefox on Linux only", () => {
     draw({ os: "linux" });
-    expect(within(task(1)).getByTestId("guide-note")).toHaveTextContent(
-      "Firefox keeps its own store — import it there too.",
-    );
+    const firefox = within(task(1)).getByText(/^In Firefox: .* → Authorities → Import → trawler-ca\.pem/);
+    const [chrome] = within(task(1)).getAllByText("For Chrome, run:");
+    const [system] = within(task(1)).getAllByText("For curl and the system's tools, run:");
+
+    expect(firefox.compareDocumentPosition(chrome) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(chrome.compareDocumentPosition(system) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(task(1)).queryByTestId("guide-note")).toBeNull();
+    expect(within(task(1)).queryByText("other ways")).toBeNull();
     cleanup();
 
     draw({ os: "windows" });
@@ -1493,6 +1499,55 @@ describe("the clock reaches the traffic reading and nothing else", () => {
     rerender(screenAt({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at, lastPlainAt: ago(5_000) }, device: clear, deviceMark: "k3m9" }));
     expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
     expect(document.body.textContent).not.toMatch(/only plain http/);
+  });
+});
+
+// ── W6: another Ubuntu machine's browsers keep stores of their own ─────────
+
+describe("another Ubuntu machine", () => {
+  const clear = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
+
+  // C2 · C3 · C4: certutil is not on a stock Ubuntu, Chrome's database moved at
+  // M146, and the download folder is named in the session's language.
+  it("prints commands that run on a stock Ubuntu, on the file its download step left", () => {
+    draw({ reach: ARMED, device: clear, deviceMark: "k3m9" });
+    pick("Another Ubuntu machine");
+
+    expect(commandNamed("the Chrome command")).toHaveTextContent(
+      'sudo apt install -y libnss3-tools && { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } && certutil -d "sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"',
+    );
+    expect(commandNamed("the trust command")).toHaveTextContent('sudo cp "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem" ');
+  });
+
+  // S1: the system command reaches no browser, so a restart fixes nothing.
+  it("says the system command reaches no browser while nothing decrypts", () => {
+    draw({ reach: ARMED, traffic: arriving, device: clear, deviceMark: "k3m9" });
+    pick("Another Ubuntu machine");
+
+    expect(task(2)).toHaveTextContent("not working — nothing decrypted");
+    const remedy = within(task(2)).getByTestId("traffic-remedy");
+    expect(remedy).toHaveTextContent(
+      "Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below.",
+    );
+    expect(remedy.textContent).not.toMatch(/restart/);
+  });
+
+  // S2: a GNOME app reading the system store, or Chrome after its import, can
+  // make the proof while Firefox still refuses.
+  it("after a proof, names a browser with a store of its own first, mixed or not", () => {
+    const at = ago(40_000);
+    const refused = { ...NO_TRAFFIC, lastDecryptedAt: at, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) };
+    const BROWSER_FIRST =
+      "one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.";
+    const { rerender } = draw({ reach: ARMED, traffic: refused, device: clear, deviceMark: "k3m9" });
+    pick("Another Ubuntu machine");
+
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(BROWSER_FIRST);
+
+    const mixed = { provedAt: at, mixed: true, wire: { ...NO_TRAFFIC, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) } };
+    rerender(screenAt({ reach: ARMED, traffic: refused, device: mixed, deviceMark: "k3m9" }));
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(BROWSER_FIRST);
   });
 });
 

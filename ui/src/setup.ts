@@ -145,6 +145,9 @@ export interface PlatformSetup {
   // What a user who already did the certificate steps checks next when traffic
   // arrives and does not decrypt: the one thing this platform's users miss.
   notDecrypting: string;
+  // What a refusal after another device's proof most likely is, where this
+  // platform knows better than every platform's answer (DEC-63 rule 7).
+  refusedAfterProof?: string;
 }
 
 // The addresses an off-machine platform's instructions are built from. Null
@@ -356,23 +359,36 @@ type OsTarget = "macos" | "windows" | "linux";
 
 const hostTarget = (os: HostOs): OsTarget => (os === "other" ? "linux" : os);
 
-// Firefox reads the system's store on macOS and Windows, and keeps one of its
-// own on Linux (S2), so only Linux's guide sends anyone to import it there.
-const FIREFOX_NOTE = "Firefox keeps its own store — import it there too.";
-
 const NOT_DECRYPTING_SYSTEM_STORE =
   "Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.";
 
 const NOT_DECRYPTING_LINUX =
-  "Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.";
+  "Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.";
+
+const REFUSED_AFTER_PROOF_LINUX =
+  "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.";
+
+// Linux has three stores and the browsers read neither of the other two:
+// Firefox keeps its own, Chrome the NSS database, and curl and the system's
+// tools the system bundle. Each is a step, browsers first, because the try task
+// opens a browser (C1). Chromium moved the NSS database at M146 and keeps an
+// older one where it exists (C3); a Chrome never opened has made neither, and
+// certutil adds only to a database it was asked to create. certutil is not on
+// a stock Ubuntu (C2).
+const FIREFOX_AUTHORITIES = "In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities";
+const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
+const NSS_DB_MADE =
+  "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
+const FOR_CHROME = "For Chrome, run:";
+const FOR_SYSTEM_TOOLS = "For curl and the system's tools, run:";
 
 interface OsTrust {
   install: GuideStep[];
-  notes?: string[];
   alternatives?: GuideStep[];
   undoTitle: string;
   undo: GuideStep[];
   notDecrypting: string;
+  refusedAfterProof?: string;
 }
 
 // Windows' commands are written for PowerShell, the shell Windows opens from
@@ -418,50 +434,47 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   }),
   linux: (file) => ({
     install: [
+      [`${FIREFOX_AUTHORITIES} → Import → ${PEM_FILE}, then tick "Trust this CA to identify websites".`],
       [
-        "Run it in a terminal:",
+        FOR_CHROME,
         {
-          command:
-            `sudo cp ${file} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
-          label: "the trust command",
+          command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
+          label: "the Chrome command",
         },
       ],
-    ],
-    notes: [FIREFOX_NOTE],
-    alternatives: [
       [
-        "Chrome reads the NSS store instead:",
+        FOR_SYSTEM_TOOLS,
         {
-          command: `certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ${file}`,
-          label: "the NSS command",
+          command: `sudo cp ${file} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
+          label: "the trust command",
         },
       ],
     ],
     undoTitle: "to remove it later",
     undo: [
+      [`${FIREFOX_AUTHORITIES} → Trawler Proxy CA → Delete or Distrust.`],
+      [FOR_CHROME, { command: `certutil -d ${NSS_DB} -D -n trawler`, label: "the Chrome removal command" }],
       [
-        "Run:",
+        FOR_SYSTEM_TOOLS,
         {
           command:
             "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
           label: "the removal command",
         },
       ],
-      [
-        "NSS store:",
-        { command: "certutil -d sql:$HOME/.pki/nssdb -D -n trawler", label: "the NSS removal" },
-      ],
     ],
     notDecrypting: NOT_DECRYPTING_LINUX,
+    refusedAfterProof: REFUSED_AFTER_PROOF_LINUX,
   }),
 };
 
 // A browser on another computer saves the certificate to Downloads, and a
 // terminal opens elsewhere, so that computer's command names the folder (C2).
+// Linux names that folder in the session's language, so it asks for it (C4).
 const DOWNLOADED: Record<OsTarget, (file: string) => string> = {
   macos: (file) => `~/Downloads/${file}`,
   windows: (file) => `"$HOME\\Downloads\\${file}"`,
-  linux: (file) => `~/Downloads/${file}`,
+  linux: (file) => `"$(xdg-user-dir DOWNLOAD)/${file}"`,
 };
 
 function routeCommand(t: ProxyTarget, addr: string): string | null {
@@ -572,7 +585,6 @@ function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
       why: `so ${host}'s HTTPS can be decrypted`,
       guide: {
         steps: [saveCaStep(caFormatFor("this")), ...trust.install],
-        notes: trust.notes,
         alternatives: trust.alternatives,
         undoTitle: trust.undoTitle,
         undo: trust.undo,
@@ -608,7 +620,6 @@ function anotherMachineSetup(
           ? undefined
           : {
               steps: [downloadStep(`On ${device}`, reach, format), ...trust.install],
-              notes: trust.notes,
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
               undo: trust.undo,
@@ -621,6 +632,7 @@ function anotherMachineSetup(
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
     notDecrypting: trust.notDecrypting,
+    refusedAfterProof: trust.refusedAfterProof,
   };
 }
 
