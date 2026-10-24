@@ -17,6 +17,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         setup::ca_trusted,
         setup::simulator_trust,
+        setup::emulator_readings,
         setup::set_proxy,
         setup::set_up_this_machine,
         setup::unset_proxy,

@@ -405,6 +405,231 @@ pub fn simulator_trust(pem: String) -> Vec<SimulatorTrust> {
     }
 }
 
+// Each running Android emulator, read through adb (E-ONBRVP.W8): the name of
+// its AVD, whether its user CA store holds the live certificate, and the proxy
+// it sends through. The store is root's: only an image that ships `su` lets adb
+// read it — a Google Play image is a user build without one — so a store not
+// read is unknown, never absent (Q1). The proxy is the shell user's to read on
+// every image (Q2).
+const EMULATOR_HOST_ALIAS: &str = "10.0.2.2";
+const USER_CA_STORE: &str = "/data/misc/user/0/cacerts-added";
+const SU_ANSWERED: &str = "trawler-su";
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum EmulatorProxy {
+    Ours,
+    // Set on a network the emulator does not send over: AndroidWifi, while its
+    // default network is the mobile one (C4).
+    WifiOnly,
+    Foreign,
+    None,
+    Unknown,
+}
+
+impl EmulatorProxy {
+    fn as_str(&self) -> &'static str {
+        match self {
+            EmulatorProxy::Ours => "ours",
+            EmulatorProxy::WifiOnly => "wifi-only",
+            EmulatorProxy::Foreign => "foreign",
+            EmulatorProxy::None => "none",
+            EmulatorProxy::Unknown => "unknown",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
+pub struct EmulatorReading {
+    name: String,
+    trust: &'static str,
+    proxy: &'static str,
+}
+
+impl EmulatorReading {
+    pub(crate) fn new(name: String, trust: Option<Trust>, proxy: &EmulatorProxy) -> Self {
+        Self { name, trust: trust_word(trust), proxy: proxy.as_str() }
+    }
+}
+
+// A GUI app inherits no shell profile, so the SDK is looked for where Android
+// Studio puts it before the PATH is tried.
+fn adb_candidates(
+    os: &str,
+    var: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Vec<std::path::PathBuf> {
+    let exe = if os == "windows" { "adb.exe" } else { "adb" };
+    let home = || var("HOME").map(std::path::PathBuf::from);
+    let installed = match os {
+        "macos" => home().map(|h| h.join("Library/Android/sdk")),
+        "windows" => {
+            var("LOCALAPPDATA").map(|d| std::path::PathBuf::from(d).join("Android").join("Sdk"))
+        }
+        "linux" => home().map(|h| h.join("Android/Sdk")),
+        _ => None,
+    };
+    ["ANDROID_HOME", "ANDROID_SDK_ROOT"]
+        .iter()
+        .filter_map(|key| var(key).map(std::path::PathBuf::from))
+        .chain(installed)
+        .map(|sdk| sdk.join("platform-tools").join(exe))
+        .collect()
+}
+
+fn running_emulators(devices: &str) -> Vec<String> {
+    devices
+        .lines()
+        .filter_map(|line| match line.split_whitespace().collect::<Vec<_>>()[..] {
+            [serial, "device"] if serial.starts_with("emulator-") => Some(serial.to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn user_ca_script() -> String {
+    format!("su 0 sh -c 'echo {SU_ANSWERED}; cat {USER_CA_STORE}/* 2>/dev/null | base64'")
+}
+
+// The installer writes each user CA as its own DER, so the store holds the live
+// certificate exactly when its files carry those bytes.
+fn user_store_trust(out: Option<&Ran>, der: &[u8]) -> Option<Trust> {
+    use base64::Engine as _;
+    let encoded = out?.stdout.trim_start().strip_prefix(SU_ANSWERED)?;
+    let files: String = encoded.split_whitespace().collect();
+    let bytes = base64::engine::general_purpose::STANDARD.decode(files).ok()?;
+    let holds = !der.is_empty() && bytes.windows(der.len()).any(|window| window == der);
+    Some(if holds { Trust::Trusted } else { Trust::Absent })
+}
+
+fn global_proxy(out: &Ran) -> Option<&str> {
+    match out.stdout.trim() {
+        "" | "null" | ":0" => None,
+        set => Some(set),
+    }
+}
+
+// `dumpsys connectivity` prints each network on one line, its proxy inside its
+// link properties as `HttpProxy: [host] port`.
+struct Network<'a> {
+    id: &'a str,
+    proxy: Option<(&'a str, u16)>,
+}
+
+struct Networks<'a> {
+    default: Option<&'a str>,
+    each: Vec<Network<'a>>,
+}
+
+fn network_proxies(dump: &str) -> Networks<'_> {
+    const AGENT: &str = "NetworkAgentInfo{network{";
+    const PROXY: &str = "HttpProxy: [";
+    let default = dump
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("Active default network: "))
+        .map(str::trim);
+    let each = dump
+        .lines()
+        .filter_map(|line| {
+            let after = &line[line.find(AGENT)? + AGENT.len()..];
+            let id = &after[..after.find('}')?];
+            let proxy = after.find(PROXY).and_then(|at| {
+                let rest = &after[at + PROXY.len()..];
+                let host = &rest[..rest.find(']')?];
+                let port = rest[host.len() + 1..].split_whitespace().next()?.parse().ok()?;
+                Some((host, port))
+            });
+            Some(Network { id, proxy })
+        })
+        .collect();
+    Networks { default, each }
+}
+
+// The global proxy covers every network and outranks a network's own; a proxy
+// on a network the emulator does not send over routes nothing (C4).
+fn emulator_proxy(global: Option<&Ran>, connectivity: Option<&Ran>, port: u16) -> EmulatorProxy {
+    let ours = |host: &str, p: u16| host == EMULATOR_HOST_ALIAS && p == port;
+    let global = global.filter(|out| out.ok);
+    if let Some(set) = global.and_then(global_proxy) {
+        return match host_and_port(set) {
+            Some((host, p)) if ours(&host, p) => EmulatorProxy::Ours,
+            _ => EmulatorProxy::Foreign,
+        };
+    }
+    let Some(dump) = connectivity.filter(|out| out.ok) else {
+        return EmulatorProxy::Unknown;
+    };
+    let networks = network_proxies(&dump.stdout);
+    let on_default = networks
+        .each
+        .iter()
+        .find(|network| Some(network.id) == networks.default)
+        .and_then(|network| network.proxy);
+    match on_default {
+        Some((host, p)) if ours(host, p) => EmulatorProxy::Ours,
+        Some(_) => EmulatorProxy::Foreign,
+        None if networks.each.iter().any(|n| n.proxy.is_some_and(|(h, p)| ours(h, p))) => {
+            EmulatorProxy::WifiOnly
+        }
+        None if global.is_some() && networks.default.is_some() => EmulatorProxy::None,
+        None => EmulatorProxy::Unknown,
+    }
+}
+
+fn der_bytes(live: &str) -> Option<Vec<u8>> {
+    use base64::Engine as _;
+    base64::engine::general_purpose::STANDARD.decode(live).ok()
+}
+
+fn emulators_read(
+    live: &str,
+    port: u16,
+    adb: impl Fn(&[&str]) -> Option<Ran>,
+) -> Vec<EmulatorReading> {
+    let Some(devices) = adb(&["devices"]).filter(|out| out.ok) else {
+        return Vec::new();
+    };
+    let der = der_bytes(live);
+    let store = user_ca_script();
+    running_emulators(&devices.stdout)
+        .into_iter()
+        .map(|serial| {
+            let on = |args: &[&str]| adb(&[&["-s", serial.as_str()], args].concat());
+            let name = on(&["shell", "getprop", "ro.boot.qemu.avd_name"])
+                .filter(|out| out.ok)
+                .map(|out| out.stdout.trim().replace('_', " "))
+                .filter(|name| !name.is_empty())
+                .unwrap_or_else(|| serial.clone());
+            let trust = der
+                .as_deref()
+                .and_then(|der| user_store_trust(on(&["shell", &store]).as_ref(), der));
+            let proxy = emulator_proxy(
+                on(&["shell", "settings", "get", "global", "http_proxy"]).as_ref(),
+                on(&["shell", "dumpsys", "connectivity"]).as_ref(),
+                port,
+            );
+            EmulatorReading::new(name, trust, &proxy)
+        })
+        .collect()
+}
+
+// Read-only probe: which emulators run, does each one's own store hold the
+// certificate the core serves now, and where does each send its traffic? None
+// running is the screen's unread, and its tasks fall back to its marked request
+// (DEC-63). The window asks only while the emulator is the platform chosen:
+// adb starts a server of its own where none runs.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn emulator_readings(pem: String, port: u16) -> Vec<EmulatorReading> {
+    let Some(live) = live_body(&pem) else {
+        return Vec::new();
+    };
+    let os = std::env::consts::OS;
+    let adb = adb_candidates(os, |key| std::env::var_os(key))
+        .into_iter()
+        .find(|path| path.is_file())
+        .unwrap_or_else(|| std::path::PathBuf::from("adb"));
+    let adb = adb.to_string_lossy();
+    emulators_read(&live, port, |args| ran(&adb, args))
+}
+
 // The kernel calls a device `en1`; its owner calls it Wi-Fi, in the same
 // Settings pane they are about to open. Only the host can map one to the other,
 // and only the shell may ask it — the core is kept out of shelling to the OS
@@ -1854,6 +2079,196 @@ mod tests {
         assert_eq!(simulators_trust(&devices, "MIIB", never_queried), []);
         assert_eq!(simulators_trust(&devices.join("absent"), "MIIB", never_queried), []);
         let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    // ── Each running emulator, through adb (E-ONBRVP.W8) ────────────────────
+
+    const ADB_DEVICES: &str =
+        "List of devices attached\nemulator-5554\tdevice\nemulator-5556\toffline\n\
+        R58M12ABCDE\tdevice\nemulator-5558\tdevice\n\n";
+    const WIFI_NETWORK: &str = "  NetworkAgentInfo{network{100}  handle{432902426637}  ni{WIFI CONNECTED extra: } lp{{InterfaceName: wlan0 LinkAddresses: [ 10.0.2.16/24 ] DnsAddresses: [ /10.0.2.3 ] MTU: 0 ServerAddress: /10.0.2.2 Routes: [ 0.0.0.0/0 -> 10.0.2.2 wlan0 mtu 0 ]}}";
+    const MOBILE_NETWORK: &str = "  NetworkAgentInfo{network{101}  handle{437197393933}  ni{MOBILE[HSPA] CONNECTED extra: fast.t-mobile.com} lp{{InterfaceName: eth0 LinkAddresses: [ 10.0.2.15/24 ] MTU: 0}}";
+
+    fn connectivity(default: &str, wifi_proxy: Option<&str>) -> String {
+        let wifi = match wifi_proxy {
+            Some(proxy) => WIFI_NETWORK.replace(
+                " MTU: 0 ServerAddress",
+                &format!(" MTU: 0 HttpProxy: {proxy} xl ServerAddress"),
+            ),
+            None => WIFI_NETWORK.into(),
+        };
+        format!("NetworkProviders for:\n  5: WifiNetworkFactory\n\nActive default network: {default}\n\nCurrent Networks:\n{wifi}\n    Nat464Xlat:\n{MOBILE_NETWORK}\n")
+    }
+
+    fn store_answer(certs: &[&[u8]]) -> Option<Ran> {
+        use base64::Engine as _;
+        let files: Vec<u8> = certs.concat();
+        let encoded = base64::engine::general_purpose::STANDARD.encode(files);
+        let wrapped: Vec<String> = encoded
+            .as_bytes()
+            .chunks(76)
+            .map(|line| String::from_utf8_lossy(line).into_owned())
+            .collect();
+        answered(&format!("{SU_ANSWERED}\n{}\n", wrapped.join("\n")))
+    }
+
+    #[test]
+    fn only_an_emulator_adb_can_talk_to_is_read() {
+        assert_eq!(running_emulators(ADB_DEVICES), ["emulator-5554", "emulator-5558"]);
+        assert_eq!(running_emulators("List of devices attached\n\n"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn adb_is_looked_for_where_the_sdk_is_before_the_path() {
+        let vars = |key: &str| match key {
+            "HOME" => Some("/Users/me".into()),
+            "LOCALAPPDATA" => Some(r"C:\Users\me\AppData\Local".into()),
+            "ANDROID_HOME" => Some("/opt/sdk".into()),
+            _ => None,
+        };
+        assert_eq!(
+            adb_candidates("macos", vars),
+            [
+                PathBuf::from("/opt/sdk/platform-tools/adb"),
+                PathBuf::from("/Users/me/Library/Android/sdk/platform-tools/adb")
+            ]
+        );
+        assert_eq!(
+            adb_candidates("linux", |key| if key == "HOME" {
+                Some("/home/me".into())
+            } else {
+                None
+            }),
+            [PathBuf::from("/home/me/Android/Sdk/platform-tools/adb")]
+        );
+        let windows =
+            adb_candidates("windows", |key| if key == "LOCALAPPDATA" { vars(key) } else { None });
+        assert_eq!(windows.len(), 1);
+        assert!(
+            windows[0].ends_with("adb.exe") && windows[0].to_string_lossy().contains("Android")
+        );
+        assert!(adb_candidates("freebsd", |_| None).is_empty());
+    }
+
+    #[test]
+    fn the_user_store_reads_trusted_only_where_its_files_carry_the_live_der() {
+        let live = [0x30, 0x82, 0x01, 0xa4, 0x01, 0x02];
+        let other = [0x30, 0x82, 0x01, 0x99, 0x07, 0x08];
+        assert_eq!(
+            user_store_trust(store_answer(&[&other, &live]).as_ref(), &live),
+            Some(Trust::Trusted)
+        );
+        assert_eq!(user_store_trust(store_answer(&[&other]).as_ref(), &live), Some(Trust::Absent));
+        assert_eq!(user_store_trust(store_answer(&[]).as_ref(), &live), Some(Trust::Absent));
+    }
+
+    #[test]
+    fn a_store_su_cannot_open_reads_unknown_never_absent() {
+        let live = [0x30, 0x82, 0x01];
+        assert_eq!(user_store_trust(answered("").as_ref(), &live), None);
+        assert_eq!(user_store_trust(exited_non_zero("").as_ref(), &live), None);
+        assert_eq!(user_store_trust(None, &live), None);
+        assert_eq!(
+            user_store_trust(answered(&format!("{SU_ANSWERED}\n!!not base64")).as_ref(), &live),
+            None
+        );
+    }
+
+    #[test]
+    fn the_global_proxy_is_read_first_and_covers_every_network() {
+        let wifi_elsewhere = connectivity("101", Some("[192.168.1.9] 8080"));
+        for (global, read) in [
+            ("10.0.2.2:7420\n", EmulatorProxy::Ours),
+            ("10.0.2.2:8888\n", EmulatorProxy::Foreign),
+            ("192.168.1.9:3128\n", EmulatorProxy::Foreign),
+        ] {
+            assert_eq!(
+                emulator_proxy(answered(global).as_ref(), answered(&wifi_elsewhere).as_ref(), 7420),
+                read
+            );
+        }
+    }
+
+    #[test]
+    fn a_proxy_on_a_network_the_emulator_does_not_send_over_routes_nothing() {
+        let unset = answered("null\n");
+        let on_wifi = connectivity("101", Some("[10.0.2.2] 7420"));
+        assert_eq!(
+            emulator_proxy(unset.as_ref(), answered(&on_wifi).as_ref(), 7420),
+            EmulatorProxy::WifiOnly
+        );
+        let wifi_default = connectivity("100", Some("[10.0.2.2] 7420"));
+        assert_eq!(
+            emulator_proxy(unset.as_ref(), answered(&wifi_default).as_ref(), 7420),
+            EmulatorProxy::Ours
+        );
+        let foreign_default = connectivity("100", Some("[10.0.2.2] 3128"));
+        assert_eq!(
+            emulator_proxy(unset.as_ref(), answered(&foreign_default).as_ref(), 7420),
+            EmulatorProxy::Foreign
+        );
+    }
+
+    #[test]
+    fn no_proxy_anywhere_reads_none_and_an_unread_answer_unknown() {
+        let nothing = connectivity("101", None);
+        for unset in ["null\n", ":0\n", "\n"] {
+            assert_eq!(
+                emulator_proxy(answered(unset).as_ref(), answered(&nothing).as_ref(), 7420),
+                EmulatorProxy::None
+            );
+        }
+        assert_eq!(emulator_proxy(None, answered(&nothing).as_ref(), 7420), EmulatorProxy::Unknown);
+        assert_eq!(emulator_proxy(answered("null\n").as_ref(), None, 7420), EmulatorProxy::Unknown);
+        assert_eq!(
+            emulator_proxy(answered("null\n").as_ref(), exited_non_zero("").as_ref(), 7420),
+            EmulatorProxy::Unknown
+        );
+    }
+
+    #[test]
+    fn each_running_emulator_is_named_by_its_avd_and_read_on_its_own_serial() {
+        let live = "MIIBpAECAw==";
+        let der = der_bytes(live).unwrap();
+        let asked = std::cell::RefCell::new(Vec::new());
+        let read = emulators_read(live, 7420, |args| {
+            asked.borrow_mut().push(args.join(" "));
+            match args {
+                ["devices"] => answered(ADB_DEVICES),
+                ["-s", "emulator-5554", "shell", "getprop", _] => answered("Pixel_7_API_35\n"),
+                ["-s", _, "shell", "getprop", _] => answered("\n"),
+                ["-s", "emulator-5554", "shell", script] if script.starts_with("su 0") => {
+                    store_answer(&[&der])
+                }
+                ["-s", _, "shell", script] if script.starts_with("su 0") => answered(""),
+                ["-s", "emulator-5554", "shell", "settings", ..] => answered("10.0.2.2:7420\n"),
+                ["-s", _, "shell", "settings", ..] => answered("null\n"),
+                ["-s", _, "shell", "dumpsys", "connectivity"] => {
+                    answered(&connectivity("101", Some("[10.0.2.2] 7420")))
+                }
+                _ => None,
+            }
+        });
+        assert_eq!(
+            read,
+            [
+                EmulatorReading::new(
+                    "Pixel 7 API 35".into(),
+                    Some(Trust::Trusted),
+                    &EmulatorProxy::Ours
+                ),
+                EmulatorReading::new("emulator-5558".into(), None, &EmulatorProxy::WifiOnly),
+            ]
+        );
+        assert!(asked.borrow().iter().all(|a| a == "devices" || a.starts_with("-s emulator-")));
+        assert!(asked.borrow().contains(&format!("-s emulator-5554 shell {}", user_ca_script())));
+    }
+
+    #[test]
+    fn no_adb_or_no_emulator_reads_nothing() {
+        assert_eq!(emulators_read("MIIB", 7420, |_| None), []);
+        assert_eq!(emulators_read("MIIB", 7420, |_| exited_non_zero("")), []);
+        assert_eq!(emulators_read("MIIB", 7420, |_| answered("List of devices attached\n\n")), []);
     }
 
     // ── The proxy HTTPS goes through now (D3 · D5 · D8) ─────────────────────

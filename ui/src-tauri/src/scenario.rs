@@ -11,8 +11,9 @@ use std::sync::Mutex;
 use serde::Deserialize;
 
 use crate::setup::{
-    command_failed, read_proxy, trust_word, ProxyRead, ProxyReading, SetupError, SimulatorTrust,
-    Trust, NO_INSTALL_DETAIL, NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
+    command_failed, read_proxy, trust_word, EmulatorProxy, EmulatorReading, ProxyRead,
+    ProxyReading, SetupError, SimulatorTrust, Trust, NO_INSTALL_DETAIL, NO_SET_PROXY_DETAIL,
+    NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -45,6 +46,35 @@ pub struct SimulatorOs {
     trust: TrustOs,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum EmulatorProxyOs {
+    Ours,
+    WifiOnly,
+    Foreign,
+    None,
+    Unreadable,
+}
+
+impl EmulatorProxyOs {
+    fn reading(self) -> EmulatorProxy {
+        match self {
+            EmulatorProxyOs::Ours => EmulatorProxy::Ours,
+            EmulatorProxyOs::WifiOnly => EmulatorProxy::WifiOnly,
+            EmulatorProxyOs::Foreign => EmulatorProxy::Foreign,
+            EmulatorProxyOs::None => EmulatorProxy::None,
+            EmulatorProxyOs::Unreadable => EmulatorProxy::Unknown,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct EmulatorOs {
+    name: String,
+    trust: TrustOs,
+    proxy: EmulatorProxyOs,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ProxyOs {
@@ -71,6 +101,7 @@ pub enum Outcome {
 pub struct Scenario {
     trust: TrustOs,
     simulators: Vec<SimulatorOs>,
+    emulators: Vec<EmulatorOs>,
     proxy: ProxyOs,
     set_up: Outcome,
     set_proxy: Outcome,
@@ -85,6 +116,7 @@ pub struct Scenario {
 pub struct Patch {
     trust: Option<TrustOs>,
     simulators: Option<Vec<SimulatorOs>>,
+    emulators: Option<Vec<EmulatorOs>>,
     proxy: Option<ProxyOs>,
     set_up: Option<Outcome>,
     set_proxy: Option<Outcome>,
@@ -99,6 +131,7 @@ impl Scenario {
         let Patch {
             trust,
             simulators,
+            emulators,
             proxy,
             set_up,
             set_proxy,
@@ -112,6 +145,9 @@ impl Scenario {
         }
         if let Some(v) = simulators {
             self.simulators = v;
+        }
+        if let Some(v) = emulators {
+            self.emulators = v;
         }
         if let Some(v) = proxy {
             self.proxy = v;
@@ -144,6 +180,13 @@ impl Scenario {
         self.simulators
             .iter()
             .map(|s| SimulatorTrust::new(s.name.clone(), s.trust.reading()))
+            .collect()
+    }
+
+    fn emulators_reading(&self) -> Vec<EmulatorReading> {
+        self.emulators
+            .iter()
+            .map(|e| EmulatorReading::new(e.name.clone(), e.trust.reading(), &e.proxy.reading()))
             .collect()
     }
 
@@ -202,6 +245,11 @@ pub fn ca_trusted(state: Shared<'_>) -> String {
 #[tauri::command]
 pub fn simulator_trust(state: Shared<'_>) -> Vec<SimulatorTrust> {
     with(&state, |s| s.simulators_reading())
+}
+
+#[tauri::command]
+pub fn emulator_readings(state: Shared<'_>) -> Vec<EmulatorReading> {
+    with(&state, |s| s.emulators_reading())
 }
 
 #[tauri::command]
@@ -298,6 +346,7 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             scenario_script,
             ca_trusted,
             simulator_trust,
+            emulator_readings,
             set_proxy,
             set_up_this_machine,
             unset_proxy,
@@ -332,6 +381,7 @@ mod tests {
         );
         assert!(!s.allow_reach && !s.allow_replace);
         assert_eq!(s.simulators_reading(), []);
+        assert_eq!(s.emulators_reading(), []);
     }
 
     #[test]
@@ -344,6 +394,24 @@ mod tests {
             [
                 SimulatorTrust::new("iPhone 17 Pro".into(), Some(Trust::Trusted)),
                 SimulatorTrust::new("iPad mini".into(), None),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_running_emulators_are_scripted_by_name_through_the_shells_own_words() {
+        let s = patched(
+            r#"{"emulators":[{"name":"Pixel 7 API 35","trust":"trusted","proxy":"wifi-only"},{"name":"Pixel Fold","trust":"unreadable","proxy":"unreadable"}]}"#,
+        );
+        assert_eq!(
+            s.emulators_reading(),
+            [
+                EmulatorReading::new(
+                    "Pixel 7 API 35".into(),
+                    Some(Trust::Trusted),
+                    &EmulatorProxy::WifiOnly
+                ),
+                EmulatorReading::new("Pixel Fold".into(), None, &EmulatorProxy::Unknown),
             ]
         );
     }
