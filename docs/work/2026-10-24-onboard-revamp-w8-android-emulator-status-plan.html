@@ -83,7 +83,7 @@
     <h2 id="status">Part 1 — what the status lines say</h2>
     <table data-c="status-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr data-item="S1"><td>S1</td>
+      <tr><td>S1</td>
         <td><strong>This machine's traffic proves the emulator.</strong> ① and ② read any request in the session. After
           This machine's setup, its own browsing turns both done and says "You're set up" before the emulator is touched —
           what DEC-63 fixed for another device, never applied here, because the emulator gets no mark and no cut.</td>
@@ -92,7 +92,7 @@
           traffic counts only between two readings of this machine's proxy as off or another (rule 3), from the session's
           start, since it needs no allow. Its proxy is its own, so that span is one in which this machine's system proxy
           sends nothing here; <code>curl -x</code> stays accepted, as DEC-63 already says.</td><td>take</td></tr>
-      <tr data-item="S2"><td>S2</td>
+      <tr><td>S2</td>
         <td><strong>Android's own refusals are blamed on the certificate.</strong> An idle emulator whose proxy points
           at Trawler opens a few tunnels a second that never decrypt, CA installed or not (reproduced): its services ignore
           a user CA. ① reads <em>not working</em> and sends the user back to steps they did; a refusal on this machine
@@ -100,7 +100,7 @@
         <td>On the emulator a refusal is never ①'s. It is ③'s, and names no device (rule 3's mixed try task). Where ① reads
           its store trusted (Q1), ③'s remedy names that store: <em>the emulator trusts Trawler's certificate — Android's
           own services ignore a user certificate, so a website in Chrome is the test.</em></td><td>take</td></tr>
-      <tr data-item="S3"><td>S3</td>
+      <tr><td>S3</td>
         <td><strong>A proof does not last.</strong> ③ keeps a decrypted request for 30 s, then reads <em>not working</em>
           under the services' refusals — "Finish the certificate step", under a done ① — or <em>not done — nothing
           arriving</em>. ① says <em>a request decrypted</em> with no time.</td>
@@ -108,7 +108,7 @@
           not decrypt: <em>done — decrypted at 14:02</em>, a refusal after it a muted note (rule 7). The end names the
           device on its marked request only: "You're set up — Trawler is capturing traffic from the emulator" (rule 5).
           Every proof is timed (rule 4).</td><td>take</td></tr>
-      <tr data-item="S4"><td>S4</td>
+      <tr><td>S4</td>
         <td><strong>② cannot tell a proxy the emulator ignores.</strong> With the Wi-Fi proxy set and the emulator sending
           over mobile data (C4), ② waits for traffic that never comes, or reads done on this machine's (S1). Nothing on the
           screen says why.</td>
@@ -122,29 +122,29 @@
     <p>As in W5–W7, each of these leaves a task waiting for a request that the step, as written, can never produce.</p>
     <table data-c="command-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr data-item="C1"><td>C1</td>
+      <tr><td>C1</td>
         <td><strong>The push names a bare <code>trawler-ca.cer</code></strong>, so it fails from any folder but the one the
           save wrote to (reproduced). W7's Q2 ruled A — every guide where a save step comes before a command — and this
           guide was missed.</td>
         <td>As W7's C1: the path the save returned, quoted for the host's shell; <code>~/Downloads</code> (or the host's
           equivalent) before a save.</td><td>take</td></tr>
-      <tr data-item="C2"><td>C2</td>
+      <tr><td>C2</td>
         <td><strong>The push fails with two of anything.</strong> Two emulators, or an emulator and a phone on USB:
           <em>more than one device/emulator</em>; <code>-e</code> fails on two emulators (reproduced).</td>
         <td>The command pushes to every running emulator, as W7's C2 does for Simulators — POSIX:
           <code>for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d push &lt;file&gt; /sdcard/Download/; done</code>;
           PowerShell on Windows. With Q1, ① names any running emulator still without it.</td><td>take</td></tr>
-      <tr data-item="C3"><td>C3</td>
+      <tr><td>C3</td>
         <td><strong>The start-up flag names an address this machine does not have.</strong> <code>-http-proxy</code> is
           read by the emulator process on this machine, where <code>10.0.2.2</code> is nothing: it times out, ignores the
           proxy, and boots with none (reproduced).</td>
         <td><code>emulator -avd &lt;name&gt; -http-proxy http://127.0.0.1:&lt;port&gt;</code> — reproduced routing and
           decrypting. Its place among the routes: Q3.</td><td>take</td></tr>
-      <tr data-item="C4"><td>C4</td>
+      <tr><td>C4</td>
         <td><strong>The Wi-Fi proxy routes nothing</strong> where the emulator's default network is its mobile one — on
           both fresh API 35 AVDs here: Chrome loaded an HTTPS page directly with the proxy set (reproduced).</td>
         <td>The route is one that holds on every network: Q3.</td><td>take</td></tr>
-      <tr data-item="C5"><td>C5</td>
+      <tr><td>C5</td>
         <td><strong>The menu paths are not there.</strong> On API 35 <em>Settings → Security</em> and <em>Settings →
           Wi-Fi → the network → Proxy</em> do not exist, and the picker opens where a pushed file is not
           (reproduced). The same <em>Security</em> path is printed for an Android device and its removal.</td>
@@ -155,16 +155,16 @@
     <h2 id="noticed">Noticed outside status — for later WUs</h2>
     <table data-c="noticed">
       <tr><th>#</th><th>What</th><th>Why not here</th><th>Ruling</th></tr>
-      <tr data-item="N1"><td>N1</td><td>Android Studio does not put <code>adb</code> or <code>emulator</code> on the PATH; a terminal without it fails with <em>command not found</em>. Not reproduced: your shell profile adds both</td><td>the commands are right where the SDK is on the PATH. Saying where it is when not is help text</td><td>ruled: defer to W17</td></tr>
-      <tr data-item="N2"><td>N2</td><td>The shell could run the push and the proxy itself — "Install in the emulator" · "Route the emulator" buttons — since adb needs no password; and <code>am start</code> can open the right Settings screen</td><td>interactive routes are the epic's Q11, W17's</td><td>ruled: defer to W17</td></tr>
-      <tr data-item="N3"><td>N3</td><td>Core: the emulator's start-up proxy forwards some plain-http requests in origin form (<code>GET /edgedl/…</code>, <code>Host:</code> only). Trawler records each twice — a bare path with no status, and <code>http://127.0.0.1:17420/…</code> answered <code>502</code> — so the request fails, and each tunnel also shows a connection to <code>127.0.0.1:17420</code></td><td>core changes are this epic's non-goal</td><td>ruled: a roadmap row</td></tr>
-      <tr data-item="N4"><td>N4</td><td>An Android device shares S2 (its services refuse a user CA) and C5's paths</td><td>its own status WU</td><td>ruled: carry to W10</td></tr>
+      <tr><td>N1</td><td>Android Studio does not put <code>adb</code> or <code>emulator</code> on the PATH; a terminal without it fails with <em>command not found</em>. Not reproduced: your shell profile adds both</td><td>the commands are right where the SDK is on the PATH. Saying where it is when not is help text</td><td>ruled: defer to W17</td></tr>
+      <tr><td>N2</td><td>The shell could run the push and the proxy itself — "Install in the emulator" · "Route the emulator" buttons — since adb needs no password; and <code>am start</code> can open the right Settings screen</td><td>interactive routes are the epic's Q11, W17's</td><td>ruled: defer to W17</td></tr>
+      <tr><td>N3</td><td>Core: the emulator's start-up proxy forwards some plain-http requests in origin form (<code>GET /edgedl/…</code>, <code>Host:</code> only). Trawler records each twice — a bare path with no status, and <code>http://127.0.0.1:17420/…</code> answered <code>502</code> — so the request fails, and each tunnel also shows a connection to <code>127.0.0.1:17420</code></td><td>core changes are this epic's non-goal</td><td>ruled: a roadmap row</td></tr>
+      <tr><td>N4</td><td>An Android device shares S2 (its services refuse a user CA) and C5's paths</td><td>its own status WU</td><td>ruled: carry to W10</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
       <tr><th>#</th><th>Question</th><th>Proposed · ruling</th></tr>
-      <tr data-item="Q1"><td>Q1</td>
+      <tr><td>Q1</td>
         <td>What reads ①?
           <strong>A</strong> a shell-side probe (epic Q8): for each running emulator, list
           <code>/data/misc/user/0/cacerts-added</code> through <code>su 0</code> and compare each file's bytes with the
@@ -176,7 +176,7 @@
           epic's "a proof is not permanent"), and it is what lets S2's remedy say the store trusts it. Risks: an
           undocumented path, read only — a moved store reads unread, never not installed; <code>adb devices</code> starts
           adb's server where none runs, as Android Studio does anyway. Ruled: A</td></tr>
-      <tr data-item="Q2"><td>Q2</td>
+      <tr><td>Q2</td>
         <td>What reads ②?
           <strong>A</strong> a shell-side probe, as the shell user, every image: the global proxy
           (<code>settings get global http_proxy</code>), else the default network's own
@@ -186,7 +186,7 @@
           <strong>B</strong> no probe: S1's readings only</td>
         <td>A. It is the one reading that can say why a set proxy routes nothing (C4), and it costs ~35 ms. It cannot see
           the start-up flag, which is why <em>none</em> stays silent. Ruled: A</td></tr>
-      <tr data-item="Q3"><td>Q3</td>
+      <tr><td>Q3</td>
         <td>How does ② route the emulator?
           <strong>A</strong> one command: <code>adb shell settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>, looped
           over every running emulator as C2; undo <code>… http_proxy :0</code>. The Settings steps and the fixed start-up
