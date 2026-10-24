@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adc465b9f34851f0dfad9e9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W5 result: status, Another Windows PC</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W5 — result: status, Another Windows PC</h1>
+      <p>Another device's try task now keeps its proof past whatever follows it that does not decrypt, with a refusal as a note under it. Windows' commands run in PowerShell as their sentences say. Another computer's trust command reads its download from Downloads. Firefox's own store is named only where Firefox keeps one.</p>
+      <div class="meta">v1 · 2026-10-24 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W5</span> · branch <code>wu/onboard-revamp/another-windows-status</code> · <a href="2026-10-24-onboard-revamp-w5-another-windows-status-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 14</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>open a website on that PC, then wait 30 s while a pinned app keeps trying → ④ done with a muted note, never "finish the certificate step" under a done ②</td><td>on every off-machine platform, ④ reads "done — decrypted at 14:02" past a refusal, with the note "something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device." This holds whether or not this machine's traffic may be mixed in. This machine keeps its once-quiet rule (S1, Q1 A)</td><td>delivered</td></tr>
+      <tr><td>only tunnels nothing decrypted → ② ⚠'s advice says restart the browser, never import into Firefox</td><td>macOS and Windows: "Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt." The Firefox note shows on Linux only, for This machine and Another Ubuntu machine (S2, Q2 A)</td><td>delivered</td></tr>
+      <tr><td>② and ③'s commands, pasted into Windows PowerShell 5.1 → each runs, and the trust command finds <code>trawler-ca.pem</code></td><td>"In PowerShell, run:" with the two <code>reg add</code> commands joined by <code>;</code> · "In PowerShell as administrator, run:" <code>certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</code>. Another Mac's and Ubuntu's trust commands read <code>~/Downloads/trawler-ca.pem</code> (C1, C2, Q3 A)</td><td>delivered, unit- and integration-tested; not run on a real Windows PC</td></tr>
+      <tr><td>This machine on a Windows host, "do it manually" → the same PowerShell route command</td><td>the same command and lead. This machine's trust command keeps the bare file name its save step names, since the save dialog decides where the file goes</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>S1: ④ keeps its proof past a refusal</td><td>it also keeps its proof past a plain-http request and past a tunnel still in its grace, with no note; recorded in plan v2 and DEC-63 rule 7</td><td>found while drafting round 14: a plain-http request after the proof read "not done — only plain http so far", and Windows checks its connection over http</td></tr>
+      <tr><td>S2's advice: "A browser reads Windows' store when it starts"</td><td>"A browser reads the system's store when it starts", the same sentence on macOS and Windows</td><td>Q2 A gave macOS the same fix, and one sentence serves both systems</td></tr>
+      <tr><td>—</td><td>no fresh server snapshot of the design run before round 14</td><td>the htmldoc server refuses the run's 102 KB body (HTTP 413) since partway through round 13; git holds the baseline (<code>794cb44</code>)</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code> (another device's try task done past a refusal with the note, past plain http and a tunnel in its grace with none; nothing changed while capturing or before a decrypt; This machine's once-quiet rule untouched; the mixed try task keeping a proof already that device's) · <code>ui/src/setup.test.ts</code> (the not-decrypting advice and the Firefox note per system; Windows' commands led by PowerShell with no <code>&amp;&amp;</code>; the route's two writes joined by <code>;</code>; another computer's trust command reading the downloaded file from Downloads; This machine's reading the saved file's bare name)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> (Another Windows PC keeping its proof past a refusal and past plain http; a mixed device keeping a proof already its own; the Firefox note on Linux only; This machine's advice on macOS) · <code>ui/src/onboardingMatrix.test.tsx</code> (two rules over 22,145 cases: no task sends a done certificate back to its step on any off-machine platform, and another device's try task keeps its proof past whatever follows it). Every new test was shown to fail on the code before it</td></tr>
+      <tr><td>e2e</td><td>waived at WU, as in W4: allowing a device opens a native confirm no WebDriver reaches, and a second machine is not hermetic. Running the commands on a real Windows PC is the owner's check; the per-platform traffic journey is W20's</td></tr>
+      <tr><td>suites</td><td>at <code>7c466bc</code>, 2026-10-24: UI 62 files and 23,859 tests green · <code>tsc -b</code> and <code>pnpm lint</code> green. The shell and the core are unchanged</td></tr>
+      <tr><td>review</td><td>pending</td></tr>
+      <tr><td>design</td><td>round 14 of the setup screen's design run, closed and archived with your LGTM (<code>3447d9a</code>)</td></tr>
+      <tr><td>commits</td><td>plan <code>5b7f304</code> · <code>e7575cd</code> · <code>ef5f01e</code> · round 14 <code>5d9343e</code>, closed <code>3447d9a</code> · S1 <code>0d21dc2</code> · S2 C1 C2 <code>7c466bc</code> · T2 <code>790abad</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> says that another device's try task keeps its proof past what follows it, in the traffic layer's row and in the paragraph on reading only what could have come from it. A new paragraph under the platform table says each command runs as written, in the shell it names, on the file the step before it left, and that Firefox's own store is named on Linux only. Its index row says the same. <a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> is v2. It adds rule 7: a refusal after a proof is a note, never <em>not working</em>, on every off-machine platform. It also gains a row in its why-table, two scope rows (This machine's own rule, and Windows' wording left to W14), and a rejected alternative. Its index row says the same. No component contract changed.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W14: N1 (the manual route does not refresh running apps the way "Set up this PC" does), N2 (a setup script or "Automatically detect settings" outranks a manual proxy), and N3 ("WinINET" in the undo step, and a certificate route without a terminal: a <code>.cer</code> opens in Windows' own installer). W20: the walkthrough films none of the new states, and the real-device check is still owed: on a Windows PC, paste ② and ③'s commands into PowerShell, open a website, and watch ④ stay done while background apps refuse. W12: This machine's manual trust command still names the saved file without its folder. The htmldoc server's body limit needs raising before the design run can be snapshotted again.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
