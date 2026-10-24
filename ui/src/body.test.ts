@@ -8,6 +8,7 @@ import {
   formPairCut,
   hexDump,
   hexRows,
+  isFullPath,
   humanBytePair,
   humanBytes,
   rawKind,
@@ -264,6 +265,33 @@ test("saveBody reports the path it wrote, and null when the native dialog was ca
   // The returned path is a claim that the bytes landed there; assert the write
   // itself, or a refactor that reports the path without writing passes.
   expect(writeFile).toHaveBeenCalledWith("/tmp/picked.pem", bytes);
+});
+
+// W7's C1: a command names the file where the save put it, so the dialog opens
+// in the folder the command names until the user points it elsewhere.
+test("saveBody opens the dialog in the folder it is given, and where it would anyway when that folder cannot be read", async () => {
+  const bytes = new TextEncoder().encode("pem");
+  vi.stubGlobal("window", { ...globalThis.window, __TAURI_INTERNALS__: {} });
+  const save = vi.fn(async () => null);
+  vi.doMock("@tauri-apps/plugin-dialog", () => ({ save }));
+  vi.doMock("@tauri-apps/plugin-fs", () => ({ writeFile: vi.fn(async () => {}) }));
+  vi.doMock("@tauri-apps/api/path", () => ({ join: vi.fn(async (...parts: string[]) => parts.join("/")) }));
+  vi.resetModules();
+  const { saveBody: saving } = await import("./body");
+
+  await saving(bytes, "trawler-ca.pem", async () => "/Users/me/Downloads");
+  expect(save).toHaveBeenLastCalledWith({ defaultPath: "/Users/me/Downloads/trawler-ca.pem" });
+  await saving(bytes, "trawler-ca.pem", () => Promise.reject(new Error("no such folder")));
+  expect(save).toHaveBeenLastCalledWith({ defaultPath: "trawler-ca.pem" });
+  await saving(bytes, "body.json");
+  expect(save).toHaveBeenLastCalledWith({ defaultPath: "body.json" });
+});
+
+test("a full path is what a native save returns, never a browser download's bare name", () => {
+  for (const path of ["/Users/me/trawler-ca.pem", "C:\\Users\\me\\trawler-ca.pem", "D:/certs/trawler-ca.pem", "\\\\host\\share\\trawler-ca.pem"])
+    expect(isFullPath(path)).toBe(true);
+  for (const path of ["trawler-ca.pem", "certs/trawler-ca.pem", "~/Downloads/trawler-ca.pem"])
+    expect(isFullPath(path)).toBe(false);
 });
 
 // openFile is saveBody's inverse and carries the same contract, so it gets the

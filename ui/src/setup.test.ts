@@ -15,7 +15,9 @@ import {
   reachTaskTitle,
   needsReach,
   probesRoute,
+  probesOwnStore,
   probesTrust,
+  sharesHostWire,
   PLATFORM_IDS,
   platformChoices,
   setupFor,
@@ -91,7 +93,7 @@ const setup = (id: PlatformId, over = {}) => setupFor(id, ctx(over));
 // of them is a command whatever part it is written as, which is what lets the
 // two questions below be asked in both directions.
 const LOOKS_LIKE_COMMAND =
-  /^(sudo|certutil|adb|networksetup|reg|gsettings|unset|export|curl|emulator|xcrun)\s/;
+  /^(sudo|certutil|adb|networksetup|reg|gsettings|unset|export|curl|emulator|xcrun|for)\s/;
 
 test("hostOs maps webview UA samples to the host family", () => {
   expect(hostOs(UA.mac)).toBe("macos");
@@ -236,6 +238,13 @@ test("this machine's system proxy answers for it and for the Simulator that foll
   expect(PLATFORM_IDS.filter(probesRoute)).toEqual(["this", "ios-sim"]);
 });
 
+// W7: the Simulator keeps a store this machine can read, and sends through this
+// machine's own proxy, so this machine's traffic is always on its wire.
+test("the Simulator alone has a store of its own read here, and shares this machine's wire", () => {
+  expect(PLATFORM_IDS.filter(probesOwnStore)).toEqual(["ios-sim"]);
+  expect(PLATFORM_IDS.filter(sharesHostWire)).toEqual(["ios-sim"]);
+});
+
 test("the five platforms that are somewhere else are the ones that need reach", () => {
   expect(PLATFORM_IDS.filter(needsReach)).toEqual(["mac", "windows", "ubuntu", "ios", "android"]);
 });
@@ -359,11 +368,30 @@ describe("this machine is instructed for the host it is running on", () => {
     expect(text).toMatch(/ProxyServer .*127\.0\.0\.1:9999/);
   });
 
-  it("its trust command reads the file the save step names, wherever the dialog put it", () => {
+  // W7's C1: a terminal opens in the home folder, so a bare file name finds a
+  // file only the user who saved it there has.
+  it("its trust command reads Downloads, where the save dialog opens, then the path a save returned, quoted for its shell", () => {
+    const before = {
+      macos: "~/Downloads/trawler-ca.pem",
+      windows: '"$HOME\\Downloads\\trawler-ca.pem"',
+      linux: '"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"',
+    };
+    const saved = {
+      macos: "/Users/me/My Certs/it's trawler-ca.pem",
+      windows: "C:\\Users\\me\\it's\\trawler-ca.pem",
+      linux: "/home/me/certs/trawler-ca.pem",
+    };
+    const quoted = {
+      macos: "'/Users/me/My Certs/it'\\''s trawler-ca.pem'",
+      windows: "'C:\\Users\\me\\it''s\\trawler-ca.pem'",
+      linux: "'/home/me/certs/trawler-ca.pem'",
+    };
     for (const os of ["macos", "windows", "linux"] as const) {
-      const trust = commands(setup("this", { os }).trust.guide!.steps).join("\n");
-      expect(trust).toMatch(/ trawler-ca\.pem( |$)/);
-      expect(trust).not.toMatch(/Downloads/);
+      const trust = (over = {}) => commands(setup("this", { os, ...over }).trust.guide!.steps).join("\n");
+      expect(trust()).toContain(` ${before[os]}`);
+      expect(trust()).not.toMatch(/ trawler-ca\.pem( |$)/);
+      expect(trust({ saved: { pem: saved[os] } })).toContain(` ${quoted[os]}`);
+      expect(trust({ saved: { cer: saved[os] } })).toContain(` ${before[os]}`);
     }
   });
 
@@ -390,14 +418,31 @@ describe("the Simulator is trusted through its own keychain and routed through t
     const s = setup("ios-sim");
     expect(s.trust.why).toMatch(/keeps its own certificate store/);
     expect(everything(s)).not.toMatch(/this Mac's certificate store/);
-    expect(copies(s)).toContain("xcrun simctl keychain booted add-root-cert trawler-ca.pem");
+    expect(commands(s.trust.guide!.steps)).toEqual([
+      "for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done",
+    ]);
     expect(saves(s)).toBe(1);
   });
 
-  it("reverses that trust, and says what the reversal costs", () => {
+  // W7's C2: with two running, `booted` named the one booted last, silently.
+  it("trusts every Simulator running, never the one `booted` picks", () => {
+    const [trust] = commands(setup("ios-sim").trust.guide!.steps);
+    expect(trust).toMatch(/^for d in \$\(xcrun simctl list devices booted \| .+\); do xcrun simctl keychain \$d add-root-cert .+; done$/);
+    expect(everything(setup("ios-sim"))).not.toMatch(/simctl keychain booted/);
+  });
+
+  it("reads the file where the save put it", () => {
+    const s = setup("ios-sim", { saved: { pem: "/Users/me/Desktop/trawler-ca.pem" } });
+    expect(commands(s.trust.guide!.steps)[0]).toContain("add-root-cert '/Users/me/Desktop/trawler-ca.pem'; done");
+  });
+
+  // W7's C3: `keychain reset` exits 0 and leaves the root trusted.
+  it("reverses that trust by the erase, and says what the erase costs", () => {
     const s = setup("ios-sim");
-    expect(copies(s)).toContain("xcrun simctl keychain booted reset");
-    expect(prose(s)).toMatch(/clears everything in it/);
+    expect(s.trust.guide!.undo).toEqual([
+      ["Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included."],
+    ]);
+    expect(everything(s)).not.toMatch(/keychain .*reset/);
   });
 
   it("routes through the host's own guide, because the proxy it follows is the host's", () => {
@@ -628,8 +673,14 @@ describe("each platform names the one certificate file its installer opens", () 
 // nothing on the screen said installing is not trusting. Each platform names
 // what its users check next when traffic arrives and does not decrypt.
 describe("each platform says what to check when its traffic does not decrypt", () => {
-  it.each(PLATFORM_IDS)("%s has a check to make", (id) => {
+  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id)))("%s has a check to make", (id) => {
     expect(setup(id).notDecrypting).toMatch(/\S/);
+  });
+
+  // W7's S2: the Simulator's wire is this Mac's too, so a refusal is never its
+  // certificate task's to explain.
+  it("the Simulator has none: a refusal is never its certificate task's", () => {
+    expect(setup("ios-sim").notDecrypting).toBeUndefined();
   });
 
   it("the iPhone's is the trust switch, and Safari is its test", () => {
@@ -642,10 +693,6 @@ describe("each platform says what to check when its traffic does not decrypt", (
     const check = setup(id).notDecrypting;
     expect(check).toContain("Trusted credentials → User");
     expect(check).toMatch(/Android 7\+; a website in Chrome is the test/);
-  });
-
-  it("the Simulator's is a restart", () => {
-    expect(setup("ios-sim").notDecrypting).toMatch(/Restart the Simulator/);
   });
 
   // S2: Firefox reads the system's store on macOS and Windows, and keeps its
@@ -773,13 +820,11 @@ describe("Linux's certificate task installs into every store, each a step of its
     expect(chromeRemoval).toBe(`certutil -d ${NSS_DB} -D -n trawler`);
   });
 
-  it("this machine's commands read the file it saved, another Ubuntu machine's the one it downloaded", () => {
+  it("this machine's commands and another Ubuntu machine's read the Downloads folder Ubuntu names", () => {
     const [, ...thisMachine] = commands(trustOf("this", "linux").steps);
     const [, ...ubuntu] = commands(trustOf("ubuntu", "macos").steps);
 
-    expect(thisMachine).toEqual([
-      "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
-    ]);
+    expect(thisMachine).toEqual(ubuntu);
     expect(ubuntu).toEqual([
       'sudo cp "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem" /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates',
     ]);

@@ -460,10 +460,13 @@
             settles both (<a href="../decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>);
             another device's traffic never does. The success line names <em>this machine</em> only when both
             probes read done</td></tr>
-        <tr><td>iOS Simulator</td><td>macOS only</td><td>proxy only</td><td>no</td><td><code>trawler-ca.pem</code></td>
+        <tr><td>iOS Simulator</td><td>macOS only</td><td>this machine's proxy · its own trust store, in each Simulator running</td><td>no</td><td><code>trawler-ca.pem</code></td>
           <td>it routes through this machine's proxy, but keeps a trust store of its own — so the
-            certificate is installed with <code>simctl</code> and the trust half is never claimed from the
-            host's keychain</td></tr>
+            certificate is installed with <code>simctl</code> and read from that store, by the Simulator's name
+            (<em>done — trusted in iPhone 17 Pro</em>), never from the host's keychain. Its wire is this
+            machine's, so nothing unmarked is its own: where no store answers, its marked request settles its
+            certificate, and its try task and the end read that request alone
+            (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8)</td></tr>
         <tr><td>Android emulator</td><td>every host</td><td>neither</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
           <td>its tasks read this session's traffic, since no probe can read it</td></tr>
         <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code></td>
@@ -482,8 +485,11 @@
       <p><strong>Each command runs as written</strong>, in the shell its sentence names, on the file the step
       before it left: Windows' are PowerShell's, which on Windows 10 and 11 rejects <code>&amp;&amp;</code>;
       another computer's trust command reads the certificate from Downloads, where its browser saved it, and
-      This machine's reads the file its save step names. A command installs a tool the system does not ship before
-      using it, and finds a folder or database wherever this version and this language put it.</p>
+      This machine's and the Simulator's read it from Downloads, where the save dialog opens, until a save returns
+      another path, which the command prints quoted for its shell. A command installs a tool the system does not ship before
+      using it, and finds a folder or database wherever this version and this language put it. The Simulator's
+      reaches every Simulator running — <code>booted</code> names only the one booted last — and its way back is
+      the erase, because <code>keychain reset</code> leaves the root trusted.</p>
       <p><strong>Linux's certificate task installs into every store a browser reads</strong>, a step each: Firefox's
       own (its Authorities import), Chrome's NSS database (made first where no Chrome has opened one), then the system bundle for curl and the system's tools —
       the browsers first, because the try task opens one; none is a note or another way. Its advice when nothing
@@ -515,8 +521,8 @@
       <table>
         <tr><th>Layer</th><th>Answers for</th><th>Readings</th></tr>
         <tr><td><strong>The probes</strong> — a dated snapshot, re-taken wherever its answer can change</td>
-          <td>this machine only: does it trust the certificate the core serves now, does the proxy HTTPS goes
-            through now point at Trawler</td>
+          <td>this machine: does it trust the certificate the core serves now, does the proxy HTTPS goes
+            through now point at Trawler — and each running Simulator's own trust store, by its name</td>
           <td>trusted / installed, not trusted / not installed / <code>unknown</code>, matched on the live
             certificate's bytes — never on a name another run's certificate shares: held in a keychain and verified on macOS, its
             thumbprint in the machine or user root store on Windows, in the CA bundle on Linux. The proxy is
@@ -556,6 +562,13 @@
       device, and no success line shows. Every proof lasts the session, whatever this machine's proxy reads after
       it; a reach read that failed takes none back. Its try task's proof outlasts whatever follows it that does not
       decrypt: a refusal is a note under <em>done — decrypted at 14:02</em>, never <em>not working</em>.</p>
+      <p><strong>The iOS Simulator's wire is this machine's</strong>: it sends through this machine's proxy, so
+      this machine's traffic is on its wire whenever it is routed, and nothing unmarked is its own. Its
+      certificate reads its own store; its try task offers the marked address — <em>or open this one in the
+      Simulator</em> — and reads <em>can't check here — the address below confirms it</em> until that request
+      decrypts; a refusal is the try task's, naming no device, or the Simulator's store where that reads trusted;
+      and <em>You're set up — Trawler is capturing traffic from the Simulator</em> shows on its marked request alone
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8).</p>
       <p><strong>This machine is read again wherever its answer can change</strong>: as setup opens, after
       every action whatever its outcome, on <em>check again</em>, on focus, when the core comes back, and
       every 3 s while setup is on screen, its core answering and the window visible. Only a read the user

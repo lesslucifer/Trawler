@@ -225,6 +225,41 @@ export function deviceRouteStatus(evidence: Evidence, reading: DeviceReading, co
   return routeByTraffic(evidence, confirmOn);
 }
 
+// What the shell read of each Simulator running: the name its own window
+// shows, and whether its own store holds the live certificate (W7's Q1).
+export interface SimulatorTrust {
+  name: string;
+  trust: TrustProbe;
+}
+
+// Every running Simulator's store holds the certificate, one does not, or no
+// store answered - none running among them.
+export function simulatorsTrusted(read: readonly SimulatorTrust[]): boolean | null {
+  if (read.some((s) => s.trust === "absent")) return false;
+  return read.length > 0 && read.every((s) => s.trust === "trusted") ? true : null;
+}
+
+export const trustedSimulators = (read: readonly SimulatorTrust[]) =>
+  read.length === 1 ? read[0].name : "every running Simulator";
+
+// The Simulator's certificate, read from its own store where one answers, and
+// otherwise from its own marked request: its wire is this machine's too, so
+// nothing else on it is its own (S1), and a refusal is never this task's (S2).
+export function simulatorTrustStatus(
+  read: readonly SimulatorTrust[],
+  running: Running,
+  reading: DeviceReading,
+): StepStatusView {
+  if (running === "checking") return verdict("checking", "the certificate store");
+  const missing = read.filter((s) => s.trust === "absent");
+  if (missing.length === 1) return verdict("not-done", `not in ${missing[0].name}`);
+  if (missing.length > 1) return verdict("not-done", `not in ${missing.length} running Simulators`);
+  if (simulatorsTrusted(read)) return verdict("done", `trusted in ${trustedSimulators(read)}`);
+  if (reading.provedAt !== null)
+    return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
+  return awaiting(`the address in step ${reading.tryStep} confirms it`);
+}
+
 // The device the end may name: the one whose marked request is the newest
 // decrypted proof the screen reads.
 export function markedDevice(device: string, provedAt: number | null, seen: Traffic): string | null {
@@ -234,8 +269,8 @@ export function markedDevice(device: string, provedAt: number | null, seen: Traf
 // The certificate task's own account of a refusal: the certificate is the step
 // left, so the sentence says whose store, points at the steps under it, and
 // gives the user who already took them the check their platform's users miss.
-export const notDecryptingHere = (device: string, check: string) =>
-  `something reached Trawler and did not decrypt — ${device} does not trust Trawler's certificate yet. The steps below install it. ${check}`;
+export const notDecryptingHere = (device: string, check?: string) =>
+  `something reached Trawler and did not decrypt — ${device} does not trust Trawler's certificate yet. The steps below install it.${check === undefined ? "" : ` ${check}`}`;
 
 export function proxyStatus(
   probe: ProxyProbe,
@@ -363,17 +398,22 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
 
 // Another device's try task while nothing arriving is told apart from this
 // machine's (DEC-63). The wire may still say nothing decrypts, naming no device,
-// as This machine's try task does where its store went unread (D7); otherwise
-// only a proof already that device's is read, and it outlasts the wire (S1).
+// as This machine's try task does where its store went unread (D7) - or naming
+// the store a probe read as trusting it, so the refusal is someone else's;
+// otherwise only a proof already that device's is read, and it outlasts the
+// wire (S1).
 export function mixedTryStatus(
   wire: Traffic,
   now: number,
   decryptedAt: number | null,
-  refusedAfterProof = REFUSED_AFTER_PROOF,
+  around: { refusedAfterProof?: string; trustedOn?: string | null } = {},
 ): StepStatusView {
+  const { refusedAfterProof = REFUSED_AFTER_PROOF, trustedOn = null } = around;
   const refused = trafficReading(wire, now) === "not-decrypting";
   if (decryptedAt !== null) return keptProof(decryptedAt, refused ? refusedAfterProof : undefined);
-  return refused ? TRAFFIC_VERDICT["not-decrypting"] : awaiting("the address below confirms it");
+  if (!refused) return awaiting("the address below confirms it");
+  const view = TRAFFIC_VERDICT["not-decrypting"];
+  return trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(trustedOn) };
 }
 
 // The sentence that ends setup, in the two forms the evidence supports. A

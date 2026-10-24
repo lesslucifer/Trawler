@@ -127,6 +127,19 @@
     .tunnel .a-ub-wait,.late .a-ub-wait{display:none}
     .tunnel .a-ub-tunnel{display:block}
     .late .a-ub-late{display:block}
+    /* round 16 — the Simulator reads its own store and its own marked
+       request: not in its store (also while this Mac's traffic decrypts),
+       trusted with this Mac refusing, its marked request decrypted, and no
+       Simulator running. The end shows on its marked request only. */
+    .a-sm-tunnel,.a-sm-marked,.a-sm-unread,.a-sm-unread-marked{display:none}
+    .p-sim.tunnel .a-sm-absent,.p-sim.marked .a-sm-absent,.p-sim.unread .a-sm-absent{display:none}
+    .p-sim.tunnel .a-sm-tunnel{display:block}
+    .p-sim.unread .a-sm-unread{display:block}
+    .p-sim.marked .a-sm-marked{display:block}
+    .p-sim.marked .a-sm-tunnel,.p-sim.unread .a-sm-tunnel,.p-sim.unread.marked .a-sm-marked,.p-sim.unread.marked .a-sm-unread{display:none}
+    .p-sim.unread.marked .a-sm-unread-marked{display:block}
+    .p-sim [data-zone="done"]{display:none}
+    .p-sim.marked [data-zone="done"]{display:block}
     .p-off.mixed [data-zone="done"]{display:none}
     .p-off.marked [data-zone="done"]{display:block}
   </style>
@@ -136,8 +149,8 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W6</strong> · branch <code>wu/onboard-revamp/another-ubuntu-status</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W7</strong> · branch <code>wu/onboard-revamp/ios-simulator-status</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
@@ -172,7 +185,13 @@
               <div class="a-rd-route" id="m-steps-machine-route"></div>
               <div class="a-rd-both" id="m-steps-machine-both"></div>
             </div>
-            <div class="a-pf-sim" id="m-steps-sim"></div>
+            <div class="a-pf-sim">
+              <div class="a-sm-absent" id="m-steps-sim"></div>
+              <div class="a-sm-tunnel" id="m-steps-sim-tunnel"></div>
+              <div class="a-sm-marked" id="m-steps-sim-marked"></div>
+              <div class="a-sm-unread" id="m-steps-sim-unread"></div>
+              <div class="a-sm-unread-marked" id="m-steps-sim-unread-marked"></div>
+            </div>
             <div class="a-pf-off">
               <div class="a-rch-off" id="m-steps-off-unreached"></div>
               <div class="a-rch-on">
@@ -387,7 +406,10 @@
         const WAITING = { glyph: "○", tone: "muted", short: "not done — waiting for the first request" };
         const PROXY_OFF_CMD = "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
 
-        const TRUST_STEP = <>Run it in a terminal:{command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem", "the trust command")}</>;
+        /* Round 16 (C1 · Q2): the command reads the file where the save put it -
+           Downloads, where the save dialog opens, until a save names another
+           path, which the command then prints quoted. */
+        const TRUST_STEP = <>Run it in a terminal:{command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem", "the trust command")}</>;
         const ROUTE_STEP = <>Run — this sets the Wi-Fi service; change the name for Ethernet:{command(MAC_ROUTE_CMD, "the proxy command")}</>;
         const TRUST_UNDO = [
           <>Run:{command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
@@ -584,53 +606,6 @@
           </>)}
         </>));
 
-        /* ---- the Simulator: its own keychain, this Mac's proxy ------------- */
-        mount("m-steps-sim",
-          <Section variant="band" title="">
-            <div className="flex flex-col gap-4">
-            <TaskStep n={1} title="Trust Trawler's certificate in the Simulator"
-                      why="the Simulator keeps its own certificate store — this Mac's does not cover it"
-                      status={{ glyph: "◐", tone: "muted", short: "can't check here — the Simulator's first HTTPS request confirms it" }}>
-              <Steps n={3} open>
-                <Guide
-                  steps={[
-                    saveStep,
-                    <>With the Simulator running, run:{command("xcrun simctl keychain booted add-root-cert trawler-ca.pem", "the trust command")}</>,
-                    "Restart the Simulator so apps pick the new root up.",
-                  ]}
-                  undoTitle="to remove it later"
-                  undo={[<>Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:{command("xcrun simctl keychain booted reset", "the keychain reset")}</>]}
-                />
-              </Steps>
-            </TaskStep>
-            <TaskStep n={2} title="Send this Mac's traffic to Trawler"
-                      why="the Simulator follows this Mac's system proxy"
-                      >
-              <div className="a-rt-off">
-                <StatusLine status={UNROUTED} />
-                <div className="pt-2"><Button onClick={noop}>Set the system proxy</Button></div>
-                <div className="pt-3">
-                  <ByHand>
-                    <Guide steps={[ROUTE_STEP]} undoTitle="to turn it off later" undo={ROUTE_UNDO} />
-                  </ByHand>
-                </div>
-              </div>
-              {/* The Simulator's proxy is this Mac's, so its done reading is this
-                  Mac's too — and the reversal is inside the task it reverses. The
-                  Simulator's certificate is in a keychain nothing here reads, so
-                  the line names nothing of it. */}
-              <div className="a-rt-on">
-                <StatusLine status={ROUTED} />
-                <div className="pt-2"><Reversal trusted={false} /></div>
-                <div className="pt-3"><WayBack title="to turn it off later" steps={ROUTE_UNDO} /></div>
-              </div>
-            </TaskStep>
-            <TaskStep n={3} title="Open any website in the Simulator"
-                      why="the first decrypted request is what proves setup works"
-                      status={WAITING} />
-            </div>
-          </Section>);
-
         /* ---- a phone: one task that changes this machine, three that do not - */
         /* Round 8. Nothing reads a phone's stores, so its tasks promise to be
            confirmed by its first request — and once requests arrive, they are.
@@ -819,6 +794,101 @@
         mount("m-steps-off-lost", phoneTasks("lost"));
         mount("m-steps-off-late", phoneTasks("late"));
 
+        /* ---- the Simulator: its own store, this Mac's proxy --------------- */
+        /* Round 16 (S1-S3 · C1-C3 · Q1-Q3). The Simulator sends through this
+           Mac's proxy, so this Mac's traffic is on its wire for as long as task
+           2 is done: nothing unmarked is the Simulator's, ever. Task 1 reads the
+           store of each Simulator running (Q1), named by the Simulator's own
+           name; where none runs it is unread, and the Simulator's marked
+           request settles it. A refusal is never task 1's: the try task says
+           it, with the trusted store's name where task 1 reads trusted. The
+           try task and the end read the marked request only. The command
+           trusts every Simulator running (C2), on the file where the save put
+           it (C1); the way back is the erase, which is what removes it (C3). */
+        const SIM_TRUST_CMD = "for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done";
+        const SIM_UNDO = ["Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included."];
+        const SIM_LINES = {
+          absent: { trust: sv("○", "muted", "not done — not in iPhone 17 Pro"), try: sv("◐", "muted", "can't check here — the address below confirms it") },
+          tunnel: { trust: sv("✓", "ok", "done — trusted in iPhone 17 Pro"), try: ARRIVING },
+          marked: { trust: sv("✓", "ok", "done — trusted in iPhone 17 Pro"), try: sv("✓", "ok", "done — decrypted at 14:02") },
+          unread: { trust: sv("◐", "muted", "can't check here — the address in step 3 confirms it"), try: sv("◐", "muted", "can't check here — the address below confirms it") },
+          "unread-marked": { trust: sv("✓", "ok", "done — the Simulator's request decrypted at 14:02"), try: sv("✓", "ok", "done — decrypted at 14:02") },
+        };
+        const simTasks = (variant) => {
+          const lines = SIM_LINES[variant];
+          const trustDone = lines.trust.tone === "ok";
+          const routed = variant !== "absent";
+          return (
+          <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="Trust Trawler's certificate in the Simulator"
+                      why="the Simulator keeps its own certificate store — this Mac's does not cover it"
+                      status={lines.trust}>
+              {trustDone
+                ? <WayBack title="to remove it later" steps={SIM_UNDO} />
+                : <Steps n={3} open>
+                    <Guide
+                      steps={[
+                        saveStep,
+                        <>With the Simulator running, run:{command(SIM_TRUST_CMD, "the trust command")}</>,
+                        "Restart the Simulator so apps pick the new root up.",
+                      ]}
+                      undoTitle="to remove it later"
+                      undo={SIM_UNDO}
+                    />
+                  </Steps>}
+            </TaskStep>
+            <TaskStep n={2} title="Send this Mac's traffic to Trawler"
+                      why="the Simulator follows this Mac's system proxy"
+                      >
+              {/* The Simulator's proxy is this Mac's, so its done reading is this
+                  Mac's too — and the reversal is inside the task it reverses. */}
+              {!routed && (
+                <div className="a-rt-off">
+                  <StatusLine status={UNROUTED} />
+                  <div className="pt-2"><Button onClick={noop}>Set the system proxy</Button></div>
+                  <div className="pt-3">
+                    <ByHand>
+                      <Guide steps={[ROUTE_STEP]} undoTitle="to turn it off later" undo={ROUTE_UNDO} />
+                    </ByHand>
+                  </div>
+                </div>
+              )}
+              <div className={routed ? undefined : "a-rt-on"}>
+                <StatusLine status={ROUTED} />
+                <div className="pt-2"><Reversal trusted={false} /></div>
+                <div className="pt-3"><WayBack title="to turn it off later" steps={ROUTE_UNDO} /></div>
+              </div>
+            </TaskStep>
+            <TaskStep n={3} title="Open any website in the Simulator"
+                      why="the first decrypted request is what proves setup works">
+              <StatusLine status={lines.try} />
+              {variant === "tunnel" && (
+                <div className="pt-2">
+                  <Notice tone="mute">
+                    something is connecting and none of it is decrypting — iPhone 17 Pro trusts Trawler's
+                    certificate, so it comes from another device, or from an app with a certificate store of
+                    its own, that does not trust it yet.
+                  </Notice>
+                </div>
+              )}
+              <div className="pt-2 font-ui text-chrome text-ink-mute">
+                <span className="flex flex-wrap items-center gap-chrome-gap">
+                  <span>or open this one in the Simulator</span>
+                  {copyable(CHECK_URL, "the address to open", "check url")}
+                </span>
+              </div>
+            </TaskStep>
+            </div>
+          </Section>
+          );
+        };
+        mount("m-steps-sim", simTasks("absent"));
+        mount("m-steps-sim-tunnel", simTasks("tunnel"));
+        mount("m-steps-sim-marked", simTasks("marked"));
+        mount("m-steps-sim-unread", simTasks("unread"));
+        mount("m-steps-sim-unread-marked", simTasks("unread-marked"));
+
         /* ---- another Ubuntu machine: three stores, a step each ----------- */
         /* Round 15 (C1 · Q3): Firefox keeps its own store, Chrome reads the NSS
            database, and curl and the system's tools read the system bundle -
@@ -924,7 +994,8 @@
           <div className="a-pf-machine">
             <Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic from this Mac</Notice>
           </div>
-          <div className="a-pf-sim"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic</Notice></div>
+          {/* Round 16 (S3): on its marked request only, which names it. */}
+          <div className="a-pf-sim"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic from the Simulator</Notice></div>
           <div className="a-pf-off">
             <div className="a-mx-plain"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic</Notice></div>
             {/* Round 13 (A4): its marked request is the newest proof, so the end
@@ -962,7 +1033,7 @@
         <strong>blocked</strong> and <strong>back</strong> cannot overflow; <strong>steps</strong> grows with the platform and the column scrolls whole —
         no inner scroller.</p>
       <p class="kd">Payload is mono and copies whole: a command such as
-        <span class="font-mono" data-wire="shell command">xcrun simctl keychain booted add-root-cert trawler-ca.pem</span>,
+        <span class="font-mono" data-wire="shell command">sudo update-ca-certificates</span>,
         the certificate URL <span class="font-mono" data-wire="certificate url">http://192.168.1.24:7421/ca.mobileconfig</span>
         (on a phone, with a code under it that encodes exactly that URL),
         the server <span class="font-mono" data-wire="proxy host">192.168.1.24</span> and port
@@ -1025,6 +1096,9 @@
         <tr><td>A certificate task installs into every store the try task's client may read, each store a numbered step of its own — a store is a different end, never "another way". On Linux: Firefox's own, Chrome's NSS database, then the system's, the browsers first because the try task opens one</td><td>round 15 · C1 · Q1 · Q3</td></tr>
         <tr><td>A command runs on a stock install: it installs a tool the system does not ship before using it, and finds a database or a folder wherever this version and this language put it</td><td>round 15 · C2 · C3 · C4</td></tr>
         <tr><td>Advice names the store still missing: on Linux the system command reaches no browser, and on another Ubuntu machine a refusal after its proof is first a browser with a store of its own</td><td>round 15 · S1 · S2 · Q2</td></tr>
+        <tr><td>A platform whose route is this Mac's proxy reads nothing unmarked: the Simulator's certificate task reads the store of each Simulator running, and where none is read, its marked request; its try task and the end read its marked request only; a refusal is never its certificate task's</td><td>round 16 · S1 · S2 · S3 · Q1</td></tr>
+        <tr><td>A command reads the file where the save put it — Downloads, where the save dialog opens, until a save returns another path, which it prints quoted — and reaches every target it is for: the Simulator's, every Simulator running</td><td>round 16 · C1 · C2 · Q2</td></tr>
+        <tr><td>A way back removes what the steps added. The Simulator's is the erase: <code>keychain reset</code> exits 0 and leaves the root trusted</td><td>round 16 · C3 · Q3</td></tr>
         <tr><td>A command runs as written in the shell its sentence names, and reads the file where the step before it left it: Windows' sentences name PowerShell; another computer's trust command reads the download from Downloads</td><td>round 14 · C1 · C2 · Q3</td></tr>
         <tr><td>An allowed address this Mac no longer holds reads not working, offers the one it holds now, and dims the tasks that would print it. Reach is read again with this machine: on focus and every 3 s</td><td>round 13 · R1 · R2</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
@@ -1043,12 +1117,12 @@
 
       <h3 id="model">Where each task's reading comes from</h3>
       <table data-c="model-table">
-        <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Another device — what could have come from it (round 13)</th><th>The Simulator and the emulator — this setup's traffic</th></tr>
-        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em></td><td>a request decrypted → <em>done — a request decrypted</em> · a tunnel past its grace and nothing decrypted → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — …'s first HTTPS request confirms it</em></td></tr>
+        <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Another device — what could have come from it (round 13)</th><th>The emulator — this setup's traffic · the Simulator — its own store, else its marked request (round 16)</th></tr>
+        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em></td><td>the emulator: a request decrypted → <em>done — a request decrypted</em> · a tunnel past its grace and nothing decrypted → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — …'s first HTTPS request confirms it</em>. The Simulator: each one running (its <code>device.plist</code>), its own <code>TrustStore.sqlite3</code> holding the live certificate → <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em>; one not → <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em>; none running, or no store read → its marked request: <em>done — the Simulator's request decrypted at 14:02</em>, else <em>can't check here — the address in step 3 confirms it</em>. Never unmarked traffic, never a refusal</td></tr>
         <tr><td>proxy</td><td>this machine and the Simulator: the proxy HTTPS goes through now — <code>scutil --proxy</code> on macOS, the <code>https=</code> entry or the one address on Windows, GNOME's HTTPS proxy on Linux. <code>localhost</code> on Trawler's port is Trawler, no other loopback address is</td><td>the same request → <em>done — step 3's request came through at 14:02</em> · else <em>can't check here — the same request confirms it</em></td><td>the same request → <em>done — your iPhone's request came through at 14:02</em> · where this Mac's traffic may be arriving too → <em>can't check here — the same request confirms it</em> · else any request since its address was allowed → <em>done — a request reached Trawler at 14:02</em> · none → <em>can't check here — your iPhone's first request confirms it</em></td><td>any request reached Trawler → <em>done — requests reached Trawler</em> · none → <em>can't check here — …'s first request confirms it</em>. The Simulator's too, where this Mac's proxy cannot be read</td></tr>
-        <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named. On another device (round 14) the proof also stays past plain http and past a refusal, which is a note under it</td></tr>
+        <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named. On another device (round 14) the proof also stays past plain http and past a refusal, which is a note under it. On the Simulator (round 16), only its marked request, always — its route is this Mac's proxy, so the wire is always mixed: <em>can't check here — the address below confirms it</em>, then <em>done — decrypted at 14:02</em>, kept as another device's is; a refusal names no device, or, where task 1 reads trusted, the Simulator it read</td></tr>
       </table>
-      <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. On the Simulator and the emulator the screen infers the device from the platform chosen, so a request from this Mac would also count — the blocked-on attribution row stays open. This machine's own request carries a mark (<code>?trawler-check=…</code>, visible in the list) and its tasks read nothing else (round 12). Another device's carries one too, opened there, and its tasks read unmarked traffic only from after its address was allowed and while this Mac's proxy does not point here (round 13). The matrix test renders every host × platform × reach × probe pair × traffic history × own request × marked request and judges each against this table.</p>
+      <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. On the emulator the screen infers the device from the platform chosen, so a request from this Mac would also count — the blocked-on attribution row stays open. The Simulator reads its own store and its marked request, nothing unmarked (round 16). This machine's own request carries a mark (<code>?trawler-check=…</code>, visible in the list) and its tasks read nothing else (round 12). Another device's carries one too, opened there, and its tasks read unmarked traffic only from after its address was allowed and while this Mac's proxy does not point here (round 13). The matrix test renders every host × platform × reach × probe pair × traffic history × own request × marked request and judges each against this table.</p>
 
       <h3 id="copy">The sentences</h3>
       <table data-c="copy-table">
@@ -1072,11 +1146,13 @@
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.</em></td></tr>
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
-        <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>the Simulator</em>, …), with the steps open</td></tr>
+        <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>your iPhone</em>, …), with the steps open. Never on the Simulator, whose wire is this Mac's too (round 16)</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted · another device after its proof (round 14), under <em>done — decrypted at 14:02</em>: <em>something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.</em></td></tr>
         <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's trust command reads <span class="font-mono">~/Downloads/trawler-ca.pem</span>, another Ubuntu machine's <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> (round 15) · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
         <tr><td>Linux's certificate steps (round 15)</td><td><em>In Firefox: Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".</em> · <em>For Chrome, run:</em> <span class="font-mono">sudo apt install -y libnss3-tools &amp;&amp; { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb &amp;&amp; certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } &amp;&amp; certutil -d "sql:$([ -d ~/.pki/nssdb ] &amp;&amp; echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i …</span> · <em>For curl and the system's tools, run:</em> the system command · the same three under <em>to remove it later</em>, Firefox's ending <em>→ Trawler Proxy CA → Delete or Distrust.</em> · the refusal's advice: <em>Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.</em> · another Ubuntu machine after its proof: <em>something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.</em></td></tr>
-        <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
+        <tr><td>the Simulator (round 16)</td><td>task 1: <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em> · <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em> · none read: <em>can't check here — the address in step 3 confirms it</em>, then <em>done — the Simulator's request decrypted at 14:02</em> · its steps: <em>With the Simulator running, run:</em> <span class="font-mono">for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done</span> · <em>Restart the Simulator so apps pick the new root up.</em> · <em>to remove it later</em>: <em>Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included.</em> · task 3: <em>or open this one in the Simulator</em> with its marked address · a refusal, task 1 trusted: <em>something is connecting and none of it is decrypting — iPhone 17 Pro trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em></td></tr>
+        <tr><td>the saved file in a command (round 16)</td><td>before a save, This machine's and the Simulator's commands read Downloads, where the save dialog opens: <span class="font-mono">~/Downloads/trawler-ca.pem</span> on macOS · <span class="font-mono">"$HOME\Downloads\trawler-ca.pem"</span> on Windows · <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> on Linux; after it, the path the save returned, quoted for that shell</td></tr>
+        <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · the Simulator, on its marked request only (round 16): <em>You're set up — Trawler is capturing traffic from the Simulator</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
         <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
         <tr><td>the empty list</td><td><em>Nothing captured yet</em> · <em>Requests from your apps and devices show up here once they go through Trawler. Setup walks you through it, step by step.</em> · <em>set up capture</em>, centred as the whole region</td></tr>
@@ -1097,8 +1173,9 @@
       <tr><td><code>trustProbe</code> — trusted · installed · absent · unknown, of the live certificate</td><td>used</td><td>task 1's reading, on this machine only</td></tr>
       <tr><td><code>proxy</code> — ours · foreign · none · unknown, and the address: the proxy HTTPS goes through now</td><td>used</td><td>task 2's reading, on this machine and the Simulator; the address names a proxy about to be replaced; on another device, whether this Mac's own traffic may be arriving too (round 13)</td></tr>
       <tr><td><code>probing</code> · <code>probedAt</code> · <code>onRecheck</code></td><td>used</td><td>probe — one dated re-read of both. <code>probing</code> is true only for a read the user asked for; a quiet one moves <code>probedAt</code> alone</td></tr>
+      <tr><td><code>simulators</code> — each Simulator running: its name, and whether its own store holds the live certificate — trusted · absent · unknown</td><td>used</td><td>task 1 on the Simulator; none running reads unread (round 16, Q1)</td></tr>
       <tr><td><code>ownProofAt</code> — when This machine's marked request last came through decrypted, this session</td><td>used</td><td>tasks 1 and 2 on This machine where no probe answers (round 12, DEC-62)</td></tr>
-      <tr><td><code>deviceMark</code> · <code>device</code> — another device's mark, and beside its traffic: when a row carrying the mark last came through decrypted since its address was allowed, whether this machine's own traffic may be arriving now, and the wire since the allow</td><td>used</td><td>its try task's address, and its tasks 2 and 3 (round 13, DEC-63)</td></tr>
+      <tr><td><code>deviceMark</code> · <code>device</code> — another device's mark, and beside its traffic: when a row carrying the mark last came through decrypted since its address was allowed, whether this machine's own traffic may be arriving now, and the wire since the allow</td><td>used</td><td>its try task's address, and its tasks 2 and 3 (round 13, DEC-63); the Simulator's mark too, read since setup opened, for its tasks 1 and 3 and its end (round 16)</td></tr>
       <tr><td><code>traffic</code> — decrypted · tunnel · plain, this session's only: captured, since setup opened — on another device, since its address was allowed — unfiltered</td><td>used</td><td>try — the only proof; a tunnel cannot be tied to a platform (blocked-on)</td></tr>
       <tr><td><code>reach.armed</code> · <code>interfaces</code> · <code>proxy</code> · <code>ca_urls</code></td><td>used</td><td>task 1 off-machine, the values a device types in, and the phone's code; an armed address <code>interfaces</code> no longer lists is lost (round 13)</td></tr>
       <tr><td><code>reach.api</code></td><td>deliberately unused</td><td>no step points at it</td></tr>
@@ -1194,7 +1271,9 @@
         <tr><td>Round 14, close — "LGTM", on another device's try task keeping its proof past what follows it with a refusal as a note under it, a note true of its system, and a command that runs where its sentence says</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W5's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 15 — the owner's rulings on E-ONBRVP.W6's plan, 2026-10-24: "all good, just go with the proposed" — S1–S2 and C1–C4 taken, Q1–Q3 A: the Linux route fixed wherever it is printed, the note after a proof naming the browsers on another Ubuntu machine only, Firefox then Chrome then the system</td><td>mockup — another Ubuntu machine: its certificate task's four steps, a refusal before any proof with Linux's advice, its try task after a proof with Ubuntu's note; This machine on macOS loses the Firefox note round 14 removed from macOS · rules — every store a step, a command that runs on a stock install, advice that names the missing store · copy — Linux's certificate steps, the advice and the note</td><td><code>DEC-63</code> rule 7 — the note's Linux wording · <code>StepList</code> — a step is one act, so three stores are three steps · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
         <tr><td>Round 15, close — "LGTM", on Linux's certificate task installing into every store a browser reads, a step each, commands that run on a stock Ubuntu, and advice and a note after a proof that name the browsers' own stores</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W6's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
-        <tr><td>Round 15, after the close — the code review, round 1: a Chrome installed and never opened has made neither NSS database, and certutil adds to none it was not asked to create, so Chrome's step failed on a fresh Ubuntu</td><td>copy — Chrome's command creates the database a Chrome since M146 reads where none exists, before adding to it. Nothing drawn moved. W6's <code>design/v1</code> note cites the blob this amendment leaves</td><td>the rule — a command finds a database wherever this version put it, and makes it where none exists</td></tr>
+        <tr><td>Round 15, after the close — the code review, round 1: a Chrome installed and never opened has made neither NSS database, and certutil adds to none it was not asked to create, so Chrome's step failed on a fresh Ubuntu</td><td>copy — Chrome's command creates the database a Chrome since M146 reads where none exists, before adding to it. Nothing drawn moved. W6's <code>design/v1</code> note cites the blob this amendment leaves</td><td><code>UC-ONBOARD</code> — a command finds a database wherever this version put it, and makes it where none exists</td></tr>
+        <tr><td>Round 16 — the owner's rulings on E-ONBRVP.W7's plan, 2026-10-24: "ok, go ahead with all proposed" — S1–S3 and C1–C3 taken, Q1–Q3 A: a probe of each running Simulator's own store, the saved path wherever a save step comes before a command, removal by erase</td><td>mockup — the Simulator: not in its store (also while this Mac's traffic decrypts: no end), trusted with this Mac refusing, its marked request decrypted with the end naming it, and none running, before and after its marked request; This machine's trust command reads Downloads · rules — nothing unmarked on a platform whose route is this Mac's proxy, the file where the save put it, a way back that removes · model — the Simulator's column · copy — the Simulator's lines and steps, the saved file in a command, the end · given — <code>simulators</code></td><td><code>DEC-63</code> — the Simulator's rule · <code>DEC-33</code> — a probe that concludes is the whole state · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
+        <tr><td>Round 16, close — "LGTM", on the Simulator's certificate task reading its own store, else its marked request, its try task and the end reading that mark alone, commands that read the file where the save put it and reach every running Simulator, and the erase as its way back</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W7's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
       </tbody>
     </table>
 
