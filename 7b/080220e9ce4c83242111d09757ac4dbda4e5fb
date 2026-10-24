@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7b080220e9ce4c83242111d09757ac4dbda4e5fb
+base: 4df86d67de4bf9ce930a11b9634dc69ed5262ab8
+tier: key
+signer: vuluu
+report: docs/work/2026-10-24-onboard-revamp-w6-another-ubuntu-status-result.html
+report_sha256: eebf2a3bfa11b504e765274ca977d8f45ad9aa9786c376b48f7c9e666e9cec88
+date: 2026-10-24
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBzsv49f4Nosq+0K6dW+nmHaZ1ztnO8zoFyPDyNXCyWbKZ7x0Q+c4rIqz
+  LTM/4QGn0ZZoKPccLkX8nPhWlYMyUN
+  -----END SSH SIGNATURE-----
