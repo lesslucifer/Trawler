@@ -10,15 +10,15 @@
     <div class="inner">
       <h1>E-ONBRVP.W7 — status: iOS Simulator</h1>
       <p>A certificate step read from the Simulator's own store, never from this Mac's traffic, and commands that do what they say.</p>
-      <div class="meta">v1 · 2026-10-24 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W7</span> · branch <code>wu/onboard-revamp/ios-simulator-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · takes up what DEC-63 left to this WU</div>
+      <div class="meta">v2 · 2026-10-24 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W7</span> · branch <code>wu/onboard-revamp/ios-simulator-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · takes up what DEC-63 left to this WU</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waiting for your ruling.</strong> S1–S3 and C1–C3 each need take · defer · refute, and Q1–Q3 an answer. Every C-row
-      and the store facts below were reproduced on this Mac (Xcode, iOS 26.5 runtime) on a throwaway Simulator, deleted after.
-      Nothing is built yet.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("go ahead with all proposed", 2026-10-24). S1–S3 and C1–C3 taken; Q1–Q3 all A;
+      N1–N3 deferred to W16. Every C-row and the store facts below were reproduced on this Mac (Xcode, iOS 26.5 runtime) on a
+      throwaway Simulator, deleted after.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -72,26 +72,26 @@
     <h2 id="status">Part 1 — what the status lines say</h2>
     <table data-c="status-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr><td>S1</td><td><strong>This Mac's traffic proves the Simulator's certificate.</strong> ① reads any decrypted request in the session. After This machine's setup, this Mac's own browser decrypts at once, and ① reads done, with no time, before the Simulator's store is touched. The cut DEC-63 makes for another device (count unmarked traffic only while this Mac's proxy is off) can never apply: with the proxy off, the Simulator sends nothing either.</td><td>① reads the Simulator's own store (Q1): <em>done — trusted in iPhone 17 Pro</em> · <em>not done — not in iPhone 17 Pro</em>. Where nothing reads it (no Simulator running, a store not where this runtime keeps it), the Simulator's marked request does, named and timed: <em>can't check here — the address in step 3 confirms it</em>, then <em>done — the Simulator's request decrypted at 14:02</em>. Unmarked traffic never settles ①.</td><td>—</td></tr>
-      <tr><td>S2</td><td><strong>A refusal on this Mac is blamed on the Simulator.</strong> An app on this Mac that pins its certificate leaves a tunnel nothing decrypts. ① turns <em>not working</em>, says the Simulator does not trust the certificate, and opens the steps, even after they were done.</td><td>On the Simulator a refusal is never the certificate task's. It is the try task's and names no device, as in DEC-63's mixed state. Where ① reads trusted, the try task's remedy says the Simulator trusts it, so the refusal comes from another app or device (the line This machine already uses).</td><td>—</td></tr>
-      <tr><td>S3</td><td><strong>The try task and the end read this Mac's traffic.</strong> ③ reads <em>capturing traffic</em> for 30 s after any decrypted request, and <em>nothing arriving</em> after that, under a done ①. "You're set up" shows on this Mac's browsing.</td><td>③ offers the marked address — "or open this one in the Simulator" — and reads <em>can't check here — the address below confirms it</em> until that request decrypts. It then reads <em>done — decrypted at 14:02</em> and keeps that past anything later that does not decrypt (DEC-63 rules 4 and 7). The end shows only on the marked request and names the device: <em>"You're set up — Trawler is capturing traffic from the Simulator"</em> (rule 5).</td><td>—</td></tr>
+      <tr><td>S1</td><td><strong>This Mac's traffic proves the Simulator's certificate.</strong> ① reads any decrypted request in the session. After This machine's setup, this Mac's own browser decrypts at once, and ① reads done, with no time, before the Simulator's store is touched. The cut DEC-63 makes for another device (count unmarked traffic only while this Mac's proxy is off) can never apply: with the proxy off, the Simulator sends nothing either.</td><td>① reads the Simulator's own store (Q1): <em>done — trusted in iPhone 17 Pro</em> · <em>not done — not in iPhone 17 Pro</em>. Where nothing reads it (no Simulator running, a store not where this runtime keeps it), the Simulator's marked request does, named and timed: <em>can't check here — the address in step 3 confirms it</em>, then <em>done — the Simulator's request decrypted at 14:02</em>. Unmarked traffic never settles ①.</td><td>take</td></tr>
+      <tr><td>S2</td><td><strong>A refusal on this Mac is blamed on the Simulator.</strong> An app on this Mac that pins its certificate leaves a tunnel nothing decrypts. ① turns <em>not working</em>, says the Simulator does not trust the certificate, and opens the steps, even after they were done.</td><td>On the Simulator a refusal is never the certificate task's. It is the try task's and names no device, as in DEC-63's mixed state. Where ① reads trusted, the try task's remedy says the Simulator trusts it, so the refusal comes from another app or device (the line This machine already uses).</td><td>take</td></tr>
+      <tr><td>S3</td><td><strong>The try task and the end read this Mac's traffic.</strong> ③ reads <em>capturing traffic</em> for 30 s after any decrypted request, and <em>nothing arriving</em> after that, under a done ①. "You're set up" shows on this Mac's browsing.</td><td>③ offers the marked address — "or open this one in the Simulator" — and reads <em>can't check here — the address below confirms it</em> until that request decrypts. It then reads <em>done — decrypted at 14:02</em> and keeps that past anything later that does not decrypt (DEC-63 rules 4 and 7). The end shows only on the marked request and names the device: <em>"You're set up — Trawler is capturing traffic from the Simulator"</em> (rule 5).</td><td>take</td></tr>
     </table>
 
     <h2 id="commands">Part 2 — steps that cannot be done as written</h2>
     <p>As in W5 and W6, each of these leaves a task waiting for a request that the step, as written, can never produce, or says something false.</p>
     <table data-c="command-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr><td>C1</td><td><strong>The trust command names a bare <code>trawler-ca.pem</code>.</strong> The save step opens a dialog that saves wherever the user points it. A terminal opens in <code>~</code>, so the command fails with "no such file" (reproduced). This machine's commands on macOS, Windows and Linux name the bare file too.</td><td>Once the file is saved, the command names the path the save returned, quoted. Before a save, it names <code>~/Downloads/trawler-ca.pem</code>, and the save dialog opens in Downloads. Who gets this: Q2.</td><td>—</td></tr>
-      <tr><td>C2</td><td><strong><code>booted</code> picks one Simulator, silently.</strong> With two running, the command trusted the one booted last (reproduced). It may not be the one the user is looking at, so ③ never decrypts.</td><td>The command trusts every running Simulator: <code>for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert &lt;file&gt;; done</code>. With S1's probe, ① names any running Simulator still missing the certificate.</td><td>—</td></tr>
-      <tr><td>C3</td><td><strong>The removal removes nothing.</strong> <code>simctl keychain booted reset</code> exits 0 and leaves Trawler's root in the trust store, through a reboot (reproduced). So both halves of its warning, "clears everything in it, not only Trawler's root", are wrong.</td><td>The removal step is the one that works: "Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it." The <code>keychain reset</code> command goes. Alternative: Q3.</td><td>—</td></tr>
+      <tr><td>C1</td><td><strong>The trust command names a bare <code>trawler-ca.pem</code>.</strong> The save step opens a dialog that saves wherever the user points it. A terminal opens in <code>~</code>, so the command fails with "no such file" (reproduced). This machine's commands on macOS, Windows and Linux name the bare file too.</td><td>Once the file is saved, the command names the path the save returned, quoted. Before a save, it names <code>~/Downloads/trawler-ca.pem</code>, and the save dialog opens in Downloads. Who gets this: Q2.</td><td>take</td></tr>
+      <tr><td>C2</td><td><strong><code>booted</code> picks one Simulator, silently.</strong> With two running, the command trusted the one booted last (reproduced). It may not be the one the user is looking at, so ③ never decrypts.</td><td>The command trusts every running Simulator: <code>for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert &lt;file&gt;; done</code>. With S1's probe, ① names any running Simulator still missing the certificate.</td><td>take</td></tr>
+      <tr><td>C3</td><td><strong>The removal removes nothing.</strong> <code>simctl keychain booted reset</code> exits 0 and leaves Trawler's root in the trust store, through a reboot (reproduced). So both halves of its warning, "clears everything in it, not only Trawler's root", are wrong.</td><td>The removal step is the one that works: "Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it." The <code>keychain reset</code> command goes. Alternative: Q3.</td><td>take</td></tr>
     </table>
 
     <h2 id="noticed">Noticed outside status — for later WUs</h2>
     <table data-c="noticed">
       <tr><th>#</th><th>What</th><th>Why not here</th><th>Ruling</th></tr>
-      <tr><td>N1</td><td>Where <code>xcode-select</code> points at the Command Line Tools rather than Xcode, <code>xcrun simctl</code> fails with "unable to find utility simctl". This is a known failure; I did not reproduce it, because this Mac points at Xcode.</td><td>the command is right for a working Xcode. Saying what to do when it is not is help text</td><td>propose: defer to W16</td></tr>
-      <tr><td>N2</td><td>Each simulated device keeps its own store, so trusting the iPhone does not cover the iPad, and a new or erased device starts empty.</td><td>with S1's probe the status already shows this. Telling the user ahead of time is wording</td><td>propose: defer to W16</td></tr>
-      <tr><td>N3</td><td>The shell could run <code>add-root-cert</code> itself: a "Trust in the Simulator" button, with no password, because simctl needs none.</td><td>it is an interactive route, which is the epic's Q11 and belongs to W16. Status is this WU's</td><td>propose: defer to W16</td></tr>
+      <tr><td>N1</td><td>Where <code>xcode-select</code> points at the Command Line Tools rather than Xcode, <code>xcrun simctl</code> fails with "unable to find utility simctl". This is a known failure; I did not reproduce it, because this Mac points at Xcode.</td><td>the command is right for a working Xcode. Saying what to do when it is not is help text</td><td>ruled: defer to W16</td></tr>
+      <tr><td>N2</td><td>Each simulated device keeps its own store, so trusting the iPhone does not cover the iPad, and a new or erased device starts empty.</td><td>with S1's probe the status already shows this. Telling the user ahead of time is wording</td><td>ruled: defer to W16</td></tr>
+      <tr><td>N3</td><td>The shell could run <code>add-root-cert</code> itself: a "Trust in the Simulator" button, with no password, because simctl needs none.</td><td>it is an interactive route, which is the epic's Q11 and belongs to W16. Status is this WU's</td><td>ruled: defer to W16</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -100,15 +100,15 @@
       <tr><td>Q1</td><td>What reads ①?
         <strong>A</strong> a shell-side probe (epic Q8): for each running Simulator (<code>device.plist</code> state 3), does its <code>TrustStore.sqlite3</code> hold Trawler's CA? It reads with <code>/usr/bin/sqlite3 -readonly</code> and adds no dependency. Unread wherever no Simulator runs or the file is not there, and then the marked request settles ①. ·
         <strong>B</strong> the marked request only, DEC-63's mechanism, with no new probe</td>
-        <td>A. It is the most accurate reading available, and it re-reads, so the epic's carried-in rule ("a proof is not permanent") holds: an erased Simulator reads <em>not done</em> on the next tick. Risk: Apple does not document the path, so a runtime that moves it reads <em>unread</em>, never <em>not installed</em>. Ruled: —</td></tr>
+        <td>A. It is the most accurate reading available, and it re-reads, so the epic's carried-in rule ("a proof is not permanent") holds: an erased Simulator reads <em>not done</em> on the next tick. Risk: Apple does not document the path, so a runtime that moves it reads <em>unread</em>, never <em>not installed</em>. Ruled: A</td></tr>
       <tr><td>Q2</td><td>Who gets C1?
         <strong>A</strong> every guide where a save step comes before a command: the Simulator, and This machine on every host ·
         <strong>B</strong> the Simulator only, with This machine left to W12</td>
-        <td>A, as W6's Q1 did: the same failure in the same code, fixed once. Ruled: —</td></tr>
+        <td>A, as W6's Q1 did: the same failure in the same code, fixed once. Ruled: A</td></tr>
       <tr><td>Q3</td><td>How is Trawler's root removed?
         <strong>A</strong> Erase All Content and Settings: supported, and it wipes the Simulator ·
         <strong>B</strong> delete the one row from <code>TrustStore.sqlite3</code> while the Simulator is shut down. This keeps everything else, but writes a file Apple does not document</td>
-        <td>A. Reading an undocumented file can only misread. Writing one can damage the Simulator. Ruled: —</td></tr>
+        <td>A. Reading an undocumented file can only misread. Writing one can damage the Simulator. Ruled: A</td></tr>
     </table>
 
     <h2 id="expected">Expected result</h2>
