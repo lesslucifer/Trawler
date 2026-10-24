@@ -1151,11 +1151,12 @@ function PlatformSetup({
           <TrafficState
             read={(now) =>
               mixed
-                ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt)
+                ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt, setup.refusedAfterProof)
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
                     proofStays: platform === "this" ? "once-quiet" : offMachine ? "past-anything" : "never",
+                    refusedAfterProof: setup.refusedAfterProof,
                   })
             }
           />

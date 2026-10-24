@@ -8,8 +8,10 @@ import {
   deviceName,
   platformChoices,
   platformLabel,
+  setupFor,
   type HostOs,
   type PlatformId,
+  type ReachAddresses,
 } from "./setup";
 import {
   mayCarryOwnTraffic,
@@ -102,6 +104,15 @@ function trafficOf(history: History): Traffic {
       };
   }
 }
+
+const ANY_REACH: ReachAddresses = {
+  proxy: "192.168.1.24:7420",
+  caUrls: {
+    pem: "http://192.168.1.24:7421/ca.pem",
+    cer: "http://192.168.1.24:7421/ca.cer",
+    mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
+  },
+};
 
 const OFF_MACHINE = new Set<PlatformId>(["mac", "windows", "ubuntu", "ios", "android"]);
 
@@ -558,6 +569,19 @@ const RULES: Record<string, Rule> = {
     return /done — decrypted at \d\d:\d\d/.test(line) && !/not working|not done/.test(line)
       ? null
       : `task ${m.tryN} reads "${line}"`;
+  },
+
+  // W6: Linux's system command reaches no browser, so advice that sends the
+  // user to a browser's own store is true only where a step installs into it.
+  "truth: advice names only a browser whose store a certificate step installs into": (o, s) => {
+    const steps = setupFor(s.platform, { os: s.os, proxyAddr: "127.0.0.1:7420", reach: ANY_REACH }).trust.guide?.steps ?? [];
+    const stepped = steps.flat().filter((p): p is string => typeof p === "string").join("\n");
+    const ownStore = o.notes.filter((note) => /keeps? its own|store of (its|their) own/.test(note));
+    const unstepped = ["Firefox", "Chrome"].filter(
+      (browser) =>
+        ownStore.some((note) => note.includes(browser)) && !new RegExp(`^(In|For) ${browser}`, "m").test(stepped),
+    );
+    return unstepped.length === 0 ? null : `advice names ${unstepped.join(", ")} with no step that installs into it`;
   },
 
   "one guide open at most, beyond those a sentence points at": (o) => {
