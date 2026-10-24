@@ -11,8 +11,8 @@ use std::sync::Mutex;
 use serde::Deserialize;
 
 use crate::setup::{
-    command_failed, read_proxy, trust_word, ProxyRead, ProxyReading, SetupError, Trust,
-    NO_INSTALL_DETAIL, NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
+    command_failed, read_proxy, trust_word, ProxyRead, ProxyReading, SetupError, SimulatorTrust,
+    Trust, NO_INSTALL_DETAIL, NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -26,6 +26,23 @@ pub enum TrustOs {
     #[default]
     Absent,
     Unreadable,
+}
+
+impl TrustOs {
+    fn reading(self) -> Option<Trust> {
+        match self {
+            TrustOs::Trusted => Some(Trust::Trusted),
+            TrustOs::Installed => Some(Trust::Installed),
+            TrustOs::Absent => Some(Trust::Absent),
+            TrustOs::Unreadable => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct SimulatorOs {
+    name: String,
+    trust: TrustOs,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -53,6 +70,7 @@ pub enum Outcome {
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Scenario {
     trust: TrustOs,
+    simulators: Vec<SimulatorOs>,
     proxy: ProxyOs,
     set_up: Outcome,
     set_proxy: Outcome,
@@ -66,6 +84,7 @@ pub struct Scenario {
 #[serde(deny_unknown_fields)]
 pub struct Patch {
     trust: Option<TrustOs>,
+    simulators: Option<Vec<SimulatorOs>>,
     proxy: Option<ProxyOs>,
     set_up: Option<Outcome>,
     set_proxy: Option<Outcome>,
@@ -79,6 +98,7 @@ impl Scenario {
     fn apply(&mut self, patch: Patch) {
         let Patch {
             trust,
+            simulators,
             proxy,
             set_up,
             set_proxy,
@@ -89,6 +109,9 @@ impl Scenario {
         } = patch;
         if let Some(v) = trust {
             self.trust = v;
+        }
+        if let Some(v) = simulators {
+            self.simulators = v;
         }
         if let Some(v) = proxy {
             self.proxy = v;
@@ -114,12 +137,14 @@ impl Scenario {
     }
 
     fn trust_reading(&self) -> &'static str {
-        trust_word(match self.trust {
-            TrustOs::Trusted => Some(Trust::Trusted),
-            TrustOs::Installed => Some(Trust::Installed),
-            TrustOs::Absent => Some(Trust::Absent),
-            TrustOs::Unreadable => None,
-        })
+        trust_word(self.trust.reading())
+    }
+
+    fn simulators_reading(&self) -> Vec<SimulatorTrust> {
+        self.simulators
+            .iter()
+            .map(|s| SimulatorTrust::new(s.name.clone(), s.trust.reading()))
+            .collect()
     }
 
     fn proxy_reading(&self, host: &str, port: u16) -> ProxyReading {
@@ -172,6 +197,11 @@ pub fn scenario_script(state: Shared<'_>, patch: Patch) {
 #[tauri::command]
 pub fn ca_trusted(state: Shared<'_>) -> String {
     with(&state, |s| s.trust_reading().into())
+}
+
+#[tauri::command]
+pub fn simulator_trust(state: Shared<'_>) -> Vec<SimulatorTrust> {
+    with(&state, |s| s.simulators_reading())
 }
 
 #[tauri::command]
@@ -267,6 +297,7 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
         tauri::generate_handler![
             scenario_script,
             ca_trusted,
+            simulator_trust,
             set_proxy,
             set_up_this_machine,
             unset_proxy,
@@ -300,6 +331,21 @@ mod tests {
             read_proxy(&ProxyRead::Off, "127.0.0.1", 7420)
         );
         assert!(!s.allow_reach && !s.allow_replace);
+        assert_eq!(s.simulators_reading(), []);
+    }
+
+    #[test]
+    fn the_running_simulators_are_scripted_by_name_through_the_shells_own_trust_words() {
+        let s = patched(
+            r#"{"simulators":[{"name":"iPhone 17 Pro","trust":"trusted"},{"name":"iPad mini","trust":"unreadable"}]}"#,
+        );
+        assert_eq!(
+            s.simulators_reading(),
+            [
+                SimulatorTrust::new("iPhone 17 Pro".into(), Some(Trust::Trusted)),
+                SimulatorTrust::new("iPad mini".into(), None),
+            ]
+        );
     }
 
     #[test]

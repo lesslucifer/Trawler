@@ -291,6 +291,120 @@ pub(crate) fn trust_word(reading: Option<Trust>) -> &'static str {
     }
 }
 
+// Each simulated device keeps a trust store of its own, which `simctl keychain
+// add-root-cert` writes and no tool Apple ships reads back: a row holding the
+// root's DER beside its trust settings. Apple documents neither the file nor
+// its table, so a store not where this runtime keeps it reads unknown, never
+// absent (E-ONBRVP.W7's Q1).
+const SIMULATOR_DEVICES: &str = "Library/Developer/CoreSimulator/Devices";
+const SIMULATOR_TRUST_STORE: &str = "data/private/var/protected/trustd/private/TrustStore.sqlite3";
+const SIMULATOR_BOOTED: &str = "3";
+
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
+pub struct SimulatorTrust {
+    name: String,
+    trust: &'static str,
+}
+
+impl SimulatorTrust {
+    pub(crate) fn new(name: String, reading: Option<Trust>) -> Self {
+        Self { name, trust: trust_word(reading) }
+    }
+}
+
+fn plist_value(plist: &str, key: &str) -> Option<String> {
+    let after_key = &plist[plist.find(&format!("<key>{key}</key>"))?..];
+    let open = after_key.find("</key>")? + "</key>".len();
+    let rest = after_key[open..].trim_start().strip_prefix('<')?;
+    let tag = &rest[..rest.find('>')?];
+    let body = &rest[tag.len() + 1..];
+    let value = &body[..body.find(&format!("</{tag}>"))?];
+    Some(
+        value
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&apos;", "'")
+            .replace("&amp;", "&"),
+    )
+}
+
+// The running devices, by the name the Simulator's own window shows, each with
+// the store it trusts from.
+fn running_simulators(devices: &Path) -> Vec<(String, std::path::PathBuf)> {
+    let Ok(entries) = std::fs::read_dir(devices) else {
+        return Vec::new();
+    };
+    let mut running: Vec<_> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let plist = std::fs::read_to_string(entry.path().join("device.plist")).ok()?;
+            if plist_value(&plist, "state")? != SIMULATOR_BOOTED {
+                return None;
+            }
+            Some((plist_value(&plist, "name")?, entry.path().join(SIMULATOR_TRUST_STORE)))
+        })
+        .collect();
+    running.sort();
+    running
+}
+
+fn der_hex(live: &str) -> Option<String> {
+    use base64::Engine as _;
+    let der = base64::engine::general_purpose::STANDARD.decode(live).ok()?;
+    Some(der.iter().map(|byte| format!("{byte:02X}")).collect())
+}
+
+fn simulator_store_trust(
+    store: &Path,
+    der_hex: &str,
+    query: impl FnOnce(&Path, &str) -> Option<Ran>,
+) -> Option<Trust> {
+    if !store.is_file() {
+        return None;
+    }
+    let read = query(store, &format!("select count(*) from tsettings where data = x'{der_hex}';"))
+        .filter(|out| out.ok)?;
+    match read.stdout.trim().parse::<u32>().ok()? {
+        0 => Some(Trust::Absent),
+        _ => Some(Trust::Trusted),
+    }
+}
+
+fn simulators_trust(
+    devices: &Path,
+    live: &str,
+    query: impl Fn(&Path, &str) -> Option<Ran>,
+) -> Vec<SimulatorTrust> {
+    let der_hex = der_hex(live);
+    running_simulators(devices)
+        .into_iter()
+        .map(|(name, store)| {
+            let reading =
+                der_hex.as_deref().and_then(|hex| simulator_store_trust(&store, hex, &query));
+            SimulatorTrust::new(name, reading)
+        })
+        .collect()
+}
+
+fn sqlite_read(store: &Path, sql: &str) -> Option<Ran> {
+    ran("/usr/bin/sqlite3", &["-readonly", &store.to_string_lossy(), sql])
+}
+
+// Read-only probe: which Simulators run, and does each one's own store hold the
+// certificate the core serves now? None running is the screen's unread, and
+// it falls back to the Simulator's marked request (DEC-63).
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn simulator_trust(pem: String) -> Vec<SimulatorTrust> {
+    let home = std::env::var_os("HOME");
+    match (std::env::consts::OS, home, live_body(&pem)) {
+        ("macos", Some(home), Some(live)) => {
+            simulators_trust(&Path::new(&home).join(SIMULATOR_DEVICES), &live, sqlite_read)
+        }
+        _ => Vec::new(),
+    }
+}
+
 // The kernel calls a device `en1`; its owner calls it Wi-Fi, in the same
 // Settings pane they are about to open. Only the host can map one to the other,
 // and only the shell may ask it — the core is kept out of shelling to the OS
@@ -1635,6 +1749,111 @@ mod tests {
         assert_eq!(trust_word(Some(Trust::Installed)), "installed");
         assert_eq!(trust_word(Some(Trust::Absent)), "absent");
         assert_eq!(trust_word(None), "unknown");
+    }
+
+    // ── Each running Simulator's own store (E-ONBRVP.W7 · Q1) ───────────────
+
+    // CoreSimulator's own layout, as recorded on an iOS 26.5 runtime.
+    fn device_plist(name: &str, state: u8) -> String {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n\
+             \t<key>UDID</key>\n\t<string>F8B53282-E662-4C67-B106-81760F47AEA4</string>\n\
+             \t<key>name</key>\n\t<string>{name}</string>\n\
+             \t<key>state</key>\n\t<integer>{state}</integer>\n</dict>\n</plist>\n"
+        )
+    }
+
+    fn simulators(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join(format!("trawler-test-simulators-{}-{name}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn simulator(devices: &Path, udid: &str, name: &str, state: u8, store: bool) {
+        let dir = devices.join(udid);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("device.plist"), device_plist(name, state)).unwrap();
+        if store {
+            let store = dir.join(SIMULATOR_TRUST_STORE);
+            std::fs::create_dir_all(store.parent().unwrap()).unwrap();
+            std::fs::write(store, "").unwrap();
+        }
+    }
+
+    fn never_queried(_: &Path, _: &str) -> Option<Ran> {
+        unreachable!("a store that is not there is not queried")
+    }
+
+    #[test]
+    fn a_device_plist_names_the_device_and_its_state() {
+        let plist = device_plist("iPad Pro 11-inch (M5) &amp; more", 3);
+        assert_eq!(plist_value(&plist, "name").as_deref(), Some("iPad Pro 11-inch (M5) & more"));
+        assert_eq!(plist_value(&plist, "state").as_deref(), Some("3"));
+        assert_eq!(plist_value(&plist, "runtime"), None);
+    }
+
+    #[test]
+    fn the_store_is_asked_for_the_live_certificates_own_bytes() {
+        assert_eq!(der_hex("MIIB").as_deref(), Some("308201"));
+        let devices = simulators("asked");
+        simulator(&devices, "A", "iPhone 17 Pro", 3, true);
+        let asked = std::cell::RefCell::new(String::new());
+        simulators_trust(&devices, "MIIB", |_, sql| {
+            asked.replace(sql.to_string());
+            answered("1\n")
+        });
+        assert_eq!(asked.into_inner(), "select count(*) from tsettings where data = x'308201';");
+        let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    #[test]
+    fn only_a_running_simulator_is_read_and_each_is_named() {
+        let devices = simulators("running");
+        simulator(&devices, "A", "iPhone 17 Pro", 3, true);
+        simulator(&devices, "B", "iPad Air 11-inch (M4)", 1, true);
+        simulator(&devices, "C", "iPad mini (A17 Pro)", 3, true);
+        let read = simulators_trust(&devices, "MIIB", |store, _| {
+            answered(if store.starts_with(devices.join("A")) { "1" } else { "0" })
+        });
+        assert_eq!(
+            read,
+            [
+                SimulatorTrust::new("iPad mini (A17 Pro)".into(), Some(Trust::Absent)),
+                SimulatorTrust::new("iPhone 17 Pro".into(), Some(Trust::Trusted)),
+            ]
+        );
+        let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    #[test]
+    fn a_store_not_where_this_runtime_keeps_it_or_that_does_not_answer_reads_unknown() {
+        let devices = simulators("unread");
+        simulator(&devices, "A", "iPhone 17 Pro", 3, false);
+        assert_eq!(
+            simulators_trust(&devices, "MIIB", never_queried),
+            [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
+        );
+        simulator(&devices, "A", "iPhone 17 Pro", 3, true);
+        for answer in [Some((false, "")), Some((true, "Error: no such table: tsettings")), None] {
+            assert_eq!(
+                simulators_trust(&devices, "MIIB", |_, _| {
+                    answer.map(|(ok, stdout)| Ran { ok, stdout: stdout.into() })
+                }),
+                [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
+            );
+        }
+        let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    #[test]
+    fn no_simulator_running_or_none_installed_reads_nothing() {
+        let devices = simulators("none");
+        simulator(&devices, "A", "iPhone 17 Pro", 1, true);
+        assert_eq!(simulators_trust(&devices, "MIIB", never_queried), []);
+        assert_eq!(simulators_trust(&devices.join("absent"), "MIIB", never_queried), []);
+        let _ = std::fs::remove_dir_all(&devices);
     }
 
     // ── The proxy HTTPS goes through now (D3 · D5 · D8) ─────────────────────
