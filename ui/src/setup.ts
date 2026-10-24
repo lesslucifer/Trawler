@@ -144,7 +144,8 @@ export interface PlatformSetup {
   confirmOn: string;
   // What a user who already did the certificate steps checks next when traffic
   // arrives and does not decrypt: the one thing this platform's users miss.
-  notDecrypting: string;
+  // None where a refusal is never this platform's certificate task's to say.
+  notDecrypting?: string;
   // What a refusal after another device's proof most likely is, where this
   // platform knows better than every platform's answer (DEC-63 rule 7).
   refusedAfterProof?: string;
@@ -158,10 +159,16 @@ export interface ReachAddresses {
   caUrls: Record<CaFormat, string>;
 }
 
+// Where this machine's save put each certificate file, by the path the save
+// returned. A file not saved yet is read from Downloads, where the save dialog
+// opens (W7's C1).
+export type SavedCa = Partial<Record<CaFormat, string>>;
+
 export interface SetupContext {
   os: HostOs;
   proxyAddr: string;
   reach: ReachAddresses | null;
+  saved?: SavedCa;
 }
 
 interface PlatformFacts {
@@ -180,6 +187,13 @@ interface PlatformFacts {
   // one — borrowing an answer about the wrong store is worse than no answer.
   probesTrust: boolean;
   probesRoute: boolean;
+  // A store of its own that this machine can still read: each Simulator
+  // running keeps one (W7's Q1).
+  probesOwnStore: boolean;
+  // It sends through this machine's own system proxy, so this machine's
+  // traffic is on its wire for as long as it is routed: nothing unmarked is
+  // its own, ever, and only its marked request settles anything (DEC-63).
+  sharesHostWire: boolean;
   // Do this platform's instructions need an address beyond loopback?
   needsReach: boolean;
   // A device that cannot paste opens a value by scanning it (DEC-57).
@@ -195,6 +209,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: null,
     probesTrust: true,
     probesRoute: true,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: false,
     scans: false,
   },
@@ -204,6 +220,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on that Mac",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: true,
     scans: false,
   },
@@ -213,6 +231,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on that PC",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: true,
     scans: false,
   },
@@ -222,6 +242,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on that machine",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: true,
     scans: false,
   },
@@ -231,6 +253,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "in the Simulator",
     probesTrust: false,
     probesRoute: true,
+    probesOwnStore: true,
+    sharesHostWire: true,
     needsReach: false,
     scans: false,
     onlyBeside: "macos",
@@ -241,6 +265,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "in the emulator",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: false,
     scans: false,
   },
@@ -250,6 +276,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on your iPhone",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: true,
     scans: true,
   },
@@ -259,6 +287,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on your Android device",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
     needsReach: true,
     scans: true,
   },
@@ -346,6 +376,14 @@ export function probesTrust(id: PlatformId): boolean {
 
 export function probesRoute(id: PlatformId): boolean {
   return PLATFORMS[id].probesRoute;
+}
+
+export function probesOwnStore(id: PlatformId): boolean {
+  return PLATFORMS[id].probesOwnStore;
+}
+
+export function sharesHostWire(id: PlatformId): boolean {
+  return PLATFORMS[id].sharesHostWire;
 }
 
 export function needsReach(id: PlatformId): boolean {
@@ -468,14 +506,29 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   }),
 };
 
-// A browser on another computer saves the certificate to Downloads, and a
-// terminal opens elsewhere, so that computer's command names the folder (C2).
+// A browser on another computer saves the certificate to Downloads, and so
+// does this machine's save dialog until the user points it elsewhere; a
+// terminal opens elsewhere, so a command names the folder (C2, W7's C1).
 // Linux names that folder in the session's language, so it asks for it (C4).
 const DOWNLOADED: Record<OsTarget, (file: string) => string> = {
   macos: (file) => `~/Downloads/${file}`,
   windows: (file) => `"$HOME\\Downloads\\${file}"`,
   linux: (file) => `"$(xdg-user-dir DOWNLOAD)/${file}"`,
 };
+
+// A path the user chose may hold a space or a quote, so it is quoted for the
+// shell its command runs in: PowerShell on Windows, a POSIX shell elsewhere.
+const posixQuoted = (path: string) => `'${path.replace(/'/g, "'\\''")}'`;
+const QUOTED: Record<OsTarget, (path: string) => string> = {
+  macos: posixQuoted,
+  windows: (path) => `'${path.replace(/'/g, "''")}'`,
+  linux: posixQuoted,
+};
+
+function savedFile(target: OsTarget, format: CaFormat, saved: SavedCa = {}): string {
+  const path = saved[format];
+  return path === undefined ? DOWNLOADED[target](CA_FILES[format]) : QUOTED[target](path);
+}
 
 function routeCommand(t: ProxyTarget, addr: string): string | null {
   const { host, port } = splitProxyAddr(addr);
@@ -536,9 +589,6 @@ const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Set
 
 const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate switch: ${IOS_TRUST_PATH}. Apple's own services never decrypt; a website in Safari is the test.`;
 
-const NOT_DECRYPTING_SIMULATOR =
-  "Already did? Restart the Simulator — its apps keep the store they started with.";
-
 const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
 
 const androidInstall = (format: CaFormat) =>
@@ -575,9 +625,9 @@ function tryTask(id: PlatformId, os: HostOs): Task {
   return { title: `Open any website ${openWhere(id, os)}`, why: PROVES_IT };
 }
 
-function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
   const target = hostTarget(os);
-  const trust = OS_TRUST[target](PEM_FILE);
+  const trust = OS_TRUST[target](savedFile(target, caFormatFor("this"), saved));
   const host = HOST_NOUN[os];
   return {
     trust: {
@@ -742,26 +792,28 @@ function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
 
 // Two stores, two answers. The Simulator follows this Mac's system proxy, so
 // the host's own routing guide is its routing guide; its trust store is its
-// own, and Apple's supported way in is simctl against the booted device.
-function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+// own, and Apple's supported way in is simctl. `booted` names one Simulator,
+// the one booted last, so the command reaches every one running (C2); and
+// `keychain reset` leaves the root trusted, so the way back is the erase (C3).
+const simulatorTrustCommand = (file: string) =>
+  `for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ${file}; done`;
+
+function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
   const host = HOST_NOUN[os];
+  const format = caFormatFor("ios-sim");
   const trust: Guide = {
     steps: [
-      saveCaStep(caFormatFor("ios-sim")),
+      saveCaStep(format),
       [
         "With the Simulator running, run:",
-        {
-          command: `xcrun simctl keychain booted add-root-cert ${PEM_FILE}`,
-          label: "the trust command",
-        },
+        { command: simulatorTrustCommand(savedFile("macos", format, saved)), label: "the trust command" },
       ],
       ["Restart the Simulator so apps pick the new root up."],
     ],
     undoTitle: "to remove it later",
     undo: [
       [
-        "Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:",
-        { command: "xcrun simctl keychain booted reset", label: "the keychain reset" },
+        "Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included.",
       ],
     ],
   };
@@ -778,7 +830,6 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     },
     try: tryTask("ios-sim", os),
     confirmOn: confirmOn("ios-sim", os),
-    notDecrypting: NOT_DECRYPTING_SIMULATOR,
   };
 }
 
@@ -791,7 +842,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
   const reach = needsReach(id) ? ctx.reach : null;
   switch (id) {
     case "this":
-      return localSetup(ctx.os, ctx.proxyAddr);
+      return localSetup(ctx.os, ctx.proxyAddr, ctx.saved);
     case "mac":
       return anotherMachineSetup(id, ctx.os, "macos", reach);
     case "windows":
@@ -799,7 +850,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
     case "ubuntu":
       return anotherMachineSetup(id, ctx.os, "linux", reach);
     case "ios-sim":
-      return simulatorSetup(ctx.os, ctx.proxyAddr);
+      return simulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved);
     case "android-sim":
       return emulatorSetup(ctx.os, ctx.proxyAddr);
     case "ios":

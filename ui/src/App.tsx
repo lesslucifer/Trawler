@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { downloadDir } from "@tauri-apps/api/path";
 import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
-import { CA_FILES, hostOs, lostAddress, needsReach, splitProxyAddr, type CaFormat } from "./setup";
+import {
+  CA_FILES,
+  hostOs,
+  lostAddress,
+  needsReach,
+  sharesHostWire,
+  splitProxyAddr,
+  type CaFormat,
+  type SavedCa,
+} from "./setup";
 import {
   mayCarryOwnTraffic,
   NO_PROXY_READING,
   setUpOn,
   TUNNEL_GRACE_MS,
   type ProxyReading,
+  type SimulatorTrust,
   type TrustProbe,
 } from "./verdicts";
-import { saveBody } from "./body";
+import { isFullPath, saveBody } from "./body";
 import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
@@ -241,6 +252,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
+  const [simulators, setSimulators] = useState<readonly SimulatorTrust[]>([]);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
   // When this machine's proxy read off or another, so nothing of its own could
@@ -257,13 +269,20 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       if (mode === "shown") setProbing(true);
       const { host, port } = splitProxyAddr(proxyAddr);
       // The certificate the core serves now is the one asked about: a store
-      // holding an older one under the same name answers nothing (D1).
-      const trust = client
-        .caCertPem()
-        .then((pem) => invoke<TrustProbe | undefined>("ca_trusted", { pem }))
+      // holding an older one under the same name answers nothing (D1). Each
+      // running Simulator's own store is asked about it too (W7's Q1).
+      const pem = client.caCertPem();
+      const trust = pem
+        .then((live) => invoke<TrustProbe | undefined>("ca_trusted", { pem: live }))
         .then(
           (p): TrustProbe => p ?? "unknown",
           (): TrustProbe => "unknown",
+        );
+      const running = pem
+        .then((live) => invoke<SimulatorTrust[] | undefined>("simulator_trust", { pem: live }))
+        .then(
+          (read): readonly SimulatorTrust[] => read ?? [],
+          (): readonly SimulatorTrust[] => [],
         );
       // A shell that answers with nothing has read nothing, which is what
       // "unknown" means — and the screen may not crash on the difference.
@@ -271,11 +290,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         (reading) => reading ?? NO_PROXY_READING,
         () => NO_PROXY_READING,
       );
-      void Promise.all([trust, route]).then(([t, r]) => {
+      void Promise.all([trust, route, running]).then(([t, r, sims]) => {
         if (!landing()) return;
         const landed = Date.now();
         setTrustProbe(t);
         setProxyReading(r);
+        setSimulators((held) => (JSON.stringify(held) === JSON.stringify(sims) ? held : sims));
         setClearReadings((was) =>
           nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }, READINGS_APART_MAX_MS),
         );
@@ -421,15 +441,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   // This machine's evidence is the session's. Another device's starts when the
   // address it uses was allowed (A2), and is what could have come from it (DEC-63).
+  // The Simulator's wire is this machine's own, so no reading of this machine's
+  // proxy clears it: from the session's start, only its mark is its own (W7).
   const offMachine = needsReach(state.chosen);
-  const deviceSince = deviceEvidenceSince(state.since, armedSince);
-  const mark = offMachine ? deviceMark(state.since, state.chosen) : undefined;
+  const sharedWire = sharesHostWire(state.chosen);
+  const deviceSince = sharedWire ? state.since : deviceEvidenceSince(state.since, armedSince);
+  const deviceClear = sharedWire ? NO_CLEAR_READINGS : clearReadings;
+  const mark = offMachine || sharedWire ? deviceMark(state.since, state.chosen) : undefined;
   const device = useMemo(
     () =>
       state.phase === "onboarding" && mark !== undefined
-        ? deviceTraffic(everything, { allowedSince: deviceSince, mark, clear: clearReadings }, tunnelTimes)
+        ? deviceTraffic(everything, { allowedSince: deviceSince, mark, clear: deviceClear }, tunnelTimes)
         : undefined,
-    [state.phase, everything, mark, deviceSince, clearReadings, tunnelTimes],
+    [state.phase, everything, mark, deviceSince, deviceClear, tunnelTimes],
   );
 
   // The confirm comes first and the bind only on a yes — the shell asks,
@@ -448,7 +472,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     landReach(await client.disarmReach());
   };
 
-  const saveCa = async (format: CaFormat) => saveBody(await client.caFile(format), CA_FILES[format]);
+  // Where the save put each file, held here so a command names it after setup
+  // closes and opens again (W7's C1). The dialog opens in Downloads, where the
+  // commands look until a save says otherwise; a browser's download names no
+  // folder, so it moves nothing.
+  const [savedCa, setSavedCa] = useState<SavedCa>({});
+  const saveCa = async (format: CaFormat) => {
+    const path = await saveBody(await client.caFile(format), CA_FILES[format], downloadDir);
+    if (path !== null && isFullPath(path)) setSavedCa((was) => ({ ...was, [format]: path }));
+    return path;
+  };
 
   // Held here and not by the setup screen, so leaving setup does not lose it (S5).
   const [routeAct, setRouteAct] = useRouteMemory(proxyReading.status);
@@ -720,6 +753,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onRouteAct={setRouteAct}
           traffic={traffic}
           ownProofAt={ownProofAt}
+          simulators={simulators}
+          savedCa={savedCa}
           deviceMark={mark}
           device={device}
           onSetUpThisMachine={setUpThisMachine}

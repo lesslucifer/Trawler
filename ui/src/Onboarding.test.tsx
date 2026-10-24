@@ -865,16 +865,17 @@ describe("a proxy that is already set", () => {
 // ── The iOS Simulator: two stores, two answers ──────────────────────────────
 
 describe("the iOS Simulator", () => {
+  const notInIt = [{ name: "iPhone 17 Pro", trust: "absent" as const }];
   const simulator = () => {
-    draw({ trustProbe: "trusted", proxy: { status: "none", address: null } });
+    draw({ trustProbe: "trusted", proxy: { status: "none", address: null }, simulators: notInIt });
     pick("iOS Simulator");
   };
 
-  it("takes its trust task's state from nobody, and says when it will know", () => {
+  it("takes its trust task's state from its own store, never this Mac's", () => {
     simulator();
 
     expect(task(1)).toHaveTextContent("Trust Trawler's certificate in the Simulator");
-    expect(task(1)).toHaveTextContent("can't check here — the Simulator's first HTTPS request confirms it");
+    expect(task(1)).toHaveTextContent("not done — not in iPhone 17 Pro");
     expect(task(1)).not.toHaveTextContent("done — installed and trusted");
   });
 
@@ -893,7 +894,7 @@ describe("the iOS Simulator", () => {
     expect(within(task(1)).getByText("3 steps")).toBeInTheDocument();
     expect(open("3 steps")).toBe(true);
     expect(commandNamed("the trust command")).toHaveTextContent(
-      "xcrun simctl keychain booted add-root-cert",
+      "for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done",
     );
   });
 
@@ -908,6 +909,78 @@ describe("the iOS Simulator", () => {
     simulator();
 
     expect(task(3)).toHaveTextContent("Open any website in the Simulator");
+  });
+});
+
+// ── The Simulator's wire is this Mac's too (W7 · S1–S3) ─────────────────────
+// It sends through this Mac's proxy, so App hands it its marked request alone
+// as its traffic, and the whole wire beside it.
+
+describe("the iOS Simulator, beside this Mac's own traffic", () => {
+  const MARK = "k3m9";
+  const sim = (trust: "trusted" | "absent" | "unknown") => [{ name: "iPhone 17 Pro", trust }];
+  const simulator = (props: Props) => {
+    draw({ proxy: { status: "ours", address: ADDR }, deviceMark: MARK, ...props });
+    pick("iOS Simulator");
+  };
+  const wire = (traffic: Traffic) => ({ traffic: NO_TRAFFIC, device: { provedAt: null, mixed: true, wire: traffic } });
+
+  // S1: This machine set up first, its browser decrypting - the common path.
+  it("is not proven by this Mac's decrypted traffic", () => {
+    simulator({ simulators: [], ...wire(capturing) });
+
+    expect(task(1)).toHaveTextContent("can't check here — the address in step 3 confirms it");
+    expect(task(3)).toHaveTextContent("can't check here — the address below confirms it");
+    expect(zone("proven")).toBeNull();
+  });
+
+  it("offers its marked address, to open in it", () => {
+    simulator({ simulators: [], ...wire(NO_TRAFFIC) });
+
+    expect(zone("check-address")).toHaveTextContent("or open this one in the Simulator");
+    expect(zone("check-address")).toHaveTextContent(`https://example.com/?trawler-check=${MARK}`);
+  });
+
+  // S2: an app on this Mac that pins its certificate.
+  it("is never blamed for this Mac's refusal", () => {
+    simulator({ simulators: sim("absent"), ...wire(arriving) });
+
+    expect(task(1)).toHaveTextContent("not done — not in iPhone 17 Pro");
+    expect(task(1)).not.toHaveTextContent("not working");
+    expect(within(task(1)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(screen.queryByText(/the Simulator does not trust/)).toBeNull();
+    expect(task(3)).toHaveTextContent("not working — arriving but not decrypting");
+    expect(task(3)).toHaveTextContent("the device it comes from does not trust Trawler's certificate yet");
+  });
+
+  it("says a refusal is someone else's where its store reads trusted", () => {
+    simulator({ simulators: sim("trusted"), ...wire(arriving) });
+
+    expect(task(1)).toHaveTextContent("done — trusted in iPhone 17 Pro");
+    expect(task(3)).toHaveTextContent(
+      "iPhone 17 Pro trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.",
+    );
+    expect(task(3)).not.toHaveTextContent("Finish the certificate step");
+  });
+
+  // S3: its marked request, opened in it, is its proof and its end.
+  it("is proven by its marked request, named and timed, with an end that names it", () => {
+    const at = ago(1_000);
+    const marked: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: at };
+    simulator({ simulators: [], traffic: marked, device: { provedAt: at, mixed: true, wire: marked } });
+
+    expect(task(1)).toHaveTextContent(`done — the Simulator's request decrypted at ${clock(at)}`);
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic from the Simulator");
+  });
+
+  it("keeps that proof past this Mac's refusal after it, as a note", () => {
+    const at = ago(RECENT_MS * 2);
+    const marked: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: at };
+    simulator({ simulators: sim("trusted"), traffic: marked, device: { provedAt: at, mixed: true, wire: { ...marked, ...arriving } } });
+
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(task(3)).not.toHaveTextContent("not working");
   });
 });
 
@@ -1599,7 +1672,17 @@ describe("a command is a block, not a phrase inside a sentence", () => {
     expect(code).toHaveAttribute("data-wire", "shell command");
     expect(code.className).toContain("font-mono");
     expect(code.textContent).toBe(
-      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem",
+    );
+  });
+
+  // W7's C1: once saved, the command names where the save put the file.
+  it("names the file where the save put it", () => {
+    draw({ savedCa: { pem: "/Users/me/My Certs/trawler-ca.pem" } });
+    fireEvent.click(within(task(1)).getByText(MANUAL));
+
+    expect(commandNamed("the trust command").querySelector("[data-wire]")!.textContent).toBe(
+      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain '/Users/me/My Certs/trawler-ca.pem'",
     );
   });
 
@@ -1931,7 +2014,8 @@ describe("This machine where no probe answers", () => {
   // The promise rule's find: that request used to move nothing where this Mac's
   // proxy could not be read.
   it("keeps the Simulator's promise: a request reaching Trawler settles its route", () => {
-    draw({ ...unread, traffic: { ...NO_TRAFFIC, lastPlainAt: Date.now() } });
+    const plain = { ...NO_TRAFFIC, lastPlainAt: Date.now() };
+    draw({ ...unread, device: { provedAt: null, mixed: true, wire: plain } });
     pick("iOS Simulator");
 
     expect(task(2)).toHaveTextContent("done — requests reached Trawler");

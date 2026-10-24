@@ -31,17 +31,20 @@ import {
   isScan,
   lostAddress,
   needsReach,
+  probesOwnStore,
   probesRoute,
   probesTrust,
   platformChoices,
   reachTaskTitle,
   setupFor,
+  sharesHostWire,
   splitProxyAddr,
   type CaFormat,
   type Guide,
   type GuideStep,
   type HostOs,
   type PlatformId,
+  type SavedCa,
   type Task,
 } from "./setup";
 import {
@@ -59,15 +62,19 @@ import {
   proxyStatus,
   routeByTraffic,
   setUpOn,
+  simulatorsTrusted,
+  simulatorTrustStatus,
   stopRoutingNote,
   trafficReading,
   trafficStatus,
   trustByTraffic,
+  trustedSimulators,
   trustStatus,
   TUNNEL_GRACE_MS,
   verdict,
   type ProxyReading,
   type Running,
+  type SimulatorTrust,
   type StepStatusView,
   type DeviceReading,
   type Traffic,
@@ -761,8 +768,11 @@ interface SetupProps {
   probedAt?: number | null;
   traffic?: Traffic;
   ownProofAt?: number | null;
-  // Another device (DEC-63): the mark its address carries, and what its tasks
-  // read beside the traffic that is its.
+  simulators?: readonly SimulatorTrust[];
+  savedCa?: SavedCa;
+  // Another device (DEC-63), and the Simulator, whose wire is this machine's
+  // too: the mark its address carries, and what its tasks read beside the
+  // traffic that is its.
   deviceMark?: string;
   device?: AnotherDevice;
   reach?: ReachState;
@@ -860,6 +870,7 @@ export function BackToFlows({ onBack }: { onBack: () => void }) {
 // Another device's tasks read the traffic they are handed unless told this
 // machine's own may be in it.
 const UNMIXED: AnotherDevice = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
+const NO_SIMULATORS: readonly SimulatorTrust[] = [];
 
 function PlatformSetup({
   platform,
@@ -871,6 +882,8 @@ function PlatformSetup({
   probedAt = null,
   traffic = NO_TRAFFIC,
   ownProofAt = null,
+  simulators = NO_SIMULATORS,
+  savedCa,
   deviceMark,
   device = UNMIXED,
   reach = UNREACHABLE,
@@ -915,6 +928,7 @@ function PlatformSetup({
     os,
     proxyAddr,
     reach: allowed ? { proxy: reach.proxy!, caUrls: reach.ca_urls! } : null,
+    saved: savedCa,
   });
   const here = deviceName("this", os);
 
@@ -931,19 +945,26 @@ function PlatformSetup({
   // nothing about this one (D7). Elsewhere - the Simulator's route included,
   // when this Mac's proxy cannot be read - this setup's traffic is, because
   // that is what the task promised to be confirmed by; another device's is
-  // only what could have come from it (DEC-63).
+  // only what could have come from it (DEC-63). The Simulator's wire is this
+  // machine's too, so its certificate reads its own store, else its marked
+  // request, and nothing unmarked is its own (W7).
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
   const offMachine = needsReach(platform);
-  const mixed = offMachine && device.mixed;
-  const evidence = evidenceOf(traffic, useGraceEdge(traffic.openTunnelAt));
+  const sharedWire = sharesHostWire(platform);
+  const mixed = (offMachine && device.mixed) || sharedWire;
+  const graceEdge = useGraceEdge(traffic.openTunnelAt);
+  const evidence = evidenceOf(traffic, graceEdge);
+  const routeEvidence = sharedWire ? evidenceOf(device.wire, graceEdge) : evidence;
   const ownProved = platform === "this" && ownProofAt !== null;
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
-  const trustDone = !probesTrust(platform)
-    ? evidence.decrypted
-    : trustUnread
-      ? ownProved
-      : trustProbe === "trusted";
+  const trustDone = probesOwnStore(platform)
+    ? (simulatorsTrusted(simulators) ?? device.provedAt !== null)
+    : !probesTrust(platform)
+      ? evidence.decrypted
+      : trustUnread
+        ? ownProved
+        : trustProbe === "trusted";
   const routeUnread = probesRoute(platform) && proxy.status === "unknown";
   const routeByOwnRequest = platform === "this";
   const routeDone =
@@ -951,7 +972,7 @@ function PlatformSetup({
       ? proxy.status === "ours"
       : routeByOwnRequest
         ? ownProved
-        : evidence.reached;
+        : routeEvidence.reached;
   // One prompt for the one thing most users want, and only while both halves
   // are this machine's to change and neither reads done (F27). Once either
   // does, each task carries its own, and the certificate never gets an
@@ -985,17 +1006,19 @@ function PlatformSetup({
     mixed,
     tryStep,
   };
-  const trustState = probesTrust(platform)
-    ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
-    : offMachine
-      ? deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os))
-      : trustByTraffic(evidence, confirmHttpsOn(platform, os));
+  const trustState = probesOwnStore(platform)
+    ? simulatorTrustStatus(simulators, busy(setUp, "installing"), reading)
+    : probesTrust(platform)
+      ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
+      : offMachine
+        ? deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os))
+        : trustByTraffic(evidence, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
         unread: routeByOwnRequest
           ? byOwnRequest("route", ownProofAt, tryStep)
-          : routeByTraffic(evidence, setup.confirmOn),
+          : routeByTraffic(routeEvidence, setup.confirmOn),
       })
     : offMachine
       ? deviceRouteStatus(evidence, reading, setup.confirmOn)
@@ -1151,7 +1174,11 @@ function PlatformSetup({
           <TrafficState
             read={(now) =>
               mixed
-                ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt, setup.refusedAfterProof)
+                ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt, {
+                    refusedAfterProof: setup.refusedAfterProof,
+                    trustedOn:
+                      probesOwnStore(platform) && simulatorsTrusted(simulators) ? trustedSimulators(simulators) : null,
+                  })
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
@@ -1180,7 +1207,7 @@ function PlatformSetup({
               </div>
             </>
           )}
-          {offMachine && deviceMark !== undefined && (
+          {(offMachine || sharedWire) && deviceMark !== undefined && (
             <div data-testid="check-address" className="pt-2 font-ui text-chrome text-ink-mute">
               <StepParts step={checkStep(platform, os, markedUrl(deviceMark))} />
             </div>
@@ -1196,7 +1223,7 @@ function PlatformSetup({
         device={
           platform === "this"
             ? provenDevice(here, trustProbe, proxy.status)
-            : offMachine
+            : offMachine || sharedWire
               ? markedDevice(deviceName(platform, os), device.provedAt, traffic)
               : null
         }

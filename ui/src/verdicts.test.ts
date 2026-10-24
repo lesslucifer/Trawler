@@ -20,14 +20,18 @@ import {
   RECENT_MS,
   REFUSED_AFTER_PROOF,
   setUpOn,
+  simulatorsTrusted,
+  simulatorTrustStatus,
   stopRoutingNote,
   trafficStatus,
   trustByTraffic,
+  trustedSimulators,
   trustStatus,
   STATE_WORDS,
   TUNNEL_GRACE_MS,
   verdict,
   type SetupState,
+  type SimulatorTrust,
   type StepStatusView,
   type Traffic,
   type TrafficContext,
@@ -774,8 +778,78 @@ describe("another device's try task, while nothing arriving is told apart from t
     const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
     const own = "a browser with a store of its own";
 
-    expect(mixedTryStatus(refusing, quiet, AT_1402, own)).toEqual(verdict("done", "decrypted at 14:02", own));
-    expect(mixedTryStatus(refusing, quiet, null, own).remedy).toMatch(/the device it comes from does not trust/);
+    expect(mixedTryStatus(refusing, quiet, AT_1402, { refusedAfterProof: own })).toEqual(verdict("done", "decrypted at 14:02", own));
+    expect(mixedTryStatus(refusing, quiet, null, { refusedAfterProof: own }).remedy).toMatch(/the device it comes from does not trust/);
+  });
+
+  // W7's S2: where a probe read the chosen device's store as trusting it, the
+  // refusal is someone else's, and the remedy says so rather than sending
+  // anyone to finish a certificate step that is done.
+  it("names the store a probe read as trusted, so the refusal is someone else's", () => {
+    const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    const v = mixedTryStatus(refusing, quiet, null, { trustedOn: "iPhone 17 Pro" });
+    expect(v.short).toBe("not working — arriving but not decrypting");
+    expect(v.remedy).toBe(
+      "something is connecting and none of it is decrypting — iPhone 17 Pro trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.",
+    );
+    expect(mixedTryStatus(NO_TRAFFIC, quiet, null, { trustedOn: "iPhone 17 Pro" })).toEqual(
+      awaiting("the address below confirms it"),
+    );
+  });
+});
+
+// ── The Simulator: its own store, else its own marked request (W7) ─────────
+
+describe("the Simulator's certificate", () => {
+  const sim = (name: string, trust: SimulatorTrust["trust"]): SimulatorTrust => ({ name, trust });
+  const reading = (provedAt: number | null = null) => ({ device: "the Simulator", provedAt, mixed: true, tryStep: 3 });
+
+  it("reads trusted only where every running Simulator's store holds it, and unread where none answered", () => {
+    expect(simulatorsTrusted([sim("iPhone 17 Pro", "trusted")])).toBe(true);
+    expect(simulatorsTrusted([sim("iPhone 17 Pro", "trusted"), sim("iPad mini", "absent")])).toBe(false);
+    expect(simulatorsTrusted([sim("iPhone 17 Pro", "trusted"), sim("iPad mini", "unknown")])).toBeNull();
+    expect(simulatorsTrusted([])).toBeNull();
+  });
+
+  it("names the Simulator its store was read in, by the name its window shows", () => {
+    expect(simulatorTrustStatus([sim("iPhone 17 Pro", "trusted")], null, reading())).toEqual(
+      verdict("done", "trusted in iPhone 17 Pro"),
+    );
+    expect(simulatorTrustStatus([sim("iPhone 17 Pro", "absent")], null, reading())).toEqual(
+      verdict("not-done", "not in iPhone 17 Pro"),
+    );
+    const two = [sim("iPad mini", "trusted"), sim("iPhone 17 Pro", "trusted")];
+    expect(simulatorTrustStatus(two, null, reading())).toEqual(verdict("done", "trusted in every running Simulator"));
+    expect(trustedSimulators(two)).toBe("every running Simulator");
+  });
+
+  it("counts every running Simulator still missing it", () => {
+    const missing = [sim("iPad mini", "absent"), sim("iPhone 17 Pro", "absent"), sim("iPad Air", "trusted")];
+    expect(simulatorTrustStatus(missing, null, reading()).short).toBe("not done — not in 2 running Simulators");
+  });
+
+  // S1: this Mac's own traffic is on the Simulator's wire, so only the store
+  // or the mark is its reading - and a store that reads absent outranks a mark.
+  it("falls back to its own marked request where no store answered, and to that alone", () => {
+    expect(simulatorTrustStatus([], null, reading())).toEqual(awaiting("the address in step 3 confirms it"));
+    expect(simulatorTrustStatus([sim("iPhone 17 Pro", "unknown")], null, reading(AT_1402))).toEqual(
+      verdict("done", "the Simulator's request decrypted at 14:02"),
+    );
+    expect(simulatorTrustStatus([sim("iPhone 17 Pro", "absent")], null, reading(AT_1402)).short).toBe(
+      "not done — not in iPhone 17 Pro",
+    );
+  });
+
+  it("says it is checking while a read the user asked for runs", () => {
+    expect(simulatorTrustStatus([sim("iPhone 17 Pro", "trusted")], "checking", reading())).toEqual(
+      verdict("checking", "the certificate store"),
+    );
+  });
+
+  it("is never told a refusal's check it has none of", () => {
+    expect(notDecryptingHere("this Mac")).toBe(
+      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it.",
+    );
   });
 });
 
