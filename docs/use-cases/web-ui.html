@@ -467,8 +467,13 @@
             machine's, so nothing unmarked is its own: where no store answers, its marked request settles its
             certificate, and its try task and the end read that request alone
             (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8)</td></tr>
-        <tr><td>Android emulator</td><td>every host</td><td>neither</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
-          <td>its tasks read this session's traffic, since no probe can read it</td></tr>
+        <tr><td>Android emulator</td><td>every host</td><td>its own user store and proxy, through adb, in each emulator running</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
+          <td>it reaches Trawler on this machine's loopback, through a proxy of its own: its store and proxy are
+            read through adb, by the name of its AVD (<em>done — trusted in Pixel 7 API 35</em>), and where adb reads
+            neither it is another device that needs no allow — its marked request, and other traffic only while this
+            machine's proxy does not point here. A refusal is never its certificate task's: its own services ignore a
+            user certificate. The end names it on its marked request only
+            (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 9)</td></tr>
         <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code></td>
           <td>nothing read off that machine — only what could have come from it, since its address was
             allowed: its own marked request, named and timed, and other traffic only while this machine's
@@ -489,7 +494,12 @@
       another path, which the command prints quoted for its shell. A command installs a tool the system does not ship before
       using it, and finds a folder or database wherever this version and this language put it. The Simulator's
       reaches every Simulator running — <code>booted</code> names only the one booted last — and its way back is
-      the erase, because <code>keychain reset</code> leaves the root trusted.</p>
+      the erase, because <code>keychain reset</code> leaves the root trusted. The emulator's push reads the saved file
+      the same way, and each of its adb commands runs once per emulator running — a bare <code>adb</code> refuses with
+      two of anything attached. Its route is the global proxy (<code>settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>),
+      which covers its mobile network too: a Wi-Fi proxy routes nothing where that is the default, so the Settings
+      route turns mobile data off first, and the start-up flag, read on this machine, names <code>127.0.0.1</code>.
+      Its menu paths are Android 15's.</p>
       <p><strong>Linux's certificate task installs into every store a browser reads</strong>, a step each: Firefox's
       own (its Authorities import), Chrome's NSS database (made first where no Chrome has opened one), then the system bundle for curl and the system's tools —
       the browsers first, because the try task opens one; none is a note or another way. Its advice when nothing
@@ -522,7 +532,8 @@
         <tr><th>Layer</th><th>Answers for</th><th>Readings</th></tr>
         <tr><td><strong>The probes</strong> — a dated snapshot, re-taken wherever its answer can change</td>
           <td>this machine: does it trust the certificate the core serves now, does the proxy HTTPS goes
-            through now point at Trawler — and each running Simulator's own trust store, by its name</td>
+            through now point at Trawler — and each running Simulator's own trust store, by its name, and each
+            running emulator's own user store and proxy, through adb, only while the emulator is the platform chosen</td>
           <td>trusted / installed, not trusted / not installed / <code>unknown</code>, matched on the live
             certificate's bytes — never on a name another run's certificate shares: held in a keychain and verified on macOS, its
             thumbprint in the machine or user root store on Windows, in the CA bundle on Linux. The proxy is
@@ -569,6 +580,15 @@
       decrypts; a refusal is the try task's, naming no device, or the Simulator's store where that reads trusted;
       and <em>You're set up — Trawler is capturing traffic from the Simulator</em> shows on its marked request alone
       (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8).</p>
+      <p><strong>The Android emulator is another device that needs no allow</strong>: its evidence starts with the
+      setup session, its marked request settles its tasks, and unmarked traffic counts only while this machine's
+      proxy reads off or another. Before those, adb reads its own store and proxy: <em>not done — not in Pixel 7 API
+      35</em> · <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em>; no proxy read is never <em>not
+      done</em>, since a proxy set at its start lives on this machine. A refusal is the try task's, and says Android's
+      own services never decrypt — <em>a website in Chrome is the test</em> — naming the store that trusts it where one
+      does; its proof outlasts them, and <em>You're set up — Trawler is capturing traffic from the emulator</em> shows
+      on its marked request alone
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 9).</p>
       <p><strong>This machine is read again wherever its answer can change</strong>: as setup opens, after
       every action whatever its outcome, on <em>check again</em>, on focus, when the core comes back, and
       every 3 s while setup is on screen, its core answering and the window visible. Only a read the user
