@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 9a592ee4951bb70f048277f6fca0e188d588ce23
+base: 647959769b1b77882d3f046ab73c7e7574ca08e7
+tier: key
+signer: vuluu
+report: docs/work/2026-10-24-onboard-revamp-w5-another-windows-status-result.html
+report_sha256: e04515b74c95ce6e8efe46ecb1c535bf040006fc1cc17e68eca6609564d37b32
+date: 2026-10-24
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAzZqdj0OPGbOzPSBjOoyuGNPQNcRjIZv69jUtn++BjAQW2tUumTkbzn2
+  MZarAHbogDiyYC39Xm3bmy/TpUIf4J
+  -----END SSH SIGNATURE-----
