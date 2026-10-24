@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W5
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v2: rule 7 - once a decrypted request proved another device, its try task stays done with its time past anything after it that does not decrypt, mixed or not, a refusal a muted note that never reads not working nor sends anyone to the certificate step, on every off-machine platform; the why-table's row for the refusal after a proof; scope rows for This machine's own rule and Windows' wording left to W14; rule 7 for Windows alone rejected"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-63 row: the try task keeps its proof past what follows it that does not decrypt, a refusal a note; rule 7 for Windows alone rejected"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: every proof outlasts what follows it that does not decrypt, and each guide's command runs as written in the shell it names, on the file the step before it left"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the traffic layer's row and the paragraph on another device - its try task keeps its proof past what follows it, a refusal a note under it; a paragraph under the platform table - each command runs as written, Windows' in PowerShell, another computer's trust command from Downloads, This machine's on its saved file, Firefox's own store on Linux only; what pins it"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the setup screen's design of record, round 14 opened and closed archived with the owner's LGTM: a device after its proof with a connection nothing decrypts, the try task done with the note under it; rules for the proof past what follows it, a note true of its system and a command that runs where its sentence says; the model's try row; the copy for the note and a computer's commands and notes"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1-W4 landed, W5 ruled, built and on its branch; W5's summary block links its plan"
+  - path: "docs/work/2026-10-24-onboard-revamp-w5-another-windows-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W5's plan: the render sweep of Another Windows PC, status fixes S1-S2 and command fixes C1-C2 with the owner's rulings on Q1-Q3, N1-N3 deferred to W14, the test plan"
+  - path: "docs/work/2026-10-24-onboard-revamp-w5-another-windows-status-result.html"
+    tier: T3
+    action: added
+    distills: "W5's result: outcome per expected row, deviations, evidence, distillation, follow-ups"
