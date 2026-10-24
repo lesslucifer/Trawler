@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU another-windows-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W5
+branch: wu/onboard-revamp/another-windows-status
+base: 647959769b1b77882d3f046ab73c7e7574ca08e7
+head: 5b5a36699332a30946109f10d7a49a7910826bee
+diff_sha256: 5d76b572d97ffd92a42f1911d593af068779c51a707e45eade3945999ab93c43
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 92
+    finders: 26
+    verifiers: 0
+    total: 119
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-10-24
