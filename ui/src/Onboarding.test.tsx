@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Onboarding, useRouteMemory } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
@@ -514,12 +514,23 @@ describe("each task holds its own route, under the one button", () => {
     draw();
     fireEvent.click(within(task(1)).getByText(MANUAL));
 
-    expect(within(task(1)).getByTestId("guide-note")).toHaveTextContent(
-      "Firefox keeps its own store — import it there too.",
-    );
+    expect(within(task(1)).queryByTestId("guide-note")).toBeNull();
     expect(open("Or double-click the file and set the Trawler CA to Always Trust.")).toBe(false);
     expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
     expect(within(task(2)).getByText("to turn it off later")).toBeInTheDocument();
+  });
+
+  // S2: Firefox reads the system's store on macOS and Windows, so only Linux's
+  // guide sends anyone to import it there.
+  it("names Firefox's own store on Linux only", () => {
+    draw({ os: "linux" });
+    expect(within(task(1)).getByTestId("guide-note")).toHaveTextContent(
+      "Firefox keeps its own store — import it there too.",
+    );
+    cleanup();
+
+    draw({ os: "windows" });
+    expect(document.body.textContent).not.toMatch(/Firefox/);
   });
 
   it("the one act leads task 1, and nothing renders between the tasks", () => {
@@ -1347,7 +1358,7 @@ describe("the end", () => {
     draw({ traffic: arriving, trustProbe: "absent" });
 
     expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
-      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.",
+      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.",
     );
     expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
     expect(within(task(3)).queryByTestId("traffic-remedy")).toBeNull();

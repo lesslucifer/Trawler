@@ -356,29 +356,43 @@ type OsTarget = "macos" | "windows" | "linux";
 
 const hostTarget = (os: HostOs): OsTarget => (os === "other" ? "linux" : os);
 
+// Firefox reads the system's store on macOS and Windows, and keeps one of its
+// own on Linux (S2), so only Linux's guide sends anyone to import it there.
 const FIREFOX_NOTE = "Firefox keeps its own store — import it there too.";
+
+const NOT_DECRYPTING_SYSTEM_STORE =
+  "Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.";
+
+const NOT_DECRYPTING_LINUX =
+  "Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.";
 
 interface OsTrust {
   install: GuideStep[];
-  notes: string[];
+  notes?: string[];
   alternatives?: GuideStep[];
   undoTitle: string;
   undo: GuideStep[];
+  notDecrypting: string;
 }
 
-const OS_TRUST: Record<OsTarget, OsTrust> = {
-  macos: {
+// Windows' commands are written for PowerShell, the shell Windows opens from
+// Start, Win+X and Terminal: 5.1 there rejects `&&` (C1).
+const POWERSHELL_ADMIN = "In PowerShell as administrator, run:";
+
+// The trust command reads the certificate file at `file`, which is wherever
+// the step before it left it.
+const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
+  macos: (file) => ({
     install: [
       [
         "Run it in a terminal:",
         {
           command:
-            `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${PEM_FILE}`,
+            `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
           label: "the trust command",
         },
       ],
     ],
-    notes: [FIREFOX_NOTE],
     alternatives: [["Or double-click the file and set the Trawler CA to Always Trust."]],
     undoTitle: "to remove it later",
     undo: [
@@ -392,30 +406,23 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
       ],
       ["Or delete the Trawler Proxy CA entry in Keychain Access → System."],
     ],
-  },
-  windows: {
-    install: [
-      [
-        "In an elevated terminal run:",
-        { command: `certutil -addstore -f ROOT ${PEM_FILE}`, label: "the trust command" },
-      ],
-    ],
-    notes: [FIREFOX_NOTE],
+    notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
+  }),
+  windows: (file) => ({
+    install: [[POWERSHELL_ADMIN, { command: `certutil -addstore -f ROOT ${file}`, label: "the trust command" }]],
     undoTitle: "to remove it later",
     undo: [
-      [
-        "In an elevated terminal run:",
-        { command: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" },
-      ],
+      [POWERSHELL_ADMIN, { command: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" }],
     ],
-  },
-  linux: {
+    notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
+  }),
+  linux: (file) => ({
     install: [
       [
         "Run it in a terminal:",
         {
           command:
-            `sudo cp ${PEM_FILE} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
+            `sudo cp ${file} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
           label: "the trust command",
         },
       ],
@@ -425,7 +432,7 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
       [
         "Chrome reads the NSS store instead:",
         {
-          command: `certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ${PEM_FILE}`,
+          command: `certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ${file}`,
           label: "the NSS command",
         },
       ],
@@ -445,7 +452,16 @@ const OS_TRUST: Record<OsTarget, OsTrust> = {
         { command: "certutil -d sql:$HOME/.pki/nssdb -D -n trawler", label: "the NSS removal" },
       ],
     ],
-  },
+    notDecrypting: NOT_DECRYPTING_LINUX,
+  }),
+};
+
+// A browser on another computer saves the certificate to Downloads, and a
+// terminal opens elsewhere, so that computer's command names the folder (C2).
+const DOWNLOADED: Record<OsTarget, (file: string) => string> = {
+  macos: (file) => `~/Downloads/${file}`,
+  windows: (file) => `"$HOME\\Downloads\\${file}"`,
+  linux: (file) => `~/Downloads/${file}`,
 };
 
 function routeCommand(t: ProxyTarget, addr: string): string | null {
@@ -454,7 +470,7 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
     case "macos":
       return `networksetup -setwebproxy Wi-Fi ${host} ${port} && networksetup -setsecurewebproxy Wi-Fi ${host} ${port}`;
     case "windows":
-      return `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d ${addr} /f && reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f`;
+      return `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d ${addr} /f; reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f`;
     case "linux":
       return `gsettings set org.gnome.system.proxy mode 'manual' && gsettings set org.gnome.system.proxy.http host '${host}' && gsettings set org.gnome.system.proxy.http port ${port} && gsettings set org.gnome.system.proxy.https host '${host}' && gsettings set org.gnome.system.proxy.https port ${port}`;
     case "terminal":
@@ -466,7 +482,7 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
 
 const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
   macos: "Run — this sets the Wi-Fi service; change the name for Ethernet:",
-  windows: "Run:",
+  windows: "In PowerShell, run:",
   linux: "GNOME — run:",
   terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
 };
@@ -504,9 +520,6 @@ const CA_NAME = "Trawler Proxy CA";
 const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not signed by a company.";
 
 const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
-
-const NOT_DECRYPTING_DESKTOP =
-  "Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.";
 
 const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate switch: ${IOS_TRUST_PATH}. Apple's own services never decrypt; a website in Safari is the test.`;
 
@@ -551,7 +564,7 @@ function tryTask(id: PlatformId, os: HostOs): Task {
 
 function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
   const target = hostTarget(os);
-  const trust = OS_TRUST[target];
+  const trust = OS_TRUST[target](PEM_FILE);
   const host = HOST_NOUN[os];
   return {
     trust: {
@@ -573,7 +586,7 @@ function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     try: tryTask("this", os),
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
     confirmOn: confirmOn("this", os),
-    notDecrypting: NOT_DECRYPTING_DESKTOP,
+    notDecrypting: trust.notDecrypting,
   };
 }
 
@@ -583,7 +596,8 @@ function anotherMachineSetup(
   target: OsTarget,
   reach: ReachAddresses | null,
 ): PlatformSetup {
-  const trust = OS_TRUST[target];
+  const format = caFormatFor(id);
+  const trust = OS_TRUST[target](DOWNLOADED[target](CA_FILES[format]));
   const device = deviceName(id, os);
   return {
     trust: {
@@ -593,7 +607,7 @@ function anotherMachineSetup(
         reach === null
           ? undefined
           : {
-              steps: [downloadStep(`On ${device}`, reach, caFormatFor(id)), ...trust.install],
+              steps: [downloadStep(`On ${device}`, reach, format), ...trust.install],
               notes: trust.notes,
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
@@ -606,7 +620,7 @@ function anotherMachineSetup(
     },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
-    notDecrypting: NOT_DECRYPTING_DESKTOP,
+    notDecrypting: trust.notDecrypting,
   };
 }
 
