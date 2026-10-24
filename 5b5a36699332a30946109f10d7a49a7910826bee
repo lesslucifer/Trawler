@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W5
+base: 647959769b1b77882d3f046ab73c7e7574ca08e7
+design_sha256: 9d9d9a762cd4b916d79acfa49afca2b3e254e2978949d391e206b795264d05ac
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 5603005203dcdf671b1ea942d6b27beda5cd9901
+    built: [ui/src/Onboarding.tsx]
+date: 2026-10-24
