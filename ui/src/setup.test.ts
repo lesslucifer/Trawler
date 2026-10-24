@@ -359,6 +359,14 @@ describe("this machine is instructed for the host it is running on", () => {
     expect(text).toMatch(/ProxyServer .*127\.0\.0\.1:9999/);
   });
 
+  it("its trust command reads the file the save step names, wherever the dialog put it", () => {
+    for (const os of ["macos", "windows", "linux"] as const) {
+      const trust = commands(setup("this", { os }).trust.guide!.steps).join("\n");
+      expect(trust).toMatch(/ trawler-ca\.pem( |$)/);
+      expect(trust).not.toMatch(/Downloads/);
+    }
+  });
+
   it("an unknown host gets the two routes that assume no desktop", () => {
     const text = everything(setup("this", { os: "other" }));
     expect(text).toMatch(/update-ca-certificates/);
@@ -444,7 +452,7 @@ describe("a guide's steps are the route, and everything else says what it is", (
   });
 
   it("the browser caveats are notes — a reader cannot perform 'Firefox keeps its own store'", () => {
-    expect(notes(setup("this"))).toContain("Firefox keeps its own store — import it there too.");
+    expect(notes(setup("this", { os: "linux" }))).toContain("Firefox keeps its own store — import it there too.");
     expect(notes(setup("android"))).toContain(
       "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
     );
@@ -461,7 +469,7 @@ describe("a guide's steps are the route, and everything else says what it is", (
       "emulator -avd <name> -http-proxy http://10.0.2.2:9999",
     );
     expect(commands(alternatives("ubuntu"))).toContain(
-      "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
+      "certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ~/Downloads/trawler-ca.pem",
     );
     expect(
       alternatives("android").flatMap((step) => step.filter((p) => typeof p === "string")),
@@ -643,16 +651,79 @@ describe("each platform says what to check when its traffic does not decrypt", (
     expect(setup("ios-sim").notDecrypting).toMatch(/Restart the Simulator/);
   });
 
-  it.each(["this", "mac", "windows", "ubuntu"] as const)("%s's is a browser restart, Firefox and pinning", (id) => {
-    const check = setup(id).notDecrypting;
-    expect(check).toMatch(/restarts/);
-    expect(check).toMatch(/Firefox keeps its own/);
+  // S2: Firefox reads the system's store on macOS and Windows, and keeps its
+  // own on Linux.
+  it.each([
+    ["this", "macos"],
+    ["this", "windows"],
+    ["mac", "macos"],
+    ["windows", "macos"],
+  ] as const)("%s on %s: a browser restart and pinning, and no Firefox store of its own", (id, os) => {
+    const check = setup(id, { os }).notDecrypting;
+    expect(check).toMatch(/reads the system's store when it starts — restart it/);
     expect(check).toMatch(/pin their own certificate/);
+    expect(check).not.toMatch(/Firefox/);
+    expect(notes(setup(id, { os })).join("\n")).not.toMatch(/Firefox/);
+  });
+
+  it.each([
+    ["this", "linux"],
+    ["ubuntu", "macos"],
+  ] as const)("%s on %s: a browser restart, Firefox's own store and pinning", (id, os) => {
+    const check = setup(id, { os }).notDecrypting;
+    expect(check).toMatch(/restarts, and Firefox keeps its own/);
+    expect(check).toMatch(/pin their own certificate/);
+    expect(notes(setup(id, { os }))).toContain("Firefox keeps its own store — import it there too.");
   });
 
   it("the iPhone's trust step says installing does not trust, and what Safari says until it does", () => {
     const steps = setup("ios").trust.guide!.steps.map((step) => step.join(" "));
     expect(steps[2]).toMatch(/^Then turn on full trust\. Installing does not: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA\./);
     expect(steps[2]).toMatch(/Until it is on, Safari says This Connection Is Not Private\./);
+  });
+});
+
+// C1: Windows PowerShell 5.1 - what Windows opens from Start, Win+X and Terminal -
+// rejects `&&`, so a command that joins with it sets nothing.
+describe("Windows' commands run in the shell their sentence names", () => {
+  const windowsSteps = (id: PlatformId) => numbered(setup(id, { os: "windows" }));
+  const leadOf = (step: GuideStep) => step.find((p) => typeof p === "string");
+
+  it.each(["this", "windows"] as const)("%s: every command is led by PowerShell, and none joins with &&", (id) => {
+    for (const step of windowsSteps(id).filter((st) => commands([st]).length > 0)) {
+      expect(leadOf(step)).toMatch(/^In PowerShell( as administrator)?, run:$/);
+    }
+    for (const command of commands(guides(setup(id, { os: "windows" })))) expect(command).not.toMatch(/&&/);
+  });
+
+  it("the route writes the address, then enables it, joined as PowerShell runs them", () => {
+    const [route] = commands(setup("windows").route.guide!.steps);
+    expect(route).toMatch(/\/v ProxyServer \/t REG_SZ \/d 192\.168\.1\.24:9999 \/f; reg add .* \/v ProxyEnable \/t REG_DWORD \/d 1 \/f$/);
+    expect(leadOf(setup("windows").route.guide!.steps[0])).toBe("In PowerShell, run:");
+  });
+
+  it("the certificate is installed as administrator, whose terminal opens elsewhere", () => {
+    expect(commands(setup("windows").trust.guide!.steps)).toEqual([
+      'certutil -addstore -f ROOT "$HOME\\Downloads\\trawler-ca.pem"',
+    ]);
+  });
+});
+
+// C2: a browser saves the certificate to Downloads, and a terminal does not
+// open there, so another computer's trust command names the folder.
+describe("another computer's trust command reads the file its download step names, from Downloads", () => {
+  const downloaded = (id: PlatformId) =>
+    setup(id).trust.guide!.steps[0].find((p): p is string => typeof p === "string" && /it downloads/.test(p))!;
+
+  it.each([
+    ["mac", "~/Downloads/trawler-ca.pem"],
+    ["windows", '"$HOME\\Downloads\\trawler-ca.pem"'],
+    ["ubuntu", "~/Downloads/trawler-ca.pem"],
+  ] as const)("%s", (id, path) => {
+    const file = downloaded(id).match(/it downloads (\S+)\.$/)![1];
+    const [install] = commands(setup(id).trust.guide!.steps);
+
+    expect(path).toContain(file);
+    expect(install.endsWith(path) || install.includes(`${path} `)).toBe(true);
   });
 });

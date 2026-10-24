@@ -1155,7 +1155,7 @@ function PlatformSetup({
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
-                    proofStays: platform === "this" || offMachine,
+                    proofStays: platform === "this" ? "once-quiet" : offMachine ? "past-anything" : "never",
                   })
             }
           />

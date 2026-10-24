@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Onboarding, useRouteMemory } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
@@ -514,12 +514,23 @@ describe("each task holds its own route, under the one button", () => {
     draw();
     fireEvent.click(within(task(1)).getByText(MANUAL));
 
-    expect(within(task(1)).getByTestId("guide-note")).toHaveTextContent(
-      "Firefox keeps its own store — import it there too.",
-    );
+    expect(within(task(1)).queryByTestId("guide-note")).toBeNull();
     expect(open("Or double-click the file and set the Trawler CA to Always Trust.")).toBe(false);
     expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
     expect(within(task(2)).getByText("to turn it off later")).toBeInTheDocument();
+  });
+
+  // S2: Firefox reads the system's store on macOS and Windows, so only Linux's
+  // guide sends anyone to import it there.
+  it("names Firefox's own store on Linux only", () => {
+    draw({ os: "linux" });
+    expect(within(task(1)).getByTestId("guide-note")).toHaveTextContent(
+      "Firefox keeps its own store — import it there too.",
+    );
+    cleanup();
+
+    draw({ os: "windows" });
+    expect(document.body.textContent).not.toMatch(/Firefox/);
   });
 
   it("the one act leads task 1, and nothing renders between the tasks", () => {
@@ -1119,6 +1130,16 @@ describe("another device, where this machine's own traffic may be arriving too",
     expect(document.body.textContent).not.toMatch(/that Mac does not trust/);
   });
 
+  it("a proof already that Mac's outlasts the refusal, which is a note under it (S1)", () => {
+    const at = ago(40_000);
+    draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at }, device: mixedIn(arriving, at), deviceMark: MARK });
+    pick("Another Mac");
+
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent("one request already did");
+    expect(document.body.textContent).not.toMatch(/Finish the certificate step/);
+  });
+
   it("where it cannot be arriving, unmarked traffic is that Mac's, and the end names no one", () => {
     draw({ reach: ARMED, traffic: capturing, deviceMark: MARK });
     pick("Another Mac");
@@ -1337,7 +1358,7 @@ describe("the end", () => {
     draw({ traffic: arriving, trustProbe: "absent" });
 
     expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
-      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.",
+      "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it. Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.",
     );
     expect(open("Save Trawler's certificate as trawler-ca.pem")).toBe(true);
     expect(within(task(3)).queryByTestId("traffic-remedy")).toBeNull();
@@ -1450,6 +1471,28 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
     pick("Android emulator");
     expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
+  });
+
+  // S1: Windows starts its own HTTPS the moment its proxy is set, and an app of
+  // it that pins its certificate refused - turning step 4 red under a done
+  // certificate step, and telling the user to redo it.
+  it("keeps another device's proof past a refusal and past plain http, the refusal a note", () => {
+    const at = ago(40_000);
+    const clear = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
+    const refused = { ...NO_TRAFFIC, lastDecryptedAt: at, lastTunnelAt: ago(5_000), openTunnelAt: ago(5_000) };
+    const { rerender } = draw({ reach: ARMED, traffic: refused, device: clear, deviceMark: "k3m9" });
+    pick("Another Windows PC");
+
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something else is connecting and not decrypting — one request already did",
+    );
+    expect(document.body.textContent).not.toMatch(/not working|Finish the certificate step/);
+
+    rerender(screenAt({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at, lastPlainAt: ago(5_000) }, device: clear, deviceMark: "k3m9" }));
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(at)}`);
+    expect(document.body.textContent).not.toMatch(/only plain http/);
   });
 });
 

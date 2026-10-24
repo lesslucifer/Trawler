@@ -18,6 +18,7 @@ import {
   provenDevice,
   proxyStatus,
   RECENT_MS,
+  REFUSED_AFTER_PROOF,
   setUpOn,
   stopRoutingNote,
   trafficStatus,
@@ -29,6 +30,7 @@ import {
   type SetupState,
   type StepStatusView,
   type Traffic,
+  type TrafficContext,
 } from "./verdicts";
 
 // One tunnel that no decrypted request has followed.
@@ -259,7 +261,7 @@ describe("trafficStatus reads recency, never history", () => {
     const v = trafficStatus({ ...NO_TRAFFIC, ...openTunnel(ago(TUNNEL_GRACE_MS)) }, NOW, {
       ownsRefusal: false,
       trustedOn: "this Mac",
-      proofStays: false,
+      proofStays: "never",
     });
     expect(v).toMatchObject({ glyph: "⚠", tone: "warn", short: "not working — arriving but not decrypting" });
     expect(v.remedy).toBe(
@@ -272,7 +274,7 @@ describe("trafficStatus reads recency, never history", () => {
     const quiet = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: ago(1) }, NOW, {
       ownsRefusal: false,
       trustedOn: "this Mac",
-      proofStays: false,
+      proofStays: "never",
     });
     expect(quiet).toEqual(at({ lastPlainAt: ago(1) }));
   });
@@ -421,7 +423,7 @@ describe("the short form every state carries", () => {
       trafficStatus(seen({ lastDecryptedAt: AT_1402 }), AT_1402 + RECENT_MS + 1, {
         ownsRefusal: false,
         trustedOn: null,
-        proofStays: true,
+        proofStays: "once-quiet",
       }),
       "done — decrypted at 14:02, nothing since",
       undefined,
@@ -568,7 +570,7 @@ describe("a task no probe concludes reads its evidence", () => {
 
   it("the try task leaves a refusal to a certificate task that is not done", () => {
     const refused = { ...NO_TRAFFIC, ...openTunnel(1_000_000 - TUNNEL_GRACE_MS) };
-    const v = trafficStatus(refused, 1_000_000, { ownsRefusal: true, trustedOn: null, proofStays: false });
+    const v = trafficStatus(refused, 1_000_000, { ownsRefusal: true, trustedOn: null, proofStays: "never" });
     expect(v.short).toBe("not working — arriving but not decrypting");
     expect(v.remedy).toBeUndefined();
   });
@@ -600,7 +602,7 @@ describe("This machine's own request stands in for a probe that cannot answer", 
 // ── U5 · Q3: This machine's proof does not expire with the traffic window ──
 
 describe("the try task once a decrypted request proved this setup", () => {
-  const STAYS = { ownsRefusal: false, trustedOn: null, proofStays: true };
+  const STAYS: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: "once-quiet" };
   const quiet = AT_1402 + RECENT_MS + 1;
 
   it("stays done on This machine when traffic goes quiet, with the time it was proven", () => {
@@ -627,6 +629,43 @@ describe("the try task once a decrypted request proved this setup", () => {
     expect(trafficStatus(plainOnly, quiet, STAYS).short).toBe("not done — nothing arriving right now");
     const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402 - RECENT_MS, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
     expect(trafficStatus(refusing, quiet, STAYS).short).toBe("not working — arriving but not decrypting");
+  });
+});
+
+// ── S1: another device's proof outlasts what follows it ────────────────────
+
+describe("another device's try task once a decrypted request proved it", () => {
+  const PAST: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: "past-anything" };
+  const quiet = AT_1402 + RECENT_MS + 1;
+
+  it("stays done past a refusal, with a note that sends no one back to the certificate", () => {
+    const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    const v = trafficStatus(refusing, quiet, PAST);
+
+    expect(v).toEqual(verdict("done", "decrypted at 14:02", REFUSED_AFTER_PROOF));
+    expect(v.remedy).not.toMatch(/Finish the certificate step/);
+  });
+
+  it("stays done past plain http and a tunnel still in its grace, with no note", () => {
+    const plain = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, lastPlainAt: quiet - 1_000 };
+    const arriving = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, ...openTunnel(quiet - 1_000) };
+
+    expect(trafficStatus(plain, quiet, PAST)).toEqual(verdict("done", "decrypted at 14:02"));
+    expect(trafficStatus(arriving, quiet, PAST)).toEqual(verdict("done", "decrypted at 14:02"));
+  });
+
+  it("changes nothing while it captures, or before any decrypt", () => {
+    expect(trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, AT_1402 + 1_000, PAST).short).toBe(
+      "done — capturing traffic",
+    );
+    const refused = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    expect(trafficStatus(refused, quiet, PAST).remedy).toMatch(/Finish the certificate step/);
+  });
+
+  it("is This machine's once-quiet rule nowhere else: past a refusal, This machine still reads it", () => {
+    const refusing = { ...NO_TRAFFIC, lastDecryptedAt: AT_1402, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    const once: TrafficContext = { ...PAST, proofStays: "once-quiet" };
+    expect(trafficStatus(refusing, quiet, once).short).toBe("not working — arriving but not decrypting");
   });
 });
 
@@ -708,9 +747,16 @@ describe("another device's try task, while nothing arriving is told apart from t
 
   it("still says nothing decrypts, naming no device (A3)", () => {
     const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
-    const v = mixedTryStatus(refusing, quiet, AT_1402);
+    const v = mixedTryStatus(refusing, quiet, null);
     expect(v.short).toBe("not working — arriving but not decrypting");
     expect(v.remedy).toMatch(/the device it comes from does not trust/);
+  });
+
+  it("keeps a proof already that device's past the wire's refusal, as a note (S1)", () => {
+    const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS) };
+    expect(mixedTryStatus(refusing, quiet, AT_1402)).toEqual(
+      verdict("done", "decrypted at 14:02", REFUSED_AFTER_PROOF),
+    );
   });
 });
 
