@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W7
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v4: rule 8 - the iOS Simulator's wire is this machine's, so its certificate reads its own store in each running Simulator, else its marked request, and its try task and the end read that mark alone; the row left to W7 closes; counting its unmarked traffic is rejected"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-63's row names rule 8 and the rejected alternative"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the Simulator reads its own store and its own mark; commands read Downloads or the saved path"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the Simulator's platform row and a paragraph on its shared wire; the probe layer names each running Simulator's store; the commands paragraph covers the saved path, every running Simulator and the erase"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 16 opened, ruled and closed: the Simulator's mockup in five readings, rules, model, copy, given and the review rows; round 15's after-close row cites UC-ONBOARD"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic's status line and W7's link to its WU plan"
+  - path: "docs/work/2026-10-24-onboard-revamp-w7-ios-simulator-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W7's WU plan: the sweep, six findings, three questions and the owner's rulings"
+  - path: "docs/work/2026-10-24-onboard-revamp-w7-ios-simulator-status-result.html"
+    tier: T3
+    action: added
+    distills: "W7's result report"
