@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU another-mac-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W4
+branch: wu/onboard-revamp/another-mac-status
+base: 1815021e7045898674320b536844e6e0b250262c
+head: a3411dfe46ab8e46b29a8407c3d2dbc8cf2d5377
+diff_sha256: fe6dbc6ef99b175ffbad1e7a555a8206aae161fea22fdd610b0a203a8bced25b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 9
+  stage_seconds:
+    gate0: 37
+    finders: 798
+    verifiers: 314
+    total: 1112
+  by_finder:
+    correctness: { found: 4, verified: 1 }
+    efficiency:  { found: 1, verified: 1 }
+    altitude:    { found: 6, verified: 2 }
+findings: { found: 11, verified: 4, waived: 1 }
+waivers:
+  - finding: "setup.ts lostAddress reads an armed address missing from the core's routable interface list as no longer held, so ::1 armed by a direct POST /reach reads 'this Mac no longer holds ::1' and the chip 'no longer reachable on ::1'"
+    reason: "the owner's ruling, 2026-10-24: producible only by a direct control-API call (DEC-55's local-script path), never through the app, which arms only listed addresses; DEC-63 rule 6 makes the core's list the criterion, and the screen's outcome - the tasks dimmed, a routable address offered - is right for an address no other device can use; at the base the same state read 'listening on ::1'. Follow-up: GET /reach reporting whether the armed address is held"
+nits:
+  - finding: "deviceTraffic makes four or five passes over the flow list, latestFlowTimes over the whole list twice while mixed"
+    waived: "bounded and off the hot path: about 3.5 ms at 10k flows, once per refetch or watch tick on one screen, about what the list's own JSON parse costs; nothing accumulates"
+  - finding: "'the address is allowed and still held' is spelled at five call sites"
+    waived: "the held-or-lost verdict has one owner in lostAddress; the core sets armed, proxy and ca_urls together, so the other spellings cannot diverge; nextArmedSince keeping a lost address's moment is DEC-63 rule 1"
+  - finding: "'clear' names this machine's proxy read off or another, beside the product's 'clear' for removing flows"
+    waived: "the names live in the readings' own functions beside the comment that defines them by DEC-63 rule 3, and meet the flow-clearing vocabulary in no expression"
+refuted: "a system proxy at this machine's own LAN address (DEC-63 rule 3 counts foreign; at the base all traffic counted; the product writes only loopback); the e2e comment (an armed loopback address renders as lost, not the armed half journey 2 leaves undriven); a zero-width run (sent and landed straddle a process spawn and an HTTP fetch, never one millisecond); 'wire' naming (one concept; data-wire predates the diff); newestRead beside useFlows' counter (a different rule, untouched); the UNMIXED default (App passes the device whenever the platform needs reach); ownRequest.ts holding device attribution (markOf is its; the one-concern rule is the core's)"
+verdict: PASS
+date: 2026-10-24
