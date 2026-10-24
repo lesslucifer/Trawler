@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W7
+base: 265adfaed53523bd519c780e3d08a3041aa307ad
+design_sha256: a8fb725cbaff1121a4ee9c1ae0f64dfa7cb5694ae7f4ff4a2026f0d55962856c
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: e0ad9b1ee6506c91cdd596785de0326b0100efc2
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wiring only: it reads the Simulator probe with this machine's readings, holds the path a save returned, and hands the Simulator its mark and its wire; nothing App draws changed - what those readings render is Onboarding's, built from round 16"
+date: 2026-10-24
