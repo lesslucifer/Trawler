@@ -194,6 +194,11 @@ interface PlatformFacts {
   // traffic is on its wire for as long as it is routed: nothing unmarked is
   // its own, ever, and only its marked request settles anything (DEC-63).
   sharesHostWire: boolean;
+  // Its own stores and its own proxy are adb's to read, one reading per
+  // emulator running (W8's Q1, Q2); its traffic arrives on this machine's
+  // loopback, so only its mark, or what arrived while this machine's proxy did
+  // not point here, is its own (DEC-63).
+  readsOverAdb: boolean;
   // Do this platform's instructions need an address beyond loopback?
   needsReach: boolean;
   // A device that cannot paste opens a value by scanning it (DEC-57).
@@ -211,6 +216,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: true,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: false,
     scans: false,
   },
@@ -222,6 +228,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: false,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
     scans: false,
   },
@@ -233,6 +240,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: false,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
     scans: false,
   },
@@ -244,6 +252,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: false,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
     scans: false,
   },
@@ -255,6 +264,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: true,
     probesOwnStore: true,
     sharesHostWire: true,
+    readsOverAdb: false,
     needsReach: false,
     scans: false,
     onlyBeside: "macos",
@@ -267,6 +277,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: false,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: true,
     needsReach: false,
     scans: false,
   },
@@ -278,6 +289,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: false,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
     scans: true,
   },
@@ -289,6 +301,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     probesRoute: false,
     probesOwnStore: false,
     sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
     scans: true,
   },
@@ -388,6 +401,16 @@ export function sharesHostWire(id: PlatformId): boolean {
 
 export function needsReach(id: PlatformId): boolean {
   return PLATFORMS[id].needsReach;
+}
+
+export function readsOverAdb(id: PlatformId): boolean {
+  return PLATFORMS[id].readsOverAdb;
+}
+
+// Every platform but This machine is another device whose traffic this
+// machine's may be mixed with, so its own request carries a mark (DEC-63).
+export function marksItsOwn(id: PlatformId): boolean {
+  return needsReach(id) || sharesHostWire(id) || readsOverAdb(id);
 }
 
 // The three systems the screen can give commands for. An unknown host gets the
@@ -591,6 +614,11 @@ const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate s
 
 const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
 
+// Android's own services ignore a user certificate by design, and an idle
+// emulator opens a few connections a second that never decrypt (W8's S2).
+const REFUSED_AFTER_PROOF_ANDROID =
+  "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.";
+
 const androidInstall = (format: CaFormat) =>
   `Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate → ${CA_FILES[format]}.`;
 
@@ -738,55 +766,86 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
   };
 }
 
-function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+// adb reaches one device unless told which, and refuses with two of anything
+// attached: two emulators, or one and a phone on USB. So every command runs once
+// per emulator running, in the shell its sentence names (C2).
+const EACH_EMULATOR: Record<OsTarget, (args: string) => string> = {
+  macos: (args) => `for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d ${args}; done`,
+  linux: (args) => `for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d ${args}; done`,
+  windows: (args) =>
+    `adb devices | Select-String '^emulator-\\d+' | ForEach-Object { adb -s $_.Matches[0].Value ${args} }`,
+};
+
+const RUN_IN: Record<OsTarget, string> = {
+  macos: "In a terminal, run:",
+  linux: "In a terminal, run:",
+  windows: "In PowerShell, run:",
+};
+
+// Android 15's own paths: the emulator runs a stock image, so its menus are
+// the ones Google ships, where a phone's are its maker's (C5).
+const EMULATOR_CREDENTIALS = "Settings → Security & privacy → More security & privacy → Encryption & credentials";
+
+// The global proxy covers every network the emulator has. Its Wi-Fi is the
+// network a phone's steps name, but an emulator sends over its mobile one
+// wherever that is the default, and a Wi-Fi proxy then routes nothing (C4).
+const emulatorProxy = (value: string) => `shell settings put global http_proxy ${value}`;
+
+function emulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
   const { port } = splitProxyAddr(proxyAddr);
   const format = caFormatFor("android-sim");
+  const target = hostTarget(os);
+  const each = EACH_EMULATOR[target];
   const trust: Guide = {
     steps: [
       saveCaStep(format),
       [
-        "Push it to the emulator:",
-        { command: `adb push ${CA_FILES[format]} /sdcard/Download/`, label: "the push command" },
+        `With the emulator running, ${RUN_IN[target].charAt(0).toLowerCase()}${RUN_IN[target].slice(1)}`,
+        {
+          command: each(`push ${savedFile(target, format, saved)} /sdcard/Download/`),
+          label: "the push command",
+        },
       ],
-      [androidInstall(format)],
+      [
+        `Install it: ${EMULATOR_CREDENTIALS} → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → ${CA_FILES[format]}.`,
+      ],
     ],
     notes: [ANDROID_USER_CA],
     undoTitle: "to remove it later",
-    undo: [
-      [
-        "Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA.",
-      ],
-    ],
+    undo: [[`${EMULATOR_CREDENTIALS} → Trusted credentials → User → ${CA_NAME} → Remove.`]],
   };
   const route: Guide = {
     steps: [
-      ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
-      [
-        "Server",
-        { copy: EMULATOR_HOST, label: "the emulator's host", wire: "proxy host" },
-        "port",
-        { copy: String(port), label: "the proxy port", wire: "proxy port" },
-      ],
+      [RUN_IN[target], { command: each(emulatorProxy(`${EMULATOR_HOST}:${port}`)), label: "the proxy command" }],
     ],
     notes: [`${EMULATOR_HOST} is the alias every emulator resolves to the machine it runs on.`],
     alternatives: [
       [
-        "Or start it with the proxy already set:",
+        "Or in the emulator: Settings → Network & internet → Internet → turn Mobile data off, then AndroidWifi ⚙ → ✎ → Advanced options → Proxy → Manual, server",
+        { copy: EMULATOR_HOST, label: "the emulator's host", wire: "proxy host" },
+        "port",
+        { copy: String(port), label: "the proxy port", wire: "proxy port" },
+      ],
+      [
+        "Or start it with the proxy already set — the emulator reads this address on this machine:",
         {
-          command: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
+          command: `emulator -avd <name> -http-proxy http://127.0.0.1:${port}`,
           label: "the emulator command",
         },
       ],
     ],
     undoTitle: DEVICE_PROXY_UNDO,
-    undo: [["Wi-Fi → the network → Proxy → None."]],
+    undo: [
+      [RUN_IN[target], { command: each(emulatorProxy(":0")), label: "the proxy-off command" }],
+      ["Set in Settings? AndroidWifi ⚙ → ✎ → Advanced options → Proxy → None, and turn Mobile data back on."],
+    ],
   };
   return {
     trust: { title: "In the emulator, install the certificate", guide: trust },
-    route: { title: "In the emulator, set the Wi-Fi proxy", guide: route },
+    route: { title: "In the emulator, set the proxy", guide: route },
     try: tryTask("android-sim", os),
     confirmOn: confirmOn("android-sim", os),
-    notDecrypting: NOT_DECRYPTING_ANDROID,
+    refusedAfterProof: REFUSED_AFTER_PROOF_ANDROID,
   };
 }
 
@@ -852,7 +911,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
     case "ios-sim":
       return simulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved);
     case "android-sim":
-      return emulatorSetup(ctx.os, ctx.proxyAddr);
+      return emulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved);
     case "ios":
     case "android":
       return deviceSetup(id, ctx.os, reach);

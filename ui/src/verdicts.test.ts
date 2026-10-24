@@ -5,6 +5,10 @@ import {
   clock,
   deviceRouteStatus,
   deviceTrustStatus,
+  emulatorRefusal,
+  emulatorRouteStatus,
+  emulatorsRouted,
+  emulatorTrustStatus,
   evidenceOf,
   foreignProxyNotice,
   lastReachedAt,
@@ -20,16 +24,18 @@ import {
   RECENT_MS,
   REFUSED_AFTER_PROOF,
   setUpOn,
-  simulatorsTrusted,
+  storesTrusted,
   simulatorTrustStatus,
   stopRoutingNote,
   trafficStatus,
   trustByTraffic,
+  trustedEmulators,
   trustedSimulators,
   trustStatus,
   STATE_WORDS,
   TUNNEL_GRACE_MS,
   verdict,
+  type EmulatorReading,
   type SetupState,
   type SimulatorTrust,
   type StepStatusView,
@@ -805,10 +811,10 @@ describe("the Simulator's certificate", () => {
   const reading = (provedAt: number | null = null) => ({ device: "the Simulator", provedAt, mixed: true, tryStep: 3 });
 
   it("reads trusted only where every running Simulator's store holds it, and unread where none answered", () => {
-    expect(simulatorsTrusted([sim("iPhone 17 Pro", "trusted")])).toBe(true);
-    expect(simulatorsTrusted([sim("iPhone 17 Pro", "trusted"), sim("iPad mini", "absent")])).toBe(false);
-    expect(simulatorsTrusted([sim("iPhone 17 Pro", "trusted"), sim("iPad mini", "unknown")])).toBeNull();
-    expect(simulatorsTrusted([])).toBeNull();
+    expect(storesTrusted([sim("iPhone 17 Pro", "trusted")])).toBe(true);
+    expect(storesTrusted([sim("iPhone 17 Pro", "trusted"), sim("iPad mini", "absent")])).toBe(false);
+    expect(storesTrusted([sim("iPhone 17 Pro", "trusted"), sim("iPad mini", "unknown")])).toBeNull();
+    expect(storesTrusted([])).toBeNull();
   });
 
   it("names the Simulator its store was read in, by the name its window shows", () => {
@@ -849,6 +855,134 @@ describe("the Simulator's certificate", () => {
   it("is never told a refusal's check it has none of", () => {
     expect(notDecryptingHere("this Mac")).toBe(
       "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it.",
+    );
+  });
+});
+
+// ── The emulator: its own store and proxy through adb, else another device's
+// readings (W8) ─────────────────────────────────────────────────────────────
+
+describe("the emulator's certificate and proxy", () => {
+  const emu = (
+    name: string,
+    trust: EmulatorReading["trust"],
+    proxy: EmulatorReading["proxy"] = "none",
+  ): EmulatorReading => ({ name, trust, proxy });
+  const reading = (provedAt: number | null = null, mixed = false) => ({
+    device: "the emulator",
+    provedAt,
+    mixed,
+    tryStep: 3,
+  });
+  const CONFIRM_HTTPS = "the emulator's first HTTPS request confirms it";
+  const CONFIRM = "the emulator's first request confirms it";
+  const refused = evidenceOf({ ...NO_TRAFFIC, ...openTunnel(AT_1402) }, AT_1402 + TUNNEL_GRACE_MS);
+  const decrypted = evidenceOf({ ...NO_TRAFFIC, lastDecryptedAt: AT_1402 }, AT_1402);
+
+  it("reads its own store by the name of its AVD, and counts every one still missing it", () => {
+    expect(emulatorTrustStatus([emu("Pixel 7 API 35", "trusted")], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+      verdict("done", "trusted in Pixel 7 API 35"),
+    );
+    expect(emulatorTrustStatus([emu("Pixel 7 API 35", "absent")], null, reading(AT_1402), decrypted, CONFIRM_HTTPS)).toEqual(
+      verdict("not-done", "not in Pixel 7 API 35"),
+    );
+    const two = [emu("Pixel 7 API 35", "trusted"), emu("Pixel Fold", "trusted")];
+    expect(emulatorTrustStatus(two, null, reading(), NO_EVIDENCE, CONFIRM_HTTPS).short).toBe(
+      "done — trusted in every running emulator",
+    );
+    expect(trustedEmulators(two)).toBe("every running emulator");
+    expect(trustedEmulators([emu("Pixel 7 API 35", "unknown")])).toBeNull();
+    const missing = [emu("Pixel 7 API 35", "absent"), emu("Pixel Fold", "absent")];
+    expect(emulatorTrustStatus(missing, null, reading(), NO_EVIDENCE, CONFIRM_HTTPS).short).toBe(
+      "not done — not in 2 running emulators",
+    );
+  });
+
+  // S1: where no store is read, it is another device: its mark, else traffic
+  // from a span this machine's proxy did not point here, each timed.
+  it("falls back to its marked request, then to what could have come from it, timed", () => {
+    const unread = [emu("Pixel 7 API 35", "unknown")];
+    expect(emulatorTrustStatus(unread, null, reading(AT_1402, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+      verdict("done", "the emulator's request decrypted at 14:02"),
+    );
+    expect(emulatorTrustStatus([], null, reading(), decrypted, CONFIRM_HTTPS)).toEqual(
+      verdict("done", "a request decrypted at 14:02"),
+    );
+    expect(emulatorTrustStatus([], null, reading(null, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+      awaiting("the address in step 3 confirms it"),
+    );
+    expect(emulatorTrustStatus([], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(awaiting(CONFIRM_HTTPS));
+  });
+
+  // S2: its own services refuse a user certificate it holds.
+  it("never reads a refusal as its certificate not working", () => {
+    for (const read of [[], [emu("Pixel 7 API 35", "unknown")]])
+      expect(emulatorTrustStatus(read, null, reading(), refused, CONFIRM_HTTPS)).toEqual(awaiting(CONFIRM_HTTPS));
+  });
+
+  it("says it is checking while a read the user asked for runs", () => {
+    expect(emulatorTrustStatus([emu("Pixel 7 API 35", "trusted")], "checking", reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+      verdict("checking", "the certificate store"),
+    );
+    expect(emulatorRouteStatus([emu("Pixel 7 API 35", "trusted", "ours")], "checking", reading(), NO_EVIDENCE, CONFIRM)).toEqual(
+      verdict("checking", "the proxy settings"),
+    );
+  });
+
+  // S4 · C4: a proxy set on a network the emulator does not send over routes nothing.
+  it("reads its own proxy, and says why a proxy it set routes nothing", () => {
+    expect(emulatorRouteStatus([emu("Pixel 7 API 35", "unknown", "ours")], null, reading(), NO_EVIDENCE, CONFIRM)).toEqual(
+      verdict("done", "Pixel 7 API 35 routes through Trawler"),
+    );
+    expect(emulatorRouteStatus([emu("Pixel 7 API 35", "unknown", "wifi-only")], null, reading(), decrypted, CONFIRM)).toEqual(
+      verdict("not-done", "Pixel 7 API 35 sends over mobile data, not Wi-Fi"),
+    );
+    expect(emulatorRouteStatus([emu("Pixel 7 API 35", "unknown", "foreign")], null, reading(), NO_EVIDENCE, CONFIRM)).toEqual(
+      verdict("not-done", "another proxy is set in Pixel 7 API 35"),
+    );
+    const both = [emu("Pixel 7 API 35", "unknown", "ours"), emu("Pixel Fold", "unknown", "ours")];
+    expect(emulatorRouteStatus(both, null, reading(), NO_EVIDENCE, CONFIRM).short).toBe(
+      "done — every running emulator routes through Trawler",
+    );
+  });
+
+  // A proxy set at its start lives on this machine, where no guest reads it.
+  it("never reads no proxy as not done: another device's readings settle it", () => {
+    for (const proxy of ["none", "unknown"] as const) {
+      const read = [emu("Pixel 7 API 35", "unknown", proxy)];
+      expect(emulatorsRouted(read)).toBeNull();
+      expect(emulatorRouteStatus(read, null, reading(), NO_EVIDENCE, CONFIRM)).toEqual(awaiting(CONFIRM));
+      expect(emulatorRouteStatus(read, null, reading(AT_1402, true), NO_EVIDENCE, CONFIRM)).toEqual(
+        verdict("done", "the emulator's request came through at 14:02"),
+      );
+    }
+    expect(emulatorsRouted([])).toBeNull();
+    expect(emulatorsRouted([emu("A", "unknown", "ours"), emu("B", "unknown", "none")])).toBeNull();
+    expect(emulatorsRouted([emu("A", "unknown", "ours"), emu("B", "unknown", "wifi-only")])).toBe(false);
+  });
+});
+
+describe("the emulator's try task words a refusal for what it is (W8's S2)", () => {
+  const quiet = AT_1402 + RECENT_MS + 1;
+  const refusing = { ...NO_TRAFFIC, ...openTunnel(quiet - TUNNEL_GRACE_MS - 1) };
+  const around: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: "past-anything" };
+
+  it("says Android's own services never decrypt, and names the store that trusts it", () => {
+    expect(emulatorRefusal(null)).toBe(
+      "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. A website in Chrome is the test.",
+    );
+    expect(emulatorRefusal("Pixel 7 API 35")).toBe(
+      "something is connecting and none of it is decrypting — Pixel 7 API 35 trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate. A website in Chrome is the test.",
+    );
+  });
+
+  it("carries that account wherever the wire refuses, mixed or not", () => {
+    const refused = emulatorRefusal(null);
+    expect(trafficStatus(refusing, quiet, { ...around, refused })).toEqual(
+      verdict("not-working", "arriving but not decrypting", refused),
+    );
+    expect(mixedTryStatus(refusing, quiet, null, { refused })).toEqual(
+      verdict("not-working", "arriving but not decrypting", refused),
     );
   });
 });
