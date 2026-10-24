@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adc6d4a9f34851f0dfadabd" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W7 result: status, iOS Simulator</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W7 — result: status, iOS Simulator</h1>
+      <p>The Simulator's certificate task now reads the Simulator's own trust store, and otherwise its own marked request; its try task and the end read that mark alone, so this Mac's traffic proves nothing about it and a refusal on this Mac never blames it. Its commands read the file where the save put it, reach every running Simulator, and its way back is the erase that actually removes the root.</p>
+      <div class="meta">v1 · 2026-10-24 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W7</span> · branch <code>wu/onboard-revamp/ios-simulator-status</code> · <a href="2026-10-24-onboard-revamp-w7-ios-simulator-status-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 16</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>set up This machine, browse on this Mac, then choose iOS Simulator → ① <em>not done — not in iPhone 17 Pro</em> · ③ <em>can't check here — the address below confirms it</em> · no success line</td><td>the shell reads each running Simulator's <code>TrustStore.sqlite3</code> for the live certificate's DER, beside this machine's two probes and on the same watch (Q1 A). ① reads that store by the Simulator's name; where no store answers it reads <em>can't check here — the address in step 3 confirms it</em>. The Simulator's traffic is its marked request alone, so ③ and the end ignore this Mac's capture (S1, S3)</td><td>delivered, unit- and integration-tested; the probe read this Mac's real booted iPhone 17 Pro as <em>absent</em> in 6.7 ms</td></tr>
+      <tr><td>an app on this Mac refuses, with the Simulator untouched → ① unchanged, never <em>not working</em>; ③'s refusal names no device</td><td>a refusal is never the Simulator's certificate task's. ③ says it, naming no device, or, where ① reads trusted, <em>… iPhone 17 Pro trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> (S2)</td><td>delivered</td></tr>
+      <tr><td>save the certificate anywhere, run ①'s command as printed, with two Simulators running → it finds the file, both read trusted</td><td>the save dialog opens in Downloads. The command reads <code>~/Downloads/trawler-ca.pem</code>, or the path a save returned, single-quoted, and loops over every booted Simulator: <code>for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert …; done</code> (C1, C2)</td><td>delivered; the loop dry-run under <code>zsh</code> and <code>bash</code> on this Mac. Not run end to end with two Simulators</td></tr>
+      <tr><td>open the marked address in the Simulator → ③ <em>done — decrypted at 14:02</em>, kept past later refusals · "You're set up — Trawler is capturing traffic from the Simulator"</td><td>as expected. ① reads <em>done — the Simulator's request decrypted at 14:02</em> where no store answered (S3, DEC-63 rule 8)</td><td>delivered</td></tr>
+      <tr><td>erase that Simulator → ① <em>not done</em> on the next read</td><td>the probe re-reads on the 3 s watch and on every re-check; an erased Simulator's store holds no row. The way back now says "Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included." (C3, Q3 A)</td><td>delivered; the erase was verified on a throwaway Simulator during the sweep, not through the app</td></tr>
+      <tr><td>This machine on macOS, Windows or Linux, "do it manually" → the trust command names the saved file's path</td><td>Downloads before a save — <code>~/Downloads/…</code>, <code>"$HOME\Downloads\…"</code>, <code>"$(xdg-user-dir DOWNLOAD)/…"</code> — and the saved path after, quoted for POSIX shells or PowerShell (Q2 A)</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>commits 4 and 5: S1–S3, then C1–C3</td><td>one build commit, <code>a625225</code></td><td>both change the Simulator's one setup record and the same tests; split, the first would carry a red test</td></tr>
+      <tr><td>—</td><td>the walkthrough harness scripts the new probe (<code>simulators</code> in its patch)</td><td>every shell command answers from the script in that build; one left out would read nothing there</td></tr>
+      <tr><td>—</td><td>the design run's round 15 after-close row now cites <code>UC-ONBOARD</code> (<code>b8c0ed3</code>)</td><td>checking round 16's close found the run red on one hard rule from W6's after-close row; with the citation it reads 12/12</td></tr>
+      <tr><td>—</td><td>no server snapshot of the design run before round 16</td><td>the htmldoc server still refuses its body (HTTP 413), as in W5 and W6; git holds the baseline (<code>289b2df</code>)</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code> (a device's name and state read from its <code>device.plist</code>; the store asked for the live certificate's own bytes; only running Simulators read, each named; a store not where the runtime keeps it, or that does not answer, reads unknown; none running reads nothing) · <code>ui/src-tauri/src/scenario.rs</code> (the harness scripts the Simulators through the shell's own trust words) · <code>ui/src/verdicts.test.ts</code> (the Simulator's store reading, by name and by count, its fallback to the mark, never to unmarked traffic; the mixed try task naming the store a probe read as trusted) · <code>ui/src/setup.test.ts</code> (the two new platform facts; the loop over every running Simulator; the saved path, quoted, and Downloads before a save, on every host; the erase as the way back, and no <code>keychain reset</code>; the Simulator owns no refusal check) · <code>ui/src/body.test.ts</code> (the save dialog opens in the folder it is given; a full path tells a native save from a download's bare name)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> (S1–S3 on the Simulator's screen: this Mac's capture proves nothing and shows no end; the marked address is offered; this Mac's refusal never blames it; a trusted store names itself in the remedy; the marked request settles ① and ③ and the end names the Simulator; the proof outlasts a later refusal. This machine's command names the saved path) · <code>ui/src/onboardingMatrix.test.tsx</code> (the Simulator's store reading and its mark swept over every reading; a new rule — the Simulator reads nothing unmarked). Run against the epic tip's sources, every new or rewritten test fails, and 1,044 of the matrix's 3,024 Simulator states fail</td></tr>
+      <tr><td>e2e</td><td>waived at WU: a running Simulator is neither hermetic nor in CI. The owner's checks remain — whether Safari decrypts right after <code>add-root-cert</code> or only after a restart, and whether a running Simulator follows a change to this Mac's proxy. The per-platform traffic journey is W20's</td></tr>
+      <tr><td>manual</td><td>on this Mac, on a throwaway Simulator since deleted: a bare <code>trawler-ca.pem</code> fails from <code>~</code>; <code>booted</code> picks the Simulator booted last; <code>add-root-cert</code> writes the CA's DER to <code>TrustStore.sqlite3</code>; <code>keychain reset</code> leaves it through a reboot; <code>simctl erase</code> clears it. The probe, run once against the real booted iPhone 17 Pro: <em>absent</em>, 6.7 ms</td></tr>
+      <tr><td>suites</td><td>at <code>a625225</code>, 2026-10-24: UI 62 files and 25,399 tests green · <code>tsc -b</code> and <code>eslint .</code> green · the shell crate 83 tests green, 100 with <code>scenario</code>, clippy clean on both</td></tr>
+      <tr><td>review</td><td>pending</td></tr>
+      <tr><td>design</td><td>round 16 of the setup screen's design run, closed and archived with your LGTM (<code>43dc4b5</code>)</td></tr>
+      <tr><td>commits</td><td>plan <code>168a645</code> · <code>289b2df</code> · <code>d92b766</code> · round 16 <code>8b29fbd</code>, closed <code>43dc4b5</code>, cited <code>b8c0ed3</code> · probe <code>82ba531</code> · build <code>a625225</code> · T2 <code>03664d3</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> — the platform table's Simulator row reads its own store, by name, and says its wire is this machine's; a new paragraph says what that means for its try task, its refusals and its end; the probe layer's row names each running Simulator's store; the commands paragraph says This machine's and the Simulator's read Downloads or the saved path, the Simulator's reaches every running Simulator and its way back is the erase. The index row says the same. <a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> is v4: rule 8, the Simulator, with why; the "left to W7" row closes; the rejected list gains counting its unmarked traffic. Its index row says so. No component contract changed.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W16: N1 (<code>xcode-select</code> pointing at the Command Line Tools fails <code>xcrun simctl</code>), N2 (each simulated device keeps its own store), N3 (the shell could run <code>add-root-cert</code> itself — a "Trust in the Simulator" button with no password), and whether step 3's "restart the Simulator" survives the owner's check. W20: the real-Simulator checks above. The code review covers <code>ui/src</code> but not <code>ui/src-tauri</code>, so the probe's Rust is held by its unit tests and not by a review. The walkthrough films none of the new states. The htmldoc server's body limit still blocks design-run snapshots.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
