@@ -235,6 +235,54 @@ export function deviceRouteStatus(evidence: Evidence, reading: DeviceReading, co
   return routeByTraffic(evidence, confirmOn);
 }
 
+// The newer of a device's two proofs: its marked request, and a request
+// decrypted where unmarked traffic is its own.
+function newestProof(evidence: Evidence, reading: DeviceReading): number | null {
+  const times = [reading.provedAt, evidence.decryptedAt].filter((at) => at !== null);
+  return times.length === 0 ? null : Math.max(...times);
+}
+
+// The address's refusal its certificate task says (W9's Q1, Q2): past its
+// grace, the device's, and newer than any proof - one older than it showed a
+// certificate since removed, or a trust switch since turned off.
+export function refusedAddress(
+  refusal: AddressRefusal | undefined,
+  evidence: Evidence,
+  reading: DeviceReading,
+  now: number,
+): AddressRefusal | null {
+  if (refusal === undefined || !refusal.mine || now - refusal.at < TUNNEL_GRACE_MS) return null;
+  const proof = newestProof(evidence, reading);
+  return proof === null || refusal.at > proof ? refusal : null;
+}
+
+// A device whose test is its address: that refusal is the one its certificate
+// task says, any other before a proof points at the address, and everything
+// else reads as another device's (DEC-63).
+export function addressTrustStatus(
+  evidence: Evidence,
+  reading: DeviceReading,
+  refused: AddressRefusal | null,
+  confirmOn: string,
+): StepStatusView {
+  const proof = newestProof(evidence, reading);
+  if (refused !== null)
+    return verdict(
+      "not-working",
+      proof === null
+        ? `${refused.host} did not decrypt`
+        : `${refused.host} did not decrypt at ${clock(refused.at)}, after decrypting at ${clock(proof)}`,
+    );
+  if (proof === null && !reading.mixed && evidence.refused)
+    return awaiting(`the address in step ${reading.tryStep} confirms it`);
+  return deviceTrustStatus(evidence, reading, confirmOn);
+}
+
+// Whether the refusal the try task reads now may be the address's: one past its
+// grace and inside the window of now.
+export const addressRefusedNow = (refusal: AddressRefusal | undefined, now: number): boolean =>
+  refusal !== undefined && now - refusal.at >= TUNNEL_GRACE_MS && now - refusal.at <= RECENT_MS;
+
 // What the shell read of each Simulator running: the name its own window
 // shows, and whether its own store holds the live certificate (W7's Q1).
 export interface SimulatorTrust {
@@ -465,7 +513,8 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
   if (decryptedAt !== null && OUTLASTED[around.proofStays].includes(reading)) {
     const after = (at: number | null) => at !== null && at > decryptedAt;
     const since = after(seen.lastPlainAt) || after(seen.lastTunnelAt) ? "" : ", nothing since";
-    const refusal = reading === "not-decrypting" ? (around.refusedAfterProof ?? REFUSED_AFTER_PROOF) : undefined;
+    const refusal =
+      reading === "not-decrypting" && !around.ownsRefusal ? (around.refusedAfterProof ?? REFUSED_AFTER_PROOF) : undefined;
     return keptProof(decryptedAt, refusal, since);
   }
   const view = TRAFFIC_VERDICT[reading];
@@ -485,13 +534,14 @@ export function mixedTryStatus(
   wire: Traffic,
   now: number,
   decryptedAt: number | null,
-  around: { refusedAfterProof?: string; trustedOn?: string | null; refused?: string } = {},
+  around: { refusedAfterProof?: string; trustedOn?: string | null; refused?: string; ownsRefusal?: boolean } = {},
 ): StepStatusView {
-  const { refusedAfterProof = REFUSED_AFTER_PROOF, trustedOn = null, refused } = around;
+  const { refusedAfterProof = REFUSED_AFTER_PROOF, trustedOn = null, refused, ownsRefusal = false } = around;
   const refusing = trafficReading(wire, now) === "not-decrypting";
-  if (decryptedAt !== null) return keptProof(decryptedAt, refusing ? refusedAfterProof : undefined);
+  if (decryptedAt !== null) return keptProof(decryptedAt, refusing && !ownsRefusal ? refusedAfterProof : undefined);
   if (!refusing) return awaiting("the address below confirms it");
   const view = TRAFFIC_VERDICT["not-decrypting"];
+  if (ownsRefusal) return { glyph: view.glyph, tone: view.tone, short: view.short };
   if (refused !== undefined) return { ...view, remedy: refused };
   return trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(trustedOn) };
 }

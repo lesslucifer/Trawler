@@ -50,6 +50,8 @@ import {
   type Task,
 } from "./setup";
 import {
+  addressRefusedNow,
+  addressTrustStatus,
   byOwnRequest,
   deviceRouteStatus,
   deviceTrustStatus,
@@ -66,6 +68,7 @@ import {
   notDecryptingHere,
   provenDevice,
   proxyStatus,
+  refusedAddress,
   routeByTraffic,
   setUpOn,
   storesTrusted,
@@ -971,13 +974,27 @@ function PlatformSetup({
   const evidence = evidenceOf(traffic, graceEdge);
   const routeEvidence = sharedWire ? evidenceOf(device.wire, graceEdge) : evidence;
   const ownProved = platform === "this" && ownProofAt !== null;
+  const first = offMachine ? 1 : 0;
+  const tryStep = first + 3;
+  const reading: DeviceReading = {
+    device: deviceName(platform, os),
+    provedAt: device.provedAt,
+    mixed,
+    tryStep,
+  };
+  // The iPhone's own services refuse whatever its certificate does, so only its
+  // address refused is that certificate's to say, and it outlasts a proof (W9).
+  const addressTest = setup.addressTest;
+  const addressEdge = useGraceEdge(device.refusal?.at ?? null);
+  const addressRefused =
+    addressTest === undefined ? null : refusedAddress(device.refusal, evidence, reading, addressEdge);
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = probesOwnStore(platform)
     ? (storesTrusted(simulators) ?? device.provedAt !== null)
     : adb
       ? (storesTrusted(emulators) ?? evidence.decrypted)
       : !probesTrust(platform)
-      ? evidence.decrypted
+      ? evidence.decrypted && addressRefused === null
       : trustUnread
         ? ownProved
         : trustProbe === "trusted";
@@ -1015,22 +1032,16 @@ function PlatformSetup({
   // not exist yet — so they keep their numbers and say which step comes first.
   const blocked = offMachine && !allowed;
   const waitsOn = chosen === undefined ? undefined : "after step 1";
-  const first = offMachine ? 1 : 0;
-  const tryStep = first + 3;
 
-  const reading: DeviceReading = {
-    device: deviceName(platform, os),
-    provedAt: device.provedAt,
-    mixed,
-    tryStep,
-  };
   const trustState = probesOwnStore(platform)
     ? simulatorTrustStatus(simulators, busy(setUp, "installing"), reading)
     : probesTrust(platform)
       ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
       : adb
         ? emulatorTrustStatus(emulators, busy(setUp, "installing"), reading, evidence, confirmHttpsOn(platform, os))
-        : deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os));
+        : addressTest
+          ? addressTrustStatus(evidence, reading, addressRefused, confirmHttpsOn(platform, os))
+          : deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
@@ -1048,8 +1059,14 @@ function PlatformSetup({
   // store unread (D7), another device's traffic mixed with this one's (A3), and
   // the emulator, whose own services refuse a certificate it holds (W8's S2).
   const emulatorRefused = adb ? emulatorRefusal(trustedEmulators(emulators)) : undefined;
-  const certificateOwnsRefusal = !trustDone && !trustUnread && !mixed && !adb;
-  const refusedHere = certificateOwnsRefusal && evidence.unanswered;
+  const certificateOwnsRefusal = addressTest
+    ? addressRefused !== null
+    : !trustDone && !trustUnread && !mixed && !adb;
+  const refusedHere = certificateOwnsRefusal && (addressRefused !== null || evidence.unanswered);
+  const refusalNote =
+    addressTest !== undefined && addressRefused !== null
+      ? addressTest.refused
+      : notDecryptingHere(deviceName(platform, os), setup.notDecrypting);
 
   const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
   const routeUnderButton = setUpHere !== undefined || setProxyHere !== undefined;
@@ -1167,7 +1184,7 @@ function PlatformSetup({
         >
           {refusedHere && (
             <div data-testid="traffic-remedy" className="pb-2">
-              <Notice tone="mute">{notDecryptingHere(deviceName(platform, os), setup.notDecrypting)}</Notice>
+              <Notice tone="mute">{refusalNote}</Notice>
             </div>
           )}
         </GuidedTask>
@@ -1192,22 +1209,24 @@ function PlatformSetup({
 
         <GuidedTask n={tryStep} task={setup.try} dim={blocked} waitsOn={waitsOn}>
           <TrafficState
-            read={(now) =>
-              mixed
+            read={(now) => {
+              const addressNow = addressTest !== undefined && addressRefusedNow(device.refusal, now);
+              return mixed
                 ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt, {
-                    refusedAfterProof: setup.refusedAfterProof,
+                    refusedAfterProof: addressNow ? addressTest.maybeRefused : setup.refusedAfterProof,
                     trustedOn:
                       probesOwnStore(platform) && storesTrusted(simulators) ? trustedSimulators(simulators) : null,
-                    refused: emulatorRefused,
+                    refused: emulatorRefused ?? (addressNow ? addressTest.maybeRefused : addressTest?.elsewhereRefused),
+                    ownsRefusal: certificateOwnsRefusal,
                   })
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
                     proofStays: platform === "this" ? "once-quiet" : anotherDevice ? "past-anything" : "never",
                     refusedAfterProof: setup.refusedAfterProof,
-                    refused: emulatorRefused,
-                  })
-            }
+                    refused: emulatorRefused ?? addressTest?.elsewhereRefused,
+                  });
+            }}
           />
           {request.trigger && (
             <div className="pt-2">
@@ -1231,7 +1250,14 @@ function PlatformSetup({
           )}
           {deviceMark !== undefined && (
             <div data-testid="check-address" className="pt-2 font-ui text-chrome text-ink-mute">
-              <StepParts step={checkStep(platform, os, markedUrl(deviceMark))} />
+              <StepParts
+                step={checkStep(
+                  platform,
+                  os,
+                  markedUrl(deviceMark),
+                  addressTest !== undefined && traffic.lastDecryptedAt !== null,
+                )}
+              />
             </div>
           )}
         </GuidedTask>

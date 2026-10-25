@@ -52,6 +52,9 @@ import {
 //   the emulator  another device that needs no allow: its own store and proxy
 //                as adb reads them, else what another device's tasks read; a
 //                refusal is never its certificate task's (W8)
+//   the iPhone   another device whose test is its address: only that address
+//                refused, the iPhone's and newer than any proof, is its
+//                certificate's to say; any other refusal is the try task's (W9)
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
@@ -80,6 +83,9 @@ const HISTORIES = [
   "decrypted-then-refused",
 ] as const;
 type History = (typeof HISTORIES)[number];
+
+// The histories whose newest tunnel no decrypted request answered.
+const UNANSWERED = new Set<History>(["refused", "refused-and-retrying", "refused-earlier", "decrypted-then-refused"]);
 
 const EARLIER = RECENT_MS * 2;
 const PAST_GRACE = TUNNEL_GRACE_MS + 2_000;
@@ -193,6 +199,9 @@ interface State {
   // Another device's marked request came through, decrypted, since its
   // address was allowed (DEC-63).
   marked: boolean;
+  // The history's open tunnel is to the host of the address the iPhone is
+  // offered, rather than one of Apple's own services (W9).
+  address: boolean;
 }
 
 const OWN_AT = Date.now() - 60_000;
@@ -234,6 +243,10 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
     s.platform === "ios-sim" ||
     ((OFF_MACHINE.has(s.platform) || s.platform === "android-sim") && mayCarryOwnTraffic(s.proxy));
   const its = !mixed ? traffic : markedAt === null ? NO_TRAFFIC : { ...NO_TRAFFIC, lastDecryptedAt: markedAt };
+  const refusal =
+    s.address && traffic.openTunnelAt !== null
+      ? { host: "example.com", at: traffic.openTunnelAt, mine: !mixed }
+      : undefined;
   return (
     <Onboarding
       state={onboarding}
@@ -247,7 +260,7 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       simulators={RUNNING[s.trust]}
       emulators={EMULATORS[s.trust]}
       deviceMark={MARK}
-      device={{ provedAt: markedAt, mixed, wire: traffic }}
+      device={{ provedAt: markedAt, mixed, wire: traffic, refusal }}
       reach={s.armed ? ARMED : UNARMED}
       onRecheck={nothing}
       onSaveCa={nothingSaved}
@@ -361,8 +374,11 @@ function model(s: State) {
   // marked request is another device's evidence - the Simulator's, always.
   const sharedWire = s.platform === "ios-sim";
   const emulator = s.platform === "android-sim";
+  const iphone = s.platform === "ios";
   const anotherDevice = needsReach || emulator;
   const mixed = sharedWire || (anotherDevice && (s.proxy === "ours" || s.proxy === "unknown"));
+  // Every open tunnel the sweep draws is newer than every proof beside it.
+  const addressRefused = iphone && s.address && onWire.unanswered && !mixed;
   const reached = mixed ? s.marked : onWire.reached;
   const decrypted = mixed ? s.marked : onWire.decrypted;
   const unanswered = mixed ? false : onWire.unanswered;
@@ -376,7 +392,7 @@ function model(s: State) {
     : emulator
       ? (emulatorStore ?? decrypted)
       : !probesTrust
-      ? decrypted
+      ? decrypted && !addressRefused
       : trustConcluded
         ? s.trust === "trusted"
         : s.own;
@@ -393,7 +409,9 @@ function model(s: State) {
   // the refusal may be anyone's: This machine's store unread (D7), another
   // device's traffic mixed with this machine's (A3), and the emulator, whose
   // own services refuse a certificate it holds (W8).
-  const certificateOwnsRefusal = !trustDone && !(probesTrust && !trustConcluded) && !mixed && !emulator;
+  const certificateOwnsRefusal = iphone
+    ? addressRefused
+    : !trustDone && !(probesTrust && !trustConcluded) && !mixed && !emulator;
   const auto = canAutoSetup(s.os);
   const routeHere = probesRoute && auto;
   const oneAct = probesTrust && auto && !trustDone && !routeDone;
@@ -402,7 +420,7 @@ function model(s: State) {
   const notDecryptingNow = h === "refused" || h === "refused-and-retrying" || h === "decrypted-then-refused";
   return {
     ...{ probesTrust, probesRoute, first, reached, routeReached, decrypted, unanswered, refused, mixed, sharedWire },
-    ...{ emulator, anotherDevice },
+    ...{ emulator, anotherDevice, iphone, addressRefused },
     trustN: first + 1,
     routeN: first + 2,
     tryN: first + 3,
@@ -442,6 +460,17 @@ function expectedTrustState(s: State): RegExp {
     if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
     if (m.mixed) return new RegExp(`^◐\\s*can't check here — the address in step ${m.tryN} confirms it$`);
     return /^◐\s*can't check here — the emulator's first HTTPS request confirms it$/;
+  }
+  if (m.iphone && !m.blocked) {
+    if (m.addressRefused)
+      return m.decrypted
+        ? /^⚠\s*not working — example\.com did not decrypt at \d\d:\d\d, after decrypting at \d\d:\d\d$/
+        : /^⚠\s*not working — example\.com did not decrypt$/;
+    if (s.marked) return /^✓\s*done — your iPhone's request decrypted at \d\d:\d\d$/;
+    if (m.mixed) return /^◐\s*can't check here — the address in step 4 confirms it$/;
+    if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
+    if (m.refused) return /^◐\s*can't check here — the address in step 4 confirms it$/;
+    return /^◐\s*can't check here — your iPhone's first HTTPS request confirms it$/;
   }
   if (m.probesTrust && !m.trustConcluded)
     return s.own
@@ -690,6 +719,21 @@ const RULES: Record<string, Rule> = {
     return wrong.length === 0 ? null : wrong.join("; ");
   },
 
+  // W9: Apple's own services refuse whatever the iPhone's certificate does,
+  // so only its address refused says anything of that certificate.
+  "truth: the iPhone's certificate is not working only on its address refused, and no refusal blames it otherwise (W9)": (
+    o,
+    s,
+  ) => {
+    const m = model(s);
+    if (!m.iphone || m.blocked) return null;
+    const notWorking = /not working/.test(task(o, m.trustN).state);
+    const blamed = o.tasks.some((t) => /does not trust Trawler's certificate yet|Finish the certificate step/.test(t.text));
+    return notWorking === m.addressRefused && !blamed
+      ? null
+      : `task ${m.trustN} reads "${task(o, m.trustN).state}"${blamed ? "; a refusal blames the certificate" : ""}`;
+  },
+
   "one guide open at most, beyond those a sentence points at": (o) => {
     const open = o.tasks
       .filter((t) => !/the steps below/i.test(t.text))
@@ -727,7 +771,11 @@ const STATES: State[] = HOSTS.flatMap((os) =>
             : [false]
           ).flatMap((marked) =>
             PROXY.flatMap((proxy) =>
-              HISTORIES.map((history) => ({ os, platform, armed, trust, proxy, history, own, marked })),
+              HISTORIES.flatMap((history) =>
+                (platform === "ios" && armed && UNANSWERED.has(history) ? [false, true] : [false]).map((address) => ({
+                  ...{ os, platform, armed, trust, proxy, history, own, marked, address },
+                })),
+              ),
             ),
           ),
         ),
@@ -738,7 +786,8 @@ const STATES: State[] = HOSTS.flatMap((os) =>
 
 const name = (s: State) =>
   `${s.os} · ${s.platform}${OFF_MACHINE.has(s.platform) ? (s.armed ? " armed" : " unarmed") : ""}` +
-  ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}${s.own ? " · own request" : ""}${s.marked ? " · marked" : ""}`;
+  ` · trust ${s.trust} · proxy ${s.proxy} · ${s.history}${s.own ? " · own request" : ""}${s.marked ? " · marked" : ""}` +
+  `${s.address ? " · its address refused" : ""}`;
 
 describe("every reading at rest", () => {
   drainingToggles();
@@ -750,11 +799,13 @@ describe("every reading at rest", () => {
     const marked = HOSTS.length * OFF_MACHINE.size * PROXY.length * HISTORIES.length;
     const simulatorMarked = TRUST.length * PROXY.length * HISTORIES.length;
     const emulatorMarked = HOSTS.length * TRUST.length * PROXY.length * HISTORIES.length;
+    const iphoneAddress = HOSTS.length * (TRUST.length + 1) * PROXY.length * UNANSWERED.size;
     expect(STATES).toHaveLength(
       (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length +
         marked +
         simulatorMarked +
-        emulatorMarked,
+        emulatorMarked +
+        iphoneAddress,
     );
     expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });

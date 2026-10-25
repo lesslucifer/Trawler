@@ -135,6 +135,13 @@ describe("another device's own request is one address, opened where it is", () =
     expect(value).toMatchObject({ copy: ADDRESS, label: "the address to open" });
   });
 
+  // W9's S3: once proved, opening it again is the re-check.
+  it("once proved, it is the address to check again", () => {
+    const [said] = checkStep("ios", "macos", ADDRESS, true);
+
+    expect(said).toBe("to check again, open this one on your iPhone");
+  });
+
   it("a phone scans it, and a computer does not (DEC-57)", () => {
     const scans = OFF.filter((id) => checkStep(id, "macos", ADDRESS).some(isScan));
 
@@ -676,9 +683,12 @@ describe("each platform names the one certificate file its installer opens", () 
 // nothing on the screen said installing is not trusting. Each platform names
 // what its users check next when traffic arrives and does not decrypt.
 describe("each platform says what to check when its traffic does not decrypt", () => {
-  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id) && !readsOverAdb(id)))("%s has a check to make", (id) => {
-    expect(setup(id).notDecrypting).toMatch(/\S/);
-  });
+  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id) && !readsOverAdb(id) && id !== "ios"))(
+    "%s has a check to make",
+    (id) => {
+      expect(setup(id).notDecrypting).toMatch(/\S/);
+    },
+  );
 
   // W7's S2: the Simulator's wire is this Mac's too, so a refusal is never its
   // certificate task's to explain.
@@ -686,10 +696,30 @@ describe("each platform says what to check when its traffic does not decrypt", (
     expect(setup("ios-sim").notDecrypting).toBeUndefined();
   });
 
-  it("the iPhone's is the trust switch, and Safari is its test", () => {
-    const check = setup("ios").notDecrypting;
-    expect(check).toContain("Settings → General → About → Certificate Trust Settings → Trawler Proxy CA");
-    expect(check).toMatch(/Apple's own services never decrypt; a website in Safari is the test/);
+  // W9's Q1: Apple's own services refuse whatever its certificate does, so its
+  // address is its test, and only that refusal is its certificate's to say.
+  it("the iPhone has none: its test is the address it is offered", () => {
+    expect(setup("ios").notDecrypting).toBeUndefined();
+    expect(PLATFORM_IDS.filter((id) => setup(id).addressTest !== undefined)).toEqual(["ios"]);
+  });
+
+  // W9's S2: the profile and the switch refuse alike, and the switch leads.
+  it("the iPhone's address refused names the trust switch before the profile", () => {
+    const { refused, maybeRefused } = setup("ios").addressTest!;
+    const SWITCH = "turn on full trust: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA";
+
+    expect(refused).toBe(
+      `example.com did not decrypt on your iPhone — ${SWITCH}. Not listed there? The profile is not installed — the steps below install it.`,
+    );
+    expect(maybeRefused).toBe(
+      `example.com did not decrypt — if you opened it on your iPhone, ${SWITCH}. Not listed there? The profile is not installed — the certificate step installs it.`,
+    );
+  });
+
+  it("the iPhone's other refusals are Apple's own services, and the address is the test", () => {
+    expect(setup("ios").addressTest!.elsewhereRefused).toBe(
+      "something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.",
+    );
   });
 
   // W8's S2: the emulator's own services refuse a certificate it holds, so a
@@ -842,14 +872,18 @@ describe("Linux's certificate task installs into every store, each a step of its
   // S2: another Ubuntu machine's browsers keep stores of their own, so after a
   // proof a refusal is first one of them; the emulator's, its own services
   // (W8's S2); elsewhere the platform says nothing.
-  it("only another Ubuntu machine and the emulator say what a refusal after a proof is", () => {
+  it("only another Ubuntu machine, the emulator and the iPhone say what a refusal after a proof is", () => {
     expect(setup("ubuntu").refusedAfterProof).toBe(
       "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.",
     );
     expect(setup("android-sim").refusedAfterProof).toBe(
       "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
     );
-    for (const id of PLATFORM_IDS.filter((p) => p !== "ubuntu" && p !== "android-sim")) {
+    // W9's S4: an iPhone refuses most through Apple's own services.
+    expect(setup("ios").refusedAfterProof).toBe(
+      "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.",
+    );
+    for (const id of PLATFORM_IDS.filter((p) => p !== "ubuntu" && p !== "android-sim" && p !== "ios")) {
       for (const os of ["macos", "windows", "linux", "other"] as const) {
         expect(setup(id, { os }).refusedAfterProof).toBeUndefined();
       }
