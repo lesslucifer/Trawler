@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W8
+base: 0edfaf2c62e0ec6012508e1d51df76a6a5294129
+design_sha256: e6f9719092b3ee63269a5664be111dee5fce488fee66a5feb02a68dfbfda8907
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: db9bcbfe82206bcd7ab5c983bd69f0804e6da558
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wiring only: it reads the emulator through adb while the emulator is the platform chosen, and hands the emulator its readings, its mark and the clear span; nothing App draws changed - what those readings render is Onboarding's, built from round 17"
+date: 2026-10-25
