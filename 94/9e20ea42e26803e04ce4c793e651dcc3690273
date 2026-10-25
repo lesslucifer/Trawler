@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W8
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "a deferred row: a plain-http request sent to the proxy in origin form is recorded twice and answered 502 - found on the emulator's start-up proxy, left to the core (W8's N3)"
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v5: rule 9 - the Android emulator reads its own store and proxy through adb, else as another device that needs no allow; a refusal is never its certificate task's; the row left to W8 closes and an Android device's share goes to W10; its whole-session traffic and its mark alone are rejected"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-63's row names rule 9 and the two rejected alternatives"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the emulator reads its own store and proxy through adb, else as another device; a refusal never blames its certificate"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the emulator's platform row and a paragraph on it as another device that needs no allow; the probe layer names each running emulator, read only while chosen; the commands paragraph covers the push, the loop over every emulator, the global proxy and Android 15's paths"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 17 opened, ruled and closed: the emulator's mockup in four readings, rules, model, copy, given and the review rows"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic's status line and W8's link to its WU plan"
+  - path: "docs/work/2026-10-24-onboard-revamp-w8-android-emulator-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W8's plan: the sweep's reproductions, S1-S4, C1-C5, N1-N4 and Q1-Q3 with the owner's rulings, the test plan and the commits"
+  - path: "docs/work/2026-10-25-onboard-revamp-w8-android-emulator-status-result.html"
+    tier: T3
+    action: added
+    distills: "W8's result: what shipped against each expected row, the deviations, the evidence and the follow-ups"
