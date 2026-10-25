@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU android-emulator-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W8
+branch: wu/onboard-revamp/android-emulator-status
+base: 0edfaf2c62e0ec6012508e1d51df76a6a5294129
+head: d6b53f4c7d38a4037c220bf0600705d4f0f046c1
+diff_sha256: 49cbdd8e88a5a8ee485a7314b9cc02cb6a74e9f38c7c314c89cc76d0c7c10328
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 95
+    finders: 31
+    verifiers: 0
+    total: 104
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+nits:
+  - finding: "emulators state is kept when the user leaves the Android emulator, so choosing it again starts from the previous reading until the re-read lands (ui/src/App.tsx)"
+    waived: "choosing the emulator triggers a shown read, during which both of its tasks read checking rather than the held verdict; only which guide is open may follow the held reading, and only until that read lands a moment later"
+verdict: PASS
+date: 2026-10-25
