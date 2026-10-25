@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6add7e249f34851f0dfadb25" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6add7e249f34851f0dfadb25" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,16 +10,17 @@
     <div class="inner">
       <h1>E-ONBRVP.W9 — status: iPhone or iPad</h1>
       <p>The iPhone's certificate task blames only the refusal that could be its own test: the address step 4 offers. Apple's own services never count. The task names the trust switch before the profile, and reopens when that address refuses after its proof.</p>
-      <div class="meta">v1 · 2026-10-25 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W9</span> · branch <code>wu/onboard-revamp/iphone-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · builds on DEC-63 rules 1–7, which W4 gave the iPhone</div>
+      <div class="meta">v2 · 2026-10-25 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W9</span> · branch <code>wu/onboard-revamp/iphone-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · builds on DEC-63 rules 1–7, which W4 gave the iPhone</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waits for your ruling.</strong> Four findings (S1–S4) and two questions. No iPhone is attached to this Mac,
-      so nothing below was reproduced on a device. The menu paths were read from the iOS 26.5 runtime installed here. The
-      wire facts come from the core's and the shell's code. Apple's pinning comes from Proxyman's and Fiddler's
-      documentation. Your checks on a real iPhone are listed <a href="#device-checks">below</a>.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("ok, let's implement it", 2026-10-25). S1–S4 taken; Q1 and Q2 both A;
+      N1, N3 and N4 deferred to W18, N2 to the roadmap, N5 carried to W10. No iPhone is attached to this Mac, so nothing
+      below was reproduced on a device: the menu paths were read from the iOS 26.5 runtime installed here, the wire facts
+      from the core's and the shell's code, Apple's pinning from Proxyman's and Fiddler's documentation. Your checks on a
+      real iPhone are listed <a href="#device-checks">below</a>.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -74,7 +75,7 @@
     <h2 id="status">Part 1 — what the status lines say</h2>
     <table data-c="status-findings">
       <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
-      <tr data-item="S1"><td>S1</td>
+      <tr><td>S1</td>
         <td><strong>Apple's own services are blamed on the certificate.</strong> An iPhone whose proxy points here
           connects to Apple's services, which pin their certificates and never decrypt (documented, not reproduced). In a
           clear span ② reads <em>not working</em>, says the iPhone does not trust the certificate, and reopens steps the
@@ -85,8 +86,8 @@
           decrypting — Apple's own services pin their certificates and never decrypt. The address below is the test.</em>
           While mixed, an example.com refusal is nobody's (rule 3), so ② stays ◐. ④'s remedy gives the iPhone's check
           conditionally: <em>example.com did not decrypt — if you opened it on your iPhone, …</em> (S2's
-          words).</td><td>—</td></tr>
-      <tr data-item="S2"><td>S2</td>
+          words).</td><td>take</td></tr>
+      <tr><td>S2</td>
         <td><strong>The profile and the trust switch cannot be told apart, and the remedy leads with the
           profile.</strong> Both refuse the same way: a tunnel, no row, no reason. The download that could tell them
           apart goes to the control API, which records nothing (N2). The remedy says "The steps below install it" first
@@ -95,22 +96,22 @@
         <td>② keeps one reading for both, worded switch first: <em>not working — example.com did not decrypt</em> ·
           remedy <em>turn on full trust: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Not
           listed there? The profile is not installed — the steps below install it.</em> Telling the two apart is N2's
-          core row.</td><td>—</td></tr>
-      <tr data-item="S3"><td>S3</td>
+          core row.</td><td>take</td></tr>
+      <tr><td>S3</td>
         <td><strong>A removed profile reads done</strong>. This is the epic's own carried-in example. ② keeps
           "decrypted at 14:02" for the session (rule 4). Under rule 7, a later refusal is "an app that pins … or another
           device", even when it is Safari refusing the same address that proved it.</td>
         <td>An example.com refusal newer than the iPhone's newest proof, in a clear span, reopens ② (Q2):
           <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em>, with S2's remedy. ④
           keeps its proof's time and names the refusal. Opening the address again is how a user re-checks, and the try
-          task says so. While mixed, ② keeps its proof and ④ gives S1's conditional note.</td><td>—</td></tr>
-      <tr data-item="S4"><td>S4</td>
+          task says so. While mixed, ② keeps its proof and ④ gives S1's conditional note.</td><td>take</td></tr>
+      <tr><td>S4</td>
         <td><strong>The note after a proof leaves out the iPhone's commonest refuser.</strong> The iPhone uses every
           platform's rule-7 note, which leaves out Apple's own services. Those are what an iPhone refuses most, as
           Android's services are for the emulator (W8).</td>
         <td>The iPhone gets its own note: <em>something else is connecting and not decrypting — one request already
           did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another
-          device.</em></td><td>—</td></tr>
+          device.</em></td><td>take</td></tr>
     </table>
 
     <h2 id="commands">Part 2 — steps that cannot be done as written</h2>
@@ -121,18 +122,18 @@
 
     <h2 id="noticed">Noticed outside status — for later WUs</h2>
     <table data-c="noticed">
-      <tr><th>#</th><th>What</th><th>Why not here</th><th>Proposed</th></tr>
-      <tr data-item="N1"><td>N1</td><td>The iPhone's certificate task has no "to remove it later". Every other platform's has one. The way back is <em>Settings → General → VPN &amp; Device Management → Trawler Proxy CA → Remove Profile</em></td><td>a missing guide section is wording, not a status</td><td>defer to W18</td></tr>
-      <tr data-item="N2"><td>N2</td><td>Core: the control API serves <code>/ca.mobileconfig</code> and records nothing. An event for each download (address, time) would let ② read <em>the profile was downloaded at 14:02 — install it, then turn on full trust</em>. That is the separate state the epic's W9 row asks for wherever traffic can tell</td><td>core changes are this epic's non-goal</td><td>a roadmap row</td></tr>
-      <tr data-item="N3"><td>N3</td><td>Every line says "your iPhone", including to a user who chose "iPhone or iPad" and holds an iPad</td><td>wording</td><td>defer to W18</td></tr>
-      <tr data-item="N4"><td>N4</td><td>iOS 26.5 also has the label <em>VPN, DNS, &amp; Device Management</em> for the same row. Not reproduced which devices show it. Likely those with a DNS setting installed</td><td>the step's words, and it needs a device</td><td>defer to W18</td></tr>
-      <tr data-item="N5"><td>N5</td><td>An Android device shares S1: Google's services ignore a user certificate. Q1's model, where the offered address is the test, may carry over to it</td><td>its own status WU</td><td>carry to W10</td></tr>
+      <tr><th>#</th><th>What</th><th>Why not here</th><th>Ruling</th></tr>
+      <tr><td>N1</td><td>The iPhone's certificate task has no "to remove it later". Every other platform's has one. The way back is <em>Settings → General → VPN &amp; Device Management → Trawler Proxy CA → Remove Profile</em></td><td>a missing guide section is wording, not a status</td><td>ruled: defer to W18</td></tr>
+      <tr><td>N2</td><td>Core: the control API serves <code>/ca.mobileconfig</code> and records nothing. An event for each download (address, time) would let ② read <em>the profile was downloaded at 14:02 — install it, then turn on full trust</em>. That is the separate state the epic's W9 row asks for wherever traffic can tell</td><td>core changes are this epic's non-goal</td><td>ruled: a roadmap row</td></tr>
+      <tr><td>N3</td><td>Every line says "your iPhone", including to a user who chose "iPhone or iPad" and holds an iPad</td><td>wording</td><td>ruled: defer to W18</td></tr>
+      <tr><td>N4</td><td>iOS 26.5 also has the label <em>VPN, DNS, &amp; Device Management</em> for the same row. Not reproduced which devices show it. Likely those with a DNS setting installed</td><td>the step's words, and it needs a device</td><td>ruled: defer to W18</td></tr>
+      <tr><td>N5</td><td>An Android device shares S1: Google's services ignore a user certificate. Q1's model, where the offered address is the test, may carry over to it</td><td>its own status WU</td><td>ruled: carry to W10</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
-      <tr><th>#</th><th>Question</th><th>Proposed</th></tr>
-      <tr data-item="Q1"><td>Q1</td>
+      <tr><th>#</th><th>Question</th><th>Proposed · ruling</th></tr>
+      <tr><td>Q1</td>
         <td>Which refusal is the iPhone's certificate's?
           <strong>A</strong> only example.com's: a tunnel to the host of step 4's address with no decrypted example.com
           row after it within its grace, read as This machine's own request is read (D9). Any other refusal goes to ④ as a
@@ -144,8 +145,8 @@
         <td>A. It needs no list and blames no pinned app. The address is already on screen with its scan code, and the
           notice already calls a website in Safari the test. C drops the one sign the trust switch has: on an iPhone, unlike
           the emulator, no store probe takes its place. Cost: a user who tests some other site with the switch off sees ②
-          stay ◐ until they open the address</td></tr>
-      <tr data-item="Q2"><td>Q2</td>
+          stay ◐ until they open the address. Ruled: A</td></tr>
+      <tr><td>Q2</td>
         <td>After a proof, may an example.com refusal reopen ②?
           <strong>A</strong> yes, on the iPhone, in a clear span. This amends rule 7 for this platform: an example.com
           refusal newer than the iPhone's newest proof is the certificate gone ·
@@ -153,7 +154,7 @@
           age</td>
         <td>A. It answers the epic's own example, and opening the address again is the only re-read an iPhone allows.
           Risk: another device opening example.com in the same clear span. That device would itself have to be refusing,
-          and rule 3 already accepts that span as the iPhone's</td></tr>
+          and rule 3 already accepts that span as the iPhone's. Ruled: A</td></tr>
     </table>
 
     <h3 id="device-checks">Your checks on a real iPhone</h3>
