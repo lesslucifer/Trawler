@@ -202,6 +202,16 @@ export interface DeviceReading {
   tryStep: number;
 }
 
+// The newest tunnel to the host of the address another device's try task
+// offers, where no decrypted request to that host answered it, and whether it
+// arrived where unmarked traffic is that device's (rule 3): the iPhone's test,
+// since its own services refuse whatever its certificate does (W9's Q1).
+export interface AddressRefusal {
+  host: string;
+  at: number;
+  mine: boolean;
+}
+
 // Whether this machine's own traffic may be reaching Trawler, as its proxy
 // reads: pointing here, or unread. Where it may, nothing unmarked is another
 // device's (DEC-63).

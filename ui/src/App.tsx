@@ -474,9 +474,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const device = useMemo(
     () =>
       state.phase === "onboarding" && mark !== undefined
-        ? deviceTraffic(everything, { allowedSince: deviceSince, mark, clear: deviceClear }, tunnelTimes)
+        ? deviceTraffic(
+            everything,
+            { allowedSince: deviceSince, mark, clear: deviceClear },
+            tunnelTimes,
+            tunnelAt(REQUEST_HOST),
+          )
         : undefined,
-    [state.phase, everything, mark, deviceSince, deviceClear, tunnelTimes],
+    [state.phase, everything, mark, deviceSince, deviceClear, tunnelTimes, tunnelAt],
   );
 
   // The confirm comes first and the bind only on a yes — the shell asks,
