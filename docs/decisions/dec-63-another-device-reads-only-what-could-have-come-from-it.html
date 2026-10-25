@@ -12,9 +12,10 @@
       <p>The five off-machine platforms read traffic from after their address was allowed, their own marked
         request wherever this machine's traffic may be mixed in, and a proof that carries its time. An allowed
         address this machine has left reads not working. The iOS Simulator, whose wire is this machine's, reads
-        its own store and its own mark (rule 8).</p>
-      <div class="meta">v4 · 2026-10-24 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W4</strong> from its
-        plan's A1–A4, R1–R2 and P1–P2, ruled by the owner · rule 7 added by <strong>E-ONBRVP.W5</strong> from its S1, its Linux wording by <strong>E-ONBRVP.W6</strong> from its S2 · rule 8 by <strong>E-ONBRVP.W7</strong> from its S1–S3 and Q1 · amends
+        its own store and its own mark (rule 8). The Android emulator, on this machine's loopback, reads its own
+        store and proxy through adb, and otherwise as another device that needs no allow (rule 9).</p>
+      <div class="meta">v5 · 2026-10-24 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W4</strong> from its
+        plan's A1–A4, R1–R2 and P1–P2, ruled by the owner · rule 7 added by <strong>E-ONBRVP.W5</strong> from its S1, its Linux wording by <strong>E-ONBRVP.W6</strong> from its S2 · rule 8 by <strong>E-ONBRVP.W7</strong> from its S1–S3 and Q1 · rule 9 by <strong>E-ONBRVP.W8</strong> from its S1–S4, Q1 and Q2 · amends
         <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> · extends
         <a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>'s mark to
         another device · relates to <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a>,
@@ -50,6 +51,11 @@
         certificate done and said "You're set up" before its store was touched, and an app on this Mac that pins
         was said to be the Simulator not trusting Trawler. Rule 3's cut never applies: with this Mac's proxy off,
         the Simulator sends nothing either</td></tr>
+      <tr><td>the emulator's evidence was left to its own WU (E-ONBRVP.W8)</td><td>the emulator was neither
+        off-machine nor the Simulator, so it had no mark and no cut: this Mac's browsing turned its certificate and
+        proxy done and said "You're set up" before it was touched. Its own services ignore a user certificate and
+        refuse a few times a second when idle, so its certificate read <em>not working</em> and sent the user back to
+        steps they had done, and its try task fell to <em>not done</em> 30 s after a proof</td></tr>
     </table>
 
     <div class="callout" data-c="decision">
@@ -120,6 +126,20 @@
         proxy probe, and where that cannot read, anything on the wire (W7's S1–S3, Q1)</td><td>its route is this Mac's
         system proxy, so the span rule 3 trusts is one the Simulator sends nothing in. Its store is a file this Mac
         can read, a better reading than any request: it re-reads, so an erased Simulator reads not done again</td></tr>
+      <tr><td>9</td><td>The Android emulator is another device that needs no allow: its evidence starts with the setup
+        session, and rules 2–5 and 7 are its. Before them, adb reads each emulator running. Its certificate reads its
+        own user store, through <code>su</code> — <em>done — trusted in Pixel 7 API 35</em> · <em>not done — not in
+        Pixel 7 API 35</em> — and where no store is read (none running, no adb, an image without <code>su</code>) rules
+        2–4 settle it. Its route reads its global proxy, else its default network's — <em>done — Pixel 7 API 35 routes
+        through Trawler</em> · <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em> · <em>not done —
+        another proxy is set in Pixel 7 API 35</em> — and where none is read, rules 2–4. A refusal is never its
+        certificate task's: the try task says it is Android's own services, naming the store that trusts it where one
+        does, and after a proof adds them to rule 7's note. Adb is asked only while the emulator is the platform
+        chosen (W8's S1–S4, Q1, Q2)</td><td>it reaches Trawler on this machine's loopback, so this machine's traffic
+        is on its listener whenever this machine's proxy points here — but its proxy is its own, so rule 3's span is
+        one this machine's system proxy sends nothing in. Its own stores re-read, so a removed certificate reads not
+        done again; a proxy set by the start-up flag lives on this machine, where no guest reads it, so a guest that
+        reads no proxy never reads not done. Adb starts a server of its own where none runs</td></tr>
     </table>
 
     <h2 id="scope">What this does not decide</h2>
@@ -131,7 +151,8 @@
         proxy reads off</td><td>accepted: it still counts (the owner's Q1)</td></tr>
       <tr><td>why a device cannot reach the allowed address — another network, this machine's firewall</td><td>the
         wording WU (E-ONBRVP.W13)</td></tr>
-      <tr><td>the emulator's evidence</td><td>its status WU (E-ONBRVP.W8)</td></tr>
+      <tr><td>an Android device's own services refusing a user certificate, and its Settings paths</td><td>its
+        status WU (E-ONBRVP.W10)</td></tr>
       <tr><td>This machine's try task after its proof</td><td>DEC-62: it keeps its proof once quiet; a refusal
         after it still reads <em>not working</em>, worded by its own probe where that reads trusted (W5's Q1)</td></tr>
       <tr><td>a Windows PC's route reaching apps already running, a setup script or "Automatically detect
@@ -150,6 +171,10 @@
         cannot be in it, a user who just opens a website should see the steps settle</td></tr>
       <tr><td>The Simulator's unmarked traffic counted, as DEC-33 did</td><td>this Mac's own browsing proved a
         Simulator nobody had touched (W7's S1)</td></tr>
+      <tr><td>The emulator's whole-session traffic, as DEC-33 read it</td><td>this Mac's browsing proved an
+        emulator nobody had touched, and its own services' refusals blamed a certificate it held (W8's S1, S2)</td></tr>
+      <tr><td>The emulator's marked request only, as the Simulator's</td><td>its proxy is its own, so rule 3's span
+        holds for it, and a user who just opens a website should see the steps settle</td></tr>
       <tr><td>No mark, only the cut at the allow</td><td>this machine's traffic would keep counting as the
         device's</td></tr>
       <tr><td>Tag each flow with the listener it arrived on, in the core</td><td>device attribution is its own

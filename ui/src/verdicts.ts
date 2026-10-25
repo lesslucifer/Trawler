@@ -232,9 +232,9 @@ export interface SimulatorTrust {
   trust: TrustProbe;
 }
 
-// Every running Simulator's store holds the certificate, one does not, or no
-// store answered - none running among them.
-export function simulatorsTrusted(read: readonly SimulatorTrust[]): boolean | null {
+// Every store read holds the certificate, one does not, or none answered -
+// none running among them: the Simulator's, and the emulator's (W8's Q1).
+export function storesTrusted(read: readonly SimulatorTrust[]): boolean | null {
   if (read.some((s) => s.trust === "absent")) return false;
   return read.length > 0 && read.every((s) => s.trust === "trusted") ? true : null;
 }
@@ -254,11 +254,78 @@ export function simulatorTrustStatus(
   const missing = read.filter((s) => s.trust === "absent");
   if (missing.length === 1) return verdict("not-done", `not in ${missing[0].name}`);
   if (missing.length > 1) return verdict("not-done", `not in ${missing.length} running Simulators`);
-  if (simulatorsTrusted(read)) return verdict("done", `trusted in ${trustedSimulators(read)}`);
+  if (storesTrusted(read)) return verdict("done", `trusted in ${trustedSimulators(read)}`);
   if (reading.provedAt !== null)
     return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
   return awaiting(`the address in step ${reading.tryStep} confirms it`);
 }
+
+// What the shell read of each emulator running, through adb (W8's Q1, Q2):
+// the name of its AVD, its own user store, and the proxy it sends through -
+// set on a network it does not send over (`wifi-only`) routes nothing.
+export type EmulatorProxy = "ours" | "wifi-only" | "foreign" | "none" | "unknown";
+
+export interface EmulatorReading extends SimulatorTrust {
+  proxy: EmulatorProxy;
+}
+
+const each = (read: readonly SimulatorTrust[], every: string) => (read.length === 1 ? read[0].name : every);
+
+// The emulator's certificate, read from its own store where adb reads one, and
+// otherwise from what could have come from it (DEC-63 rule 9). Its own services
+// refuse a user certificate by design, so a refusal is never this task's (S2).
+export function emulatorTrustStatus(
+  read: readonly EmulatorReading[],
+  running: Running,
+  reading: DeviceReading,
+  evidence: Evidence,
+  confirmOn: string,
+): StepStatusView {
+  if (running === "checking") return verdict("checking", "the certificate store");
+  const missing = read.filter((e) => e.trust === "absent");
+  if (missing.length === 1) return verdict("not-done", `not in ${missing[0].name}`);
+  if (missing.length > 1) return verdict("not-done", `not in ${missing.length} running emulators`);
+  if (storesTrusted(read)) return verdict("done", `trusted in ${each(read, "every running emulator")}`);
+  if (reading.provedAt !== null)
+    return verdict("done", `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`);
+  if (evidence.decryptedAt !== null) return verdict("done", `a request decrypted at ${clock(evidence.decryptedAt)}`);
+  return awaiting(reading.mixed ? `the address in step ${reading.tryStep} confirms it` : confirmOn);
+}
+
+// Every running emulator sends through Trawler, one sends elsewhere, or none
+// said: a proxy set at its start is this machine's, which no guest reads, so
+// no proxy read is never "not done" (S4).
+export function emulatorsRouted(read: readonly EmulatorReading[]): boolean | null {
+  if (read.some((e) => e.proxy === "wifi-only" || e.proxy === "foreign")) return false;
+  return read.length > 0 && read.every((e) => e.proxy === "ours") ? true : null;
+}
+
+export function emulatorRouteStatus(
+  read: readonly EmulatorReading[],
+  running: Running,
+  reading: DeviceReading,
+  evidence: Evidence,
+  confirmOn: string,
+): StepStatusView {
+  if (running === "checking") return verdict("checking", "the proxy settings");
+  const wifiOnly = read.find((e) => e.proxy === "wifi-only");
+  if (wifiOnly) return verdict("not-done", `${wifiOnly.name} sends over mobile data, not Wi-Fi`);
+  const foreign = read.find((e) => e.proxy === "foreign");
+  if (foreign) return verdict("not-done", `another proxy is set in ${foreign.name}`);
+  if (emulatorsRouted(read)) return verdict("done", `${each(read, "every running emulator")} routes through Trawler`);
+  return deviceRouteStatus(evidence, reading, confirmOn);
+}
+
+// The try task's account of a refusal on the emulator, before any proof: its
+// own services never decrypt, so a refusal says nothing of its certificate.
+export function emulatorRefusal(trustedIn: string | null): string {
+  return trustedIn === null
+    ? "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. A website in Chrome is the test."
+    : `something is connecting and none of it is decrypting — ${trustedIn} trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate. A website in Chrome is the test.`;
+}
+
+export const trustedEmulators = (read: readonly EmulatorReading[]) =>
+  storesTrusted(read) ? each(read, "every running emulator") : null;
 
 // The device the end may name: the one whose marked request is the newest
 // decrypted proof the screen reads.
@@ -359,6 +426,7 @@ export interface TrafficContext {
   trustedOn: string | null;
   proofStays: ProofStays;
   refusedAfterProof?: string;
+  refused?: string;
 }
 
 const NO_CONTEXT: TrafficContext = { ownsRefusal: false, trustedOn: null, proofStays: "never" };
@@ -393,6 +461,7 @@ export function trafficStatus(seen: Traffic, now: number, around: TrafficContext
   const view = TRAFFIC_VERDICT[reading];
   if (reading !== "not-decrypting") return view;
   if (around.ownsRefusal) return { glyph: view.glyph, tone: view.tone, short: view.short };
+  if (around.refused !== undefined) return { ...view, remedy: around.refused };
   return around.trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(around.trustedOn) };
 }
 
@@ -406,13 +475,14 @@ export function mixedTryStatus(
   wire: Traffic,
   now: number,
   decryptedAt: number | null,
-  around: { refusedAfterProof?: string; trustedOn?: string | null } = {},
+  around: { refusedAfterProof?: string; trustedOn?: string | null; refused?: string } = {},
 ): StepStatusView {
-  const { refusedAfterProof = REFUSED_AFTER_PROOF, trustedOn = null } = around;
-  const refused = trafficReading(wire, now) === "not-decrypting";
-  if (decryptedAt !== null) return keptProof(decryptedAt, refused ? refusedAfterProof : undefined);
-  if (!refused) return awaiting("the address below confirms it");
+  const { refusedAfterProof = REFUSED_AFTER_PROOF, trustedOn = null, refused } = around;
+  const refusing = trafficReading(wire, now) === "not-decrypting";
+  if (decryptedAt !== null) return keptProof(decryptedAt, refusing ? refusedAfterProof : undefined);
+  if (!refusing) return awaiting("the address below confirms it");
   const view = TRAFFIC_VERDICT["not-decrypting"];
+  if (refused !== undefined) return { ...view, remedy: refused };
   return trustedOn === null ? view : { ...view, remedy: trustedNotDecrypting(trustedOn) };
 }
 

@@ -6,7 +6,9 @@ import {
   CA_FILES,
   hostOs,
   lostAddress,
+  marksItsOwn,
   needsReach,
+  readsOverAdb,
   sharesHostWire,
   splitProxyAddr,
   type CaFormat,
@@ -17,6 +19,7 @@ import {
   NO_PROXY_READING,
   setUpOn,
   TUNNEL_GRACE_MS,
+  type EmulatorReading,
   type ProxyReading,
   type SimulatorTrust,
   type TrustProbe,
@@ -253,6 +256,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
   const [simulators, setSimulators] = useState<readonly SimulatorTrust[]>([]);
+  const [emulators, setEmulators] = useState<readonly EmulatorReading[]>([]);
+  // adb starts a server of its own where none runs, so the emulator is read
+  // only while it is the platform chosen (W8's Q1).
+  const readsEmulators = useRef(false);
+  readsEmulators.current = readsOverAdb(state.chosen);
   const [probing, setProbing] = useState(false);
   const [probedAt, setProbedAt] = useState<number | null>(null);
   // When this machine's proxy read off or another, so nothing of its own could
@@ -284,18 +292,27 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           (read): readonly SimulatorTrust[] => read ?? [],
           (): readonly SimulatorTrust[] => [],
         );
+      const adb = readsEmulators.current
+        ? pem
+            .then((live) => invoke<EmulatorReading[] | undefined>("emulator_readings", { pem: live, port }))
+            .then(
+              (read): readonly EmulatorReading[] => read ?? [],
+              (): readonly EmulatorReading[] => [],
+            )
+        : Promise.resolve<readonly EmulatorReading[]>([]);
       // A shell that answers with nothing has read nothing, which is what
       // "unknown" means — and the screen may not crash on the difference.
       const route = invoke<ProxyReading | undefined>("proxy_in_use", { host, port }).then(
         (reading) => reading ?? NO_PROXY_READING,
         () => NO_PROXY_READING,
       );
-      void Promise.all([trust, route, running]).then(([t, r, sims]) => {
+      void Promise.all([trust, route, running, adb]).then(([t, r, sims, emus]) => {
         if (!landing()) return;
         const landed = Date.now();
         setTrustProbe(t);
         setProxyReading(r);
         setSimulators((held) => (JSON.stringify(held) === JSON.stringify(sims) ? held : sims));
+        setEmulators((held) => (JSON.stringify(held) === JSON.stringify(emus) ? held : emus));
         setClearReadings((was) =>
           nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }, READINGS_APART_MAX_MS),
         );
@@ -354,6 +371,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   useEffect(() => {
     if (inSetup) readMachine("shown");
   }, [inSetup, readMachine]);
+
+  const choseEmulator = inSetup && readsOverAdb(state.chosen);
+  useEffect(() => {
+    if (choseEmulator) readMachine("shown");
+  }, [choseEmulator, readMachine]);
 
   useEffect(() => {
     if (!inSetup) return;
@@ -443,11 +465,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // address it uses was allowed (A2), and is what could have come from it (DEC-63).
   // The Simulator's wire is this machine's own, so no reading of this machine's
   // proxy clears it: from the session's start, only its mark is its own (W7).
-  const offMachine = needsReach(state.chosen);
+  // The emulator needs no allow - it reaches this machine's loopback - so its
+  // evidence starts with the session (W8).
   const sharedWire = sharesHostWire(state.chosen);
-  const deviceSince = sharedWire ? state.since : deviceEvidenceSince(state.since, armedSince);
+  const deviceSince = needsReach(state.chosen) ? deviceEvidenceSince(state.since, armedSince) : state.since;
   const deviceClear = sharedWire ? NO_CLEAR_READINGS : clearReadings;
-  const mark = offMachine || sharedWire ? deviceMark(state.since, state.chosen) : undefined;
+  const mark = marksItsOwn(state.chosen) ? deviceMark(state.since, state.chosen) : undefined;
   const device = useMemo(
     () =>
       state.phase === "onboarding" && mark !== undefined
@@ -754,6 +777,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           traffic={traffic}
           ownProofAt={ownProofAt}
           simulators={simulators}
+          emulators={emulators}
           savedCa={savedCa}
           deviceMark={mark}
           device={device}

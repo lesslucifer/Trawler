@@ -140,6 +140,21 @@
     .p-sim.unread.marked .a-sm-unread-marked{display:block}
     .p-sim [data-zone="done"]{display:none}
     .p-sim.marked [data-zone="done"]{display:block}
+    /* round 17 — the emulator reads its own store and proxy through adb, else
+       what could have come from it: not in its store with its proxy on a
+       network it does not send over, unread beside this Mac's traffic, trusted
+       with its own services refusing, and its marked request decrypted. The
+       end shows on its marked request only. */
+    .a-pf-emu,.a-em-unread,.a-em-tunnel,.a-em-marked{display:none}
+    .p-emu .a-pf-machine{display:none}
+    .p-emu .a-pf-emu{display:block}
+    .p-emu.unread .a-em-absent,.p-emu.tunnel .a-em-absent,.p-emu.marked .a-em-absent{display:none}
+    .p-emu.unread .a-em-unread{display:block}
+    .p-emu.tunnel .a-em-tunnel{display:block}
+    .p-emu.marked .a-em-marked{display:block}
+    .p-emu.unread .a-em-tunnel,.p-emu.marked .a-em-unread,.p-emu.marked .a-em-tunnel{display:none}
+    .p-emu [data-zone="done"]{display:none}
+    .p-emu.marked [data-zone="done"]{display:block}
     .p-off.mixed [data-zone="done"]{display:none}
     .p-off.marked [data-zone="done"]{display:block}
   </style>
@@ -149,8 +164,8 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W7</strong> · branch <code>wu/onboard-revamp/ios-simulator-status</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W8</strong> · branch <code>wu/onboard-revamp/android-emulator-status</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
@@ -176,6 +191,7 @@
             <div class="a-pf-off" id="m-picker-off"></div>
             <div class="a-pf-none" id="m-picker-none"></div>
             <div class="a-pf-ubuntu" id="m-picker-ubuntu"></div>
+            <div class="a-pf-emu" id="m-picker-emu"></div>
           </div>
 
           <div class="a-zone" data-zone="steps">
@@ -209,6 +225,12 @@
               </div>
               <div class="a-rch-lost" id="m-steps-off-lost"></div>
             </div>
+            <div class="a-pf-emu">
+              <div class="a-em-absent" id="m-steps-emu"></div>
+              <div class="a-em-unread" id="m-steps-emu-unread"></div>
+              <div class="a-em-tunnel" id="m-steps-emu-tunnel"></div>
+              <div class="a-em-marked" id="m-steps-emu-marked"></div>
+            </div>
             <div class="a-pf-ubuntu">
               <div class="a-ub-wait" id="m-steps-ubuntu-waiting"></div>
               <div class="a-ub-tunnel" id="m-steps-ubuntu-tunnel"></div>
@@ -236,6 +258,8 @@
               data-label-off="▶ platform: iPhone or iPad" data-label-on="◀ back to this machine">▶ platform: iPhone or iPad</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="p-ubuntu"
               data-label-off="▶ platform: Another Ubuntu machine" data-label-on="◀ back to this machine">▶ platform: Another Ubuntu machine</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-emu"
+              data-label-off="▶ platform: Android emulator" data-label-on="◀ back to this machine">▶ platform: Android emulator</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="reached"
               data-label-off="▶ reach armed" data-label-on="◀ reach not armed">▶ reach armed</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="r-trust"
@@ -374,6 +398,7 @@
 
         mount("m-picker-machine", picker("this"));
         mount("m-picker-sim", picker("ios-sim"));
+        mount("m-picker-emu", picker("android-sim"));
         mount("m-picker-off", picker("ios"));
         /* Round 9: the device this setup is for is the one question nobody has
            answered yet, so it is asked rather than guessed. */
@@ -889,6 +914,117 @@
         mount("m-steps-sim-unread", simTasks("unread"));
         mount("m-steps-sim-unread-marked", simTasks("unread-marked"));
 
+        /* ---- the emulator: its own store and proxy, through adb ---------- */
+        /* Round 17 (S1-S4 · C1-C5 · Q1-Q3). The emulator reaches Trawler on
+           this Mac's loopback, so it is another device that needs no allow:
+           its own store and proxy where adb reads them (Q1, Q2), else its
+           marked request, else what arrived while this Mac's proxy did not
+           point here. Its own services ignore a user certificate, so a refusal
+           is never task 1's; the try task says what it is. Each command runs
+           once per emulator running (C2), on the file where the save put it
+           (C1). The route is the global proxy, which covers its mobile network
+           too (C4 · Q3); a proxy set at its start is this Mac's, which no guest
+           reads, so no proxy read is never "not done". */
+        const EMU_EACH = (args) => `for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d ${args}; done`;
+        const EMU_CREDENTIALS = "Settings → Security & privacy → More security & privacy → Encryption & credentials";
+        const EMU_PUSH = EMU_EACH("push ~/Downloads/trawler-ca.cer /sdcard/Download/");
+        const EMU_ROUTE = EMU_EACH("shell settings put global http_proxy 10.0.2.2:7420");
+        const EMU_ROUTE_OFF = EMU_EACH("shell settings put global http_proxy :0");
+        const EMU_TRUST_UNDO = [`${EMU_CREDENTIALS} → Trusted credentials → User → Trawler Proxy CA → Remove.`];
+        const EMU_ROUTE_UNDO = [
+          <>In a terminal, run:{command(EMU_ROUTE_OFF, "the proxy-off command")}</>,
+          "Set in Settings? AndroidWifi ⚙ → ✎ → Advanced options → Proxy → None, and turn Mobile data back on.",
+        ];
+        const emuSave = <>Save Trawler's certificate as trawler-ca.cer <Button frame="bare" tone="mute" onClick={noop}>save…</Button></>;
+        const EMU_LINES = {
+          absent: {
+            trust: sv("○", "muted", "not done — not in Pixel 7 API 35"),
+            route: sv("○", "muted", "not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi"),
+            try: WAITING,
+          },
+          unread: {
+            trust: sv("◐", "muted", "can't check here — the address in step 3 confirms it"),
+            route: sv("◐", "muted", "can't check here — the same request confirms it"),
+            try: sv("◐", "muted", "can't check here — the address below confirms it"),
+          },
+          tunnel: {
+            trust: sv("✓", "ok", "done — trusted in Pixel 7 API 35"),
+            route: sv("✓", "ok", "done — Pixel 7 API 35 routes through Trawler"),
+            try: ARRIVING,
+          },
+          marked: {
+            trust: sv("✓", "ok", "done — the emulator's request decrypted at 14:02"),
+            route: sv("✓", "ok", "done — the emulator's request came through at 14:02"),
+            try: sv("✓", "ok", "done — decrypted at 14:02"),
+          },
+        };
+        const EMU_NOTES = {
+          tunnel:
+            "something is connecting and none of it is decrypting — Pixel 7 API 35 trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate. A website in Chrome is the test.",
+          marked:
+            "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
+        };
+        const emuTasks = (variant) => {
+          const lines = EMU_LINES[variant];
+          const trustDone = lines.trust.tone === "ok";
+          const routeDone = lines.route.tone === "ok";
+          return (
+          <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="In the emulator, install the certificate" status={lines.trust}>
+              {trustDone
+                ? <WayBack title="to remove it later" steps={EMU_TRUST_UNDO} />
+                : <Steps n={3} open>
+                    <Guide
+                      steps={[
+                        emuSave,
+                        <>With the emulator running, in a terminal, run:{command(EMU_PUSH, "the push command")}</>,
+                        `Install it: ${EMU_CREDENTIALS} → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → trawler-ca.cer.`,
+                      ]}
+                      notes={["Apps targeting Android 7+ only trust user CAs when their network security config opts in."]}
+                      undoTitle="to remove it later"
+                      undo={EMU_TRUST_UNDO}
+                    />
+                  </Steps>}
+            </TaskStep>
+            <TaskStep n={2} title="In the emulator, set the proxy" status={lines.route}>
+              {routeDone
+                ? <WayBack title="to turn it off later" steps={EMU_ROUTE_UNDO} />
+                : <Steps n={1} open={trustDone}>
+                    <Guide
+                      steps={[<>In a terminal, run:{command(EMU_ROUTE, "the proxy command")}</>]}
+                      notes={["10.0.2.2 is the alias every emulator resolves to the machine it runs on."]}
+                      alternatives={[
+                        <>Or in the emulator: Settings → Network &amp; internet → Internet → turn Mobile data off, then AndroidWifi ⚙ → ✎ → Advanced options → Proxy → Manual, server {copyable("10.0.2.2", "the emulator's host", "proxy host")} port {copyable("7420", "the proxy port", "proxy port")}</>,
+                        <>Or start it with the proxy already set — the emulator reads this address on this machine:{command("emulator -avd <name> -http-proxy http://127.0.0.1:7420", "the emulator command")}</>,
+                      ]}
+                      undoTitle="to turn it off later"
+                      undo={EMU_ROUTE_UNDO}
+                    />
+                  </Steps>}
+            </TaskStep>
+            <TaskStep n={3} title="Open any website in the emulator"
+                      why="the first decrypted request is what proves setup works">
+              <StatusLine status={lines.try} />
+              {EMU_NOTES[variant] && (
+                <div className="pt-2"><Notice tone="mute">{EMU_NOTES[variant]}</Notice></div>
+              )}
+              <div className="pt-2 font-ui text-chrome text-ink-mute">
+                <span className="flex flex-wrap items-center gap-chrome-gap">
+                  <span>or open this one in the emulator</span>
+                  {copyable(CHECK_URL, "the address to open", "check url")}
+                </span>
+              </div>
+            </TaskStep>
+            </div>
+          </Section>
+          );
+        };
+        mount("m-steps-emu", emuTasks("absent"));
+        mount("m-steps-emu-unread", emuTasks("unread"));
+        mount("m-steps-emu-tunnel", emuTasks("tunnel"));
+        mount("m-steps-emu-marked", emuTasks("marked"));
+
         /* ---- another Ubuntu machine: three stores, a step each ----------- */
         /* Round 15 (C1 · Q3): Firefox keeps its own store, Chrome reads the NSS
            database, and curl and the system's tools read the system bundle -
@@ -996,6 +1132,8 @@
           </div>
           {/* Round 16 (S3): on its marked request only, which names it. */}
           <div className="a-pf-sim"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic from the Simulator</Notice></div>
+          {/* Round 17 (S3): on its marked request only, which names it. */}
+          <div className="a-pf-emu"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic from the emulator</Notice></div>
           <div className="a-pf-off">
             <div className="a-mx-plain"><Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic</Notice></div>
             {/* Round 13 (A4): its marked request is the newest proof, so the end
@@ -1099,6 +1237,9 @@
         <tr><td>A platform whose route is this Mac's proxy reads nothing unmarked: the Simulator's certificate task reads the store of each Simulator running, and where none is read, its marked request; its try task and the end read its marked request only; a refusal is never its certificate task's</td><td>round 16 · S1 · S2 · S3 · Q1</td></tr>
         <tr><td>A command reads the file where the save put it — Downloads, where the save dialog opens, until a save returns another path, which it prints quoted — and reaches every target it is for: the Simulator's, every Simulator running</td><td>round 16 · C1 · C2 · Q2</td></tr>
         <tr><td>A way back removes what the steps added. The Simulator's is the erase: <code>keychain reset</code> exits 0 and leaves the root trusted</td><td>round 16 · C3 · Q3</td></tr>
+        <tr><td>The emulator is another device that needs no allow: its own store and proxy, read through adb in each emulator running, else its marked request, else what arrived while this Mac's proxy did not point here. A refusal is never its certificate task's — its own services ignore a user certificate — and no proxy read is never "not done", since a proxy set at its start is this Mac's</td><td>round 17 · S1 · S2 · S4 · Q1 · Q2</td></tr>
+        <tr><td>A route holds on every network the device sends over: the emulator's is the global proxy, since a Wi-Fi proxy routes nothing where its mobile network is the default; the Settings route turns mobile data off first, and a flag the emulator reads on this Mac names this Mac's loopback</td><td>round 17 · C3 · C4 · Q3</td></tr>
+        <tr><td>A command reaches every device it is for — every emulator running, never the one adb would refuse to pick — and a path names the menus the device's own version ships</td><td>round 17 · C1 · C2 · C5</td></tr>
         <tr><td>A command runs as written in the shell its sentence names, and reads the file where the step before it left it: Windows' sentences name PowerShell; another computer's trust command reads the download from Downloads</td><td>round 14 · C1 · C2 · Q3</td></tr>
         <tr><td>An allowed address this Mac no longer holds reads not working, offers the one it holds now, and dims the tasks that would print it. Reach is read again with this machine: on focus and every 3 s</td><td>round 13 · R1 · R2</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
@@ -1117,12 +1258,12 @@
 
       <h3 id="model">Where each task's reading comes from</h3>
       <table data-c="model-table">
-        <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Another device — what could have come from it (round 13)</th><th>The emulator — this setup's traffic · the Simulator — its own store, else its marked request (round 16)</th></tr>
-        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em></td><td>the emulator: a request decrypted → <em>done — a request decrypted</em> · a tunnel past its grace and nothing decrypted → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — …'s first HTTPS request confirms it</em>. The Simulator: each one running (its <code>device.plist</code>), its own <code>TrustStore.sqlite3</code> holding the live certificate → <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em>; one not → <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em>; none running, or no store read → its marked request: <em>done — the Simulator's request decrypted at 14:02</em>, else <em>can't check here — the address in step 3 confirms it</em>. Never unmarked traffic, never a refusal</td></tr>
-        <tr><td>proxy</td><td>this machine and the Simulator: the proxy HTTPS goes through now — <code>scutil --proxy</code> on macOS, the <code>https=</code> entry or the one address on Windows, GNOME's HTTPS proxy on Linux. <code>localhost</code> on Trawler's port is Trawler, no other loopback address is</td><td>the same request → <em>done — step 3's request came through at 14:02</em> · else <em>can't check here — the same request confirms it</em></td><td>the same request → <em>done — your iPhone's request came through at 14:02</em> · where this Mac's traffic may be arriving too → <em>can't check here — the same request confirms it</em> · else any request since its address was allowed → <em>done — a request reached Trawler at 14:02</em> · none → <em>can't check here — your iPhone's first request confirms it</em></td><td>any request reached Trawler → <em>done — requests reached Trawler</em> · none → <em>can't check here — …'s first request confirms it</em>. The Simulator's too, where this Mac's proxy cannot be read</td></tr>
-        <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named. On another device (round 14) the proof also stays past plain http and past a refusal, which is a note under it. On the Simulator (round 16), only its marked request, always — its route is this Mac's proxy, so the wire is always mixed: <em>can't check here — the address below confirms it</em>, then <em>done — decrypted at 14:02</em>, kept as another device's is; a refusal names no device, or, where task 1 reads trusted, the Simulator it read</td></tr>
+        <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Another device — what could have come from it (round 13)</th><th>The emulator — its own store and proxy, else another device's readings (round 17) · the Simulator — its own store, else its marked request (round 16)</th></tr>
+        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em></td><td>the emulator: each one running (<code>adb devices</code>), its own user store holding the live certificate, read through <code>su</code> → <em>done — trusted in Pixel 7 API 35</em> · <em>done — trusted in every running emulator</em>; one not → <em>not done — not in Pixel 7 API 35</em> · <em>not done — not in 2 running emulators</em>; no store read (none running, no adb, an image without <code>su</code>) → as another device, from setup's start: its marked request <em>done — the emulator's request decrypted at 14:02</em> · a request decrypted between two readings of this Mac's proxy as off or another <em>done — a request decrypted at 14:02</em> · this Mac's proxy here or unread <em>can't check here — the address in step 3 confirms it</em> · else <em>can't check here — the emulator's first HTTPS request confirms it</em>. Never a refusal. The Simulator: each one running (its <code>device.plist</code>), its own <code>TrustStore.sqlite3</code> holding the live certificate → <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em>; one not → <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em>; none running, or no store read → its marked request: <em>done — the Simulator's request decrypted at 14:02</em>, else <em>can't check here — the address in step 3 confirms it</em>. Never unmarked traffic, never a refusal</td></tr>
+        <tr><td>proxy</td><td>this machine and the Simulator: the proxy HTTPS goes through now — <code>scutil --proxy</code> on macOS, the <code>https=</code> entry or the one address on Windows, GNOME's HTTPS proxy on Linux. <code>localhost</code> on Trawler's port is Trawler, no other loopback address is</td><td>the same request → <em>done — step 3's request came through at 14:02</em> · else <em>can't check here — the same request confirms it</em></td><td>the same request → <em>done — your iPhone's request came through at 14:02</em> · where this Mac's traffic may be arriving too → <em>can't check here — the same request confirms it</em> · else any request since its address was allowed → <em>done — a request reached Trawler at 14:02</em> · none → <em>can't check here — your iPhone's first request confirms it</em></td><td>the emulator: each one running, its global proxy, else its default network's → <em>done — Pixel 7 API 35 routes through Trawler</em> (10.0.2.2 on Trawler's port) · set only on a network it does not send over → <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em> · another → <em>not done — another proxy is set in Pixel 7 API 35</em> · none or unread → as another device: its marked request, a request in a clear span, <em>can't check here — the same request confirms it</em>, or <em>…'s first request confirms it</em>. The Simulator: any request reached Trawler → <em>done — requests reached Trawler</em>, where this Mac's proxy cannot be read</td></tr>
+        <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named. On another device (round 14) the proof also stays past plain http and past a refusal, which is a note under it. On the Simulator (round 16), only its marked request, always — its route is this Mac's proxy, so the wire is always mixed: <em>can't check here — the address below confirms it</em>, then <em>done — decrypted at 14:02</em>, kept as another device's is; a refusal names no device, or, where task 1 reads trusted, the Simulator it read. The emulator (round 17) is another device: its proof stays past what does not decrypt, and a refusal names Android's own services, with its store's name where task 1 reads trusted</td></tr>
       </table>
-      <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. On the emulator the screen infers the device from the platform chosen, so a request from this Mac would also count — the blocked-on attribution row stays open. The Simulator reads its own store and its marked request, nothing unmarked (round 16). This machine's own request carries a mark (<code>?trawler-check=…</code>, visible in the list) and its tasks read nothing else (round 12). Another device's carries one too, opened there, and its tasks read unmarked traffic only from after its address was allowed and while this Mac's proxy does not point here (round 13). The matrix test renders every host × platform × reach × probe pair × traffic history × own request × marked request and judges each against this table.</p>
+      <p class="kd">Evidence is what this setup's traffic has shown, not what it shows this second, so a task does not flip back when the clock's window closes. One decrypted request outranks any refusal. The emulator reads its own store and proxy through adb, and otherwise what another device reads, from setup's start — its loopback is this Mac's, so this Mac's traffic counts only where its proxy read off or another (round 17). The Simulator reads its own store and its marked request, nothing unmarked (round 16). This machine's own request carries a mark (<code>?trawler-check=…</code>, visible in the list) and its tasks read nothing else (round 12). Another device's carries one too, opened there, and its tasks read unmarked traffic only from after its address was allowed and while this Mac's proxy does not point here (round 13). The matrix test renders every host × platform × reach × probe pair × traffic history × own request × marked request and judges each against this table.</p>
 
       <h3 id="copy">The sentences</h3>
       <table data-c="copy-table">
@@ -1146,13 +1287,14 @@
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.</em></td></tr>
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
-        <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>your iPhone</em>, …), with the steps open. Never on the Simulator, whose wire is this Mac's too (round 16)</td></tr>
+        <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>your iPhone</em>, …), with the steps open. Never on the Simulator, whose wire is this Mac's too (round 16), nor on the emulator, whose own services refuse a certificate it holds (round 17)</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted · another device after its proof (round 14), under <em>done — decrypted at 14:02</em>: <em>something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.</em></td></tr>
         <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's trust command reads <span class="font-mono">~/Downloads/trawler-ca.pem</span>, another Ubuntu machine's <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> (round 15) · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
         <tr><td>Linux's certificate steps (round 15)</td><td><em>In Firefox: Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".</em> · <em>For Chrome, run:</em> <span class="font-mono">sudo apt install -y libnss3-tools &amp;&amp; { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb &amp;&amp; certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } &amp;&amp; certutil -d "sql:$([ -d ~/.pki/nssdb ] &amp;&amp; echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i …</span> · <em>For curl and the system's tools, run:</em> the system command · the same three under <em>to remove it later</em>, Firefox's ending <em>→ Trawler Proxy CA → Delete or Distrust.</em> · the refusal's advice: <em>Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.</em> · another Ubuntu machine after its proof: <em>something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.</em></td></tr>
         <tr><td>the Simulator (round 16)</td><td>task 1: <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em> · <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em> · none read: <em>can't check here — the address in step 3 confirms it</em>, then <em>done — the Simulator's request decrypted at 14:02</em> · its steps: <em>With the Simulator running, run:</em> <span class="font-mono">for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done</span> · <em>Restart the Simulator so apps pick the new root up.</em> · <em>to remove it later</em>: <em>Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included.</em> · task 3: <em>or open this one in the Simulator</em> with its marked address · a refusal, task 1 trusted: <em>something is connecting and none of it is decrypting — iPhone 17 Pro trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em></td></tr>
-        <tr><td>the saved file in a command (round 16)</td><td>before a save, This machine's and the Simulator's commands read Downloads, where the save dialog opens: <span class="font-mono">~/Downloads/trawler-ca.pem</span> on macOS · <span class="font-mono">"$HOME\Downloads\trawler-ca.pem"</span> on Windows · <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> on Linux; after it, the path the save returned, quoted for that shell</td></tr>
-        <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · the Simulator, on its marked request only (round 16): <em>You're set up — Trawler is capturing traffic from the Simulator</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
+        <tr><td>the saved file in a command (round 16)</td><td>before a save, This machine's, the Simulator's and the emulator's (round 17, <span class="font-mono">trawler-ca.cer</span>) commands read Downloads, where the save dialog opens: <span class="font-mono">~/Downloads/trawler-ca.pem</span> on macOS · <span class="font-mono">"$HOME\Downloads\trawler-ca.pem"</span> on Windows · <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> on Linux; after it, the path the save returned, quoted for that shell</td></tr>
+        <tr><td>the emulator (round 17)</td><td>task 1: <em>done — trusted in Pixel 7 API 35</em> · <em>not done — not in Pixel 7 API 35</em> · <em>not done — not in 2 running emulators</em> · unread: <em>the emulator's request decrypted at 14:02</em> · its steps: the save, then <em>With the emulator running, in a terminal, run:</em> <span class="font-mono">for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d push ~/Downloads/trawler-ca.cer /sdcard/Download/; done</span> (PowerShell on Windows: <span class="font-mono">adb devices | Select-String '^emulator-\d+' | ForEach-Object { adb -s $_.Matches[0].Value … }</span>) · <em>Install it: Settings → Security &amp; privacy → More security &amp; privacy → Encryption &amp; credentials → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → trawler-ca.cer.</em> · <em>to remove it later</em>: <em>… → Encryption &amp; credentials → Trusted credentials → User → Trawler Proxy CA → Remove.</em> · task 2: <em>In the emulator, set the proxy</em>, <em>done — Pixel 7 API 35 routes through Trawler</em> · <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em> · its step: <span class="font-mono">… shell settings put global http_proxy 10.0.2.2:7420 …</span>, off with <span class="font-mono">… http_proxy :0 …</span> · other ways: Settings with <em>turn Mobile data off</em> first, and <span class="font-mono">emulator -avd &lt;name&gt; -http-proxy http://127.0.0.1:7420</span> · task 3: <em>or open this one in the emulator</em> · a refusal: <em>something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. A website in Chrome is the test.</em>, or, task 1 trusted, <em>— Pixel 7 API 35 trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate. A website in Chrome is the test.</em> · after its proof: <em>something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.</em></td></tr>
+        <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · the Simulator, on its marked request only (round 16): <em>You're set up — Trawler is capturing traffic from the Simulator</em> · the emulator, likewise (round 17): <em>You're set up — Trawler is capturing traffic from the emulator</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
         <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
         <tr><td>the empty list</td><td><em>Nothing captured yet</em> · <em>Requests from your apps and devices show up here once they go through Trawler. Setup walks you through it, step by step.</em> · <em>set up capture</em>, centred as the whole region</td></tr>
@@ -1174,8 +1316,9 @@
       <tr><td><code>proxy</code> — ours · foreign · none · unknown, and the address: the proxy HTTPS goes through now</td><td>used</td><td>task 2's reading, on this machine and the Simulator; the address names a proxy about to be replaced; on another device, whether this Mac's own traffic may be arriving too (round 13)</td></tr>
       <tr><td><code>probing</code> · <code>probedAt</code> · <code>onRecheck</code></td><td>used</td><td>probe — one dated re-read of both. <code>probing</code> is true only for a read the user asked for; a quiet one moves <code>probedAt</code> alone</td></tr>
       <tr><td><code>simulators</code> — each Simulator running: its name, and whether its own store holds the live certificate — trusted · absent · unknown</td><td>used</td><td>task 1 on the Simulator; none running reads unread (round 16, Q1)</td></tr>
+      <tr><td><code>emulators</code> — each emulator running: the name of its AVD, whether its own user store holds the live certificate — trusted · absent · unknown — and its proxy — ours · wifi-only · foreign · none · unknown. Read only while the emulator is the platform chosen</td><td>used</td><td>tasks 1 and 2 on the emulator, and the try task's account of a refusal; none running reads unread (round 17, Q1 · Q2)</td></tr>
       <tr><td><code>ownProofAt</code> — when This machine's marked request last came through decrypted, this session</td><td>used</td><td>tasks 1 and 2 on This machine where no probe answers (round 12, DEC-62)</td></tr>
-      <tr><td><code>deviceMark</code> · <code>device</code> — another device's mark, and beside its traffic: when a row carrying the mark last came through decrypted since its address was allowed, whether this machine's own traffic may be arriving now, and the wire since the allow</td><td>used</td><td>its try task's address, and its tasks 2 and 3 (round 13, DEC-63); the Simulator's mark too, read since setup opened, for its tasks 1 and 3 and its end (round 16)</td></tr>
+      <tr><td><code>deviceMark</code> · <code>device</code> — another device's mark, and beside its traffic: when a row carrying the mark last came through decrypted since its address was allowed, whether this machine's own traffic may be arriving now, and the wire since the allow</td><td>used</td><td>its try task's address, and its tasks 2 and 3 (round 13, DEC-63); the Simulator's mark too, read since setup opened, for its tasks 1 and 3 and its end (round 16); the emulator's, read since setup opened beside this Mac's proxy readings, for all three tasks and its end (round 17)</td></tr>
       <tr><td><code>traffic</code> — decrypted · tunnel · plain, this session's only: captured, since setup opened — on another device, since its address was allowed — unfiltered</td><td>used</td><td>try — the only proof; a tunnel cannot be tied to a platform (blocked-on)</td></tr>
       <tr><td><code>reach.armed</code> · <code>interfaces</code> · <code>proxy</code> · <code>ca_urls</code></td><td>used</td><td>task 1 off-machine, the values a device types in, and the phone's code; an armed address <code>interfaces</code> no longer lists is lost (round 13)</td></tr>
       <tr><td><code>reach.api</code></td><td>deliberately unused</td><td>no step points at it</td></tr>
@@ -1274,6 +1417,8 @@
         <tr><td>Round 15, after the close — the code review, round 1: a Chrome installed and never opened has made neither NSS database, and certutil adds to none it was not asked to create, so Chrome's step failed on a fresh Ubuntu</td><td>copy — Chrome's command creates the database a Chrome since M146 reads where none exists, before adding to it. Nothing drawn moved. W6's <code>design/v1</code> note cites the blob this amendment leaves</td><td><code>UC-ONBOARD</code> — a command finds a database wherever this version put it, and makes it where none exists</td></tr>
         <tr><td>Round 16 — the owner's rulings on E-ONBRVP.W7's plan, 2026-10-24: "ok, go ahead with all proposed" — S1–S3 and C1–C3 taken, Q1–Q3 A: a probe of each running Simulator's own store, the saved path wherever a save step comes before a command, removal by erase</td><td>mockup — the Simulator: not in its store (also while this Mac's traffic decrypts: no end), trusted with this Mac refusing, its marked request decrypted with the end naming it, and none running, before and after its marked request; This machine's trust command reads Downloads · rules — nothing unmarked on a platform whose route is this Mac's proxy, the file where the save put it, a way back that removes · model — the Simulator's column · copy — the Simulator's lines and steps, the saved file in a command, the end · given — <code>simulators</code></td><td><code>DEC-63</code> — the Simulator's rule · <code>DEC-33</code> — a probe that concludes is the whole state · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
         <tr><td>Round 16, close — "LGTM", on the Simulator's certificate task reading its own store, else its marked request, its try task and the end reading that mark alone, commands that read the file where the save put it and reach every running Simulator, and the erase as its way back</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W7's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 17 — the owner's rulings on E-ONBRVP.W8's plan, 2026-10-24: "ok, go and implement it" — S1–S4 and C1–C5 taken, Q1–Q3 A: an adb probe of each running emulator's own store and proxy, the global proxy as its route</td><td>mockup — the emulator: not in its store with its proxy on Wi-Fi only, unread beside this Mac's traffic, trusted with its own services refusing, and its marked request decrypted with the end naming it; the probe row on the emulator · rules — another device that needs no allow, a route that holds on every network, every device a command is for · model — the emulator's column · copy — the emulator's lines and steps, the saved file, the end · given — <code>emulators</code></td><td><code>DEC-63</code> — the emulator's rule · <code>DEC-33</code> — a probe that concludes is the whole state · <code>CommandBlock</code> — one command per surface, copied whole</td></tr>
+        <tr><td>Round 17, close — "LGTM", on the emulator reading its own store and proxy through adb, else as another device that needs no allow, a refusal never its certificate task's, its proof kept and its end on its marked request, and commands that reach every emulator running, route it on every network and name Android 15's paths</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W8's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
       </tbody>
     </table>
 

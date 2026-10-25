@@ -19,6 +19,7 @@ import {
   RECENT_MS,
   STATE_WORDS,
   TUNNEL_GRACE_MS,
+  type EmulatorReading,
   type ProxyProbe,
   type SimulatorTrust,
   type Traffic,
@@ -48,6 +49,9 @@ import {
 //   the Simulator  its wire is this machine's, always: its certificate is the
 //                store of each Simulator running, else its marked request; its
 //                try task and the end read the mark only (W7)
+//   the emulator  another device that needs no allow: its own store and proxy
+//                as adb reads them, else what another device's tasks read; a
+//                refusal is never its certificate task's (W8)
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
@@ -127,6 +131,17 @@ const RUNNING: Record<TrustProbe, SimulatorTrust[]> = {
   trusted: [{ name: "iPhone 17 Pro", trust: "trusted" }],
   absent: [{ name: "iPhone 17 Pro", trust: "absent" }],
   installed: [{ name: "iPhone 17 Pro", trust: "unknown" }],
+  unknown: [],
+};
+
+// The emulator's readings, swept on the same axis: its store holding the
+// certificate and its proxy at Trawler, neither and its proxy on a network it
+// does not send over, a store and a proxy adb could not read, or none running.
+const EMULATOR = "Pixel 7 API 35";
+const EMULATORS: Record<TrustProbe, EmulatorReading[]> = {
+  trusted: [{ name: EMULATOR, trust: "trusted", proxy: "ours" }],
+  absent: [{ name: EMULATOR, trust: "absent", proxy: "wifi-only" }],
+  installed: [{ name: EMULATOR, trust: "unknown", proxy: "none" }],
   unknown: [],
 };
 
@@ -215,7 +230,9 @@ const through = async () => "through" as const;
 function Host({ s, handlers }: { s: State; handlers: Handlers }) {
   const [routeAct, onRouteAct] = useRouteMemory(s.proxy);
   const { traffic, markedAt } = wireOf(s);
-  const mixed = s.platform === "ios-sim" || (OFF_MACHINE.has(s.platform) && mayCarryOwnTraffic(s.proxy));
+  const mixed =
+    s.platform === "ios-sim" ||
+    ((OFF_MACHINE.has(s.platform) || s.platform === "android-sim") && mayCarryOwnTraffic(s.proxy));
   const its = !mixed ? traffic : markedAt === null ? NO_TRAFFIC : { ...NO_TRAFFIC, lastDecryptedAt: markedAt };
   return (
     <Onboarding
@@ -228,6 +245,7 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       traffic={its}
       ownProofAt={s.own ? OWN_AT : null}
       simulators={RUNNING[s.trust]}
+      emulators={EMULATORS[s.trust]}
       deviceMark={MARK}
       device={{ provedAt: markedAt, mixed, wire: traffic }}
       reach={s.armed ? ARMED : UNARMED}
@@ -342,16 +360,22 @@ function model(s: State) {
   // DEC-63: where this machine's own traffic may be arriving too, only the
   // marked request is another device's evidence - the Simulator's, always.
   const sharedWire = s.platform === "ios-sim";
-  const mixed = sharedWire || (needsReach && (s.proxy === "ours" || s.proxy === "unknown"));
+  const emulator = s.platform === "android-sim";
+  const anotherDevice = needsReach || emulator;
+  const mixed = sharedWire || (anotherDevice && (s.proxy === "ours" || s.proxy === "unknown"));
   const reached = mixed ? s.marked : onWire.reached;
   const decrypted = mixed ? s.marked : onWire.decrypted;
   const unanswered = mixed ? false : onWire.unanswered;
   const refused = unanswered && !decrypted;
   const trustConcluded = probesTrust && s.trust !== "unknown";
   const ownStore = !sharedWire ? null : s.trust === "trusted" ? true : s.trust === "absent" ? false : null;
+  const emulatorStore = !emulator ? null : s.trust === "trusted" ? true : s.trust === "absent" ? false : null;
+  const emulatorRouted = !emulator ? null : s.trust === "trusted" ? true : s.trust === "absent" ? false : null;
   const trustDone = sharedWire
     ? (ownStore ?? s.marked)
-    : !probesTrust
+    : emulator
+      ? (emulatorStore ?? decrypted)
+      : !probesTrust
       ? decrypted
       : trustConcluded
         ? s.trust === "trusted"
@@ -360,11 +384,16 @@ function model(s: State) {
   // reached Trawler through it.
   const routeReached = sharedWire ? onWire.reached : reached;
   const routeDone =
-    probesRoute && s.proxy !== "unknown" ? s.proxy === "ours" : s.platform === "this" ? s.own : routeReached;
+    probesRoute && s.proxy !== "unknown"
+      ? s.proxy === "ours"
+      : s.platform === "this"
+        ? s.own
+        : (emulatorRouted ?? routeReached);
   // A refusal is the certificate task's while it is not done - except where
   // the refusal may be anyone's: This machine's store unread (D7), another
-  // device's traffic mixed with this machine's (A3).
-  const certificateOwnsRefusal = !trustDone && !(probesTrust && !trustConcluded) && !mixed;
+  // device's traffic mixed with this machine's (A3), and the emulator, whose
+  // own services refuse a certificate it holds (W8).
+  const certificateOwnsRefusal = !trustDone && !(probesTrust && !trustConcluded) && !mixed && !emulator;
   const auto = canAutoSetup(s.os);
   const routeHere = probesRoute && auto;
   const oneAct = probesTrust && auto && !trustDone && !routeDone;
@@ -373,6 +402,7 @@ function model(s: State) {
   const notDecryptingNow = h === "refused" || h === "refused-and-retrying" || h === "decrypted-then-refused";
   return {
     ...{ probesTrust, probesRoute, first, reached, routeReached, decrypted, unanswered, refused, mixed, sharedWire },
+    ...{ emulator, anotherDevice },
     trustN: first + 1,
     routeN: first + 2,
     tryN: first + 3,
@@ -405,6 +435,14 @@ function expectedTrustState(s: State): RegExp {
     if (s.marked) return /^✓\s*done — the Simulator's request decrypted at \d\d:\d\d$/;
     return new RegExp(`^◐\\s*can't check here — the address in step ${m.tryN} confirms it$`);
   }
+  if (m.emulator) {
+    if (s.trust === "trusted") return /^✓\s*done — trusted in Pixel 7 API 35$/;
+    if (s.trust === "absent") return /^○\s*not done — not in Pixel 7 API 35$/;
+    if (s.marked) return /^✓\s*done — the emulator's request decrypted at \d\d:\d\d$/;
+    if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
+    if (m.mixed) return new RegExp(`^◐\\s*can't check here — the address in step ${m.tryN} confirms it$`);
+    return /^◐\s*can't check here — the emulator's first HTTPS request confirms it$/;
+  }
   if (m.probesTrust && !m.trustConcluded)
     return s.own
       ? /^✓\s*done — step 3's request decrypted at \d\d:\d\d$/
@@ -425,7 +463,9 @@ function expectedTrustState(s: State): RegExp {
 
 function expectedRouteState(s: State): RegExp {
   const m = model(s);
-  const another = OFF_MACHINE.has(s.platform);
+  const another = m.anotherDevice;
+  if (m.emulator && s.trust === "trusted") return /^✓\s*done — Pixel 7 API 35 routes through Trawler$/;
+  if (m.emulator && s.trust === "absent") return /^○\s*not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi$/;
   if (another && s.marked) return /^✓\s*done — .+'s request came through at \d\d:\d\d$/;
   if (another && m.mixed) return /^◐\s*can't check here — the same request confirms it$/;
   if (another && m.reached) return /^✓\s*done — a request reached Trawler at \d\d:\d\d$/;
@@ -580,7 +620,7 @@ const RULES: Record<string, Rule> = {
 
   "truth: another device's end reads only what could have come from it (A4)": (o, s) => {
     const m = model(s);
-    if (!(OFF_MACHINE.has(s.platform) || m.sharedWire) || m.blocked) return null;
+    if (!(m.anotherDevice || m.sharedWire) || m.blocked) return null;
     const expected = !m.mixed && s.history === "capturing";
     return (o.proven !== null) === expected ? null : `the end: ${o.proven ?? "absent"}`;
   },
@@ -589,14 +629,14 @@ const RULES: Record<string, Rule> = {
     const m = model(s);
     if (!m.trustDone || m.blocked) return null;
     const wrong = o.tasks.filter((t) => /Finish the certificate step|The steps below install it/.test(t.text));
-    return (s.platform === "this" || s.platform === "ios-sim" || OFF_MACHINE.has(s.platform)) && wrong.length > 0
+    return wrong.length > 0
       ? `tasks [${wrong.map((t) => t.n)}] send ${s.platform} back to its certificate step`
       : null;
   },
 
   "truth: another device's try task keeps its proof past whatever follows it (S1)": (o, s) => {
     const m = model(s);
-    if (!(OFF_MACHINE.has(s.platform) || m.sharedWire) || m.blocked || !m.decrypted) return null;
+    if (!(m.anotherDevice || m.sharedWire) || m.blocked || !m.decrypted) return null;
     if (!m.mixed && s.history === "capturing") return null;
     const line = task(o, m.tryN).text;
     return /done — decrypted at \d\d:\d\d/.test(line) && !/not working|not done/.test(line)
@@ -627,6 +667,25 @@ const RULES: Record<string, Rule> = {
       ...(/done — decrypted at|capturing traffic/.test(task(o, m.tryN).text) ? [`task ${m.tryN} done`] : []),
       ...(o.proven === null ? [] : ["the end shows"]),
       ...(o.tasks.some((t) => /the Simulator does not trust/.test(t.text)) ? ["a refusal blames the Simulator"] : []),
+    ];
+    return wrong.length === 0 ? null : wrong.join("; ");
+  },
+
+  // W8: the emulator reaches Trawler on this machine's loopback, so this
+  // machine's traffic settles none of its tasks while it may be arriving, and
+  // its own services' refusals never say its certificate is missing.
+  "truth: the emulator reads only what could be its own, and a refusal never blames it (W8)": (o, s) => {
+    const m = model(s);
+    if (!m.emulator) return null;
+    const wrong = [
+      ...(/not working/.test(task(o, m.trustN).state) ? [`task ${m.trustN} not working`] : []),
+      ...(o.tasks.some((t) => /the emulator does not trust|Finish the certificate step/.test(t.text))
+        ? ["a refusal blames the emulator's certificate"]
+        : []),
+      ...(m.mixed && !s.marked && s.trust !== "trusted" && /^✓/.test(task(o, m.trustN).state)
+        ? [`task ${m.trustN} done on this machine's traffic`]
+        : []),
+      ...(m.mixed && !s.marked && o.proven !== null ? ["the end shows on this machine's traffic"] : []),
     ];
     return wrong.length === 0 ? null : wrong.join("; ");
   },
@@ -663,7 +722,10 @@ const STATES: State[] = HOSTS.flatMap((os) =>
           // The trust probe reads this machine, and no off-machine task reads
           // it, so the mark is swept once against the probe that decides it.
           // The Simulator's own store is read beside its mark, so both sweep.
-          (platform === "ios-sim" || (armed && trust === "unknown") ? [false, true] : [false]).flatMap((marked) =>
+          (platform === "ios-sim" || platform === "android-sim" || (armed && trust === "unknown")
+            ? [false, true]
+            : [false]
+          ).flatMap((marked) =>
             PROXY.flatMap((proxy) =>
               HISTORIES.map((history) => ({ os, platform, armed, trust, proxy, history, own, marked })),
             ),
@@ -687,8 +749,12 @@ describe("every reading at rest", () => {
     const withOwnRequest = HOSTS.length;
     const marked = HOSTS.length * OFF_MACHINE.size * PROXY.length * HISTORIES.length;
     const simulatorMarked = TRUST.length * PROXY.length * HISTORIES.length;
+    const emulatorMarked = HOSTS.length * TRUST.length * PROXY.length * HISTORIES.length;
     expect(STATES).toHaveLength(
-      (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length + marked + simulatorMarked,
+      (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length +
+        marked +
+        simulatorMarked +
+        emulatorMarked,
     );
     expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });
@@ -796,7 +862,8 @@ function settledBy(s: State, promise: string): { evidence: State; offered: (o: O
   const m = model(s);
   if (
     (OFF_MACHINE.has(s.platform) && /^(the address in step 4|the same request) confirms it$/.test(promise)) ||
-    (m.sharedWire && /^the address in step \d confirms it$/.test(promise))
+    (m.sharedWire && /^the address in step \d confirms it$/.test(promise)) ||
+    (m.emulator && /^(the address in step \d|the same request) confirms it$/.test(promise))
   )
     return {
       evidence: { ...s, marked: true },

@@ -36,6 +36,8 @@ import {
   probesTrust,
   platformChoices,
   reachTaskTitle,
+  readsOverAdb,
+  marksItsOwn,
   setupFor,
   sharesHostWire,
   splitProxyAddr,
@@ -51,6 +53,10 @@ import {
   byOwnRequest,
   deviceRouteStatus,
   deviceTrustStatus,
+  emulatorRefusal,
+  emulatorRouteStatus,
+  emulatorsRouted,
+  emulatorTrustStatus,
   evidenceOf,
   foreignProxyNotice,
   markedDevice,
@@ -62,16 +68,17 @@ import {
   proxyStatus,
   routeByTraffic,
   setUpOn,
-  simulatorsTrusted,
+  storesTrusted,
   simulatorTrustStatus,
   stopRoutingNote,
   trafficReading,
   trafficStatus,
-  trustByTraffic,
+  trustedEmulators,
   trustedSimulators,
   trustStatus,
   TUNNEL_GRACE_MS,
   verdict,
+  type EmulatorReading,
   type ProxyReading,
   type Running,
   type SimulatorTrust,
@@ -769,10 +776,11 @@ interface SetupProps {
   traffic?: Traffic;
   ownProofAt?: number | null;
   simulators?: readonly SimulatorTrust[];
+  emulators?: readonly EmulatorReading[];
   savedCa?: SavedCa;
-  // Another device (DEC-63), and the Simulator, whose wire is this machine's
-  // too: the mark its address carries, and what its tasks read beside the
-  // traffic that is its.
+  // Another device (DEC-63) - the Simulator, whose wire is this machine's too,
+  // and the emulator, which arrives on its loopback, among them: the mark its
+  // address carries, and what its tasks read beside the traffic that is its.
   deviceMark?: string;
   device?: AnotherDevice;
   reach?: ReachState;
@@ -871,6 +879,7 @@ export function BackToFlows({ onBack }: { onBack: () => void }) {
 // machine's own may be in it.
 const UNMIXED: AnotherDevice = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
 const NO_SIMULATORS: readonly SimulatorTrust[] = [];
+const NO_EMULATORS: readonly EmulatorReading[] = [];
 
 function PlatformSetup({
   platform,
@@ -883,6 +892,7 @@ function PlatformSetup({
   traffic = NO_TRAFFIC,
   ownProofAt = null,
   simulators = NO_SIMULATORS,
+  emulators = NO_EMULATORS,
   savedCa,
   deviceMark,
   device = UNMIXED,
@@ -947,20 +957,26 @@ function PlatformSetup({
   // that is what the task promised to be confirmed by; another device's is
   // only what could have come from it (DEC-63). The Simulator's wire is this
   // machine's too, so its certificate reads its own store, else its marked
-  // request, and nothing unmarked is its own (W7).
+  // request, and nothing unmarked is its own (W7). The emulator's store and
+  // proxy are adb's to read; where adb reads neither, it is another device that
+  // needs no allow (W8).
   // Done is the reading, never what the state line says this second: a
   // re-check in flight changes the line and may not change the layout.
   const offMachine = needsReach(platform);
   const sharedWire = sharesHostWire(platform);
-  const mixed = (offMachine && device.mixed) || sharedWire;
+  const adb = readsOverAdb(platform);
+  const anotherDevice = offMachine || adb;
+  const mixed = (anotherDevice && device.mixed) || sharedWire;
   const graceEdge = useGraceEdge(traffic.openTunnelAt);
   const evidence = evidenceOf(traffic, graceEdge);
   const routeEvidence = sharedWire ? evidenceOf(device.wire, graceEdge) : evidence;
   const ownProved = platform === "this" && ownProofAt !== null;
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = probesOwnStore(platform)
-    ? (simulatorsTrusted(simulators) ?? device.provedAt !== null)
-    : !probesTrust(platform)
+    ? (storesTrusted(simulators) ?? device.provedAt !== null)
+    : adb
+      ? (storesTrusted(emulators) ?? evidence.decrypted)
+      : !probesTrust(platform)
       ? evidence.decrypted
       : trustUnread
         ? ownProved
@@ -972,7 +988,9 @@ function PlatformSetup({
       ? proxy.status === "ours"
       : routeByOwnRequest
         ? ownProved
-        : routeEvidence.reached;
+        : adb
+          ? (emulatorsRouted(emulators) ?? evidence.reached)
+          : routeEvidence.reached;
   // One prompt for the one thing most users want, and only while both halves
   // are this machine's to change and neither reads done (F27). Once either
   // does, each task carries its own, and the certificate never gets an
@@ -1010,9 +1028,9 @@ function PlatformSetup({
     ? simulatorTrustStatus(simulators, busy(setUp, "installing"), reading)
     : probesTrust(platform)
       ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
-      : offMachine
-        ? deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os))
-        : trustByTraffic(evidence, confirmHttpsOn(platform, os));
+      : adb
+        ? emulatorTrustStatus(emulators, busy(setUp, "installing"), reading, evidence, confirmHttpsOn(platform, os))
+        : deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
         device: here,
@@ -1020,15 +1038,17 @@ function PlatformSetup({
           ? byOwnRequest("route", ownProofAt, tryStep)
           : routeByTraffic(routeEvidence, setup.confirmOn),
       })
-    : offMachine
-      ? deviceRouteStatus(evidence, reading, setup.confirmOn)
-      : routeByTraffic(evidence, setup.confirmOn);
+    : adb
+      ? emulatorRouteStatus(emulators, busy(setProxyAction, "setting"), reading, evidence, setup.confirmOn)
+      : deviceRouteStatus(evidence, reading, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
   // refusal is some other client's and the try task words it instead. So does
   // the try task wherever the refusal may be any device's: This machine's
-  // store unread (D7), and another device's traffic mixed with this one's (A3).
-  const certificateOwnsRefusal = !trustDone && !trustUnread && !mixed;
+  // store unread (D7), another device's traffic mixed with this one's (A3), and
+  // the emulator, whose own services refuse a certificate it holds (W8's S2).
+  const emulatorRefused = adb ? emulatorRefusal(trustedEmulators(emulators)) : undefined;
+  const certificateOwnsRefusal = !trustDone && !trustUnread && !mixed && !adb;
   const refusedHere = certificateOwnsRefusal && evidence.unanswered;
 
   const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
@@ -1177,13 +1197,15 @@ function PlatformSetup({
                 ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt, {
                     refusedAfterProof: setup.refusedAfterProof,
                     trustedOn:
-                      probesOwnStore(platform) && simulatorsTrusted(simulators) ? trustedSimulators(simulators) : null,
+                      probesOwnStore(platform) && storesTrusted(simulators) ? trustedSimulators(simulators) : null,
+                    refused: emulatorRefused,
                   })
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
-                    proofStays: platform === "this" ? "once-quiet" : offMachine ? "past-anything" : "never",
+                    proofStays: platform === "this" ? "once-quiet" : anotherDevice ? "past-anything" : "never",
                     refusedAfterProof: setup.refusedAfterProof,
+                    refused: emulatorRefused,
                   })
             }
           />
@@ -1207,7 +1229,7 @@ function PlatformSetup({
               </div>
             </>
           )}
-          {(offMachine || sharedWire) && deviceMark !== undefined && (
+          {deviceMark !== undefined && (
             <div data-testid="check-address" className="pt-2 font-ui text-chrome text-ink-mute">
               <StepParts step={checkStep(platform, os, markedUrl(deviceMark))} />
             </div>
@@ -1215,7 +1237,7 @@ function PlatformSetup({
         </GuidedTask>
       </div>
 
-      {(probesTrust(platform) || probesRoute(platform)) && canProbe(os) && onRecheck && (
+      {(((probesTrust(platform) || probesRoute(platform)) && canProbe(os)) || adb) && onRecheck && (
         <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
       )}
 
@@ -1223,7 +1245,7 @@ function PlatformSetup({
         device={
           platform === "this"
             ? provenDevice(here, trustProbe, proxy.status)
-            : offMachine || sharedWire
+            : marksItsOwn(platform)
               ? markedDevice(deviceName(platform, os), device.provedAt, traffic)
               : null
         }

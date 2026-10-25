@@ -4,7 +4,7 @@ import { Onboarding, useRouteMemory } from "./Onboarding";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
 import { PLATFORM_IDS, type PlatformId } from "./setup";
-import { clock, NO_TRAFFIC, RECENT_MS, TUNNEL_GRACE_MS, type Traffic } from "./verdicts";
+import { clock, NO_TRAFFIC, RECENT_MS, TUNNEL_GRACE_MS, type EmulatorReading, type Traffic } from "./verdicts";
 import type { RequestRoute } from "./ownRequest";
 import type { ReachState } from "./api";
 
@@ -984,6 +984,90 @@ describe("the iOS Simulator, beside this Mac's own traffic", () => {
   });
 });
 
+// ── The emulator: its own store and proxy through adb (W8 · S1–S4) ─────────
+// It reaches Trawler on this machine's loopback, so App hands it what another
+// device is handed: its marked request, and unmarked traffic only from a span
+// this machine's proxy did not point here.
+
+describe("the Android emulator, beside this machine's own traffic", () => {
+  const MARK = "k3m9";
+  const emu = (trust: "trusted" | "absent" | "unknown", proxy: EmulatorReading["proxy"] = "none") => [
+    { name: "Pixel 7 API 35", trust, proxy },
+  ];
+  const emulator = (props: Props) => {
+    draw({ proxy: { status: "ours", address: ADDR }, deviceMark: MARK, ...props });
+    pick("Android emulator");
+  };
+  const mixedWire = (traffic: Traffic) => ({ traffic: NO_TRAFFIC, device: { provedAt: null, mixed: true, wire: traffic } });
+  const clearWire = (traffic: Traffic) => ({ traffic, device: { provedAt: null, mixed: false, wire: NO_TRAFFIC } });
+
+  // S1: This machine set up first, its browser decrypting - the common path.
+  it("is not proven by this machine's decrypted traffic", () => {
+    emulator({ emulators: [], ...mixedWire(capturing) });
+
+    expect(task(1)).toHaveTextContent("can't check here — the address in step 3 confirms it");
+    expect(task(2)).toHaveTextContent("can't check here — the same request confirms it");
+    expect(task(3)).toHaveTextContent("can't check here — the address below confirms it");
+    expect(zone("proven")).toBeNull();
+    expect(zone("check-address")).toHaveTextContent("or open this one in the emulator");
+    expect(zone("check-address")).toHaveTextContent(`https://example.com/?trawler-check=${MARK}`);
+  });
+
+  it("reads its own store and proxy, by the name of its AVD", () => {
+    emulator({ emulators: emu("trusted", "ours"), ...mixedWire(NO_TRAFFIC) });
+
+    expect(task(1)).toHaveTextContent("done — trusted in Pixel 7 API 35");
+    expect(task(2)).toHaveTextContent("done — Pixel 7 API 35 routes through Trawler");
+    expect(zone("probe")).toBeInTheDocument();
+  });
+
+  // S2: its own services refuse a certificate it holds, and never stop.
+  it("never blames its certificate for a refusal", () => {
+    emulator({ emulators: emu("unknown"), ...clearWire(arriving) });
+
+    expect(task(1)).toHaveTextContent("can't check here — the emulator's first HTTPS request confirms it");
+    expect(task(1)).not.toHaveTextContent("not working");
+    expect(within(task(1)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(screen.queryByText(/the emulator does not trust|Finish the certificate step/)).toBeNull();
+    expect(task(3)).toHaveTextContent("not working — arriving but not decrypting");
+    expect(task(3)).toHaveTextContent("Android's own services ignore a user certificate, so they never decrypt");
+  });
+
+  it("names the store that trusts it when a refusal comes", () => {
+    emulator({ emulators: emu("trusted", "ours"), ...clearWire(arriving) });
+
+    expect(task(3)).toHaveTextContent(
+      "Pixel 7 API 35 trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate.",
+    );
+  });
+
+  // S4 · C4: the Wi-Fi proxy set, the emulator sending over mobile data.
+  it("says why a Wi-Fi proxy routes nothing", () => {
+    emulator({ emulators: emu("trusted", "wifi-only"), ...clearWire(capturing) });
+
+    expect(task(2)).toHaveTextContent("not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi");
+  });
+
+  // S3: its marked request is its proof and its end, kept past its services' refusals.
+  it("is proven by its marked request, named, timed and kept, with an end that names it", () => {
+    const at = ago(1_000);
+    const marked: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: at };
+    emulator({ emulators: [], traffic: marked, device: { provedAt: at, mixed: true, wire: marked } });
+
+    expect(task(1)).toHaveTextContent(`done — the emulator's request decrypted at ${clock(at)}`);
+    expect(task(2)).toHaveTextContent(`done — the emulator's request came through at ${clock(at)}`);
+    expect(zone("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic from the emulator");
+    cleanup();
+
+    const earlier = ago(RECENT_MS * 2);
+    const kept: Traffic = { ...NO_TRAFFIC, lastDecryptedAt: earlier };
+    emulator({ emulators: [], traffic: kept, device: { provedAt: earlier, mixed: true, wire: { ...kept, ...arriving } } });
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(earlier)}`);
+    expect(task(3)).toHaveTextContent("Android's own services, which ignore a user certificate");
+    expect(task(3)).not.toHaveTextContent("not working");
+  });
+});
+
 // ── A phone: one task that changes this machine, three that do not ──────────
 
 describe("a phone, before the network is allowed", () => {
@@ -1537,8 +1621,9 @@ describe("the clock reaches the traffic reading and nothing else", () => {
 
   // U5 · Q3 · P1: 30 s after "You're set up" the try task fell back to "not
   // done" under two done tasks. On This machine and on another device the
-  // proof stays, with its time; their other two tasks keep theirs.
-  it("keeps the proof on This machine and on another device once the traffic goes quiet, and nowhere else", () => {
+  // proof stays, with its time; their other two tasks keep theirs. The
+  // emulator is another device (W8's S3).
+  it("keeps the proof on This machine and on another device once the traffic goes quiet", () => {
     const at = Date.now();
     draw({ reach: ARMED, traffic: { ...NO_TRAFFIC, lastDecryptedAt: at } });
     act(() => vi.advanceTimersByTime(RECENT_MS + 2_000));
@@ -1549,7 +1634,8 @@ describe("the clock reaches the traffic reading and nothing else", () => {
     expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
 
     pick("Android emulator");
-    expect(task(3)).toHaveTextContent("not done — nothing arriving right now");
+    expect(task(3)).toHaveTextContent(`done — decrypted at ${clock(at)}, nothing since`);
+    expect(task(1)).toHaveTextContent(`done — a request decrypted at ${clock(at)}`);
   });
 
   // S1: Windows starts its own HTTPS the moment its proxy is set, and an app of
@@ -1701,7 +1787,7 @@ describe("a command is a block, not a phrase inside a sentence", () => {
 
     const host = screen.getByRole("button", { name: /copy the emulator's host/i });
     expect(host).toHaveTextContent("10.0.2.2");
-    expect(host.closest("li")).toHaveTextContent("Server");
+    expect(host.closest("li")).toHaveTextContent("server");
     expect(host.closest("li")).toHaveTextContent("port");
   });
 

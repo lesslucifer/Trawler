@@ -287,6 +287,26 @@ test("the trust probe asks about the certificate the core serves now, and setup 
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_status")).toHaveLength(0);
 });
 
+// W8's Q1: adb starts a server of its own where none runs, so the emulator is
+// read only once it is the platform chosen, and its readings reach its tasks.
+test("the emulator is read through adb only while it is the platform chosen", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "emulator_readings" ? [{ name: "Pixel 7 API 35", trust: "trusted", proxy: "ours" }] : undefined,
+  );
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: PEM }));
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "emulator_readings")).toHaveLength(0);
+
+  pickPlatform("Android emulator");
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("emulator_readings", { pem: PEM, port: 7999 }));
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — trusted in Pixel 7 API 35"));
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — Pixel 7 API 35 routes through Trawler");
+});
+
 test("a core that cannot serve its certificate leaves the trust probe unread, never trusted", async () => {
   onMacHost();
   vi.mocked(invoke).mockImplementation(async (name: string) => (name === "ca_trusted" ? "trusted" : undefined));

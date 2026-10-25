@@ -17,6 +17,8 @@ import {
   probesRoute,
   probesOwnStore,
   probesTrust,
+  marksItsOwn,
+  readsOverAdb,
   sharesHostWire,
   PLATFORM_IDS,
   platformChoices,
@@ -301,9 +303,11 @@ describe("the Android emulator and the Android device stop sharing one answer", 
   });
 
   it("send the certificate by different routes", () => {
-    expect(copies(emulator())).toContain("adb push trawler-ca.cer /sdcard/Download/");
+    expect(commands(emulator().trust.guide!.steps)).toEqual([
+      "for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d push ~/Downloads/trawler-ca.cer /sdcard/Download/; done",
+    ]);
     expect(copies(device())).toContain(REACH.caUrls.cer);
-    expect(copies(device())).not.toContain("adb push trawler-ca.cer /sdcard/Download/");
+    expect(everything(device())).not.toMatch(/\badb\b/);
   });
 
   it("point at different hosts — the emulator's alias, the device's reach address", () => {
@@ -510,7 +514,7 @@ describe("a guide's steps are the route, and everything else says what it is", (
         .flatMap((g) => g.alternatives ?? []);
 
     expect(commands(alternatives("android-sim"))).toContain(
-      "emulator -avd <name> -http-proxy http://10.0.2.2:9999",
+      "emulator -avd <name> -http-proxy http://127.0.0.1:9999",
     );
     expect(alternatives("ubuntu")).toEqual([]);
     expect(
@@ -528,7 +532,7 @@ describe("a guide's steps are the route, and everything else says what it is", (
     expect(setup("this").route.guide?.steps).toHaveLength(1);
     expect(setup("ios").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").trust.guide?.steps).toHaveLength(3);
-    expect(setup("android-sim").route.guide?.steps).toHaveLength(2);
+    expect(setup("android-sim").route.guide?.steps).toHaveLength(1);
   });
 });
 
@@ -663,9 +667,8 @@ describe("each platform names the one certificate file its installer opens", () 
 
   it("names the file to pick in each phone installer", () => {
     expect(prose(setup("ios"))).toMatch(/VPN & Device Management → Trawler Proxy CA → Install/);
-    for (const id of ["android", "android-sim"] as const) {
-      expect(prose(setup(id))).toMatch(/CA certificate → trawler-ca\.cer\./);
-    }
+    expect(prose(setup("android"))).toMatch(/CA certificate → trawler-ca\.cer\./);
+    expect(prose(setup("android-sim"))).toMatch(/CA certificate → Install anyway → ☰ → Downloads → trawler-ca\.cer\./);
   });
 });
 
@@ -673,7 +676,7 @@ describe("each platform names the one certificate file its installer opens", () 
 // nothing on the screen said installing is not trusting. Each platform names
 // what its users check next when traffic arrives and does not decrypt.
 describe("each platform says what to check when its traffic does not decrypt", () => {
-  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id)))("%s has a check to make", (id) => {
+  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id) && !readsOverAdb(id)))("%s has a check to make", (id) => {
     expect(setup(id).notDecrypting).toMatch(/\S/);
   });
 
@@ -689,7 +692,13 @@ describe("each platform says what to check when its traffic does not decrypt", (
     expect(check).toMatch(/Apple's own services never decrypt; a website in Safari is the test/);
   });
 
-  it.each(["android", "android-sim"] as const)("%s's is the User store, and Chrome is its test", (id) => {
+  // W8's S2: the emulator's own services refuse a certificate it holds, so a
+  // refusal is never its certificate task's either.
+  it("the emulator has none: a refusal is never its certificate task's", () => {
+    expect(setup("android-sim").notDecrypting).toBeUndefined();
+  });
+
+  it.each(["android"] as const)("%s's is the User store, and Chrome is its test", (id) => {
     const check = setup(id).notDecrypting;
     expect(check).toContain("Trusted credentials → User");
     expect(check).toMatch(/Android 7\+; a website in Chrome is the test/);
@@ -831,12 +840,16 @@ describe("Linux's certificate task installs into every store, each a step of its
   });
 
   // S2: another Ubuntu machine's browsers keep stores of their own, so after a
-  // proof a refusal is first one of them; elsewhere the platform says nothing.
-  it("only another Ubuntu machine names a browser's own store after a proof", () => {
+  // proof a refusal is first one of them; the emulator's, its own services
+  // (W8's S2); elsewhere the platform says nothing.
+  it("only another Ubuntu machine and the emulator say what a refusal after a proof is", () => {
     expect(setup("ubuntu").refusedAfterProof).toBe(
       "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.",
     );
-    for (const id of PLATFORM_IDS.filter((p) => p !== "ubuntu")) {
+    expect(setup("android-sim").refusedAfterProof).toBe(
+      "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
+    );
+    for (const id of PLATFORM_IDS.filter((p) => p !== "ubuntu" && p !== "android-sim")) {
       for (const os of ["macos", "windows", "linux", "other"] as const) {
         expect(setup(id, { os }).refusedAfterProof).toBeUndefined();
       }
@@ -853,4 +866,87 @@ test("Linux's Chrome command creates the database a Chrome since M146 reads wher
 
   expect(chrome).toContain(`libnss3-tools && ${create} && certutil -d `);
   expect(chrome.indexOf(" -N ")).toBeLessThan(chrome.indexOf(" -A "));
+});
+
+// W8: the emulator's steps, as written, reach every emulator running and send
+// its traffic to Trawler on whichever network it uses.
+describe("the emulator's commands reach every emulator running, and route it on every network", () => {
+  const emulator = (over: Partial<Parameters<typeof setupFor>[1]> = {}) => setup("android-sim", over);
+
+  // C1: the push named a bare file, and a terminal does not open in Downloads.
+  it("pushes the file where the save put it, quoted, and from Downloads before a save", () => {
+    const [push] = commands(emulator({ saved: { cer: "/Users/me/My Files/trawler-ca.cer" } }).trust.guide!.steps);
+    expect(push).toContain("push '/Users/me/My Files/trawler-ca.cer' /sdcard/Download/");
+    expect(commands(emulator({ os: "windows" }).trust.guide!.steps)[0]).toContain(
+      'push "$HOME\\Downloads\\trawler-ca.cer" /sdcard/Download/',
+    );
+    expect(commands(emulator({ os: "linux" }).trust.guide!.steps)[0]).toContain(
+      'push "$(xdg-user-dir DOWNLOAD)/trawler-ca.cer" /sdcard/Download/',
+    );
+    expect(everything(emulator())).not.toMatch(/adb push trawler-ca\.cer/);
+  });
+
+  // C2: a bare adb refuses with two of anything attached.
+  it.each(["macos", "linux", "windows"] as const)("on %s, every adb command runs once per emulator running", (os) => {
+    const all = commands(guides(emulator({ os }))).filter((c) => /\badb\b/.test(c));
+    expect(all.length).toBe(3);
+    for (const command of all) {
+      expect(command).toMatch(
+        os === "windows"
+          ? /^adb devices \| Select-String '\^emulator-\\d\+' \| ForEach-Object \{ adb -s \$_\.Matches\[0\]\.Value .+ \}$/
+          : /^for d in \$\(adb devices \| grep -Eo '\^emulator-\[0-9\]\+'\); do adb -s \$d .+; done$/,
+      );
+      if (os === "windows") expect(command).not.toMatch(/&&/);
+    }
+  });
+
+  it("leads each command with the shell it runs in", () => {
+    const leads = (os: HostOs) =>
+      both(emulator({ os })).flatMap((g) => [...g.steps, ...(g.undo ?? [])])
+        .filter((step) => commands([step]).some((c) => /\badb\b/.test(c)))
+        .map((step) => step.find((p): p is string => typeof p === "string"));
+    expect(leads("windows")).toEqual(["With the emulator running, in PowerShell, run:", "In PowerShell, run:", "In PowerShell, run:"]);
+    expect(leads("macos")).toEqual(["With the emulator running, in a terminal, run:", "In a terminal, run:", "In a terminal, run:"]);
+  });
+
+  // C4 · Q3: a Wi-Fi proxy routes nothing where the emulator sends over its
+  // mobile network; the global proxy covers both.
+  it("routes through the global proxy, and turns it off the same way", () => {
+    const route = emulator({ proxyAddr: "127.0.0.1:8123" }).route.guide!;
+    expect(commands(route.steps)).toEqual([
+      "for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d shell settings put global http_proxy 10.0.2.2:8123; done",
+    ]);
+    expect(commands(route.undo!)).toEqual([
+      "for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d shell settings put global http_proxy :0; done",
+    ]);
+  });
+
+  it("offers the Settings route only with mobile data off, and the start-up flag on this machine's own address", () => {
+    const route = emulator({ proxyAddr: "127.0.0.1:8123" }).route.guide!;
+    const [settings, flag] = route.alternatives!;
+    expect(settings[0]).toMatch(/turn Mobile data off, then AndroidWifi ⚙ → ✎ → Advanced options → Proxy → Manual/);
+    expect(values([settings])).toEqual(["10.0.2.2", "8123"]);
+    // C3: the flag is read by the emulator process on this machine, where 10.0.2.2 is nothing.
+    expect(commands([flag])).toEqual(["emulator -avd <name> -http-proxy http://127.0.0.1:8123"]);
+    expect(everything(emulator())).not.toMatch(/-http-proxy http:\/\/10\.0\.2\.2/);
+  });
+
+  // C5: Android 15 has no Settings → Security, and a pushed file is not under Recent.
+  it("names Android 15's own paths, to install and to remove", () => {
+    const s = emulator();
+    expect(prose(s)).toContain(
+      "Install it: Settings → Security & privacy → More security & privacy → Encryption & credentials → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → trawler-ca.cer.",
+    );
+    expect(s.trust.guide!.undo).toEqual([
+      [
+        "Settings → Security & privacy → More security & privacy → Encryption & credentials → Trusted credentials → User → Trawler Proxy CA → Remove.",
+      ],
+    ]);
+    expect(prose(s)).not.toMatch(/Settings → Security →|Settings → Wi-Fi →/);
+  });
+
+  it("is the one platform adb reads, and every platform but This machine marks its own request", () => {
+    expect(PLATFORM_IDS.filter(readsOverAdb)).toEqual(["android-sim"]);
+    expect(PLATFORM_IDS.filter(marksItsOwn)).toEqual(PLATFORM_IDS.filter((id) => id !== "this"));
+  });
 });
