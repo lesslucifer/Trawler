@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 949e20ea42e26803e04ce4c793e651dcc3690273
+base: 0edfaf2c62e0ec6012508e1d51df76a6a5294129
+tier: key
+signer: vuluu
+report: docs/work/2026-10-25-onboard-revamp-w8-android-emulator-status-result.html
+report_sha256: 42abad3fbe2a218168978f47229e402d0eeeacd2bea7a8a916c072b703ad97ed
+date: 2026-10-25
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBYGrLaVI67rHhrZlroPvT3Elwt/ISIir0GcoyU9FHCW2cD8HdD5UC8gY
+  WoRP/gmdtWwgPHX7AGMGHLobZ/KmUM
+  -----END SSH SIGNATURE-----
