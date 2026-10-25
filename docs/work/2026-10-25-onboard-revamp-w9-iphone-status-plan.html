@@ -17,7 +17,7 @@
 
     <div class="callout" data-c="status">
       <strong>Every point is ruled</strong> ("ok, let's implement it", 2026-10-25). S1–S4 taken; Q1 and Q2 both A;
-      N1, N3 and N4 deferred to W18, N2 to the roadmap, N5 carried to W10. No iPhone is attached to this Mac, so nothing
+      N1, N3 and N4 deferred to W18, N2 to the roadmap, N5 carried to W10. Built; round 18 of the setup screen's design run waits for your review. No iPhone is attached to this Mac, so nothing
       below was reproduced on a device: the menu paths were read from the iOS 26.5 runtime installed here, the wire facts
       from the core's and the shell's code, Apple's pinning from Proxyman's and Fiddler's documentation. Your checks on a
       real iPhone are listed <a href="#device-checks">below</a>.
@@ -170,9 +170,9 @@
     <table data-item="expected" data-c="expected">
       <tr><th>Try this…</th><th>…and see</th></tr>
       <tr><td>this Mac's proxy off, the iPhone routed and trusted, Apple's services refusing, nothing opened</td><td>② never <em>not working</em> and its steps stay shut · ④ the muted note naming Apple's services and the address as the test</td></tr>
-      <tr><td>full trust off, open step 4's address</td><td>② <em>not working — example.com did not decrypt</em>, remedy naming the trust switch first, then the profile</td></tr>
-      <tr><td>the same in the common path (this Mac routed here)</td><td>② ◐ · ④'s remedy: "example.com did not decrypt — if you opened it on your iPhone, …"</td></tr>
-      <tr><td>proved at 14:02, profile removed, address opened again at 15:10</td><td>② <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em></td></tr>
+      <tr><td>full trust off, open step 4's address</td><td>② <em>not working — example.com did not decrypt</em>, its steps open, and "example.com did not decrypt on your iPhone — turn on full trust: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Not listed there? The profile is not installed — the steps below install it."</td></tr>
+      <tr><td>the same in the common path (this Mac routed here)</td><td>② ◐ <em>can't check here — the address in step 4 confirms it</em> · ④'s remedy: "example.com did not decrypt — if you opened it on your iPhone, turn on full trust: … Not listed there? The profile is not installed — the certificate step installs it."</td></tr>
+      <tr><td>proved at 14:02, profile removed, address opened again at 15:10</td><td>② <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em>, its steps open · ④ keeps <em>done — decrypted at 14:02</em> with no note, and offers "to check again, open this one on your iPhone"</td></tr>
       <tr><td>proved, then an Apple service refuses</td><td>④ keeps <em>done — decrypted at 14:02</em> with the iPhone's note naming Apple's own services</td></tr>
     </table>
 
