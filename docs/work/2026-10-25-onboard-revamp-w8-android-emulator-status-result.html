@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6add78f39f34851f0dfadb23" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W8 result: status, Android emulator</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W8 — result: status, Android emulator</h1>
+      <p>The emulator's tasks now read its own store and proxy through adb, and otherwise only what could have come from it — its marked request, or traffic that arrived while this machine's proxy did not point here. Its own services' refusals never blame its certificate, its proof lasts and names it, and its commands find the saved file, reach every emulator running, route it on every network and name Android 15's paths.</p>
+      <div class="meta">v1 · 2026-10-25 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W8</span> · branch <code>wu/onboard-revamp/android-emulator-status</code> · <a href="2026-10-24-onboard-revamp-w8-android-emulator-status-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 17</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>set up This machine, browse on it, then choose Android emulator, an emulator running → ① <em>not done — not in Pixel 7 API 35</em> (or, unread, <em>can't check here — the address in step 3 confirms it</em>) · ② <em>can't check here</em> · ③ <em>can't check here — the address below confirms it</em> · no success line</td><td>the shell reads each running emulator through adb — its AVD's name, its user store through <code>su</code>, its global proxy, else its default network's — only while the emulator is the platform chosen (Q1, Q2). Where adb reads neither, the emulator is another device that needs no allow: its mark, and unmarked traffic only between two readings of this machine's proxy as off or another (S1, DEC-63 rule 9)</td><td>delivered, unit- and integration-tested; the probe read a live emulator correctly</td></tr>
+      <tr><td>run ②'s command, install ①, leave the emulator idle → ① <em>done — trusted in Pixel 7 API 35</em> · ② <em>done — the emulator's proxy points at Trawler</em> · its services' refusals never turn ① <em>not working</em></td><td>① <em>done — trusted in Pixel 7 API 35</em> · ② <em>done — Pixel 7 API 35 routes through Trawler</em>. A refusal is the try task's: <em>… Pixel 7 API 35 trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate. A website in Chrome is the test.</em> (S2)</td><td>delivered; ②'s line follows This machine's <em>routes through Trawler</em> rather than the plan's wording</td></tr>
+      <tr><td>save the certificate anywhere, two emulators running, run ①'s push as printed → it finds the file and reaches both</td><td><code>for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d push ~/Downloads/trawler-ca.cer /sdcard/Download/; done</code>, the saved path quoted after a save; PowerShell's <code>Select-String … ForEach-Object</code> on Windows (C1, C2)</td><td>delivered; the loop reached two emulators during the sweep</td></tr>
+      <tr><td>set only the Wi-Fi proxy → ② <em>not done — the Wi-Fi proxy is set, but the emulator sends over mobile data</em></td><td>② <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em> (S4, C4)</td><td>delivered</td></tr>
+      <tr><td>open the marked address in the emulator → ③ <em>done — decrypted at 14:02</em>, kept past later refusals · "You're set up — Trawler is capturing traffic from the emulator"</td><td>as expected; ① and ② read <em>the emulator's request decrypted / came through at 14:02</em> where adb read nothing (S3)</td><td>delivered</td></tr>
+      <tr><td>run the start-up command as printed → the emulator routes through Trawler</td><td><code>emulator -avd &lt;name&gt; -http-proxy http://127.0.0.1:&lt;port&gt;</code>, now another way beside the Settings route with mobile data off; the route is the global proxy, <code>settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>, off with <code>:0</code> (C3, Q3 A). Android 15's install and removal paths (C5)</td><td>delivered; the flag and the global proxy each decrypted on a live emulator during the sweep</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>commits 5 and 6: S1–S4, then C1–C5</td><td>one build commit, <code>4d368bf</code></td><td>both change the emulator's one setup record and the same tests; split, the first would carry a red test</td></tr>
+      <tr><td>the AVD named as <code>Pixel_7_API_35</code></td><td><em>Pixel 7 API 35</em></td><td>the probe reads underscores as spaces, the name Android Studio shows</td></tr>
+      <tr><td>—</td><td><code>ui/vite.config.ts</code> gives the test worker an 8 GB heap</td><td>the matrix now sweeps the emulator's readings and its mark — 29,665 states in one file, one worker — and outgrew node's default heap</td></tr>
+      <tr><td>—</td><td>the walkthrough harness scripts the emulator probe (<code>emulators</code> in its patch)</td><td>every shell command answers from the script in that build</td></tr>
+      <tr><td>—</td><td>no server snapshot of the design run before round 17</td><td>the htmldoc server refuses its body (HTTP 413), as in W5–W7; git holds the baseline (<code>5129a96</code>)</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code> (only an emulator adb can talk to is read; adb found where the SDK is before the PATH; the user store reads trusted only where its files carry the live DER, unknown where <code>su</code> cannot open it; the global proxy first, a proxy on a network it does not send over read as Wi-Fi only, none and unknown apart; each emulator named by its AVD and read on its own serial) · <code>ui/src-tauri/src/scenario.rs</code> · <code>ui/src/verdicts.test.ts</code> (the emulator's ① and ② from its readings, else another device's; a refusal never ①'s; no proxy read never <em>not done</em>; the try task's account of a refusal) · <code>ui/src/setup.test.ts</code> (the push's saved path and loop on every host, the global proxy and its undo, the Settings route and the flag on <code>127.0.0.1</code>, Android 15's paths, the platform facts)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> (S1–S4 on the emulator's screen) · <code>ui/src/App.test.tsx</code> (adb asked only once the emulator is chosen, and its readings reach its tasks) · <code>ui/src/onboardingMatrix.test.tsx</code> (the emulator's readings and its mark swept over every reading; a new rule — the emulator reads only what could be its own, and a refusal never blames it). Run against the epic tip's sources, every new or rewritten test fails — <code>setup.test.ts</code> whole, since the helpers it imports do not exist there — and 1,168 of the matrix's emulator states fail; no other platform's does</td></tr>
+      <tr><td>e2e</td><td>waived at WU: a running emulator is neither hermetic nor in CI. Your checks remain — on a Google Play image, ① reads <em>can't check here</em> rather than <em>not done</em>; and whether an emulator started from Android Studio follows this machine's proxy. The per-platform traffic journey is W20's</td></tr>
+      <tr><td>manual</td><td>on this Mac, on throwaway API 35 AVDs since deleted: every C-row reproduced as the plan records. The probe, run once through a temporary test against a live emulator: <em>trusted · ours</em> on the right port, <em>foreign</em> on another, <em>absent</em> for another certificate</td></tr>
+      <tr><td>suites</td><td>at <code>4d368bf</code>, 2026-10-24: UI 62 files and 31,438 tests green · <code>tsc</code> and <code>eslint .</code> green · the shell crate 92 tests green, 110 with <code>scenario</code>, clippy clean on both · <code>cargo xtask ui specimens --check</code>: the design run renders (52 mounts)</td></tr>
+      <tr><td>review</td><td>pending — the code review runs on this report's commit</td></tr>
+      <tr><td>design</td><td>round 17 of the setup screen's design run, closed and archived with your LGTM (<code>518d389</code>)</td></tr>
+      <tr><td>commits</td><td>plan <code>114d991</code> · <code>44dcfcf</code> · <code>5129a96</code> · <code>00f50f8</code> · round 17 <code>4b3810b</code>, closed <code>518d389</code> · probe <code>de93f67</code> · build <code>4d368bf</code> · T2 <code>c0a7e7a</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> — the platform table's emulator row reads its own store and proxy through adb, else as another device; a new paragraph says what that means for its tasks, refusals and end; the probe layer names each running emulator, read only while chosen; the commands paragraph covers the push, the loop, the global proxy and Android 15's paths. The index row says the same. <a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> is v5: rule 9, the emulator, with why; the "left to W8" row closes and an Android device's share goes to W10; the rejected list gains its whole-session traffic and its mark alone. Its index row says so. The <a href="../backlog/roadmap.html">roadmap</a> gains the core's origin-form row (N3). No component contract changed.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W17: N1 (<code>adb</code> and <code>emulator</code> not on the PATH of a stock Android Studio install) and N2 (buttons that run the push and the proxy through adb). W10: N4 — an Android device's services refuse a user certificate too, and its Settings paths are its maker's. W20: the checks above. The core: the origin-form row on the roadmap. The walkthrough films none of the new states.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
