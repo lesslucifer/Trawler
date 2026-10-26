@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W10
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "a row for Chrome on Android saving /ca.cer as trawler-ca.cer.crt, left to the core (W10's N3)"
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v7: rule 10 covers both phones - an Android device's test is its address, its sentence the user store's, outlasting a proof; a why-this-exists row; the Android device's paths closed; two rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-63's row: rule 10 for an Android device, and its two rejected alternatives"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the Android device's address as its test, the user store's sentence, steps that name no renamed file and reach the installer by Settings' search"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the phones' platform row and a paragraph on the Android device's address as its test, its user store's sentence, and its steps' menus"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 19 opened, ruled and closed: the Android device beside the iPhone in every phone state, its rules, model, copy and given rows; closed on the owner's LGTM, then its render fixed"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1-W9 landed, W10 built; W10's card links its plan"
+  - path: "docs/work/2026-10-26-onboard-revamp-w10-android-status-plan.html"
+    tier: T3
+    action: added
+    distills: "the W10 plan: S1-S4, C1-C3, N1-N3, Q1-Q3 with the owner's rulings, the emulator reproduction, device checks and the test plan"
+  - path: "docs/work/2026-10-26-onboard-revamp-w10-android-status-result.html"
+    tier: T3
+    action: added
+    distills: "the W10 result: outcome per expected row, deviations, evidence, distillation and follow-ups"
