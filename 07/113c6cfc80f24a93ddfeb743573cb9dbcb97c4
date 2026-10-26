@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W11
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the quit dialog row closed by E-ONBRVP.W11, and a row for the Dock's Quit and a logout, which tao cannot hold"
+  - path: "docs/decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"
+    tier: T2
+    action: added
+    distills: "DEC-64: cmd-Q is Trawler's own Quit and asks; a quit asks while this machine routes through Trawler (its address, localhost or its own address on Trawler's port), while its proxy could not be read, or while reach is armed or the chosen emulator routes here; a proxy not Trawler's asks nothing; the stake is the capture service; the act is stop routing through Trawler with each platform's own steps; five rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-64's row"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: quitting asks while something still routes through Trawler, and only then"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's quit row restated: what asks, about what, the stake, the act, the steps, the outcome and the three cancels"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the status line: W1-W10 landed, W11 built"
+  - path: "docs/work/2026-10-26-close-dialog-design-run.html"
+    tier: T3
+    action: added
+    distills: "the close dialog's own design run from Frame B, round 1: one frame for every reading, the button giving way to its outcome, the stake, the steps and the opt-outs; closed on the owner's LGTM and archived"
+  - path: "docs/work/2026-10-26-onboard-revamp-w11-close-dialog-plan.html"
+    tier: T3
+    action: added
+    distills: "the W11 plan: D1-D5, S1-S4, N1, Q1-Q5 with the owner's rulings, the cmd-Q reproduction and the test plan"
+  - path: "docs/work/2026-10-26-onboard-revamp-w11-close-dialog-result.html"
+    tier: T3
+    action: added
+    distills: "the W11 result"
