@@ -59,9 +59,10 @@
         platform chosen; a Wi-Fi-only proxy on an emulator sending over mobile data routes nothing. It keeps its
         opt-out</td><td>only then can a device lose anything when Trawler stops;
         adb starts a server of its own (E-ONBRVP.W8's Q1)</td></tr>
-      <tr><td>5a</td><td>Every read a close waits on is bounded (1.5 s each, run together), and a read that does
-        not answer in time claims nothing</td><td>a close held by a read that never settles is a window that cannot
-        be quit (E-ONBRVP.W11's review, round 1)</td></tr>
+      <tr><td>5a</td><td>Every read a close waits on is bounded at 1.5 s — the capture service and the emulator,
+        run together, then this machine's proxy (read off the shell's main thread) and the opt-out. A read that
+        does not answer in time claims nothing: an unanswered proxy reads as unread</td><td>a close held by a read
+        that never settles is a window that cannot be quit (E-ONBRVP.W11's review, rounds 1 and 2)</td></tr>
       <tr><td>6</td><td>The stake is the capture service, not the window: the routed machine has no internet once
         it stops, or now while it does not answer</td><td>the core is its own process, and quitting the window does
         not stop it</td></tr>

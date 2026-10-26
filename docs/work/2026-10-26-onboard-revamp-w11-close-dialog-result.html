@@ -34,10 +34,10 @@
       <tr><td>the steps from <code>setup.ts</code></td><td><code>routeUndo(platform, os)</code> in <code>setup.ts</code>, read by setup's guides and the dialog alike; setup's step renderer (<code>StepParts</code>, <code>GuideSteps</code>) moved into <code>manualSteps.tsx</code>, shared by both screens</td><td>one source for each reversal and one way to render it; the dialog may not import from a sibling screen</td></tr>
       <tr><td>—</td><td><code>proxyTargets.ts</code> keeps only the four reversals setup reads; the Firefox, iOS Simulator and Android client targets are gone</td><td>they existed only for the dialog's old picker; the platforms now carry those steps</td></tr>
       <tr><td>—</td><td>while the stop runs, the button stays, disabled, with the progress line above it</td><td>fork D4, as setup's actions do; it gives way only once routing has stopped. The design run draws it so</td></tr>
-      <tr><td>—</td><td>review round 1 failed, and <code>68ce8d6</code> fixed it: every read a close waits on is
+      <tr><td>—</td><td>review rounds 1 and 2 failed; <code>68ce8d6</code> and <code>02f4322</code> fixed them: every read a close waits on is
         bounded and the two run together; an emulator's Wi-Fi-only proxy no longer counts as routed here; a silent
         capture service's last-reported addresses stand in for this machine's</td><td>a hung adb read held the close
-        with no dialog (blocker); the other two were false or missed prompts (important). DEC-64 says each</td></tr>
+        with no dialog (blocker), and round 2 found the shell's two reads unbounded (important); the others were false or missed prompts (important). DEC-64 rule 5a says each</td></tr>
       <tr><td>—</td><td><code>Notice</code>'s TSDoc example quotes the dialog's new outcome</td><td>its <code>@use</code> named the old wording</td></tr>
     </table>
 
@@ -48,15 +48,21 @@
       <tr><td>unit</td><td><code>ui/src/closeConfirm.test.tsx</code> (which reading asks what; the machine's addresses passed; each opt-out its own key; a shell or service that fails still settles the close) · <code>ui/src/ProxyCloseDialog.test.tsx</code> (every prompt's words, steps, button and opt-out; the outcome replacing the button; focus; the shell's three cancels and the trap) · <code>ui/src/setup.test.ts</code> (setup's undo is <code>routeUndo</code> on every platform and host) · <code>ui/src/proxyTargets.test.ts</code> · <code>ui/src-tauri/src/menu.rs</code> (only Quit asks the window to close) · <code>setup.rs</code> (this machine's own address reads Trawler's; quit reads GNOME as setup does; the unread key) · <code>scenario.rs</code></td></tr>
       <tr><td>integration</td><td><code>ui/src/App.test.tsx</code>'s <em>quitting</em> block: a close request through App's own wiring opens the routed-here dialog with this machine's addresses and is cancelled by Esc, the backdrop and ✕; someone else's proxy quits unasked; devices allowed opens the device notice on the device last set up; a silent capture service says <em>now</em></td></tr>
       <tr><td>e2e</td><td>waived at WU: <code>proxy_status</code> reads the real system proxy in the e2e build, so a routed state is not hermetic, and WebDriver cannot press a native menu item; the epic's quit journey stays with W20</td></tr>
-      <tr><td>suites</td><td>at <code>68ce8d6</code>: UI 62 files and 32,126 tests green · <code>tsc -b</code> and <code>eslint .</code> green · <code>ui/src-tauri</code> 95 tests, 113 with <code>scenario</code> · Gate 0 green · the design run renders (7 mounts)</td></tr>
+      <tr><td>suites</td><td>at <code>02f4322</code>: UI 62 files and 32,128 tests green · <code>tsc -b</code> and <code>eslint .</code> green · <code>ui/src-tauri</code> 95 tests, 113 with <code>scenario</code> · Gate 0 green · the design run renders (7 mounts)</td></tr>
       <tr><td>review</td><td>round 1 at <code>07113c6</code>: FAIL — the correctness and efficiency finders over
         <code>ui/src</code> raised five candidates; the verifiers confirmed a blocker (a hung emulator read held the
         close), two importants (a Wi-Fi-only emulator proxy prompted; a LAN-address proxy was missed while the
         service was down) and one nit (the reads ran in sequence), and refuted one as a duplicate. Each has a named
         regression test in <code>App.test.tsx</code>'s <em>quitting</em> block and <code>closeConfirm.test.tsx</code>,
-        written failing first. Round 2 follows on the fixed tip</td></tr>
+        written failing first</td></tr>
+      <tr><td>review</td><td>round 2 at <code>4a75ae6</code>: FAIL — six candidates; the verifiers confirmed one
+        important (the close still waited on <code>proxy_status</code> and the opt-out's read unbounded) and one nit
+        (a bound left its timer pending), and refuted four (the devices opt-out and its one key are DEC-64 rule 5's
+        ruling; the certificate is re-read by DEC-62; the reads' order is a data dependency). <code>02f4322</code>
+        bounds both reads, clears the timer and runs <code>proxy_status</code> off the shell's main thread, each with
+        a regression test written failing first. Round 3 follows on the fixed tip</td></tr>
       <tr><td>design</td><td>the dialog's own design run, round 1, closed and archived with your LGTM (<code>6209d7b</code>)</td></tr>
-      <tr><td>commits</td><td>plan <code>bcd6db7</code> · <code>0b30897</code> · <code>2115d09</code> · design <code>3c54733</code>, closed <code>6209d7b</code> · build <code>b858aa8</code>, review fix <code>68ce8d6</code> · T2 <code>6082a70</code></td></tr>
+      <tr><td>commits</td><td>plan <code>bcd6db7</code> · <code>0b30897</code> · <code>2115d09</code> · design <code>3c54733</code>, closed <code>6209d7b</code> · build <code>b858aa8</code>, review fixes <code>68ce8d6</code>, <code>02f4322</code> · T2 <code>6082a70</code></td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
