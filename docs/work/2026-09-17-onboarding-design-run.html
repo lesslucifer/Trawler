@@ -699,12 +699,12 @@
            proof says when it was made (P2), the try task keeps it once quiet
            (P1), and an allowed address this Mac has left is not working (R1). */
         const sv = (glyph, tone, short) => ({ glyph, tone, short });
-        const phoneLines = (device) => {
-        const CONFIRM = sv("◐", "muted", `can't check here — ${device}'s first request confirms it`);
         const REACHED_AT = sv("✓", "ok", "done — a request reached Trawler at 14:02");
         const ARRIVING = sv("⚠", "warn", "not working — arriving but not decrypting");
         const MIXED_TRUST = sv("◐", "muted", "can't check here — the address in step 4 confirms it");
         const MIXED_ROUTE = sv("◐", "muted", "can't check here — the same request confirms it");
+        const phoneLines = (device) => {
+        const CONFIRM = sv("◐", "muted", `can't check here — ${device}'s first request confirms it`);
         const PHONE = {
           waiting: { trust: sv("◐", "muted", `can't check here — ${device}'s first HTTPS request confirms it`), route: CONFIRM, try: WAITING },
           tunnel: { trust: sv("⚠", "warn", "not working — nothing decrypted"), route: REACHED_AT, try: ARRIVING },
@@ -1565,6 +1565,7 @@
         <tr><td>Round 18, close — "it's ok, please help me to proceed to WU close", on the iPhone's address as its test: only that address refused is its certificate's, the trust switch before the profile, reopened after a proof, and Apple's own services' refusals the try task's note</td><td>nothing further. <code>verify-doc</code> green, then archived; W9's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 19 — the owner's rulings on E-ONBRVP.W10's plan, 2026-10-26: "Q1: yes, Q2: yes, Q3: yes" — S1–S4 and C1–C3 taken, Q1–Q3 A: only a refusal of the address step 4 offers is the Android device's certificate's, it reopens the task after a proof, and its steps reach the installer by Settings' search and the proxy by the stock path</td><td>mockup — the Android device beside the iPhone, in every state the phone's buttons show: its services refusing, the address refused (clear, mixed, and after a proof), its note after a proof, its steps · rules — the address is the Android device's test; a phone's step names what it shows · model — the Android device's certificate · copy — the Android device's lines and steps · given — <code>device.refusal</code>, for both phones</td><td><code>DEC-63</code> — rule 10, both phones · <code>DEC-62</code> — a tunnel to example.com and no row is a refusal (D9)</td></tr>
         <tr><td>Round 19, close — "LGTM", on the Android device's address as its test: only that address refused is its certificate's, said as its user store lacking it, reopened after a proof, Android's own services' refusals the try task's note, and steps that name no file a browser renames, reach the installer by Settings' search and the proxy by the stock path</td><td>nothing further. <code>verify-doc</code> green, then archived; W10's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 19, after close — <code>cargo xtask ui specimens --check</code> found the mockup failing to render: round 19's per-phone lines had made four shared lines local, which the sections after the phone read</td><td>the four lines are the mockup's again; nothing the design says changes. The run renders, 68 mounts</td><td><code>DEC-53</code></td></tr>
       </tbody>
     </table>
 
