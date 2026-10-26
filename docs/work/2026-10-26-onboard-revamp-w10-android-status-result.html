@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adf33ca9f34851f0dfadcf9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W10 result: status, Android device</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W10 — result: status, Android device</h1>
+      <p>The Android device's test is now the address its try task offers, as the iPhone's is. Only that address refused says anything of its certificate: the user store lacks it, and the task reopens after a proof. Android's own services' refusals are the try task's note. Its steps name no file Chrome renames and reach each menu a stock Android has.</p>
+      <div class="meta">v1 · 2026-10-26 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W10</span> · branch <code>wu/onboard-revamp/android-status</code> · <a href="2026-10-26-onboard-revamp-w10-android-status-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 19</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>this Mac's proxy off, the device routed with its CA installed, Android's services refusing, nothing opened → ② never <em>not working</em> · ④ a muted note naming Android's own services and the address as the test</td><td>② <em>can't check here — the address in step 4 confirms it</em> · ④ <em>not working — arriving but not decrypting</em> with <em>… Android's own services ignore a user certificate, so they never decrypt. The address below is the test.</em> (S1, Q1 A)</td><td>delivered; ②'s guide stays open by reading order (the first task not done), and no sentence points at it</td></tr>
+      <tr><td>no CA, open step 4's address → ② <em>not working — example.com did not decrypt</em>, its steps open, S2's remedy</td><td>as expected: <em>example.com did not decrypt on your Android device — Trawler Proxy CA is not in its user store. The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.</em> ④ stays bare, so it is said once (S2)</td><td>delivered</td></tr>
+      <tr><td>the same in the common path → ② ◐ · ④'s conditional remedy</td><td>as expected: <em>example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.</em></td><td>delivered</td></tr>
+      <tr><td>proved at 14:02, CA uninstalled, address opened again at 15:10 → ② <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em></td><td>as expected; ④ keeps <em>done — decrypted at 14:02</em> and offers <em>to check again, open this one on your Android device</em> (S3, Q2 A)</td><td>delivered</td></tr>
+      <tr><td>proved, then Android's services refuse → ④ keeps its proof with the note naming them</td><td><em>something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.</em> (S4)</td><td>delivered</td></tr>
+      <tr><td>the certificate and proxy steps → no <code>trawler-ca.cer</code> to pick, no <em>Settings → Security</em> or <em>Settings → Wi-Fi</em>, <em>Install anyway</em> named</td><td><em>… — it downloads Trawler's certificate.</em> · <em>Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.</em> · <em>Menus differ by maker; on stock Android: Settings → Network &amp; internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy → Manual.</em>, off with <em>… → Proxy → None.</em> (C1–C3, Q3 A)</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>two code commits, S1–S4 then C1–C3</td><td>one (<code>b27c056</code>)</td><td>both change the same constructor in <code>setup.ts</code>; the plan's commit table says so</td></tr>
+      <tr><td>—</td><td>no change to <code>ownRequest.ts</code>, <code>verdicts.ts</code> or <code>Onboarding.tsx</code> beyond two comments</td><td>W9 built the address reading for any platform that opts in; the Android device opts in with its own sentences</td></tr>
+      <tr><td>—</td><td>the Android device's old <code>notDecrypting</code> advice is gone</td><td>its certificate task now says only the address's refusal, in its own words</td></tr>
+      <tr><td>—</td><td>round 19's mockup failed to render after the close, and was fixed in <code>cc440fe</code></td><td>its per-phone lines had made four shared lines local; <code>cargo xtask ui specimens --check</code> caught it. Nothing the design says changed; the run's log has an after-close row</td></tr>
+      <tr><td>—</td><td>no server snapshot of the design run before round 19</td><td>the htmldoc server refuses its body (HTTP 413), as in W5–W9; git holds the baseline (<code>fe2e63c</code>)</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>reproduced</td><td>on a throwaway Android 15 AVD (API 35, google_apis arm64) routed to a scratch core on spare ports, both deleted after: Android's services refusing (514 tunnels in 40 s, none decrypted); example.com refused without the CA and decrypted with it; Chrome saving <code>trawler-ca.cer.crt</code>; Settings' search reaching the installer; the wrong type refused; the address refused again after <em>Uninstall</em>, Chrome left running; no search result for a proxy</td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code> (the two phones' address tests and the Android device's sentences; its rule-7 note shared with the emulator; no <code>trawler-ca.cer</code> to pick; the installer by Settings' search past <em>Install anyway</em>; the stock proxy path and its undo)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> (S1–S4 on the Android device's screen, in a clear span and mixed, before and after a proof) · <code>ui/src/onboardingMatrix.test.tsx</code> (the <em>its address refused</em> axis and the rule <em>a phone's certificate is not working only on its address refused</em>, widened from the iPhone to both phones — 320 states more). Run against the epic tip's sources, all 12 new or rewritten unit and screen tests fail, and 440 of the matrix's Android device states. No other platform's state fails</td></tr>
+      <tr><td>e2e</td><td>waived at WU: a real phone is neither hermetic nor in CI, and allowing an address opens a native confirm no WebDriver reaches. Your three checks on a real phone remain (the plan's <a href="2026-10-26-onboard-revamp-w10-android-status-plan.html#device-checks">device checks</a>): a Samsung's search and proxy path; the address in Samsung Internet or Firefox; Google Play services idle</td></tr>
+      <tr><td>suites</td><td>at <code>cc440fe</code>, 2026-10-26: UI 62 files and 32,108 tests green · <code>tsc -b</code> and <code>eslint .</code> green · <code>cargo xtask ui specimens --check</code>: the design run renders (68 mounts); the seven failing files are archived design runs from July to September that this branch does not touch</td></tr>
+      <tr><td>review</td><td>pending</td></tr>
+      <tr><td>design</td><td>round 19 of the setup screen's design run, closed and archived with your LGTM (<code>5f210d6</code>), its render fixed after (<code>cc440fe</code>)</td></tr>
+      <tr><td>commits</td><td>plan <code>d7837c8</code> · <code>fe2e63c</code> · <code>c19bf60</code> · round 19 <code>18c4860</code>, closed <code>5f210d6</code>, render <code>cc440fe</code> · build <code>b27c056</code> · T2 <code>09e954c</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> — the phones' row in the platform table says each phone's marked address is its certificate's test, and how an Android device's steps reach its menus; a new paragraph says what the address means for the Android device's tasks. The index row says the same. <a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> is v7: rule 10 covers both phones, with an Android row and why; a "why this record exists" row; the Android device's paths closed; the rejected list gains no refusal the Android device's and rule 7 unchanged for it. Its index row says so. The <a href="../backlog/roadmap.html">roadmap</a> gains Chrome's <code>.cer.crt</code> rename (N3). No component contract changed.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W19: N1 (the Android device's certificate task has no "to remove it later"). W17: N2 (the emulator's undo says <em>Remove</em>, Android 15's button <em>Uninstall</em>). W11: the close dialog's Android proxy-off line still reads <em>Wi-Fi → your network → Proxy → None</em>. W20: the three device checks. The core: the <code>.cer.crt</code> row on the roadmap. The walkthrough films none of the new states.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
