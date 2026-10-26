@@ -484,7 +484,7 @@ const CA_SHOWN: Record<"mac" | "windows" | "ubuntu" | "ios" | "android", { says:
     findings: ["R23", "R24", "R27", "R28"],
   },
   android: {
-    says: "opens /ca.cer, which downloads trawler-ca.cer, and the install step picks trawler-ca.cer; its other way saves the same file",
+    says: "opens /ca.cer, which downloads Trawler's certificate, and the install step reaches the CA installer by Settings' search and picks the trawler-ca file it downloaded; its other way saves trawler-ca.cer",
     findings: ["R25", "R27", "R28"],
   },
 };

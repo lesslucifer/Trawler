@@ -204,8 +204,8 @@ export interface DeviceReading {
 
 // The newest tunnel to the host of the address another device's try task
 // offers, where no decrypted request to that host answered it, and whether it
-// arrived where unmarked traffic is that device's (rule 3): the iPhone's test,
-// since its own services refuse whatever its certificate does (W9's Q1).
+// arrived where unmarked traffic is that device's (rule 3): a phone's test,
+// since its own services refuse whatever its certificate does (W9's and W10's Q1).
 export interface AddressRefusal {
   host: string;
   at: number;

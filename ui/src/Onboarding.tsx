@@ -993,8 +993,8 @@ function PlatformSetup({
     mixed,
     tryStep,
   };
-  // The iPhone's own services refuse whatever its certificate does, so only its
-  // address refused is that certificate's to say, and it outlasts a proof (W9).
+  // A phone's own services refuse whatever its certificate does, so only its
+  // address refused is that certificate's to say, and it outlasts a proof (W9, W10).
   const addressTest = setup.addressTest;
   const address = useSettledRefusal(device.refusal);
   const addressRefused =

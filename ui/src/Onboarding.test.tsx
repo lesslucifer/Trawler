@@ -1341,6 +1341,90 @@ describe("the iPhone, whose test is the address it is offered", () => {
   });
 });
 
+// W10: Android's own services ignore a user certificate and refuse from the
+// moment its proxy points here, so the Android device's test is its address too.
+describe("the Android device, whose test is the address it is offered", () => {
+  const STORE_LACKS = "example.com did not decrypt on your Android device — Trawler Proxy CA is not in its user store.";
+  const refusedAt = arriving.openTunnelAt!;
+  const theAddress = (at: number, mine = true) => ({ host: "example.com", at, mine });
+  const clearSpan = (refusal?: ReturnType<typeof theAddress>) => ({
+    provedAt: null,
+    mixed: false,
+    wire: NO_TRAFFIC,
+    refusal,
+  });
+
+  it("a refusal of anything else confirms the proxy, leaves the certificate to the address, and names Android's services", () => {
+    draw({ reach: ARMED, traffic: arriving, device: clearSpan() });
+    pick("Android device");
+
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(refusedAt)}`);
+    expect(task(2)).toHaveTextContent("can't check here — the address in step 4 confirms it");
+    expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The address below is the test.",
+    );
+  });
+
+  it("its address refused says the user store lacks the certificate, with the steps open, once", () => {
+    draw({ reach: ARMED, traffic: arriving, device: clearSpan(theAddress(refusedAt)) });
+    pick("Android device");
+
+    expect(task(2)).toHaveTextContent("not working — example.com did not decrypt");
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
+      `${STORE_LACKS} The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.`,
+    );
+    expect(open("On your Android device, open")).toBe(true);
+    expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
+  });
+
+  it("its address refused after a proof reopens the certificate task; the try task keeps the proof and the address to check again", () => {
+    const provedAt = ago(60_000);
+    draw({
+      reach: ARMED,
+      traffic: { ...arriving, lastDecryptedAt: provedAt },
+      device: clearSpan(theAddress(refusedAt)),
+      deviceMark: "k3m9",
+    });
+    pick("Android device");
+
+    expect(task(2)).toHaveTextContent(
+      `not working — example.com did not decrypt at ${clock(refusedAt)}, after decrypting at ${clock(provedAt)}`,
+    );
+    expect(open("On your Android device, open")).toBe(true);
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(provedAt)}`);
+    expect(screen.getByTestId("check-address")).toHaveTextContent(
+      "to check again, open this one on your Android device",
+    );
+  });
+
+  it("after a proof, a refusal of anything else is Android's own services first", () => {
+    const provedAt = ago(60_000);
+    draw({ reach: ARMED, traffic: { ...arriving, lastDecryptedAt: provedAt }, device: clearSpan() });
+    pick("Android device");
+
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(provedAt)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
+    );
+  });
+
+  it("its address refused while this Mac's traffic may be arriving is nobody's, and the try task says what to do if it was the Android device's", () => {
+    draw({
+      reach: ARMED,
+      device: { provedAt: null, mixed: true, wire: arriving, refusal: theAddress(refusedAt, false) },
+      deviceMark: "k3m9",
+    });
+    pick("Android device");
+
+    expect(task(2)).toHaveTextContent("can't check here — the address in step 4 confirms it");
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.",
+    );
+    expect(document.body.textContent).not.toMatch(/Finish the certificate step/);
+  });
+});
+
 // A1 · A3 · A4 (DEC-63): with this Mac routed through Trawler, its own
 // requests arrive beside that Mac's, and nothing unmarked tells them apart.
 describe("another device, where this machine's own traffic may be arriving too", () => {
@@ -2078,15 +2162,6 @@ test("the emulator's save control saves the DER its installer opens, and names i
   expect(
     await within(task(1)).findByText("saved as trawler-ca.cer. now trust it with the steps here."),
   ).toBeInTheDocument();
-});
-
-test("an Android device whose requests arrive and do not decrypt is told where its user store is, and what ignores it", () => {
-  draw({ reach: ARMED, traffic: arriving });
-  pick("Android device");
-
-  expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
-    "something reached Trawler and did not decrypt — your Android device does not trust Trawler's certificate yet. The steps below install it. Already did? Trawler Proxy CA should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.",
-  );
 });
 
 // ── The request the app makes of its own (F24 · DEC-56) ────────────────────

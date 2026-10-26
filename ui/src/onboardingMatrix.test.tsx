@@ -52,9 +52,10 @@ import {
 //   the emulator  another device that needs no allow: its own store and proxy
 //                as adb reads them, else what another device's tasks read; a
 //                refusal is never its certificate task's (W8)
-//   the iPhone   another device whose test is its address: only that address
-//                refused, the iPhone's and newer than any proof, is its
-//                certificate's to say; any other refusal is the try task's (W9)
+//   a phone      another device whose test is its address: only that address
+//                refused, the phone's and newer than any proof, is its
+//                certificate's to say; any other refusal is the try task's
+//                (the iPhone W9, the Android device W10)
 //
 // and against three kinds of rule. PLACE, an instruction sits inside the task
 // it is for; TIME, an action or a step is offered only while its task is not
@@ -199,8 +200,8 @@ interface State {
   // Another device's marked request came through, decrypted, since its
   // address was allowed (DEC-63).
   marked: boolean;
-  // The history's open tunnel is to the host of the address the iPhone is
-  // offered, rather than one of Apple's own services (W9).
+  // The history's open tunnel is to the host of the address a phone is
+  // offered, rather than one of its own services (W9, W10).
   address: boolean;
 }
 
@@ -374,11 +375,11 @@ function model(s: State) {
   // marked request is another device's evidence - the Simulator's, always.
   const sharedWire = s.platform === "ios-sim";
   const emulator = s.platform === "android-sim";
-  const iphone = s.platform === "ios";
+  const phone = s.platform === "ios" || s.platform === "android";
   const anotherDevice = needsReach || emulator;
   const mixed = sharedWire || (anotherDevice && (s.proxy === "ours" || s.proxy === "unknown"));
   // Every open tunnel the sweep draws is newer than every proof beside it.
-  const addressRefused = iphone && s.address && onWire.unanswered && !mixed;
+  const addressRefused = phone && s.address && onWire.unanswered && !mixed;
   const reached = mixed ? s.marked : onWire.reached;
   const decrypted = mixed ? s.marked : onWire.decrypted;
   const unanswered = mixed ? false : onWire.unanswered;
@@ -409,7 +410,7 @@ function model(s: State) {
   // the refusal may be anyone's: This machine's store unread (D7), another
   // device's traffic mixed with this machine's (A3), and the emulator, whose
   // own services refuse a certificate it holds (W8).
-  const certificateOwnsRefusal = iphone
+  const certificateOwnsRefusal = phone
     ? addressRefused
     : !trustDone && !(probesTrust && !trustConcluded) && !mixed && !emulator;
   const auto = canAutoSetup(s.os);
@@ -420,7 +421,7 @@ function model(s: State) {
   const notDecryptingNow = h === "refused" || h === "refused-and-retrying" || h === "decrypted-then-refused";
   return {
     ...{ probesTrust, probesRoute, first, reached, routeReached, decrypted, unanswered, refused, mixed, sharedWire },
-    ...{ emulator, anotherDevice, iphone, addressRefused },
+    ...{ emulator, anotherDevice, phone, addressRefused },
     trustN: first + 1,
     routeN: first + 2,
     tryN: first + 3,
@@ -461,16 +462,17 @@ function expectedTrustState(s: State): RegExp {
     if (m.mixed) return new RegExp(`^◐\\s*can't check here — the address in step ${m.tryN} confirms it$`);
     return /^◐\s*can't check here — the emulator's first HTTPS request confirms it$/;
   }
-  if (m.iphone && !m.blocked) {
+  if (m.phone && !m.blocked) {
+    const device = deviceName(s.platform, s.os);
     if (m.addressRefused)
       return m.decrypted
         ? /^⚠\s*not working — example\.com did not decrypt at \d\d:\d\d, after decrypting at \d\d:\d\d$/
         : /^⚠\s*not working — example\.com did not decrypt$/;
-    if (s.marked) return /^✓\s*done — your iPhone's request decrypted at \d\d:\d\d$/;
+    if (s.marked) return new RegExp(`^✓\\s*done — ${device}'s request decrypted at \\d\\d:\\d\\d$`);
     if (m.mixed) return /^◐\s*can't check here — the address in step 4 confirms it$/;
     if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
     if (m.refused) return /^◐\s*can't check here — the address in step 4 confirms it$/;
-    return /^◐\s*can't check here — your iPhone's first HTTPS request confirms it$/;
+    return new RegExp(`^◐\\s*can't check here — ${device}'s first HTTPS request confirms it$`);
   }
   if (m.probesTrust && !m.trustConcluded)
     return s.own
@@ -719,14 +721,15 @@ const RULES: Record<string, Rule> = {
     return wrong.length === 0 ? null : wrong.join("; ");
   },
 
-  // W9: Apple's own services refuse whatever the iPhone's certificate does,
-  // so only its address refused says anything of that certificate.
-  "truth: the iPhone's certificate is not working only on its address refused, and no refusal blames it otherwise (W9)": (
+  // A phone's own services refuse whatever its certificate does - Apple's pin
+  // theirs, Android's ignore a user certificate - so only its address refused
+  // says anything of that certificate.
+  "truth: a phone's certificate is not working only on its address refused, and no refusal blames it otherwise (W9, W10)": (
     o,
     s,
   ) => {
     const m = model(s);
-    if (!m.iphone || m.blocked) return null;
+    if (!m.phone || m.blocked) return null;
     const notWorking = /not working/.test(task(o, m.trustN).state);
     const blamed = o.tasks.some((t) => /does not trust Trawler's certificate yet|Finish the certificate step/.test(t.text));
     return notWorking === m.addressRefused && !blamed
@@ -772,7 +775,7 @@ const STATES: State[] = HOSTS.flatMap((os) =>
           ).flatMap((marked) =>
             PROXY.flatMap((proxy) =>
               HISTORIES.flatMap((history) =>
-                (platform === "ios" && armed && UNANSWERED.has(history) ? [false, true] : [false]).map((address) => ({
+                ((platform === "ios" || platform === "android") && armed && UNANSWERED.has(history) ? [false, true] : [false]).map((address) => ({
                   ...{ os, platform, armed, trust, proxy, history, own, marked, address },
                 })),
               ),
@@ -799,13 +802,13 @@ describe("every reading at rest", () => {
     const marked = HOSTS.length * OFF_MACHINE.size * PROXY.length * HISTORIES.length;
     const simulatorMarked = TRUST.length * PROXY.length * HISTORIES.length;
     const emulatorMarked = HOSTS.length * TRUST.length * PROXY.length * HISTORIES.length;
-    const iphoneAddress = HOSTS.length * (TRUST.length + 1) * PROXY.length * UNANSWERED.size;
+    const phoneAddress = 2 * HOSTS.length * (TRUST.length + 1) * PROXY.length * UNANSWERED.size;
     expect(STATES).toHaveLength(
       (onMac + 3 * elsewhere + withOwnRequest) * TRUST.length * 4 * HISTORIES.length +
         marked +
         simulatorMarked +
         emulatorMarked +
-        iphoneAddress,
+        phoneAddress,
     );
     expect(STATES.filter((s) => s.platform === "ios-sim").every((s) => s.os === "macos")).toBe(true);
   });
