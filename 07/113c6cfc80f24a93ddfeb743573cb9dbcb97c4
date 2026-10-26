@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU close-dialog -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W11
+branch: wu/onboard-revamp/close-dialog
+base: d1bbf8fb53539c706b6bdc011bd6f217bb3accf6
+head: 07113c6cfc80f24a93ddfeb743573cb9dbcb97c4
+diff_sha256: d18c1c8bed7d26f3686dc088012556344e6aa3842d49fa2cef2ba0de48db4a68
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 3
+  stage_seconds:
+    gate0: 48
+    total: 147
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 2, verified: 1 }
+findings: { found: 4, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "readQuitFacts reads reach, then the certificate, then the emulator in sequence, though the reach and emulator reads are independent"
+    waived: "superseded: the round fails on the blocker in the same code, and the fix round runs the two reads concurrently"
+verdict: FAIL
+date: 2026-10-26
