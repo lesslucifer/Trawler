@@ -162,6 +162,11 @@
     .a-ad-yes{display:none}
     .addr .a-ad-no{display:none}
     .addr .a-ad-yes{display:block}
+    /* round 19 — the Android device takes the iPhone's address as its test:
+       the same states, its own sentences and steps. */
+    .a-ph-andr{display:none}
+    .andr .a-ph-ios{display:none}
+    .andr .a-ph-andr{display:block}
   </style>
 </head>
 <body>
@@ -169,8 +174,8 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 by E-ONBRVP.W8 · round 18 on 2026-10-25 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W9</strong> · branch <code>wu/onboard-revamp/iphone-status</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 by E-ONBRVP.W8 · round 18 on 2026-10-25 by E-ONBRVP.W9 · round 19 on 2026-10-26 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W10</strong> · branch <code>wu/onboard-revamp/android-status</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
@@ -193,7 +198,10 @@
             <p class="font-ui text-chrome uppercase tracking-label text-ink-mute">which device's traffic do you want to see</p>
             <div class="a-pf-machine" id="m-picker-machine"></div>
             <div class="a-pf-sim" id="m-picker-sim"></div>
-            <div class="a-pf-off" id="m-picker-off"></div>
+            <div class="a-pf-off">
+              <div class="a-ph-ios" id="m-picker-off"></div>
+              <div class="a-ph-andr" id="m-picker-off-andr"></div>
+            </div>
             <div class="a-pf-none" id="m-picker-none"></div>
             <div class="a-pf-ubuntu" id="m-picker-ubuntu"></div>
             <div class="a-pf-emu" id="m-picker-emu"></div>
@@ -214,6 +222,7 @@
               <div class="a-sm-unread-marked" id="m-steps-sim-unread-marked"></div>
             </div>
             <div class="a-pf-off">
+              <div class="a-ph-ios">
               <div class="a-rch-off" id="m-steps-off-unreached"></div>
               <div class="a-rch-on">
                 <div class="a-mx-plain">
@@ -238,6 +247,33 @@
                 <div class="a-mx-marked" id="m-steps-off-marked"></div>
               </div>
               <div class="a-rch-lost" id="m-steps-off-lost"></div>
+              </div>
+              <div class="a-ph-andr">
+              <div class="a-rch-off" id="m-steps-andr-unreached"></div>
+              <div class="a-rch-on">
+                <div class="a-mx-plain">
+                  <div class="a-op-wait" id="m-steps-andr-reached"></div>
+                  <div class="a-op-tunnel">
+                    <div class="a-ad-no" id="m-steps-andr-tunnel"></div>
+                    <div class="a-ad-yes" id="m-steps-andr-addr"></div>
+                  </div>
+                  <div class="a-op-proven" id="m-steps-andr-proven"></div>
+                  <div class="a-op-late">
+                    <div class="a-ad-no" id="m-steps-andr-late"></div>
+                    <div class="a-ad-yes" id="m-steps-andr-late-addr"></div>
+                  </div>
+                </div>
+                <div class="a-mx-mixed">
+                  <div class="a-op-rest" id="m-steps-andr-mixed"></div>
+                  <div class="a-op-tunnel">
+                    <div class="a-ad-no" id="m-steps-andr-mixed-tunnel"></div>
+                    <div class="a-ad-yes" id="m-steps-andr-mixed-addr"></div>
+                  </div>
+                </div>
+                <div class="a-mx-marked" id="m-steps-andr-marked"></div>
+              </div>
+              <div class="a-rch-lost" id="m-steps-andr-lost"></div>
+              </div>
             </div>
             <div class="a-pf-emu">
               <div class="a-em-absent" id="m-steps-emu"></div>
@@ -321,7 +357,9 @@
       <button class="statebtn" data-state-toggle="mock" data-state-class="late"
               data-label-off="▶ a device: after its proof, a connection nothing decrypts" data-label-on="◀ a device: nothing after its proof">▶ a device: after its proof, a connection nothing decrypts</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="addr"
-              data-label-off="▶ iPhone: what refuses is step 4's address, example.com" data-label-on="◀ iPhone: what refuses is Apple's own services">▶ iPhone: what refuses is step 4's address, example.com</button>
+              data-label-off="▶ a phone: what refuses is step 4's address, example.com" data-label-on="◀ a phone: what refuses is its own services">▶ a phone: what refuses is step 4's address, example.com</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="andr"
+              data-label-off="▶ the phone is an Android device" data-label-on="◀ the phone is an iPhone">▶ the phone is an Android device</button>
       <script type="text/babel">
         const { React, createRoot, Notice, Section, StatusLine, Button, CommandBlock,
                 StepList, CopyText, Disclosure, Select, Spinner, StatusDot, TaskStep, TimestampText,
@@ -416,6 +454,7 @@
         mount("m-picker-sim", picker("ios-sim"));
         mount("m-picker-emu", picker("android-sim"));
         mount("m-picker-off", picker("ios"));
+        mount("m-picker-off-andr", picker("android"));
         /* Round 9: the device this setup is for is the one question nobody has
            answered yet, so it is asked rather than guessed. */
         mount("m-picker-none", picker(undefined));
@@ -660,20 +699,21 @@
            proof says when it was made (P2), the try task keeps it once quiet
            (P1), and an allowed address this Mac has left is not working (R1). */
         const sv = (glyph, tone, short) => ({ glyph, tone, short });
-        const CONFIRM = sv("◐", "muted", "can't check here — your iPhone's first request confirms it");
         const REACHED_AT = sv("✓", "ok", "done — a request reached Trawler at 14:02");
         const ARRIVING = sv("⚠", "warn", "not working — arriving but not decrypting");
         const MIXED_TRUST = sv("◐", "muted", "can't check here — the address in step 4 confirms it");
         const MIXED_ROUTE = sv("◐", "muted", "can't check here — the same request confirms it");
+        const phoneLines = (device) => {
+        const CONFIRM = sv("◐", "muted", `can't check here — ${device}'s first request confirms it`);
         const PHONE = {
-          waiting: { trust: sv("◐", "muted", "can't check here — your iPhone's first HTTPS request confirms it"), route: CONFIRM, try: WAITING },
+          waiting: { trust: sv("◐", "muted", `can't check here — ${device}'s first HTTPS request confirms it`), route: CONFIRM, try: WAITING },
           tunnel: { trust: sv("⚠", "warn", "not working — nothing decrypted"), route: REACHED_AT, try: ARRIVING },
           proven: { trust: sv("✓", "ok", "done — a request decrypted at 14:02"), route: REACHED_AT },
           mixed: { trust: MIXED_TRUST, route: MIXED_ROUTE, try: sv("◐", "muted", "can't check here — the address below confirms it") },
           "mixed-tunnel": { trust: MIXED_TRUST, route: MIXED_ROUTE, try: ARRIVING },
           marked: {
-            trust: sv("✓", "ok", "done — your iPhone's request decrypted at 14:02"),
-            route: sv("✓", "ok", "done — your iPhone's request came through at 14:02"),
+            trust: sv("✓", "ok", `done — ${device}'s request decrypted at 14:02`),
+            route: sv("✓", "ok", `done — ${device}'s request came through at 14:02`),
             try: sv("✓", "ok", "done — decrypted at 14:02"),
           },
           /* Round 14 (S1): nothing here reads the phone again, so its proof
@@ -706,6 +746,8 @@
           "mixed-addr": { trust: MIXED_TRUST, route: MIXED_ROUTE, try: ARRIVING },
         };
         PHONE.tunnel = { trust: MIXED_TRUST, route: REACHED_AT, try: ARRIVING };
+        return PHONE;
+        };
         /* Round 18 (S4): what an iPhone refuses most, after its proof. */
         const LATE_REFUSAL =
           "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.";
@@ -718,16 +760,72 @@
           "something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.";
         const PROXY_UNDO = ["Settings → Wi-Fi → the network → Configure Proxy → Off."];
         const PHONE_CERT = "http://192.168.1.24:7421/ca.mobileconfig";
-        const PHONE_CERT_URL = copyable(PHONE_CERT, "the certificate URL", "certificate url");
+        const IPHONE = {
+          device: "your iPhone",
+          lines: phoneLines("your iPhone"),
+          cert: PHONE_CERT,
+          certSteps: (url) => [
+            /* Round 11 (F28 · DEC-57): the URL stays printed and copyable in
+               its sentence; the code under it is the route a phone's camera
+               takes to the same value. */
+            <>
+              On your iPhone, open {url} in Safari — it downloads trawler-ca.mobileconfig.
+              <div className="pt-2"><QrCode value={PHONE_CERT} label="the certificate URL" /></div>
+            </>,
+            "Open it: Settings → General → VPN & Device Management → install the profile.",
+            "Then turn it on: Settings → General → About → Certificate Trust Settings.",
+          ],
+          routeSteps: [
+            "Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual.",
+            "Put the server and port above into it, and save.",
+          ],
+          proxyUndo: PROXY_UNDO,
+          refused: ADDRESS_REFUSED,
+          maybe: ADDRESS_MAYBE,
+          elsewhere: ELSEWHERE_REFUSED,
+          late: LATE_REFUSAL,
+        };
+        /* Round 19 (S1-S4 · C1-C3 · Q1-Q3): Android's own services ignore a
+           user certificate, so the Android device's test is the address step 4
+           offers, as the iPhone's is. A user certificate has no second switch,
+           and the wrong type is refused outright, so the address refused says
+           the certificate is not in its user store. Chrome saves the download
+           under a name of its own, so the steps name no file; the installer is
+           reached by Settings' own search, which a maker's paths do not move,
+           and the proxy, which search does not find, by the stock path. */
+        const ANDROID_CERT = "http://192.168.1.24:7421/ca.cer";
+        const ANDROID_PROXY_UNDO = ["Settings → Network & internet → Internet → ⚙ by the network → ✎ → Advanced options → Proxy → None."];
+        const ANDROID = {
+          device: "your Android device",
+          lines: phoneLines("your Android device"),
+          cert: ANDROID_CERT,
+          certSteps: (url) => [
+            <>
+              On your Android device, open {url} — it downloads Trawler's certificate.
+              <div className="pt-2"><QrCode value={ANDROID_CERT} label="the certificate URL" /></div>
+            </>,
+            "Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.",
+          ],
+          certNotes: ["Apps targeting Android 7+ only trust user CAs when their network security config opts in."],
+          routeSteps: [
+            "Menus differ by maker; on stock Android: Settings → Network & internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy → Manual.",
+            "Put the server and port above into it, and save.",
+          ],
+          proxyUndo: ANDROID_PROXY_UNDO,
+          refused: "example.com did not decrypt on your Android device — Trawler Proxy CA is not in its user store. The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.",
+          maybe: "example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.",
+          elsewhere: "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The address below is the test.",
+          late: "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
+        };
         /* Round 13 (A1 · DEC-57): the one request that is the phone's by
            construction — its mark is shown nowhere else. Printed and copyable,
            with a code under it, as the certificate URL is. */
         const CHECK_URL = "https://example.com/?trawler-check=k3m9";
         /* Round 18 (S3): after a proof, opening it again is the re-check. */
-        const checkAddress = (again) => (
+        const checkAddress = (again, device) => (
           <div className="pt-2 font-ui text-chrome text-ink-mute">
             <span className="flex flex-wrap items-center gap-chrome-gap">
-              <span>{again ? "to check again, open this one on your iPhone" : "or open this one on your iPhone"}</span>
+              <span>{again ? `to check again, open this one on ${device}` : `or open this one on ${device}`}</span>
               {copyable(CHECK_URL, "the address to open", "check url")}
             </span>
             <div className="pt-2"><QrCode value={CHECK_URL} label="the address to open" /></div>
@@ -744,9 +842,9 @@
             <p className="pt-2 font-ui text-chrome text-ink-mute">other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</p>
           </>
         );
-        const phoneTasks = (variant) => {
+        const phoneTasks = (variant, phone = IPHONE) => {
           const armed = variant !== "unreached" && variant !== "lost";
-          const lines = PHONE[variant];
+          const lines = phone.lines[variant];
           const trustDone = variant === "proven" || variant === "marked" || variant === "late";
           const addressRefused = variant === "addr" || variant === "late-addr";
           const routeDone = trustDone || variant === "tunnel" || addressRefused;
@@ -754,7 +852,7 @@
           return (
           <Section variant="band" title="">
             <div className="flex flex-col gap-4">
-            <TaskStep n={1} title="Allow your iPhone to connect"
+            <TaskStep n={1} title={`Allow ${phone.device} to connect`}
                       why={variant === "unreached" ? "Trawler answers on this machine only until you do" : undefined}
                       status={armed
                         ? sv("✓", "ok", "done — listening on 192.168.1.24 until Trawler quits")
@@ -765,35 +863,26 @@
                 ? <Button frame="bare" tone="mute" onClick={noop}>stop listening</Button>
                 : addressOffer(variant === "lost" ? "10.0.4.9" : "192.168.1.24")}
             </TaskStep>
-            <TaskStep n={2} title="On your iPhone, install the certificate" dim={!armed}
+            <TaskStep n={2} title={`On ${phone.device}, install the certificate`} dim={!armed}
                       why={armed ? undefined : "after step 1"}
                       status={armed ? lines.trust : undefined}>
               {addressRefused && (
-                <div className="pb-2"><Notice tone="mute">{ADDRESS_REFUSED}</Notice></div>
+                <div className="pb-2"><Notice tone="mute">{phone.refused}</Notice></div>
               )}
               {armed && !trustDone && (
                 <Steps n={3} open>
                   <Guide
-                    steps={[
-                      /* Round 11 (F28 · DEC-57): the URL stays printed and
-                         copyable in its sentence; the code under it is the
-                         route a phone's camera takes to the same value. */
-                      <>
-                        On your iPhone, open {PHONE_CERT_URL} in Safari — it downloads trawler-ca.mobileconfig.
-                        <div className="pt-2"><QrCode value={PHONE_CERT} label="the certificate URL" /></div>
-                      </>,
-                      "Open it: Settings → General → VPN & Device Management → install the profile.",
-                      "Then turn it on: Settings → General → About → Certificate Trust Settings.",
-                    ]}
+                    steps={phone.certSteps(copyable(phone.cert, "the certificate URL", "certificate url"))}
+                    notes={phone.certNotes}
                     alternatives={[<>No browser on it? {saveStep} and carry the file over instead.</>]}
                   />
                 </Steps>
               )}
             </TaskStep>
-            <TaskStep n={3} title="On your iPhone, set the Wi-Fi proxy" dim={!armed}
+            <TaskStep n={3} title={`On ${phone.device}, set the Wi-Fi proxy`} dim={!armed}
                       why={armed ? undefined : "after step 1"}
                       status={armed ? lines.route : undefined}>
-              {armed && routeDone && <WayBack title="to turn it off later" steps={PROXY_UNDO} />}
+              {armed && routeDone && <WayBack title="to turn it off later" steps={phone.proxyUndo} />}
               {armed && !routeDone && (
                 <>
                   <div className="flex gap-4">
@@ -809,19 +898,16 @@
                   <div className="pt-3">
                     <Steps n={2}>
                       <Guide
-                        steps={[
-                          "Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual.",
-                          "Put the server and port above into it, and save.",
-                        ]}
+                        steps={phone.routeSteps}
                         undoTitle="to turn it off later"
-                        undo={PROXY_UNDO}
+                        undo={phone.proxyUndo}
                       />
                     </Steps>
                   </div>
                 </>
               )}
             </TaskStep>
-            <TaskStep n={4} title="Open any website on your iPhone" dim={!armed}
+            <TaskStep n={4} title={`Open any website on ${phone.device}`} dim={!armed}
                       why={armed ? "the first decrypted request is what proves setup works" : "after step 1"}>
               {armed && (
                 <>
@@ -836,15 +922,15 @@
                     <StatusLine status={lines.try} />
                   )}
                   {(variant === "tunnel" || variant === "mixed-tunnel") && (
-                    <div className="pt-2"><Notice tone="mute">{ELSEWHERE_REFUSED}</Notice></div>
+                    <div className="pt-2"><Notice tone="mute">{phone.elsewhere}</Notice></div>
                   )}
                   {variant === "mixed-addr" && (
-                    <div className="pt-2"><Notice tone="mute">{ADDRESS_MAYBE}</Notice></div>
+                    <div className="pt-2"><Notice tone="mute">{phone.maybe}</Notice></div>
                   )}
                   {variant === "late" && (
-                    <div className="pt-2"><Notice tone="mute">{LATE_REFUSAL}</Notice></div>
+                    <div className="pt-2"><Notice tone="mute">{phone.late}</Notice></div>
                   )}
-                  {checkAddress(proved)}
+                  {checkAddress(proved, phone.device)}
                 </>
               )}
             </TaskStep>
@@ -864,6 +950,10 @@
         mount("m-steps-off-addr", phoneTasks("addr"));
         mount("m-steps-off-late-addr", phoneTasks("late-addr"));
         mount("m-steps-off-mixed-addr", phoneTasks("mixed-addr"));
+        for (const v of ["unreached", "reached:waiting", "tunnel", "proven", "mixed", "mixed-tunnel", "marked", "lost", "late", "addr", "late-addr", "mixed-addr"]) {
+          const [slot, variant = slot] = v.split(":");
+          mount(`m-steps-andr-${slot}`, phoneTasks(variant, ANDROID));
+        }
 
         /* ---- the Simulator: its own store, this Mac's proxy --------------- */
         /* Round 16 (S1-S3 · C1-C3 · Q1-Q3). The Simulator sends through this
@@ -1287,6 +1377,8 @@
         <tr><td>A route holds on every network the device sends over: the emulator's is the global proxy, since a Wi-Fi proxy routes nothing where its mobile network is the default; the Settings route turns mobile data off first, and a flag the emulator reads on this Mac names this Mac's loopback</td><td>round 17 · C3 · C4 · Q3</td></tr>
         <tr><td>A command reaches every device it is for — every emulator running, never the one adb would refuse to pick — and a path names the menus the device's own version ships</td><td>round 17 · C1 · C2 · C5</td></tr>
         <tr><td>On the iPhone, the test is the address step 4 offers. Apple's own services pin their certificates and refuse from the moment its proxy is set, so a refusal is its certificate task's only where it is that address's — a tunnel to example.com no decrypted example.com row answered — in a clear span. It names the trust switch before the profile, since the two refuse alike, and it reopens a task its proof had made done: the profile removed, or full trust turned off. Every other refusal is the try task's note, naming Apple's services; while this Mac's traffic may be arriving, the address's refusal is nobody's and the note says what to do if it was the iPhone's</td><td>round 18 · S1 · S2 · S3 · S4 · Q1 · Q2</td></tr>
+        <tr><td>On the Android device, the test is the address step 4 offers, as on the iPhone. Android's own services, and most apps, ignore a user certificate and refuse from the moment its proxy is set, so a refusal is its certificate task's only where it is that address's, in a clear span, before a proof and after one — the certificate uninstalled. A user certificate has no second switch, and the wrong type is refused outright, so the sentence says the certificate is not in its user store, and how to see that it is. Every other refusal is the try task's note, naming Android's own services</td><td>round 19 · S1 · S2 · S3 · S4 · Q1 · Q2</td></tr>
+        <tr><td>A phone's step names what it shows, not what a server meant: no file name a browser may change, a menu reached by Settings' own search where it finds one, and where it does not, the stock path, said to differ by maker</td><td>round 19 · C1 · C2 · C3 · Q3</td></tr>
         <tr><td>A command runs as written in the shell its sentence names, and reads the file where the step before it left it: Windows' sentences name PowerShell; another computer's trust command reads the download from Downloads</td><td>round 14 · C1 · C2 · Q3</td></tr>
         <tr><td>An allowed address this Mac no longer holds reads not working, offers the one it holds now, and dims the tasks that would print it. Reach is read again with this machine: on focus and every 3 s</td><td>round 13 · R1 · R2</td></tr>
         <tr><td>A command is a block; a value stays in its sentence; a caveat is a line under the steps</td><td>round 5</td></tr>
@@ -1306,7 +1398,7 @@
       <h3 id="model">Where each task's reading comes from</h3>
       <table data-c="model-table">
         <tr><th>Task</th><th>Where a probe concludes</th><th>This machine, where none does — its own request (round 12)</th><th>Another device — what could have come from it (round 13)</th><th>The emulator — its own store and proxy, else another device's readings (round 17) · the Simulator — its own store, else its marked request (round 16)</th></tr>
-        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em>. The iPhone (round 18): a refusal of step 4's address in a clear span, newer than any proof → ⚠ <em>not working — example.com did not decrypt</em>, after a proof <em>… did not decrypt at 15:10, after decrypting at 14:02</em>; any other refusal and no proof → <em>can't check here — the address in step 4 confirms it</em></td><td>the emulator: each one running (<code>adb devices</code>), its own user store holding the live certificate, read through <code>su</code> → <em>done — trusted in Pixel 7 API 35</em> · <em>done — trusted in every running emulator</em>; one not → <em>not done — not in Pixel 7 API 35</em> · <em>not done — not in 2 running emulators</em>; no store read (none running, no adb, an image without <code>su</code>) → as another device, from setup's start: its marked request <em>done — the emulator's request decrypted at 14:02</em> · a request decrypted between two readings of this Mac's proxy as off or another <em>done — a request decrypted at 14:02</em> · this Mac's proxy here or unread <em>can't check here — the address in step 3 confirms it</em> · else <em>can't check here — the emulator's first HTTPS request confirms it</em>. Never a refusal. The Simulator: each one running (its <code>device.plist</code>), its own <code>TrustStore.sqlite3</code> holding the live certificate → <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em>; one not → <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em>; none running, or no store read → its marked request: <em>done — the Simulator's request decrypted at 14:02</em>, else <em>can't check here — the address in step 3 confirms it</em>. Never unmarked traffic, never a refusal</td></tr>
+        <tr><td>certificate</td><td>this machine, the live certificate: <em>trusted</em> (a keychain holds it and it verifies on macOS; its thumbprint is in the machine or the user root store on Windows; it is in the CA bundle on Linux) · <em>installed, not trusted</em> (macOS: a keychain holds it, it does not verify) · <em>not installed</em>. Traffic never overrules it</td><td>its marked request decrypted this session → <em>done — step 3's request decrypted at 14:02</em> · else <em>can't check here — the request in step 3 confirms it</em>. No other device's traffic (D7)</td><td>its marked request → <em>done — your iPhone's request decrypted at 14:02</em> · since its address was allowed, of what arrived between two readings of this Mac's proxy as off or another: a request decrypted → <em>done — a request decrypted at 14:02</em> · where that proxy points here or is unread now, nothing else → <em>can't check here — the address in step 4 confirms it</em> · else a refusal → ⚠ <em>not working — nothing decrypted</em> · neither → <em>can't check here — your iPhone's first HTTPS request confirms it</em>. The iPhone (round 18): a refusal of step 4's address in a clear span, newer than any proof → ⚠ <em>not working — example.com did not decrypt</em>, after a proof <em>… did not decrypt at 15:10, after decrypting at 14:02</em>; any other refusal and no proof → <em>can't check here — the address in step 4 confirms it</em>. The Android device, likewise (round 19)</td><td>the emulator: each one running (<code>adb devices</code>), its own user store holding the live certificate, read through <code>su</code> → <em>done — trusted in Pixel 7 API 35</em> · <em>done — trusted in every running emulator</em>; one not → <em>not done — not in Pixel 7 API 35</em> · <em>not done — not in 2 running emulators</em>; no store read (none running, no adb, an image without <code>su</code>) → as another device, from setup's start: its marked request <em>done — the emulator's request decrypted at 14:02</em> · a request decrypted between two readings of this Mac's proxy as off or another <em>done — a request decrypted at 14:02</em> · this Mac's proxy here or unread <em>can't check here — the address in step 3 confirms it</em> · else <em>can't check here — the emulator's first HTTPS request confirms it</em>. Never a refusal. The Simulator: each one running (its <code>device.plist</code>), its own <code>TrustStore.sqlite3</code> holding the live certificate → <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em>; one not → <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em>; none running, or no store read → its marked request: <em>done — the Simulator's request decrypted at 14:02</em>, else <em>can't check here — the address in step 3 confirms it</em>. Never unmarked traffic, never a refusal</td></tr>
         <tr><td>proxy</td><td>this machine and the Simulator: the proxy HTTPS goes through now — <code>scutil --proxy</code> on macOS, the <code>https=</code> entry or the one address on Windows, GNOME's HTTPS proxy on Linux. <code>localhost</code> on Trawler's port is Trawler, no other loopback address is</td><td>the same request → <em>done — step 3's request came through at 14:02</em> · else <em>can't check here — the same request confirms it</em></td><td>the same request → <em>done — your iPhone's request came through at 14:02</em> · where this Mac's traffic may be arriving too → <em>can't check here — the same request confirms it</em> · else any request since its address was allowed → <em>done — a request reached Trawler at 14:02</em> · none → <em>can't check here — your iPhone's first request confirms it</em></td><td>the emulator: each one running, its global proxy, else its default network's → <em>done — Pixel 7 API 35 routes through Trawler</em> (10.0.2.2 on Trawler's port) · set only on a network it does not send over → <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em> · another → <em>not done — another proxy is set in Pixel 7 API 35</em> · none or unread → as another device: its marked request, a request in a clear span, <em>can't check here — the same request confirms it</em>, or <em>…'s first request confirms it</em>. The Simulator: any request reached Trawler → <em>done — requests reached Trawler</em>, where this Mac's proxy cannot be read</td></tr>
         <tr><td>try it</td><td colspan="4">the traffic now, against a 30 s clock. On This machine (round 12) and another device (round 13) a decrypted request stays its proof once quiet: <em>done — decrypted at 14:02, nothing since</em>. On another device whose traffic this Mac's may be mixed with, only its marked request: <em>done — decrypted at 14:02</em>, else <em>can't check here — the address below confirms it</em>, and a refusal is said with no device named. On another device (round 14) the proof also stays past plain http and past a refusal, which is a note under it. On the Simulator (round 16), only its marked request, always — its route is this Mac's proxy, so the wire is always mixed: <em>can't check here — the address below confirms it</em>, then <em>done — decrypted at 14:02</em>, kept as another device's is; a refusal names no device, or, where task 1 reads trusted, the Simulator it read. The emulator (round 17) is another device: its proof stays past what does not decrypt, and a refusal names Android's own services, with its store's name where task 1 reads trusted. The iPhone (round 18) is another device whose refusal names Apple's own services, and whose address, refused, leaves the note to the certificate task</td></tr>
       </table>
@@ -1334,7 +1426,7 @@
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.</em></td></tr>
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
         <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
-        <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>your iPhone</em>, …), with the steps open. Never on the Simulator, whose wire is this Mac's too (round 16), nor on the emulator, whose own services refuse a certificate it holds (round 17), nor on the iPhone, which says its own (round 18)</td></tr>
+        <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>your iPhone</em>, …), with the steps open. Never on the Simulator, whose wire is this Mac's too (round 16), nor on the emulator, whose own services refuse a certificate it holds (round 17), nor on a phone, which says its own (rounds 18 and 19)</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted · another device after its proof (round 14), under <em>done — decrypted at 14:02</em>: <em>something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.</em></td></tr>
         <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's trust command reads <span class="font-mono">~/Downloads/trawler-ca.pem</span>, another Ubuntu machine's <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> (round 15) · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
         <tr><td>Linux's certificate steps (round 15)</td><td><em>In Firefox: Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".</em> · <em>For Chrome, run:</em> <span class="font-mono">sudo apt install -y libnss3-tools &amp;&amp; { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb &amp;&amp; certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } &amp;&amp; certutil -d "sql:$([ -d ~/.pki/nssdb ] &amp;&amp; echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i …</span> · <em>For curl and the system's tools, run:</em> the system command · the same three under <em>to remove it later</em>, Firefox's ending <em>→ Trawler Proxy CA → Delete or Distrust.</em> · the refusal's advice: <em>Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.</em> · another Ubuntu machine after its proof: <em>something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.</em></td></tr>
@@ -1342,6 +1434,7 @@
         <tr><td>the saved file in a command (round 16)</td><td>before a save, This machine's, the Simulator's and the emulator's (round 17, <span class="font-mono">trawler-ca.cer</span>) commands read Downloads, where the save dialog opens: <span class="font-mono">~/Downloads/trawler-ca.pem</span> on macOS · <span class="font-mono">"$HOME\Downloads\trawler-ca.pem"</span> on Windows · <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> on Linux; after it, the path the save returned, quoted for that shell</td></tr>
         <tr><td>the emulator (round 17)</td><td>task 1: <em>done — trusted in Pixel 7 API 35</em> · <em>not done — not in Pixel 7 API 35</em> · <em>not done — not in 2 running emulators</em> · unread: <em>the emulator's request decrypted at 14:02</em> · its steps: the save, then <em>With the emulator running, in a terminal, run:</em> <span class="font-mono">for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d push ~/Downloads/trawler-ca.cer /sdcard/Download/; done</span> (PowerShell on Windows: <span class="font-mono">adb devices | Select-String '^emulator-\d+' | ForEach-Object { adb -s $_.Matches[0].Value … }</span>) · <em>Install it: Settings → Security &amp; privacy → More security &amp; privacy → Encryption &amp; credentials → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → trawler-ca.cer.</em> · <em>to remove it later</em>: <em>… → Encryption &amp; credentials → Trusted credentials → User → Trawler Proxy CA → Remove.</em> · task 2: <em>In the emulator, set the proxy</em>, <em>done — Pixel 7 API 35 routes through Trawler</em> · <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em> · its step: <span class="font-mono">… shell settings put global http_proxy 10.0.2.2:7420 …</span>, off with <span class="font-mono">… http_proxy :0 …</span> · other ways: Settings with <em>turn Mobile data off</em> first, and <span class="font-mono">emulator -avd &lt;name&gt; -http-proxy http://127.0.0.1:7420</span> · task 3: <em>or open this one in the emulator</em> · a refusal: <em>something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. A website in Chrome is the test.</em>, or, task 1 trusted, <em>— Pixel 7 API 35 trusts Trawler's certificate, so it is Android's own services, which ignore a user certificate, or an app that pins its certificate. A website in Chrome is the test.</em> · after its proof: <em>something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.</em></td></tr>
         <tr><td>the iPhone (round 18)</td><td>task 2: <em>not working — example.com did not decrypt</em> · after a proof <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em>, with the steps open and <em>example.com did not decrypt on your iPhone — turn on full trust: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Not listed there? The profile is not installed — the steps below install it.</em> · any other refusal: <em>can't check here — the address in step 4 confirms it</em> · task 4, a refusal of anything else: <em>something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.</em> · the address's refusal while this Mac's traffic may be arriving: <em>example.com did not decrypt — if you opened it on your iPhone, turn on full trust: … Not listed there? The profile is not installed — the certificate step installs it.</em> · after its proof: <em>something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.</em> · its address, once proved: <em>to check again, open this one on your iPhone</em></td></tr>
+        <tr><td>the Android device (round 19)</td><td>task 2: <em>not working — example.com did not decrypt</em> · after a proof <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em>, with the steps open and <em>example.com did not decrypt on your Android device — Trawler Proxy CA is not in its user store. The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.</em> · its steps: <em>On your Android device, open</em> the certificate URL <em>— it downloads Trawler's certificate.</em> · <em>Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.</em> · task 3: <em>Menus differ by maker; on stock Android: Settings → Network &amp; internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy → Manual.</em>, off with <em>… → Proxy → None.</em> · task 4, a refusal of anything else: <em>something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The address below is the test.</em> · the address's refusal while this Mac's traffic may be arriving: <em>example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.</em> · after its proof: <em>something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.</em> · its address, once proved: <em>to check again, open this one on your Android device</em></td></tr>
         <tr><td>the end</td><td>this machine, both done: <em>You're set up — Trawler is capturing traffic from this Mac</em> · another device, its marked request the newest proof: <em>You're set up — Trawler is capturing traffic from your iPhone</em> · the Simulator, on its marked request only (round 16): <em>You're set up — Trawler is capturing traffic from the Simulator</em> · the emulator, likewise (round 17): <em>You're set up — Trawler is capturing traffic from the emulator</em> · otherwise: <em>You're set up — Trawler is capturing traffic</em> · <em>‹ show traffic</em>, on every setup screen</td></tr>
         <tr><td>the core not answering</td><td><em>Trawler's capture service isn't answering</em> · <em>Setup can't check this computer or see your requests until it's back.</em> · <em>try again</em>, then <em>Trying again…</em>. Centred as the whole region. No address and no <em>core</em>: the user's word for it is <em>capture service</em>, and it <em>isn't answering</em>, never <em>offline</em> or <em>down</em></td></tr>
         <tr><td>the header's dot</td><td><em>Checking…</em> · <em>Nothing captured yet</em> · <em>Nothing captured in the last 3 minutes</em> · <em>Capturing</em>, then <em>— click to set up</em> or <em>— click to show traffic</em></td></tr>
@@ -1367,7 +1460,7 @@
       <tr><td><code>emulators</code> — each emulator running: the name of its AVD, whether its own user store holds the live certificate — trusted · absent · unknown — and its proxy — ours · wifi-only · foreign · none · unknown. Read only while the emulator is the platform chosen</td><td>used</td><td>tasks 1 and 2 on the emulator, and the try task's account of a refusal; none running reads unread (round 17, Q1 · Q2)</td></tr>
       <tr><td><code>ownProofAt</code> — when This machine's marked request last came through decrypted, this session</td><td>used</td><td>tasks 1 and 2 on This machine where no probe answers (round 12, DEC-62)</td></tr>
       <tr><td><code>deviceMark</code> · <code>device</code> — another device's mark, and beside its traffic: when a row carrying the mark last came through decrypted since its address was allowed, whether this machine's own traffic may be arriving now, and the wire since the allow</td><td>used</td><td>its try task's address, and its tasks 2 and 3 (round 13, DEC-63); the Simulator's mark too, read since setup opened, for its tasks 1 and 3 and its end (round 16); the emulator's, read since setup opened beside this Mac's proxy readings, for all three tasks and its end (round 17)</td></tr>
-      <tr><td><code>device.refusal</code> — the newest tunnel to example.com since the address was allowed that no decrypted example.com row answered, and whether it arrived in a clear span</td><td>used</td><td>the iPhone's task 2 and its try task's note (round 18, Q1 · Q2)</td></tr>
+      <tr><td><code>device.refusal</code> — the newest tunnel to example.com since the address was allowed that no decrypted example.com row answered, and whether it arrived in a clear span</td><td>used</td><td>the iPhone's task 2 and its try task's note (round 18, Q1 · Q2), and the Android device's (round 19, Q1 · Q2)</td></tr>
       <tr><td><code>traffic</code> — decrypted · tunnel · plain, this session's only: captured, since setup opened — on another device, since its address was allowed — unfiltered</td><td>used</td><td>try — the only proof; a tunnel cannot be tied to a platform (blocked-on)</td></tr>
       <tr><td><code>reach.armed</code> · <code>interfaces</code> · <code>proxy</code> · <code>ca_urls</code></td><td>used</td><td>task 1 off-machine, the values a device types in, and the phone's code; an armed address <code>interfaces</code> no longer lists is lost (round 13)</td></tr>
       <tr><td><code>reach.api</code></td><td>deliberately unused</td><td>no step points at it</td></tr>
@@ -1470,6 +1563,9 @@
         <tr><td>Round 17, close — "LGTM", on the emulator reading its own store and proxy through adb, else as another device that needs no allow, a refusal never its certificate task's, its proof kept and its end on its marked request, and commands that reach every emulator running, route it on every network and name Android 15's paths</td><td>nothing further. <code>verify-doc</code> green on twelve hard rules, then archived; W8's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 18 — the owner's rulings on E-ONBRVP.W9's plan, 2026-10-25: "ok, let's implement it" — S1–S4 taken, Q1 and Q2 A: only a refusal of the address step 4 offers is the iPhone's certificate's, and it reopens the task after a proof</td><td>mockup — the iPhone: Apple's services refusing (clear, and mixed), the address refused (clear, mixed, and after a proof), the note after a proof naming Apple's services, the address offered again once proved · rules — the address is the iPhone's test · model — the iPhone's certificate · copy — the iPhone's lines · given — <code>device.refusal</code></td><td><code>DEC-63</code> — the iPhone's rule · <code>DEC-62</code> — a tunnel to example.com and no row is a refusal (D9)</td></tr>
         <tr><td>Round 18, close — "it's ok, please help me to proceed to WU close", on the iPhone's address as its test: only that address refused is its certificate's, the trust switch before the profile, reopened after a proof, and Apple's own services' refusals the try task's note</td><td>nothing further. <code>verify-doc</code> green, then archived; W9's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 19 — the owner's rulings on E-ONBRVP.W10's plan, 2026-10-26: "Q1: yes, Q2: yes, Q3: yes" — S1–S4 and C1–C3 taken, Q1–Q3 A: only a refusal of the address step 4 offers is the Android device's certificate's, it reopens the task after a proof, and its steps reach the installer by Settings' search and the proxy by the stock path</td><td>mockup — the Android device beside the iPhone, in every state the phone's buttons show: its services refusing, the address refused (clear, mixed, and after a proof), its note after a proof, its steps · rules — the address is the Android device's test; a phone's step names what it shows · model — the Android device's certificate · copy — the Android device's lines and steps · given — <code>device.refusal</code>, for both phones</td><td><code>DEC-63</code> — rule 10, both phones · <code>DEC-62</code> — a tunnel to example.com and no row is a refusal (D9)</td></tr>
+        <tr><td>Round 19, close — "LGTM", on the Android device's address as its test: only that address refused is its certificate's, said as its user store lacking it, reopened after a proof, Android's own services' refusals the try task's note, and steps that name no file a browser renames, reach the installer by Settings' search and the proxy by the stock path</td><td>nothing further. <code>verify-doc</code> green, then archived; W10's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
+        <tr><td>Round 19, after close — <code>cargo xtask ui specimens --check</code> found the mockup failing to render: round 19's per-phone lines had made four shared lines local, which the sections after the phone read</td><td>the four lines are the mockup's again; nothing the design says changes. The run renders, 68 mounts</td><td><code>DEC-53</code></td></tr>
       </tbody>
     </table>
 

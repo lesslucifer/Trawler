@@ -638,15 +638,28 @@ const IOS_ADDRESS_TEST: AddressTest = {
 const REFUSED_AFTER_PROOF_IOS =
   "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.";
 
-const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
+// A user certificate has no second switch, and the installer refuses the wrong
+// type outright, so the address refused in Chrome leaves one cause: the
+// certificate is not in the user store (W10's S2).
+const ANDROID_ADDRESS_TEST: AddressTest = {
+  refused: `${REQUEST_HOST} did not decrypt on your Android device — ${CA_NAME} is not in its user store. The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.`,
+  maybeRefused: `${REQUEST_HOST} did not decrypt — if you opened it on your Android device, ${CA_NAME} is not in its user store: the certificate step installs it.`,
+  elsewhereRefused:
+    "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The address below is the test.",
+};
 
 // Android's own services ignore a user certificate by design, and an idle
 // emulator opens a few connections a second that never decrypt (W8's S2).
 const REFUSED_AFTER_PROOF_ANDROID =
   "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.";
 
-const androidInstall = (format: CaFormat) =>
-  `Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate → ${CA_FILES[format]}.`;
+// A maker moves the installer, and Settings' own search still finds it; Chrome
+// renames the download after its type, so the step names no file (W10's C1, C2).
+const ANDROID_INSTALL =
+  "Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.";
+
+// Search finds no proxy, so the route is the stock path (W10's C3).
+const ANDROID_WIFI_PROXY = "Settings → Network & internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy";
 
 // Each platform gets the one format its installer opens: an iPhone installs a
 // configuration profile from Safari, Files and AirDrop alike, where a bare
@@ -662,12 +675,12 @@ function downloadStep(
   where: string,
   reach: ReachAddresses,
   format: CaFormat,
-  { how = "", scan = false }: { how?: string; scan?: boolean } = {},
+  { how = "", scan = false, file = CA_FILES[format] }: { how?: string; scan?: boolean; file?: string } = {},
 ): GuideStep {
   return [
     `${where}, open`,
     { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url", scan },
-    `${how}— it downloads ${CA_FILES[format]}.`,
+    `${how}— it downloads ${file}.`,
   ];
 }
 
@@ -761,7 +774,10 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
                 `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
               ],
             ]
-          : [downloadStep(`On ${device}`, reach, format, { scan: PLATFORMS[id].scans }), [androidInstall(format)]],
+          : [
+              downloadStep(`On ${device}`, reach, format, { scan: PLATFORMS[id].scans, file: "Trawler's certificate" }),
+              [ANDROID_INSTALL],
+            ],
         notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
         alternatives: [carryOver],
       };
@@ -775,22 +791,21 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               ["Put the server and port above into it, and save."],
             ]
           : [
-              ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
+              [`Menus differ by maker; on stock Android: ${ANDROID_WIFI_PROXY} → Manual.`],
               ["Put the server and port above into it, and save."],
             ],
         undoTitle: DEVICE_PROXY_UNDO,
         undo: ios
           ? [["Settings → Wi-Fi → the network → Configure Proxy → Off."]]
-          : [["Wi-Fi → the network → Proxy → None."]],
+          : [[`${ANDROID_WIFI_PROXY} → None.`]],
       };
   return {
     trust: { title: `On ${device}, install the certificate`, guide: trust },
     route: { title: `On ${device}, set the Wi-Fi proxy`, guide: route },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
-    notDecrypting: ios ? undefined : NOT_DECRYPTING_ANDROID,
-    refusedAfterProof: ios ? REFUSED_AFTER_PROOF_IOS : undefined,
-    addressTest: ios ? IOS_ADDRESS_TEST : undefined,
+    refusedAfterProof: ios ? REFUSED_AFTER_PROOF_IOS : REFUSED_AFTER_PROOF_ANDROID,
+    addressTest: ios ? IOS_ADDRESS_TEST : ANDROID_ADDRESS_TEST,
   };
 }
 

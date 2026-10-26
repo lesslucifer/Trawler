@@ -674,7 +674,7 @@ describe("each platform names the one certificate file its installer opens", () 
 
   it("names the file to pick in each phone installer", () => {
     expect(prose(setup("ios"))).toMatch(/VPN & Device Management → Trawler Proxy CA → Install/);
-    expect(prose(setup("android"))).toMatch(/CA certificate → trawler-ca\.cer\./);
+    expect(prose(setup("android"))).toMatch(/CA certificate → Install anyway → the trawler-ca file it downloaded\./);
     expect(prose(setup("android-sim"))).toMatch(/CA certificate → Install anyway → ☰ → Downloads → trawler-ca\.cer\./);
   });
 });
@@ -683,7 +683,7 @@ describe("each platform names the one certificate file its installer opens", () 
 // nothing on the screen said installing is not trusting. Each platform names
 // what its users check next when traffic arrives and does not decrypt.
 describe("each platform says what to check when its traffic does not decrypt", () => {
-  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id) && !readsOverAdb(id) && id !== "ios"))(
+  it.each(PLATFORM_IDS.filter((id) => !sharesHostWire(id) && !readsOverAdb(id) && id !== "ios" && id !== "android"))(
     "%s has a check to make",
     (id) => {
       expect(setup(id).notDecrypting).toMatch(/\S/);
@@ -700,7 +700,29 @@ describe("each platform says what to check when its traffic does not decrypt", (
   // address is its test, and only that refusal is its certificate's to say.
   it("the iPhone has none: its test is the address it is offered", () => {
     expect(setup("ios").notDecrypting).toBeUndefined();
-    expect(PLATFORM_IDS.filter((id) => setup(id).addressTest !== undefined)).toEqual(["ios"]);
+  });
+
+  // W10's Q1: Android's own services ignore a user certificate, so the Android
+  // device's test is its address too.
+  it("the Android device has none: its test is the address it is offered, as the iPhone's is", () => {
+    expect(setup("android").notDecrypting).toBeUndefined();
+    expect(PLATFORM_IDS.filter((id) => setup(id).addressTest !== undefined)).toEqual(["ios", "android"]);
+  });
+
+  // W10's S2: a user certificate has no second switch, and the wrong type is
+  // refused outright, so the address refused says the user store lacks it.
+  it("the Android device's address refused says its user store lacks the certificate, and how to see it there", () => {
+    const { refused, maybeRefused, elsewhereRefused } = setup("android").addressTest!;
+
+    expect(refused).toBe(
+      "example.com did not decrypt on your Android device — Trawler Proxy CA is not in its user store. The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.",
+    );
+    expect(maybeRefused).toBe(
+      "example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.",
+    );
+    expect(elsewhereRefused).toBe(
+      "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The address below is the test.",
+    );
   });
 
   // W9's S2: the profile and the switch refuse alike, and the switch leads.
@@ -726,12 +748,6 @@ describe("each platform says what to check when its traffic does not decrypt", (
   // refusal is never its certificate task's either.
   it("the emulator has none: a refusal is never its certificate task's", () => {
     expect(setup("android-sim").notDecrypting).toBeUndefined();
-  });
-
-  it.each(["android"] as const)("%s's is the User store, and Chrome is its test", (id) => {
-    const check = setup(id).notDecrypting;
-    expect(check).toContain("Trusted credentials → User");
-    expect(check).toMatch(/Android 7\+; a website in Chrome is the test/);
   });
 
   // S2: Firefox reads the system's store on macOS and Windows, and keeps its
@@ -872,18 +888,21 @@ describe("Linux's certificate task installs into every store, each a step of its
   // S2: another Ubuntu machine's browsers keep stores of their own, so after a
   // proof a refusal is first one of them; the emulator's, its own services
   // (W8's S2); elsewhere the platform says nothing.
-  it("only another Ubuntu machine, the emulator and the iPhone say what a refusal after a proof is", () => {
+  it("only another Ubuntu machine, the two Androids and the iPhone say what a refusal after a proof is", () => {
     expect(setup("ubuntu").refusedAfterProof).toBe(
       "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.",
     );
-    expect(setup("android-sim").refusedAfterProof).toBe(
-      "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
-    );
+    // W10's S4: so does an Android device, through its own services.
+    for (const id of ["android-sim", "android"] as const) {
+      expect(setup(id).refusedAfterProof).toBe(
+        "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.",
+      );
+    }
     // W9's S4: an iPhone refuses most through Apple's own services.
     expect(setup("ios").refusedAfterProof).toBe(
       "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.",
     );
-    for (const id of PLATFORM_IDS.filter((p) => p !== "ubuntu" && p !== "android-sim" && p !== "ios")) {
+    for (const id of PLATFORM_IDS.filter((p) => !["ubuntu", "android-sim", "android", "ios"].includes(p))) {
       for (const os of ["macos", "windows", "linux", "other"] as const) {
         expect(setup(id, { os }).refusedAfterProof).toBeUndefined();
       }
@@ -982,5 +1001,32 @@ describe("the emulator's commands reach every emulator running, and route it on 
   it("is the one platform adb reads, and every platform but This machine marks its own request", () => {
     expect(PLATFORM_IDS.filter(readsOverAdb)).toEqual(["android-sim"]);
     expect(PLATFORM_IDS.filter(marksItsOwn)).toEqual(PLATFORM_IDS.filter((id) => id !== "this"));
+  });
+});
+
+// W10's C1-C3, Q3: Chrome saves the download under a name of its own, a maker
+// moves the installer where Settings' search still finds it, and search finds
+// no proxy, so the proxy is the stock path, said to differ by maker.
+describe("the Android device's steps name what a stock Android shows", () => {
+  const device = () => setup("android");
+
+  it("names no file the download may not leave", () => {
+    expect(device().trust.guide!.steps[0]).toContain("— it downloads Trawler's certificate.");
+    const said = device().trust.guide!.steps.flat().filter((p) => typeof p === "string");
+    expect(said.join("\n")).not.toMatch(/trawler-ca\.cer\b/);
+  });
+
+  it("reaches the installer by Settings' search, past its warning", () => {
+    expect(device().trust.guide!.steps[1]).toEqual([
+      "Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.",
+    ]);
+    expect(prose(device())).not.toMatch(/Settings → Security →/);
+  });
+
+  it("routes by the stock path, led by the maker's difference, and turns it off by the same", () => {
+    const path = "Settings → Network & internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy";
+    expect(device().route.guide!.steps[0]).toEqual([`Menus differ by maker; on stock Android: ${path} → Manual.`]);
+    expect(device().route.guide!.undo).toEqual([[`${path} → None.`]]);
+    expect(prose(device())).not.toMatch(/Settings → Wi-Fi/);
   });
 });
