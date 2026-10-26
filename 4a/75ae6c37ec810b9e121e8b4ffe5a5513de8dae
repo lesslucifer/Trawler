@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU close-dialog -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W11
+branch: wu/onboard-revamp/close-dialog
+base: d1bbf8fb53539c706b6bdc011bd6f217bb3accf6
+head: 4a75ae6c37ec810b9e121e8b4ffe5a5513de8dae
+diff_sha256: b6ff217daa749de40c37086b87faea73d14bb6f52cdf3a851b35c47a336cc8bc
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 3
+  stage_seconds:
+    gate0: 36
+    total: 120
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency: { found: 3, verified: 1 }
+findings: { found: 5, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "bounded() never clears its timer when the read settles first"
+    waived: "superseded: the round fails on the unbounded proxy_status and notice_dismissed reads in the same function, and the fix round clears the timer"
+verdict: FAIL
+date: 2026-10-26
