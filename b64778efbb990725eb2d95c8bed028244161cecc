@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W9
+base: 7b8642c8b185974f1a7b3c51da895c86a3ddfc9f
+design_sha256: 7a4db843b36695955d73e707fe01bc6723a690efb00fa88b4af303743a05bb64
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+implements:
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: cd3b02ae6a4f0e555fc754e33c45c7e4225f1054
+    built: [ui/src/Onboarding.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wiring only: it hands deviceTraffic the newest tunnel to example.com, so another device's readings carry its address refused; nothing App draws changed - what that reading renders is Onboarding's, built from round 18"
+date: 2026-10-26
