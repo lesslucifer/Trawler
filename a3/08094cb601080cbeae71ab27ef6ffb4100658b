@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU iphone-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W9
+branch: wu/onboard-revamp/iphone-status
+base: 7b8642c8b185974f1a7b3c51da895c86a3ddfc9f
+head: a308094cb601080cbeae71ab27ef6ffb4100658b
+diff_sha256: b536f029edf62a70d484456080f4b695ed36d2737743f704fd7fa31a7d095732
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 1
+  stage_seconds:
+    gate0: 139
+    finders: 46
+    total: 229
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 2, verified: 1, waived: 0 }
+verified:
+  - finding: "Onboarding.tsx's addressEdge (useGraceEdge keyed on device.refusal.at) goes stale when a newer address tunnel replaces a refused one, so refusedAddress drops the iPhone's not-working certificate verdict and its remedy for up to 3 s, then restores it"
+    severity: important
+verdict: FAIL
+date: 2026-10-26
