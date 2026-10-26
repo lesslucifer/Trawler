@@ -40,15 +40,17 @@ export interface QuitFacts {
 // any device could route here.
 export const NO_QUIT_FACTS: QuitFacts = { answering: true, ownAddresses: [], reachArmed: false, emulator: null };
 
-// Every read a close waits on is bounded: a close held by a read that never
-// settles is a window that cannot be quit (W11's review, round 1).
+// Every read a close waits on is bounded — the facts, the proxy and the opt-out
+// alike: a close held by a read that never settles is a window that cannot be
+// quit (W11's review, rounds 1 and 2).
 export const QUIT_READ_MS = 1500;
 
 export function bounded<T>(read: Promise<T>, fallback: T, ms = QUIT_READ_MS): Promise<T> {
-  return Promise.race([
-    read.catch(() => fallback),
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([read.catch(() => fallback), late]).finally(() => clearTimeout(timer));
 }
 
 const dismissKey = (prompt: QuitPrompt): NoticeKey | null =>
@@ -78,15 +80,15 @@ export function useProxyCloseConfirm(
         const facts = await bounded(readFacts(), NO_QUIT_FACTS, 2 * QUIT_READ_MS);
         // A shell that cannot answer has read nothing, and a handler that throws
         // leaves a window that will not close: unread is the honest reading.
-        const status = await deps
-          .invoke<{ status: string }>("proxy_status", { host, port, own: facts.ownAddresses })
-          .then(
-            (reading) => reading?.status ?? "unknown",
-            () => "unknown",
-          );
+        const status = await bounded(
+          deps
+            .invoke<{ status: string }>("proxy_status", { host, port, own: facts.ownAddresses })
+            .then((reading) => reading?.status ?? "unknown"),
+          "unknown",
+        );
         const asked = promptFor(status, facts);
         const key = asked && dismissKey(asked);
-        if (asked === null || (key !== null && (await noticeDismissed(key, deps.invoke)))) return;
+        if (asked === null || (key !== null && (await bounded(noticeDismissed(key, deps.invoke), false)))) return;
         e.preventDefault();
         setPrompt(asked);
       })

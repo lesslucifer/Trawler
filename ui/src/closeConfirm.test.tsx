@@ -239,4 +239,31 @@ describe("every read a close waits on is bounded", () => {
       vi.useRealTimers();
     }
   });
+
+  // Review round 2: the shell's own reads are waited on too.
+  test.each([
+    ["proxy_status", { mode: "unread" }],
+    ["notice_dismissed", { mode: "unread" }],
+  ] as const)("a %s that never answers still lets the close ask", async (hung, asked) => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeDeps("unknown");
+      f.invoke.mockImplementation(async (cmd: string) => {
+        if (cmd === hung) return new Promise(() => {});
+        if (cmd === "proxy_status") return { status: "unknown", address: null };
+        return false;
+      });
+      const { result } = confirmFor(f);
+      const preventDefault = vi.fn();
+      await act(async () => {
+        const closing = f.fireClose()({ preventDefault });
+        await vi.advanceTimersByTimeAsync(2 * QUIT_READ_MS);
+        await closing;
+      });
+      expect(preventDefault).toHaveBeenCalledOnce();
+      expect(result.current.prompt).toEqual(asked);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

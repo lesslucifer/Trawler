@@ -1211,7 +1211,9 @@ pub(crate) fn read_proxy_among(
     ProxyReading { status: classify(read, host, port, own).as_str(), address }
 }
 
-#[cfg_attr(not(feature = "scenario"), tauri::command)]
+// Run off the main thread: a quit waits on it, and a tool that hangs there
+// would freeze the window it is deciding about.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn proxy_status(host: String, port: u16, own: Vec<String>) -> ProxyReading {
     read_proxy_among(&active_system_proxy(std::env::consts::OS), &host, port, &own)
 }
