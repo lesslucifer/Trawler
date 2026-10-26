@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W9
+branch: wu/onboard-revamp/iphone-status
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "a deferred row: the control API serves the iPhone's profile and records nothing, so a profile downloaded and not trusted cannot be told from none - left to the core (W9's N2)"
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v6: rule 10 - the iPhone's test is the address it is offered; only that address refused, in a clear span and newer than every proof, is its certificate's, switch first, and Apple's own services' refusals are the try task's note; the Android device may take it; the profile download left to the roadmap; an Apple host list, no refusal the iPhone's and rule 7 unchanged for it are rejected"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-63's row names rule 10 and its three rejected alternatives"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the iPhone's test is the address it is offered, the switch first, reopened after a proof"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the phones' platform row and a paragraph on the iPhone's address as its test - its certificate and try tasks before and after a proof and while mixed"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 18 opened, ruled and closed: the iPhone's mockup with Apple's services and its address refused, in a clear span, mixed and after a proof, with rules, model, copy, given and the review rows"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic's status line and W9's link to its WU plan"
+  - path: "docs/work/2026-10-25-onboard-revamp-w9-iphone-status-plan.html"
+    tier: T3
+    action: added
+    distills: "W9's plan: what was checked, S1-S4, N1-N5, Q1-Q2 with the owner's rulings, the device checks, the test plan and the commits"
+  - path: "docs/work/2026-10-26-onboard-revamp-w9-iphone-status-result.html"
+    tier: T3
+    action: added
+    distills: "W9's result: what shipped against each expected row, the deviations, the evidence and the follow-ups"
