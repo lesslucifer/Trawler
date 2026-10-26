@@ -1,0 +1,29 @@
+schema: cr/v5
+scope: "WU close-dialog -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W11
+branch: wu/onboard-revamp/close-dialog
+base: d1bbf8fb53539c706b6bdc011bd6f217bb3accf6
+head: 7d434cca8c8488f7ab59cc8c6fbcfc3eff5cd76b
+diff_sha256: d3d85ab1fd15d1058aa6f5f903062d1455eb31361439738f92440f9e0ac8fb3d
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 4
+  stage_seconds:
+    gate0: 37
+    total: 124
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-10-26
