@@ -1250,6 +1250,21 @@ describe("the iPhone, whose test is the address it is offered", () => {
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
   });
 
+  // The review's round 1: a retry may yet decrypt, so until it does or is
+  // refused itself, the refusal before it stands.
+  it("its address retried inside the retry's grace keeps the refusal before it", () => {
+    const { rerender } = draw({ reach: ARMED, traffic: arriving, device: clearSpan(theAddress(refusedAt)) });
+    pick("iPhone or iPad");
+    expect(task(2)).toHaveTextContent("not working — example.com did not decrypt");
+
+    const retriedAt = Date.now();
+    const retrying = { ...arriving, lastTunnelAt: retriedAt };
+    rerender(screenAt({ reach: ARMED, traffic: retrying, device: clearSpan(theAddress(retriedAt)) }));
+
+    expect(task(2)).toHaveTextContent("not working — example.com did not decrypt");
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(/turn on full trust/);
+  });
+
   it("its address is not refused inside a tunnel's grace", () => {
     const opening = { ...NO_TRAFFIC, lastTunnelAt: ago(500), openTunnelAt: ago(500) };
     draw({ reach: ARMED, traffic: opening, device: clearSpan(theAddress(opening.openTunnelAt)) });

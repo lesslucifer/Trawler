@@ -256,6 +256,19 @@ export function refusedAddress(
   return proof === null || refusal.at > proof ? refusal : null;
 }
 
+// The address's refusal a reading may stand on: the newest past its grace. A
+// retry inside its own grace may yet decrypt, so the refusal before it stands
+// until the retry is answered - and the newest is gone - or refused itself.
+export function settledRefusal(
+  newest: AddressRefusal | undefined,
+  held: AddressRefusal | undefined,
+  now: number,
+): AddressRefusal | undefined {
+  if (newest === undefined) return undefined;
+  if (now - newest.at >= TUNNEL_GRACE_MS) return newest;
+  return held !== undefined && held.at < newest.at ? held : undefined;
+}
+
 // A device whose test is its address: that refusal is the one its certificate
 // task says, any other before a proof points at the address, and everything
 // else reads as another device's (DEC-63).

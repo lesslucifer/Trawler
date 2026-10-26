@@ -70,6 +70,7 @@ import {
   proxyStatus,
   refusedAddress,
   routeByTraffic,
+  settledRefusal,
   setUpOn,
   storesTrusted,
   simulatorTrustStatus,
@@ -86,6 +87,7 @@ import {
   type Running,
   type SimulatorTrust,
   type StepStatusView,
+  type AddressRefusal,
   type DeviceReading,
   type Traffic,
   type TrustProbe,
@@ -244,6 +246,15 @@ function useGraceEdge(tunnelAt: number | null): number {
     return () => clearTimeout(id);
   }, [tunnelAt]);
   return now;
+}
+
+// The address's refusal, held past a retry of it until the retry settles.
+function useSettledRefusal(newest: AddressRefusal | undefined): { refusal: AddressRefusal | undefined; now: number } {
+  const now = useGraceEdge(newest?.at ?? null);
+  const [held, setHeld] = useState<AddressRefusal | undefined>(undefined);
+  const refusal = settledRefusal(newest, held, now);
+  useEffect(() => setHeld(refusal), [refusal]);
+  return { refusal, now };
 }
 
 function ActionNote({
@@ -985,9 +996,9 @@ function PlatformSetup({
   // The iPhone's own services refuse whatever its certificate does, so only its
   // address refused is that certificate's to say, and it outlasts a proof (W9).
   const addressTest = setup.addressTest;
-  const addressEdge = useGraceEdge(device.refusal?.at ?? null);
+  const address = useSettledRefusal(device.refusal);
   const addressRefused =
-    addressTest === undefined ? null : refusedAddress(device.refusal, evidence, reading, addressEdge);
+    addressTest === undefined ? null : refusedAddress(address.refusal, evidence, reading, address.now);
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = probesOwnStore(platform)
     ? (storesTrusted(simulators) ?? device.provedAt !== null)

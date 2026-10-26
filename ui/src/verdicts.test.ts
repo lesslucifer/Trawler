@@ -26,6 +26,7 @@ import {
   RECENT_MS,
   REFUSED_AFTER_PROOF,
   refusedAddress,
+  settledRefusal,
   setUpOn,
   storesTrusted,
   simulatorTrustStatus,
@@ -857,6 +858,15 @@ describe("a device whose test is its address", () => {
     expect(addressTrustStatus(NO_EVIDENCE, { ...IPHONE, mixed: true }, null, FIRST_HTTPS)).toEqual(
       awaiting("the address in step 4 confirms it"),
     );
+  });
+
+  // The review's round 1: a retry may yet decrypt, so it moves nothing until it settles.
+  it("a retry inside its grace leaves the refusal before it standing, and an answer clears both", () => {
+    const retry = address(AT_1410);
+    expect(settledRefusal(retry, address(AT_1402), AT_1410 + 1)).toEqual(address(AT_1402));
+    expect(settledRefusal(retry, address(AT_1402), past(AT_1410))).toEqual(retry);
+    expect(settledRefusal(retry, undefined, AT_1410 + 1)).toBeUndefined();
+    expect(settledRefusal(undefined, address(AT_1402), past(AT_1410))).toBeUndefined();
   });
 
   it("the try task reads its address refused as the refusal now only past its grace and inside the window", () => {
