@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: b64778efbb990725eb2d95c8bed028244161cecc
+base: 7b8642c8b185974f1a7b3c51da895c86a3ddfc9f
+tier: key
+signer: vuluu
+report: docs/work/2026-10-26-onboard-revamp-w9-iphone-status-result.html
+report_sha256: 480945dbe92b19ec1aa7d93cd3d2dbb8bf54dc002bae76b76cc4fc452e1bac3e
+date: 2026-10-26
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAED1j3FwZX0lR8ziNUbP+F32U+cDRlo+2EjDitySefGVh5GcKyDdlYytlU
+  NlaiQzIfHtQrWJPjz0cVWfYyOvfvID
+  -----END SSH SIGNATURE-----
