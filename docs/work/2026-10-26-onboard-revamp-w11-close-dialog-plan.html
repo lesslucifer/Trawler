@@ -10,14 +10,14 @@
     <div class="inner">
       <h1>E-ONBRVP.W11 — the close dialog</h1>
       <p>Each quit Trawler can catch asks first when this machine still routes through it. The dialog says only what it can verify, offers to stop only a proxy that routes here, and becomes one frame whose button gives way to its outcome.</p>
-      <div class="meta">v1 · 2026-10-26 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W11</span> · branch <code>wu/onboard-revamp/close-dialog</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1 · design input: E-RFINISH.W7's run, Frame B, on <code>wu/redesign-finish/onboarding-design</code> at <code>7c6e144</code></div>
+      <div class="meta">v2 · 2026-10-26 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W11</span> · branch <code>wu/onboard-revamp/close-dialog</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1 · design input: E-RFINISH.W7's run, Frame B, on <code>wu/redesign-finish/onboarding-design</code> at <code>7c6e144</code></div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Waiting for your rulings:</strong> D1–D5, S1–S4 and N1 to take, defer or refute, and Q1–Q5.
-      D1 was reproduced on this Mac with the walkthrough's scenario build (<code>--features scenario</code>). It scripts
+      <strong>Every point is ruled</strong> ("yes, just go with all proposed, please proceed the implementation",
+      2026-10-26). D1–D5, S1–S4 and N1 taken; Q1–Q5 all A. D1 was reproduced on this Mac with the walkthrough's scenario build (<code>--features scenario</code>). It scripts
       every proxy read and write, so the proxy was scripted to point at Trawler and nothing on this Mac changed.
       The roadmap's two shape defects are S1 and S2. Everything else was found by this sweep.
     </div>
@@ -89,7 +89,7 @@
           accepted this in July, believing nothing could catch it. UC-ONBOARD still promises the opposite.</td>
         <td>Per Q1. A: the app menu's Quit becomes Trawler's own item on ⌘Q. It asks the window to close, so ⌘Q runs the same
           check as ✕. The Dock's Quit and logging out still send <code>terminate:</code>, which tao cannot cancel.
-          UC-ONBOARD names that gap, and a roadmap row keeps it.</td><td>—</td></tr>
+          UC-ONBOARD names that gap, and a roadmap row keeps it.</td><td>take</td></tr>
       <tr><td>D2</td>
         <td><strong>Linux always hears "No proxy is set on this machine."</strong> Quit reads no proxy on Linux, so the
           reading is <em>unknown</em>, and unknown is handled as the remote case. A GNOME proxy pointing at Trawler gets a
@@ -97,22 +97,24 @@
           dialog cannot work on Linux either.</td>
         <td>Quit reads GNOME's proxy on Linux, as setup's proxy task does. An unread proxy gets its own sentence:
           <em>Trawler couldn't read this machine's proxy</em>, with the steps. Where the shell cannot turn the proxy off
-          (Linux), the dialog shows the command instead of a button that can only fail.</td><td>—</td></tr>
+          (Linux), the dialog shows the command instead of a button that can only fail. An unread proxy has its own
+          <em>don't show this again</em>, since a desktop whose proxy nothing here reads would otherwise ask on every
+          quit.</td><td>take</td></tr>
       <tr><td>D3</td>
         <td><strong>Someone else's proxy is treated as Trawler's problem.</strong> A work proxy reads <em>foreign</em>,
           stops every quit, and offers <em>turn it off</em>. Quitting Trawler does not change that proxy, and turning it
           off can take away the internet it provides. It asks on every quit, with no way to stop it. Meanwhile this
           machine's own LAN address at Trawler's port also reads foreign, though it routes here.</td>
         <td>Per Q2. A: a proxy that does not route through Trawler is not this dialog's business, so that quit goes on to
-          the other-devices check. A proxy at Trawler's port on any of this machine's own addresses reads ours.</td><td>—</td></tr>
+          the other-devices check. A proxy at Trawler's port on any of this machine's own addresses reads ours.</td><td>take</td></tr>
       <tr><td>D4</td>
         <td><strong>The other-devices notice shows when no device can be routing here.</strong> It appears on every quit
           that finds nothing set on this machine, until it is dismissed for good. Another device can reach Trawler only
           while reach is armed (DEC-55), and an emulator only while its proxy points here. A notice that is nearly always
           irrelevant teaches its <em>don't show this again</em>, and then it stays silent on the day it matters.</td>
         <td>Per Q3. A: the notice shows only when a device could be routing here now: reach is armed (the core's
-          <code>/reach</code>), or a running emulator's proxy reads ours (W8's adb reading). Otherwise the quit goes
-          through.</td><td>—</td></tr>
+          <code>/reach</code>), or a running emulator's proxy reads ours (W8's adb reading, taken only while the emulator is the platform
+          chosen, because adb starts a server of its own: W8's Q1). Otherwise the quit goes through.</td><td>take</td></tr>
       <tr><td>D5</td>
         <td><strong>The stake is tied to the window, not the proxy.</strong> "Leave it on after quitting and your internet
           may stop working" and "once Trawler closes": the proxy is the core, a separate process that this quit does not
@@ -121,7 +123,7 @@
         <td>The stake names the proxy: <em>This machine sends its web traffic through Trawler. Once Trawler's proxy stops,
           it has no internet until you stop routing through Trawler.</em> While the core is not answering: <em>Trawler's
           proxy isn't answering, so this machine has no internet through it now.</em> Final words come from the design
-          run.</td><td>—</td></tr>
+          run.</td><td>take</td></tr>
     </table>
 
     <h2 id="shape">Part 2 — shape and wording</h2>
@@ -131,12 +133,12 @@
         <td><strong>A dead button</strong> (the roadmap row). After a successful turn-off whose window stayed open,
           <em>turn it off</em> stays on screen, disabled, beside "you can quit safely".</td>
         <td>Frame B's ruling: the button gives way to its outcome. <em>quit</em> remains alone in the same corner, with
-          focus on it.</td><td>—</td></tr>
+          focus on it.</td><td>take</td></tr>
       <tr><td>S2</td>
         <td><strong>A second dialog body</strong> (the roadmap row). The remote mode returns its own
           <code>ModalShell</code> tree.</td>
         <td>Frame B's ruling: one frame with sentences worded per mode. The remote mode drops the button and gains the
-          opt-out.</td><td>—</td></tr>
+          opt-out.</td><td>take</td></tr>
       <tr><td>S3</td>
         <td><strong>Two names for one act.</strong> Setup's reversal reads <em>stop routing through Trawler</em> and names
           the half it performs (UC-ONBOARD). The dialog says <em>turn the proxy off</em>, <em>turn it off</em> and
@@ -144,7 +146,7 @@
           where turning the proxy off writes the user's own settings and shows none.</td>
         <td>Per Q4. A: the dialog uses setup's words. The button reads <em>stop routing through Trawler</em>, the title asks
           <em>stop routing through Trawler before quitting?</em>, and the outcome says <em>this machine no longer routes
-          through Trawler</em>. The prompt is mentioned on macOS only.</td><td>—</td></tr>
+          through Trawler</em>. The prompt is mentioned on macOS only.</td><td>take</td></tr>
       <tr><td>S4</td>
         <td><strong>The by-hand steps fork from setup's.</strong> The dialog keeps its own seven targets
           (<code>proxyTargets.ts</code>). Android's step names a path stock Android lacks (W10's C3), and there is no
@@ -153,13 +155,13 @@
         <td>Per Q5. A: the dialog's steps are the platforms' own undo steps from <code>setup.ts</code>, picked by platform.
           The default is this machine wherever this machine is the subject, and in the remote mode the device the reading
           found (the emulator) or the last platform set up. Each fix W3–W10 made then reaches the dialog by
-          construction.</td><td>—</td></tr>
+          construction.</td><td>take</td></tr>
     </table>
 
     <h2 id="noticed">Noticed outside the dialog</h2>
     <table data-c="noticed">
       <tr><th>#</th><th>What</th><th>Where it goes</th><th>Ruling</th></tr>
-      <tr><td>N1</td><td><code>ui/e2e/specs/onboarding.spec.ts</code> describes a quit "through the RunEvent::ExitRequested net", plus <code>proxy_is_set</code>, <code>clear_proxy_marker</code> and a launch reconciliation. None of them has existed since E-UISETUP.W6</td><td>proposed: rewritten here with D1, since that comment is about this quit path</td><td>—</td></tr>
+      <tr><td>N1</td><td><code>ui/e2e/specs/onboarding.spec.ts</code> describes a quit "through the RunEvent::ExitRequested net", plus <code>proxy_is_set</code>, <code>clear_proxy_marker</code> and a launch reconciliation. None of them has existed since E-UISETUP.W6</td><td>proposed: rewritten here with D1, since that comment is about this quit path</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -173,35 +175,35 @@
           without asking. That is the behaviour E-UISETUP.W6 removed for its surprise password prompt ·
           <strong>C</strong> no change; UC-ONBOARD states that ⌘Q does not ask</td>
         <td>A. It closes the common route with no prompt nobody asked for. B brings back the prompt W6 removed, on a quit the
-          user meant. C keeps the hole the use case already promises is closed.</td></tr>
+          user meant. C keeps the hole the use case already promises is closed. Ruled: A</td></tr>
       <tr><td>Q2</td>
         <td>What does a quit do when a proxy that is not Trawler's is set?
           <strong>A</strong> no proxy dialog; it goes on to the other-devices check ·
           <strong>B</strong> ask, say it isn't Trawler's, and offer no button ·
           <strong>C</strong> as today: ask and offer to turn it off</td>
         <td>A. Quitting Trawler changes nothing for that proxy, so there is nothing to ask. B interrupts every quit to say
-          so. C offers an act that can break the machine's internet.</td></tr>
+          so. C offers an act that can break the machine's internet. Ruled: A</td></tr>
       <tr><td>Q3</td>
         <td>When does the other-devices notice show?
           <strong>A</strong> only while reach is armed, or a running emulator's proxy reads ours ·
           <strong>B</strong> as today: every quit with nothing set here, until it is dismissed</td>
         <td>A. Only then can a device lose anything when Trawler stops. Cost: a phone pointed here while reach was off
-          already has no internet, and this notice will not mention it.</td></tr>
+          already has no internet, and this notice will not mention it. Ruled: A</td></tr>
       <tr><td>Q4</td>
         <td>Does the dialog adopt setup's reversal words?
           <strong>A</strong> yes: <em>stop routing through Trawler</em> for the button, the title and the outcome ·
           <strong>B</strong> no: keep <em>turn the proxy off</em></td>
-        <td>A. One act, one name (the roadmap's standing question). The setup screen settled its words in E-ONBOARD.W5.</td></tr>
+        <td>A. One act, one name (the roadmap's standing question). The setup screen settled its words in E-ONBOARD.W5. Ruled: A</td></tr>
       <tr><td>Q5</td>
         <td>Whose by-hand steps does the dialog show?
           <strong>A</strong> the platforms' own undo steps, picked by platform ·
           <strong>B</strong> keep the seven client targets, fix Android's path and add an iPhone</td>
         <td>A. B keeps two copies of each reversal, and they have already drifted once. Firefox's and the terminal's
-          steps sit under the platforms that offer them today.</td></tr>
+          steps sit under the platforms that offer them today. Ruled: A</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
-    <p>The dialog gets its own design run (the epic's Q9), round 1, which I start once you have ruled. Its input is
+    <p>The dialog gets its own design run (the epic's Q9), round 1, opened on these rulings. Its input is
       Frame B of E-RFINISH.W7's run (the consequence-first title, one action row, the remedy giving way to its outcome,
       one frame for every mode), amended by the rulings above. You review it before the build.</p>
 
