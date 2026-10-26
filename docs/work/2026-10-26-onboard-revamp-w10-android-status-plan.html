@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6adece299f34851f0dfadbd4" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6adece299f34851f0dfadbd4" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,17 +10,18 @@
     <div class="inner">
       <h1>E-ONBRVP.W10 — status: Android device</h1>
       <p>The Android device's certificate task blames only the refusal that could be its own test: the address step 4 offers. Android's own services never count. That refusal reopens the task after a proof, and the steps name the file and the menus a stock Android actually shows.</p>
-      <div class="meta">v1 · 2026-10-26 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W10</span> · branch <code>wu/onboard-revamp/android-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · takes up what DEC-63 left to this WU, and W8's N4 and W9's N5</div>
+      <div class="meta">v2 · 2026-10-26 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W10</span> · branch <code>wu/onboard-revamp/android-status</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W2 · takes up what DEC-63 left to this WU, and W8's N4 and W9's N5</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waits for your ruling.</strong> Four status findings (S1–S4), three steps that cannot be done as written
-      (C1–C3) and three questions. Every finding marked <em>reproduced</em> was reproduced on this Mac on a throwaway
-      AVD (Android 15, API 35, google_apis arm64, the image of your <code>Pixel_7_API_35</code>), its Chrome routed to
-      a scratch core on spare ports. Both were deleted after. That image is stock Android, so a maker's menus and Google
-      Play services are <a href="#device-checks">your checks on a real phone</a>.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("Q1: yes, Q2: yes, Q3: yes — let's proceed the implementation",
+      2026-10-26). S1–S4 and C1–C3 taken; Q1–Q3 all A; N1 deferred to W19, N2 to W17, N3 to the roadmap. Every finding
+      marked <em>reproduced</em> was reproduced on this Mac on a throwaway AVD (Android 15, API 35, google_apis arm64,
+      the image of your <code>Pixel_7_API_35</code>), its Chrome routed to a scratch core on spare ports. Both were
+      deleted after. That image is stock Android, so a maker's menus and Google Play services are
+      <a href="#device-checks">your checks on a real phone</a>.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -90,7 +91,7 @@
           never turns ② not working and never opens its steps. ④ reads it as a muted note: <em>something is connecting
           and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The
           address below is the test.</em> While mixed, ② stays ◐, and ④'s remedy for an example.com refusal is
-          conditional (S2's words).</td><td></td></tr>
+          conditional (S2's words).</td><td>take</td></tr>
       <tr><td>S2</td>
         <td><strong>The remedy names a path stock Android lacks, and a test the screen does not read.</strong>
           <em>Settings → Security → Encryption &amp; credentials</em> is not on Android 15 (C2). "A website in Chrome is
@@ -101,7 +102,7 @@
           Android device — Trawler Proxy CA is not in its user store. The steps below install it. Installed it already?
           Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.</em> · while
           mixed, ④: <em>example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in
-          its user store: the certificate step installs it.</em></td><td></td></tr>
+          its user store: the certificate step installs it.</em></td><td>take</td></tr>
       <tr><td>S3</td>
         <td><strong>A removed certificate reads done.</strong> ② keeps "decrypted at 14:02" for the session (rule 4).
           Under rule 7, a later refusal is "an app that pins … or another device", even when Chrome is refusing the
@@ -109,14 +110,14 @@
         <td>As the iPhone's S3 (Q2): an example.com refusal newer than the device's newest proof, in a clear span,
           reopens ② — <em>not working — example.com did not decrypt at 15:10, after decrypting at 14:02</em> — with S2's
           remedy. ④ keeps its proof's time and offers the address "to check again". While mixed, ② keeps its proof and
-          ④ gives S2's conditional note.</td><td></td></tr>
+          ④ gives S2's conditional note.</td><td>take</td></tr>
       <tr><td>S4</td>
         <td><strong>The note after a proof leaves out the device's commonest refuser.</strong> The Android device uses
           every platform's rule-7 note, which leaves out Android's own services. The emulator's note names them (W8)
           and the iPhone's names Apple's (W9).</td>
         <td>The Android device takes the emulator's note: <em>something else is connecting and not decrypting — one
           request already did, so it is Android's own services, which ignore a user certificate, an app that pins its
-          certificate, or another device.</em></td><td></td></tr>
+          certificate, or another device.</em></td><td>take</td></tr>
     </table>
 
     <h2 id="commands">Part 2 — steps that cannot be done as written</h2>
@@ -129,29 +130,29 @@
           it as a <em>CRT file</em> (reproduced).</td>
         <td>The download step says what it downloads without a name it cannot promise: <em>— it downloads Trawler's
           certificate.</em> The install step picks <em>the trawler-ca file it downloaded</em>. The type that causes the
-          rename is the core's (N3).</td><td></td></tr>
+          rename is the core's (N3).</td><td>take</td></tr>
       <tr><td>C2</td>
         <td><strong>The install path is not on stock Android, and differs by maker.</strong> <em>Settings → Security →
           Encryption &amp; credentials</em> is <em>Security &amp; privacy → More security &amp; privacy → Encryption &amp;
           credentials</em> on Android 15, and another path again on a Samsung. The <em>Install anyway</em> warning that
           comes before the picker is not mentioned (reproduced).</td>
         <td>Per Q3. A: <em>Install it: in Settings, search CA certificate → CA certificate → Install anyway → the
-          trawler-ca file it downloaded.</em> The search reaches the installer whatever path a maker gives it.</td><td></td></tr>
+          trawler-ca file it downloaded.</em> The search reaches the installer whatever path a maker gives it.</td><td>take</td></tr>
       <tr><td>C3</td>
         <td><strong>The proxy path is not on stock Android.</strong> <em>Settings → Wi-Fi → the network → Proxy</em> is
           <em>Network &amp; internet → Internet → ⚙ by the network → ✎ → Advanced options → Proxy</em> on Android 12 and
           later (W8's C5). Settings' search finds no proxy (reproduced). The undo has the same path.</td>
         <td>Per Q3. A: the stock path, with a lead that says a maker's menus may differ: <em>Settings → Network &amp;
           internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy → Manual.</em> Undo: the same
-          path, <em>Proxy → None</em>.</td><td></td></tr>
+          path, <em>Proxy → None</em>.</td><td>take</td></tr>
     </table>
 
     <h2 id="noticed">Noticed outside status — for later WUs</h2>
     <table data-c="noticed">
       <tr><th>#</th><th>What</th><th>Why not here</th><th>Ruling</th></tr>
-      <tr><td>N1</td><td>The Android device's certificate task has no "to remove it later". The emulator's has one. The way back: <em>Settings → search Trusted credentials → User → Trawler Proxy CA → Uninstall</em></td><td>a missing guide section is wording, not a status</td><td></td></tr>
-      <tr><td>N2</td><td>The emulator's undo ends <em>→ Remove</em>. Android 15's button reads <em>Uninstall</em> (reproduced)</td><td>the emulator's wording</td><td></td></tr>
-      <tr><td>N3</td><td>Core: <code>/ca.cer</code> is served as <code>application/x-x509-ca-cert</code>, which Android maps to <code>.crt</code>, so Chrome appends it. A type Android maps to <code>.cer</code> would keep the name the core sends</td><td>core changes are this epic's non-goal</td><td></td></tr>
+      <tr><td>N1</td><td>The Android device's certificate task has no "to remove it later". The emulator's has one. The way back: <em>Settings → search Trusted credentials → User → Trawler Proxy CA → Uninstall</em></td><td>a missing guide section is wording, not a status</td><td>ruled: defer to W19</td></tr>
+      <tr><td>N2</td><td>The emulator's undo ends <em>→ Remove</em>. Android 15's button reads <em>Uninstall</em> (reproduced)</td><td>the emulator's wording</td><td>ruled: defer to W17</td></tr>
+      <tr><td>N3</td><td>Core: <code>/ca.cer</code> is served as <code>application/x-x509-ca-cert</code>, which Android maps to <code>.crt</code>, so Chrome appends it. A type Android maps to <code>.cer</code> would keep the name the core sends</td><td>core changes are this epic's non-goal</td><td>ruled: a roadmap row</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -167,13 +168,13 @@
           <strong>C</strong> no refusal is ②'s, as on the emulator (rule 9)</td>
         <td>A. The address is already on screen with its scan code, and the reading exists (W9). C drops the one sign a
           missing certificate has: on a phone, no adb store probe takes its place, as it does on the emulator. Cost: a
-          user who tests another site with no certificate sees ② stay ◐ until they open the address.</td></tr>
+          user who tests another site with no certificate sees ② stay ◐ until they open the address. Ruled: A</td></tr>
       <tr><td>Q2</td>
         <td>After a proof, may an example.com refusal reopen ②?
           <strong>A</strong> yes, in a clear span, as rule 10 says for the iPhone ·
           <strong>B</strong> no: rule 7 as it stands</td>
         <td>A. It answers the epic's "a proof is not permanent" for this platform (reproduced). Opening the address again
-          is the only re-read a phone allows.</td></tr>
+          is the only re-read a phone allows. Ruled: A</td></tr>
       <tr><td>Q3</td>
         <td>How do the steps reach menus whose paths differ by maker?
           <strong>A</strong> the certificate by Settings' own search (<em>CA certificate</em>); the proxy, which search
@@ -181,7 +182,7 @@
           <strong>B</strong> stock Android 15's paths for both ·
           <strong>C</strong> stock and Samsung's paths, both printed</td>
         <td>A. The search reaches the installer on stock Android without a path (reproduced). Whether a Samsung's does is
-          your check 1. B keeps one path that a Samsung lacks. C doubles every step and still misses other makers.</td></tr>
+          your check 1. B keeps one path that a Samsung lacks. C doubles every step and still misses other makers. Ruled: A</td></tr>
     </table>
 
     <h3 id="device-checks">Your checks on a real Android phone</h3>
