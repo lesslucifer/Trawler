@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
-import { NO_QUIT_FACTS, promptFor, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
+import { bounded, NO_QUIT_FACTS, promptFor, QUIT_READ_MS, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 
 const ADDR = "127.0.0.1:7420";
 const FACTS: QuitFacts = { answering: true, ownAddresses: [], reachArmed: false, emulator: null };
@@ -205,4 +205,38 @@ test("a revert that fails does not quit — it surfaces, and quit stays a click 
     await result.current.quit(false);
   });
   expect(f.destroy).toHaveBeenCalledOnce();
+});
+
+// Review round 1: a read that never settles may not hold the close.
+describe("every read a close waits on is bounded", () => {
+  test("a read that answers in time is its answer; one that fails or never settles is the fallback", async () => {
+    vi.useFakeTimers();
+    try {
+      await expect(bounded(Promise.resolve("read"), "fallback")).resolves.toBe("read");
+      await expect(bounded(Promise.reject(new Error("no")), "fallback")).resolves.toBe("fallback");
+      const pending = bounded(new Promise<string>(() => {}), "fallback");
+      await vi.advanceTimersByTimeAsync(QUIT_READ_MS);
+      await expect(pending).resolves.toBe("fallback");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("facts that never arrive still let the close ask on this machine's reading", async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fakeDeps("ours");
+      const { result } = renderHook(() => useProxyCloseConfirm(ADDR, () => new Promise<QuitFacts>(() => {}), f.deps));
+      const preventDefault = vi.fn();
+      await act(async () => {
+        const closing = f.fireClose()({ preventDefault });
+        await vi.advanceTimersByTimeAsync(2 * QUIT_READ_MS);
+        await closing;
+      });
+      expect(preventDefault).toHaveBeenCalledOnce();
+      expect(result.current.prompt).toEqual({ mode: "ours", answering: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

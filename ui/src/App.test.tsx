@@ -3118,6 +3118,62 @@ describe("quitting", () => {
     expect(within(dialog()!).getByRole("button", { name: "steps for" })).toHaveTextContent("Android device");
   });
 
+  // Review round 1: an emulator read that never settles may not hold the close.
+  test("an emulator read that hangs still lets the close settle, on this machine's reading", async () => {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "proxy_status") return { status: "ours", address: null };
+      if (name === "emulator_readings") return new Promise(() => {});
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={{ ...PROVEN, chosen: "android-sim" }} />);
+
+    expect(await requestClose()).toHaveBeenCalledOnce();
+    expect(dialog()).toHaveAttribute("aria-label", "stop routing through Trawler before quitting?");
+  });
+
+  // Review round 1: a Wi-Fi-only proxy on an emulator sending over mobile data routes nothing.
+  test("an emulator whose proxy is on a network it does not send over asks nothing", async () => {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "proxy_status") return { status: "none", address: null };
+      if (name === "emulator_readings") return [{ name: "Pixel_7_API_35", trust: "trusted", proxy: "wifi-only" }];
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={{ ...PROVEN, chosen: "android-sim" }} />);
+
+    expect(await requestClose()).not.toHaveBeenCalled();
+    expect(dialog()).toBeNull();
+  });
+
+  // Review round 1: with the capture service gone, this machine's own addresses
+  // are the ones it last reported, so a proxy at one of them still reads Trawler's.
+  test("with the capture service gone, the addresses it last reported still reach proxy_status", async () => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    let answers = true;
+    api.reach = vi.fn(async () => {
+      if (answers) return UNARMED;
+      throw new TypeError("Failed to fetch");
+    });
+    render(<App api={api} initialState={PROVEN} />);
+    await waitFor(() => expect(api.reach).toHaveBeenCalled());
+    await act(async () => {});
+    answers = false;
+
+    await requestClose();
+    expect(invoke).toHaveBeenCalledWith("proxy_status", {
+      host: "127.0.0.1",
+      port: 7420,
+      own: INTERFACES.map((i) => i.address),
+    });
+  });
+
   test("with the capture service not answering, it says this Mac has no internet now", async () => {
     onMacHost();
     proxyReads("ours");

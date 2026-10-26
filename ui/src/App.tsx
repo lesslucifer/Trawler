@@ -29,7 +29,7 @@ import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
-import { useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
+import { bounded, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
@@ -590,12 +590,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Read at the moment of the close, not from what the screen last held: the
   // emulator is asked through adb only while it is the platform chosen, since
   // adb starts a server of its own (W8's Q1).
+  // A Wi-Fi-only proxy sits on a network the emulator does not send over, so it
+  // routes nothing. A capture service that has stopped answering still ran on
+  // this machine's addresses, so the last ones it reported stand in for them.
   const chosenAtQuit = useRef(state.chosen);
   chosenAtQuit.current = state.chosen;
+  const reachAtQuit = useRef(reach);
+  reachAtQuit.current = reach;
   const readQuitFacts = useCallback(async (): Promise<QuitFacts> => {
-    const reached = await client.reach().catch(() => null);
-    const emulator = readsOverAdb(chosenAtQuit.current)
-      ? await client
+    const emulatorRead = readsOverAdb(chosenAtQuit.current)
+      ? client
           .caCertPem()
           .then((pem) =>
             invoke<EmulatorReading[] | undefined>("emulator_readings", {
@@ -603,14 +607,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
               port: splitProxyAddr(proxyAddr).port,
             }),
           )
-          .then(
-            (read) => read?.find((e) => e.proxy === "ours" || e.proxy === "wifi-only")?.name ?? null,
-            () => null,
-          )
-      : null;
+          .then((read) => read?.find((e) => e.proxy === "ours")?.name ?? null)
+      : Promise.resolve(null);
+    const [reached, emulator] = await Promise.all([
+      bounded<ReachState | null>(client.reach(), null),
+      bounded<string | null>(emulatorRead, null),
+    ]);
     return {
       answering: reached !== null,
-      ownAddresses: reached?.interfaces.map((i) => i.address) ?? [],
+      ownAddresses: (reached ?? reachAtQuit.current).interfaces.map((i) => i.address),
       reachArmed: reached?.armed ?? false,
       emulator,
     };

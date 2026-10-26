@@ -40,6 +40,17 @@ export interface QuitFacts {
 // any device could route here.
 export const NO_QUIT_FACTS: QuitFacts = { answering: true, ownAddresses: [], reachArmed: false, emulator: null };
 
+// Every read a close waits on is bounded: a close held by a read that never
+// settles is a window that cannot be quit (W11's review, round 1).
+export const QUIT_READ_MS = 1500;
+
+export function bounded<T>(read: Promise<T>, fallback: T, ms = QUIT_READ_MS): Promise<T> {
+  return Promise.race([
+    read.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 const dismissKey = (prompt: QuitPrompt): NoticeKey | null =>
   prompt.mode === "unread" ? NOTICE_KEY.unread : prompt.mode === "devices" ? NOTICE_KEY.remote : null;
 
@@ -64,7 +75,7 @@ export function useProxyCloseConfirm(
     deps
       .getWindow()
       .onCloseRequested(async (e) => {
-        const facts = await readFacts().catch(() => NO_QUIT_FACTS);
+        const facts = await bounded(readFacts(), NO_QUIT_FACTS, 2 * QUIT_READ_MS);
         // A shell that cannot answer has read nothing, and a handler that throws
         // leaves a window that will not close: unread is the honest reading.
         const status = await deps
