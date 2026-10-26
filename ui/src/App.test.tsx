@@ -12,10 +12,18 @@ import { CA_FILES } from "./setup";
 import { TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
-// App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
-// no-op here. The guard's own behavior is covered in closeConfirm.test.tsx.
+// App wires a quit-time close guard; the stub window keeps the handler it was
+// given, so a test can raise a close request the way ✕ and ⌘Q do.
+type CloseRequest = (e: { preventDefault: () => void }) => unknown;
+const quitWindow = vi.hoisted(() => ({ handler: null as CloseRequest | null }));
 vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: () => ({ onCloseRequested: async () => () => {}, destroy: async () => {} }),
+  getCurrentWindow: () => ({
+    onCloseRequested: async (h: CloseRequest) => {
+      quitWindow.handler = h;
+      return () => {};
+    },
+    destroy: async () => {},
+  }),
 }));
 
 // Capture is proven only by a live decrypted flow (W4); until then App shows
@@ -3041,5 +3049,85 @@ describe("This machine's own request", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// E-ONBRVP.W11: a close request reads this machine's proxy and the capture
+// service at that moment, through App's own wiring, and opens what they rule.
+describe("quitting", () => {
+  const requestClose = async () => {
+    await waitFor(() => expect(quitWindow.handler).not.toBeNull());
+    const preventDefault = vi.fn();
+    await act(async () => {
+      await quitWindow.handler!({ preventDefault });
+    });
+    return preventDefault;
+  };
+  const proxyReads = (status: string) =>
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "proxy_status") return { status, address: null };
+      if (name === "notice_dismissed") return false;
+      return undefined;
+    });
+  const dialog = () => screen.queryByTestId("proxy-close-dialog");
+
+  test("this Mac routed here asks, with this machine's own addresses, and Esc, the backdrop and ✕ each cancel", async () => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={PROVEN} />);
+
+    for (const cancel of [
+      () => fireEvent.keyDown(dialog()!, { key: "Escape" }),
+      () => fireEvent.click(screen.getByTestId("proxy-close-backdrop")),
+      () => fireEvent.click(within(dialog()!).getByRole("button", { name: "cancel" })),
+    ]) {
+      expect(await requestClose()).toHaveBeenCalledOnce();
+      expect(dialog()).toHaveAttribute("aria-label", "stop routing through Trawler before quitting?");
+      cancel();
+      await waitFor(() => expect(dialog()).toBeNull());
+    }
+    expect(invoke).toHaveBeenCalledWith("proxy_status", {
+      host: "127.0.0.1",
+      port: 7420,
+      own: INTERFACES.map((i) => i.address),
+    });
+  });
+
+  test("someone else's proxy, with no device allowed, quits without asking", async () => {
+    onMacHost();
+    proxyReads("foreign");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={PROVEN} />);
+
+    expect(await requestClose()).not.toHaveBeenCalled();
+    expect(dialog()).toBeNull();
+  });
+
+  test("nothing routed here with devices allowed asks about them, on the device last set up", async () => {
+    onMacHost();
+    proxyReads("none");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => ARMED);
+    render(<App api={api} initialState={{ ...PROVEN, chosen: "android" }} />);
+
+    expect(await requestClose()).toHaveBeenCalledOnce();
+    expect(dialog()).toHaveAttribute("aria-label", "check your other devices before quitting");
+    expect(within(dialog()!).getByRole("button", { name: "steps for" })).toHaveTextContent("Android device");
+  });
+
+  test("with the capture service not answering, it says this Mac has no internet now", async () => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    render(<App api={api} initialState={PROVEN} />);
+
+    await requestClose();
+    expect(dialog()).toHaveTextContent("Trawler's capture service isn't answering, so this Mac has no internet");
   });
 });

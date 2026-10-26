@@ -795,9 +795,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               ["Put the server and port above into it, and save."],
             ],
         undoTitle: DEVICE_PROXY_UNDO,
-        undo: ios
-          ? [["Settings → Wi-Fi → the network → Configure Proxy → Off."]]
-          : [[`${ANDROID_WIFI_PROXY} → None.`]],
+        undo: routeUndo(id, os),
       };
   return {
     trust: { title: `On ${device}, install the certificate`, guide: trust },
@@ -878,10 +876,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platform
       ],
     ],
     undoTitle: DEVICE_PROXY_UNDO,
-    undo: [
-      [RUN_IN[target], { command: each(emulatorProxy(":0")), label: "the proxy-off command" }],
-      ["Set in Settings? AndroidWifi ⚙ → ✎ → Advanced options → Proxy → None, and turn Mobile data back on."],
-    ],
+    undo: routeUndo("android-sim", os),
   };
   return {
     trust: { title: "In the emulator, install the certificate", guide: trust },
@@ -933,6 +928,33 @@ function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platfor
     try: tryTask("ios-sim", os),
     confirmOn: confirmOn("ios-sim", os),
   };
+}
+
+// Each platform's way to stop routing through Trawler, needing no address: the
+// quit dialog shows it whether or not that platform's tasks can be written yet
+// (W11's S4), and setup's "to turn it off later" is the same steps.
+export function routeUndo(id: PlatformId, os: HostOs): GuideStep[] {
+  const target = hostTarget(os);
+  switch (id) {
+    case "this":
+    case "ios-sim":
+      return reversal(os === "other" ? "terminal" : target);
+    case "mac":
+      return reversal("macos");
+    case "windows":
+      return reversal("windows");
+    case "ubuntu":
+      return reversal("linux");
+    case "android-sim":
+      return [
+        [RUN_IN[target], { command: EACH_EMULATOR[target](emulatorProxy(":0")), label: "the proxy-off command" }],
+        ["Set in Settings? AndroidWifi ⚙ → ✎ → Advanced options → Proxy → None, and turn Mobile data back on."],
+      ];
+    case "ios":
+      return [["Settings → Wi-Fi → the network → Configure Proxy → Off."]];
+    case "android":
+      return [[`${ANDROID_WIFI_PROXY} → None.`]];
+  }
 }
 
 // Every platform always has its tasks, because the shape of the whole job is

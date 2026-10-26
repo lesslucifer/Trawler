@@ -29,7 +29,7 @@ import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
-import { useProxyCloseConfirm } from "./closeConfirm";
+import { useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
@@ -587,14 +587,42 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return route;
   };
 
-  const close = useProxyCloseConfirm(proxyAddr);
-  const closeDialog = close.mode && (
+  // Read at the moment of the close, not from what the screen last held: the
+  // emulator is asked through adb only while it is the platform chosen, since
+  // adb starts a server of its own (W8's Q1).
+  const chosenAtQuit = useRef(state.chosen);
+  chosenAtQuit.current = state.chosen;
+  const readQuitFacts = useCallback(async (): Promise<QuitFacts> => {
+    const reached = await client.reach().catch(() => null);
+    const emulator = readsOverAdb(chosenAtQuit.current)
+      ? await client
+          .caCertPem()
+          .then((pem) =>
+            invoke<EmulatorReading[] | undefined>("emulator_readings", {
+              pem,
+              port: splitProxyAddr(proxyAddr).port,
+            }),
+          )
+          .then(
+            (read) => read?.find((e) => e.proxy === "ours" || e.proxy === "wifi-only")?.name ?? null,
+            () => null,
+          )
+      : null;
+    return {
+      answering: reached !== null,
+      ownAddresses: reached?.interfaces.map((i) => i.address) ?? [],
+      reachArmed: reached?.armed ?? false,
+      emulator,
+    };
+  }, [client, proxyAddr]);
+  const close = useProxyCloseConfirm(proxyAddr, readQuitFacts);
+  const closeDialog = close.prompt && (
     <ProxyCloseDialog
-      mode={close.mode}
+      prompt={close.prompt}
       os={hostOs()}
-      onRemove={close.remove}
-      onKeep={close.keep}
-      onAcknowledge={close.acknowledge}
+      chosen={state.chosen}
+      onStop={close.stop}
+      onQuit={close.quit}
       onCancel={close.cancel}
     />
   );

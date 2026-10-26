@@ -1,3 +1,4 @@
+mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
@@ -12,7 +13,9 @@ mod scenario;
 pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init());
+        .plugin(tauri_plugin_fs::init())
+        .menu(menu::build)
+        .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()));
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         setup::ca_trusted,

@@ -222,13 +222,11 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await browser.waitUntil(async () => (await rowCount()) >= 1, { timeout: 15_000 });
   });
 
-  // Lifecycle wiring is exercised here implicitly: this app boots through the Tauri
-  // setup hook (launch reconciliation) and quits through the RunEvent::ExitRequested
-  // net — a broken hook or capability would fail this launch/quit. The quit-time
-  // confirm (App.tsx onCloseRequested), the unset_proxy / proxy_is_set /
-  // clear_proxy_marker commands, the marker gate and native off-argvs are unit-tested
-  // in src-tauri + closeConfirm.test.tsx; the real proxy-off is elevation-gated and
-  // not hermetically runnable, so it is not driven from the UI here.
+  // The quit-time confirm is not driven here: proxy_status reads the real system
+  // proxy in this build, so a routed state is not hermetic, and WebDriver cannot
+  // press the native menu's ⌘Q. Its rules are held by closeConfirm.test.tsx,
+  // ProxyCloseDialog.test.tsx and App.test.tsx's quitting block; the shell's
+  // reader, its classifier and the Quit item by src-tauri's unit tests.
 
   it("appends a second row on a new request without a manual refresh", async () => {
     const before = await rowCount();

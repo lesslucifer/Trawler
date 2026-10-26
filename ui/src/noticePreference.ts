@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 export const NOTICE_KEY = {
   remote: "remote-notice",
+  unread: "unread-notice",
   clear: "clear-ask",
 } as const;
 

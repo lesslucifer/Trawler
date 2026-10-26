@@ -1,19 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
-import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { CLOSE_COPY, ProxyCloseDialog } from "./ProxyCloseDialog";
-import type { CloseMode } from "./closeConfirm";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { CLOSE_COPY, deviceShown, ProxyCloseDialog } from "./ProxyCloseDialog";
+import type { QuitPrompt } from "./closeConfirm";
+import { proxyOffSnippet } from "./proxyTargets";
+import { routeUndo, type HostOs } from "./setup";
 
 // The dialog's bounded contract. It is the app's only modal, and the only screen
-// that can strand a machine with no internet, so every mode's action set and
+// that can strand a machine with no internet, so every prompt's answers and
 // every route out is asserted here.
 
-const mount = (mode: CloseMode, over: Partial<Parameters<typeof ProxyCloseDialog>[0]> = {}) => {
+const OURS: QuitPrompt = { mode: "ours", answering: true };
+const STALE: QuitPrompt = { mode: "ours", answering: false };
+const UNREAD: QuitPrompt = { mode: "unread" };
+const DEVICES: QuitPrompt = { mode: "devices", emulator: null };
+const EMULATOR: QuitPrompt = { mode: "devices", emulator: "Pixel_7_API_35" };
+const EVERY: [string, QuitPrompt][] = [
+  ["ours", OURS],
+  ["unread", UNREAD],
+  ["devices", DEVICES],
+];
+
+const mount = (prompt: QuitPrompt, over: Partial<Parameters<typeof ProxyCloseDialog>[0]> = {}) => {
   const props = {
-    mode,
-    os: "macos" as const,
-    onRemove: vi.fn(),
-    onKeep: vi.fn(),
-    onAcknowledge: vi.fn(),
+    prompt,
+    os: "macos" as HostOs,
+    chosen: "this" as const,
+    onStop: vi.fn(),
+    onQuit: vi.fn(),
     onCancel: vi.fn(),
     ...over,
   };
@@ -21,7 +34,7 @@ const mount = (mode: CloseMode, over: Partial<Parameters<typeof ProxyCloseDialog
   return props;
 };
 
-const ACTIONABLE: CloseMode[] = ["ours", "foreign"];
+const stopButton = () => screen.getByRole("button", { name: CLOSE_COPY.stop });
 
 // The same root and selector the trap uses, so these tests exercise the real
 // stop list rather than one that happens to share its edges.
@@ -31,175 +44,224 @@ const tabStops = () => [
   ...screen.getByTestId("proxy-close-panel").querySelectorAll<HTMLElement>(FOCUSABLE),
 ];
 
-describe("the actionable modes — a proxy is set on this machine", () => {
-  it.each(ACTIONABLE)("%s offers one action row: a bare quit and the remedy", (mode) => {
-    mount(mode);
+describe("this machine routes through Trawler", () => {
+  it("asks in setup's words, with a bare quit and the button that stops routing (S3)", () => {
+    mount(OURS);
 
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-label", "stop routing through Trawler before quitting?");
     expect(screen.getByRole("button", { name: CLOSE_COPY.quit })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeInTheDocument();
+    expect(stopButton()).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /turn/i })).toBeNull();
+    expect(screen.queryByText(/the proxy is off/i)).toBeNull();
   });
 
-  it.each(ACTIONABLE)("%s never offers 'keep' as a second name for quitting", (mode) => {
-    mount(mode);
-
-    expect(screen.queryByRole("button", { name: /keep/i })).toBeNull();
-    expect(screen.getByTestId("proxy-close-dialog")).not.toHaveTextContent(/keep it/i);
+  it("names the capture service as the stake, not the window (D5)", () => {
+    mount(OURS);
+    expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.ours("this Mac"));
   });
 
-  it.each(ACTIONABLE)("%s collapses the manual route beneath the action that leads", (mode) => {
-    mount(mode);
-
-    expect(screen.getByTestId("proxy-close-manual")).toBeInTheDocument();
-    expect(screen.getByText("do it manually instead")).toBeInTheDocument();
+  it("says this machine has no internet now while the capture service does not answer (D5)", () => {
+    mount(STALE);
+    expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.stale("this Mac"));
   });
 
-  it("quitting leaves the proxy up and records nothing", () => {
-    const p = mount("ours");
+  it("collapses this machine's own steps beneath the button that leads (S4)", () => {
+    mount(OURS);
+
+    expect(screen.getByText(CLOSE_COPY.byHand)).toBeInTheDocument();
+    expect(within(screen.getByTestId("proxy-close-manual")).getByText(proxyOffSnippet("macos"))).toBeInTheDocument();
+  });
+
+  it("on Linux, where the shell cannot stop it, shows the command inline and no button (D2)", () => {
+    mount(OURS, { os: "linux" });
+
+    expect(screen.queryByRole("button", { name: CLOSE_COPY.stop })).toBeNull();
+    expect(screen.queryByTestId("proxy-close-manual")).toBeNull();
+    expect(within(screen.getByTestId("proxy-close-steps")).getByText(proxyOffSnippet("linux"))).toBeInTheDocument();
+    expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.ours("this machine"));
+  });
+
+  it("quitting leaves the proxy up and persists nothing", () => {
+    const p = mount(OURS);
 
     fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.quit }));
-    expect(p.onKeep).toHaveBeenCalledOnce();
-    expect(p.onRemove).not.toHaveBeenCalled();
+    expect(p.onQuit).toHaveBeenCalledWith(false);
+    expect(p.onStop).not.toHaveBeenCalled();
   });
 
-  it("turn it off runs the remedy", () => {
-    const p = mount("ours");
+  it("the button stops routing, naming a prompt only on macOS (S3)", () => {
+    const p = mount(OURS, { onStop: vi.fn(() => new Promise<void>(() => {})) });
 
-    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
-    expect(p.onRemove).toHaveBeenCalledOnce();
+    fireEvent.click(stopButton());
+    expect(p.onStop).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("proxy-close-running")).toHaveTextContent(CLOSE_COPY.stopping("macos"));
+    expect(CLOSE_COPY.stopping("windows")).not.toMatch(/prompt/);
   });
 
-  it("a failed remedy relabels the same slot and opens the manual route — it strands nobody", async () => {
-    const onRemove = vi.fn().mockRejectedValue(new Error("elevation declined"));
-    mount("ours", { onRemove });
+  it("a failure relabels the same slot and opens the steps — it strands nobody", async () => {
+    const onStop = vi.fn().mockRejectedValue(new Error("elevation declined"));
+    mount(OURS, { onStop });
 
-    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
+    fireEvent.click(stopButton());
 
     await waitFor(() => expect(screen.getByTestId("proxy-close-failed")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: CLOSE_COPY.tryAgain })).toBeInTheDocument();
     expect(screen.getByTestId("proxy-close-failed")).toHaveTextContent(CLOSE_COPY.failed);
-    // The escape stays one click away rather than the dialog trapping the user.
     expect(screen.getByRole("button", { name: CLOSE_COPY.quit })).toBeInTheDocument();
     expect(screen.getByTestId("proxy-close-manual").querySelector("details")).toHaveAttribute("open");
   });
 
-  it("try again re-runs the remedy", async () => {
-    const onRemove = vi.fn().mockRejectedValue(new Error("declined"));
-    mount("ours", { onRemove });
-    // The slot relabels, so the retry is found by either name.
-    const remedy = () =>
-      screen.getByRole("button", {
-        name: new RegExp(`^(${CLOSE_COPY.turnOff}|${CLOSE_COPY.tryAgain})$`),
-      });
+  it("try again re-runs the stop", async () => {
+    const onStop = vi.fn().mockRejectedValue(new Error("declined"));
+    mount(OURS, { onStop });
 
-    fireEvent.click(remedy());
+    fireEvent.click(stopButton());
     await waitFor(() => expect(screen.getByTestId("proxy-close-failed")).toBeInTheDocument());
-    fireEvent.click(remedy());
+    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.tryAgain }));
 
-    expect(onRemove).toHaveBeenCalledTimes(2);
+    expect(onStop).toHaveBeenCalledTimes(2);
   });
 
-  // remove() resolves after the unset succeeds AND the window destroy settles —
-  // and the destroy failing is deliberately swallowed, so a resolved remove can
-  // leave the window open. The proxy IS off at that point, so the dialog must say
-  // so and must not offer to do it again.
-  it("says the proxy is off when the remedy succeeds without closing the window", async () => {
-    const onRemove = vi.fn().mockResolvedValue(undefined);
-    mount("ours", { onRemove });
+  // stop() resolves after the unset succeeds AND the window destroy settles —
+  // and the destroy failing is deliberately swallowed, so a resolved stop can
+  // leave the window open. Routing has stopped, so the dialog says so, and what
+  // remains is the way out: the button is gone, not disabled (S1).
+  it("once it worked and the window stayed, the button gives way to its outcome (S1)", async () => {
+    const onStop = vi.fn().mockResolvedValue(undefined);
+    mount(OURS, { onStop });
 
-    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
+    const button = stopButton();
+    button.focus();
+    fireEvent.click(button);
 
     await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
-    expect(screen.getByTestId("proxy-close-done")).toHaveTextContent(CLOSE_COPY.done);
+    expect(screen.getByTestId("proxy-close-done")).toHaveTextContent(CLOSE_COPY.stopped("this Mac"));
     expect(screen.queryByTestId("proxy-close-running")).toBeNull();
-    // Nothing unmounts under the user: the spent remedy stays put, disabled.
-    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: CLOSE_COPY.stop })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: CLOSE_COPY.quit }));
+    expect(onStop).toHaveBeenCalledOnce();
   });
 
-  it("does not offer to turn off a proxy it just turned off — no second elevation prompt", async () => {
-    const onRemove = vi.fn().mockResolvedValue(undefined);
-    mount("ours", { onRemove });
-
-    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
-    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
-
-    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeDisabled();
-    expect(onRemove).toHaveBeenCalledOnce();
-  });
-
-
-
-  it("never offers the opt-out — this mode has something local to fix", () => {
-    mount("ours");
+  it("never offers the opt-out — there is something here to fix", () => {
+    mount(OURS);
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 });
 
-describe("the remote mode — nothing local to act on", () => {
-  it("leads with the steps and offers no remedy", () => {
-    mount("remote");
+describe("this machine's proxy could not be read (D2)", () => {
+  it("says so, never that no proxy is set, and offers its steps inline with no button", () => {
+    mount(UNREAD);
 
-    expect(screen.getByTestId("proxy-close-steps")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: CLOSE_COPY.turnOff })).toBeNull();
-    // Nothing to collapse behind: the steps are the whole content.
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-label", CLOSE_COPY.title.unread("this Mac"));
+    expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.unread("this Mac"));
+    expect(screen.getByTestId("proxy-close-panel")).not.toHaveTextContent(/no proxy is set/i);
+    expect(screen.queryByRole("button", { name: CLOSE_COPY.stop })).toBeNull();
+    expect(within(screen.getByTestId("proxy-close-steps")).getByText(proxyOffSnippet("macos"))).toBeInTheDocument();
+  });
+
+  it("carries the opt-out's value to the quit", () => {
+    const p = mount(UNREAD);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: CLOSE_COPY.dontShowAgain }));
+    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.quit }));
+    expect(p.onQuit).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("nothing here routes through Trawler, but a device could (D4)", () => {
+  it("leads with a device's own steps, in the same frame, with no button", () => {
+    mount(DEVICES);
+
+    expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.devices);
+    expect(screen.queryByRole("button", { name: CLOSE_COPY.stop })).toBeNull();
     expect(screen.queryByTestId("proxy-close-manual")).toBeNull();
+    expect(screen.getByTestId("proxy-close-steps")).toHaveTextContent(
+      routeUndo("ios", "macos")[0][0] as string,
+    );
   });
 
-  it("its exit is the same bare quit, in the same corner as every other mode", () => {
-    mount("remote");
-    expect(screen.getByRole("button", { name: CLOSE_COPY.quit })).toBeInTheDocument();
+  it("names the emulator it found and opens on its steps", () => {
+    mount(EMULATOR);
+
+    expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.emulator("Pixel_7_API_35"));
+    expect(screen.getByRole("button", { name: "steps for" })).toHaveTextContent("Android emulator");
   });
 
-  it("carries the opt-out's value to the acknowledgement", () => {
-    const p = mount("remote");
+  it("offers the platforms a device could be, and the steps setup gives each (S4)", () => {
+    mount(DEVICES);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: CLOSE_COPY.remote.dontShowAgain }));
+    fireEvent.click(screen.getByRole("button", { name: "steps for" }));
+    const offered = screen.getAllByRole("option").map((o) => o.textContent?.replace("✓", ""));
+    expect(offered).toEqual([
+      "Another Mac",
+      "Another Windows PC",
+      "Another Ubuntu machine",
+      "Android emulator",
+      "iPhone or iPad",
+      "Android device",
+    ]);
+    fireEvent.click(screen.getByRole("option", { name: "Android device" }));
+    expect(screen.getByTestId("proxy-close-steps")).toHaveTextContent(
+      routeUndo("android", "macos")[0][0] as string,
+    );
+  });
+
+  it("carries the opt-out's value to the quit, and quits without it when left alone", () => {
+    const ticked = mount(DEVICES);
+    fireEvent.click(screen.getByRole("checkbox", { name: CLOSE_COPY.dontShowAgain }));
     fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.quit }));
-
-    expect(p.onAcknowledge).toHaveBeenCalledWith(true);
+    expect(ticked.onQuit).toHaveBeenCalledWith(true);
   });
+});
 
-  it("quits without persisting when the box is left alone", () => {
-    const p = mount("remote");
-
-    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.quit }));
-    expect(p.onAcknowledge).toHaveBeenCalledWith(false);
+describe("which device's steps open first", () => {
+  it("the emulator found, else the device last set up, else an iPhone", () => {
+    expect(deviceShown(EMULATOR, "ios")).toBe("android-sim");
+    expect(deviceShown(DEVICES, "android")).toBe("android");
+    expect(deviceShown(DEVICES, "this")).toBe("ios");
+    expect(deviceShown(DEVICES, "ios-sim")).toBe("ios");
   });
 });
 
 describe("the modal shell — three routes out, one outcome", () => {
-  it.each(["ours", "foreign", "remote"] as CloseMode[])("%s: Esc cancels the quit", (mode) => {
-    const p = mount(mode);
+  it.each(EVERY)("%s: Esc cancels the quit", (_, prompt) => {
+    const p = mount(prompt);
 
     fireEvent.keyDown(screen.getByTestId("proxy-close-dialog"), { key: "Escape" });
     expect(p.onCancel).toHaveBeenCalledOnce();
   });
 
-  it.each(["ours", "foreign", "remote"] as CloseMode[])("%s: the backdrop cancels", (mode) => {
-    const p = mount(mode);
+  it.each(EVERY)("%s: the backdrop cancels", (_, prompt) => {
+    const p = mount(prompt);
 
     fireEvent.click(screen.getByTestId("proxy-close-backdrop"));
     expect(p.onCancel).toHaveBeenCalledOnce();
   });
 
-  it.each(["ours", "foreign", "remote"] as CloseMode[])("%s: the dismiss glyph cancels", (mode) => {
-    const p = mount(mode);
+  it.each(EVERY)("%s: the dismiss glyph cancels", (_, prompt) => {
+    const p = mount(prompt);
 
     fireEvent.click(screen.getByRole("button", { name: "cancel" }));
     expect(p.onCancel).toHaveBeenCalledOnce();
   });
 
-  it("counts the disclosure summary as a stop — the trap must match the tab ring", () => {
-    mount("ours");
+  it.each(EVERY)("%s: one frame — a single dialog, a single stake (S2)", (_, prompt) => {
+    mount(prompt);
 
-    const panel = screen.getByTestId("proxy-close-panel");
-    const summary = panel.querySelector("summary");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByTestId("proxy-close-dialog")).toHaveAttribute("data-mode", prompt.mode);
+  });
+
+  it("counts the disclosure summary as a stop — the trap must match the tab ring", () => {
+    mount(OURS);
+
+    const summary = screen.getByTestId("proxy-close-panel").querySelector("summary");
     expect(summary).not.toBeNull();
 
     summary!.focus();
     const forward = createEvent.keyDown(screen.getByTestId("proxy-close-dialog"), { key: "Tab" });
     fireEvent(screen.getByTestId("proxy-close-dialog"), forward);
 
-    // Mid-ring, so no wrap: the summary is not an edge.
     expect(forward.defaultPrevented).toBe(false);
   });
 
@@ -207,9 +269,9 @@ describe("the modal shell — three routes out, one outcome", () => {
   // so the event still reaches the shell. Closing a dropdown must not cancel the
   // quit — the user asked to dismiss the list, not the dialog.
   it("Escape that closed a dropdown does not also cancel the quit", () => {
-    const p = mount("remote");
+    const p = mount(DEVICES);
 
-    fireEvent.click(screen.getByRole("button", { name: "proxy target" }));
+    fireEvent.click(screen.getByRole("button", { name: "steps for" }));
     expect(screen.getByRole("listbox")).toBeInTheDocument();
 
     const escape = createEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
@@ -219,39 +281,16 @@ describe("the modal shell — three routes out, one outcome", () => {
     expect(p.onCancel).not.toHaveBeenCalled();
   });
 
-  it("a spent remedy keeps focus in the panel — a disabled control blurs to body", async () => {
-    const onRemove = vi.fn().mockResolvedValue(undefined);
-    mount("ours", { onRemove });
-
-    const remedy = screen.getByRole("button", { name: CLOSE_COPY.turnOff });
-    remedy.focus();
-    fireEvent.click(remedy);
-    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
-
-    // jsdom keeps focus on a disabled button; real browsers blur it. The dialog
-    // must not depend on which, so the spent control leaves the tab ring and
-    // focus moves to what remains.
-    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeDisabled();
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: CLOSE_COPY.quit }));
-  });
-
-  it("is a modal with an accessible name", () => {
-    mount("ours");
-
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-label", CLOSE_COPY.ours.title);
-  });
-
   // The ✕ is the first stop in the DOM and the manual-steps summary is the next;
-  // opening onto either would put the destructive escape, or an answer to nothing,
-  // under the first Enter.
+  // opening onto either would put the escape, or an answer to nothing, under the
+  // first Enter.
   it.each([
-    ["ours", CLOSE_COPY.turnOff],
-    ["foreign", CLOSE_COPY.turnOff],
-    ["remote", CLOSE_COPY.quit],
-  ] as [CloseMode, string][])("%s: opens with focus on the action it asks about", async (mode, action) => {
-    mount(mode);
+    ["ours", OURS, CLOSE_COPY.stop],
+    ["ours on Linux", OURS, CLOSE_COPY.quit, "linux"],
+    ["unread", UNREAD, CLOSE_COPY.quit],
+    ["devices", DEVICES, CLOSE_COPY.quit],
+  ] as [string, QuitPrompt, string, HostOs?][])("%s: opens with focus on the answer it asks for", async (_, prompt, action, os) => {
+    mount(prompt, os ? { os } : {});
 
     await waitFor(() => {
       expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
@@ -265,14 +304,7 @@ describe("the modal shell — three routes out, one outcome", () => {
     invoker.focus();
 
     const { unmount } = render(
-      <ProxyCloseDialog
-        mode="ours"
-        os="macos"
-        onRemove={vi.fn()}
-        onKeep={vi.fn()}
-        onAcknowledge={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <ProxyCloseDialog prompt={OURS} os="macos" chosen="this" onStop={vi.fn()} onQuit={vi.fn()} onCancel={vi.fn()} />,
     );
     await waitFor(() => expect(document.activeElement).not.toBe(invoker));
 
@@ -285,7 +317,7 @@ describe("the modal shell — three routes out, one outcome", () => {
   // hold with the trap deleted. The discriminating facts are that the wrap was
   // taken (the event is defaultPrevented) and WHERE focus landed.
   it("wraps focus from the last stop back to the first — the scrim is not a way out", () => {
-    mount("ours");
+    mount(OURS);
 
     const dialog = screen.getByTestId("proxy-close-dialog");
     const stops = tabStops();
@@ -299,7 +331,7 @@ describe("the modal shell — three routes out, one outcome", () => {
   });
 
   it("wraps backwards from the first stop to the last on shift+Tab", () => {
-    mount("ours");
+    mount(OURS);
 
     const dialog = screen.getByTestId("proxy-close-dialog");
     const stops = tabStops();
@@ -313,7 +345,7 @@ describe("the modal shell — three routes out, one outcome", () => {
   });
 
   it("leaves Tab alone in the middle of the panel — only the edges wrap", () => {
-    mount("ours");
+    mount(OURS);
 
     const dialog = screen.getByTestId("proxy-close-dialog");
     const stops = tabStops();

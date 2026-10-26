@@ -1,56 +1,22 @@
-import { describe, expect, it, test } from "vitest";
-import {
-  defaultProxyTarget,
-  PROXY_TARGETS,
-  proxyOffSteps,
-} from "./proxyTargets";
+import { describe, expect, it } from "vitest";
+import { proxyOffSnippet, proxyOffSteps, type ProxyTarget } from "./proxyTargets";
 
-test("the proxy selector defaults to the detected host, falling back to terminal", () => {
-  expect(defaultProxyTarget("macos")).toBe("macos");
-  expect(defaultProxyTarget("windows")).toBe("windows");
-  expect(defaultProxyTarget("linux")).toBe("linux");
-  expect(defaultProxyTarget("other")).toBe("terminal");
-});
+const TARGETS: ProxyTarget[] = ["macos", "windows", "linux", "terminal"];
 
-test("proxyOffSteps covers every target with the inverse action", () => {
-  for (const { id } of PROXY_TARGETS) {
-    const steps = proxyOffSteps(id);
-    expect(steps.length).toBeGreaterThan(0);
-    for (const step of steps) expect(typeof step).toBe("string");
-  }
-  expect(proxyOffSteps("macos").join("\n")).toMatch(/-setwebproxystate .*off/);
-  expect(proxyOffSteps("windows").join("\n")).toMatch(/ProxyEnable .*\/d 0/);
-  expect(proxyOffSteps("terminal").join("\n")).toMatch(/unset HTTPS_PROXY/);
-});
-
-// The off-command is replaced in place in the steps that introduce it, so the
-// resolver must put it there exactly once — zero would drop the copy affordance,
-// twice would render two CopyTexts for one command.
 describe("the reversal every target carries", () => {
-  // The list is derived from a Record now, so its order is insertion order rather
-  // than something the reader can see in an array literal — and the order is what
-  // the user sees in the picker.
-  it("offers the targets in the order the picker has always shown", () => {
-    expect(PROXY_TARGETS.map((t) => t.id)).toEqual([
-      "macos",
-      "windows",
-      "linux",
-      "firefox",
-      "terminal",
-      "ios-sim",
-      "android",
-    ]);
+  it("turns each proxy back off", () => {
+    expect(proxyOffSnippet("macos")).toMatch(/-setwebproxystate .*off/);
+    expect(proxyOffSnippet("windows")).toMatch(/ProxyEnable .*\/d 0/);
+    expect(proxyOffSnippet("linux")).toMatch(/mode 'none'/);
+    expect(proxyOffSnippet("terminal")).toMatch(/unset HTTPS_PROXY/);
   });
 
-  it("offers every target it can render steps for", () => {
-    for (const { id, label } of PROXY_TARGETS) {
-      expect(label).not.toBe("");
-      expect(proxyOffSteps(id).length).toBeGreaterThan(0);
-    }
-  });
-
-  it.each(PROXY_TARGETS.map((t) => t.id))("%s repeats no step", (id) => {
-    const steps = proxyOffSteps(id);
+  // The off-command is replaced in place in the steps that introduce it, so it
+  // must be there exactly once: zero drops the copy affordance, two render twice.
+  it.each(TARGETS)("%s carries its command once, after its lead", (t) => {
+    const steps = proxyOffSteps(t);
+    expect(steps.filter((step) => step === proxyOffSnippet(t))).toHaveLength(1);
+    expect(steps[steps.length - 1]).toBe(proxyOffSnippet(t));
     expect(new Set(steps).size).toBe(steps.length);
   });
 });
