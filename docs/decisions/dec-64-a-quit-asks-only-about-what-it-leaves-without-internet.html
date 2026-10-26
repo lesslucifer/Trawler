@@ -45,9 +45,10 @@
         so a terminate cannot be held; a revert on terminate was removed by E-UISETUP.W6 for its surprise password
         prompt</td></tr>
       <tr><td>2</td><td>This machine routes through Trawler when its proxy is Trawler's address,
-        <code>localhost</code> on Trawler's port, or one of this machine's own addresses on Trawler's port. Read
-        at the close, on every service on macOS, WinINET on Windows and GNOME's proxy on Linux</td><td>each of
-        those reaches the same listener</td></tr>
+        <code>localhost</code> on Trawler's port, or one of this machine's own addresses on Trawler's port — as the
+        capture service reports them, or last reported them once it stops answering. Read at the close, on every
+        service on macOS, WinINET on Windows and GNOME's proxy on Linux</td><td>each of those reaches the same
+        listener</td></tr>
       <tr><td>3</td><td>A proxy that is not Trawler's asks nothing of its own</td><td>a quit changes nothing for
         it, and turning it off can take the internet it provides</td></tr>
       <tr><td>4</td><td>A proxy nothing here could read asks, says it could not be read, and offers the steps with
@@ -55,8 +56,12 @@
         whose proxy is never readable would otherwise ask on every quit</td></tr>
       <tr><td>5</td><td>With nothing routing here, the dialog asks about other devices only while reach is armed
         (DEC-55), or an emulator's own proxy reads Trawler's — asked through adb only while the emulator is the
-        platform chosen. It keeps its opt-out</td><td>only then can a device lose anything when Trawler stops;
+        platform chosen; a Wi-Fi-only proxy on an emulator sending over mobile data routes nothing. It keeps its
+        opt-out</td><td>only then can a device lose anything when Trawler stops;
         adb starts a server of its own (E-ONBRVP.W8's Q1)</td></tr>
+      <tr><td>5a</td><td>Every read a close waits on is bounded (1.5 s each, run together), and a read that does
+        not answer in time claims nothing</td><td>a close held by a read that never settles is a window that cannot
+        be quit (E-ONBRVP.W11's review, round 1)</td></tr>
       <tr><td>6</td><td>The stake is the capture service, not the window: the routed machine has no internet once
         it stops, or now while it does not answer</td><td>the core is its own process, and quitting the window does
         not stop it</td></tr>
