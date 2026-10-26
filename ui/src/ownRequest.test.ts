@@ -412,6 +412,40 @@ describe("another device's traffic", () => {
     expect(read.traffic).toEqual(NO_TRAFFIC);
   });
 
+  // W9's Q1: the address the try task offers is that device's test.
+  describe("its address refused", () => {
+    const address = (second: number, id = `a${second}`) =>
+      row(`https://${REQUEST_HOST}/?trawler-check=${mark}`, { id, started_at: new Date(at(second)).toISOString() });
+    const clear = readings({ clear: true, second: 3 }, { clear: true, second: 9 });
+
+    it("is a tunnel to its host no decrypted request to it answered, the device's inside a clear span", () => {
+      const read = deviceTraffic([decrypted(6)], { ...allowed, clear }, [at(5)], at(5));
+
+      expect(read.refusal).toEqual({ host: REQUEST_HOST, at: at(5), mine: true });
+    });
+
+    it("is nobody's outside a clear span, as anything unmarked is", () => {
+      const read = deviceTraffic([], { ...allowed, clear: NO_CLEAR_READINGS }, [at(5)], at(5));
+
+      expect(read.refusal).toEqual({ host: REQUEST_HOST, at: at(5), mine: false });
+    });
+
+    it("is answered by a decrypted request to its host after it, or the moment before it", () => {
+      expect(deviceTraffic([address(6)], { ...allowed, clear }, [], at(5)).refusal).toBeUndefined();
+      expect(deviceTraffic([address(4)], { ...allowed, clear }, [], at(5)).refusal).toBeUndefined();
+      expect(deviceTraffic([address(1)], { ...allowed, clear }, [], at(5)).refusal).toEqual({
+        host: REQUEST_HOST,
+        at: at(5),
+        mine: true,
+      });
+    });
+
+    it("is none where the only tunnel to its host came before the allow", () => {
+      expect(deviceTraffic([], { ...allowed, clear }, [], at(1)).refusal).toBeUndefined();
+      expect(deviceTraffic([], { ...allowed, clear }, [], null).refusal).toBeUndefined();
+    });
+  });
+
   it("is nothing at all before an address is allowed", () => {
     const flows = [decrypted(4), row(markedUrl(mark), { id: "m", started_at: new Date(at(4)).toISOString() })];
     const clear = readings({ clear: true, second: 1 }, { clear: true, second: 9 });

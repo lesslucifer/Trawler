@@ -1194,24 +1194,150 @@ describe("a phone, once it may connect", () => {
     expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(capturing.lastDecryptedAt!)}`);
     expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(capturing.lastDecryptedAt!)}`);
   });
+});
 
-  // The owner's report: an iPhone pointed here without the certificate. Its
-  // requests arrive and nothing decrypts - which says the proxy is set and the
-  // certificate is the step left, so that is where the screen says so.
-  it("requests that arrive and do not decrypt confirm the proxy and point at the certificate", () => {
+// W9: Apple's own services pin their certificates and refuse from the moment an
+// iPhone's proxy points here, so its test is the address its try task offers.
+describe("the iPhone, whose test is the address it is offered", () => {
+  const TRUST_SWITCH = "Settings → General → About → Certificate Trust Settings → Trawler Proxy CA";
+  const refusedAt = arriving.openTunnelAt!;
+  const theAddress = (at: number, mine = true) => ({ host: "example.com", at, mine });
+  const clearSpan = (refusal?: ReturnType<typeof theAddress>) => ({
+    provedAt: null,
+    mixed: false,
+    wire: NO_TRAFFIC,
+    refusal,
+  });
+
+  // DEC-63 as W4 left it, on a platform whose own services do not refuse.
+  it("another computer's refusal still confirms its proxy and points at its certificate", () => {
     draw({ reach: ARMED, traffic: arriving });
-    pick("iPhone or iPad");
+    pick("Another Mac");
 
-    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(arriving.lastTunnelAt!)}`);
-    expect(within(task(3)).queryByText("2 steps")).toBeNull();
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(refusedAt)}`);
     expect(within(task(3)).getByText("to turn it off later")).toBeInTheDocument();
     expect(task(2)).toHaveTextContent("not working — nothing decrypted");
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
-      "something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it. Installed the profile already? Trust is a separate switch: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA. Apple's own services never decrypt; a website in Safari is the test.",
+      /^something reached Trawler and did not decrypt — that Mac does not trust Trawler's certificate yet\. The steps below install it\./,
+    );
+    expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
+    expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
+  });
+
+  it("a refusal of anything else confirms the proxy, leaves the certificate to the address, and names Apple's services", () => {
+    draw({ reach: ARMED, traffic: arriving, device: clearSpan() });
+    pick("iPhone or iPad");
+
+    expect(task(3)).toHaveTextContent(`done — a request reached Trawler at ${clock(refusedAt)}`);
+    expect(task(2)).toHaveTextContent("can't check here — the address in step 4 confirms it");
+    expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.",
+    );
+  });
+
+  it("its address refused says the trust switch before the profile, with the steps open, once", () => {
+    draw({ reach: ARMED, traffic: arriving, device: clearSpan(theAddress(refusedAt)) });
+    pick("iPhone or iPad");
+
+    expect(task(2)).toHaveTextContent("not working — example.com did not decrypt");
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
+      `example.com did not decrypt on your iPhone — turn on full trust: ${TRUST_SWITCH}. Not listed there? The profile is not installed — the steps below install it.`,
     );
     expect(open("On your iPhone, open")).toBe(true);
     expect(task(4)).toHaveTextContent("not working — arriving but not decrypting");
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
+  });
+
+  // The review's round 1: a retry may yet decrypt, so until it does or is
+  // refused itself, the refusal before it stands.
+  it("its address retried inside the retry's grace keeps the refusal before it", () => {
+    const { rerender } = draw({ reach: ARMED, traffic: arriving, device: clearSpan(theAddress(refusedAt)) });
+    pick("iPhone or iPad");
+    expect(task(2)).toHaveTextContent("not working — example.com did not decrypt");
+
+    const retriedAt = Date.now();
+    const retrying = { ...arriving, lastTunnelAt: retriedAt };
+    rerender(screenAt({ reach: ARMED, traffic: retrying, device: clearSpan(theAddress(retriedAt)) }));
+
+    expect(task(2)).toHaveTextContent("not working — example.com did not decrypt");
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(/turn on full trust/);
+  });
+
+  it("its address is not refused inside a tunnel's grace", () => {
+    const opening = { ...NO_TRAFFIC, lastTunnelAt: ago(500), openTunnelAt: ago(500) };
+    draw({ reach: ARMED, traffic: opening, device: clearSpan(theAddress(opening.openTunnelAt)) });
+    pick("iPhone or iPad");
+
+    expect(task(2)).not.toHaveTextContent("not working");
+  });
+
+  // Q2: a proof older than the refusal showed a certificate since removed, or
+  // a trust switch since turned off.
+  it("its address refused after a proof reopens the certificate task; the try task keeps the proof and the address to check again", () => {
+    const provedAt = ago(60_000);
+    const traffic = { ...arriving, lastDecryptedAt: provedAt };
+    draw({ reach: ARMED, traffic, device: clearSpan(theAddress(refusedAt)), deviceMark: "k3m9" });
+    pick("iPhone or iPad");
+
+    expect(task(2)).toHaveTextContent(
+      `not working — example.com did not decrypt at ${clock(refusedAt)}, after decrypting at ${clock(provedAt)}`,
+    );
+    expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(/turn on full trust/);
+    expect(open("On your iPhone, open")).toBe(true);
+    expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(provedAt)}`);
+    expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(screen.getByTestId("check-address")).toHaveTextContent("to check again, open this one on your iPhone");
+  });
+
+  it("its address refused before a proof leaves the proof standing", () => {
+    const provedAt = ago(60_000);
+    draw({
+      reach: ARMED,
+      traffic: { ...NO_TRAFFIC, lastDecryptedAt: provedAt },
+      device: clearSpan(theAddress(ago(90_000))),
+    });
+    pick("iPhone or iPad");
+
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(provedAt)}`);
+  });
+
+  it("after a proof, a refusal of anything else is Apple's own services first", () => {
+    const provedAt = ago(60_000);
+    draw({ reach: ARMED, traffic: { ...arriving, lastDecryptedAt: provedAt }, device: clearSpan() });
+    pick("iPhone or iPad");
+
+    expect(task(2)).toHaveTextContent(`done — a request decrypted at ${clock(provedAt)}`);
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.",
+    );
+  });
+
+  // Rule 3: while this Mac's traffic may be arriving, nothing unmarked is the
+  // iPhone's, its address refused included.
+  it("its address refused while this Mac's traffic may be arriving is nobody's, and the try task says what to do if it was the iPhone's", () => {
+    draw({
+      reach: ARMED,
+      device: { provedAt: null, mixed: true, wire: arriving, refusal: theAddress(refusedAt, false) },
+      deviceMark: "k3m9",
+    });
+    pick("iPhone or iPad");
+
+    expect(task(2)).toHaveTextContent("can't check here — the address in step 4 confirms it");
+    expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
+      `example.com did not decrypt — if you opened it on your iPhone, turn on full trust: ${TRUST_SWITCH}. Not listed there? The profile is not installed — the certificate step installs it.`,
+    );
+    expect(document.body.textContent).not.toMatch(/Finish the certificate step/);
+  });
+
+  it("anything else refused while this Mac's traffic may be arriving names Apple's services, never the certificate step", () => {
+    draw({ reach: ARMED, device: { provedAt: null, mixed: true, wire: arriving }, deviceMark: "k3m9" });
+    pick("iPhone or iPad");
+
+    expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(/Apple's own services pin their certificates/);
+    expect(document.body.textContent).not.toMatch(/Finish the certificate step/);
   });
 });
 

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  addressRefusedNow,
+  addressTrustStatus,
   awaiting,
   byOwnRequest,
   clock,
@@ -23,6 +25,8 @@ import {
   proxyStatus,
   RECENT_MS,
   REFUSED_AFTER_PROOF,
+  refusedAddress,
+  settledRefusal,
   setUpOn,
   storesTrusted,
   simulatorTrustStatus,
@@ -800,6 +804,91 @@ describe("another device's try task, while nothing arriving is told apart from t
     );
     expect(mixedTryStatus(NO_TRAFFIC, quiet, null, { trustedOn: "iPhone 17 Pro" })).toEqual(
       awaiting("the address below confirms it"),
+    );
+  });
+});
+
+// ── The iPhone: its test is the address it is offered (W9) ─────────────────
+
+describe("a device whose test is its address", () => {
+  const ev = (e: Partial<ReturnType<typeof evidenceOf>>) => ({ ...NO_EVIDENCE, ...e });
+  const IPHONE = { device: "your iPhone", provedAt: null, mixed: false, tryStep: 4 };
+  const FIRST_HTTPS = "your iPhone's first HTTPS request confirms it";
+  const AT_1410 = AT_1402 + 8 * 60_000;
+  const address = (at: number, mine = true) => ({ host: "example.com", at, mine });
+  const past = (at: number) => at + TUNNEL_GRACE_MS;
+
+  it("its address refused is the certificate's only past its grace and inside a clear span", () => {
+    expect(refusedAddress(address(AT_1402), NO_EVIDENCE, IPHONE, past(AT_1402))).toEqual(address(AT_1402));
+    expect(refusedAddress(address(AT_1402), NO_EVIDENCE, IPHONE, past(AT_1402) - 1)).toBeNull();
+    expect(refusedAddress(address(AT_1402, false), NO_EVIDENCE, IPHONE, past(AT_1402))).toBeNull();
+    expect(refusedAddress(undefined, NO_EVIDENCE, IPHONE, past(AT_1402))).toBeNull();
+  });
+
+  // Q2: a proof older than the refusal showed a certificate since removed.
+  it("and only where it is newer than every proof, marked or not", () => {
+    const now = past(AT_1410);
+    expect(refusedAddress(address(AT_1410), ev({ decryptedAt: AT_1402 }), IPHONE, now)).toEqual(address(AT_1410));
+    expect(refusedAddress(address(AT_1402), ev({ decryptedAt: AT_1410 }), IPHONE, now)).toBeNull();
+    expect(refusedAddress(address(AT_1402), NO_EVIDENCE, { ...IPHONE, provedAt: AT_1410 }, now)).toBeNull();
+  });
+
+  it("its certificate reads that refusal not working, with the proof it outlasted", () => {
+    expect(addressTrustStatus(NO_EVIDENCE, IPHONE, address(AT_1402), FIRST_HTTPS)).toEqual(
+      verdict("not-working", "example.com did not decrypt"),
+    );
+    expect(addressTrustStatus(ev({ decryptedAt: AT_1402 }), IPHONE, address(AT_1410), FIRST_HTTPS)).toEqual(
+      verdict("not-working", "example.com did not decrypt at 14:10, after decrypting at 14:02"),
+    );
+  });
+
+  // Q1: Apple's own services refuse whatever its certificate does.
+  it("any other refusal before a proof points at the address, never at the certificate", () => {
+    const refusing = ev({ reached: true, unanswered: true, refused: true });
+    expect(addressTrustStatus(refusing, IPHONE, null, FIRST_HTTPS)).toEqual(
+      awaiting("the address in step 4 confirms it"),
+    );
+  });
+
+  it("everything else reads as another device's", () => {
+    expect(addressTrustStatus(NO_EVIDENCE, IPHONE, null, FIRST_HTTPS)).toEqual(awaiting(FIRST_HTTPS));
+    expect(addressTrustStatus(ev({ decryptedAt: AT_1402 }), IPHONE, null, FIRST_HTTPS)).toEqual(
+      verdict("done", "a request decrypted at 14:02"),
+    );
+    expect(addressTrustStatus(NO_EVIDENCE, { ...IPHONE, mixed: true }, null, FIRST_HTTPS)).toEqual(
+      awaiting("the address in step 4 confirms it"),
+    );
+  });
+
+  // The review's round 1: a retry may yet decrypt, so it moves nothing until it settles.
+  it("a retry inside its grace leaves the refusal before it standing, and an answer clears both", () => {
+    const retry = address(AT_1410);
+    expect(settledRefusal(retry, address(AT_1402), AT_1410 + 1)).toEqual(address(AT_1402));
+    expect(settledRefusal(retry, address(AT_1402), past(AT_1410))).toEqual(retry);
+    expect(settledRefusal(retry, undefined, AT_1410 + 1)).toBeUndefined();
+    expect(settledRefusal(undefined, address(AT_1402), past(AT_1410))).toBeUndefined();
+  });
+
+  it("the try task reads its address refused as the refusal now only past its grace and inside the window", () => {
+    expect(addressRefusedNow(address(AT_1402), past(AT_1402))).toBe(true);
+    expect(addressRefusedNow(address(AT_1402), past(AT_1402) - 1)).toBe(false);
+    expect(addressRefusedNow(address(AT_1402), AT_1402 + RECENT_MS + 1)).toBe(false);
+    expect(addressRefusedNow(undefined, past(AT_1402))).toBe(false);
+  });
+
+  // F19: the certificate task says a refusal it owns, so the try task does not.
+  it("a refusal its certificate task owns leaves the try task bare, before a proof and after one", () => {
+    const now = AT_1410 + TUNNEL_GRACE_MS;
+    const refusing = { ...NO_TRAFFIC, ...openTunnel(AT_1410) };
+    expect(mixedTryStatus(refusing, now, null, { ownsRefusal: true })).toEqual({
+      glyph: "⚠",
+      tone: "warn",
+      short: "not working — arriving but not decrypting",
+    });
+    expect(mixedTryStatus(refusing, now, AT_1402, { ownsRefusal: true })).toEqual(verdict("done", "decrypted at 14:02"));
+    const proved = { ...refusing, lastDecryptedAt: AT_1402 };
+    expect(trafficStatus(proved, now, { ownsRefusal: true, trustedOn: null, proofStays: "past-anything" })).toEqual(
+      verdict("done", "decrypted at 14:02"),
     );
   });
 });

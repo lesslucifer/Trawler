@@ -1,7 +1,7 @@
 import type { FlowSummary, ReachState } from "./api";
-import { isCaptured, sessionTraffic } from "./flow";
+import { hostOf, isCaptured, sessionTraffic } from "./flow";
 import type { PlatformId } from "./setup";
-import { NO_TRAFFIC, type Traffic } from "./verdicts";
+import { NO_TRAFFIC, TUNNEL_GRACE_MS, type AddressRefusal, type Traffic } from "./verdicts";
 
 // DEC-56: one request, on the user's click, to a destination the sentence
 // names and Trawler does not own. The window's own fetch goes the way a browser
@@ -141,6 +141,7 @@ export interface AnotherDevice {
   provedAt: number | null;
   mixed: boolean;
   wire: Traffic;
+  refusal?: AddressRefusal;
 }
 
 // From the moment its address was allowed (A2) - and nothing while none is -
@@ -152,6 +153,7 @@ export function deviceTraffic(
   flows: FlowSummary[],
   device: { allowedSince: number | null; mark: string; clear: ClearReadings },
   tunnels: readonly number[],
+  addressTunnelAt: number | null = null,
 ): AnotherDevice & { traffic: Traffic } {
   const { allowedSince: since, mark, clear } = device;
   const mixed = !clear.open;
@@ -166,7 +168,31 @@ export function deviceTraffic(
     wire: mixed ? sessionTraffic(flows, since, tunnels) : NO_TRAFFIC,
     provedAt: lastProvedAt(flows, since, (seen) => seen === mark),
     mixed,
+    refusal: addressRefusal(flows, since, addressTunnelAt, inClear),
   };
+}
+
+// The address the try task offers is opened on that device, so a tunnel to its
+// host that no decrypted request to that host answered is that address
+// refused - or anyone's opening of the same host, which is why it is the
+// device's only inside a clear span.
+function addressRefusal(
+  flows: FlowSummary[],
+  since: number,
+  tunnelAt: number | null,
+  inClear: (at: number) => boolean,
+): AddressRefusal | undefined {
+  if (tunnelAt === null || tunnelAt < since) return undefined;
+  // The tunnel is timed when its event lands here and the request by the
+  // core's clock, so the request it carries may read a moment older.
+  const answered = flows.some(
+    (flow) =>
+      isCaptured(flow) &&
+      flow.uri.startsWith("https://") &&
+      hostOf(flow.uri) === REQUEST_HOST &&
+      Date.parse(flow.started_at) >= tunnelAt - TUNNEL_GRACE_MS,
+  );
+  return answered ? undefined : { host: REQUEST_HOST, at: tunnelAt, mine: inClear(tunnelAt) };
 }
 
 // Which way one request went, as far as the core saw it (D9): decrypted, a

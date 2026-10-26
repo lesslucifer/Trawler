@@ -6,6 +6,7 @@
 // Pure data and pure functions; no I/O, no React.
 
 import type { CaFormat, ReachState } from "./api";
+import { REQUEST_HOST } from "./ownRequest";
 import type { ProxyTarget } from "./proxyTargets";
 import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
 
@@ -149,6 +150,18 @@ export interface PlatformSetup {
   // What a refusal after another device's proof most likely is, where this
   // platform knows better than every platform's answer (DEC-63 rule 7).
   refusedAfterProof?: string;
+  addressTest?: AddressTest;
+}
+
+// A platform whose own services refuse whatever its certificate does, so the
+// address its try task offers is the certificate's one test (W9's Q1): that
+// address refused, said by the certificate task where it is the device's and
+// by the try task where it may be anyone's, and every other refusal, which is
+// never the certificate's.
+export interface AddressTest {
+  refused: string;
+  maybeRefused: string;
+  elsewhereRefused: string;
 }
 
 // The addresses an off-machine platform's instructions are built from. Null
@@ -340,9 +353,10 @@ export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
 // Another device's own request, for when its traffic cannot be told from this
 // machine's (DEC-63): an address carrying its mark, opened on that device. The
 // try task's title already says to open a website there, so this is the one.
-export function checkStep(id: PlatformId, os: HostOs, url: string): GuideStep {
+// Once proved, opening it again is the one re-read a device allows (W9's S3).
+export function checkStep(id: PlatformId, os: HostOs, url: string, again = false): GuideStep {
   return [
-    `or open this one ${openWhere(id, os)}`,
+    `${again ? "to check again, open" : "or open"} this one ${openWhere(id, os)}`,
     { copy: url, label: "the address to open", wire: "check url", scan: PLATFORMS[id].scans },
   ];
 }
@@ -610,7 +624,19 @@ const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not sig
 
 const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
 
-const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate switch: ${IOS_TRUST_PATH}. Apple's own services never decrypt; a website in Safari is the test.`;
+// The profile and the trust switch refuse alike, and the switch is the step a
+// user who installed misses, so it leads (W9's S2).
+const IOS_TRUST_FIRST = `turn on full trust: ${IOS_TRUST_PATH}. Not listed there? The profile is not installed`;
+
+const IOS_ADDRESS_TEST: AddressTest = {
+  refused: `${REQUEST_HOST} did not decrypt on your iPhone — ${IOS_TRUST_FIRST} — the steps below install it.`,
+  maybeRefused: `${REQUEST_HOST} did not decrypt — if you opened it on your iPhone, ${IOS_TRUST_FIRST} — the certificate step installs it.`,
+  elsewhereRefused:
+    "something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.",
+};
+
+const REFUSED_AFTER_PROOF_IOS =
+  "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.";
 
 const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
 
@@ -762,7 +788,9 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
     route: { title: `On ${device}, set the Wi-Fi proxy`, guide: route },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
-    notDecrypting: ios ? NOT_DECRYPTING_IOS : NOT_DECRYPTING_ANDROID,
+    notDecrypting: ios ? undefined : NOT_DECRYPTING_ANDROID,
+    refusedAfterProof: ios ? REFUSED_AFTER_PROOF_IOS : undefined,
+    addressTest: ios ? IOS_ADDRESS_TEST : undefined,
   };
 }
 
