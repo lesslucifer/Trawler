@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W11
+base: d1bbf8fb53539c706b6bdc011bd6f217bb3accf6
+design_sha256: 6aecf902144637e52b4494eefde7b069a4db0a5be4f35fe91dc20f1aa8d6db9e
+verdict: PASS
+artifacts: [docs/work/2026-10-26-close-dialog-design-run.html]
+implements:
+  - path: docs/work/2026-10-26-close-dialog-design-run.html
+    blob: 005518d0a7a22b3355ce06a6e22a10ead854c7eb
+    built: [ui/src/ProxyCloseDialog.tsx, ui/src/App.tsx, ui/src/manualSteps.tsx]
+undesigned:
+  - path: ui/src/Onboarding.tsx
+    why: "its step renderer moved into manualSteps.tsx unchanged and is called with the same save note; nothing setup renders changes, which the unchanged Onboarding and matrix suites hold"
+  - path: ui/src/components/Notice.tsx
+    why: "a TSDoc @use example quotes the dialog's new outcome sentence; no markup changes"
+date: 2026-10-26
