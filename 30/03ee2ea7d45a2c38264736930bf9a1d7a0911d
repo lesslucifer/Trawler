@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3003ee2ea7d45a2c38264736930bf9a1d7a0911d
+base: 0b61b3478b28b943bf7c6a2ea364e229cd4e3720
+tier: key
+signer: vuluu
+report: docs/work/2026-10-26-onboard-revamp-w10-android-status-result.html
+report_sha256: 310a5afd5e44b5198fe8e882708d534318a1633be6204a59b8733a31ca9cabc9
+date: 2026-10-26
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAxiP7xtjKirLNx9pVsdKTdnbdc9I+OdwiyC9pVpCPeIbb9nlPUESl6w6
+  2uf1PWIi+gJSudbgbNBO19VaI2U1wM
+  -----END SSH SIGNATURE-----
