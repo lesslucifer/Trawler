@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU android-status -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W10
+branch: wu/onboard-revamp/android-status
+base: 0b61b3478b28b943bf7c6a2ea364e229cd4e3720
+head: 55ecc4981642ebe1dccce1f7944eb8d254c6469a
+diff_sha256: 046e354924716f7e623b4a185344f4654888c45e332ef39c4f7b8ef89e207e6e
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 118
+    finders: 27
+    total: 137
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-10-26
