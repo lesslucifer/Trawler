@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-ONBRVP
+wu: E-ONBRVP.W11
+base: d1bbf8fb53539c706b6bdc011bd6f217bb3accf6
+tip: 7d434cca8c8488f7ab59cc8c6fbcfc3eff5cd76b
+diff_sha256: e4263408f8b4578a08ddc0405c1c692cfcb82ac3740c05c46cfeca1cbea3af39
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-10-27
