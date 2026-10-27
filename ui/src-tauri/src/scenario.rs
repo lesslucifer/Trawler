@@ -11,9 +11,9 @@ use std::sync::Mutex;
 use serde::Deserialize;
 
 use crate::setup::{
-    command_failed, read_proxy, trust_word, EmulatorProxy, EmulatorReading, ProxyRead,
-    ProxyReading, SetupError, SimulatorTrust, Trust, NO_INSTALL_DETAIL, NO_SET_PROXY_DETAIL,
-    NO_UNSET_PROXY_DETAIL,
+    command_failed, read_proxy, read_proxy_among, trust_word, EmulatorProxy, EmulatorReading,
+    ProxyRead, ProxyReading, SetupError, SimulatorTrust, Trust, NO_INSTALL_DETAIL,
+    NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -190,13 +190,20 @@ impl Scenario {
             .collect()
     }
 
-    fn proxy_reading(&self, host: &str, port: u16) -> ProxyReading {
-        let read = match &self.proxy {
+    fn proxy_read(&self) -> ProxyRead {
+        match &self.proxy {
             ProxyOs::Set { host, port } => ProxyRead::Set(host.clone(), *port),
             ProxyOs::Unset => ProxyRead::Off,
             ProxyOs::Unreadable => ProxyRead::Unreadable,
-        };
-        read_proxy(&read, host, port)
+        }
+    }
+
+    fn proxy_reading(&self, host: &str, port: u16) -> ProxyReading {
+        read_proxy(&self.proxy_read(), host, port)
+    }
+
+    fn quit_reading(&self, host: &str, port: u16, own: &[String]) -> ProxyReading {
+        read_proxy_among(&self.proxy_read(), host, port, own)
     }
 
     fn set_up(&mut self, host: String, port: u16) -> Result<(), SetupError> {
@@ -253,8 +260,8 @@ pub fn emulator_readings(state: Shared<'_>) -> Vec<EmulatorReading> {
 }
 
 #[tauri::command]
-pub fn proxy_status(state: Shared<'_>, host: String, port: u16) -> ProxyReading {
-    with(&state, |s| s.proxy_reading(&host, port))
+pub fn proxy_status(state: Shared<'_>, host: String, port: u16, own: Vec<String>) -> ProxyReading {
+    with(&state, |s| s.quit_reading(&host, port, &own))
 }
 
 // One scripted proxy answers both questions: the walkthrough films a machine
@@ -461,6 +468,12 @@ mod tests {
         assert_eq!(
             unreadable.proxy_reading("127.0.0.1", 7420),
             read_proxy(&ProxyRead::Unreadable, "127.0.0.1", 7420)
+        );
+        let lan = patched(r#"{"proxy":{"set":{"host":"192.168.1.24","port":7420}}}"#);
+        let own = ["192.168.1.24".to_string()];
+        assert_eq!(
+            lan.quit_reading("127.0.0.1", 7420, &own),
+            read_proxy_among(&ProxyRead::Set("192.168.1.24".into(), 7420), "127.0.0.1", 7420, &own)
         );
         let unset = patched(r#"{"proxy":"unset"}"#);
         assert_eq!(

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adf4c669f34851f0dfadd0f">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: the close dialog</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- theme + shared specimen behaviours + the real collection, one classic
+       script so the doc opens over file://. Generated, git-ignored:
+       `cargo xtask ui specimens`. -->
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .a-mock h2,.a-mock h3{margin:0;padding:0;border:0}
+    .a-mock p,.a-mock li{color:inherit}
+    /* mockup assembly only — which reading the dialog opens on. The base is a
+       Mac routed through Trawler, its capture service answering, nothing pressed. */
+    .a-zone{display:block}
+    .a-on-stale,.a-on-running,.a-on-failed,.a-on-done,.a-on-linux,.a-on-unread,.a-on-devices,.a-on-emu{display:none}
+    .stale .a-on-stale,.running .a-on-running,.failed .a-on-failed,.done .a-on-done,
+    .linux .a-on-linux,.unread .a-on-unread,.devices .a-on-devices,.emu .a-on-emu{display:block}
+    .stale .a-off-stale,.running .a-off-running,.failed .a-off-failed,.done .a-off-done,
+    .linux .a-off-linux,.unread .a-off-unread,.devices .a-off-devices,.emu .a-off-emu{display:none}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — the close dialog</h1>
+      <p>What Trawler asks when it is told to quit: the one frame, its sentence for each reading, and what is left once its button has done its work.</p>
+      <div class="meta">Design run · round 1 on 2026-10-26, closed on the owner's LGTM · Trawler · T3 (docs/work/) · <strong>E-ONBRVP.W11</strong> · branch <code>wu/onboard-revamp/close-dialog</code> · epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · <a href="2026-10-26-onboard-revamp-w11-close-dialog-plan.html">WU plan</a> · input: Frame B of E-RFINISH.W7's run, on <code>wu/redesign-finish/onboarding-design</code> at <code>7c6e144</code></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="mockup">Mockup</h2>
+    <p class="kd">Mounted from the real <code>ui/src/components/</code>; the frame is <code>ModalShell</code>, build-local. Each button below shows the dialog for one reading — read each one alone.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-mock bg-scrim p-8" id="mock">
+          <div class="mx-auto w-full max-w-dialog-max rounded-lg border border-hairline bg-canvas p-4 font-ui text-body text-ink">
+            <div class="a-zone mb-3" data-zone="title" id="m-title"></div>
+            <div class="a-zone mb-3" data-zone="stake" id="m-stake"></div>
+            <div class="a-zone" data-zone="outcome" id="m-outcome"></div>
+            <div class="a-zone mb-3" data-zone="steps" id="m-steps"></div>
+            <div class="a-zone" data-zone="opt-out" id="m-optout"></div>
+            <div class="a-zone" data-zone="answers" id="m-answers"></div>
+          </div>
+        </div>
+      </div>
+      <p>overflow: the panel is capped at <code>dialog-max</code> wide and at the window's height. title, stake, outcome, opt-out and answers are bounded — each one sentence or one row. steps is the only unbounded zone: a command wraps (CommandBlock's own wrap) and the step count is the platform's; where the panel would pass the window's height the panel scrolls, the scrim never does (owner: this dialog).</p>
+      <p class="kd">Payload is mono and copies whole: the proxy-off command, such as
+        <span class="font-mono" data-wire="shell command">gsettings set org.gnome.system.proxy mode 'none'</span>.
+        Nothing else in the dialog is read verbatim.</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="stale"
+        data-label-off="▶ the capture service is not answering" data-label-on="◀ it answers">▶ the capture service is not answering</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="running"
+        data-label-off="▶ stopping" data-label-on="◀ at rest">▶ stopping</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="failed"
+        data-label-off="▶ it failed" data-label-on="◀ at rest">▶ it failed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="done"
+        data-label-off="▶ it worked, the window stayed" data-label-on="◀ at rest">▶ it worked, the window stayed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="linux"
+        data-label-off="▶ on Linux" data-label-on="◀ on a Mac">▶ on Linux</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="unread"
+        data-label-off="▶ the proxy could not be read" data-label-on="◀ routed here">▶ the proxy could not be read</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="devices"
+        data-label-off="▶ nothing here, devices allowed" data-label-on="◀ routed here">▶ nothing here, devices allowed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="emu"
+        data-label-off="▶ nothing here, an emulator routed" data-label-on="◀ routed here">▶ nothing here, an emulator routed</button>
+      <script type="text/babel">
+        const { React, createRoot, Button, IconButton, Checkbox, Notice, Disclosure, Select,
+                StepList, CommandBlock } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+
+        const MAC_OFF = "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
+        const LINUX_OFF = "gsettings set org.gnome.system.proxy mode 'none'";
+        const EMU_OFF = "for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d shell settings put global http_proxy :0; done";
+
+        const command = (lead, value) => (
+          <div className="flex min-w-0 flex-col gap-chrome-gap">
+            <span>{lead}</span>
+            <span data-wire="proxy-off command" className="font-mono"><CommandBlock value={value} label="the proxy-off command" /></span>
+          </div>
+        );
+        const macSteps = <StepList steps={[command("Turn it off per enabled service (keeps the saved address):", MAC_OFF)]} />;
+        const linuxSteps = <StepList steps={[command("GNOME — back to no proxy:", LINUX_OFF)]} />;
+
+        const DEVICES = [
+          { id: "mac", label: "Another Mac" },
+          { id: "windows", label: "Another Windows PC" },
+          { id: "ubuntu", label: "Another Ubuntu machine" },
+          { id: "android-sim", label: "Android emulator" },
+          { id: "ios", label: "iPhone or iPad" },
+          { id: "android", label: "Android device" },
+        ];
+        const picker = (value) => (
+          <div className="mb-2 flex items-center gap-chrome-gap font-ui text-body text-ink-mute">
+            steps for
+            <Select options={DEVICES} value={value} onChange={noop} label="steps for" />
+          </div>
+        );
+
+        mount("m-title", (
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="font-serif text-title italic">
+              <span className="a-off-unread a-off-devices a-off-emu">stop routing through Trawler before quitting?</span>
+              <span className="a-on-unread">check this Mac's proxy before quitting</span>
+              <span className="a-on-devices a-on-emu">check your other devices before quitting</span>
+            </h2>
+            <IconButton glyph="close" label="cancel" onClick={noop} />
+          </div>
+        ));
+
+        mount("m-stake", (
+          <p className="font-ui text-body text-ink-mute">
+            <span className="a-off-stale a-off-unread a-off-devices a-off-emu">This Mac sends its web traffic through Trawler. Once Trawler's capture service stops, this Mac has no internet until you stop routing through Trawler.</span>
+            <span className="a-on-stale">Trawler's capture service isn't answering, so this Mac has no internet while it routes through Trawler.</span>
+            <span className="a-on-unread">Trawler couldn't read this Mac's proxy. If it points at Trawler, this Mac has no internet once Trawler's capture service stops.</span>
+            <span className="a-on-devices">Devices on your network can use Trawler now. Any still set to it have no internet once Trawler's capture service stops.</span>
+            <span className="a-on-emu">Pixel_7_API_35 sends its traffic through Trawler, and has no internet once Trawler's capture service stops.</span>
+          </p>
+        ));
+
+        mount("m-outcome", (
+          <>
+            <div className="a-on-running mb-2"><Notice tone="pending">stopping — approve the prompt if asked…</Notice></div>
+            <div className="a-on-failed mb-2"><Notice tone="warn">couldn't stop routing through Trawler — the steps below do it by hand.</Notice></div>
+            <div className="a-on-done mb-2"><Notice tone="ok">This Mac no longer routes through Trawler.</Notice></div>
+          </>
+        ));
+
+        mount("m-steps", (
+          <>
+            <div className="a-off-failed a-off-linux a-off-unread a-off-devices a-off-emu">
+              <Disclosure summary="do it by hand">{macSteps}</Disclosure>
+            </div>
+            <div className="a-on-failed">
+              <Disclosure summary="do it by hand" defaultOpen>{macSteps}</Disclosure>
+            </div>
+            <div className="a-on-linux a-off-unread a-off-devices a-off-emu">{linuxSteps}</div>
+            <div className="a-on-unread">{macSteps}</div>
+            <div className="a-on-devices">
+              {picker("ios")}
+              <StepList steps={["Settings → Wi-Fi → the network → Configure Proxy → Off."]} />
+            </div>
+            <div className="a-on-emu">
+              {picker("android-sim")}
+              <StepList steps={[
+                command("In a terminal, run:", EMU_OFF),
+                "Set in Settings? AndroidWifi ⚙ → ✎ → Advanced options → Proxy → None, and turn Mobile data back on.",
+              ]} />
+            </div>
+          </>
+        ));
+
+        mount("m-optout", (
+          <div className="a-on-unread a-on-devices a-on-emu mb-3">
+            <Checkbox checked={false} onChange={noop}>don't show this again</Checkbox>
+          </div>
+        ));
+
+        mount("m-answers", (
+          <div className="flex justify-end gap-chrome-gap">
+            <Button onClick={noop} frame="bare" tone="mute">quit</Button>
+            <span className="a-off-failed a-off-done a-off-linux a-off-unread a-off-devices a-off-emu a-off-running">
+              <Button onClick={noop}>stop routing through Trawler</Button>
+            </span>
+            <span className="a-on-running">
+              <Button onClick={noop} disabled>stop routing through Trawler</Button>
+            </span>
+            <span className="a-on-failed">
+              <Button onClick={noop}>try again</Button>
+            </span>
+          </div>
+        ));
+      </script>
+    </div>
+
+    <h3 id="which-reading">Which reading opens what</h3>
+    <table data-c="readings">
+      <tr><th>At quit</th><th>The dialog</th><th>Steps</th><th>Its button</th></tr>
+      <tr><td>this machine routes through Trawler — its address, <code>localhost</code>, or any of this machine's own addresses at Trawler's port</td><td><em>stop routing through Trawler before quitting?</em></td><td>this machine's, behind <em>do it by hand</em>; open on a failure; inline where the shell cannot act (Linux)</td><td><em>stop routing through Trawler</em>, macOS and Windows only</td></tr>
+      <tr><td>this machine's proxy could not be read</td><td><em>check this Mac's proxy before quitting</em> · <em>don't show this again</em></td><td>this machine's, inline</td><td>none — nothing verified to act on</td></tr>
+      <tr><td>nothing routes here, or another proxy does — and devices are allowed, or a running emulator routes here</td><td><em>check your other devices before quitting</em> · <em>don't show this again</em></td><td>a device's, picked: the emulator found, else the last device set up, else an iPhone</td><td>none</td></tr>
+      <tr><td>anything else</td><td colspan="3">no dialog: Trawler quits</td></tr>
+    </table>
+
+    <h2 id="given">Given — what the dialog is handed</h2>
+    <table data-item="capabilities" data-c="given-table">
+      <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
+      <tr><td><code>prompt.mode</code> — ours · unread · devices, from the live reading at quit</td><td>used</td><td>title, stake, which steps, whether there is a button and an opt-out</td></tr>
+      <tr><td><code>prompt.answering</code> — whether Trawler's capture service answers now</td><td>used</td><td>stake: the routed machine has no internet <em>now</em> rather than once it stops</td></tr>
+      <tr><td><code>prompt.emulator</code> — the name of a running emulator whose proxy reads ours, read through adb only while the emulator is the platform chosen (W8's Q1)</td><td>used</td><td>stake, and the steps' default</td></tr>
+      <tr><td><code>os</code></td><td>used</td><td>this machine's noun, its steps, whether a button can act, and whether a prompt is mentioned</td></tr>
+      <tr><td><code>chosen</code> — the last platform chosen in setup</td><td>used</td><td>the device steps' default, where it is a device</td></tr>
+      <tr><td><code>routeUndo(platform)</code> — each platform's own way to stop routing, from <code>setup.ts</code></td><td>used</td><td>steps — one source with setup's <em>to turn it off later</em></td></tr>
+      <tr><td><code>onStop</code> — stop routing, then quit</td><td>used</td><td>answers: the button; its rejection is the failed outcome</td></tr>
+      <tr><td><code>onQuit(dontShowAgain)</code></td><td>used</td><td>answers: quit; the opt-out persists only where one is shown</td></tr>
+      <tr><td><code>onCancel</code></td><td>used</td><td>✕, Esc and the backdrop — the quit is cancelled</td></tr>
+      <tr><td>the reading's <code>address</code></td><td>deliberately unused</td><td>a proxy that does not route here asks nothing, so no address is ever named</td></tr>
+    </table>
+    <p class="kd">Not given: whether a device on the network is actually set to Trawler · whether the quit will complete · a quit from the Dock or a logout, which never reaches the window.</p>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
+      <tr><td>press ⌘Q, or the app menu's Quit</td><td>— (the app menu)</td><td>⌘Q opens the dialog as the window's ✕ does; focus lands on its button, else on quit</td></tr>
+      <tr><td>click stop routing through Trawler · try again</td><td>answers</td><td>Tab · Enter or Space; focus moves to quit before the button disables</td></tr>
+      <tr><td>click quit</td><td>answers</td><td>Tab · Enter or Space</td></tr>
+      <tr><td>click ✕ or the backdrop</td><td>title</td><td>Esc — the quit is cancelled, focus returns (dismiss the surface)</td></tr>
+      <tr><td>open or shut do it by hand</td><td>steps</td><td>Tab to the summary · Enter or Space (Disclosure)</td></tr>
+      <tr><td>pick a device's steps</td><td>steps</td><td>Tab · Enter/Space opens · ↑/↓ · Enter takes · Esc closes the popup, not the dialog (Select)</td></tr>
+      <tr><td>copy a command</td><td>steps</td><td>Tab · Enter or Space (CommandBlock's copy)</td></tr>
+      <tr><td>tick don't show this again</td><td>opt-out</td><td>Tab · Space</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <tr><th>Kind</th><th>What</th><th>Status</th><th>Owner</th></tr>
+      <tr><td>none</td><td>every element is mounted from the collection; the frame stays <code>ModalShell</code>, build-local — still the app's only dialog, so a registry entry would generalise from one sample (Frame B's warrant, re-checked)</td><td>—</td><td>—</td></tr>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr><td>a quit from the Dock, or a logout, that can be held: tao implements no <code>applicationShouldTerminate</code></td><td>tao / Tauri upstream</td><td>⌘Q and the app menu's Quit are Trawler's own and ask; UC-ONBOARD names the gap; a roadmap row keeps it</td></tr>
+      <tr><td>which devices are set to Trawler</td><td>control API — the attribution row on the roadmap</td><td>the notice reads only what makes a device able to route here: reach armed, or an emulator's own proxy</td></tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>Start — the dialog's own run (the epic's Q9), from Frame B: one frame, the button giving way to its outcome, one exit in one corner</td><td>capabilities · mockup · keyboard — one frame for every reading, no disabled button after success, no second body</td><td><code>Notice</code> @use · <code>Button</code> @anatomy</td></tr>
+        <tr><td>Q1 A — ⌘Q asks</td><td>keyboard — ⌘Q's row · blocked-on — the Dock and logout</td><td><code>taste</code> — UC-ONBOARD's quit row promises it</td></tr>
+        <tr><td>Q2 A — a proxy that is not Trawler's asks nothing</td><td>mockup — no foreign reading; this machine's own addresses read ours · capabilities — the address unused</td><td><code>taste</code> — a quit changes nothing for that proxy</td></tr>
+        <tr><td>Q3 A — the other-devices notice only while a device could route here</td><td>mockup — two device readings, reach and the emulator · capabilities — <code>prompt.emulator</code></td><td><code>DEC-55</code></td></tr>
+        <tr><td>Q4 A — setup's words</td><td>mockup — title, button and outcome say <em>stop routing through Trawler</em>; the prompt is named on macOS only; the core is Trawler's capture service</td><td><code>taste</code> — the lexicon's <em>capture service</em> and UC-ONBOARD's reversal row</td></tr>
+        <tr><td>Q5 A — the platforms' own steps</td><td>mockup — this machine's steps where it is the subject, a device picker otherwise · capabilities — <code>routeUndo</code></td><td><code>Select</code> @use</td></tr>
+        <tr><td>D2 — Linux and an unread proxy</td><td>mockup — Linux's command inline with no button; an unread proxy its own sentence and opt-out</td><td><code>taste</code></td></tr>
+        <tr><td>D5 — the stake names the capture service, not the window</td><td>mockup — the stake's two sentences, answering and not</td><td><code>Notice</code> @use — the pending and standing outcomes the stake sits above</td></tr>
+        <tr><td>Round 1 — the owner: "LGTM, please close the WU"</td><td>nothing — the design held as drawn, and the run closes</td><td><code>taste</code></td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

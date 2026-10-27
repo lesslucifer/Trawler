@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { markedUrl, REQUEST_HOST, type AnotherDevice, type RequestRoute } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
+import { GuideSteps as SharedGuideSteps, StepParts } from "./manualSteps";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
@@ -9,11 +10,9 @@ import {
   CopyText,
   Disclosure,
   Notice,
-  QrCode,
   Select,
   Spinner,
   StatusLine,
-  StepList,
   TaskStep,
   TimestampText,
   type NoticeTone,
@@ -26,9 +25,6 @@ import {
   checkStep,
   confirmHttpsOn,
   deviceName,
-  isCommand,
-  isSave,
-  isScan,
   lostAddress,
   needsReach,
   probesOwnStore,
@@ -329,71 +325,17 @@ function Action({
 
 const ZONE_LABEL = "font-ui text-chrome uppercase tracking-label text-ink-mute";
 
-// A value is read inside the sentence that names it, because that sentence is
-// what says which field it goes in. A command is read somewhere else entirely,
-// so it leaves the sentence and takes a surface of its own.
-function Value({ value, label, wire }: { value: string; label: string; wire: string }) {
-  return (
-    <span data-wire={wire} className="font-mono">
-      <CopyText value={value} label={label} />
-    </span>
-  );
-}
-
-function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
-  const said = step.filter((part) => !isCommand(part));
-  const commands = step.filter(isCommand);
-  const scans = step.filter(isScan);
-  return (
-    <>
-      {said.length > 0 && (
-        <span className="flex flex-wrap items-center gap-chrome-gap">
-          {said.map((part, i) => {
-            if (typeof part === "string") return <span key={i}>{part}</span>;
-            if ("copy" in part)
-              return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
-            return save?.trigger ? (
-              <Button
-                key={i}
-                frame="bare"
-                tone="mute"
-                onClick={save.trigger}
-                disabled={save.state === "running"}
-              >
-                save…
-              </Button>
-            ) : null;
-          })}
-        </span>
-      )}
-      {commands.map((part, i) => (
-        <CommandBlock key={i} value={part.command} label={part.label} />
-      ))}
-      {scans.map((part, i) => (
-        <div key={i} data-testid="scan-code" className="pt-2">
-          <QrCode value={part.copy} label={part.label} />
-        </div>
-      ))}
-    </>
-  );
-}
-
-// The save control produces the file the step names, so its outcome lands inside
-// that step rather than under the guide that contains it.
+// The save control's outcome is this screen's note, so the shared step
+// renderer is handed it rather than knowing about actions' wording.
 function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }) {
   return (
-    <StepList
-      steps={steps.map((step, i) => {
-        const saves = step.find(isSave);
-        return (
-          <div key={i} className="flex min-w-0 flex-col gap-chrome-gap">
-            <StepParts step={step} save={save} />
-            {save && saves && (
-              <ActionNote testId="save-ca" action={save} note={saveCaNote(CA_FILES[saves.save])} />
-            )}
-          </div>
-        );
-      })}
+    <SharedGuideSteps
+      steps={steps}
+      save={save}
+      saveNote={
+        save &&
+        ((format) => <ActionNote testId="save-ca" action={save} note={saveCaNote(CA_FILES[format])} />)
+      }
     />
   );
 }

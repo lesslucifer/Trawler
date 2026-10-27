@@ -889,11 +889,9 @@ pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), S
 // quit-time confirm keys off this, NOT off whether we set it this session, so a
 // proxy the user pointed at Trawler by hand is caught too. "ours" ⇒ an active
 // proxy on this system routes through Trawler; "foreign" ⇒ some other active
-// proxy on this system — also actionable, since unset_proxy turns the OS proxy
-// state off without reading whose address is set; "none" ⇒ this system is clean
-// (the remote-device notice — a device elsewhere may point here); "unknown" ⇒
-// nothing here could read it, which quit treats as "none" and setup words as a
-// promise rather than a false "off" (R19).
+// proxy, which a quit changes nothing for (W11's D3); "none" ⇒ this system is
+// clean; "unknown" ⇒ nothing here could read it, which quit says it could not
+// read and setup words as a promise rather than a false "off" (R19).
 #[derive(Debug, PartialEq, Eq)]
 enum ProxyStatus {
     Ours,
@@ -966,14 +964,18 @@ fn localhost_reaches(host: &str) -> bool {
         .is_ok_and(|ip| ip == std::net::Ipv4Addr::LOCALHOST || ip == std::net::Ipv6Addr::LOCALHOST)
 }
 
-fn names_trawler(set: &str, host: &str) -> bool {
+// A proxy at one of this machine's own addresses reaches the same listener as
+// Trawler's own address does, so it routes here too (W11's D3).
+fn names_trawler(set: &str, host: &str, own: &[String]) -> bool {
+    let bare = |addr: &str| addr.trim_start_matches('[').trim_end_matches(']').to_ascii_lowercase();
     set.eq_ignore_ascii_case(host)
         || (set.eq_ignore_ascii_case("localhost") && localhost_reaches(host))
+        || own.iter().any(|addr| bare(addr) == bare(set))
 }
 
-fn classify(read: &ProxyRead, host: &str, port: u16) -> ProxyStatus {
+fn classify(read: &ProxyRead, host: &str, port: u16, own: &[String]) -> ProxyStatus {
     match read {
-        ProxyRead::Set(s, p) if *p == port && names_trawler(s, host) => ProxyStatus::Ours,
+        ProxyRead::Set(s, p) if *p == port && names_trawler(s, host, own) => ProxyStatus::Ours,
         ProxyRead::Set(..) => ProxyStatus::Foreign,
         ProxyRead::Off => ProxyStatus::None,
         ProxyRead::Unreadable => ProxyStatus::Unknown,
@@ -1152,13 +1154,15 @@ fn proxy_in_use_now(os: &str) -> ProxyRead {
     match os {
         "macos" => scutil_proxy(ran("scutil", &["--proxy"]).as_ref()),
         "windows" => active_system_proxy(os),
-        "linux" => {
-            gnome_proxy(std::env::var("XDG_CURRENT_DESKTOP").ok().as_deref(), |schema, key| {
-                ran("gsettings", &["get", schema, key])
-            })
-        }
+        "linux" => gnome_proxy_now(),
         _ => ProxyRead::Unreadable,
     }
+}
+
+fn gnome_proxy_now() -> ProxyRead {
+    gnome_proxy(std::env::var("XDG_CURRENT_DESKTOP").ok().as_deref(), |schema, key| {
+        ran("gsettings", &["get", schema, key])
+    })
 }
 
 fn active_system_proxy(os: &str) -> ProxyRead {
@@ -1173,6 +1177,7 @@ fn active_system_proxy(os: &str) -> ProxyRead {
                 ran("reg", &["query", WININET_KEY, "/v", "ProxyServer"])
             })
         }
+        "linux" => gnome_proxy_now(),
         _ => ProxyRead::Unreadable,
     }
 }
@@ -1190,16 +1195,27 @@ pub struct ProxyReading {
 }
 
 pub(crate) fn read_proxy(read: &ProxyRead, host: &str, port: u16) -> ProxyReading {
+    read_proxy_among(read, host, port, &[])
+}
+
+pub(crate) fn read_proxy_among(
+    read: &ProxyRead,
+    host: &str,
+    port: u16,
+    own: &[String],
+) -> ProxyReading {
     let address = match read {
         ProxyRead::Set(h, p) => Some(format!("{h}:{p}")),
         ProxyRead::Off | ProxyRead::Unreadable => None,
     };
-    ProxyReading { status: classify(read, host, port).as_str(), address }
+    ProxyReading { status: classify(read, host, port, own).as_str(), address }
 }
 
-#[cfg_attr(not(feature = "scenario"), tauri::command)]
-pub fn proxy_status(host: String, port: u16) -> ProxyReading {
-    read_proxy(&active_system_proxy(std::env::consts::OS), &host, port)
+// Run off the main thread: a quit waits on it, and a tool that hangs there
+// would freeze the window it is deciding about.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn proxy_status(host: String, port: u16, own: Vec<String>) -> ProxyReading {
+    read_proxy_among(&active_system_proxy(std::env::consts::OS), &host, port, &own)
 }
 
 // Run off the main thread: the window re-reads it every few seconds.
@@ -1211,6 +1227,7 @@ pub fn proxy_in_use(host: String, port: u16) -> ProxyReading {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum NoticeKey {
     RemoteNotice,
+    UnreadNotice,
     ClearAsk,
 }
 
@@ -1220,6 +1237,7 @@ impl TryFrom<&str> for NoticeKey {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "remote-notice" => Ok(Self::RemoteNotice),
+            "unread-notice" => Ok(Self::UnreadNotice),
             "clear-ask" => Ok(Self::ClearAsk),
             _ => Err(format!("unknown notice key: {value}")),
         }
@@ -1229,6 +1247,7 @@ impl TryFrom<&str> for NoticeKey {
 fn notice_dismissed_path(config_dir: &Path, key: NoticeKey) -> std::path::PathBuf {
     let filename = match key {
         NoticeKey::RemoteNotice => "remote-notice-dismissed",
+        NoticeKey::UnreadNotice => "unread-notice-dismissed",
         NoticeKey::ClearAsk => "clear-ask-dismissed",
     };
     config_dir.join(filename)
@@ -1798,13 +1817,13 @@ mod tests {
     #[test]
     fn classify_maps_the_active_proxy_against_trawlers_address() {
         let ours = ProxyRead::Set("127.0.0.1".into(), 7420);
-        assert_eq!(classify(&ours, "127.0.0.1", 7420), ProxyStatus::Ours);
+        assert_eq!(classify(&ours, "127.0.0.1", 7420, &[]), ProxyStatus::Ours);
         let other_port = ProxyRead::Set("127.0.0.1".into(), 8080);
-        assert_eq!(classify(&other_port, "127.0.0.1", 7420), ProxyStatus::Foreign);
+        assert_eq!(classify(&other_port, "127.0.0.1", 7420, &[]), ProxyStatus::Foreign);
         let other_host = ProxyRead::Set("10.0.0.1".into(), 7420);
-        assert_eq!(classify(&other_host, "127.0.0.1", 7420), ProxyStatus::Foreign);
-        assert_eq!(classify(&ProxyRead::Off, "127.0.0.1", 7420), ProxyStatus::None);
-        assert_eq!(classify(&ProxyRead::Unreadable, "127.0.0.1", 7420), ProxyStatus::Unknown);
+        assert_eq!(classify(&other_host, "127.0.0.1", 7420, &[]), ProxyStatus::Foreign);
+        assert_eq!(classify(&ProxyRead::Off, "127.0.0.1", 7420, &[]), ProxyStatus::None);
+        assert_eq!(classify(&ProxyRead::Unreadable, "127.0.0.1", 7420, &[]), ProxyStatus::Unknown);
     }
 
     #[test]
@@ -1824,6 +1843,9 @@ mod tests {
         assert!(notice_is_dismissed(&dir, NoticeKey::RemoteNotice));
         assert_eq!(NoticeKey::try_from("remote-notice"), Ok(NoticeKey::RemoteNotice));
         assert_eq!(NoticeKey::try_from("clear-ask"), Ok(NoticeKey::ClearAsk));
+        assert_eq!(NoticeKey::try_from("unread-notice"), Ok(NoticeKey::UnreadNotice));
+        mark_notice_dismissed(&dir, NoticeKey::UnreadNotice).unwrap();
+        assert!(dir.join("unread-notice-dismissed").exists());
         assert!(NoticeKey::try_from("other").is_err());
 
         let _ = std::fs::remove_dir_all(&dir);
@@ -2366,18 +2388,18 @@ mod tests {
     fn localhost_on_trawlers_port_is_trawler() {
         for set in ["localhost", "LOCALHOST", "127.0.0.1"] {
             let read = ProxyRead::Set(set.into(), 7420);
-            assert_eq!(classify(&read, "127.0.0.1", 7420), ProxyStatus::Ours, "{set}");
+            assert_eq!(classify(&read, "127.0.0.1", 7420, &[]), ProxyStatus::Ours, "{set}");
         }
         assert_eq!(
-            classify(&ProxyRead::Set("localhost".into(), 8080), "127.0.0.1", 7420),
+            classify(&ProxyRead::Set("localhost".into(), 8080), "127.0.0.1", 7420, &[]),
             ProxyStatus::Foreign
         );
         assert_eq!(
-            classify(&ProxyRead::Set("localhost.evil".into(), 7420), "127.0.0.1", 7420),
+            classify(&ProxyRead::Set("localhost.evil".into(), 7420), "127.0.0.1", 7420, &[]),
             ProxyStatus::Foreign
         );
         assert_eq!(
-            classify(&ProxyRead::Set("192.168.1.24".into(), 7420), "127.0.0.1", 7420),
+            classify(&ProxyRead::Set("192.168.1.24".into(), 7420), "127.0.0.1", 7420, &[]),
             ProxyStatus::Foreign
         );
     }
@@ -2386,7 +2408,35 @@ mod tests {
     fn another_loopback_address_reaches_nothing_trawler_listens_on() {
         for set in ["127.0.0.2", "::1", "[::1]"] {
             let read = ProxyRead::Set(set.into(), 7420);
-            assert_eq!(classify(&read, "127.0.0.1", 7420), ProxyStatus::Foreign, "{set}");
+            assert_eq!(classify(&read, "127.0.0.1", 7420, &[]), ProxyStatus::Foreign, "{set}");
         }
+    }
+
+    // W11's D3: this machine's own address at Trawler's port reaches the same
+    // listener, so a quit reads it as Trawler's; another machine's never is.
+    #[test]
+    fn this_machines_own_address_on_trawlers_port_is_trawler() {
+        let own = ["192.168.1.24".to_string(), "fe80::1".to_string()];
+        for set in ["192.168.1.24", "[fe80::1]", "FE80::1"] {
+            let read = ProxyRead::Set(set.into(), 7420);
+            assert_eq!(classify(&read, "127.0.0.1", 7420, &own), ProxyStatus::Ours, "{set}");
+        }
+        assert_eq!(
+            classify(&ProxyRead::Set("192.168.1.24".into(), 8080), "127.0.0.1", 7420, &own),
+            ProxyStatus::Foreign
+        );
+        assert_eq!(
+            classify(&ProxyRead::Set("192.168.1.25".into(), 7420), "127.0.0.1", 7420, &own),
+            ProxyStatus::Foreign
+        );
+        assert_eq!(
+            read_proxy_among(&ProxyRead::Set("192.168.1.24".into(), 7420), "127.0.0.1", 7420, &own),
+            ProxyReading { status: "ours", address: Some("192.168.1.24:7420".into()) }
+        );
+    }
+
+    #[test]
+    fn quit_reads_gnomes_proxy_on_linux_as_setup_does() {
+        assert_eq!(active_system_proxy("linux"), proxy_in_use_now("linux"));
     }
 }

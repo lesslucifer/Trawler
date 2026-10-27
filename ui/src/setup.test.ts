@@ -19,6 +19,7 @@ import {
   probesTrust,
   marksItsOwn,
   readsOverAdb,
+  routeUndo,
   sharesHostWire,
   PLATFORM_IDS,
   platformChoices,
@@ -1028,5 +1029,29 @@ describe("the Android device's steps name what a stock Android shows", () => {
     expect(device().route.guide!.steps[0]).toEqual([`Menus differ by maker; on stock Android: ${path} → Manual.`]);
     expect(device().route.guide!.undo).toEqual([[`${path} → None.`]]);
     expect(prose(device())).not.toMatch(/Settings → Wi-Fi/);
+  });
+});
+
+// W11's S4: the quit dialog shows routeUndo, so it must be what setup's own
+// "to turn it off later" says, on every platform and every host.
+describe("each platform's way to stop routing is one source", () => {
+  const HOSTS: HostOs[] = ["macos", "windows", "linux", "other"];
+  it.each(HOSTS)("on %s, setup's undo is routeUndo for every platform", (os) => {
+    for (const id of PLATFORM_IDS) {
+      expect(setupFor(id, ctx({ os })).route.guide?.undo, `${id}`).toEqual(routeUndo(id, os));
+    }
+  });
+
+  it("needs no address: an off-machine platform has its way back before reach is armed", () => {
+    for (const id of ["mac", "windows", "ubuntu", "ios", "android"] as PlatformId[]) {
+      expect(setupFor(id, ctx({ reach: null })).route.guide).toBeUndefined();
+      expect(routeUndo(id, "macos").length, id).toBeGreaterThan(0);
+    }
+  });
+
+  it("names the stock Android path W10 found, never the one stock Android lacks", () => {
+    const android = JSON.stringify(routeUndo("android", "macos"));
+    expect(android).toContain("Network & internet");
+    expect(android).not.toContain("Wi-Fi → your network");
   });
 });

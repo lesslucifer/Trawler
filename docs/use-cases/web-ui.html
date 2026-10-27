@@ -755,10 +755,17 @@ the client lacks the certificate"]
           both probed tasks show the in-flight state</td></tr>
         <tr><td>A copied command says whether it copied</td><td>the copy affordance confirms at the value,
           and a clipboard write the browser refuses says so rather than doing nothing visible</td></tr>
-        <tr><td>Quitting with a proxy still set asks first, and can fix it</td><td>unchanged by this epic:
-          the dialog offers to turn it off, a failed attempt says so and opens the manual steps, a remote
-          device that may still route here is a notice with a durable dismissal, and Esc, the backdrop and
-          ✕ all cancel the quit</td></tr>
+        <tr><td>Quitting asks first while something still routes through Trawler, and only then</td><td>E-ONBRVP.W11
+          (<a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>): the
+          window's ✕ and ⌘Q (Trawler's own Quit) ask; the Dock's Quit and a logout cannot be held and do not. It asks
+          while this machine routes through Trawler — its address, localhost or this machine's own address on
+          Trawler's port — and offers <em>stop routing through Trawler</em> on macOS and Windows, the command inline
+          elsewhere; while this machine's proxy could not be read, saying so; and while reach is armed or the
+          emulator chosen in setup routes here, about other devices, with a durable dismissal. A proxy that is not
+          Trawler's asks nothing. The stake is the capture service: no internet once it stops, or now while it does
+          not answer. A failed stop says so and opens the steps, which are each platform's own way back; once it
+          worked, the button gives way to its outcome. One frame for every case; Esc, the backdrop and ✕ cancel the
+          quit</td></tr>
       </table>
     </div>
 

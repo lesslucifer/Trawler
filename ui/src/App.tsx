@@ -29,7 +29,7 @@ import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useDraft } from "./useDraft";
-import { useProxyCloseConfirm } from "./closeConfirm";
+import { bounded, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
@@ -587,14 +587,47 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return route;
   };
 
-  const close = useProxyCloseConfirm(proxyAddr);
-  const closeDialog = close.mode && (
+  // Read at the moment of the close, not from what the screen last held: the
+  // emulator is asked through adb only while it is the platform chosen, since
+  // adb starts a server of its own (W8's Q1).
+  // A Wi-Fi-only proxy sits on a network the emulator does not send over, so it
+  // routes nothing. A capture service that has stopped answering still ran on
+  // this machine's addresses, so the last ones it reported stand in for them.
+  const chosenAtQuit = useRef(state.chosen);
+  chosenAtQuit.current = state.chosen;
+  const reachAtQuit = useRef(reach);
+  reachAtQuit.current = reach;
+  const readQuitFacts = useCallback(async (): Promise<QuitFacts> => {
+    const emulatorRead = readsOverAdb(chosenAtQuit.current)
+      ? client
+          .caCertPem()
+          .then((pem) =>
+            invoke<EmulatorReading[] | undefined>("emulator_readings", {
+              pem,
+              port: splitProxyAddr(proxyAddr).port,
+            }),
+          )
+          .then((read) => read?.find((e) => e.proxy === "ours")?.name ?? null)
+      : Promise.resolve(null);
+    const [reached, emulator] = await Promise.all([
+      bounded<ReachState | null>(client.reach(), null),
+      bounded<string | null>(emulatorRead, null),
+    ]);
+    return {
+      answering: reached !== null,
+      ownAddresses: (reached ?? reachAtQuit.current).interfaces.map((i) => i.address),
+      reachArmed: reached?.armed ?? false,
+      emulator,
+    };
+  }, [client, proxyAddr]);
+  const close = useProxyCloseConfirm(proxyAddr, readQuitFacts);
+  const closeDialog = close.prompt && (
     <ProxyCloseDialog
-      mode={close.mode}
+      prompt={close.prompt}
       os={hostOs()}
-      onRemove={close.remove}
-      onKeep={close.keep}
-      onAcknowledge={close.acknowledge}
+      chosen={state.chosen}
+      onStop={close.stop}
+      onQuit={close.quit}
       onCancel={close.cancel}
     />
   );

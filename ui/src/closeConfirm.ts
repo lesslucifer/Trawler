@@ -2,22 +2,18 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { splitProxyAddr } from "./setup";
-import { dismissNotice, noticeDismissed, NOTICE_KEY } from "./noticePreference";
+import { dismissNotice, noticeDismissed, NOTICE_KEY, type NoticeKey } from "./noticePreference";
 
-// Quit-time proxy check (E-UISETUP.W5). Keys off the ACTUAL system proxy status,
-// not off whether we set it this session — so a proxy the user pointed at Trawler
-// by hand is caught too, and a stale in-session flag never misleads. On close we
-// ask Rust `proxy_status(host, port)`, which classifies the live system proxy:
-//   "ours"    → a proxy on THIS system routes through Trawler. Quitting silently
-//               would strand the machine on a dead proxy (no internet), so prevent
-//               the close and confirm: turn it off (unset_proxy, elevation) or quit.
-//   "foreign" → some other proxy is active on THIS system. `unset_proxy` turns the
-//               OS proxy state off without reading whose address is set, so this
-//               is fixable from here too — it offers the same action as "ours".
-//   "none"    → this system is clean, but the proxy could live on another device
-//               (phone / emulator pointed at this machine's LAN IP) we can't read.
-// Only "none" has nothing local to act on, so it alone is the info-only mode with
-// a durable "don't show again".
+// Quit-time proxy check (E-UISETUP.W5, re-ruled by E-ONBRVP.W11). Keys off the
+// ACTUAL system proxy at the moment of the close, never off what this session
+// did, and asks only where a quit leaves something without internet:
+//   "ours"    → this machine routes through Trawler — at its address, localhost,
+//               or one of this machine's own addresses at Trawler's port (D3).
+//   "unread"  → nothing here could read this machine's proxy (D2): the dialog
+//               says so rather than "no proxy is set".
+//   "devices" → nothing here routes through Trawler, but a device could: reach
+//               is armed, or a running emulator's own proxy points here (D4).
+// A proxy that is not Trawler's asks nothing: a quit changes nothing for it.
 
 type CloseEvent = { preventDefault: () => void };
 type Win = { onCloseRequested: (h: (e: CloseEvent) => void) => Promise<() => void>; destroy: () => Promise<void> };
@@ -25,13 +21,54 @@ type Deps = { getWindow: () => Win; invoke: <T>(cmd: string, args?: Record<strin
 
 const real: Deps = { getWindow: getCurrentWindow as unknown as () => Win, invoke };
 
-// null = no prompt (quit proceeds). "ours" and "foreign" are both actionable — a
-// local proxy is set and `unset_proxy` clears it; they differ only in what the
-// dialog says. "remote" has nothing local to act on, so it warns once.
-export type CloseMode = "ours" | "foreign" | "remote";
+export type QuitPrompt =
+  | { mode: "ours"; answering: boolean }
+  | { mode: "unread" }
+  | { mode: "devices"; emulator: string | null };
 
-export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
-  const [mode, setMode] = useState<CloseMode | null>(null);
+// What the shell knows at the moment of the close, beyond this machine's proxy.
+// `answering` and the reach facts come from one read of the capture service, so
+// a service that does not answer has no armed address and no addresses at all.
+export interface QuitFacts {
+  answering: boolean;
+  ownAddresses: string[];
+  reachArmed: boolean;
+  emulator: string | null;
+}
+
+// A read that failed claims nothing: not that the service is down, not that
+// any device could route here.
+export const NO_QUIT_FACTS: QuitFacts = { answering: true, ownAddresses: [], reachArmed: false, emulator: null };
+
+// Every read a close waits on is bounded — the facts, the proxy and the opt-out
+// alike: a close held by a read that never settles is a window that cannot be
+// quit (W11's review, rounds 1 and 2).
+export const QUIT_READ_MS = 1500;
+
+export function bounded<T>(read: Promise<T>, fallback: T, ms = QUIT_READ_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([read.catch(() => fallback), late]).finally(() => clearTimeout(timer));
+}
+
+const dismissKey = (prompt: QuitPrompt): NoticeKey | null =>
+  prompt.mode === "unread" ? NOTICE_KEY.unread : prompt.mode === "devices" ? NOTICE_KEY.remote : null;
+
+export function promptFor(status: string, facts: QuitFacts): QuitPrompt | null {
+  if (status === "ours") return { mode: "ours", answering: facts.answering };
+  if (status === "unknown") return { mode: "unread" };
+  if (facts.reachArmed || facts.emulator !== null) return { mode: "devices", emulator: facts.emulator };
+  return null;
+}
+
+export function useProxyCloseConfirm(
+  proxyAddr: string,
+  readFacts: () => Promise<QuitFacts>,
+  deps: Deps = real,
+) {
+  const [prompt, setPrompt] = useState<QuitPrompt | null>(null);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -40,26 +77,32 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     deps
       .getWindow()
       .onCloseRequested(async (e) => {
-        const { status } = await deps.invoke<{ status: string }>("proxy_status", { host, port });
-        if (status === "ours" || status === "foreign") {
-          e.preventDefault();
-          setMode(status);
-        } else if (!(await noticeDismissed(NOTICE_KEY.remote, deps.invoke))) {
-          e.preventDefault();
-          setMode("remote");
-        }
+        const facts = await bounded(readFacts(), NO_QUIT_FACTS, 2 * QUIT_READ_MS);
+        // A shell that cannot answer has read nothing, and a handler that throws
+        // leaves a window that will not close: unread is the honest reading.
+        const status = await bounded(
+          deps
+            .invoke<{ status: string }>("proxy_status", { host, port, own: facts.ownAddresses })
+            .then((reading) => reading?.status ?? "unknown"),
+          "unknown",
+        );
+        const asked = promptFor(status, facts);
+        const key = asked && dismissKey(asked);
+        if (asked === null || (key !== null && (await bounded(noticeDismissed(key, deps.invoke), false)))) return;
+        e.preventDefault();
+        setPrompt(asked);
       })
       .then((u) => (disposed ? u() : (unlisten = u)));
     return () => {
       disposed = true;
       unlisten?.();
     };
-  }, [deps, proxyAddr]);
+  }, [deps, proxyAddr, readFacts]);
 
   // A window that refuses to close is not something the user can act on from a
   // dialog that is about the proxy, so every quit path logs and moves on rather
   // than leaving an unhandled rejection behind.
-  const quit = () =>
+  const destroy = () =>
     deps
       .getWindow()
       .destroy()
@@ -68,21 +111,21 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
       });
 
   return {
-    mode,
+    prompt,
     // A failed unset must not quit: the dialog exists to stop the machine being
     // stranded on a dead proxy, and swallowing the error strands it silently.
     // The rejection reaches the dialog, which offers the manual route instead.
     // Only the unset itself reports failure — once the proxy IS off, a window
-    // that will not close is not "couldn't turn the proxy off", and telling the
-    // user to undo it by hand would be advice to undo nothing.
-    remove: () => deps.invoke("unset_proxy").then(quit),
-    // Live proxy state is the only source of truth (no persisted marker): keeping
-    // the proxy is just quitting — there is nothing to record, and next launch
-    // does no reconciliation.
-    keep: quit,
-    // Info-only notice: optionally persist "don't show again", then quit.
-    acknowledge: (dontShowAgain: boolean) =>
-      (dontShowAgain ? dismissNotice(NOTICE_KEY.remote, deps.invoke).catch(() => {}) : Promise.resolve()).then(quit),
-    cancel: () => setMode(null),
+    // that will not close is not "couldn't stop routing", and telling the user
+    // to undo it by hand would be advice to undo nothing.
+    stop: () => deps.invoke("unset_proxy").then(destroy),
+    // The opt-out persists only where the dialog offered one.
+    quit: (dontShowAgain: boolean) => {
+      const key = prompt && dismissKey(prompt);
+      const remembered =
+        dontShowAgain && key !== null ? dismissNotice(key, deps.invoke).catch(() => {}) : Promise.resolve();
+      return remembered.then(destroy);
+    },
+    cancel: () => setPrompt(null),
   };
 }
