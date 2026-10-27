@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7d434cca8c8488f7ab59cc8c6fbcfc3eff5cd76b
+base: d1bbf8fb53539c706b6bdc011bd6f217bb3accf6
+tier: key
+signer: vuluu
+report: docs/work/2026-10-26-onboard-revamp-w11-close-dialog-result.html
+report_sha256: ae4df8fca2c34f2cefd11a570378362a9b5c95f8ae4a11fdf4f018e81ff8707a
+date: 2026-10-27
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDBV1rPPsZy/w1EGfnpA+ZxlRF0W3MqSNlpUYo2j96jjyl9gWwtRBK4Pf
+  4IsxDIujHFWluYkjW09wETo4nKsGsG
+  -----END SSH SIGNATURE-----
