@@ -30,9 +30,10 @@
       <tr><th>#</th><th>What</th><th>Built as</th></tr>
       <tr><td>R1</td>
         <td><strong>A screen shows only what the user acts on.</strong> Always on screen: the title, the state, the next
-        action, the values and commands it needs, an action's own outcome, and a warning of a risk. Everything else that
-        explains (why lines, notes, captions, what to check when something fails to load) sits behind a help control and
-        shows only when the user asks.</td>
+        action, the values and commands it needs, and an action's own outcome. Everything else that explains (why lines,
+        notes, captions, risk warnings, what to check when something fails to load) sits behind a help control and shows
+        only when the user asks. You confirmed both on 2026-10-31: the control reveals that text, and a risk warning is no
+        exception.</td>
         <td>Predicate: on the mockup, every muted prose element that is none of those sits inside a <code>data-help</code>
         host. On the setup screen the matrix test checks the same in built markup</td></tr>
       <tr><td>R2</td>
@@ -267,7 +268,7 @@ flowchart TB
     <table data-item="expected" data-c="expected">
       <tr><th>Try this…</th><th>…and see</th></tr>
       <tr><td>Another Mac, nothing allowed</td><td>task 1: no why line, <em>not done — Trawler answers on this Mac only</em>,
-        <em>allow devices on Ethernet to connect</em> framed</td></tr>
+        <em>allow devices on Ethernet to connect</em> framed; what other devices can then see behind its <em>?</em></td></tr>
       <tr><td>allowed</td><td>task 2's guide open: download, open from Downloads, Always Trust with its recording, password;
         the sudo command under <em>other ways</em>; no why line</td></tr>
       <tr><td>task 3's steps</td><td>System Settings → Network → Wi-Fi → Details… → Proxies with its recording, the command
@@ -277,7 +278,7 @@ flowchart TB
       <tr><td>task 2 read done</td><td>its way back removes Trawler Proxy CA from both keychains</td></tr>
       <tr><td>the certificate URL</td><td>a <em>?</em> beside it; clicked, it says what to check when it does not load</td></tr>
       <tr><td>This machine, every host and state</td><td>no why line, note or caption on screen; each behind its <em>?</em>.
-        State lines, actions, values, outcomes and risk warnings unchanged</td></tr>
+        State lines, actions, values and outcomes unchanged</td></tr>
       <tr><td>iPhone, Android, Windows, Ubuntu, the simulators (Q1 A)</td><td>the same task 1, task 4 and why-line changes,
         nothing else of theirs</td></tr>
       <tr><td><code>cargo xtask ui walkthrough</code></td><td>green; Another Mac gains chapters for task 2 and task 3's
