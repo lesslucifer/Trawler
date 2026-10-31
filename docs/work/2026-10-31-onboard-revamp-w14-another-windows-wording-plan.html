@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6ae5fced9f34851f0dfade78" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6ae5fced9f34851f0dfade78" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,16 +10,17 @@
     <div class="inner">
       <h1>E-ONBRVP.W14 — wording and display: Another Windows PC</h1>
       <p>W12's pattern and W13's help rule on Another Windows PC: each task leads with what a person does on that PC without a terminal, using This PC's Windows 11 recordings. Each command becomes the other way, and every way back undoes every way in.</p>
-      <div class="meta">v1 · 2026-10-31 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W14</span> · branch <code>wu/onboard-revamp/another-windows-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W5</div>
+      <div class="meta">v2 · 2026-10-31 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W14</span> · branch <code>wu/onboard-revamp/another-windows-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W5</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waiting for your rulings</strong> on ten findings, three rows handed in from W5, one noticed row and four
-      questions. Found by reading the Another Windows PC reels at the epic tip (<code>c4f7f445</code>:
-      <code>macos-windows</code>, <code>windows-windows</code>, <code>linux-windows</code>, filmed 2026-10-31 after the last
-      UI change) and the source of its guide. Nothing is built yet.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("1. Yes 2. yes 3. ok 4. ok", 2026-10-31). Q1–Q4 are A. The findings and
+      N1–N3 are taken with them. X1 is taken, since it was proposed on Q4 being A. Found by reading the Another Windows PC
+      reels at the epic tip (<code>c4f7f445</code>: <code>macos-windows</code>, <code>windows-windows</code>,
+      <code>linux-windows</code>, filmed 2026-10-31 after the last UI change) and the source of its guide. Next: round 22 of
+      the design run, for your review before the build.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -105,16 +106,16 @@ flowchart TB
       <tr><td>E1</td>
         <td><strong>The certificate's only route needs an administrator's PowerShell.</strong> The heaviest element on
         screen (walk-05). A person who cannot elevate on that PC has no way through.</td>
-        <td>The by-hand route leads (I1). The command goes under <em>other ways</em> (Q3), as on This PC.</td><td></td></tr>
+        <td>The by-hand route leads (I1). The command goes under <em>other ways</em> (Q3), as on This PC.</td><td>take</td></tr>
       <tr><td>E2</td>
         <td><strong>Task 3's only route is a registry command,</strong> behind a collapsed <em>1 step</em>.</td>
-        <td>The by-hand route leads (I2). The command goes under <em>other ways</em>.</td><td></td></tr>
+        <td>The by-hand route leads (I2). The command goes under <em>other ways</em>.</td><td>take</td></tr>
       <tr><td>E3</td>
         <td><strong>Task 1 says one thing twice when allowing is declined</strong> (walk-04, every off-machine platform).
         The state line reads <em>Trawler answers on this PC only</em>, and the outcome under the button reads <em>not allowed —
         Trawler still answers on this PC only.</em> (F19: one statement per fact.)</td>
         <td>The outcome reads <em>not allowed</em>. It still marks that the dialog closed with a no, which the comment on
-        <code>armNote</code> says is its job. Shared code, so Q1.</td><td></td></tr>
+        <code>armNote</code> says is its job. Shared code, so Q1.</td><td>take</td></tr>
     </table>
 
     <h2 id="wording">Part 2 — wording</h2>
@@ -124,18 +125,18 @@ flowchart TB
         <td><strong>The proxy's way back names an API</strong> (W5's N3). <em>Disable the WinINET proxy (keeps the saved
         address):</em>. Windows never shows the word WinINET. The parenthesis explains, and by R1 an explanation belongs behind help.</td>
         <td><em>In PowerShell, run:</em>, the lead the route command already uses. The parenthesis goes. One lead in
-        <code>proxyOffSteps</code>, so This PC and the close dialog read it too (Q1).</td><td></td></tr>
+        <code>proxyOffSteps</code>, so This PC and the close dialog read it too (Q1).</td><td>take</td></tr>
       <tr><td>W2</td>
         <td><strong>The certificate's way back misses a way in.</strong> It deletes from the machine store
         (<code>certutil -delstore ROOT</code>, administrator). The by-hand route (I1) imports into the user's store, where
         that command never looks.</td>
         <td>This PC's way back, as one constant both read, as This Mac and that Mac share theirs: the user-store command,
-        and the administrator's for when the command ran. Its by-hand route is I3.</td><td></td></tr>
+        and the administrator's for when the command ran. Its by-hand route is I3.</td><td>take</td></tr>
       <tr><td>W3</td>
         <td><strong>The file named is one Windows cannot open.</strong> The step says <em>it downloads trawler-ca.pem</em>.
         Windows has no handler for <code>.pem</code>.</td>
         <td>That PC downloads <code>trawler-ca.cer</code> from <code>/ca.cer</code> (Q2). The download step, the by-hand step
-        and the command name the same file through one constant, as W5's C2 required.</td><td></td></tr>
+        and the command name the same file through one constant, as W5's C2 required.</td><td>take</td></tr>
     </table>
 
     <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
@@ -147,23 +148,23 @@ flowchart TB
         <em>?</em>) · <em>Open trawler-ca.cer from Downloads</em> · <em>Click</em> Install Certificate… → Next <em>and
         choose</em> Place all certificates in the following store → Browse… → Trusted Root Certification Authorities, with
         <code>windows-install-cert</code> · <em>Click</em> OK → Next → Finish <em>and</em> Yes <em>on the warning</em>. These are
-        This PC's steps 2 and 3 as they are. The command goes under <em>other ways</em>.</td><td></td></tr>
+        This PC's steps 2 and 3 as they are. The command goes under <em>other ways</em>.</td><td>take</td></tr>
       <tr><td>I2</td>
         <td>The proxy: one registry command.</td>
         <td><em>On that PC, open</em> Settings → Network &amp; internet → Proxy · <em>Click</em> Manual proxy setup → Use a proxy
         server → Set up, with <code>windows-proxy</code> · <em>Turn on</em> Use a proxy server <em>— with the server and port
-        above</em> · <em>Click</em> Save. The command goes under <em>other ways</em>.</td><td></td></tr>
+        above</em> · <em>Click</em> Save. The command goes under <em>other ways</em>.</td><td>take</td></tr>
       <tr><td>I3</td>
         <td>Both ways back are commands only.</td>
         <td>Per Q4. A: certificate, <em>Start, search</em> Manage user certificates → Trusted Root Certification Authorities →
         Certificates → Trawler Proxy CA <em>and delete it</em>, then the commands as <em>Or</em>. Proxy, <em>In</em> Settings →
         Network &amp; internet → Proxy → Manual proxy setup → Edit, <em>turn off</em> Use a proxy server <em>and click</em> Save,
-        then the command as <em>Or</em>. The same on This PC, since both read one constant.</td><td></td></tr>
+        then the command as <em>Or</em>. The same on This PC, since both read one constant.</td><td>take</td></tr>
       <tr><td>M1</td>
         <td>No recording shows that PC.</td>
         <td>None needed: I1 and I2 reuse W12's two Windows 11 recordings. Their screens are the same on any Windows 11 PC.
         Each keeps its alt text and its <em>Windows 11</em> label, so a reader on Windows 10 knows the screens may differ.
-        No shot list, nothing for you to record. I3's steps are text only: each is one screen, already named in full.</td><td></td></tr>
+        No shot list, nothing for you to record. I3's steps are text only: each is one screen, already named in full.</td><td>take</td></tr>
     </table>
 
     <h2 id="handed">Handed in from W5</h2>
@@ -173,15 +174,15 @@ flowchart TB
         <td><strong>The registry command does not tell running apps that the proxy changed.</strong> "Set up this PC" sends
         WinINET's settings-changed refresh after the same writes (<code>ui/src-tauri/src/setup.rs</code>). The command does not.</td>
         <td>The Settings route (I2) leads. Settings applies the change through Windows itself. Behind a <em>?</em> beside
-        the command under <em>other ways</em>: <em>Apps already open may keep their old setting until restarted.</em></td><td></td></tr>
+        the command under <em>other ways</em>: <em>Apps already open may keep their old setting until restarted.</em></td><td>take</td></tr>
       <tr><td>N2</td>
         <td><strong>Automatic detection or a setup script outranks a manual proxy.</strong> On a network that answers
         either, the route sets a proxy nothing uses.</td>
         <td>Behind a <em>?</em> beside I2's Save step: <em>Nothing arrives? On the same page, turn off Automatically detect
-        settings and Use setup script — either one outranks this proxy.</em></td><td></td></tr>
+        settings and Use setup script — either one outranks this proxy.</em></td><td>take</td></tr>
       <tr><td>N3</td>
         <td><strong>WinINET named in the way back, and no certificate route without a terminal.</strong></td>
-        <td>W1, and I1 with W3.</td><td></td></tr>
+        <td>W1, and I1 with W3.</td><td>take</td></tr>
     </table>
 
     <h2 id="noticed">Noticed outside Another Windows PC's words</h2>
@@ -192,7 +193,7 @@ flowchart TB
         command only (W12, W13).</td>
         <td>proposed: here, in the same commit as I3. <em>In</em> System Settings → Network → Wi-Fi → Details… → Proxies,
         <em>turn off</em> both proxies <em>and click</em> OK, with the command as <em>Or</em> and W13's Ethernet help kept.
-        Ubuntu gets its own in W15</td><td></td></tr>
+        Ubuntu gets its own in W15</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -204,28 +205,28 @@ flowchart TB
         <strong>A</strong> fixed once, for everything that shares it, as W13's Q1 ruled ·
         <strong>B</strong> Another Windows PC only, through overrides</td>
         <td>A. One fix makes each word true wherever it shows. The close dialog's change is wording only: its
-        layout and help stay with R2's epic.</td><td></td></tr>
+        layout and help stay with R2's epic.</td><td>A</td></tr>
       <tr><td>Q2</td>
         <td><strong>Which file does that PC download?</strong><br>
         <strong>A</strong> <code>trawler-ca.cer</code> (DER, <code>/ca.cer</code>): the file This PC's route opens ·
         <strong>B</strong> <code>trawler-ca.crt</code> (PEM, <code>/ca.crt</code>), which Windows also opens ·
         <strong>C</strong> keep <code>.pem</code>, command only</td>
         <td>A. It is the file This PC's route opens, and the core already serves it for Android. <code>/ca.crt</code> is
-        the URL the core keeps for older clients, and the screen names none of them. C keeps E1.</td><td></td></tr>
+        the URL the core keeps for older clients, and the screen names none of them. C keeps E1.</td><td>A</td></tr>
       <tr><td>Q3</td>
         <td><strong>Which command sits under <em>other ways</em>?</strong><br>
         <strong>A</strong> the user store, no administrator: <code>certutil -user -addstore -f ROOT &lt;file&gt;</code>,
         for which Windows asks Yes in its own warning ·
         <strong>B</strong> keep the administrator's machine-store command</td>
         <td>A. It lands in the same store as the by-hand route, so the first line of the way back covers both, and it needs
-        no elevation. The administrator's removal stays in the way back for anyone who ran the old command or "Set up this PC".</td><td></td></tr>
+        no elevation. The administrator's removal stays in the way back for anyone who ran the old command or "Set up this PC".</td><td>A</td></tr>
       <tr><td>Q4</td>
         <td><strong>Do the ways back get a by-hand route (I3)?</strong><br>
         <strong>A</strong> yes, by hand first and the command as <em>Or</em>, on both Windows guides. The close dialog keeps
         the one command, with W1's lead ·
         <strong>B</strong> commands only, as the Mac guides are today</td>
         <td>A. A person who set up by hand should not need a terminal to undo it. The close dialog stays one action
-        until R2's epic redesigns it.</td><td></td></tr>
+        until R2's epic redesigns it.</td><td>A</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
