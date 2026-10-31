@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU another-ubuntu-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W15
+branch: wu/onboard-revamp/another-ubuntu-wording
+base: c970c4ab96efb25dc31ea51aa7f1a2a606db139e
+head: 8638d7046248575936042ef2199c0c1a69b37ea1
+diff_sha256: c019087d7d51f9ac9a1bc99d061b596fa4b2d61d9b62e4a2713022544a3dedc3
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 194
+    finders: 20
+    verifiers: 14
+    total: 199
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-01
