@@ -102,7 +102,7 @@ pub(crate) fn command_failed(stderr: &str, no_detail: &str) -> SetupError {
     }
 }
 
-fn setup_error(detail: impl Into<String>) -> SetupError {
+pub(crate) fn setup_error(detail: impl Into<String>) -> SetupError {
     SetupError { refused: false, unshowable: false, detail: detail.into() }
 }
 
@@ -116,7 +116,7 @@ fn run_elevated(argv: &[String], no_detail: &str) -> Result<(), SetupError> {
     }
 }
 
-fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
+pub(crate) fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
     if !pem.contains("-----BEGIN CERTIFICATE-----") {
         return Err(setup_error("not a PEM certificate"));
     }

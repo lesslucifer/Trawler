@@ -286,6 +286,14 @@ pub fn unset_proxy(state: Shared<'_>) -> Result<(), SetupError> {
     with(&state, Scenario::unset_proxy)
 }
 
+// A filmed route opens no real screen: what it would open is the shell's own
+// unit tests' to show.
+#[tauri::command]
+pub fn open_route(route: crate::route::Route) -> Result<(), SetupError> {
+    let _ = route;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn interface_names(state: Shared<'_>) -> HashMap<String, String> {
     with(&state, |s| s.interface_names.clone())
@@ -360,6 +368,7 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             proxy_status,
             proxy_in_use,
             interface_names,
+            open_route,
             crate::setup::notice_dismissed,
             crate::setup::dismiss_notice,
             confirm_reach,

@@ -12,6 +12,7 @@ import {
   sharesHostWire,
   splitProxyAddr,
   type CaFormat,
+  type RouteName,
   type SavedCa,
 } from "./setup";
 import {
@@ -559,6 +560,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     await invoke("unset_proxy");
   });
 
+  // A by-hand step's route: the shell opens it by name, and builds what it
+  // opens. The browser's request carries this window's mark, so it settles the
+  // tasks as the in-app one does (DEC-62).
+  const openRoute = async (route: RouteName) => {
+    if (route === "keychain") {
+      await invoke("open_route", { route: { name: route, pem: await client.caCertPem() } });
+    } else if (route === "browser") {
+      await invoke("open_route", { route: { name: route, mark: nextMark() } });
+    } else {
+      await invoke("open_route", { route: { name: route } });
+    }
+  };
+
   // D9: which way this window's own request went is what the core saw of it -
   // its marked row decrypted, a tunnel to its host and no row, or nothing - and
   // the core's account lands a listing after the page's answer, so it is
@@ -829,6 +843,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onDisarmReach={disarmReach}
           onRereadReach={rereadReach}
           onMakeRequest={makeOwnRequest}
+          onOpenRoute={openRoute}
         />
       </Layout>
     );

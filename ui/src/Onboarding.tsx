@@ -1,12 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { markedUrl, REQUEST_HOST, type AnotherDevice, type RequestRoute } from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
-import { GuideSteps as SharedGuideSteps, StepParts } from "./manualSteps";
+import { GuideSteps as SharedGuideSteps, StepParts, type StepControls } from "./manualSteps";
 import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
   Button,
-  CommandBlock,
   CopyText,
   Disclosure,
   Notice,
@@ -42,6 +41,8 @@ import {
   type GuideStep,
   type HostOs,
   type PlatformId,
+  type PlatformSetup as PlatformGuides,
+  type RouteName,
   type SavedCa,
   type Task,
 } from "./setup";
@@ -123,12 +124,12 @@ interface ActionNote {
 // A prompt the user dismissed is not a failure the OS gets to word: it is the
 // one outcome they chose, and the way back in is the same button or the steps
 // below it (F18). The tool's own text is still payload, and stays reachable.
-const PROMPT_CANCELLED = "The password prompt was cancelled. Try again, or follow the manual steps.";
+const PROMPT_CANCELLED = "the password prompt was cancelled. Try again, or do it by hand.";
 
 // An approval the OS could not show never reached the user, so it is not theirs
 // to have cancelled (-60007); the task's state line says what it left undone.
 const PROMPT_UNSHOWABLE =
-  "macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.";
+  "macOS couldn't show the prompt to approve this, so it isn't done — do it by hand below.";
 
 // Declining the replace-a-foreign-proxy confirm resolves nothing rather than
 // rejecting, so it is not a failure and may not be worded as one — but it is
@@ -145,18 +146,18 @@ const SETUP_NOTE: ActionNotes = {
     tone: "mute",
     text: "nothing changed — the other proxy is still the one in use, and the certificate was not installed.",
   },
-  failed: { tone: "warn", text: "setting up failed — the steps below do it by hand." },
+  failed: { tone: "warn", text: "setting up failed — do it by hand below." },
 };
 
 const SETPROXY_NOTE: ActionNotes = {
   running: { tone: "pending", text: APPROVE },
   nothing: { tone: "mute", text: "nothing changed — the other proxy is still the one in use." },
-  failed: { tone: "warn", text: "setting the proxy failed — the steps below do it by hand." },
+  failed: { tone: "warn", text: "setting the proxy failed — do it by hand below." },
 };
 
 const UNSETPROXY_NOTE: ActionNotes = {
   running: { tone: "pending", text: "turning the proxy off — approve the prompt…" },
-  failed: { tone: "warn", text: "couldn't turn the proxy off — the steps below do it by hand." },
+  failed: { tone: "warn", text: "couldn't turn the proxy off — do it by hand below." },
 };
 
 // Arming is the shell's dialog and then the bind. A yes needs no note — what is
@@ -190,6 +191,13 @@ const MAKE_REQUEST_NOTE: ActionNotes = {
   failed: { tone: "warn", text: `the request to ${REQUEST_HOST} didn't complete.` },
 };
 
+// The one act's prompt is the host's: macOS asks for a password, Windows for
+// an approval (W12's W2), and either does the two tasks below it.
+const ONE_ACT_CAPTION: Record<"macos" | "windows", string> = {
+  macos: "one password prompt — it does steps 1 and 2",
+  windows: "one Windows approval — it does steps 1 and 2",
+};
+
 const noAddress = (device: string) =>
   `this machine holds no network address a second device could reach it at. Join the network ${device} is on, then check again.`;
 
@@ -203,7 +211,7 @@ const saveCaNote = (named: string): ActionNotes => ({
     tone: "ok",
     text:
       fileName(path) === named
-        ? `saved as ${named}. now trust it with the steps here.`
+        ? `saved as ${named}. Now trust it with the steps here.`
         : `saved as ${fileName(path)} — the steps here name ${named}, so use ${fileName(path)} instead.`,
   }),
   nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
@@ -327,11 +335,12 @@ const ZONE_LABEL = "font-ui text-chrome uppercase tracking-label text-ink-mute";
 
 // The save control's outcome is this screen's note, so the shared step
 // renderer is handed it rather than knowing about actions' wording.
-function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }) {
+function GuideSteps({ steps, ...controls }: { steps: GuideStep[] } & StepControls) {
+  const { save } = controls;
   return (
     <SharedGuideSteps
       steps={steps}
-      save={save}
+      {...controls}
       saveNote={
         save &&
         ((format) => <ActionNote testId="save-ca" action={save} note={saveCaNote(CA_FILES[format])} />)
@@ -344,7 +353,7 @@ function GuideSteps({ steps, save }: { steps: GuideStep[]; save?: ActionHandle }
 // the guide is the other way of doing it and says so. Where there is no
 // button it is the only way, and a count is the one summary that promises no
 // automatic alternative while still saying how much work is behind it (F10).
-const MANUAL = "do it manually";
+const MANUAL = "do it by hand";
 const stepCount = (guide: Guide) =>
   `${guide.steps.length} step${guide.steps.length === 1 ? "" : "s"}`;
 
@@ -355,19 +364,20 @@ const stepCount = (guide: Guide) =>
 function GuideView({
   guide,
   save,
+  open,
+  framed,
   summary,
   defaultOpen = false,
 }: {
   guide: Guide;
-  save?: ActionHandle;
   summary: string;
   defaultOpen?: boolean;
-}) {
+} & StepControls) {
   const alternatives = guide.alternatives ?? [];
   const undo = guide.undo ?? [];
   return (
     <Disclosure summary={summary} defaultOpen={defaultOpen}>
-      <GuideSteps steps={guide.steps} save={save} />
+      <GuideSteps steps={guide.steps} save={save} open={open} framed={framed} />
       {guide.notes?.map((note) => (
         <p key={note} data-testid="guide-note" className="pt-2 font-ui text-chrome text-ink-mute">
           {note}
@@ -376,7 +386,7 @@ function GuideView({
       {alternatives.length > 0 && (
         <div className="pt-3">
           <Disclosure summary="other ways">
-            <GuideSteps steps={alternatives} save={save} />
+            <GuideSteps steps={alternatives} save={save} open={open} />
           </Disclosure>
         </div>
       )}
@@ -388,6 +398,67 @@ function GuideView({
         </div>
       )}
     </Disclosure>
+  );
+}
+
+// This machine's other ways to make the request: its browser, where a route
+// opens one, then a terminal.
+function tryOtherWays(setup: PlatformGuides): GuideStep[] {
+  const routes = (setup.tryRoutes ?? []).map((route): GuideStep => ["Open it in your browser", route]);
+  const command: GuideStep[] = setup.tryCommand
+    ? [[setup.tryLead ?? "In a terminal, run:", { command: setup.tryCommand, label: "the try-it command" }]]
+    : [];
+  return [...routes, ...command];
+}
+
+// The request leads the try task while it is the next thing to do, and once
+// something decrypted it folds, with its other ways, under one summary: the
+// proof is the task's line, and another request is optional. A request the
+// user just made keeps its outcome in view (W12's E2, E3).
+function TryRequest({
+  request,
+  framed,
+  folded,
+  other,
+  open,
+}: {
+  request: ActionHandle;
+  framed: boolean;
+  folded: boolean;
+  other: GuideStep[];
+  open?: (route: RouteName) => void;
+}) {
+  const body = (
+    <>
+      {request.trigger && (
+        <Action
+          testId="make-request"
+          label={`make a request to ${REQUEST_HOST}`}
+          action={request}
+          note={MAKE_REQUEST_NOTE}
+          onClick={request.trigger}
+          frame={framed ? undefined : "bare"}
+        />
+      )}
+      {other.length > 0 && (
+        <div data-testid="try-other-ways" className={request.trigger ? "pt-3" : ""}>
+          <Disclosure summary="other ways">
+            <GuideSteps steps={other} open={open} />
+          </Disclosure>
+        </div>
+      )}
+    </>
+  );
+  return (
+    <div data-testid="try-request" className="pt-2">
+      {folded ? (
+        <Disclosure summary="make another request" defaultOpen={request.state !== "idle"}>
+          {body}
+        </Disclosure>
+      ) : (
+        body
+      )}
+    </div>
   );
 }
 
@@ -637,8 +708,9 @@ function ServerAndPort({ proxy }: { proxy: string }) {
 }
 
 // A task's guide as its reading leaves it. A task read done keeps only its way
-// back; one not done keeps its route, and the route's summary says whether a
-// button above it already does the job (F10).
+// back; one not done keeps its route and nothing of undoing it, since nothing is
+// there to undo yet (W12's E4). Under a button, the steps are that button's by
+// hand, whichever way it goes (W12's W1).
 interface TaskGuide {
   guide: Guide;
   summary: string;
@@ -650,9 +722,9 @@ function guideFor(
   underButton: boolean,
 ): TaskGuide | undefined {
   if (guide === undefined) return undefined;
-  if (!done) return { guide, summary: underButton ? MANUAL : stepCount(guide) };
+  if (!done) return { guide: { ...guide, undo: undefined }, summary: underButton ? MANUAL : stepCount(guide) };
   return guide.undo?.length
-    ? { guide: { steps: guide.undo }, summary: guide.undoTitle ?? "to undo it later" }
+    ? { guide: { steps: guide.undo }, summary: underButton ? MANUAL : (guide.undoTitle ?? "to undo it later") }
     : undefined;
 }
 
@@ -672,6 +744,8 @@ function GuidedTask({
   guide,
   guideOpen = false,
   save,
+  open,
+  framed,
   action,
   children,
 }: {
@@ -682,10 +756,9 @@ function GuidedTask({
   waitsOn?: string;
   guide?: TaskGuide;
   guideOpen?: boolean;
-  save?: ActionHandle;
   action?: ReactNode;
   children?: ReactNode;
-}) {
+} & StepControls) {
   const body = guide !== undefined || action !== undefined || children !== undefined;
   return (
     <TaskStep
@@ -705,6 +778,8 @@ function GuidedTask({
                 key={`${guide.summary}:${guideOpen}`}
                 guide={guide.guide}
                 save={save}
+                open={open}
+                framed={framed}
                 summary={guide.summary}
                 defaultOpen={guideOpen}
               />
@@ -749,6 +824,7 @@ interface SetupProps {
   onDisarmReach?: () => Promise<void>;
   onRereadReach?: () => void;
   onMakeRequest?: () => Promise<RequestRoute>;
+  onOpenRoute?: (route: RouteName) => Promise<void>;
   routeAct?: RouteAct;
   onRouteAct?: (act: RouteAct) => void;
 }
@@ -862,10 +938,12 @@ function PlatformSetup({
   onDisarmReach,
   onRereadReach,
   onMakeRequest,
+  onOpenRoute,
   routeAct = null,
   onRouteAct,
 }: SetupProps & { platform: PlatformId }) {
   const [listenOn, setListenOn] = useState<string | null>(null);
+  const open = onOpenRoute && ((route: RouteName) => void onOpenRoute(route).catch(() => undefined));
 
   const routing =
     (act: "set" | "unset") =>
@@ -1023,7 +1101,7 @@ function PlatformSetup({
 
   const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
   const routeUnderButton = setUpHere !== undefined || setProxyHere !== undefined;
-  const routeGuide = guideFor(setup.route.guide, routeDone, routeUnderButton);
+  const routeGuide = guideFor(setup.route.guide, routeDone, routeDone ? reverseHere : routeUnderButton);
 
   // One guide is open. A failed action's route comes first, because its note
   // says the steps below do it by hand. Otherwise it is the first whose task is
@@ -1058,16 +1136,38 @@ function PlatformSetup({
       !routeDone &&
       !routeUnderButton);
 
-  const trustAction = setUpHere && (
-    <Action
-      testId="set-up"
-      label={`Set up ${here}`}
-      caption="one password prompt — it installs the certificate and sets the proxy"
-      action={setUp}
-      note={SETUP_NOTE}
-      onClick={setUpHere}
-      disabled={probing}
-    />
+  // One control on the screen is framed, and it is the next thing to do: the
+  // one act, else the proxy's action, else the open guide's first control, else
+  // This machine's request once both halves read done. Everything else is bare
+  // (W12's E1, E2).
+  const proved = traffic.lastDecryptedAt !== null;
+  const next: "set-up" | "set-proxy" | "trust-guide" | "route-guide" | "request" | null = setUpHere
+    ? "set-up"
+    : setProxyHere
+      ? "set-proxy"
+      : trustGuideOpen && !trustDone
+        ? "trust-guide"
+        : routeGuideOpen && !routeDone
+          ? "route-guide"
+          : platform === "this" && trustDone && routeDone && !proved
+            ? "request"
+            : null;
+  const bare = (framed: boolean) => (framed ? undefined : ("bare" as const));
+
+  // It does both tasks, so it belongs to neither: it leads them, and says which
+  // it does (W12's E1).
+  const oneAct = setUpHere && (
+    <div data-testid="one-act" className="px-4">
+      <Action
+        testId="set-up"
+        label={`set up ${here}`}
+        caption={ONE_ACT_CAPTION[os === "windows" ? "windows" : "macos"]}
+        action={setUp}
+        note={SETUP_NOTE}
+        onClick={setUpHere}
+        disabled={probing}
+      />
+    </div>
   );
 
   // The action and its reversal are two controls, not two halves of one, and a
@@ -1079,7 +1179,8 @@ function PlatformSetup({
       {setProxyHere && (
         <Action
           testId="set-proxy"
-          label="Set the system proxy"
+          label="set the system proxy"
+          frame={bare(next === "set-proxy")}
           action={setProxyAction}
           note={SETPROXY_NOTE}
           onClick={setProxyHere}
@@ -1124,6 +1225,8 @@ function PlatformSetup({
           />
         )}
 
+        {oneAct}
+
         <GuidedTask
           n={first + 1}
           task={setup.trust}
@@ -1133,7 +1236,8 @@ function PlatformSetup({
           guide={trustGuide}
           guideOpen={trustGuideOpen}
           save={onSaveCa ? saveCa : undefined}
-          action={trustAction || undefined}
+          open={open}
+          framed={next === "trust-guide"}
         >
           {refusedHere && (
             <div data-testid="traffic-remedy" className="pb-2">
@@ -1150,6 +1254,8 @@ function PlatformSetup({
           waitsOn={waitsOn}
           guide={routeGuide}
           guideOpen={routeGuideOpen}
+          open={open}
+          framed={next === "route-guide"}
           action={routeAction || undefined}
         >
           {proxy.status === "foreign" && probesRoute(platform) && (
@@ -1181,25 +1287,14 @@ function PlatformSetup({
                   });
             }}
           />
-          {request.trigger && (
-            <div className="pt-2">
-              <Action
-                testId="make-request"
-                label={`make a request to ${REQUEST_HOST}`}
-                action={request}
-                note={MAKE_REQUEST_NOTE}
-                onClick={request.trigger}
-                frame="bare"
-              />
-            </div>
-          )}
-          {setup.tryCommand && (
-            <>
-              <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
-              <div className="pt-2">
-                <CommandBlock value={setup.tryCommand} label="the try-it command" />
-              </div>
-            </>
+          {(request.trigger || setup.tryCommand) && (
+            <TryRequest
+              request={request}
+              framed={next === "request"}
+              folded={proved}
+              other={tryOtherWays(setup)}
+              open={open}
+            />
           )}
           {deviceMark !== undefined && (
             <div data-testid="check-address" className="pt-2 font-ui text-chrome text-ink-mute">

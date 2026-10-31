@@ -576,11 +576,8 @@ export function provenDevice(device: string, trust: TrustProbe, proxy: ProxyProb
   return trust === "trusted" && proxy === "ours" ? device : null;
 }
 
-// The reversal turns the proxy off and nothing else, and says so. Where the
-// certificate reads trusted it also says that stays, and where to remove it;
-// anywhere else there is nothing installed to name.
-export function stopRoutingNote(certificateTrusted: boolean): string {
-  return certificateTrusted
-    ? "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it."
-    : "this turns the proxy off and nothing else.";
+// The reversal turns the proxy off and nothing else; where the certificate
+// reads trusted, the one thing worth saying is that it stays (W12's E3).
+export function stopRoutingNote(certificateTrusted: boolean): string | undefined {
+  return certificateTrusted ? "the certificate stays trusted" : undefined;
 }

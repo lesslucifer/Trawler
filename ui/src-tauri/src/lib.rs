@@ -2,6 +2,8 @@ mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
+mod route;
+#[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 
 #[cfg(feature = "e2e")]
@@ -29,6 +31,7 @@ pub fn run() {
         setup::interface_names,
         setup::notice_dismissed,
         setup::dismiss_notice,
+        route::open_route,
         reach::confirm_reach,
         reach::confirm_replace_proxy
     ]);

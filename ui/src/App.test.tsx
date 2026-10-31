@@ -267,7 +267,7 @@ test("Set up this Mac fetches the PEM and invokes the one combined command", asy
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("set_up_this_machine", {
@@ -280,6 +280,38 @@ test("Set up this Mac fetches the PEM and invokes the one combined command", asy
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
   expect(screen.getByText("which device's traffic do you want to see")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// W12's I1-I3: a by-hand step's route crosses to the shell as a name, with the
+// one thing the shell needs to build what it opens: the certificate the core
+// serves now, or this window's next mark - never a URL or a path.
+test.each([
+  ["open in Keychain Access", 1, { name: "keychain", pem: PEM }],
+  ["open Proxy settings", 2, { name: "proxy-settings" }],
+] as const)("%s asks the shell for its route by name", async (label, n, route) => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  const task = await screen.findByTestId(`task-${n}`);
+  fireEvent.click(within(task).getByText("do it by hand"));
+  fireEvent.click(within(task).getByRole("button", { name: label }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route }));
+});
+
+test("the browser route carries this window's own mark, so its request settles the tasks", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "open example.com in your browser" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", {
+      route: { name: "browser", mark: expect.stringMatching(/^[a-z0-9]+\.\d+$/) },
+    }),
+  );
 });
 
 // D1: a store holding an older certificate under the same name answers
@@ -342,7 +374,7 @@ test("Save writes the PEM under the filename the manual steps tell the user to r
     });
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(within(await screen.findByTestId("task-1")).getByText("do it manually"));
+  fireEvent.click(within(await screen.findByTestId("task-1")).getByText("do it by hand"));
   fireEvent.click(screen.getByRole("button", { name: "save…" }));
   await screen.findByText(new RegExp(`saved as ${CA_FILES.pem}`));
 
@@ -378,9 +410,9 @@ test("a dismissed prompt crosses the boundary as a refusal, with the tool's text
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
-  await screen.findByText("The password prompt was cancelled. Try again, or follow the manual steps.");
+  await screen.findByText("the password prompt was cancelled. Try again, or do it by hand.");
   fireEvent.click(screen.getByText("details"));
   expect(screen.getByText("0:36: execution error: User cancelled. (-128)")).toBeInTheDocument();
   expect(screen.getByTestId("task-1")).not.toHaveTextContent(/done — installed/);
@@ -395,10 +427,10 @@ test("a real failure keeps the OS's own words and leaves the manual route open",
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
   await screen.findByText(/setting up failed/);
 
-  const route = within(screen.getByTestId("task-1")).getByText("do it manually").closest("details")!;
+  const route = within(screen.getByTestId("task-1")).getByText("do it by hand").closest("details")!;
   expect(route).toHaveAttribute("open");
   expect(route).toHaveTextContent(/security add-trusted-cert/);
   expect(screen.getByTestId("set-up-status")).toHaveTextContent("no network services to configure");
@@ -419,7 +451,7 @@ async function simulator(initial = ONBOARDING) {
 test("Set the system proxy invokes set_proxy with the configured address, and proves nothing", async () => {
   await simulator();
 
-  fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(screen.getByRole("button", { name: "set the system proxy" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 }),
@@ -432,17 +464,17 @@ test("a rejected set_proxy reports failed and keeps the manual route reachable",
   rejectCommand("set_proxy", { refused: false, detail: "no network services" } as never);
   await simulator();
 
-  fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(screen.getByRole("button", { name: "set the system proxy" }));
   await screen.findByText(/setting the proxy failed/);
 
-  fireEvent.click(within(screen.getByTestId("task-2")).getByText("do it manually"));
+  fireEvent.click(within(screen.getByTestId("task-2")).getByText("do it by hand"));
   expect(screen.getByTestId("task-2")).toHaveTextContent(/networksetup/);
 });
 
 test("Stop routing invokes unset_proxy after the proxy was set", async () => {
   await simulator();
 
-  fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(screen.getByRole("button", { name: "set the system proxy" }));
   fireEvent.click(await screen.findByRole("button", { name: "stop routing through Trawler" }));
 
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("unset_proxy"));
@@ -507,7 +539,7 @@ test("replacing another proxy costs a confirm, and a refusal writes nothing", as
       "another proxy is set on this Mac: 10.1.1.1:8080",
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(screen.getByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("confirm_replace_proxy", { address: "10.1.1.1:8080" }),
@@ -526,7 +558,7 @@ test("an allowed replacement goes through, once", async () => {
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1),
@@ -543,7 +575,7 @@ test("setting the proxy where none is set asks no second question", async () => 
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1),
@@ -818,7 +850,7 @@ describe("this machine is read again wherever its answer can change", () => {
     render(<App api={api} initialState={ONBOARDING} />);
     const before = await settled();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+    fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
     await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
     await waitFor(() => expect(probes()).toBe(before + 2));
@@ -834,7 +866,7 @@ describe("this machine is read again wherever its answer can change", () => {
     render(<App api={api} initialState={ONBOARDING} />);
     const before = await settled();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+    fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
     await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "nothing"));
     await waitFor(() => expect(probes()).toBe(before + 2));
@@ -871,7 +903,7 @@ describe("this machine is read again wherever its answer can change", () => {
     await waitFor(() => expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_in_use").length).toBe(2));
     expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
     expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking");
-    expect(screen.getByRole("button", { name: "Set up this Mac" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "set up this Mac" })).toBeEnabled();
   });
 
   it("but never twice at once: a quiet read waits out the one in flight", async () => {
@@ -2884,7 +2916,7 @@ test("the way out of a proxy Trawler set survives a trip to the list while nothi
   });
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
-  fireEvent.click(await screen.findByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set the system proxy" }));
   expect(await screen.findByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
@@ -2919,7 +2951,7 @@ test("setup opens in checking and holds its buttons until its own reading lands 
   expect(screen.getByTestId("probe")).toHaveTextContent("checking this machine…");
 
   await act(async () => answerProxy({ status: "none", address: null }));
-  expect(await screen.findByRole("button", { name: "Set the system proxy" })).toBeEnabled();
+  expect(await screen.findByRole("button", { name: "set the system proxy" })).toBeEnabled();
   expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
 });
 

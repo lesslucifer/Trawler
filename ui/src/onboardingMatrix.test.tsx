@@ -290,7 +290,11 @@ function draw(s: State, handlers: Handlers = {}) {
 
 const INSTALL_COMMAND = { trust: "the trust command", route: "the proxy command" } as const;
 const REVERSAL = "stop routing through Trawler";
-const WAY_BACK = new Set(["to remove it later", "to turn it off later", "details"]);
+const WAY_BACK = new Set(["to remove it later", "to turn it off later", "do it by hand", "details"]);
+const UNDO_SUMMARIES = new Set(["to remove it later", "to turn it off later"]);
+// A sentence that sends the reader to the steps under it (W12's W1).
+const POINTS = /the steps below|do it by hand below/i;
+const ACTION_LABEL = /^(set up this|set the system proxy|stop routing)/;
 
 interface TaskOutline {
   n: number;
@@ -305,6 +309,9 @@ interface TaskOutline {
 
 interface Outline {
   tasks: TaskOutline[];
+  oneAct: string | null;
+  framed: string[];
+  labels: string[];
   between: string[];
   proven: string | null;
   lines: string[];
@@ -332,7 +339,7 @@ function outline(): Outline {
         text: el.textContent ?? "",
         actions: [...el.querySelectorAll("button")]
           .map((b) => b.textContent?.trim() ?? "")
-          .filter((label) => /^(Set up this|Set the system proxy|stop routing)/.test(label)),
+          .filter((label) => ACTION_LABEL.test(label)),
         commands: [...el.querySelectorAll("button[aria-label]")].map(
           (b) => b.getAttribute("aria-label") ?? "",
         ),
@@ -343,7 +350,16 @@ function outline(): Outline {
         ).length,
       };
     }),
-    between: children.filter((el) => !isTask(el)).map((el) => el.textContent ?? ""),
+    oneAct: screen.queryByTestId("one-act")?.textContent ?? null,
+    // A framed control is a word button in its border; copy buttons name
+    // themselves by aria-label and frame nothing the reader acts on next.
+    framed: [...steps.querySelectorAll("button:not([aria-label])")]
+      .filter((b) => b.className.includes("border-hairline"))
+      .map((b) => b.textContent?.trim() ?? ""),
+    labels: [...steps.querySelectorAll("button:not([aria-label])")].map((b) => b.textContent?.trim() ?? ""),
+    between: children
+      .filter((el) => !isTask(el) && el.getAttribute("data-testid") !== "one-act")
+      .map((el) => el.textContent ?? ""),
     proven: screen.queryByTestId("proven")?.textContent ?? null,
     lines: [...steps.querySelectorAll('[data-testid$="-state"]')].map(textOf),
     notes: [
@@ -567,14 +583,41 @@ const RULES: Record<string, Rule> = {
       return same(found, expected) ? null : `refusal in tasks [${found}], expected [${expected}]`;
     },
 
-  "truth: every sentence that points at the steps below has them open": (o) => {
-    const pointing = o.tasks.filter((t) => /the steps below/i.test(t.text));
+  "truth: every sentence that points at the steps below has them open": (o, s) => {
+    const pointing = o.tasks.filter((t) => POINTS.test(t.text));
     const shut = pointing.filter((t) => t.openGuides.length === 0).map((t) => t.n);
+    if (o.oneAct !== null && POINTS.test(o.oneAct) && task(o, model(s).trustN).openGuides.length === 0)
+      shut.push(model(s).trustN);
     return shut.length === 0 ? null : `tasks [${shut}] point at steps left shut`;
   },
 
-  "place: nothing is drawn between the tasks": (o) =>
+  "place: nothing is drawn between the tasks but the one act above them": (o) =>
     o.between.length === 0 ? null : `between tasks: ${o.between.join(" | ")}`,
+
+  "emphasis: one framed control at most, and it is the next thing to do (W12's E1, E2)": (o, s) => {
+    const m = model(s);
+    if (o.framed.length > 1) return `framed: ${o.framed.join(", ")}`;
+    const expected = m.oneAct
+      ? /^set up this/
+      : m.routeHere && !m.routeDone && !m.oneAct
+        ? /^set the system proxy/
+        : null;
+    if (expected === null) return null;
+    return o.framed.length === 1 && expected.test(o.framed[0]) ? null : `framed [${o.framed}], expected ${expected}`;
+  },
+
+  "words: This machine's controls are lowercase (W12's W5)": (o, s) => {
+    if (s.platform !== "this") return null;
+    const capital = o.labels.filter((label) => /^[A-Z]/.test(label));
+    return capital.length === 0 ? null : `capitalised: ${capital.join(", ")}`;
+  },
+
+  "time: a task not done offers no way to undo it (W12's E4)": (o, s) => {
+    const m = model(s);
+    const undone = [...(m.trustDone ? [] : [m.trustN]), ...(m.routeDone ? [] : [m.routeN])].map((n) => task(o, n));
+    const wrong = undone.filter((t) => t.guides.some((g) => UNDO_SUMMARIES.has(g)));
+    return wrong.length === 0 ? null : wrong.map((t) => `task ${t.n} not done offers [${t.guides}]`).join("; ");
+  },
 
   "place: the certificate's install command sits in the certificate task only": (o, s) => {
     const found = withCommand(o, INSTALL_COMMAND.trust);
@@ -597,7 +640,7 @@ const RULES: Record<string, Rule> = {
       (t) =>
         t.guides.some((g) => !WAY_BACK.has(g)) ||
         t.openGuides.some(
-          (g) => g !== "details" && !(WAY_BACK.has(g) && /the steps below/i.test(t.text)),
+          (g) => g !== "details" && !(WAY_BACK.has(g) && POINTS.test(t.text)),
         ) ||
         t.commands.includes(INSTALL_COMMAND.trust) ||
         t.commands.includes(INSTALL_COMMAND.route),
@@ -607,11 +650,13 @@ const RULES: Record<string, Rule> = {
       : wrong.map((t) => `task ${t.n} is done and offers [${t.guides}]`).join("; ");
   },
 
-  "time: the one act exactly while both halves read not done, in the certificate task": (o, s) => {
+  "time and place: the one act exactly while both halves read not done, above the tasks it does (W12's E1)": (o, s) => {
     const m = model(s);
-    const expected = m.oneAct ? [m.trustN] : [];
-    const found = withAction(o, "Set up this");
-    return same(found, expected) ? null : `Set up in tasks [${found}], expected [${expected}]`;
+    const above = o.oneAct !== null && /^set up this/.test(o.oneAct);
+    const inTasks = withAction(o, "set up this");
+    return above === m.oneAct && inTasks.length === 0
+      ? null
+      : `one act above: ${above}, in tasks [${inTasks}], expected ${m.oneAct}`;
   },
 
   "time: the proxy's own action exactly while it reads not done and the one act is not offered": (
@@ -620,10 +665,10 @@ const RULES: Record<string, Rule> = {
   ) => {
     const m = model(s);
     const expected = m.routeHere && !m.oneAct && !m.routeDone ? [m.routeN] : [];
-    const found = withAction(o, "Set the system proxy");
+    const found = withAction(o, "set the system proxy");
     return same(found, expected)
       ? null
-      : `Set the system proxy in tasks [${found}], expected [${expected}]`;
+      : `set the system proxy in tasks [${found}], expected [${expected}]`;
   },
 
   "place and time: the reversal is in the proxy task, exactly while there is something to reverse":
@@ -637,7 +682,7 @@ const RULES: Record<string, Rule> = {
     const m = model(s);
     const route = o.tasks.find((t) => t.n === m.routeN);
     if (route === undefined || !route.text.includes(REVERSAL)) return null;
-    const names = /Trawler's certificate stays trusted/.test(route.text);
+    const names = /the certificate stays trusted/.test(route.text);
     return names === m.trustDone ? null : `reversal line: ${route.text}`;
   },
 
@@ -739,7 +784,7 @@ const RULES: Record<string, Rule> = {
 
   "one guide open at most, beyond those a sentence points at": (o) => {
     const open = o.tasks
-      .filter((t) => !/the steps below/i.test(t.text))
+      .filter((t) => !POINTS.test(t.text))
       .flatMap((t) => t.openGuides.filter((g) => g !== "details").map((g) => `${t.n}:${g}`));
     return open.length <= 1 ? null : `open: ${open.join(", ")}`;
   },
@@ -823,8 +868,8 @@ describe("every reading at rest", () => {
 // ── Every offered action, in every outcome ──────────────────────────────────
 
 const ACTIONS = [
-  { key: "setUp", label: "Set up this", status: "set-up-status", sets: true },
-  { key: "setProxy", label: "Set the system proxy", status: "set-proxy-status", sets: true },
+  { key: "setUp", label: "set up this", status: "set-up-status", sets: true },
+  { key: "setProxy", label: "set the system proxy", status: "set-proxy-status", sets: true },
   { key: "unset", label: REVERSAL, status: "unset-proxy-status", sets: false },
 ] as const;
 
@@ -874,12 +919,15 @@ describe("every offered action, in every outcome", () => {
     const unsetIt = !a.sets && outcome === "done";
     const reversal = m.routeHere && !unsetIt && (m.routeDone || setIt);
 
-    // A failure the user did not choose says "the steps below do it by hand",
-    // so the task its note sits in holds the one open guide.
+    // A failure the user did not choose says "do it by hand below", so the task
+    // its note sits in holds the one open guide - the one act's, the
+    // certificate task under it.
     const also: string[] = [];
     if (outcome === "failed" || outcome === "unshowable") {
       const note = screen.getByTestId(a.status);
-      const holder = note.closest('[data-testid^="task-"]');
+      const holder =
+        note.closest('[data-testid^="task-"]') ??
+        (note.closest('[data-testid="one-act"]') && screen.getByTestId(`task-${m.trustN}`));
       const opened = holder && [...holder.querySelectorAll("details[open]")].filter(topLevel);
       if (!opened || opened.length === 0) also.push(`${a.status} points at steps it left shut`);
     }

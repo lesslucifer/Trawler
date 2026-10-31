@@ -96,7 +96,27 @@ export interface CommandPart {
 export interface SavePart {
   save: CaFormat;
 }
-export type StepPart = string | CopyPart | CommandPart | SavePart;
+// Controls in another app, named in click order; the screen sets each name
+// apart from the sentence (W12's D2).
+export interface PathPart {
+  path: readonly string[];
+}
+// A screen the shell opens for the step, by name: the set is closed and the
+// shell builds what it opens (W12's I1-I3).
+export type RouteName = "proxy-settings" | "keychain" | "browser";
+export interface RoutePart {
+  open: RouteName;
+  label: string;
+}
+// A recording of a step no route finishes, named here and bundled by the
+// screen, so this module stays free of assets (W12's M1).
+export type MediaName = "macos-always-trust" | "macos-proxies";
+export interface MediaPart {
+  media: MediaName;
+  alt: string;
+  shows: string;
+}
+export type StepPart = string | CopyPart | CommandPart | SavePart | PathPart | RoutePart | MediaPart;
 export type GuideStep = readonly StepPart[];
 
 export const isCommand = (part: StepPart): part is CommandPart =>
@@ -107,6 +127,15 @@ export const isScan = (part: StepPart): part is CopyPart =>
 
 export const isSave = (part: StepPart): part is SavePart =>
   typeof part === "object" && "save" in part;
+
+export const isPath = (part: StepPart): part is PathPart =>
+  typeof part === "object" && "path" in part;
+
+export const isRoute = (part: StepPart): part is RoutePart =>
+  typeof part === "object" && "open" in part;
+
+export const isMedia = (part: StepPart): part is MediaPart =>
+  typeof part === "object" && "media" in part;
 
 // One platform's instructions for one task. `steps` is the route the reader
 // takes; everything else is what a numbered step must not be. A note is true of
@@ -140,6 +169,8 @@ export interface PlatformSetup {
   route: Task;
   try: Task;
   tryCommand?: string;
+  tryLead?: string;
+  tryRoutes?: RoutePart[];
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
@@ -320,7 +351,7 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
   },
 };
 
-// The host names itself, so "Set up this Mac" and "Open any website on this
+// The host names itself, so "set up this Mac" and "Make a request from this
 // Mac" say what the user is looking at rather than what the code calls it.
 const HOST_NOUN: Record<HostOs, string> = {
   macos: "this Mac",
@@ -543,6 +574,103 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   }),
 };
 
+// This Mac's own routes (W12): the certificate goes into the login keychain,
+// where trusting it asks for the user's password and no administrator's, and
+// the proxy into its own settings pane. Each command is the other way.
+const MACOS_OS_VERSION = "macOS 26";
+const IN_TERMINAL = "In Terminal, run:";
+const ALWAYS_TRUST = ["Trust", "When using this certificate", "Always Trust"];
+
+function thisMacTrust(file: string): Guide {
+  return {
+    steps: [
+      ["Add it to your login keychain", { open: "keychain", label: "open in Keychain Access" }],
+      [
+        "Search Trawler, double-click",
+        { path: [CA_NAME] },
+        "and set",
+        { path: ALWAYS_TRUST },
+        {
+          media: "macos-always-trust",
+          alt: `Keychain Access: ${CA_NAME} → ${ALWAYS_TRUST.join(" → ")}`,
+          shows: MACOS_OS_VERSION,
+        },
+      ],
+      ["Close the window and enter your password."],
+    ],
+    alternatives: [
+      saveCaStep("pem"),
+      [
+        IN_TERMINAL,
+        {
+          command: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
+          label: "the trust command",
+        },
+      ],
+    ],
+    undoTitle: "to remove it later",
+    undo: [
+      ["In Keychain Access, search Trawler and delete", { path: [CA_NAME] }],
+      [
+        `Or ${IN_TERMINAL.charAt(0).toLowerCase()}${IN_TERMINAL.slice(1)}`,
+        {
+          command: `security delete-certificate -c "${CA_NAME}" login.keychain; sudo security delete-certificate -c "${CA_NAME}" /Library/Keychains/System.keychain`,
+          label: "the removal command",
+        },
+      ],
+    ],
+  };
+}
+
+const PROXIES_PATH = ["Wi-Fi", "Details…", "Proxies"];
+
+function thisMacRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return {
+    steps: [
+      ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }],
+      [
+        "Click",
+        { path: PROXIES_PATH },
+        {
+          media: "macos-proxies",
+          alt: `System Settings: Network → ${PROXIES_PATH.join(" → ")}, both proxies on`,
+          shows: MACOS_OS_VERSION,
+        },
+      ],
+      [
+        "Turn on",
+        { path: ["Web proxy (HTTP)"] },
+        "and",
+        { path: ["Secure web proxy (HTTPS)"] },
+        "— each with server",
+        { copy: host, label: "the proxy server", wire: "proxy host" },
+        "and port",
+        { copy: String(port), label: "the proxy port", wire: "proxy port" },
+      ],
+      ["Click", { path: ["OK"] }],
+    ],
+    notes: ["On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command."],
+    alternatives: [[IN_TERMINAL, { command: routeCommand("macos", addr)!, label: "the proxy command" }]],
+    undoTitle: "to turn it off later",
+    undo: reversal("macos"),
+  };
+}
+
+// The route a host's own machine takes: its settings pane on macOS, else the
+// command its desktop answers to.
+function localRoute(os: HostOs, addr: string): Guide {
+  if (os === "macos") return thisMacRoute(addr);
+  return osRoute(os === "other" ? "terminal" : hostTarget(os), addr);
+}
+
+const TRY_LEAD: Record<HostOs, string> = {
+  macos: IN_TERMINAL,
+  windows: "In PowerShell, run:",
+  linux: "In a terminal, run:",
+  other: "In a terminal, run:",
+};
+
 // A browser on another computer saves the certificate to Downloads, and so
 // does this machine's save dialog until the user points it elsewhere; a
 // terminal opens elsewhere, so a command names the folder (C2, W7's C1).
@@ -692,28 +820,36 @@ function tryTask(id: PlatformId, os: HostOs): Task {
   return { title: `Open any website ${openWhere(id, os)}`, why: PROVES_IT };
 }
 
+// This machine says each thing once: its lead says why the two tasks matter,
+// so the one why line left is the route's, which says what the lead does not
+// (W12's Q3).
 function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
   const target = hostTarget(os);
-  const trust = OS_TRUST[target](savedFile(target, caFormatFor("this"), saved));
+  const file = savedFile(target, caFormatFor("this"), saved);
+  const trust = OS_TRUST[target](file);
   const host = HOST_NOUN[os];
   return {
     trust: {
       title: "Trust Trawler's certificate",
-      why: `so ${host}'s HTTPS can be decrypted`,
-      guide: {
-        steps: [saveCaStep(caFormatFor("this")), ...trust.install],
-        alternatives: trust.alternatives,
-        undoTitle: trust.undoTitle,
-        undo: trust.undo,
-      },
+      guide:
+        os === "macos"
+          ? thisMacTrust(file)
+          : {
+              steps: [saveCaStep(caFormatFor("this")), ...trust.install],
+              alternatives: trust.alternatives,
+              undoTitle: trust.undoTitle,
+              undo: trust.undo,
+            },
     },
     route: {
       title: `Send ${host}'s traffic to Trawler`,
       why: "its system proxy points at Trawler while Trawler runs",
-      guide: osRoute(os === "other" ? "terminal" : target, proxyAddr),
+      guide: localRoute(os, proxyAddr),
     },
-    try: tryTask("this", os),
+    try: { title: `Make a request from ${host}` },
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
+    tryLead: TRY_LEAD[os],
+    tryRoutes: os === "macos" ? [{ open: "browser", label: `open ${REQUEST_HOST} in your browser` }] : undefined,
     confirmOn: confirmOn("this", os),
     notDecrypting: trust.notDecrypting,
   };
@@ -923,7 +1059,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platfor
     route: {
       title: `Send ${host}'s traffic to Trawler`,
       why: `the Simulator follows ${host}'s system proxy`,
-      guide: osRoute(os === "other" ? "terminal" : hostTarget(os), proxyAddr),
+      guide: localRoute(os, proxyAddr),
     },
     try: tryTask("ios-sim", os),
     confirmOn: confirmOn("ios-sim", os),

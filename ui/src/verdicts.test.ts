@@ -208,12 +208,9 @@ test.each([
 });
 
 // R14: the reversal names only what is installed.
-test("the reversal's line names the certificate only where it reads trusted", () => {
-  expect(stopRoutingNote(true)).toBe(
-    "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.",
-  );
-  expect(stopRoutingNote(false)).toBe("this turns the proxy off and nothing else.");
-  expect(stopRoutingNote(false)).not.toMatch(/certificate/);
+test("the reversal's line names the certificate only where it reads trusted, and only that it stays (W12's E3)", () => {
+  expect(stopRoutingNote(true)).toBe("the certificate stays trusted");
+  expect(stopRoutingNote(false)).toBeUndefined();
 });
 
 // Task 3 is the traffic layer, judged against a clock. The complaint that

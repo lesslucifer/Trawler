@@ -15,8 +15,8 @@ const MEMO_MAX = 4096;
  * TimestampText — point-in-time text; local wall-clock, absolute HH:MM:SS by default.
  * @tier T1 — time parsing/formatting only (moment), no business logic
  * @props timestamp: string | number | Date | null — anything moment parses, passed raw; format?: moment format string or "relative"
- * @anatomy muted mono clock text; default 24 h HH:MM:SS with cross-day prefix "DD/MM · " when date ≠ today (year appended when ≠ current); tabular-nums, fixed-width
- * @modes default (same-day/cross-day logic) · format="<moment tokens>" (custom — ms, 12 h, any layout) · format="relative" (fromNow, 10 s tick, opt-in only)
+ * @anatomy muted mono clock text; default 24 h HH:MM:SS with cross-day prefix "DD/MM · " when date ≠ today (year appended when ≠ current); tabular-nums, fixed-width · relative takes the sentence's own font and ink: it reads as words, not as a clock
+ * @modes default (same-day/cross-day logic) · format="<moment tokens>" (custom — ms, 12 h, any layout) · format="relative" (fromNow, 10 s tick, opt-in only, set inside a sentence)
  * @use list rows (time column) · flow detail overview; anywhere a point-in-time label reads against logs
  * @avoid relative as a list-column default (log correlation is absolute) · UTC — always local in every mode · caller-side pre-formatting — pass the raw value
  * @states same-day HH:MM:SS (S1) · cross-day "DD/MM · HH:MM:SS" (S2) · ms truncated by default (S3, floor) · absent/unparseable → em-dash (S4) · custom format (S5) · relative (S6)
@@ -38,7 +38,7 @@ export function TimestampText({
     return () => clearInterval(id);
   }, [relative]);
 
-  const className = "whitespace-nowrap font-mono text-body tabular-nums text-ink-mute";
+  const className = relative ? "whitespace-nowrap" : "whitespace-nowrap font-mono text-body tabular-nums text-ink-mute";
 
   return <span className={className}>{text(timestamp, format)}</span>;
 }
