@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBRVP
+wu: E-ONBRVP.W14
+branch: HEAD
+tests:
+  unit: { count: 333, covers: "Another Windows PC walked by hand: the .cer download Windows opens, This PC's import steps with its recording, Settings' proxy page with its recording, each command the other way, the certificate's into the user's store without an administrator; one certificate way back for both Windows guides reaching the user's store and every user's; the proxy's way back by hand first, the command as Or; no WinINET; what outranks a manual proxy and what the registry writes leave open apps behind a ?; a Mac's proxy way back by hand first on This Mac, Another Mac and the Simulator; the setup screen's ways back run the close dialog's commands; Windows' proxy-off lead names PowerShell; the format each platform downloads" }
+  integration: { count: 453, covers: "On the screen: a declined allow reads not allowed alone, the state line said once; that PC's certificate and proxy by hand with each command shut under other ways; the refused confirm through the app; the close dialog green. The onboarding matrix green across every host, platform and reading (31k cases in the full suite)" }
+  e2e: { count: 1, covers: "cargo xtask ui e2e green at the tip (4 specs, 46 tests); the walkthrough films every host x platform green (24 reels, 166 chapters), that PC's download help and open proxy guide among them, the reel the owner judges emphasis by. The by-hand steps run on a second PC, which is not hermetic" }
