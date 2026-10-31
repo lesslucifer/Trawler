@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBRVP
+wu: E-ONBRVP.W13
+branch: HEAD
+tests:
+  unit: { count: 171, covers: "Help shuts by default and keeps its text off the page, opens and shuts on a click, is a real button, closes on Esc with focus back on the ? and lets Esc pass while shut; Button's expanded and controls; IconButton's help glyph forwarding them; TaskStep's why behind a ? on its title and waitsOn on a dimmed task. Another Mac walked by hand: the login keychain, Always Trust with its recording, the System keychain command as the other way in Terminal's words, one CA name, both keychains on the way back, System Settings with its recording, the Ethernet hint behind a ? on the route and its undo, no why lines; every download step's what-to-check per host; every try task a request from the device; the address step without an or" }
+  integration: { count: 359, covers: "On the screen: task 4's address at body weight with no or, no why on that Mac's tasks, its certificate by hand with the command shut under other ways, every caption, note, warning and Already did? advice read only after its ? opens, the host named as the host does, buttons lowercase. Across every reading in the matrix: no caption on screen with every ? shut, then every truth, time and place rule reads with every ? open; every platform's controls lowercase; a Mac or PC host never this machine" }
+  e2e: { count: 1, covers: "cargo xtask ui e2e green at the tip (4 specs, 46 tests); the walkthrough films every host x platform green (24 reels, 160 chapters), Another Mac's download help and open proxy guide among them, the reel the owner judges emphasis by. The by-hand steps run on a second Mac, which is not hermetic" }
