@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W14
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "the scope row that handed Windows' wording to W14 reads settled"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: Another Windows PC walked by hand from the .cer, every desktop's way back by hand first"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: Another Windows PC walked by hand with This PC's recordings, the no-administrator command, one Windows certificate way back reaching both stores, every desktop's proxy way back by hand first while the quit dialog keeps the command, the declined allow alone"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 22 of the design run: Another Windows PC walked by hand, the ways back by hand first, closed on the owner's word"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status line names W14"
+  - path: "docs/work/2026-10-31-onboard-revamp-w14-another-windows-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W14's plan: findings, rulings, the handed-in rows and X1"
+  - path: "docs/work/2026-10-31-onboard-revamp-w14-another-windows-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W14's result: what shipped against the plan's rows, the deviations, the evidence"
