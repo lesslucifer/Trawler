@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W15
+base: c970c4ab96efb25dc31ea51aa7f1a2a606db139e
+design_sha256: 473ea8f5ee2b71e498e50f8befa3e3ed4166cfc836fe5ead0e66256f2196ca77
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html]
+date: 2026-11-01
