@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae5cd349f34851f0dfade35" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W12 result: This machine's wording and display</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W12 — result: This machine's wording and display</h1>
+      <p>This machine leads with the one thing to do next, on macOS, Windows and Linux. Each by-hand step opens its own screen where one can be opened, shows the control no route reaches in a recording, and keeps its command as another way.</p>
+      <div class="meta">v1 · 2026-10-31 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W12</span> · branch <code>wu/onboard-revamp/this-machine-wording</code> · <a href="2026-10-31-onboard-revamp-w12-this-machine-wording-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run, round 20</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>this Mac, nothing done → <em>set up this Mac</em> first, above the tasks</td><td>the one act leads the tasks it does, captioned <em>it does steps 1 and 2</em>, and is the one framed control (E1)</td><td>delivered</td></tr>
+      <tr><td>both tasks done → task 3's request framed, the only framed control</td><td>as expected; curl and the browser sit under <em>other ways</em>, and task 2 shows one reversal (E2, E3)</td><td>delivered</td></tr>
+      <tr><td>task 3 capturing → its request folded under <em>make another request</em></td><td>as expected (E3)</td><td>delivered</td></tr>
+      <tr><td>an undone task's by-hand route → only ways to do it</td><td>no <em>to remove it later</em> inside an undone guide (E4)</td><td>delivered</td></tr>
+      <tr><td>Windows: set up, set the proxy, turn it off, cancel → no "password", no prompt named where none opens</td><td><em>one Windows approval</em>; a No reads <em>the approval was cancelled</em>; setting and clearing the proxy read <em>setting the proxy…</em> and <em>turning the proxy off…</em> (W2)</td><td>delivered</td></tr>
+      <tr><td>Linux, the system bundle trusted → <em>done — trusted by the system's tools</em>, Firefox's and Chrome's steps still there</td><td>as expected: the done task keeps the save, Firefox and Chrome steps beside its way back (W6)</td><td>delivered</td></tr>
+      <tr><td>the by-hand proxy route → that host's proxy screen, server and port to copy</td><td>macOS: System Settings › Network · Windows: Settings › Proxy · Linux: GNOME's Network panel, asked over D-Bus (I1–I3)</td><td>delivered</td></tr>
+      <tr><td>each step no route finishes → its recording, alt text naming the path and OS version</td><td>six recordings (mp4 and webm): macOS 26 Always Trust and Proxies · Windows 11 certificate import and manual proxy · Ubuntu 26.04 GNOME proxy and Firefox 154 import (M1)</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>GNOME: <code>gnome-control-center network</code></td><td>Settings' own <code>launch-panel</code> action over D-Bus</td><td>it starts Settings outside the shell's process and returns at once; the binary runs until its window closes</td></tr>
+      <tr><td>Firefox: Privacy &amp; Security → Certificates → View Certificates</td><td>Privacy and security → Connection and software security → Advanced settings → Manage certificates</td><td>Firefox 154, Ubuntu's current snap, moved its certificates there</td></tr>
+      <tr><td>each route runs its opener and reads its output</td><td>on Linux the shell waits on the opener's exit alone, its output discarded</td><td>found in the VM: a browser <code>xdg-open</code> starts holds every pipe it inherits until the user quits it</td></tr>
+      <tr><td>Windows: the certificate's by-hand route an elevated command</td><td>Windows' own certificate dialog, importing into the user's Trusted Root store; the command is another way</td><td>Q5's ruling: the import asks no administrator</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>reproduced</td><td>each route opened by hand on its host: the macOS host, a Windows 11 VM (build 26300) and an Ubuntu 26.04 VM (GNOME 50, Firefox 154). Every recording was filmed with a throwaway certificate, removed afterwards, and checked frame by frame; the Windows proxy dialog's old address is blurred</td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code> (leads, the CA's one name, each host's routes, media, values and commands, the steps a probe leaves open) · <code>ui/src/verdicts.test.ts</code> (the trusted reading in the caller's words) · <code>ui/src/Onboarding.test.tsx</code> (the one act, frames, folds, routes by name, recordings, each host's prompt) · <code>ui/src/onboardingMatrix.test.tsx</code> (every reading at rest against the truth, time and place rules) · <code>MenuPath</code>, <code>StepMedia</code>, <code>TimestampText</code> · <code>ui/src-tauri/src/route.rs</code> (each route per host, a bad mark opens nothing, a Linux opener done on its own exit)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/App.test.tsx</code>: a route reaches the shell by name with the saved certificate or the window's mark; a failed route leaves the steps</td></tr>
+      <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> green at <code>54b93a5</code> (4 specs, 46 tests). The walkthrough films every host × platform green: 24 reels, 154 chapters</td></tr>
+      <tr><td>suites</td><td>at <code>54b93a5</code>: UI 64 files and 32,198 tests green · <code>tsc</code> and <code>eslint</code> green · <code>ui/src-tauri</code> 115 tests · Gate 0 green</td></tr>
+      <tr><td>review</td><td>round 1 at <code>54b93a5</code>: PASS — correctness, efficiency and altitude; three candidates, one important refuted (a failed route's silence is pinned by its test, and the written steps stay), two nits confirmed and waived (one guide field read two ways; a route's payload mirrored across the IPC boundary)</td></tr>
+      <tr><td>design</td><td>round 20 of the design run, closed on your "all looks good"; StepMedia and MenuPath built from their component designs, retired into their TSDoc</td></tr>
+      <tr><td>commits</td><td>plan <code>ed52905</code>, <code>fe592b8</code> · walkthrough <code>72a4e47</code> · design <code>4367f99</code>, closed <code>4a831d7</code> · macOS <code>5605a2b</code>, <code>41643be</code>, <code>2f07fff</code>, <code>d9a990a</code> · your review <code>6ce9ab1</code>, <code>2f06393</code> · Windows <code>c0123bc</code>, <code>4847411</code>, <code>6e5ad91</code> · Linux <code>badacef</code>, <code>888e897</code>, <code>d4b880b</code> · W2, W6 <code>f9c7ddc</code>, <code>54b93a5</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> says the next thing leads, one control is framed, done tasks keep one way back, each host names its own prompt, a by-hand step opens its screen per host with its recording, and Linux's done certificate is the system's tools'. Its index row follows. DEC-13 (removal is a write the shell may make), DEC-33 (the reading re-takes itself) and DEC-62 (no check-again row; the browser's request a second sender of the mark) with their index rows. The component designs retired into <code>MenuPath</code>'s and <code>StepMedia</code>'s TSDoc.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W20: the setup journeys in e2e. The routes open real system screens, so they stay out of e2e and are checked by hand on each host. Firefox ESR still shows the old <em>View Certificates</em> label; the guide names Firefox 154's.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
