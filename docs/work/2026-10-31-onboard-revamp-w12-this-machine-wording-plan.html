@@ -17,9 +17,10 @@
 
     <div class="callout" data-c="status">
       <strong>Every point is ruled</strong> ("1. ok 2. ok 3. ok 4. ok 5. all", 2026-10-31). The findings are taken
-      as proposed; Q1–Q4 are A; Q5 is A, with media recorded on all three hosts, macOS, Windows and Linux. Next: the
-      walkthrough films again (N1), then round 20 of the design run and the media slot's component design, for your
-      review before the build. Found by filming This machine on every host at the epic tip (<code>28995cd</code>)
+      as proposed; Q1–Q4 are A; Q5 is A, with media recorded on all three hosts, macOS, Windows and Linux. The walkthrough
+      films again (N1). Round 20 of the <a href="2026-09-17-onboarding-design-run.html">design run</a> and the component
+      designs <a href="components/step-media.html">StepMedia</a> and <a href="components/menu-path.html">MenuPath</a> wait
+      for your review before the build; the <a href="#shots">shot list</a> waits for your recordings. Found by filming This machine on every host at the epic tip (<code>28995cd</code>)
       with that one walkthrough line reverted in the working tree and then restored.
     </div>
 
@@ -271,6 +272,22 @@
       rulings: placement of the one act, the next action's frame, what folds, the words. A component design for the
       step's media slot, and for the relative time in prose (D1) if it is a new component. You review both before the
       build.</p>
+
+    <h2 id="shots">Shot list (M1)</h2>
+    <p>One recording each, as a 15 s screen recording (<code>.mov</code> or <code>.mp4</code>, the window alone, at least 1280 px
+      wide) or a PNG. I trim, encode mp4 and webm, pull frames with ffmpeg, and check each against its row before it lands in
+      <code>ui/src/assets/setup/</code>. Each video starts with the route's screen already open.</p>
+    <table data-c="shots">
+      <tr><th>File</th><th>Host · OS</th><th>Starts on</th><th>Ends on</th><th>Must show</th></tr>
+      <tr><td><code>macos-always-trust</code></td><td>macOS 26</td><td>Keychain Access, Trawler Proxy CA listed after <em>open in Keychain Access</em></td><td>the password sheet after closing the window</td><td>double-click → Trust expanded → <em>When using this certificate</em> → Always Trust</td></tr>
+      <tr><td><code>macos-proxies</code></td><td>macOS 26</td><td>System Settings › Network after <em>open Proxy settings</em></td><td>the Proxies sheet, OK clicked</td><td>Wi-Fi → Details… → Proxies → Web proxy (HTTP) and Secure web proxy (HTTPS) on, 127.0.0.1 and 7420 typed in each</td></tr>
+      <tr><td><code>windows-install-cert</code></td><td>Windows 11</td><td>the certificate dialog after <em>open the certificate</em></td><td>"The import was successful"</td><td>Install Certificate → Current User → Place all certificates in → Browse → Trusted Root Certification Authorities → Finish → Yes on the warning</td></tr>
+      <tr><td><code>windows-proxy</code></td><td>Windows 11</td><td>Settings › Network &amp; internet › Proxy after <em>open Proxy settings</em></td><td>Save clicked</td><td>Manual proxy setup → Set up → Use a proxy server on → 127.0.0.1, 7420</td></tr>
+      <tr><td><code>linux-proxy</code></td><td>Ubuntu 24.04, GNOME</td><td>Settings › Network after <em>open Proxy settings</em></td><td>the dialog closed</td><td>Network Proxy → Manual → HTTP and HTTPS proxy 127.0.0.1, 7420</td></tr>
+      <tr><td><code>linux-firefox-import</code></td><td>Ubuntu 24.04, Firefox</td><td>Firefox Settings</td><td>Trawler Proxy CA in the Authorities list</td><td>Privacy &amp; Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem → "Trust this CA to identify websites" ticked → OK</td></tr>
+    </table>
+    <p>A recording that does not show its row is sent back with the row it missed. Until a recording passes, its step ships
+      without media: the sentence and the route are whole without it.</p>
 
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
