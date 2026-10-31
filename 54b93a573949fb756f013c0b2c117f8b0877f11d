@@ -1,0 +1,21 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W12
+base: 28995cdccbacfb4a88a8f064578f67cebe365c96
+design_sha256: cdc02efe976f45d297ac968aafa9750bec283c6b16e01b1c03a8f3ae4bc793c2
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html, docs/work/components/menu-path.html, docs/work/components/step-media.html]
+implements:
+  - path: docs/work/components/menu-path.html
+    blob: 957e4e2a78f0ea23b1716d06c56b9ef93313e739
+    built: [ui/src/components/MenuPath.tsx]
+  - path: docs/work/components/step-media.html
+    blob: fb4ff0d9e36ac1243263c2bdb3e226e9417b680b
+    built: [ui/src/components/StepMedia.tsx, ui/src/manualSteps.tsx]
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 8dc1f907b024056c7dba80fb2570f572f1a6d344
+    built: [ui/src/Onboarding.tsx, ui/src/components/TimestampText.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wiring only: the route command by name with the saved certificate or the window's mark, and the reading re-taken on focus and visibility in place of the check-again row; it renders no surface of its own, and the screen it feeds is the design run's"
+date: 2026-10-31
