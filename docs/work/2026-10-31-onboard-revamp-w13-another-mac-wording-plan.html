@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae5d00f9f34851f0dfade3a" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W13 plan: wording and display, Another Mac</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W13 — wording and display: Another Mac</h1>
+      <p>W12's pattern on Another Mac: each task leads with the one thing to do on that Mac, says each thing once in one name, and gives each by-hand step the route a person can follow without a terminal, with W12's macOS recordings beside it.</p>
+      <div class="meta">v2 · 2026-10-31 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W13</span> · branch <code>wu/onboard-revamp/another-mac-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W4</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("all go with your pick except Q4", 2026-10-31). The findings, N1, N2 and X1
+      are taken; Q1–Q3 are A. Q4 is neither: no note on screen, and help text sits behind a help control, shown on request
+      (H1). That is now a rule for every screen (<a href="#help-rule">R1</a>): this epic applies it to the setup screen, and
+      a new epic takes the other screens (R2, "setup now, rest new epic"). Found by reading the Another Mac reels at the
+      epic tip (<code>9160b1d8</code>: <code>macos-mac</code>, <code>windows-mac</code>, <code>linux-mac</code>, filmed
+      2026-10-31 after the last UI change) and its guide's source. Round 21 of the <a href="2026-09-17-onboarding-design-run.html">design
+      run</a> closed on your "LGTM, let's proceed it", and the Help component design retired into its TSDoc
+      (archived). Every finding is built.
+    </div>
+
+    <h2 id="help-rule">Your rule: help on request</h2>
+    <table data-c="help-rule">
+      <tr><th>#</th><th>What</th><th>Built as</th></tr>
+      <tr><td>R1</td>
+        <td><strong>A screen shows only what the user acts on.</strong> Always on screen: the title, the state, the next
+        action, the values and commands it needs, and an action's own outcome. Everything else that explains (why lines,
+        notes, captions, risk warnings, what to check when something fails to load) sits behind a help control and shows
+        only when the user asks. You confirmed both on 2026-10-31: the control reveals that text, and a risk warning is no
+        exception.</td>
+        <td>Predicate: on the mockup, every muted prose element that is none of those sits inside a <code>data-help</code>
+        host. On the setup screen the matrix test checks the same in built markup</td></tr>
+      <tr><td>R2</td>
+        <td><strong>Where it applies, when.</strong> This epic: the setup screen. W13 applies it to Another Mac, the code it
+        shares with the other platforms, and This machine (same screen, same control, the pattern W14–W19 copy). W14–W19
+        apply it to their own words. Every other screen (flow list, detail, composer, the close dialog): a new epic.</td>
+        <td>A roadmap row for that epic. The rule enters the design rulebook when that epic lands, since the rulebook records
+        no rule a screen still breaks</td></tr>
+      <tr><td>H1</td>
+        <td><strong>The help control.</strong> A bare <em>?</em> beside the thing it explains. It opens its text in place, under
+        it, and closes again. Closed by default and on every new screen state. Enter / Space toggle it; it carries
+        <code>aria-expanded</code>.</td>
+        <td>A component design (<code>Help</code>), reviewed with round 21, retired into its TSDoc once built (DEC-16)</td></tr>
+    </table>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      On Another Mac, on every host, each state of the setup screen leads with the one thing to do next and shows the
+      optional, the explanatory and the done as secondary. Every word names one thing one way and is true on the host it
+      is shown on. Each by-hand step on that Mac offers a route without a terminal where one exists, with verified media,
+      and keeps its command as another way. Every way back undoes every way in. Across the setup screen, what explains
+      shows only on request (R1). A test holds each rule.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONBRVP · epic W13 block · UC-ONBOARD: Another Mac's guides · the emphasis rule W12 set · W4's N1 and N2, handed
+      here · the epic's Q11 (interactive first, media as the fallback) · the setup screen's design run, re-opened at round
+      21 · shell-side only: the core stays out (the epic's non-goals).
+    </p>
+
+    <h2 id="today">What Another Mac shows today</h2>
+    <div class="diagram" data-c="today-diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph T1["1 · Allow that Mac to connect"]
+    a1["why: Trawler answers on this machine only until you do"] --> a2["not done — Trawler answers on this machine only"]
+    a2 --> a3["[Allow devices on Ethernet to connect]"]
+  end
+  T1 --> T2
+  subgraph T2["2 · On that Mac, install Trawler's certificate"]
+    b1["why: so that Mac's HTTPS can be decrypted"] --> b2["can't check here"]
+    b2 --> b3["1. On that Mac, open …/ca.pem
+2. Run it in a terminal: ▇ sudo security add-trusted-cert … System.keychain ▇"]
+    b3 --> b4["› other ways: double-click the file and set the Trawler CA to Always Trust"]
+  end
+  T2 --> T3
+  subgraph T3["3 · On that Mac, send its traffic to Trawler"]
+    c1["can't check here"] --> c2["SERVER · PORT"] --> c3["› 1 step: Run — this sets the Wi-Fi service; change the name for Ethernet: ▇ networksetup … Wi-Fi ▇"]
+  end
+  T3 --> T4
+  subgraph T4["4 · Open any website on that Mac"]
+    d1["why: the first decrypted request is what proves setup works"] --> d2["not done — waiting for the first request"]
+    d2 --> d3["or open this one on that Mac https://example.com/?trawler-check=… (small, muted)"]
+  end
+      </pre>
+      <div class="caption">macOS host, the address allowed (<code>macos-mac/walk-05-armed</code>). The heaviest element is a
+        sudo command; the one address that settles tasks 2–4 while this Mac routes here is the smallest text on screen.</div>
+    </div>
+
+    <h2 id="checked">What I checked</h2>
+    <table data-c="checked">
+      <tr><th>Tried</th><th>Result</th><th>Used by</th></tr>
+      <tr><td>The Another Mac reels on all three hosts (frames <code>walk-01</code>…<code>walk-05</code>)</td>
+        <td>Same guide on every host: only the host noun differs. No reel films a done state</td><td>every finding</td></tr>
+      <tr><td><code>guideFor</code>, <code>GuideView</code>, <code>TryRequest</code> in <code>ui/src/Onboarding.tsx</code></td>
+        <td>W12's display rules are generic: an undone guide hides its undo (E4), a done one keeps one way back (E3), the
+        summary is the step count with no button (W1). Another Mac already gets them</td><td>scope</td></tr>
+      <tr><td><code>anotherMachineSetup</code>, <code>OS_TRUST.macos</code>, <code>osRoute("macos")</code> in <code>ui/src/setup.ts</code></td>
+        <td>W12 rewrote This Mac's guide as <code>thisMacTrust</code> and <code>thisMacRoute</code>. Another Mac still reads the
+        old <code>OS_TRUST.macos</code> and <code>ROUTE_LEAD.macos</code>, each used by Another Mac alone</td><td>W1 · W2 · I1 · I2</td></tr>
+      <tr><td>Who shares the rest</td>
+        <td>Task 1 (reach) and the marked address: all five off-machine platforms, and the marked address the two
+        simulators too. <code>tryTask</code>: every platform but This machine. The certificate task's why: Mac, Windows, Ubuntu</td><td>Q1</td></tr>
+      <tr><td>W12's recordings <code>macos-always-trust</code> and <code>macos-proxies</code></td>
+        <td>Filmed on macOS 26. Their start frames (Keychain Access listing Trawler Proxy CA; System Settings › Network) are
+        what that Mac shows after opening the downloaded file and System Settings by hand</td><td>I1 · I2 · M1</td></tr>
+      <tr><td>The shell's open command</td>
+        <td>It opens screens on this machine only. Nothing here can open a screen on that Mac, so no route there can be a
+        button</td><td>I1 · I2</td></tr>
+    </table>
+
+    <h2 id="leads">Part 1 — what leads</h2>
+    <table data-c="leads">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>E1</td>
+        <td><strong>Task 4's action is the smallest text on screen.</strong> The marked address is what settles tasks 2–4
+        while this Mac routes here (W4's A1), and tasks 2 and 3 say "the address in step 4 confirms it". It is set muted and
+        small, opening with <em>or</em> after a title that names another route (walk-05).</td>
+        <td>The address is task 4's step, at body weight: <em>On that Mac, open</em> &lt;address&gt;, copyable. The
+        <em>or</em> goes. Once proved it reads <em>to check again, open</em> as today (W9's S3).</td><td>take</td></tr>
+      <tr><td>E2</td>
+        <td><strong>Why lines repeat what is already on screen.</strong> Task 1's why ("Trawler answers on this machine
+        only until you do") is its state line again. Task 2's ("so that Mac's HTTPS can be decrypted") is the lead again.
+        Task 4's is the one W12's Q3 removed from This machine.</td>
+        <td>W12's Q3 rule: all three go. Task 3 has none today, and keeps none.</td><td>take</td></tr>
+      <tr><td>E3</td>
+        <td><strong>The leading route needs Terminal and sudo.</strong> The heaviest element is a sudo command. The way
+        that needs neither, double-clicking the file, is one sentence under <em>other ways</em>.</td>
+        <td>The by-hand route leads (I1), and the command goes under <em>other ways</em>, as on This Mac.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="wording">Part 2 — wording</h2>
+    <table data-c="wording">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>W1</td>
+        <td><strong>Leads that don't parse</strong> (W12's W3, fixed on This machine only). <em>Run it in a terminal:</em>,
+        where "it" is nothing. <em>Run — this sets the Wi-Fi service; change the name for Ethernet:</em>. The undo's bare
+        <em>Run:</em>.</td>
+        <td><em>In Terminal, run:</em> for each. The Ethernet aside becomes the route's note (W5).</td><td>take</td></tr>
+      <tr><td>W2</td>
+        <td><strong>A name the Mac never shows</strong> (W12's W4). <em>set the Trawler CA to Always Trust</em>, where
+        Keychain Access lists <em>Trawler Proxy CA</em>.</td>
+        <td><em>Trawler Proxy CA</em>, from <code>CA_NAME</code>.</td><td>take</td></tr>
+      <tr><td>W3</td>
+        <td><strong>The host named two ways.</strong> Task 1 says <em>Trawler answers on this machine only</em> and
+        <em>not allowed — Trawler still answers on this machine only.</em> on a screen that calls the host <em>this Mac</em>
+        or <em>this PC</em> everywhere else.</td>
+        <td>The host noun: <em>Trawler answers on this Mac only</em>.</td><td>take</td></tr>
+      <tr><td>W4</td>
+        <td><strong>Case breaks the house style</strong> (W12's W5). <em>Allow devices on Ethernet to connect</em> is
+        capitalised. W12's case test reads This machine only.</td>
+        <td><em>allow devices on Ethernet to connect</em>. The case test reads every platform.</td><td>take</td></tr>
+      <tr><td>W5</td>
+        <td><strong>That Mac on Ethernet routes nothing</strong> (W4's N1). The route command and its undo set the Wi-Fi
+        service only, and say so only in the unparsed lead.</td>
+        <td>The by-hand route (I2) picks the service on screen. The command stays on Wi-Fi, and <em>On Ethernet, change
+        Wi-Fi to Ethernet in the command.</em> sits behind help beside it, on both the route and its undo (Q4, H1).</td><td>take</td></tr>
+      <tr><td>W6</td>
+        <td><strong>The way back misses one way in.</strong> The undo deletes Trawler Proxy CA from the System keychain.
+        Double-clicking the file, the other way offered today, puts it in the login keychain, where the undo never looks:
+        a user who followed both stays trusting it.</td>
+        <td>This Mac's undo: delete it in Keychain Access, or the command that removes it from both keychains.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="display">Part 3 — display</h2>
+    <table data-c="display">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>D1</td>
+        <td><strong>A menu path reads as prose</strong> (W12's D2). <em>Or delete the Trawler Proxy CA entry in Keychain
+        Access → System.</em></td>
+        <td>A path part, as W12 built. W6's undo carries it.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="routes">Part 4 — routes and media (the epic's Q11)</h2>
+    <table data-c="routes">
+      <tr><th>#</th><th>The step today</th><th>Proposed route</th><th>Ruling</th></tr>
+      <tr><td>I1</td>
+        <td>The certificate: download, then a sudo command.</td>
+        <td>Per Q3. A: <em>On that Mac, open</em> &lt;url&gt; <em>— it downloads trawler-ca.pem</em> · <em>Open trawler-ca.pem from
+        Downloads, choose</em> login <em>and click</em> Add (opening the file asks which keychain and offers iCloud,
+        which holds no trust: W12's build) · <em>Search Trawler, double-click</em> Trawler Proxy CA <em>and set</em>
+        Trust → When using this certificate → Always Trust, with <code>macos-always-trust</code> · <em>Close the window and
+        enter your password.</em> The sudo command goes under <em>other ways</em>.</td><td>take</td></tr>
+      <tr><td>I2</td>
+        <td>The proxy: one command, Wi-Fi only.</td>
+        <td><em>On that Mac, open System Settings → Network</em> · <em>Click</em> Wi-Fi → Details… → Proxies, with
+        <code>macos-proxies</code> · <em>Turn on</em> Web proxy (HTTP) <em>and</em> Secure web proxy (HTTPS) <em>— each with
+        the server and port above</em> · <em>Click</em> OK. Help beside it says Ethernet is clicked in place of Wi-Fi. The
+        command goes under <em>other ways</em>.</td><td>take</td></tr>
+      <tr><td>M1</td>
+        <td>No recording shows that Mac.</td>
+        <td>None needed: I1 and I2 reuse W12's two macOS 26 recordings, whose screens are the same on any Mac. Each keeps
+        its alt text and <em>macOS 26</em>, so a Mac on an older macOS can tell they may differ. No shot list, nothing for
+        you to record.</td><td>take</td></tr>
+    </table>
+    <p data-c="routes-note">No route on that Mac can be a button. The shell opens screens on this machine only, and a Mac
+      cannot scan a code into Safari the way a phone can.</p>
+
+    <h2 id="handed">Handed in from W4</h2>
+    <table data-c="handed">
+      <tr><th>#</th><th>What</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>N1</td><td>The route command sets Wi-Fi only.</td><td>W5, I2, Q4.</td><td>take</td></tr>
+      <tr><td>N2</td>
+        <td>Nothing tells a user whose Mac never reaches Trawler what to check.</td>
+        <td>Help beside the download step, the first thing on that Mac that needs to reach this one (H1): <em>Doesn't load?
+        That Mac can't reach this one — check both are on the same network, and that this Mac's firewall lets Trawler
+        accept incoming connections.</em> The host noun follows the host.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="noticed">Noticed outside Another Mac's words</h2>
+    <table data-c="noticed">
+      <tr><th>#</th><th>What</th><th>Where it goes</th><th>Ruling</th></tr>
+      <tr><td>X1</td>
+        <td>A download of <code>/ca.pem</code> from the allowed address proves that Mac reaches this one, before any proxy
+        is set. The core records nothing about it, so no task can read it.</td>
+        <td>proposed: a roadmap row beside device attribution. It needs the core, an epic non-goal</td><td>take</td></tr>
+    </table>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Proposed</th><th>Ruling</th></tr>
+      <tr><td>Q1</td>
+        <td><strong>Who gets the fixes made in shared code?</strong> E1, E2's task 1 and task 4, W3, W4 and N2 are in code
+        every off-machine platform reads.<br>
+        <strong>A</strong> fixed once here, for every platform that shares it, as W4's Q3 did. W14–W19 review what stays
+        their own ·
+        <strong>B</strong> Another Mac only, through overrides that W14–W19 then remove</td>
+        <td>A. The words are one in code, so one fix makes each true everywhere. The matrix and the reels show every
+        platform it reaches.</td><td>A</td></tr>
+      <tr><td>Q2</td>
+        <td><strong>What is task 4 called?</strong><br>
+        <strong>A</strong> <em>Make a request from that Mac</em>: This machine's title (W12's Q2), true of the address and of
+        any website ·
+        <strong>B</strong> <em>Open this address on that Mac</em> ·
+        <strong>C</strong> keep <em>Open any website on that Mac</em></td>
+        <td>A. B is false once this Mac stops routing here, when any website settles it. C names the route E1 moves below
+        the address.</td><td>A</td></tr>
+      <tr><td>Q3</td>
+        <td><strong>Which certificate route leads?</strong><br>
+        <strong>A</strong> the login keychain by hand, as This Mac: open the file, Always Trust, password (I1) ·
+        <strong>B</strong> keep the System keychain command leading, the by-hand route under <em>other ways</em> with its media ·
+        <strong>C</strong> the <code>.mobileconfig</code> profile the core already serves for iPhones, installed from System
+        Settings</td>
+        <td>A. It needs no terminal and no administrator, and it is the route This Mac takes, recording included. C is
+        unverified: whether macOS trusts a root certificate installed from a profile with no further switch. I would test it
+        in a VM before proposing it.</td><td>A</td></tr>
+      <tr><td>Q4</td>
+        <td><strong>The route command on Ethernet (N1).</strong><br>
+        <strong>A</strong> keep it on Wi-Fi with W12's note, as This Mac ·
+        <strong>B</strong> a command that finds the service carrying the default route and sets that one</td>
+        <td>A. The command is the other way now, behind a route that picks the service on screen. B is a long pipeline
+        a reader cannot check before running it with their proxy settings.</td><td>neither: the note sits behind help (H1)</td></tr>
+    </table>
+
+    <h2 id="design">Design</h2>
+    <p data-c="design">Round 21 of the setup screen's <a href="2026-09-17-onboarding-design-run.html">design run</a> on
+      your rulings: task 4's address at body weight, the why lines gone, Another Mac's by-hand routes with their media,
+      and every explanation on the setup screen behind help (R1). One new component, <code>Help</code> (H1), with its own
+      component design. W12's StepMedia, MenuPath and path parts carry the rest. You review both before the build.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Try this…</th><th>…and see</th></tr>
+      <tr><td>Another Mac, nothing allowed</td><td>task 1: no why line, <em>not done — Trawler answers on this Mac only</em>,
+        <em>allow devices on Ethernet to connect</em> framed; what other devices can then see behind its <em>?</em></td></tr>
+      <tr><td>allowed</td><td>task 2's guide open: download, open from Downloads, Always Trust with its recording, password;
+        the sudo command under <em>other ways</em>; no why line</td></tr>
+      <tr><td>task 3's steps</td><td>System Settings → Network → Wi-Fi → Details… → Proxies with its recording, the command
+        under <em>other ways</em>; the Ethernet hint only after clicking its <em>?</em></td></tr>
+      <tr><td>task 4</td><td><em>Make a request from that Mac</em>; <em>On that Mac, open</em> the marked address, at body
+        weight, copyable</td></tr>
+      <tr><td>task 2 read done</td><td>its way back removes Trawler Proxy CA from both keychains</td></tr>
+      <tr><td>the certificate URL</td><td>a <em>?</em> beside it; clicked, it says what to check when it does not load</td></tr>
+      <tr><td>This machine, every host and state</td><td>no why line, note or caption on screen; each behind its <em>?</em>.
+        State lines, actions, values and outcomes unchanged</td></tr>
+      <tr><td>iPhone, Android, Windows, Ubuntu, the simulators (Q1 A)</td><td>the same task 1, task 4 and why-line changes,
+        nothing else of theirs</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code></td><td>green; Another Mac gains chapters for task 2 and task 3's
+        open guides</td></tr>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="tests">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>Another Mac's leads parse (W1); the CA's one name
+        (W2); the Ethernet note on route and undo (W5); the undo reaches both keychains (W6); the by-hand routes and their
+        media (I1, I2); the commands under alternatives (E3); the reach note (N2); task 4's title (Q2)</td></tr>
+      <tr><td>unit</td><td><code>ui/src/components/Help.test.tsx</code></td><td>closed by default; Enter, Space and click
+        toggle it; <code>aria-expanded</code> follows; its text is absent from the page until opened (H1)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>task 4's address at body weight, no
+        <em>or</em> (E1); no why line on tasks 1, 2 and 4 (E2); task 1's host noun (W3)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>across every host, off-machine
+        platform and state: every label and note follows the case rule (W4); no task names the host as <em>this machine</em>
+        where the host has a noun (W3); no explanatory text outside a help host (R1)</td></tr>
+      <tr><td>e2e</td><td>—</td><td>waived at the WU: the steps run on a second Mac, which is not hermetic. Emphasis is
+        judged by your reading of the reels (the epic's e2e plan). The journeys stay with W20</td></tr>
+    </table>
+
+    <h2 id="where">Where the changes land</h2>
+    <table data-c="where">
+      <tr><th>Where</th><th>For</th></tr>
+      <tr><td><code>ui/src/setup.ts</code>: Another Mac's guide from This Mac's keychain and proxy steps; why lines; task 4's title</td><td>E2 · E3 · W1 · W2 · W5 · W6 · D1 · I1 · I2 · N2</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code>: task 1's words and case; task 4's address; why lines, notes and captions behind help</td><td>E1 · W3 · W4 · R1</td></tr>
+      <tr><td><code>ui/src/components/Help.tsx</code>, <code>TaskStep</code>, <code>manualSteps.tsx</code></td><td>H1 · R1</td></tr>
+      <tr><td><code>ui/e2e/walkthrough/script.ts</code></td><td>new chapters</td></tr>
+      <tr><td>the design run · the Help component design · UC-ONBOARD's emphasis rule (R1) and Another Mac's guides · the roadmap (X1, R2's epic)</td><td>all</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
+      <tr><td>2</td><td>the plan with your rulings</td></tr>
+      <tr><td>3</td><td>the design run's round 21 and the Help component design, for you to review</td></tr>
+      <tr><td>4</td><td>the Help component (H1)</td></tr>
+      <tr><td>5</td><td>the words (W1–W6, D1, N2)</td></tr>
+      <tr><td>6</td><td>what leads, and the routes with their media (E1–E3, I1, I2)</td></tr>
+      <tr><td>7</td><td>help on request across the setup screen (R1)</td></tr>
+      <tr><td>8</td><td>the walkthrough's new chapters</td></tr>
+      <tr><td>9</td><td>UC-ONBOARD's emphasis rule and Another Mac's guides, the roadmap (X1, R2's epic)</td></tr>
+      <tr><td>10</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -4,13 +4,25 @@ import {
   CommandBlock,
   CopyText,
   Disclosure,
+  Help,
   MenuPath,
   QrCode,
   Select,
   StepList,
   StepMedia,
 } from "./components/index";
-import { isCommand, isMedia, isPath, isRoute, isSave, isScan, type CaFormat, type GuideStep, type RouteName } from "./setup";
+import {
+  isCommand,
+  isHelp,
+  isMedia,
+  isPath,
+  isRoute,
+  isSave,
+  isScan,
+  type CaFormat,
+  type GuideStep,
+  type RouteName,
+} from "./setup";
 import { STEP_MEDIA } from "./stepMedia";
 import type { ActionHandle } from "./useAction";
 
@@ -39,7 +51,8 @@ export interface StepControls {
 }
 
 export function StepParts({ step, save, open, framed = false }: { step: GuideStep } & StepControls) {
-  const said = step.filter((part) => !isCommand(part) && !isMedia(part));
+  const said = step.filter((part) => !isCommand(part) && !isMedia(part) && !isHelp(part));
+  const help = step.find(isHelp);
   const commands = step.filter(isCommand);
   const scans = step.filter(isScan);
   const media = step.filter(isMedia);
@@ -48,7 +61,8 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
   return (
     <>
       {said.length > 0 && (
-        <span className="flex flex-wrap items-center gap-chrome-gap">
+        <Explained help={help}>
+        <span className={`${help ? "inline-flex" : "flex"} flex-wrap items-center gap-chrome-gap`}>
           {said.map((part, i) => {
             if (typeof part === "string") return <span key={i}>{part}</span>;
             if ("copy" in part)
@@ -72,6 +86,7 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
             ) : null;
           })}
         </span>
+        </Explained>
       )}
       {commands.map((part, i) => (
         <CommandBlock key={i} value={part.command} label={part.label} />
@@ -85,6 +100,16 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
         </div>
       ))}
     </>
+  );
+}
+
+// What explains a step waits behind a ? at its end (W13's R1).
+function Explained({ help, children }: { help?: { help: string; topic: string }; children: ReactNode }) {
+  if (help === undefined) return <>{children}</>;
+  return (
+    <Help topic={help.topic} text={help.help}>
+      {children}
+    </Help>
   );
 }
 

@@ -122,7 +122,13 @@ export interface MediaPart {
   alt: string;
   shows: string;
 }
-export type StepPart = string | CopyPart | CommandPart | SavePart | PathPart | RoutePart | MediaPart;
+// What explains a step and is nothing to do in it: behind a ? at the step's
+// end, shown when asked (W13's R1).
+export interface HelpPart {
+  help: string;
+  topic: string;
+}
+export type StepPart = string | CopyPart | CommandPart | SavePart | PathPart | RoutePart | MediaPart | HelpPart;
 export type GuideStep = readonly StepPart[];
 
 export const isCommand = (part: StepPart): part is CommandPart =>
@@ -142,6 +148,9 @@ export const isRoute = (part: StepPart): part is RoutePart =>
 
 export const isMedia = (part: StepPart): part is MediaPart =>
   typeof part === "object" && "media" in part;
+
+export const isHelp = (part: StepPart): part is HelpPart =>
+  typeof part === "object" && "help" in part;
 
 // One platform's instructions for one task. `steps` is the route the reader
 // takes; everything else is what a numbered step must not be. A note is true of
@@ -373,6 +382,8 @@ export function deviceName(id: PlatformId, os: HostOs): string {
   return PLATFORMS[id].device ?? HOST_NOUN[os];
 }
 
+const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 function openWhere(id: PlatformId, os: HostOs): string {
   return PLATFORMS[id].openWhere ?? `on ${HOST_NOUN[os]}`;
 }
@@ -396,7 +407,7 @@ export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
 // Once proved, opening it again is the one re-read a device allows (W9's S3).
 export function checkStep(id: PlatformId, os: HostOs, url: string, again = false): GuideStep {
   return [
-    `${again ? "to check again, open" : "or open"} this one ${openWhere(id, os)}`,
+    again ? `to check again, open it ${openWhere(id, os)}` : `${capitalised(openWhere(id, os))}, open`,
     { copy: url, label: "the address to open", wire: "check url", scan: PLATFORMS[id].scans },
   ];
 }
@@ -537,6 +548,45 @@ interface OsTrust {
   refusedAfterProof?: string;
 }
 
+// A Mac's certificate by hand goes into the login keychain, where trusting it
+// asks for the user's password and no administrator's; opening the file asks
+// which keychain and offers iCloud, which holds no trust (W12's build). The
+// command adds to the System keychain, so the way back reaches both, whichever
+// way ran (W13's W6).
+const MACOS_OS_VERSION = "macOS 26";
+const IN_TERMINAL = "In Terminal, run:";
+const ALWAYS_TRUST = ["Trust", "When using this certificate", "Always Trust"];
+const CA_NAME = "Trawler Proxy CA";
+
+const ALWAYS_TRUST_STEP: GuideStep = [
+  "Search Trawler, double-click",
+  { path: [CA_NAME] },
+  "and set",
+  { path: ALWAYS_TRUST },
+  {
+    media: "macos-always-trust",
+    alt: `Keychain Access: ${CA_NAME} → ${ALWAYS_TRUST.join(" → ")}`,
+    shows: MACOS_OS_VERSION,
+  },
+];
+const CLOSE_AND_PASSWORD: GuideStep = ["Close the window and enter your password."];
+
+const macTrustCommand = (file: string): CommandPart => ({
+  command: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
+  label: "the trust command",
+});
+
+const MAC_KEYCHAIN_UNDO: GuideStep[] = [
+  ["In Keychain Access, search Trawler and delete", { path: [CA_NAME] }],
+  [
+    `Or ${IN_TERMINAL.charAt(0).toLowerCase()}${IN_TERMINAL.slice(1)}`,
+    {
+      command: `security delete-certificate -c "${CA_NAME}" login.keychain; sudo security delete-certificate -c "${CA_NAME}" /Library/Keychains/System.keychain`,
+      label: "the removal command",
+    },
+  ],
+];
+
 // Windows' commands are written for PowerShell, the shell Windows opens from
 // Start, Win+X and Terminal: 5.1 there rejects `&&` (C1).
 const POWERSHELL_ADMIN = "In PowerShell as administrator, run:";
@@ -546,28 +596,13 @@ const POWERSHELL_ADMIN = "In PowerShell as administrator, run:";
 const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   macos: (file) => ({
     install: [
-      [
-        "Run it in a terminal:",
-        {
-          command:
-            `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
-          label: "the trust command",
-        },
-      ],
+      [`Open ${PEM_FILE} from Downloads, choose`, { path: ["login"] }, "and click", { path: ["Add"] }],
+      ALWAYS_TRUST_STEP,
+      CLOSE_AND_PASSWORD,
     ],
-    alternatives: [["Or double-click the file and set the Trawler CA to Always Trust."]],
+    alternatives: [[IN_TERMINAL, macTrustCommand(file)]],
     undoTitle: "to remove it later",
-    undo: [
-      [
-        "Run:",
-        {
-          command:
-            'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
-          label: "the removal command",
-        },
-      ],
-      ["Or delete the Trawler Proxy CA entry in Keychain Access → System."],
-    ],
+    undo: MAC_KEYCHAIN_UNDO,
     notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
   }),
   windows: (file) => ({
@@ -608,88 +643,61 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   }),
 };
 
-// This Mac's own routes (W12): the certificate goes into the login keychain,
-// where trusting it asks for the user's password and no administrator's, and
-// the proxy into its own settings pane. Each command is the other way.
-const MACOS_OS_VERSION = "macOS 26";
-const IN_TERMINAL = "In Terminal, run:";
-const ALWAYS_TRUST = ["Trust", "When using this certificate", "Always Trust"];
-
+// This Mac's own routes (W12): the route opens Keychain Access on the login
+// keychain itself, and the proxy's own settings pane. Each command is the
+// other way.
 function thisMacTrust(file: string): Guide {
   return {
     steps: [
       ["Add it to your login keychain", { open: "keychain", label: "open in Keychain Access" }],
-      [
-        "Search Trawler, double-click",
-        { path: [CA_NAME] },
-        "and set",
-        { path: ALWAYS_TRUST },
-        {
-          media: "macos-always-trust",
-          alt: `Keychain Access: ${CA_NAME} → ${ALWAYS_TRUST.join(" → ")}`,
-          shows: MACOS_OS_VERSION,
-        },
-      ],
-      ["Close the window and enter your password."],
+      ALWAYS_TRUST_STEP,
+      CLOSE_AND_PASSWORD,
     ],
-    alternatives: [
-      saveCaStep("pem"),
-      [
-        IN_TERMINAL,
-        {
-          command: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
-          label: "the trust command",
-        },
-      ],
-    ],
+    alternatives: [saveCaStep("pem"), [IN_TERMINAL, macTrustCommand(file)]],
     undoTitle: "to remove it later",
-    undo: [
-      ["In Keychain Access, search Trawler and delete", { path: [CA_NAME] }],
-      [
-        `Or ${IN_TERMINAL.charAt(0).toLowerCase()}${IN_TERMINAL.slice(1)}`,
-        {
-          command: `security delete-certificate -c "${CA_NAME}" login.keychain; sudo security delete-certificate -c "${CA_NAME}" /Library/Keychains/System.keychain`,
-          label: "the removal command",
-        },
-      ],
-    ],
+    undo: MAC_KEYCHAIN_UNDO,
   };
 }
 
 const PROXIES_PATH = ["Wi-Fi", "Details…", "Proxies"];
+const ON_ETHERNET = "On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command.";
 
-function thisMacRoute(addr: string): Guide {
-  const { host, port } = splitProxyAddr(addr);
+const PROXIES_STEP: GuideStep = [
+  "Click",
+  { path: PROXIES_PATH },
+  {
+    media: "macos-proxies",
+    alt: `System Settings: Network → ${PROXIES_PATH.join(" → ")}, both proxies on`,
+    shows: MACOS_OS_VERSION,
+  },
+];
+const BOTH_PROXIES: StepPart[] = ["Turn on", { path: ["Web proxy (HTTP)"] }, "and", { path: ["Secure web proxy (HTTPS)"] }];
+const CLICK_OK: GuideStep = ["Click", { path: ["OK"] }];
+
+function macRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
   return {
-    steps: [
-      ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }],
-      [
-        "Click",
-        { path: PROXIES_PATH },
-        {
-          media: "macos-proxies",
-          alt: `System Settings: Network → ${PROXIES_PATH.join(" → ")}, both proxies on`,
-          shows: MACOS_OS_VERSION,
-        },
-      ],
-      [
-        "Turn on",
-        { path: ["Web proxy (HTTP)"] },
-        "and",
-        { path: ["Secure web proxy (HTTPS)"] },
-        "— each with server",
-        { copy: host, label: "the proxy server", wire: "proxy host" },
-        "and port",
-        { copy: String(port), label: "the proxy port", wire: "proxy port" },
-      ],
-      ["Click", { path: ["OK"] }],
-    ],
-    notes: ["On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command."],
+    steps: [first, PROXIES_STEP, [...BOTH_PROXIES, ...values], CLICK_OK],
+    notes: [ON_ETHERNET],
     alternatives: [[IN_TERMINAL, { command: routeCommand("macos", addr)!, label: "the proxy command" }]],
     undoTitle: "to turn it off later",
     undo: reversal("macos"),
   };
 }
+
+function thisMacRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return macRoute(addr, ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }], [
+    "— each with server",
+    { copy: host, label: "the proxy server", wire: "proxy host" },
+    "and port",
+    { copy: String(port), label: "the proxy port", wire: "proxy port" },
+  ]);
+}
+
+// That Mac's route is walked by hand: nothing here opens a screen on it, and
+// the server and port are above the task (W13's I2).
+const thatMacRoute = (addr: string): Guide =>
+  macRoute(addr, ["On that Mac, open", { path: ["System Settings", "Network"] }], ["— each with the server and port above"]);
 
 // This PC's own routes (W12's Q5): the certificate opens in Windows' own
 // dialog, whose import into the user's Trusted Root store asks for no
@@ -856,7 +864,7 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
 }
 
 const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
-  macos: "Run — this sets the Wi-Fi service; change the name for Ethernet:",
+  macos: IN_TERMINAL,
   windows: "In PowerShell, run:",
   linux: "GNOME — run:",
   terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
@@ -867,10 +875,10 @@ const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
 // the command step is replaced in place rather than the prose being retyped.
 function reversal(t: OsTarget | "terminal"): GuideStep[] {
   const command = proxyOffSnippet(t);
-  const said = proxyOffSteps(t).map((step) =>
+  const said: StepPart[] = proxyOffSteps(t).map((step) =>
     step === command ? { command: step, label: "the proxy-off command" } : step,
   );
-  return [said];
+  return [t === "macos" ? [...said, { help: ON_ETHERNET, topic: "on Ethernet" }] : said];
 }
 
 function osRoute(t: OsTarget | "terminal", addr: string): Guide {
@@ -889,8 +897,6 @@ const EMULATOR_HOST = "10.0.2.2";
 
 const ANDROID_USER_CA =
   "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
-
-const CA_NAME = "Trawler Proxy CA";
 
 const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not signed by a company.";
 
@@ -943,25 +949,33 @@ export function caFormatFor(id: PlatformId): CaFormat {
   return "pem";
 }
 
+// The download is the first thing the device does that must reach this
+// machine, so what to check when it cannot sits beside it (W4's N2).
+const unreachable = (device: string, os: HostOs): HelpPart => ({
+  help: `Doesn't load? ${capitalised(device)} can't reach this one — check both are on the same network, and that ${HOST_NOUN[os]}'s firewall lets Trawler accept incoming connections.`,
+  topic: "if it doesn't load",
+});
+
 function downloadStep(
-  where: string,
+  id: PlatformId,
+  os: HostOs,
   reach: ReachAddresses,
   format: CaFormat,
   { how = "", scan = false, file = CA_FILES[format] }: { how?: string; scan?: boolean; file?: string } = {},
 ): GuideStep {
+  const device = deviceName(id, os);
   return [
-    `${where}, open`,
+    `On ${device}, open`,
     { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url", scan },
     `${how}— it downloads ${file}.`,
+    unreachable(device, os),
   ];
 }
 
-// Why each task is worth doing, said once: the reason never changes with the
-// platform, only the thing it is said about.
-const PROVES_IT = "the first decrypted request is what proves setup works";
-
+// The title names what every route in the task does — the address it offers
+// and any website alike (W12's Q2, W13's Q2); the lead already says why.
 function tryTask(id: PlatformId, os: HostOs): Task {
-  return { title: `Open any website ${openWhere(id, os)}`, why: PROVES_IT };
+  return { title: `Make a request from ${deviceName(id, os)}` };
 }
 
 // This machine says each thing once: its lead says why the two tasks matter,
@@ -1017,12 +1031,11 @@ function anotherMachineSetup(
   return {
     trust: {
       title: `On ${device}, install Trawler's certificate`,
-      why: `so ${device}'s HTTPS can be decrypted`,
       guide:
         reach === null
           ? undefined
           : {
-              steps: [downloadStep(`On ${device}`, reach, format), ...trust.install],
+              steps: [downloadStep(id, os, reach, format), ...trust.install],
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
               undo: trust.undo,
@@ -1030,7 +1043,7 @@ function anotherMachineSetup(
     },
     route: {
       title: `On ${device}, send its traffic to Trawler`,
-      guide: reach === null ? undefined : osRoute(target, reach.proxy),
+      guide: reach === null ? undefined : target === "macos" ? thatMacRoute(reach.proxy) : osRoute(target, reach.proxy),
     },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
@@ -1052,7 +1065,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              downloadStep(`On ${device}`, reach, format, { how: "in Safari ", scan: PLATFORMS[id].scans }),
+              downloadStep(id, os, reach, format, { how: "in Safari ", scan: PLATFORMS[id].scans }),
               [
                 `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
               ],
@@ -1061,7 +1074,7 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               ],
             ]
           : [
-              downloadStep(`On ${device}`, reach, format, { scan: PLATFORMS[id].scans, file: "Trawler's certificate" }),
+              downloadStep(id, os, reach, format, { scan: PLATFORMS[id].scans, file: "Trawler's certificate" }),
               [ANDROID_INSTALL],
             ],
         notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
@@ -1154,7 +1167,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platform
         { copy: String(port), label: "the proxy port", wire: "proxy port" },
       ],
       [
-        "Or start it with the proxy already set — the emulator reads this address on this machine:",
+        `Or start it with the proxy already set — the emulator reads this address on ${HOST_NOUN[os]}:`,
         {
           command: `emulator -avd <name> -http-proxy http://127.0.0.1:${port}`,
           label: "the emulator command",

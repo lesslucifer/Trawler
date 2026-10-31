@@ -411,7 +411,9 @@ function outline(): Outline {
         actions: [...el.querySelectorAll("button")]
           .map((b) => b.textContent?.trim() ?? "")
           .filter((label) => ACTION_LABEL.test(label)),
-        commands: [...el.querySelectorAll("button[aria-label]")].map(
+        commands: [
+          ...el.querySelectorAll('button[aria-label]:not([aria-label^="help:"])'),
+        ].map(
           (b) => b.getAttribute("aria-label") ?? "",
         ),
         guides: guides.map(summaryOf),
@@ -790,10 +792,15 @@ const RULES: Record<string, Rule> = {
         : `framed [${o.framed}], expected ${expected}`;
     },
 
-  "words: This machine's controls are lowercase (W12's W5)": (o, s) => {
-    if (s.platform !== "this") return null;
+  "words: every platform's controls are lowercase (W12's W5, W13's W4)": (o) => {
     const capital = o.labels.filter((label) => /^[A-Z]/.test(label));
     return capital.length === 0 ? null : `capitalised: ${capital.join(", ")}`;
+  },
+
+  "words: a host with a name of its own is never this machine (W13's W3)": (o, s) => {
+    if (s.os !== "macos" && s.os !== "windows") return null;
+    const said = o.tasks.filter((t) => /this machine/.test(t.text)).map((t) => t.n);
+    return said.length === 0 ? null : `"this machine" in task ${said.join(", ")}`;
   },
 
   "time: a task not done offers no way to undo it (W12's E4)": (o, s) => {
@@ -1048,12 +1055,26 @@ const RULES: Record<string, Rule> = {
   },
 };
 
+// What explains a line is never on screen until asked for (W13's R1): with
+// every ? shut, no caption paragraph stands outside a help panel but the step
+// a dimmed task waits on. Then every ? opens, so each rule reads every word.
+function explainedOnRequest(): string[] {
+  const steps = screen.getByTestId("steps");
+  const loud = [...steps.querySelectorAll("p.text-chrome.text-ink-mute:not(.font-mono):not(.uppercase)")]
+    .filter((p) => p.closest("[data-help], [data-dim]") === null)
+    .map((p) => `R1: on screen without a ? — ${p.textContent}`);
+  for (const help of steps.querySelectorAll('button[aria-label^="help:"][aria-expanded="false"]'))
+    fireEvent.click(help);
+  return loud;
+}
+
 function judge(
   s: State,
   extra: { reversal: boolean },
   also: string[] = [],
   rules: Record<string, Rule> = RULES,
 ) {
+  const loud = explainedOnRequest();
   const o = outline();
   const broken = Object.entries(rules)
     .map(([name, rule]) => {
@@ -1061,7 +1082,7 @@ function judge(
       return why === null ? null : `${name} — ${why}`;
     })
     .filter((line): line is string => line !== null);
-  expect([...broken, ...also]).toEqual([]);
+  expect([...loud, ...broken, ...also]).toEqual([]);
 }
 
 const STATES: State[] = HOSTS.flatMap((os) =>
