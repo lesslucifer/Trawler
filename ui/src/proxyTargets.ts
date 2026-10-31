@@ -23,7 +23,7 @@ export function proxyOffSteps(t: ProxyTarget): string[] {
   const snippet = proxyOffSnippet(t);
   switch (t) {
     case "macos":
-      return ["Turn it off per enabled service (keeps the saved address):", snippet];
+      return ["In Terminal, run:", snippet];
     case "windows":
       return ["Disable the WinINET proxy (keeps the saved address):", snippet];
     case "linux":

@@ -167,6 +167,11 @@
     .a-ph-andr{display:none}
     .andr .a-ph-ios{display:none}
     .andr .a-ph-andr{display:block}
+    /* round 20 — This machine's try task folds its request once it has
+       proved capture. */
+    .a-t3-again{display:none}
+    .proven .a-t3-next,.quiet .a-t3-next{display:none}
+    .proven .a-t3-again,.quiet .a-t3-again{display:block}
   </style>
 </head>
 <body>
@@ -174,8 +179,8 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 by E-ONBRVP.W8 · round 18 on 2026-10-25 by E-ONBRVP.W9 · round 19 on 2026-10-26 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W10</strong> · branch <code>wu/onboard-revamp/android-status</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 by E-ONBRVP.W8 · round 18 on 2026-10-25 by E-ONBRVP.W9 · round 19 on 2026-10-26 by E-ONBRVP.W10 · round 20 on 2026-10-31 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W12</strong> · branch <code>wu/onboard-revamp/this-machine-wording</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
@@ -362,7 +367,7 @@
               data-label-off="▶ the phone is an Android device" data-label-on="◀ the phone is an iPhone">▶ the phone is an Android device</button>
       <script type="text/babel">
         const { React, createRoot, Notice, Section, StatusLine, Button, CommandBlock,
-                StepList, CopyText, Disclosure, Select, Spinner, StatusDot, TaskStep, TimestampText,
+                StepList, CopyText, Disclosure, Select, Spinner, StatusDot, TaskStep,
                 QrCode } = window.Trawler;
 
         const mount = (id, node) => {
@@ -370,7 +375,6 @@
           if (host) createRoot(host).render(node);
         };
         const noop = () => {};
-        const MINUTES_AGO = Date.now() - 2 * 60 * 1000;
 
         /* A value is read inside the sentence that names the field it goes in;
            a command is carried somewhere else, so it leaves the sentence and
@@ -440,8 +444,9 @@
         const Steps = ({ n, open, children }) => (
           <Disclosure summary={`${n} step${n === 1 ? "" : "s"}`} defaultOpen={open}>{children}</Disclosure>
         );
+        /* Round 20 (W1): one name for the by-hand route, wherever it is. */
         const ByHand = ({ children }) => (
-          <Disclosure summary="do it manually">{children}</Disclosure>
+          <Disclosure summary="do it by hand">{children}</Disclosure>
         );
 
         const state = (cls, node) => <div className={cls} key={cls}>{node}</div>;
@@ -461,10 +466,11 @@
 
         /* ---- this machine: the layout is a reading of the two probes ------ */
         /* Round 7. Which controls and which steps a task carries is decided by
-           what its probe reads, never by what the host could do: the one act is
-           offered only while both halves read not done, a half that reads done
-           keeps only its way back, and the reversal sits in the task it
-           reverses. */
+           what its probe reads, never by what the host could do. Round 20
+           (E1–E5): the one act sits above the tasks, since it does two of them;
+           the one thing to do next is the one framed control on the screen; a
+           done task keeps one way back; an undone one offers only ways to do
+           it; a why line stays only where it says what the lead does not. */
         const TRUSTED = { glyph: "✓", tone: "ok", short: "done — installed and trusted" };
         /* Round 12 (D1 · D2): the live certificate, read in three answers. A
            copy nobody marked Always Trust is its own state, apart from one that
@@ -486,86 +492,136 @@
         const WAITING = { glyph: "○", tone: "muted", short: "not done — waiting for the first request" };
         const PROXY_OFF_CMD = "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
 
-        /* Round 16 (C1 · Q2): the command reads the file where the save put it -
-           Downloads, where the save dialog opens, until a save names another
-           path, which the command then prints quoted. */
-        const TRUST_STEP = <>Run it in a terminal:{command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem", "the trust command")}</>;
-        const ROUTE_STEP = <>Run — this sets the Wi-Fi service; change the name for Ethernet:{command(MAC_ROUTE_CMD, "the proxy command")}</>;
+        /* PROPOSED (round 20, D2) — MenuPath, drawn: each control's name is set
+           apart from the sentence that leads to it, the arrows stay. */
+        const MenuPath = ({ path }) => (
+          <span className="inline-flex flex-wrap items-baseline gap-x-chrome-gap">
+            {path.map((name, i) => (
+              <React.Fragment key={name}>
+                {i > 0 && <span className="text-ink-mute">→</span>}
+                <span className="whitespace-nowrap text-ink">{name}</span>
+              </React.Fragment>
+            ))}
+          </span>
+        );
+        /* PROPOSED (round 20, M1) — StepMedia, drawn: the recording a step no
+           route finishes carries under its sentence. The sentence is whole
+           without it; the frame here stands in for the owner's recording. */
+        const StepMedia = ({ kind, alt, shows }) => (
+          <figure className="m-0 flex max-w-pane flex-col gap-chrome-tight">
+            <div role="img" aria-label={alt}
+                 className="flex items-center justify-center rounded-card border border-hairline bg-canvas-soft px-4 py-12 text-center font-ui text-chrome text-ink-mute">
+              {kind === "video" ? `▶ ${alt}` : alt}
+            </div>
+            <figcaption className="font-ui text-chrome text-ink-mute">{shows}</figcaption>
+          </figure>
+        );
+
+        /* Round 16 (C1 · Q2): the command reads the file where the save put it.
+           Round 20 (W3): the sentence names the app it runs in. */
+        const TRUST_CMD = <>In Terminal, run:{command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem", "the trust command")}</>;
+        /* Round 20 (W3 · I2): the Ethernet aside is a note under the command. */
+        const ROUTE_STEP = <>In Terminal, run:{command(MAC_ROUTE_CMD, "the proxy command")}</>;
+        const ROUTE_NOTE = "On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command.";
+        /* Round 20, on the build: the route adds to the login keychain, the
+           command to the System one, so the way back reaches both. */
         const TRUST_UNDO = [
-          <>Run:{command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
-          "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
+          <>In Keychain Access, search Trawler and delete <MenuPath path={["Trawler Proxy CA"]} /></>,
+          <>Or in Terminal, run:{command('security delete-certificate -c "Trawler Proxy CA" login.keychain; sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
         ];
-        const ROUTE_UNDO = [<>Turn it off per enabled service (keeps the saved address):{command(PROXY_OFF_CMD, "the proxy-off command")}</>];
+        const ROUTE_UNDO = [<>In Terminal, run:{command(PROXY_OFF_CMD, "the proxy-off command")}</>];
+
+        /* Round 20 (I3 · M1): the file opens where the trust is set, and the
+           one control no route reaches is shown, not only named. */
+        /* Round 20, on the build: opening the file asks which keychain, and on
+           the owner's Mac offers iCloud, which holds no trust; the route adds it
+           to the login keychain itself, so no save comes first and the save
+           moves to the command it serves. */
+        const openInKeychain = <>Add it to your login keychain <Button frame="bare" tone="mute" onClick={noop}>open in Keychain Access</Button></>;
+        const framedKeychain = <>Add it to your login keychain <Button onClick={noop}>open in Keychain Access</Button></>;
+        const alwaysTrust = <>
+          Search Trawler, double-click <MenuPath path={["Trawler Proxy CA"]} /> and set <MenuPath path={["Trust", "When using this certificate", "Always Trust"]} />
+          <StepMedia kind="video" alt="Keychain Access: Trawler Proxy CA → Trust → When using this certificate → Always Trust" shows="macOS 26" />
+        </>;
+        const closeIt = "Close the window and enter your password.";
+        const TRUST_GUIDE = { steps: [openInKeychain, alwaysTrust, closeIt], alternatives: [saveStep, TRUST_CMD] };
+        /* Round 20 (I2 · M1): the proxy's route is its own settings screen, with
+           the two values to type; the command is the other way. */
+        const openProxySettings = <>Open the proxy settings <Button frame="bare" tone="mute" onClick={noop}>open Proxy settings</Button></>;
+        /* Round 20, on the build: a step per act, the recording on the path. */
+        const proxyPath = <>
+          Click <MenuPath path={["Wi-Fi", "Details…", "Proxies"]} />
+          <StepMedia kind="video" alt="System Settings: Network → Wi-Fi → Details… → Proxies, both proxies on" shows="macOS 26" />
+        </>;
+        const proxyValues = <>Turn on <MenuPath path={["Web proxy (HTTP)"]} /> and <MenuPath path={["Secure web proxy (HTTPS)"]} /> — each with server {copyable("127.0.0.1", "the proxy server", "proxy host")} and port {copyable("7420", "the proxy port", "proxy port")}</>;
+        const clickOk = <>Click <MenuPath path={["OK"]} /></>;
+        const ROUTE_GUIDE = { steps: [openProxySettings, proxyPath, proxyValues, clickOk], notes: [ROUTE_NOTE], alternatives: [ROUTE_STEP] };
 
         /* A task that reads done keeps one thing: the way back, shut. */
         const WayBack = ({ title, steps }) => (
           <Disclosure summary={title}><StepList steps={steps} /></Disclosure>
         );
 
-        /* The reversal names only what is installed. Where the certificate
-           reads trusted it says where that removal lives; anywhere else there
-           is nothing of it to name. */
+        /* Round 20 (E3): the reversal is the done proxy task's one way back. Its
+           by-hand steps sit behind the same name every by-hand route has, and
+           its line says only what it leaves. */
         const Reversal = ({ trusted }) => (
           <>
             <Button frame="bare" tone="mute" onClick={noop}>stop routing through Trawler</Button>
-            <p className="pt-2 font-ui text-chrome text-ink-mute">
-              {trusted
-                ? "this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it."
-                : "this turns the proxy off and nothing else."}
-            </p>
+            {trusted && <p className="pt-2 font-ui text-chrome text-ink-mute">the certificate stays trusted</p>}
+            <div className="pt-3"><ByHand><StepList steps={ROUTE_UNDO} /></ByHand></div>
           </>
         );
 
         const trustTask = (done, children, doneAs = TRUSTED) => (
-          <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted"
-                    status={done ? doneAs : UNTRUSTED}>
+          <TaskStep n={1} title="Trust Trawler's certificate" status={done ? doneAs : UNTRUSTED}>
             {done ? <WayBack title="to remove it later" steps={TRUST_UNDO} /> : children}
           </TaskStep>
         );
+        /* Round 20: with the one act gone and nothing to click, the guide is the
+           route, open, and its first control is the next action — framed. */
         const trustSteps = (
-          <Steps n={2} open>
-            <Guide steps={[saveStep, TRUST_STEP]}
-                   alternatives={["Or double-click the file and set the Trawler CA to Always Trust."]}
-                   undoTitle="to remove it later" undo={TRUST_UNDO} />
+          <Steps n={3} open>
+            <Guide steps={[framedKeychain, alwaysTrust, closeIt]} alternatives={[saveStep, TRUST_CMD]} />
           </Steps>
         );
         const routeTask = (done, trusted, doneAs = ROUTED) => (
           <TaskStep n={2} title="Send this Mac's traffic to Trawler" why="its system proxy points at Trawler while Trawler runs"
                     status={done ? doneAs : UNROUTED}>
-            {done ? (
+            {done ? <Reversal trusted={trusted} /> : (
               <>
-                <Reversal trusted={trusted} />
-                <div className="pt-3"><WayBack title="to turn it off later" steps={ROUTE_UNDO} /></div>
-              </>
-            ) : (
-              <>
-                <Button onClick={noop}>Set the system proxy</Button>
-                <div className="pt-3">
-                  <ByHand>
-                    <Guide steps={[ROUTE_STEP]} undoTitle="to turn it off later" undo={ROUTE_UNDO} />
-                  </ByHand>
-                </div>
+                <Button onClick={noop}>set the system proxy</Button>
+                <div className="pt-3"><ByHand><Guide {...ROUTE_GUIDE} /></ByHand></div>
               </>
             )}
           </TaskStep>
         );
-        /* Round 11 (F24 · DEC-56): the third route. One request on a click, to
-           the host its label names; the line above it stays what Trawler
-           captured. Round 12 (D9): the note says which way it went, as the core
-           saw it within a tunnel's grace — a page that got its answer around
-           Trawler is the one outcome that looked like success and was not. */
-        const tryTask = (lines) => (
-          <TaskStep n={3} title="Open any website on this Mac" why="the first decrypted request is what proves setup works">
-            {lines}
-            <div className="pt-2">
-              <Button frame="bare" tone="mute" onClick={noop}>make a request to example.com</Button>
-              <div className="a-rq-ok pt-chrome-y"><Notice tone="ok">example.com answered through Trawler.</Notice></div>
-              <div className="a-rq-undecrypted pt-chrome-y"><Notice tone="warn">the request reached Trawler and didn't decrypt.</Notice></div>
-              <div className="a-rq-around pt-chrome-y"><Notice tone="warn">example.com answered, but not through Trawler.</Notice></div>
-              <div className="a-rq-fail pt-chrome-y"><Notice tone="warn">the request to example.com didn't complete.</Notice></div>
+        /* Round 11 (F24 · DEC-56): the third route. Round 20 (E2 · Q2 · I1): the
+           title names what its request does; the request is framed when it is
+           the next thing to do, the browser and the terminal are other ways,
+           and once it has proved capture they fold under make another request. */
+        const request = (next) => (
+          <>
+            <Button {...(next ? {} : { frame: "bare", tone: "mute" })} onClick={noop}>make a request to example.com</Button>
+            <div className="a-rq-ok pt-chrome-y"><Notice tone="ok">example.com answered through Trawler.</Notice></div>
+            <div className="a-rq-undecrypted pt-chrome-y"><Notice tone="warn">the request reached Trawler and didn't decrypt.</Notice></div>
+            <div className="a-rq-around pt-chrome-y"><Notice tone="warn">example.com answered, but not through Trawler.</Notice></div>
+            <div className="a-rq-fail pt-chrome-y"><Notice tone="warn">the request to example.com didn't complete.</Notice></div>
+            <div className="pt-3">
+              <Disclosure summary="other ways">
+                <StepList steps={[
+                  <>Open it in your browser <Button frame="bare" tone="mute" onClick={noop}>open example.com in your browser</Button></>,
+                  <>In Terminal, run:{command("curl -x http://127.0.0.1:7420 https://example.com", "the try-it command")}</>,
+                ]} />
+              </Disclosure>
             </div>
-            <p className="pt-2 font-ui text-chrome text-ink-mute">or run this in a terminal</p>
-            <div className="pt-2">{command("curl -x http://127.0.0.1:7420 https://example.com", "the try-it command")}</div>
+          </>
+        );
+        const tryTask = (lines, next = false) => (
+          <TaskStep n={3} title="Make a request from this Mac">
+            {lines}
+            <div className="a-t3-next pt-2">{request(next)}</div>
+            <div className="a-t3-again pt-2"><Disclosure summary="make another request">{request(false)}</Disclosure></div>
           </TaskStep>
         );
         const column = (children) => (
@@ -574,9 +630,6 @@
           </Section>
         );
 
-        /* Neither half done: the one act leads task 1, and each task keeps its
-           own steps. While the act is offered every guide is shut — the button
-           is the route — until the act fails. */
         const MAC_TRUST = [
           state("a-st-rest", <>
             <div className="a-ct-probed">
@@ -599,48 +652,41 @@
           line("a-st-installing", { glyph: "⟳", tone: "muted", short: "setting up" }),
         ];
         const trustByHand = (open) => (
-          <Disclosure summary="do it manually" defaultOpen={open}>
-            <Guide steps={[saveStep, TRUST_STEP]}
-                   alternatives={["Or double-click the file and set the Trawler CA to Always Trust."]}
-                   undoTitle="to remove it later" undo={TRUST_UNDO} />
-          </Disclosure>
+          <Disclosure summary="do it by hand" defaultOpen={open}><Guide {...TRUST_GUIDE} /></Disclosure>
         );
 
+        /* Neither half done: the one act leads the column, above both tasks it
+           does. While it is offered every guide is shut — the button is the
+           route — until it fails, and then the certificate's opens. */
         mount("m-steps-machine-none", column(<>
-          <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted">
-            {MAC_TRUST}
-            <div className="pt-2">
-              <div className="a-st-rest"><Button onClick={noop}>Set up this Mac</Button></div>
-              <div className="a-st-checking"><Button onClick={noop} disabled>Set up this Mac</Button></div>
-              <div className="a-st-installing"><Button onClick={noop} disabled>Set up this Mac</Button></div>
-            </div>
-            <p className="a-st-rest pt-2 font-ui text-chrome text-ink-mute">one password prompt — it installs the certificate and sets the proxy</p>
+          <div className="px-4">
+            <div className="a-st-rest"><Button onClick={noop}>set up this Mac</Button></div>
+            <div className="a-st-checking"><Button onClick={noop} disabled>set up this Mac</Button></div>
+            <div className="a-st-installing"><Button onClick={noop} disabled>set up this Mac</Button></div>
+            <p className="a-st-rest pt-2 font-ui text-chrome text-ink-mute">one password prompt — it does steps 1 and 2</p>
             {/* Round 11 (F19): the two state lines say "setting up"; the one
                 thing left to the user is said here, once. */}
             <div className="a-st-installing pt-2">
               <Notice tone="pending">approve the prompt that just opened</Notice>
             </div>
-            {/* Round 11 (-60007): the password prompt was answered, and the
-                approval the trust write asked for never reached the user — so
-                it is not their cancel, and it is not worded as one. */}
+            {/* Round 11 (-60007): never worded as the user's cancel. */}
             <div className="a-st-failed pt-2">
-              <Notice tone="mute">macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.</Notice>
+              <Notice tone="mute">macOS couldn't show the prompt to approve this, so it isn't done — do it by hand below.</Notice>
               <div className="pt-2">
                 <Disclosure summary="details">
                   <p className="font-mono text-chrome text-ink-mute">0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (-60007)</p>
                 </Disclosure>
               </div>
             </div>
+          </div>
+          <TaskStep n={1} title="Trust Trawler's certificate">
+            {MAC_TRUST}
             <div className="a-st-unfailed pt-3">{trustByHand(false)}</div>
             <div className="a-st-failed pt-3">{trustByHand(true)}</div>
           </TaskStep>
           <TaskStep n={2} title="Send this Mac's traffic to Trawler" why="its system proxy points at Trawler while Trawler runs">
             {MAC_ROUTE}
-            <div className="pt-3">
-              <ByHand>
-                <Guide steps={[ROUTE_STEP]} undoTitle="to turn it off later" undo={ROUTE_UNDO} />
-              </ByHand>
-            </div>
+            <div className="pt-3"><ByHand><Guide {...ROUTE_GUIDE} /></ByHand></div>
           </TaskStep>
           {tryTask(line("a-st-wait", WAITING))}
         </>));
@@ -657,9 +703,9 @@
           {tryTask(line("a-st-wait", WAITING))}
         </>));
 
-        /* Both done: nothing left to install, and a request is what ends it.
-           The remedy for undecrypted traffic defers to the green probe above
-           it — this Mac trusts the certificate, so the tunnel is someone else's. */
+        /* Both done: nothing left to install, and a request is what ends it, so
+           it is the framed control. The remedy for undecrypted traffic defers
+           to the green probe above it. */
         const bothDone = (trustAs, routeAs) => (
           <div className="flex flex-col gap-4">
             {trustTask(true, undefined, trustAs)}
@@ -673,8 +719,6 @@
             {line("a-st-wait", WAITING)}
             {line("a-st-tunnel", { glyph: "⚠", tone: "warn", short: "not working — arriving but not decrypting" })}
             {line("a-st-proven", { glyph: "✓", tone: "ok", short: "done — capturing traffic" })}
-            {/* Round 12 (U5 · Q3): 30 s quiet after the proof, This machine's
-                try task keeps it, with its time, under two done tasks. */}
             {line("a-tq-kept", { glyph: "✓", tone: "ok", short: "done — decrypted at 14:02, nothing since" })}
             <div className="a-st-tunnel pt-2">
               <Notice tone="mute">
@@ -683,7 +727,7 @@
                 does not trust it yet.
               </Notice>
             </div>
-          </>)}
+          </>, true)}
         </>));
 
         /* ---- a phone: one task that changes this machine, three that do not - */
@@ -1007,18 +1051,14 @@
               {!routed && (
                 <div className="a-rt-off">
                   <StatusLine status={UNROUTED} />
-                  <div className="pt-2"><Button onClick={noop}>Set the system proxy</Button></div>
-                  <div className="pt-3">
-                    <ByHand>
-                      <Guide steps={[ROUTE_STEP]} undoTitle="to turn it off later" undo={ROUTE_UNDO} />
-                    </ByHand>
-                  </div>
+                  <div className="pt-2"><Button onClick={noop}>set the system proxy</Button></div>
+                  {/* Round 20: this Mac's proxy, so This machine's route. */}
+                  <div className="pt-3"><ByHand><Guide {...ROUTE_GUIDE} /></ByHand></div>
                 </div>
               )}
               <div className={routed ? undefined : "a-rt-on"}>
                 <StatusLine status={ROUTED} />
                 <div className="pt-2"><Reversal trusted={false} /></div>
-                <div className="pt-3"><WayBack title="to turn it off later" steps={ROUTE_UNDO} /></div>
               </div>
             </TaskStep>
             <TaskStep n={3} title="Open any website in the Simulator"
@@ -1247,10 +1287,10 @@
         mount("m-steps-ubuntu-tunnel", ubuntuTasks("tunnel"));
         mount("m-steps-ubuntu-late", ubuntuTasks("late"));
 
+        /* Round 20 (D1): PROPOSED — TimestampText's relative mode takes the
+           sentence's font; it reads as words, not as a clock. Drawn until built. */
         mount("m-probe-rest",
-          <span className="font-ui text-control text-ink-mute">
-            checked <TimestampText timestamp={MINUTES_AGO} format="relative" />
-          </span>);
+          <span className="font-ui text-control text-ink-mute">checked 2 minutes ago</span>);
         mount("m-probe-checking",
           <span className="flex items-center gap-chrome-gap font-ui text-control text-ink-mute">
             <Spinner /> checking this machine…
@@ -1261,7 +1301,7 @@
         /* The end names this Mac only where both of its probes read done —
            which is the one reading "capturing" is drawn on for this machine.
            Anywhere else a decrypted request proves capture and names no one. */
-        const LAST = <span>last request <TimestampText timestamp={MINUTES_AGO} format="relative" /></span>;
+        const LAST = <span>last request 2 minutes ago</span>;
         mount("m-done", <>
           <div className="a-pf-machine">
             <Notice tone="ok" detail={LAST}>You're set up — Trawler is capturing traffic from this Mac</Notice>
@@ -1338,8 +1378,15 @@
         <tr><th>Rule</th><th>Why</th></tr>
         <tr><td>A number is a reading order; a state is a reading — a probe or the traffic, never a click</td><td>DEC-33</td></tr>
         <tr><td>Each task holds its own instructions: the certificate's in task 1, the proxy's in task 2</td><td>round 7</td></tr>
-        <tr><td><em>Set up this Mac</em> is offered only while both halves read not done, and leads task 1</td><td>round 7 · R12</td></tr>
-        <tr><td>A task that reads done offers nothing to install — only its way back, shut</td><td>round 7 · R13</td></tr>
+        <tr><td><em>set up this Mac</em> is offered only while both halves read not done, and sits above the tasks it does, saying which</td><td>round 7 · R12 · round 20 · E1 · Q1</td></tr>
+        <tr><td>One framed control on the screen, and it is the next thing to do: the one act; else the proxy's action; else, with nothing to click, the open guide's first control; else, both halves done, task 3's request. Every other control is bare</td><td>round 20 · E1 · E2</td></tr>
+        <tr><td>A task that reads done offers nothing to install — only one way back: the certificate's removal, shut; the proxy's reversal, with its by-hand steps behind <em>do it by hand</em>. Task 3, once it proves capture, folds its request under <em>make another request</em></td><td>round 7 · R13 · round 20 · E3</td></tr>
+        <tr><td>A task not done offers only ways to do it — no way back until there is something to undo</td><td>round 20 · E4</td></tr>
+        <tr><td>A why line stays only where it says what the lead does not: on This machine, the proxy's <em>while Trawler runs</em></td><td>round 20 · E5 · Q3</td></tr>
+        <tr><td>One name per thing: the by-hand route is <em>do it by hand</em> wherever a button leads, a step count where none does, and a note points to it as <em>— do it by hand below</em>. Buttons are lowercase, notes are sentences</td><td>round 20 · W1 · W5</td></tr>
+        <tr><td>A word is true on the host it is shown on: macOS asks for a password, Windows for an approval, and a write that asks for nothing names no prompt</td><td>round 20 · W2</td></tr>
+        <tr><td>A by-hand step offers the easiest route there is: a button that opens the right screen or file first; where the user must still find a control, its recording under the sentence, which is whole without it; a command is an other way</td><td>round 20 · I1–I3 · M1 · Q5</td></tr>
+        <tr><td>A menu path sets each control's name apart from the sentence that leads to it; a relative time reads in its sentence's font</td><td>round 20 · D1 · D2</td></tr>
         <tr><td>The reversal sits in task 2 and names only what is installed</td><td>round 7 · R14 · R15</td></tr>
         <tr><td>One guide open: a failed action's, else the first task not done. Shut while a button can still do the job; none once a request decrypts</td><td>round 5 · round 7 · R16</td></tr>
         <tr><td>No sentence contradicts a reading beside it: the end names this Mac only when both probes read done; the remedy defers to a trusted certificate</td><td>round 7 · R17 · R18</td></tr>
@@ -1388,10 +1435,10 @@
       <h3 id="readings">This machine, per reading</h3>
       <table data-c="reading-table">
         <tr><th>This Mac reads</th><th>Task 1 · certificate</th><th>Task 2 · proxy</th></tr>
-        <tr><td>neither done</td><td><em>Set up this Mac</em> · its line · <em>do it manually</em> (certificate steps)</td><td><em>do it manually</em> (proxy steps)</td></tr>
-        <tr><td>certificate done</td><td>✓ · <em>to remove it later</em></td><td><em>Set the system proxy</em> · <em>do it manually</em></td></tr>
-        <tr><td>proxy done</td><td><em>2 steps</em>, open</td><td>✓ · <em>stop routing through Trawler</em> · <em>to turn it off later</em></td></tr>
-        <tr><td>both done</td><td>✓ · <em>to remove it later</em></td><td>✓ · <em>stop routing through Trawler</em> · <em>to turn it off later</em></td></tr>
+        <tr><td>neither done</td><td><em>set up this Mac</em>, framed, above the tasks · task 1: <em>do it by hand</em></td><td><em>do it by hand</em></td></tr>
+        <tr><td>certificate done</td><td>✓ · <em>to remove it later</em></td><td><em>set the system proxy</em>, framed · <em>do it by hand</em></td></tr>
+        <tr><td>proxy done</td><td><em>3 steps</em>, open, <em>save…</em> framed</td><td>✓ · <em>stop routing through Trawler</em> · <em>do it by hand</em></td></tr>
+        <tr><td>both done</td><td>✓ · <em>to remove it later</em></td><td>✓ · <em>stop routing through Trawler</em> · <em>the certificate stays trusted</em> · <em>do it by hand</em> — and task 3's request framed</td></tr>
       </table>
       <p class="kd">Done = the certificate reads <code>trusted</code>, the proxy reads <code>ours</code> — or, where the probe cannot answer, This machine's own request came through decrypted this session (round 12). Anything else, "can't check" included, is not done. A re-check in flight changes the state line, never the layout; a quiet re-read changes neither until its answer does.</p>
 
@@ -1412,14 +1459,17 @@
         <tr><td>states · this machine</td><td><em>done — installed and trusted</em> · <em>not done — installed, not trusted</em> · <em>not done — not installed</em> · where no probe answers: <em>can't check here — the request in step 3 confirms it</em> · <em>can't check here — the same request confirms it</em>, then <em>done — step 3's request decrypted at 14:02</em> · <em>done — step 3's request came through at 14:02</em> · once quiet after its proof: <em>done — decrypted at 14:02, nothing since</em> · <em>done — this Mac routes through Trawler</em> · <em>not done — the system proxy is off</em> · <em>not done — another proxy is set</em> · <em>not done — waiting for the first request</em> · <em>not done — nothing arriving right now</em> · <em>not done — only plain http so far</em> · <em>checking — a connection just arrived</em> · <em>not working — arriving but not decrypting</em> · <em>done — capturing traffic</em> · <em>checking — the certificate store</em> · <em>checking — the proxy settings</em> · <em>setting up</em></td></tr>
         <tr><td>states · a device</td><td>the proxy task: <em>can't check here — your iPhone's first request confirms it</em>, then <em>done — a request reached Trawler at 14:02</em> · the certificate task: <em>can't check here — your iPhone's first HTTPS request confirms it</em>, then <em>done — a request decrypted at 14:02</em> or <em>not working — nothing decrypted</em> · where this Mac's traffic may be arriving too (round 13): <em>can't check here — the address in step 4 confirms it</em> · <em>can't check here — the same request confirms it</em> · the try task: <em>can't check here — the address below confirms it</em> · its marked request: <em>done — your iPhone's request decrypted at 14:02</em> · <em>done — your iPhone's request came through at 14:02</em> · the try task: <em>done — decrypted at 14:02</em> · quiet after the proof: <em>done — decrypted at 14:02, nothing since</em> · the network task: <em>not done — Trawler answers on this machine only</em>, then <em>done — listening on 192.168.1.24 until Trawler quits</em>, or <em>not working — this Mac no longer holds 192.168.1.24</em></td></tr>
         <tr><td>a device's own request (round 13)</td><td><em>or open this one on your iPhone</em> · <span class="font-mono">https://example.com/?trawler-check=k3m9</span>, copyable, with a code under it on a phone — <em>on that Mac</em>, <em>on that PC</em>, … on a computer, with no code</td></tr>
-        <tr><td>the one act</td><td><em>Set up this Mac</em> · <em>one password prompt — it installs the certificate and sets the proxy</em></td></tr>
-        <tr><td>the proxy's own action</td><td><em>Set the system proxy</em></td></tr>
-        <tr><td>the reversal</td><td><em>stop routing through Trawler</em> · certificate trusted: <em>this turns the proxy off and nothing else — Trawler's certificate stays trusted, and step 1 has the steps to remove it.</em> · otherwise: <em>this turns the proxy off and nothing else.</em></td></tr>
-        <tr><td>guide summaries</td><td><em>N steps</em> (no button) · <em>do it manually</em> (under a button) · <em>other ways</em> · <em>to remove it later</em> · <em>to turn it off later</em></td></tr>
-        <tr><td>in flight</td><td>the one act and the proxy's action: <em>approve the prompt that just opened</em>, the tasks reading <em>setting up</em> · the reversal, whose task reads done while it runs: <em>turning the proxy off — approve the prompt…</em></td></tr>
-        <tr><td>a failed action — opens its steps</td><td><em>setting up failed — the steps below do it by hand.</em> · <em>setting the proxy failed — the steps below do it by hand.</em> · <em>couldn't turn the proxy off — the steps below do it by hand.</em> · the tool's text under <em>details</em></td></tr>
-        <tr><td>a cancelled prompt</td><td><em>The password prompt was cancelled. Try again, or follow the manual steps.</em></td></tr>
-        <tr><td>an approval macOS could not show (-60007) — opens its steps</td><td><em>macOS couldn't show the prompt to approve this, so it isn't done. The steps below do it by hand.</em> · the tool's text under <em>details</em></td></tr>
+        <tr><td>the one act (round 20)</td><td><em>set up this Mac</em> · <em>one password prompt — it does steps 1 and 2</em> · Windows: <em>set up this PC</em> · <em>one Windows approval — it does steps 1 and 2</em></td></tr>
+        <tr><td>the proxy's own action</td><td><em>set the system proxy</em></td></tr>
+        <tr><td>the reversal (round 20)</td><td><em>stop routing through Trawler</em> · certificate trusted: <em>the certificate stays trusted</em> · otherwise nothing under it · its steps under <em>do it by hand</em></td></tr>
+        <tr><td>guide summaries (round 20)</td><td><em>N steps</em> (no button) · <em>do it by hand</em> (under a button) · <em>other ways</em> · <em>to remove it later</em> (a done certificate) · <em>make another request</em> (task 3, proved) — on This machine</td></tr>
+        <tr><td>This machine's by-hand steps (round 20)</td><td>macOS certificate (on the build): <em>Add it to your login keychain</em> <em>open in Keychain Access</em> · <em>Search Trawler, double-click</em> Trawler Proxy CA <em>and set</em> Trust → When using this certificate → Always Trust + video · <em>Close the window and enter your password.</em> · other ways: <em>Save Trawler's certificate as trawler-ca.pem</em> <em>save…</em>, then <em>In Terminal, run:</em> the trust command · macOS proxy: <em>Open the proxy settings</em> <em>open Proxy settings</em> · <em>Click</em> Wi-Fi → Details… → Proxies + video · <em>Turn on</em> Web proxy (HTTP) <em>and</em> Secure web proxy (HTTPS) <em>— each with server</em> 127.0.0.1 <em>and port</em> 7420 · <em>Click</em> OK · note: <em>On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command.</em> · other ways: <em>In Terminal, run:</em> the proxy command · Windows certificate: saved as <span class="font-mono">trawler-ca.cer</span>, <em>open the certificate</em> starts Windows' installer: Install Certificate → Current User → Place all certificates in the following store → Trusted Root Certification Authorities → Finish → Yes + video · other ways: <em>In PowerShell as administrator, run:</em> · Windows proxy: <em>open Proxy settings</em> (Settings → Network &amp; internet → Proxy) → Manual proxy setup → Set up, server and port + video · Linux: <em>open Proxy settings</em> (GNOME's Network) + video, Firefox's path as a menu path + video, Chrome's and the system's commands as now · undo: <em>In Keychain Access, search Trawler and delete</em> Trawler Proxy CA · <em>Or in Terminal, run:</em> the removal from the login and the System keychains</td></tr>
+        <tr><td>task 3 (round 20)</td><td><em>Make a request from this Mac</em> (<em>this PC</em>, <em>this computer</em>) · <em>make a request to example.com</em> · other ways: <em>Open it in your browser</em> <em>open example.com in your browser</em> (the marked address) · <em>In Terminal, run:</em> the curl (<em>In PowerShell, run:</em> on Windows) · proved: <em>make another request</em></td></tr>
+        <tr><td>Linux's certificate, the system's bundle trusted (round 20)</td><td><em>done — trusted by the system's tools</em>, its Firefox and Chrome steps still offered</td></tr>
+        <tr><td>in flight (round 20)</td><td>the one act and the proxy's action on macOS: <em>approve the prompt that just opened</em>, the tasks reading <em>setting up</em> · the one act on Windows: <em>approve the Windows prompt that just opened</em> · Windows' proxy action, which asks for nothing: <em>setting the proxy…</em> · the reversal: macOS <em>turning the proxy off — approve the prompt…</em>, Windows <em>turning the proxy off…</em></td></tr>
+        <tr><td>a failed action — opens its steps (round 20)</td><td><em>setting up failed — do it by hand below.</em> · <em>setting the proxy failed — do it by hand below.</em> · <em>couldn't turn the proxy off — do it by hand below.</em> · the tool's text under <em>details</em></td></tr>
+        <tr><td>a cancelled prompt (round 20)</td><td>macOS <em>the password prompt was cancelled. Try again, or do it by hand below.</em> · Windows <em>the approval was cancelled. Try again, or do it by hand below.</em></td></tr>
+        <tr><td>an approval macOS could not show (-60007) — opens its steps</td><td><em>macOS couldn't show the prompt to approve this, so it isn't done — do it by hand below.</em> · the tool's text under <em>details</em></td></tr>
         <tr><td>the request of its own</td><td><em>make a request to example.com</em> · <em>waiting for example.com…</em> · the way it went (round 12): <em>example.com answered through Trawler.</em> · <em>the request reached Trawler and didn't decrypt.</em> · <em>example.com answered, but not through Trawler.</em> · <em>the request to example.com didn't complete.</em></td></tr>
         <tr><td>the code</td><td>no words of its own; named <em>the certificate URL, as a code to scan</em></td></tr>
         <tr><td>the list's ⋮</td><td><em>set up another device</em></td></tr>
@@ -1478,7 +1528,7 @@
       <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
       <tr><td>pick a device in the picker</td><td>platform</td><td>Tab · Enter/Space/↑/↓ opens · ↑/↓ move · Enter takes · Esc closes (Select's contract)</td></tr>
       <tr><td>click check again</td><td>probe</td><td>Tab · Enter or Space</td></tr>
-      <tr><td>click Set up this Mac, Set the system proxy, stop routing through Trawler, save…</td><td>steps</td><td>Tab · Enter or Space; a disabled action leaves the tab order</td></tr>
+      <tr><td>click set up this Mac, set the system proxy, stop routing through Trawler, save…, the open buttons</td><td>steps</td><td>Tab · Enter or Space; a disabled action leaves the tab order</td></tr>
       <tr><td>open or shut a guide, other ways, the way back, other addresses, details</td><td>steps</td><td>Tab to the summary · Enter or Space; focus stays (Disclosure)</td></tr>
       <tr><td>copy a command, the server, the port, the certificate URL or the address to open</td><td>steps</td><td>Tab · Enter or Space; drag-select + ⌘C is never intercepted</td></tr>
       <tr><td>pick another address</td><td>steps</td><td>Tab into <em>other addresses</em> · Enter or Space takes it</td></tr>
@@ -1502,6 +1552,9 @@
       <tr><td>token</td><td><code>scan-code</code> — 128px, the code's plate</td><td>built</td><td><code>ui/tailwind.config.js</code></td></tr>
       <tr><td>component</td><td><code>ChoiceTiles</code></td><td>withdrawn in round 5 — the picker is a <code>Select</code></td><td>—</td></tr>
       <tr><td>lexicon</td><td><em>arriving</em> · <em>platform</em>, and <em>flow</em> kept off this screen</td><td>proposed</td><td>rulebook lexicon</td></tr>
+      <tr><td>component</td><td><code>StepMedia</code> — the recording a step no route finishes carries under its sentence (round 20, M1). Its design retired into the TSDoc (DEC-16)</td><td>built</td><td><code>ui/src/components/StepMedia.tsx</code></td></tr>
+      <tr><td>component</td><td><code>MenuPath</code> — a path of controls, each name set apart from the sentence, the arrows between (round 20, D2). Its design retired into the TSDoc (DEC-16)</td><td>built</td><td><code>ui/src/components/MenuPath.tsx</code></td></tr>
+      <tr><td>component extension</td><td><code>TimestampText</code> <code>format="relative"</code> takes the sentence's font: its two callers set it inside a sentence, where a mono clock face reads as a value (round 20, D1)</td><td>built</td><td><code>ui/src/components/TimestampText.tsx</code></td></tr>
     </table>
 
     <h2 id="blocked-on">Blocked-on</h2>
@@ -1566,6 +1619,9 @@
         <tr><td>Round 19 — the owner's rulings on E-ONBRVP.W10's plan, 2026-10-26: "Q1: yes, Q2: yes, Q3: yes" — S1–S4 and C1–C3 taken, Q1–Q3 A: only a refusal of the address step 4 offers is the Android device's certificate's, it reopens the task after a proof, and its steps reach the installer by Settings' search and the proxy by the stock path</td><td>mockup — the Android device beside the iPhone, in every state the phone's buttons show: its services refusing, the address refused (clear, mixed, and after a proof), its note after a proof, its steps · rules — the address is the Android device's test; a phone's step names what it shows · model — the Android device's certificate · copy — the Android device's lines and steps · given — <code>device.refusal</code>, for both phones</td><td><code>DEC-63</code> — rule 10, both phones · <code>DEC-62</code> — a tunnel to example.com and no row is a refusal (D9)</td></tr>
         <tr><td>Round 19, close — "LGTM", on the Android device's address as its test: only that address refused is its certificate's, said as its user store lacking it, reopened after a proof, Android's own services' refusals the try task's note, and steps that name no file a browser renames, reach the installer by Settings' search and the proxy by the stock path</td><td>nothing further. <code>verify-doc</code> green, then archived; W10's <code>design/v1</code> note cites the blob this commit leaves</td><td><code>DEC-53</code> · <code>DEC-25</code></td></tr>
         <tr><td>Round 19, after close — <code>cargo xtask ui specimens --check</code> found the mockup failing to render: round 19's per-phone lines had made four shared lines local, which the sections after the phone read</td><td>the four lines are the mockup's again; nothing the design says changes. The run renders, 68 mounts</td><td><code>DEC-53</code></td></tr>
+        <tr><td>Round 20 — the owner's rulings on E-ONBRVP.W12's plan, 2026-10-31: "1. ok 2. ok 3. ok 4. ok 5. all" — E1–E5, W1–W6, D1–D2, I1–I3, M1 and N1 taken, Q1–Q5 A: the one act above the tasks, task 3 <em>Make a request from this Mac</em>, only the route's why line, Linux saying what it read with the browsers' steps still offered, and every route and recording on all three hosts</td><td>mockup — This machine in every reading: <em>set up this Mac</em> above the tasks with <em>it does steps 1 and 2</em>; one framed control, the next action; done tasks with one way back; task 3's request framed when it is next, its browser and terminal under <em>other ways</em>, folded under <em>make another request</em> once proved; the routes <em>open in Keychain Access</em>, <em>open Proxy settings</em>, <em>open example.com in your browser</em>; menu paths and recordings drawn · rules · readings · copy — every host's words · proposals — StepMedia, MenuPath, TimestampText's relative mode</td><td>DEC-53 · DEC-62 · UC-ONBOARD</td></tr>
+        <tr><td>Round 20, close — "all looks good", on This machine leading with the one thing to do next, the one framed control, done tasks with one way back, task 3 as a request from this Mac, the routes, menu paths and recordings, and the StepMedia and MenuPath designs</td><td>nothing further. verify-doc green, then archived; W12's design/v1 note cites the blob this commit leaves</td><td>DEC-53 · DEC-25</td></tr>
+        <tr><td>Round 20, on the build — recording the macOS videos found that opening the certificate asks which keychain and offers iCloud, which holds no trust, and that a certificate the route adds sits in the login keychain, where the removal command did not reach</td><td>mockup — task 1's route adds to the login keychain itself (<em>Add it to your login keychain</em> · <em>open in Keychain Access</em>), so it leads and the save moves under <em>other ways</em> with the command it serves; the way back reaches both keychains; the proxy's path is a step per act, its recording on the path · copy · proposals — StepMedia, MenuPath and TimestampText's relative mode built. W12's design/v1 note cites the blob this amendment leaves</td><td>DEC-53 · DEC-16</td></tr>
       </tbody>
     </table>
 

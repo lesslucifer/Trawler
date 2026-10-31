@@ -68,6 +68,14 @@ describe("TimestampText", () => {
     expect(view.container.textContent).toBe("8 minutes ago");
   });
 
+  it("relative mode reads in its sentence's font, where a clock reads in mono (W12's D1)", () => {
+    const relative = render(<TimestampText timestamp={NOW} format="relative" />).container.firstElementChild!;
+    const clock = render(<TimestampText timestamp={NOW} />).container.firstElementChild!;
+
+    expect(relative.className).not.toMatch(/font-mono|text-ink-mute|text-body/);
+    expect(clock.className).toContain("font-mono");
+  });
+
   it("is always local and never UTC", () => {
     const at = localToday(14, 7, 52);
     expect(shown(at)).toBe(moment(at).format("HH:mm:ss"));

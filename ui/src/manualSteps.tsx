@@ -1,6 +1,17 @@
 import type { ReactNode } from "react";
-import { Button, CommandBlock, CopyText, Disclosure, QrCode, Select, StepList } from "./components/index";
-import { isCommand, isSave, isScan, type CaFormat, type GuideStep } from "./setup";
+import {
+  Button,
+  CommandBlock,
+  CopyText,
+  Disclosure,
+  MenuPath,
+  QrCode,
+  Select,
+  StepList,
+  StepMedia,
+} from "./components/index";
+import { isCommand, isMedia, isPath, isRoute, isSave, isScan, type CaFormat, type GuideStep, type RouteName } from "./setup";
+import { STEP_MEDIA } from "./stepMedia";
 import type { ActionHandle } from "./useAction";
 
 // The two screens that show a platform's instructions — setup and the quit
@@ -18,10 +29,22 @@ function Value({ value, label, wire }: { value: string; label: string; wire: str
   );
 }
 
-export function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle }) {
-  const said = step.filter((part) => !isCommand(part));
+// A route opens a screen for the step it sits in, so it is a control in the
+// sentence, as the save is. The guide's first control is the one framed where
+// it is the next thing to do on the screen (W12's E1).
+export interface StepControls {
+  save?: ActionHandle;
+  open?: (route: RouteName) => void;
+  framed?: boolean;
+}
+
+export function StepParts({ step, save, open, framed = false }: { step: GuideStep } & StepControls) {
+  const said = step.filter((part) => !isCommand(part) && !isMedia(part));
   const commands = step.filter(isCommand);
   const scans = step.filter(isScan);
+  const media = step.filter(isMedia);
+  const frame = (control: boolean) => (framed && control ? {} : ({ frame: "bare", tone: "mute" } as const));
+  const firstControl = said.findIndex((part) => typeof part === "object" && (isRoute(part) || isSave(part)));
   return (
     <>
       {said.length > 0 && (
@@ -30,11 +53,17 @@ export function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle
             if (typeof part === "string") return <span key={i}>{part}</span>;
             if ("copy" in part)
               return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
+            if (isPath(part)) return <MenuPath key={i} path={part.path} />;
+            if (isRoute(part))
+              return open ? (
+                <Button key={i} {...frame(i === firstControl)} onClick={() => open(part.open)}>
+                  {part.label}
+                </Button>
+              ) : null;
             return save?.trigger ? (
               <Button
                 key={i}
-                frame="bare"
-                tone="mute"
+                {...frame(i === firstControl)}
                 onClick={save.trigger}
                 disabled={save.state === "running"}
               >
@@ -46,6 +75,9 @@ export function StepParts({ step, save }: { step: GuideStep; save?: ActionHandle
       )}
       {commands.map((part, i) => (
         <CommandBlock key={i} value={part.command} label={part.label} />
+      ))}
+      {media.map((part) => (
+        <StepMedia key={part.media} media={STEP_MEDIA[part.media]} alt={part.alt} shows={part.shows} />
       ))}
       {scans.map((part, i) => (
         <div key={i} data-testid="scan-code" className="pt-2">
@@ -62,18 +94,19 @@ export function GuideSteps({
   steps,
   save,
   saveNote,
+  open,
+  framed = false,
 }: {
   steps: GuideStep[];
-  save?: ActionHandle;
   saveNote?: (format: CaFormat) => ReactNode;
-}) {
+} & StepControls) {
   return (
     <StepList
       steps={steps.map((step, i) => {
         const saves = step.find(isSave);
         return (
           <div key={i} className="flex min-w-0 flex-col gap-chrome-gap">
-            <StepParts step={step} save={save} />
+            <StepParts step={step} save={save} open={open} framed={framed && i === 0} />
             {saves && saveNote?.(saves.save)}
           </div>
         );

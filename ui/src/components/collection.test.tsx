@@ -25,6 +25,13 @@ const SPECIMENS: Record<string, ReactElement> = {
       don't show this again
     </collection.Checkbox>
   ),
+  StepMedia: (
+    <collection.StepMedia
+      media={{ kind: "image", src: "/specimen.png" }}
+      alt="Keychain Access: Trawler Proxy CA"
+      shows="macOS 26"
+    />
+  ),
   CommandBlock: <collection.CommandBlock value="certutil -addstore -f ROOT trawler-ca.pem" label="the trust command" />,
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
@@ -39,6 +46,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   JsonRenderer: <collection.JsonRenderer text='{"a":1}' />,
   KeyValueRow: <collection.KeyValueRow name="host" value="example.com" />,
   MethodLabel: <collection.MethodLabel method="GET" />,
+  MenuPath: <collection.MenuPath path={["Trust", "When using this certificate", "Always Trust"]} />,
   QrCode: <collection.QrCode value="http://192.168.1.24:7421/ca.cer" label="the certificate URL" />,
   Notice: <collection.Notice>nothing captured yet</collection.Notice>,
   Section: <collection.Section title="request">body</collection.Section>,

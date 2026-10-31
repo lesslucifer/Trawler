@@ -20,7 +20,8 @@ const picker = () => $(`[aria-label="${QUESTION}"][aria-haspopup="listbox"]`);
 const dot = () => $('[data-testid="status-dot"]');
 const successLine = () => $('[data-testid="proven"]');
 const tryTask = () => $('[data-testid="task-3"]');
-const button = (prefix: string) => $(`//button[starts-with(normalize-space(.), "${prefix}")]`);
+const button = (prefix: string) =>
+  $(`//button[starts-with(normalize-space(.), "${prefix}")]`);
 
 // The platform axis is a Select, so an answer is two clicks: open the trigger,
 // then the option. Both are matched by aria-label — the component's own
@@ -29,10 +30,13 @@ const button = (prefix: string) => $(`//button[starts-with(normalize-space(.), "
 async function choosePlatform(label: string) {
   await picker().click();
   await $(`[role="option"][aria-label="${label}"]`).click();
-  await browser.waitUntil(async () => !(await $('[role="listbox"]').isExisting()), {
-    timeout: 5_000,
-    timeoutMsg: `the picker stayed open after choosing ${label}`,
-  });
+  await browser.waitUntil(
+    async () => !(await $('[role="listbox"]').isExisting()),
+    {
+      timeout: 5_000,
+      timeoutMsg: `the picker stayed open after choosing ${label}`,
+    },
+  );
 }
 
 // The window is already bound to this run's core: the launcher handed it the
@@ -104,8 +108,8 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     // Nothing here is waiting on a precondition, so nothing is dimmed.
     await expect($$('[data-dim="true"]')).toBeElementsArrayOfSize(0);
 
-    // The probes answer for this machine, so the row that dates them is here.
-    await expect($('[data-testid="probe"]')).toBeExisting();
+    // The probes re-read themselves, so nothing offers to re-read them.
+    await expect($("button=check again")).not.toBeExisting();
   });
 
   it("there is no wizard: no cursor, no prev/next pair, and no step that hides another", async () => {
@@ -132,12 +136,13 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     // that would fail — and they keep their numbers, because a number is a
     // reading order and not a claim about progress.
     for (const n of [2, 3, 4]) {
-      await expect($(`[data-testid="task-${n}"]`)).toHaveAttribute("data-dim", "true");
+      await expect($(`[data-testid="task-${n}"]`)).toHaveAttribute(
+        "data-dim",
+        "true",
+      );
     }
 
-    // Nothing here could read this phone, so nothing pretends to: no probe row,
-    // and no address to point a device at until reach is armed.
-    await expect($('[data-testid="probe"]')).not.toBeExisting();
+    // No address to point a device at until reach is armed.
     await expect($('[data-testid="device-address"]')).not.toBeExisting();
   });
 
@@ -146,7 +151,6 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
 
     await expect($('[data-dim="true"]')).not.toBeExisting();
     await expect($('[data-testid="task-4"]')).not.toBeExisting();
-    await expect($('[data-testid="probe"]')).toBeExisting();
   });
 
   // Journey 1's payoff. A probe-green task and a bare connection both refuse to
@@ -159,15 +163,21 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     });
 
     await expect($('[data-testid="lead"]')).not.toBeExisting();
-    await expect($('[data-testid="flow-row"]')).toHaveText(expect.stringContaining("localhost"));
+    await expect($('[data-testid="flow-row"]')).toHaveText(
+      expect.stringContaining("localhost"),
+    );
     // The seeded row was in the core all along: setup stood over it.
-    await expect($('[data-testid="flow-row"] [aria-label="sent"]')).toBeExisting();
+    await expect(
+      $('[data-testid="flow-row"] [aria-label="sent"]'),
+    ).toBeExisting();
 
     // The moment setup succeeds is the list's first paint, not the setup
     // screen's last — and it offers the next device rather than only closing.
     const banner = $('[data-testid="set-up-banner"]');
     await expect(banner).toBeExisting();
-    await expect(banner).toHaveText(expect.stringContaining("set up another device"));
+    await expect(banner).toHaveText(
+      expect.stringContaining("set up another device"),
+    );
   });
 
   // A second device is its own setup session: the first device's success is
@@ -185,12 +195,19 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await choosePlatform("Android emulator");
 
     await expect($('[data-testid="task-1"] details[open]')).toBeExisting();
-    await expect(tryTask()).toHaveText(expect.stringContaining("waiting for the first request"));
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("waiting for the first request"),
+    );
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({ timeout: 15_000, timeoutMsg: "no success line after the new request" });
-    await expect(tryTask()).toHaveText(expect.stringContaining("capturing traffic"));
+    await successLine().waitForExist({
+      timeout: 15_000,
+      timeoutMsg: "no success line after the new request",
+    });
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("capturing traffic"),
+    );
   });
 
   // Setup reads its own session unfiltered: a list filtered to nothing is the
@@ -204,13 +221,22 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     });
 
     await dot().click();
-    await expect(picker()).toHaveText(expect.stringContaining("Android emulator"));
-    await expect(tryTask()).toHaveText(expect.stringContaining("waiting for the first request"));
+    await expect(picker()).toHaveText(
+      expect.stringContaining("Android emulator"),
+    );
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("waiting for the first request"),
+    );
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({ timeout: 15_000, timeoutMsg: "the filtered re-entry never read the request" });
-    await expect(tryTask()).toHaveText(expect.stringContaining("capturing traffic"));
+    await successLine().waitForExist({
+      timeout: 15_000,
+      timeoutMsg: "the filtered re-entry never read the request",
+    });
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("capturing traffic"),
+    );
   });
 
   it("back from setup keeps the list's filter, and clearing it brings the rows back", async () => {
@@ -219,7 +245,9 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     expect(await rowCount()).toBe(0);
 
     await $('[aria-label="filter"]').clearValue();
-    await browser.waitUntil(async () => (await rowCount()) >= 1, { timeout: 15_000 });
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+    });
   });
 
   // The quit-time confirm is not driven here: proxy_status reads the real system

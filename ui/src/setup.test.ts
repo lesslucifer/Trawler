@@ -30,6 +30,9 @@ import {
   type HostOs,
   type PlatformId,
   type PlatformSetup,
+  isMedia,
+  isPath,
+  isRoute,
 } from "./setup";
 
 const UA = {
@@ -96,7 +99,7 @@ const setup = (id: PlatformId, over = {}) => setupFor(id, ctx(over));
 // of them is a command whatever part it is written as, which is what lets the
 // two questions below be asked in both directions.
 const LOOKS_LIKE_COMMAND =
-  /^(sudo|certutil|adb|networksetup|reg|gsettings|unset|export|curl|emulator|xcrun|for)\s/;
+  /^(sudo|security|certutil|adb|networksetup|reg|gsettings|unset|export|curl|emulator|xcrun|for)\s/;
 
 test("hostOs maps webview UA samples to the host family", () => {
   expect(hostOs(UA.mac)).toBe("macos");
@@ -278,9 +281,19 @@ describe("a platform that needs reach has no instructions until it exists", () =
 });
 
 describe("every platform's instructions are its own", () => {
-  it.each(PLATFORM_IDS)("%s says where to open a website, and why it settles setup", (id) => {
+  it.each(PLATFORM_IDS.filter((id) => id !== "this"))("%s says where to open a website, and why it settles setup", (id) => {
     expect(setup(id).try.title).toMatch(/^Open any website /);
     expect(setup(id).try.why).toBe("the first decrypted request is what proves setup works");
+  });
+
+  it("this names what its request does, and keeps only the why its lead does not say (W12's Q2, Q3)", () => {
+    for (const os of ["macos", "windows", "linux"] as const) {
+      const s = setup("this", { os });
+      expect(s.try.title).toBe(`Make a request from ${deviceName("this", os)}`);
+      expect(s.try.why).toBeUndefined();
+      expect(s.trust.why).toBeUndefined();
+      expect(s.route.why).toBe("its system proxy points at Trawler while Trawler runs");
+    }
   });
 
   it("only this machine offers a command to run here", () => {
@@ -399,7 +412,10 @@ describe("this machine is instructed for the host it is running on", () => {
       linux: "'/home/me/certs/trawler-ca.pem'",
     };
     for (const os of ["macos", "windows", "linux"] as const) {
-      const trust = (over = {}) => commands(setup("this", { os, ...over }).trust.guide!.steps).join("\n");
+      const trust = (over = {}) => {
+        const guide = setup("this", { os, ...over }).trust.guide!;
+        return commands([...guide.steps, ...(guide.alternatives ?? [])]).join("\n");
+      };
       expect(trust()).toContain(` ${before[os]}`);
       expect(trust()).not.toMatch(/ trawler-ca\.pem( |$)/);
       expect(trust({ saved: { pem: saved[os] } })).toContain(` ${quoted[os]}`);
@@ -536,8 +552,10 @@ describe("a guide's steps are the route, and everything else says what it is", (
   });
 
   it("what is left in the sequence is short enough to read before starting", () => {
-    expect(setup("this").trust.guide?.steps).toHaveLength(2);
-    expect(setup("this").route.guide?.steps).toHaveLength(1);
+    expect(setup("this").trust.guide?.steps).toHaveLength(3);
+    expect(setup("this").route.guide?.steps).toHaveLength(4);
+    expect(setup("this", { os: "windows" }).trust.guide?.steps).toHaveLength(3);
+    expect(setup("this", { os: "windows" }).route.guide?.steps).toHaveLength(4);
     expect(setup("ios").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").route.guide?.steps).toHaveLength(1);
@@ -595,7 +613,7 @@ describe("the words each platform is spoken about in", () => {
   });
 
   it("a website is opened ON a machine and IN a simulator", () => {
-    expect(setup("this").try.title).toBe("Open any website on this Mac");
+    expect(setup("this").try.title).toBe("Make a request from this Mac");
     expect(setup("ios").try.title).toBe("Open any website on your iPhone");
     expect(setup("ios-sim").try.title).toBe("Open any website in the Simulator");
     expect(setup("android-sim").try.title).toBe("Open any website in the emulator");
@@ -844,25 +862,34 @@ describe("Linux's certificate task installs into every store, each a step of its
   ] as const;
   const trustOf = (id: PlatformId, os: HostOs) => setup(id, { os }).trust.guide!;
   const leads = (steps: GuideStep[]) => steps.map((step) => step.find((p) => typeof p === "string"));
+  const paths = (step: GuideStep) => step.flatMap((p) => (typeof p === "object" && "path" in p ? [p.path] : []));
 
   it.each(LINUX)("%s on %s: Firefox, then Chrome, then the system's tools", (id, os) => {
     const [, ...stores] = trustOf(id, os).steps;
 
-    expect(leads(stores)).toEqual([
-      'In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".',
-      "For Chrome, run:",
-      "For curl and the system's tools, run:",
+    expect(leads(stores)).toEqual(["In Firefox's Settings, click", "For Chrome, run:", "For curl and the system's tools, run:"]);
+    expect(paths(stores[0])).toEqual([
+      ["Privacy and security", "Connection and software security", "Advanced settings", "Manage certificates", "Authorities", "Import…"],
+      ["Trust this CA to identify websites"],
     ]);
+    expect(stores[0]).toContain(", choose trawler-ca.pem and tick");
     expect(trustOf(id, os).alternatives).toBeUndefined();
   });
 
   it.each(LINUX)("%s on %s: the way back undoes each store, in the same order", (id, os) => {
     const { undo } = trustOf(id, os);
 
-    expect(leads(undo!)).toEqual([
-      "In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities → Trawler Proxy CA → Delete or Distrust.",
-      "For Chrome, run:",
-      "For curl and the system's tools, run:",
+    expect(leads(undo!)).toEqual(["In Firefox's Settings, click", "For Chrome, run:", "For curl and the system's tools, run:"]);
+    expect(paths(undo![0])).toEqual([
+      [
+        "Privacy and security",
+        "Connection and software security",
+        "Advanced settings",
+        "Manage certificates",
+        "Authorities",
+        "Trawler Proxy CA",
+        "Delete or Distrust…",
+      ],
     ]);
   });
 
@@ -1053,5 +1080,159 @@ describe("each platform's way to stop routing is one source", () => {
     const android = JSON.stringify(routeUndo("android", "macos"));
     expect(android).toContain("Network & internet");
     expect(android).not.toContain("Wi-Fi → your network");
+  });
+});
+
+// W12: each by-hand step on This Mac offers the easiest route there is - a
+// button that opens the screen, a recording where the user must still find the
+// control - and the command is the other way.
+describe("This Mac's by-hand routes", () => {
+  const parts = (steps: GuideStep[]) => steps.flat();
+  const routes = (steps: GuideStep[]) => parts(steps).filter(isRoute).map((p) => p.open);
+  const paths = (steps: GuideStep[]) => parts(steps).filter(isPath).map((p) => p.path.join(" → "));
+  const media = (steps: GuideStep[]) => parts(steps).filter(isMedia);
+
+  it("the certificate opens in Keychain Access, then the one control no route reaches is shown", () => {
+    const trust = setup("this").trust.guide!;
+
+    expect(routes(trust.steps)).toEqual(["keychain"]);
+    expect(paths(trust.steps)).toContain("Trust → When using this certificate → Always Trust");
+    expect(media(trust.steps)).toEqual([
+      expect.objectContaining({ media: "macos-always-trust", shows: "macOS 26" }),
+    ]);
+    expect(media(trust.steps)[0].alt).toContain("Trust → When using this certificate → Always Trust");
+  });
+
+  it("the certificate's command is the other way, after the save it reads", () => {
+    const trust = setup("this").trust.guide!;
+
+    expect(trust.alternatives?.[0].some(isSave)).toBe(true);
+    expect(commands(trust.alternatives!)).toEqual([
+      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem",
+    ]);
+    expect(commands(trust.steps)).toEqual([]);
+  });
+
+  it("removing it reaches the login keychain the route adds to, and the System keychain the command does", () => {
+    const removal = commands(setup("this").trust.guide!.undo!).join("\n");
+
+    expect(removal).toContain('security delete-certificate -c "Trawler Proxy CA" login.keychain');
+    expect(removal).toContain('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain');
+  });
+
+  it("the proxy opens its settings pane, shows the path to the sheet, and gives the two values to type", () => {
+    const route = setup("this").route.guide!;
+
+    expect(routes(route.steps)).toEqual(["proxy-settings"]);
+    expect(paths(route.steps)).toContain("Wi-Fi → Details… → Proxies");
+    expect(media(route.steps).map((m) => m.media)).toEqual(["macos-proxies"]);
+    expect(values(route.steps)).toEqual(["127.0.0.1", "9999"]);
+    expect(commands(route.alternatives!)).toEqual([
+      "networksetup -setwebproxy Wi-Fi 127.0.0.1 9999 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 9999",
+    ]);
+    expect(route.notes).toEqual([
+      "On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command.",
+    ]);
+  });
+
+  it("every sentence that leads a command names where it runs (W12's W3)", () => {
+    const leads = guides(setup("this"))
+      .filter((step) => step.some(isCommand))
+      .map((step) => step.find((p): p is string => typeof p === "string"));
+    expect(leads.every((lead) => lead === "In Terminal, run:" || lead === "Or in Terminal, run:")).toBe(true);
+  });
+
+  it("the request's other ways are the browser, by route, then Terminal", () => {
+    const s = setup("this");
+    expect(s.tryRoutes).toEqual([{ open: "browser", label: "open example.com in your browser" }]);
+    expect(s.tryLead).toBe("In Terminal, run:");
+  });
+
+  it("the Simulator follows this Mac's proxy, so it takes this Mac's route", () => {
+    expect(setup("ios-sim").route.guide).toEqual(setup("this").route.guide);
+  });
+
+  it("an unknown host is offered no route, and only the recording of Linux's Firefox step", () => {
+    const s = setup("this", { os: "other" });
+    expect(routes(guides(s))).toEqual([]);
+    expect(media(guides(s)).map((m) => m.media)).toEqual(["linux-firefox-import"]);
+    expect(s.tryRoutes).toBeUndefined();
+  });
+});
+
+describe("This PC's by-hand routes", () => {
+  const pc = () => setup("this", { os: "windows" });
+  const routes = (steps: GuideStep[]) => steps.flat().filter(isRoute).map((p) => p.open);
+  const media = (steps: GuideStep[]) => steps.flat().filter(isMedia).map((p) => p.media);
+
+  it("the certificate opens in Windows' own dialog, its store page recorded", () => {
+    const trust = pc().trust.guide!;
+    expect(routes(trust.steps)).toEqual(["certificate"]);
+    expect(media(trust.steps)).toEqual(["windows-install-cert"]);
+    expect(commands(trust.alternatives!)).toEqual(["certutil -addstore -f ROOT \"$HOME\\Downloads\\trawler-ca.pem\""]);
+  });
+
+  it("the user's own import comes off without an administrator, set up this PC's with one", () => {
+    expect(commands(pc().trust.guide!.undo!)).toEqual([
+      'certutil -user -delstore ROOT "Trawler Proxy CA"',
+      'certutil -delstore ROOT "Trawler Proxy CA"',
+    ]);
+  });
+
+  it("the proxy opens on its Settings page, the values to type copyable, the command another way", () => {
+    const route = pc().route.guide!;
+    expect(routes(route.steps)).toEqual(["proxy-settings"]);
+    expect(media(route.steps)).toEqual(["windows-proxy"]);
+    expect(values(route.steps)).toEqual(["127.0.0.1", "9999"]);
+    expect(commands(route.alternatives!)).toHaveLength(1);
+  });
+
+  it("the request's other ways are the browser, by route, then PowerShell", () => {
+    expect(pc().tryRoutes).toEqual([{ open: "browser", label: "open example.com in your browser" }]);
+    expect(pc().tryLead).toBe("In PowerShell, run:");
+  });
+});
+
+describe("This Linux machine's by-hand routes", () => {
+  const linux = () => setup("this", { os: "linux" });
+  const routes = (steps: GuideStep[]) => steps.flat().filter(isRoute).map((p) => p.open);
+  const media = (steps: GuideStep[]) => steps.flat().filter(isMedia).map((p) => p.media);
+
+  it("the certificate has no route, Firefox's import recorded", () => {
+    const trust = linux().trust.guide!;
+    expect(routes(trust.steps)).toEqual([]);
+    expect(media(trust.steps)).toEqual(["linux-firefox-import"]);
+  });
+
+  it("the proxy opens on GNOME's Network panel, the values to type copyable, the command another way", () => {
+    const route = linux().route.guide!;
+    expect(routes(route.steps)).toEqual(["proxy-settings"]);
+    expect(media(route.steps)).toEqual(["linux-proxy"]);
+    expect(values(route.steps)).toEqual(["127.0.0.1", "9999"]);
+    expect(route.alternatives![0][0]).toBe("GNOME — run:");
+    expect(commands(route.alternatives!)).toEqual([expect.stringMatching(/^gsettings set org\.gnome\.system\.proxy mode 'manual'/)]);
+    expect(route.notes).toBeUndefined();
+  });
+
+  it("the request's other ways are the browser, by route, then a terminal", () => {
+    expect(linux().tryRoutes).toEqual([{ open: "browser", label: "open example.com in your browser" }]);
+    expect(linux().tryLead).toBe("In a terminal, run:");
+  });
+});
+
+// W12's W6: the probe reads the system's store, so the browsers' steps are
+// what a done certificate task still offers, with the file they import.
+describe("the steps a probe leaves open", () => {
+  it("on this Linux machine, saving the file, then Firefox and Chrome", () => {
+    const { unprobed } = setup("this", { os: "linux" }).trust.guide!;
+    expect(unprobed!.map((step) => step.find((p) => typeof p === "string"))).toEqual([
+      "Save Trawler's certificate as trawler-ca.pem",
+      "In Firefox's Settings, click",
+      "For Chrome, run:",
+    ]);
+  });
+
+  it.each(["macos", "windows"] as const)("on %s, none: its browsers read the store it probes", (os) => {
+    expect(setup("this", { os }).trust.guide!.unprobed).toBeUndefined();
   });
 });
