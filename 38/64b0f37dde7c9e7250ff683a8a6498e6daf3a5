@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU this-machine-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W12
+branch: wu/onboard-revamp/this-machine-wording
+base: 28995cdccbacfb4a88a8f064578f67cebe365c96
+head: 3864b0f37dde7c9e7250ff683a8a6498e6daf3a5
+diff_sha256: 850c0a3ffefa4a7ba1bd12c0d2c810c7077e5113131c0355e1164602fecc5b16
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 169
+    finders: 52
+    verifiers: 26
+    total: 201
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 2 }
+findings: { found: 3, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "Guide.unprobed carries the done-state step swap and Linux's 'trusted by the system's tools' wording, chosen in Onboarding by the field's presence"
+    waived: "one fact read two ways - there are stores no probe reads - and only Linux sets it; setup.test.ts pins which hosts do (the steps a probe leaves open), and the matrix's truth and time rules pin the screen"
+  - finding: "App.tsx openRoute branches on the route name for its payload, mirroring route.rs's enum Route across the IPC boundary with no shared type"
+    waived: "a cross-language boundary the shell's serde guards: a mismatched payload is refused, not misread; App.test.tsx pins each route's call and route.rs's tests pin each variant"
+verdict: PASS
+date: 2026-10-31
