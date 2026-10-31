@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae5ddaf9f34851f0dfade50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Help (component design)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Help</h1>
+      <p>A bare <em>?</em> at the end of a line that opens what explains that line underneath it, and closes it again.</p>
+      <div class="meta">Component design · 2026-10-31 · draft — awaiting confirmation · Trawler · proposed by the <a href="../2026-09-17-onboarding-design-run.html">setup design run</a>, round 21 (E-ONBRVP.W13, H1) · drawn in context there · retires into the TSDoc on build (DEC-16)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this exists</h2>
+    <div class="callout" data-c="claim">
+      <p><strong>A screen shows only what the user acts on; what explains it is one click away.</strong> Today every why
+      line, note, caption and warning is small muted text that is always on screen, so the one thing to do next competes with
+      four lines about it. Deleting them loses help a user sometimes needs. A collapsed <em>details</em> row per note adds a
+      line for each one, which is the clutter this removes.</p>
+    </div>
+    <table data-c="drivers">
+      <tr><th>Driver</th><th>Design consequence</th></tr>
+      <tr><td>The owner's rule, 2026-10-31 (W13's R1)</td><td>Closed by default. Its text is absent from the page until opened</td></tr>
+      <tr><td>The line it explains stays where it is</td><td>It wraps that line and adds one glyph at its end. Opening it pushes what follows down, never overlays it</td></tr>
+      <tr><td><code>keyboard-parity</code></td><td>A real button: Tab reaches it, Enter or Space toggles it, Esc closes it while focus is inside</td></tr>
+      <tr><td>A screen reader must know it toggles</td><td><code>aria-expanded</code> and <code>aria-controls</code> on the trigger, and an accessible name that says what it explains (<em>help: why this step</em>)</td></tr>
+      <tr><td>A new state is a new screen</td><td>The host keys it on its state, so it closes when the state it explained changes</td></tr>
+      <tr><td><code>zero-accent</code> · Button's contract</td><td>No colour or fill of its own. The glyph is ink-mute and lifts to ink on hover and while open</td></tr>
+    </table>
+
+    <h2 id="contract">The contract</h2>
+    <table data-c="contract">
+      <tr><th>Facet</th><th>Decision</th></tr>
+      <tr><td>tier</td><td>T1: one boolean of its own, no business logic. It never reads what it shows.</td></tr>
+      <tr><td>anatomy</td><td>① the line it explains, unchanged, in a baseline row · ② a 24×24 <code>IconButton</code> with the glyph <em>?</em>, <code>gap-chrome-gap</code> after the line · ③ when open, the text under the line at <code>pt-chrome-tight</code>, in <code>text-chrome</code> <code>text-ink-mute</code>, the type every note uses today.</td></tr>
+      <tr><td>behaviour</td><td>Click, Enter or Space toggles it. Esc closes it and returns focus to the <em>?</em>. Focus does not move on opening. Several can be open at once: each line owns its own.</td></tr>
+      <tr><td>text</td><td>A string, or a short node holding parts a step already uses (a value, a path). Never a button: an action is never hidden (R1).</td></tr>
+      <tr><td>accessible name</td><td><code>help: &lt;topic&gt;</code>, where the caller names the topic in a few words (<em>why this step</em>, <em>on Ethernet</em>, <em>if it doesn't load</em>).</td></tr>
+      <tr><td>colour · type · spacing</td><td>Nothing of its own: IconButton's chrome, ink-mute text, chrome type, the named chrome gaps.</td></tr>
+    </table>
+
+    <h2 id="states">States</h2>
+    <table data-c="states">
+      <tr><th>State</th><th>Shows</th></tr>
+      <tr><td>closed</td><td>the line and a muted <em>?</em> after it</td></tr>
+      <tr><td>open</td><td>the <em>?</em> in ink, the text under the line</td></tr>
+      <tr><td>hover · focus</td><td>IconButton's wash and focus ring</td></tr>
+    </table>
+    <p>Not states: <strong>empty</strong> (a line with nothing to explain gets no Help; the caller passes none) and
+      <strong>disabled</strong> (help is never withheld).</p>
+
+    <h2 id="forks">Forks</h2>
+    <div class="cards" data-c="forks">
+      <div class="card"><h3>settled: a button that wraps its line</h3><p>The <em>?</em> sits at the end of the line it explains and the text opens right under it, so the reader sees which line it belongs to.</p></div>
+      <div class="card"><h3>rejected: Disclosure with a <em>?</em> summary</h3><p>A native summary must come before its content and is a whole row. The line would have to become the summary, which makes a title or a step sentence a toggle target, and adds a row where none was.</p></div>
+      <div class="card"><h3>rejected: a tooltip or popover</h3><p>A tooltip hides on hover-out and does not exist on touch. A popover overlays what follows it and needs focus trapping. Neither can hold a value the user copies.</p></div>
+      <div class="card"><h3>rejected: one help panel per screen</h3><p>The text moves away from the line it explains, and the reader has to match them up.</p></div>
+    </div>
+
+    <h2 id="api">API and TSDoc</h2>
+    <table data-c="api">
+      <tr><th>Prop</th><th>Type</th><th>Why</th></tr>
+      <tr><td><code>topic</code></td><td><code>string</code></td><td>the accessible name after <em>help:</em></td></tr>
+      <tr><td><code>text</code></td><td><code>ReactNode</code></td><td>what opens</td></tr>
+      <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>the line it explains</td></tr>
+    </table>
+    <p>Two small additions it needs from the collection, each with its test: <code>Button</code> gains
+      <code>expanded</code> and <code>controls</code> (rendered as <code>aria-expanded</code> and
+      <code>aria-controls</code>), and <code>IconButton</code> gains the glyph <code>help</code> (<em>?</em>) and forwards them.
+      <code>TaskStep</code>'s <code>why</code> becomes <code>help</code>: its title is wrapped in Help, and the purpose line
+      shows only when opened.</p>
+<pre><code>/**
+ * Help — a bare ? at the end of a line that opens what explains that line underneath it.
+ * @tier T1 — one open flag of its own; never reads what it shows
+ * @anatomy the line it wraps, unchanged · IconButton glyph="help", gap-chrome-gap after it · when open, the text under the line, chrome ink-mute, pt-chrome-tight
+ * @use a why line, a note, a caption or a warning that explains something on screen and is not itself something to do
+ * @avoid an action or a value the user needs to act (keep it on screen) · the state of a task (StatusLine) · an outcome the user just caused (Notice) · a whole block of steps (Disclosure)
+ * @states closed · open · hover and focus from IconButton. Esc closes it with focus inside
+ * @madeof IconButton (T1) with glyph="help", expanded and controls
+ */</code></pre>
+
+    <h2 id="fit">Use and avoid</h2>
+    <div class="cards" data-c="fit">
+      <div class="card"><h3>Use</h3><p>Why a task matters · a note true of a platform (<em>On Ethernet, change Wi-Fi to Ethernet in the command</em>) · what to check when something fails to load · what a control also does (<em>other devices on Ethernet will be able to use this proxy…</em>).</p></div>
+      <div class="card"><h3>Avoid</h3><p>The next action, a value or command to copy, a task's state line, an action's own outcome note: those stay on screen. A second route to the same end: that is <em>other ways</em>, a Disclosure.</p></div>
+    </div>
+
+    <h2 id="callers">Callers at build (the setup screen)</h2>
+    <table data-c="callers">
+      <tr><th>Line</th><th>Text behind it</th></tr>
+      <tr><td>a task's title</td><td>its why line, where one stays (This machine's route task)</td></tr>
+      <tr><td>a guide's step</td><td>the guide's notes (the Ethernet note, iPhone's Not Verified, Android's user CAs)</td></tr>
+      <tr><td>Another device's download step</td><td><em>Doesn't load? That Mac can't reach this one…</em> (W4's N2)</td></tr>
+      <tr><td><em>allow devices on Ethernet to connect</em></td><td>who can then use the proxy and see captured traffic</td></tr>
+      <tr><td><em>set up this Mac</em></td><td>what its one prompt does</td></tr>
+      <tr><td>a refusal's remedy</td><td>its <em>Already did?</em> advice; the remedy's first sentence stays</td></tr>
+    </table>
+
+    <div class="callout" data-c="retire">
+      <p><strong>Retirement.</strong> Per DEC-16 this file is removed once the component ships and its contract lives in
+      the TSDoc.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

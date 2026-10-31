@@ -21,8 +21,9 @@
       (H1). That is now a rule for every screen (<a href="#help-rule">R1</a>): this epic applies it to the setup screen, and
       a new epic takes the other screens (R2, "setup now, rest new epic"). Found by reading the Another Mac reels at the
       epic tip (<code>9160b1d8</code>: <code>macos-mac</code>, <code>windows-mac</code>, <code>linux-mac</code>, filmed
-      2026-10-31 after the last UI change) and its guide's source. Next: round 21 of the design run and the help control's
-      component design, for your review before the build.
+      2026-10-31 after the last UI change) and its guide's source. Round 21 of the <a href="2026-09-17-onboarding-design-run.html">design
+      run</a> (▶ platform: Another Mac, ▶ every ? open) and the <a href="components/help.html">Help component design</a>
+      wait for your review before the build.
     </div>
 
     <h2 id="help-rule">Your rule: help on request</h2>
@@ -183,8 +184,9 @@ flowchart TB
       <tr><th>#</th><th>The step today</th><th>Proposed route</th><th>Ruling</th></tr>
       <tr><td>I1</td>
         <td>The certificate: download, then a sudo command.</td>
-        <td>Per Q3. A: <em>On that Mac, open</em> &lt;url&gt; <em>— it downloads trawler-ca.pem</em> · <em>Open it from
-        Downloads</em> (Keychain Access adds it) · <em>Search Trawler, double-click</em> Trawler Proxy CA <em>and set</em>
+        <td>Per Q3. A: <em>On that Mac, open</em> &lt;url&gt; <em>— it downloads trawler-ca.pem</em> · <em>Open trawler-ca.pem from
+        Downloads, choose</em> login <em>and click</em> Add (opening the file asks which keychain and offers iCloud,
+        which holds no trust: W12's build) · <em>Search Trawler, double-click</em> Trawler Proxy CA <em>and set</em>
         Trust → When using this certificate → Always Trust, with <code>macos-always-trust</code> · <em>Close the window and
         enter your password.</em> The sudo command goes under <em>other ways</em>.</td><td>take</td></tr>
       <tr><td>I2</td>
