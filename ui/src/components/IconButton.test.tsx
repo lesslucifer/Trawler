@@ -61,6 +61,15 @@ describe("IconButton", () => {
     expect(button.className).toContain("disabled:opacity-disabled");
   });
 
+  it("help is a ? that forwards whether its region is shown", () => {
+    render(<IconButton glyph="help" label="help: on Ethernet" expanded controls="note" onClick={() => {}} />);
+
+    const button = screen.getByRole("button", { name: "help: on Ethernet" });
+    expect(button).toHaveTextContent("?");
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(button).toHaveAttribute("aria-controls", "note");
+  });
+
   it("its @avoid alternative exists: a word-labelled action is a Button", async () => {
     const { Button } = await import("./Button");
     expect(Button).toBeTypeOf("function");

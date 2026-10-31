@@ -734,11 +734,6 @@ function NetworkTask({
     <TaskStep
       n={n}
       title={title}
-      why={
-        lost === null
-          ? "Trawler answers on this machine only until you do"
-          : undefined
-      }
       status={
         lost === null
           ? verdict("not-done", "Trawler answers on this machine only")
@@ -874,7 +869,8 @@ function GuidedTask({
     <TaskStep
       n={n}
       title={task.title}
-      why={dim ? waitsOn : task.why}
+      help={dim ? undefined : task.why}
+      waitsOn={dim ? waitsOn : undefined}
       status={dim ? undefined : status}
       dim={dim}
     >

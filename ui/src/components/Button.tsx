@@ -17,6 +17,8 @@ export interface ButtonProps {
   className?: string;
   label?: string;
   title?: string;
+  expanded?: boolean;
+  controls?: string;
 }
 
 const BASE =
@@ -37,7 +39,7 @@ const SQUARE_FLOOR = 24;
 /**
  * Button — the collection's only <button> element: a labelled action by default, and the shell its two siblings compose.
  * @tier T1 — generic action affordance, no business logic
- * @anatomy 1px line border, radius 3, padding 3/9, min-height 24 for WCAG 2.5.8 · Inter 11.5px lowercase label · optional leading glyph (aria-hidden, rarely earned) · no filled or primary variant — zero-accent leaves nothing to fill it with. THREE CUSTOMIZATION AXES, defaults are Button's own: frame=border|bare (bare drops the border and hovers as a 7% wash) · shape=label|square (square takes size px per side, mandatory aria-label) · tone=body|mute (resting content colour). Everything else — focus ring, disabled, radius, hit floor, keyboard — is inherited and not overridable
+ * @anatomy 1px line border, radius 3, padding 3/9, min-height 24 for WCAG 2.5.8 · Inter 11.5px lowercase label · optional leading glyph (aria-hidden, rarely earned) · no filled or primary variant — zero-accent leaves nothing to fill it with. THREE CUSTOMIZATION AXES, defaults are Button's own: frame=border|bare (bare drops the border and hovers as a 7% wash) · shape=label|square (square takes size px per side, mandatory aria-label) · tone=body|mute (resting content colour). Everything else — focus ring, disabled, radius, hit floor, keyboard — is inherited and not overridable · a trigger that shows and hides a region says so with expanded and controls (aria-expanded, aria-controls)
  * @use any action that needs a word and is not a copy: retry, close, save, submit. Also the shell every other button composes — CopyButton (tone=mute, plus shape=square for its icon form) and IconButton (frame=bare, shape=square, size=28, tone=mute) — so one <button> element carries the focus ring, hit floor and keyboard behaviour for all three
  * @avoid copy actions (use CopyButton — it owns the clipboard write and its confirm) · actions whose glyph is unambiguous alone (use IconButton) · emphasis by styling: pick which actions to offer instead, a Button never carries a primary/filled variant · warn-toning it inside a warn Notice (the message owns the alarm, the button is the way out) · leaving it enabled while its action is in flight, or disabling it without a progress line beside it (fork D4 — both halves or neither)
  * @states rest (ink-body label, hairline border) · hover (ink label, mute border) · focus (1px mute outline, 2px offset) · active (12% mute wash) · disabled (38% opacity, no tab). No confirming and no loading state of its own — for a slow action the caller MUST render both halves (fork D4): this Button disabled for the whole in-flight window, AND a progress line in the same zone naming what is awaited
@@ -56,6 +58,8 @@ export function Button({
   className = "",
   label,
   title,
+  expanded,
+  controls,
 }: ButtonProps) {
   const square = shape === "square";
   const side = Math.max(size, SQUARE_FLOOR);
@@ -69,6 +73,8 @@ export function Button({
       disabled={disabled}
       onClick={onClick}
       aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
       title={title ?? label}
       style={square ? { width: side, height: side } : undefined}
       className={`${BASE} ${box} ${FRAME[frame]} ${TONE[tone]} ${className}`}

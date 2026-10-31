@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TaskStep } from "./TaskStep";
 
 describe("TaskStep", () => {
@@ -10,14 +10,17 @@ describe("TaskStep", () => {
     expect(screen.getByText("Send this Mac's traffic to Trawler")).toBeInTheDocument();
   });
 
-  it("carries a purpose line when one is given, and nothing where none is", () => {
+  it("keeps why the task matters behind a ? on its title, shown only when asked", () => {
     const { rerender } = render(
-      <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted" />,
+      <TaskStep n={2} title="Send this Mac's traffic to Trawler" help="its system proxy points at Trawler while Trawler runs" />,
     );
-    expect(screen.getByText("so this Mac's HTTPS can be decrypted")).toBeInTheDocument();
+    expect(screen.queryByText("its system proxy points at Trawler while Trawler runs")).toBeNull();
 
-    rerender(<TaskStep n={1} title="Trust Trawler's certificate" />);
-    expect(screen.queryByText("so this Mac's HTTPS can be decrypted")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "help: why this step" }));
+    expect(screen.getByText("its system proxy points at Trawler while Trawler runs")).toBeInTheDocument();
+
+    rerender(<TaskStep n={2} title="Send this Mac's traffic to Trawler" />);
+    expect(screen.queryByRole("button", { name: "help: why this step" })).toBeNull();
   });
 
   it("renders the state it is handed as a StatusLine, glyph and all", () => {
@@ -57,7 +60,7 @@ describe("TaskStep", () => {
   });
 
   it("dims a task whose precondition is not met, and keeps its number", () => {
-    render(<TaskStep n={2} title="On your iPhone, install the certificate" why="after step 1" dim />);
+    render(<TaskStep n={2} title="On your iPhone, install the certificate" waitsOn="after step 1" dim />);
 
     const task = screen.getByTestId("task-2");
     expect(task.className).toContain("opacity-disabled");

@@ -40,6 +40,11 @@ const SPECIMENS: Record<string, ReactElement> = {
   DurationText: <collection.DurationText value={12} />,
   Field: <collection.Field value="" onChange={() => {}} aria-label="host" />,
   FormRenderer: <collection.FormRenderer text="a=1" />,
+  Help: (
+    <collection.Help topic="on Ethernet" text="On Ethernet, change Wi-Fi to Ethernet in the command.">
+      In Terminal, run:
+    </collection.Help>
+  ),
   HexRenderer: <collection.HexRenderer bytes={new Uint8Array([1])} />,
   IconButton: <collection.IconButton glyph="close" onClick={() => {}} />,
   ImageRenderer: <collection.ImageRenderer bytes={new Uint8Array([1])} contentType="image/png" />,

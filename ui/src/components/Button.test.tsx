@@ -102,4 +102,16 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "retry" })).toBeInTheDocument();
     expect(screen.getByText("↻")).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("a trigger says whether the region it controls is shown, and which region", () => {
+    const { rerender } = render(<Button onClick={() => {}} expanded={false} controls="panel">more</Button>);
+
+    const button = screen.getByRole("button", { name: "more" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveAttribute("aria-controls", "panel");
+
+    rerender(<Button onClick={() => {}}>more</Button>);
+    expect(button).not.toHaveAttribute("aria-expanded");
+    expect(button).not.toHaveAttribute("aria-controls");
+  });
 });

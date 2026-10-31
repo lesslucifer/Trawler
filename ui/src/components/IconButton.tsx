@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { Button } from "./Button";
 
-export type GlyphName = "close" | "save";
+export type GlyphName = "close" | "save" | "help";
 
 const GLYPH: Record<GlyphName, string> = {
   close: "×",
   save: "↓",
+  help: "?",
 };
 
 export interface IconButtonProps {
@@ -16,13 +17,15 @@ export interface IconButtonProps {
   size?: number;
   disabled?: boolean;
   className?: string;
+  expanded?: boolean;
+  controls?: string;
 }
 
 /**
  * IconButton — bare-glyph button; compact affordance for icon-only actions (close, save, collapse).
  * @tier T1 — generic action affordance on a composed Button shell, no business logic
  * @anatomy a Button with frame="bare" shape="square" size={28} tone="mute" — 28×28 hit area (size overrides, floor 24), padded beyond the glyph · glyph from built-in registry (glyph="close"|"save") or custom children · muted glyph at rest, ink + 7% wash on hover/active (the bare frame's hover signal) · focus ring, disabled treatment, radius and keyboard inherited from the shell · native title tooltip, defaults to the glyph name
- * @use icon-only triggers unambiguous in place: close ×, save ↓ — wherever the glyph alone carries the action
+ * @use icon-only triggers unambiguous in place: close ×, save ↓, help ? — wherever the glyph alone carries the action
  * @avoid actions with no fitting glyph (word label carries it better — use Button, or CopyButton if it is a copy) · primary actions (no visual weight at rest)
  * @states rest (muted glyph, no bg) · hover (ink + 7% bg wash) · focus (1px mute outline) · active (ink + 13% bg) · disabled (35% opacity, not-allowed, no tab)
  * @madeof Button (T1) with frame="bare" shape="square" size={28} tone="mute" — the element, focus ring, disabled, radius, hit floor and keyboard come from the shell; this component adds the glyph registry and the accessible-name guarantee
@@ -35,6 +38,8 @@ export function IconButton({
   size = 28,
   disabled = false,
   className = "",
+  expanded,
+  controls,
 }: IconButtonProps) {
   const face = children ?? (glyph ? GLYPH[glyph] : null);
 
@@ -47,6 +52,8 @@ export function IconButton({
       tone="mute"
       size={size}
       label={label ?? glyph}
+      expanded={expanded}
+      controls={controls}
       className={`text-note ${className}`}
     >
       {face}
