@@ -25,6 +25,21 @@
       with that one walkthrough line reverted in the working tree and then restored.
     </div>
 
+    <h2 id="owner-review">Your review of the macOS build</h2>
+    <table data-c="owner-review">
+      <tr><th>#</th><th>You asked</th><th>Found</th><th>Built</th></tr>
+      <tr><td>O1</td><td>Is <em>double-click … Always Trust</em> needed? <em>open in Keychain Access</em> alone worked</td>
+        <td>On a clean Mac, yes: a throwaway CA added to the login keychain alone failed <code>verify-cert</code> (exit 1).
+          What worked for you was a trust setting left from an earlier install of the same bytes: a trust outlives its
+          certificate (DEC-62 rule 1's recording)</td><td>nothing yet; the step stays, pending your call</td></tr>
+      <tr><td>O2</td><td>A button to remove the certificate, better automatic</td><td>DEC-13 offered no removal</td>
+        <td><em>remove the certificate</em>, bare, in task 1 once it reads trusted (macOS): the live certificate by its
+          hash from each keychain that holds it, with its trust; its steps under <em>do it by hand</em>. DEC-13 amended</td></tr>
+      <tr><td>O3</td><td>Remove <em>checked … ago · check again</em>: the check runs in the background</td>
+        <td>The 3 s watch, focus and every action already re-read</td><td>the row is gone; DEC-62 rule 3 and DEC-33 amended;
+          the walkthrough re-reads on focus</td></tr>
+    </table>
+
     <h2 id="requirement">Requirement</h2>
     <p data-item="requirement">
       <strong>On This machine, on every host, each state of the setup screen leads with the one action that comes

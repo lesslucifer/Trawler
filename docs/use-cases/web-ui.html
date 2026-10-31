@@ -561,8 +561,7 @@
       try-it command names the proxy itself, and any other device's request says nothing about it, so only a
       probe or its own request — marked <code>?trawler-check=…</code>, captured decrypted this session — may
       settle its tasks. Where nothing has, the line says what will — <em>the request in step 3 confirms it</em>
-      — never a false "not set up", and a refusal nothing can place is the try task's to word. The dated row
-      and its re-read show wherever a probe can answer. A phone that trusts the certificate and points here
+      — never a false "not set up", and a refusal nothing can place is the try task's to word. A phone that trusts the certificate and points here
       reads as two true facts side by side: not trusted on this machine, and capturing traffic.</p>
       <p><strong>Another device reads only what could have come from it</strong>
       (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>): traffic that started after its address was allowed. Its try
@@ -610,9 +609,10 @@
       on its marked request alone
       (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 9).</p>
       <p><strong>This machine is read again wherever its answer can change</strong>: as setup opens, after
-      every action whatever its outcome, on <em>check again</em>, on focus, when the core comes back, and
+      every action whatever its outcome, on focus, when the core comes back, and
       every 3 s while setup is on screen, its core answering and the window visible. Only a read the user
-      asked for shows <em>checking</em> and holds the buttons; the others move only the dated row.</p>
+      caused shows <em>checking</em> and holds the buttons; the others are silent. Nothing offers to re-read
+      by hand.</p>
     </div>
 
     <div data-c="uc-onboard-states">
@@ -680,8 +680,13 @@
         <tr><td>Stop routing through Trawler — inside the proxy task</td><td>none — reversing is not a new
           exposure</td>
           <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
-            say <em>the certificate stays trusted</em>. Its own steps are under <em>do it by hand</em>. Nothing
-            claims to untrust a store</td></tr>
+            say <em>the certificate stays trusted</em>. Its own steps are under <em>do it by hand</em></td></tr>
+        <tr><td>Remove the certificate — inside the certificate task once it reads trusted, macOS
+          (E-ONBRVP.W12, the owner's review)</td><td>none of its own; a System keychain copy or an admin trust
+          asks for an administrator's password, the login copy's trust for the user's</td>
+          <td>it names the half it performs: the live certificate leaves every keychain that holds it, with the
+            trust written for it, so the same bytes added back are not trusted unasked. Only when the proxy is
+            set does it say <em>the proxy stays set</em>. Its own steps are under <em>do it by hand</em></td></tr>
         <tr><td>Open a by-hand step's screen — macOS: <em>open in Keychain Access</em>, <em>open Proxy
           settings</em>, <em>open example.com in your browser</em> (E-ONBRVP.W12)</td>
           <td>none of its own. Keychain Access adds the certificate to the login keychain; trusting it there
@@ -729,8 +734,8 @@ the rest are dimmed, not given steps that fail"]
   R -- "yes" --> A["a host and a port to type,
 a certificate URL to type or scan"]
   H --> PR["probe this machine: CA trusted? proxy set?"]
-  PR --> ST["the probed tasks' states, stamped 'checked at'"]
-  ST -. "every action · check again · focus · the core's return · every 3 s" .-> PR
+  PR --> ST["the probed tasks' states"]
+  ST -. "every action · focus · the core's return · every 3 s" .-> PR
   H --> W["watch traffic: flow timestamps + live connection events"]
   A --> W
   D --> W
