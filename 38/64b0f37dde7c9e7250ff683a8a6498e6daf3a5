@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-ONBRVP
 wu: E-ONBRVP.W12
-branch: 3864b0f3
 base: 28995cdccbacfb4a88a8f064578f67cebe365c96
 tip: 3864b0f37dde7c9e7250ff683a8a6498e6daf3a5
 diff_sha256: 11eef5d0b1e73ed68c42711a75c864a525c09a684fcd00e2734a9b2fe4e4cb0a
