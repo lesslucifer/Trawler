@@ -536,8 +536,8 @@ const CA_SHOWN: Record<
     findings: ["R27", "W14.I1"],
   },
   ubuntu: {
-    says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read",
-    findings: ["R27"],
+    says: "opens /ca.pem, which downloads trawler-ca.pem; then Firefox's Import… with its recording, choose, tick and OK, then Chrome or Chromium's Trusted Certificates → Import — the Chrome and system commands under other ways, no sudo on the path",
+    findings: ["R27", "W15.E1", "W15.E2"],
   },
   ios: {
     says: "opens /ca.mobileconfig in Safari, which downloads trawler-ca.mobileconfig, installs Trawler Proxy CA from VPN & Device Management, and says why iOS calls it Not Verified; its other way saves the same profile to AirDrop over, and no .pem is named",
@@ -592,12 +592,12 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       ],
     },
   ];
-  if (platform === "mac" || platform === "windows")
+  if (platform === "mac" || platform === "windows" || platform === "ubuntu")
     chapters.push({
       id: "download-help",
       title: "What to check when the download fails",
       act: (w) => w.openHelp(2),
-      expect: `under the certificate URL, its ? open: "Doesn't load? ${platform === "mac" ? "That Mac" : "That PC"} can't reach this one — check both are on the same network, and that ${DEVICE[host]}'s firewall lets Trawler accept incoming connections."`,
+      expect: `under the certificate URL, its ? open: "Doesn't load? ${{ mac: "That Mac", windows: "That PC", ubuntu: "That machine" }[platform]} can't reach this one — check both are on the same network, and that ${DEVICE[host]}'s firewall lets Trawler accept incoming connections."`,
       findings: ["W13.R1"],
       anchor: [task(2)],
     });
@@ -611,6 +611,18 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       },
       expect: `task 3's four steps: Settings → Network & internet → Proxy on that PC, Manual proxy setup → Use a proxy server → Set up with its recording, Use a proxy server on with the server and port above, Save; under Save's ? "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy."; the reg command under other ways`,
       findings: ["W14.I2", "W14.N2"],
+      anchor: [task(3)],
+    });
+  if (platform === "ubuntu")
+    chapters.push({
+      id: "route-open",
+      title: "That machine's proxy, by hand",
+      act: async (w) => {
+        await w.openGuide(3);
+        await w.openHelp(3);
+      },
+      expect: `task 3's four steps: Settings → Network on that machine, Proxy → Network Proxy → Configuration → Manual with its recording, HTTP and HTTPS Proxy with the server and port above, Save; under Save's ? "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY."; the gsettings command under other ways, and no GNOME anywhere`,
+      findings: ["W15.I2", "W15.N2"],
       anchor: [task(3)],
     });
   if (platform === "mac")
