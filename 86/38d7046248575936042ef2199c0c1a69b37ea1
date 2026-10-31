@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBRVP
+wu: E-ONBRVP.W15
+branch: HEAD
+tests:
+  unit: { count: 163, covers: "Another Ubuntu machine walked by hand: Firefox's import ends on OK, Chrome or Chromium imports through its own certificate manager, the Chrome and system commands are other ways so no command sits on its path; This machine on Linux keeps the system store its probe reads as the last step and offers the browsers' steps once it reads done; every Linux certificate way back is by hand in each browser, then each command that may have run; Chrome's command still creates its database; that machine's proxy on GNOME's page with its recording, its command led by where it runs with the SSH note behind a ?, which apps follow it behind Save's ? on both Linux guides, the proxy's way back by hand first; no lead names GNOME, the quit dialog's included; the refusal's advice leads with the browsers' own stores; the walkthrough lists W15's findings" }
+  integration: { count: 235, covers: "On the screen: that machine's browsers and proxy by hand with every command shut under other ways and no GNOME; This machine on Linux's four browser steps, the system step last, Chrome's command under other ways; the advice led by the browsers; the close dialog's Linux lead names a terminal. The onboarding matrix green across every host, platform and reading, no explanatory text outside a help host" }
+  e2e: { waived: "the by-hand steps run on a second machine, which is not hermetic (the epic's e2e plan: emphasis is judged on the reels). The suites themselves are red on this host at the epic tip with no W15 change - cargo xtask ui e2e 44 of 46 (two Android emulator journeys) and the walkthrough's app aborting - logged on the roadmap; macos-ubuntu and windows-ubuntu filmed all seven chapters including the new two" }
