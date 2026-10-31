@@ -541,7 +541,6 @@ describe("a guide's steps are the route, and everything else says what it is", (
     expect(commands(alternatives("android-sim"))).toContain(
       "emulator -avd <name> -http-proxy http://127.0.0.1:9999",
     );
-    expect(alternatives("ubuntu")).toEqual([]);
     expect(
       alternatives("android").flatMap((step) => step.filter((p) => typeof p === "string")),
     ).toContain("No browser on it?");
@@ -786,18 +785,19 @@ describe("each platform says what to check when its traffic does not decrypt", (
     expect(notes(setup(id, { os })).join("\n")).not.toMatch(/Firefox/);
   });
 
-  // S1: on Linux the system command reaches no browser, so a restart fixes
-  // nothing and the advice names the stores the browsers keep instead.
+  // S1, W15's W4: on Linux the system command reaches no browser, so the
+  // advice leads with the stores the browsers keep.
   it.each([
     ["this", "linux"],
     ["this", "other"],
     ["ubuntu", "macos"],
-  ] as const)("%s on %s: the system command reaches no browser, each has its own step", (id, os) => {
+  ] as const)("%s on %s: the advice leads with the browsers' own stores", (id, os) => {
     const check = setup(id, { os }).notDecrypting;
-    expect(check).toMatch(/The system command covers curl and the system's tools, not browsers/);
-    expect(check).toMatch(/Firefox and Chrome each keep a store of their own, and each has its own step below/);
+    expect(check).toMatch(
+      /^Already did\? Firefox and Chrome each keep their own store — install it in the browser you opened the address in, then restart it\./,
+    );
     expect(check).toMatch(/pin their own certificate/);
-    expect(check).not.toMatch(/restart/);
+    expect(check).not.toMatch(/system command/);
     expect(notes(setup(id, { os }))).toEqual([]);
   });
 
@@ -858,7 +858,9 @@ describe("another computer's trust command reads the file its download step name
 
 // C1-C4: Linux keeps three certificate stores, and the browsers read neither
 // of the other two, so a step that writes one cannot make another decrypt.
-describe("Linux's certificate task installs into every store, each a step of its own", () => {
+// W15: each browser is walked by hand, its command the other way; the system's
+// store is a step only where This machine's probe reads it (Q2).
+describe("Linux's certificate task installs into every store a browser reads, by hand", () => {
   const LINUX = [
     ["this", "linux"],
     ["this", "other"],
@@ -867,40 +869,54 @@ describe("Linux's certificate task installs into every store, each a step of its
   const trustOf = (id: PlatformId, os: HostOs) => setup(id, { os }).trust.guide!;
   const leads = (steps: GuideStep[]) => steps.map((step) => step.find((p) => typeof p === "string"));
   const paths = (step: GuideStep) => step.flatMap((p) => (typeof p === "object" && "path" in p ? [p.path] : []));
+  const FIREFOX = ["Privacy and security", "Connection and software security", "Advanced settings", "Manage certificates", "Authorities"];
+  const CHROME = ["Privacy and security", "Security", "Manage certificates", "Local certificates", "Installed by you", "Trusted Certificates"];
+  const SYSTEM = "For curl and the system's tools, run:";
+  const BROWSERS = ["In Firefox's Settings, click", "Choose trawler-ca.pem, tick", "In Chrome or Chromium's Settings, click"];
 
-  it.each(LINUX)("%s on %s: Firefox, then Chrome, then the system's tools", (id, os) => {
-    const [, ...stores] = trustOf(id, os).steps;
+  it.each(LINUX)("%s on %s: Firefox's import ends on OK, then Chrome or Chromium's own", (id, os) => {
+    const [, firefox, choose, chrome] = trustOf(id, os).steps;
 
-    expect(leads(stores)).toEqual(["In Firefox's Settings, click", "For Chrome, run:", "For curl and the system's tools, run:"]);
-    expect(paths(stores[0])).toEqual([
-      ["Privacy and security", "Connection and software security", "Advanced settings", "Manage certificates", "Authorities", "Import…"],
-      ["Trust this CA to identify websites"],
-    ]);
-    expect(stores[0]).toContain(", choose trawler-ca.pem and tick");
-    expect(trustOf(id, os).alternatives).toBeUndefined();
+    expect(leads([firefox, choose, chrome])).toEqual(BROWSERS);
+    expect(paths(firefox)).toEqual([[...FIREFOX, "Import…"]]);
+    expect(paths(choose)).toEqual([["Trust this CA to identify websites"], ["OK"]]);
+    expect(paths(chrome)).toEqual([[...CHROME, "Import"]]);
+    expect(chrome).toContain("and choose trawler-ca.pem");
   });
 
-  it.each(LINUX)("%s on %s: the way back undoes each store, in the same order", (id, os) => {
+  it("this machine keeps the system's store a step, last, where its probe reads it", () => {
+    const { steps, unprobed, alternatives } = trustOf("this", "linux");
+
+    expect(leads(steps.slice(1))).toEqual([...BROWSERS, SYSTEM]);
+    expect(leads(unprobed!.slice(1))).toEqual(BROWSERS);
+    expect(leads(alternatives!)).toEqual(["For Chrome, run:"]);
+  });
+
+  it("another Ubuntu machine needs no sudo on its path: both commands are other ways", () => {
+    const { steps, alternatives } = trustOf("ubuntu", "macos");
+
+    expect(leads(steps.slice(1))).toEqual(BROWSERS);
+    expect(commands(steps)).toEqual([]);
+    expect(leads(alternatives!)).toEqual(["For Chrome, run:", SYSTEM]);
+  });
+
+  it.each(LINUX)("%s on %s: the way back is by hand in each browser, then each command that may have run", (id, os) => {
     const { undo } = trustOf(id, os);
 
-    expect(leads(undo!)).toEqual(["In Firefox's Settings, click", "For Chrome, run:", "For curl and the system's tools, run:"]);
-    expect(paths(undo![0])).toEqual([
-      [
-        "Privacy and security",
-        "Connection and software security",
-        "Advanced settings",
-        "Manage certificates",
-        "Authorities",
-        "Trawler Proxy CA",
-        "Delete or Distrust…",
-      ],
+    expect(leads(undo!)).toEqual([
+      "In Firefox's Settings, click",
+      "In Chrome or Chromium's Settings, click",
+      "If you ran the Chrome command, run:",
+      "If you ran the system command, run:",
     ]);
+    expect(paths(undo![0])).toEqual([[...FIREFOX, "Trawler Proxy CA", "Delete or Distrust…"]]);
+    expect(paths(undo![1])).toEqual([[...CHROME, "Trawler Proxy CA"]]);
   });
 
   it.each(LINUX)("%s on %s: Chrome's command installs certutil, then finds whichever database Chrome made", (id, os) => {
     const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
-    const [chrome] = commands([trustOf(id, os).steps[2]]);
-    const [chromeRemoval] = commands([trustOf(id, os).undo![1]]);
+    const [chrome] = commands(trustOf(id, os).alternatives!);
+    const [chromeRemoval] = commands([trustOf(id, os).undo![2]]);
 
     expect(chrome).toMatch(/^sudo apt install -y libnss3-tools && /);
     expect(chrome).toContain(`-d ${NSS_DB} -A -t C,, -n trawler -i `);
@@ -908,13 +924,13 @@ describe("Linux's certificate task installs into every store, each a step of its
   });
 
   it("this machine's commands and another Ubuntu machine's read the Downloads folder Ubuntu names", () => {
-    const [, ...thisMachine] = commands(trustOf("this", "linux").steps);
-    const [, ...ubuntu] = commands(trustOf("ubuntu", "macos").steps);
+    const all = (guide: Guide) => commands([...guide.steps, ...(guide.alternatives ?? [])]).sort();
+    const ubuntu = all(trustOf("ubuntu", "macos"));
 
-    expect(thisMachine).toEqual(ubuntu);
-    expect(ubuntu).toEqual([
+    expect(all(trustOf("this", "linux"))).toEqual(ubuntu);
+    expect(ubuntu).toContain(
       'sudo cp "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem" /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates',
-    ]);
+    );
   });
 
   // S2: another Ubuntu machine's browsers keep stores of their own, so after a
@@ -945,7 +961,7 @@ describe("Linux's certificate task installs into every store, each a step of its
 // Review round 1: a Chrome installed and never opened has made neither NSS
 // database, and certutil adds only to a database it was asked to create.
 test("Linux's Chrome command creates the database a Chrome since M146 reads where none exists, before adding to it", () => {
-  const chrome = commands([setup("ubuntu").trust.guide!.steps[2]])[0];
+  const chrome = commands(setup("ubuntu").trust.guide!.alternatives!)[0];
   const create =
     "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
 
@@ -1224,7 +1240,7 @@ describe("This Linux machine's by-hand routes", () => {
     expect(routes(route.steps)).toEqual(["proxy-settings"]);
     expect(media(route.steps)).toEqual(["linux-proxy"]);
     expect(values(route.steps)).toEqual(["127.0.0.1", "9999"]);
-    expect(route.alternatives![0][0]).toBe("GNOME — run:");
+    expect(route.alternatives![0][0]).toBe("In a terminal, run:");
     expect(commands(route.alternatives!)).toEqual([expect.stringMatching(/^gsettings set org\.gnome\.system\.proxy mode 'manual'/)]);
     expect(route.notes).toBeUndefined();
   });
@@ -1243,7 +1259,8 @@ describe("the steps a probe leaves open", () => {
     expect(unprobed!.map((step) => step.find((p) => typeof p === "string"))).toEqual([
       "Save Trawler's certificate as trawler-ca.pem",
       "In Firefox's Settings, click",
-      "For Chrome, run:",
+      "Choose trawler-ca.pem, tick",
+      "In Chrome or Chromium's Settings, click",
     ]);
   });
 
@@ -1388,6 +1405,60 @@ describe("Another Windows PC, walked by hand (W14)", () => {
       expect(guide.alternatives![0].find(isHelp)).toMatchObject({ topic: "apps already open" });
       expect(guide.notes).toBeUndefined();
     }
+  });
+});
+
+// W15: Another Ubuntu machine takes This machine's GNOME steps by hand on that
+// machine, and each command is the other way.
+describe("Another Ubuntu machine, walked by hand (W15)", () => {
+  const ubuntu = setup("ubuntu");
+  const route = ubuntu.route.guide!;
+  const thisLinux = setup("this", { os: "linux" }).route.guide!;
+  const sentence = (step: GuideStep) => step.filter((p): p is string => typeof p === "string").join(" ");
+  const paths = (step: GuideStep) => step.filter(isPath).map((p) => p.path);
+
+  it("sets the proxy on GNOME's page with its recording, the server and port above (I2, E3)", () => {
+    expect(sentence(route.steps[0])).toBe("On that machine, open");
+    expect(paths(route.steps[0])).toEqual([["Settings", "Network"]]);
+    expect(route.steps[1].find(isMedia)).toMatchObject({ media: "linux-proxy", shows: "Ubuntu 26.04" });
+    expect(sentence(route.steps[2])).toBe("Set and — each with the server and port above");
+    expect(route.steps.slice(1, 2)).toEqual(thisLinux.steps.slice(1, 2));
+    expect(route.steps.flatMap((step) => step.filter(isRoute))).toEqual([]);
+    expect(commands(route.steps)).toEqual([]);
+  });
+
+  it("keeps the command as the other way, led by where it runs, with why behind a ? (W1, N1)", () => {
+    expect(route.alternatives!.map((step) => step[0])).toEqual(["In a terminal on that machine, run:"]);
+    expect(route.alternatives![0].find(isHelp)).toEqual({
+      help: "Run it on that machine's desktop — over SSH it sets nothing.",
+      topic: "where to run it",
+    });
+    expect(thisLinux.alternatives![0].find(isHelp)).toBeUndefined();
+  });
+
+  it("says which apps follow the proxy behind Save's ?, on both Linux guides (N2)", () => {
+    for (const guide of [route, thisLinux]) {
+      expect(sentence(guide.steps[3])).toBe("Click");
+      expect(guide.steps[3].find(isHelp)).toMatchObject({
+        topic: "what follows it",
+        help: expect.stringContaining("Firefox and Chrome follow this proxy"),
+      });
+      expect(guide.notes).toBeUndefined();
+    }
+  });
+
+  it("turns the proxy off in Settings first, the command as Or, on both Linux guides (I3)", () => {
+    for (const guide of [route, thisLinux]) {
+      expect(sentence(guide.undo![0])).toBe("Turn off in and click");
+      expect(paths(guide.undo![0])).toEqual([["Network Proxy"], ["Settings", "Network", "Proxy"], ["Save"]]);
+      expect(guide.undo![1][0]).toBe("Or in a terminal, run:");
+    }
+  });
+
+  it("names no desktop in any lead, here, on This machine or in the quit dialog (W1, W2)", () => {
+    expect(everything(ubuntu)).not.toMatch(/GNOME/);
+    expect(everything(setup("this", { os: "linux" }))).not.toMatch(/GNOME/);
+    for (const id of ["this", "ubuntu"] as const) expect(routeUndo(id, "linux")[0][0]).toBe("In a terminal, run:");
   });
 });
 

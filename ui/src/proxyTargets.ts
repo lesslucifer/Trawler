@@ -27,7 +27,7 @@ export function proxyOffSteps(t: ProxyTarget): string[] {
     case "windows":
       return ["In PowerShell, run:", snippet];
     case "linux":
-      return ["GNOME — back to no proxy:", snippet];
+      return ["In a terminal, run:", snippet];
     case "terminal":
       return ["Clear the environment variables:", snippet];
   }

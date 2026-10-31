@@ -78,6 +78,8 @@ describe("this machine routes through Trawler", () => {
     expect(screen.queryByRole("button", { name: CLOSE_COPY.stop })).toBeNull();
     expect(screen.queryByTestId("proxy-close-manual")).toBeNull();
     expect(within(screen.getByTestId("proxy-close-steps")).getByText(proxyOffSnippet("linux"))).toBeInTheDocument();
+    expect(screen.getByTestId("proxy-close-steps")).toHaveTextContent("In a terminal, run:");
+    expect(screen.getByTestId("proxy-close-panel").textContent).not.toMatch(/GNOME/);
     expect(screen.getByTestId("proxy-close-panel")).toHaveTextContent(CLOSE_COPY.stake.ours("this machine"));
   });
 

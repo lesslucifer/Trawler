@@ -25,4 +25,9 @@ describe("the reversal every target carries", () => {
   it("leads Windows' command with PowerShell", () => {
     expect(proxyOffSteps("windows")).toEqual(["In PowerShell, run:", proxyOffSnippet("windows")]);
   });
+
+  // W15's W2: Linux's names the terminal, never the desktop.
+  it("leads Linux's command with a terminal", () => {
+    expect(proxyOffSteps("linux")).toEqual(["In a terminal, run:", proxyOffSnippet("linux")]);
+  });
 });

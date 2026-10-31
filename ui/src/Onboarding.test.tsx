@@ -816,10 +816,13 @@ describe("each task holds its own route, under the one button", () => {
   // W6 C1: Linux keeps three certificate stores, and the browsers read neither
   // of the other two, so each store is a step - browsers first - and none is a
   // note or another way. Firefox reads the system's store on macOS and Windows.
-  it("gives each of Linux's three stores a step, browsers first, and names Firefox on Linux only", () => {
+  it("walks each browser's store by hand, then the system's, its probed store, and names Firefox on Linux only", () => {
     draw({ os: "linux" });
     const firefox = within(task(1)).getByTestId("step-media").closest("li")!;
-    const [chrome] = within(task(1)).getAllByText("For Chrome, run:");
+    const [chrome] = within(task(1)).getAllByText(
+      "In Chrome or Chromium's Settings, click",
+      { exact: false },
+    );
     const [system] = within(task(1)).getAllByText(
       "For curl and the system's tools, run:",
     );
@@ -833,7 +836,8 @@ describe("each task holds its own route, under the one button", () => {
     ).toBeTruthy();
     openHelp(task(1));
     expect(helpText(task(1))).toEqual([]);
-    expect(within(task(1)).queryByText("other ways")).toBeNull();
+    expect(within(task(1)).getByText("other ways")).toBeInTheDocument();
+    expect(within(task(1)).getAllByText("For Chrome, run:")[0]).toBeInTheDocument();
     cleanup();
 
     draw({ os: "windows" });
@@ -2731,7 +2735,20 @@ describe("another Ubuntu machine", () => {
   });
 
   // S1: the system command reaches no browser, so a restart fixes nothing.
-  it("says the system command reaches no browser while nothing decrypts", () => {
+  it("walks each browser and the proxy by hand, every sudo command and gsettings the other way (W15's E1-E3)", () => {
+    draw({ reach: ARMED, device: clear, deviceMark: "k3m9" });
+    pick("Another Ubuntu machine");
+
+    expect(task(2)).toHaveTextContent("In Chrome or Chromium's Settings, click");
+    for (const name of [/the chrome command/i, /the trust command/i])
+      expect(within(task(2)).getByRole("button", { name }).closest("details")).not.toBeNull();
+    expect(within(task(2)).getByText("other ways").closest("details")).not.toHaveAttribute("open");
+    expect(task(3)).toHaveTextContent("On that machine, open");
+    expect(within(task(3)).getByRole("button", { name: /the proxy command/i }).closest("details")).not.toBeNull();
+    expect(document.body.textContent).not.toMatch(/GNOME/);
+  });
+
+  it("leads with the browsers' own stores while nothing decrypts (W15's W4)", () => {
     draw({
       reach: ARMED,
       traffic: arriving,
@@ -2744,9 +2761,9 @@ describe("another Ubuntu machine", () => {
     const remedy = within(task(2)).getByTestId("traffic-remedy");
     openHelp(remedy);
     expect(remedy).toHaveTextContent(
-      "Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below.",
+      "Already did? Firefox and Chrome each keep their own store — install it in the browser you opened the address in, then restart it.",
     );
-    expect(remedy.textContent).not.toMatch(/restart/);
+    expect(remedy.textContent).not.toMatch(/system command/);
   });
 
   // S2: a GNOME app reading the system store, or Chrome after its import, can
@@ -3236,7 +3253,7 @@ describe("This machine where no probe answers", () => {
     expect(task(2)).toHaveTextContent(
       `done — step 3's request came through at ${clock(at)}`,
     );
-    expect(within(task(1)).getByText("3 steps")).toBeInTheDocument();
+    expect(within(task(1)).getByText("4 steps")).toBeInTheDocument();
     expect(within(task(2)).queryByText("1 step")).toBeNull();
   });
 
@@ -3577,7 +3594,6 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
         .map((p) => p.textContent),
     ).toEqual([
       "Privacy and security→Connection and software security→Advanced settings→Manage certificates→Authorities→Import…",
-      "Trust this CA to identify websites",
     ]);
     expect(
       within(step).getByText("Ubuntu 26.04, Firefox 154"),
@@ -3692,7 +3708,7 @@ describe("This Linux machine's certificate, trusted by the system's tools", () =
     expect(screen.getByTestId("task-1-state")).toHaveTextContent(
       /done — trusted by the system's tools$/,
     );
-    fireEvent.click(within(task(1)).getByText("3 steps"));
+    fireEvent.click(within(task(1)).getByText("4 steps"));
     expect(
       within(task(1)).getAllByText("In Firefox's Settings, click", {
         exact: false,
