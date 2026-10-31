@@ -118,10 +118,14 @@ fn run_elevated(argv: &[String], no_detail: &str) -> Result<(), SetupError> {
 }
 
 pub(crate) fn staged_cert(pem: &str) -> Result<std::path::PathBuf, SetupError> {
+    staged_cert_as(pem, "trawler-ca.pem")
+}
+
+pub(crate) fn staged_cert_as(pem: &str, name: &str) -> Result<std::path::PathBuf, SetupError> {
     if !pem.contains("-----BEGIN CERTIFICATE-----") {
         return Err(setup_error("not a PEM certificate"));
     }
-    let cert = std::env::temp_dir().join("trawler-ca.pem");
+    let cert = std::env::temp_dir().join(name);
     std::fs::write(&cert, pem).map_err(|e| setup_error(e.to_string()))?;
     Ok(cert)
 }

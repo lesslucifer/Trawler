@@ -103,14 +103,14 @@ export interface PathPart {
 }
 // A screen the shell opens for the step, by name: the set is closed and the
 // shell builds what it opens (W12's I1-I3).
-export type RouteName = "proxy-settings" | "keychain" | "browser";
+export type RouteName = "proxy-settings" | "keychain" | "certificate" | "browser";
 export interface RoutePart {
   open: RouteName;
   label: string;
 }
 // A recording of a step no route finishes, named here and bundled by the
 // screen, so this module stays free of assets (W12's M1).
-export type MediaName = "macos-always-trust" | "macos-proxies";
+export type MediaName = "macos-always-trust" | "macos-proxies" | "windows-install-cert" | "windows-proxy";
 export interface MediaPart {
   media: MediaName;
   alt: string;
@@ -657,10 +657,83 @@ function thisMacRoute(addr: string): Guide {
   };
 }
 
-// The route a host's own machine takes: its settings pane on macOS, else the
-// command its desktop answers to.
+// This PC's own routes (W12's Q5): the certificate opens in Windows' own
+// dialog, whose import into the user's Trusted Root store asks for no
+// administrator, and the proxy in its Settings page. Each command is the other way.
+const WINDOWS_OS_VERSION = "Windows 11";
+const IN_POWERSHELL = "In PowerShell, run:";
+const TRUSTED_ROOT_STORE = [
+  "Place all certificates in the following store",
+  "Browse…",
+  "Trusted Root Certification Authorities",
+];
+
+function thisPcTrust(file: string): Guide {
+  return {
+    steps: [
+      ["Open it in Windows' certificate dialog", { open: "certificate", label: "open the certificate" }],
+      [
+        "Click",
+        { path: ["Install Certificate…", "Next"] },
+        "and choose",
+        { path: TRUSTED_ROOT_STORE },
+        {
+          media: "windows-install-cert",
+          alt: `Certificate Import Wizard: ${TRUSTED_ROOT_STORE.join(" → ")}, then Finish and Yes`,
+          shows: WINDOWS_OS_VERSION,
+        },
+      ],
+      ["Click", { path: ["OK", "Next", "Finish"] }, "and", { path: ["Yes"] }, "on the warning"],
+    ],
+    alternatives: [saveCaStep("pem"), ...OS_TRUST.windows(file).install],
+    undoTitle: "to remove it later",
+    undo: [
+      [IN_POWERSHELL, { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
+      [
+        `If set up this PC trusted it, ${POWERSHELL_ADMIN.charAt(0).toLowerCase()}${POWERSHELL_ADMIN.slice(1)}`,
+        { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the administrator's removal command" },
+      ],
+    ],
+  };
+}
+
+const MANUAL_PROXY_SETUP = ["Manual proxy setup", "Use a proxy server", "Set up"];
+
+function thisPcRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return {
+    steps: [
+      ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }],
+      [
+        "Click",
+        { path: MANUAL_PROXY_SETUP },
+        {
+          media: "windows-proxy",
+          alt: `Settings: Network & internet → Proxy → ${MANUAL_PROXY_SETUP.join(" → ")}, the proxy on`,
+          shows: WINDOWS_OS_VERSION,
+        },
+      ],
+      [
+        "Turn on",
+        { path: ["Use a proxy server"] },
+        "— with proxy IP address",
+        { copy: host, label: "the proxy server", wire: "proxy host" },
+        "and port",
+        { copy: String(port), label: "the proxy port", wire: "proxy port" },
+      ],
+      ["Click", { path: ["Save"] }],
+    ],
+    alternatives: [[IN_POWERSHELL, { command: routeCommand("windows", addr)!, label: "the proxy command" }]],
+    undoTitle: "to turn it off later",
+    undo: reversal("windows"),
+  };
+}
+
+// The route a host's own machine takes: its settings screen on macOS and
+// Windows, else the command its desktop answers to.
 function localRoute(os: HostOs, addr: string): Guide {
   if (os === "macos") return thisMacRoute(addr);
+  if (os === "windows") return thisPcRoute(addr);
   return osRoute(os === "other" ? "terminal" : hostTarget(os), addr);
 }
 
@@ -834,7 +907,9 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
       guide:
         os === "macos"
           ? thisMacTrust(file)
-          : {
+          : os === "windows"
+            ? thisPcTrust(file)
+            : {
               steps: [saveCaStep(caFormatFor("this")), ...trust.install],
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
@@ -849,7 +924,10 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
     try: { title: `Make a request from ${host}` },
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
     tryLead: TRY_LEAD[os],
-    tryRoutes: os === "macos" ? [{ open: "browser", label: `open ${REQUEST_HOST} in your browser` }] : undefined,
+    tryRoutes:
+      os === "macos" || os === "windows"
+        ? [{ open: "browser", label: `open ${REQUEST_HOST} in your browser` }]
+        : undefined,
     confirmOn: confirmOn("this", os),
     notDecrypting: trust.notDecrypting,
   };

@@ -14,11 +14,14 @@ use crate::setup::{argv, SetupError, LOGIN_KEYCHAIN};
 pub enum Route {
     ProxySettings,
     Keychain { pem: String },
+    Certificate { pem: String },
     Browser { mark: String },
 }
 
 const MACOS_NETWORK_SETTINGS: &str =
     "x-apple.systempreferences:com.apple.Network-Settings.extension";
+const WINDOWS_PROXY_SETTINGS: &str = "ms-settings:network-proxy";
+const WINDOWS_CER: &str = "trawler-ca.cer";
 const REQUEST_URL: &str = "https://example.com/?trawler-check=";
 const ALREADY_IN_KEYCHAIN: &str = "already in";
 
@@ -36,25 +39,41 @@ fn valid_mark(mark: &str) -> bool {
 // Each route as the commands that open it, in order. The certificate is added
 // to the login keychain first: opening the file instead asks which keychain,
 // and the default it offers may be one that holds no trust (W12's recording).
+// Windows opens each through `start`, which returns once the screen is up: the
+// certificate dialog runs inside its opener and would hold the command open.
 fn route_commands(os: &str, route: &Route, cert: &Path) -> Option<Vec<Vec<String>>> {
-    if os != "macos" {
-        return None;
-    }
-    match route {
-        Route::ProxySettings => Some(vec![argv(&["open", MACOS_NETWORK_SETTINGS])]),
-        Route::Keychain { .. } => Some(vec![
-            argv(&["security", "add-certificates", "-k", LOGIN_KEYCHAIN, &cert.to_string_lossy()]),
-            argv(&["open", "-a", "Keychain Access"]),
-        ]),
-        Route::Browser { mark } => {
-            valid_mark(mark).then(|| vec![argv(&["open", &format!("{REQUEST_URL}{mark}")])])
+    if let Route::Browser { mark } = route {
+        if !valid_mark(mark) {
+            return None;
         }
     }
+    let cert = cert.to_string_lossy();
+    match (os, route) {
+        ("macos", Route::ProxySettings) => Some(vec![argv(&["open", MACOS_NETWORK_SETTINGS])]),
+        ("macos", Route::Keychain { .. }) => Some(vec![
+            argv(&["security", "add-certificates", "-k", LOGIN_KEYCHAIN, &cert]),
+            argv(&["open", "-a", "Keychain Access"]),
+        ]),
+        ("macos", Route::Browser { mark }) => {
+            Some(vec![argv(&["open", &format!("{REQUEST_URL}{mark}")])])
+        }
+        ("windows", Route::ProxySettings) => Some(vec![windows_start(WINDOWS_PROXY_SETTINGS)]),
+        ("windows", Route::Certificate { .. }) => Some(vec![windows_start(&cert)]),
+        ("windows", Route::Browser { mark }) => {
+            Some(vec![windows_start(&format!("{REQUEST_URL}{mark}"))])
+        }
+        _ => None,
+    }
+}
+
+fn windows_start(target: &str) -> Vec<String> {
+    argv(&["cmd", "/C", "start", "", target])
 }
 
 fn staged(route: &Route) -> Result<PathBuf, SetupError> {
     match route {
         Route::Keychain { pem } => crate::setup::staged_cert(pem),
+        Route::Certificate { pem } => crate::setup::staged_cert_as(pem, WINDOWS_CER),
         _ => Ok(PathBuf::new()),
     }
 }
@@ -129,13 +148,53 @@ mod tests {
         for mark in ["", "k3m9", "k3m9.", ".4", "K3M9.4", "k3m9.4&x=1", "k3m9.4 --args", "../a.1"] {
             let route = Route::Browser { mark: mark.into() };
             assert_eq!(route_commands("macos", &route, &cert()), None, "{mark}");
+            assert_eq!(route_commands("windows", &route, &cert()), None, "{mark}");
         }
     }
 
     #[test]
-    fn no_route_opens_off_macos_yet() {
-        for os in ["windows", "linux"] {
-            assert_eq!(route_commands(os, &Route::ProxySettings, &cert()), None);
+    fn windows_proxy_settings_starts_the_proxy_page() {
+        assert_eq!(
+            route_commands("windows", &Route::ProxySettings, &cert()),
+            Some(vec![argv(&["cmd", "/C", "start", "", "ms-settings:network-proxy"])])
+        );
+    }
+
+    #[test]
+    fn windows_certificate_starts_the_saved_cer_in_its_own_dialog() {
+        let route = Route::Certificate { pem: String::new() };
+        let cer = PathBuf::from("C:\\Temp\\trawler-ca.cer");
+        assert_eq!(
+            route_commands("windows", &route, &cer),
+            Some(vec![argv(&["cmd", "/C", "start", "", "C:\\Temp\\trawler-ca.cer"])])
+        );
+    }
+
+    #[test]
+    fn windows_browser_starts_the_marked_address() {
+        let route = Route::Browser { mark: "k3m9x2.4".into() };
+        assert_eq!(
+            route_commands("windows", &route, &cert()),
+            Some(vec![argv(&[
+                "cmd",
+                "/C",
+                "start",
+                "",
+                "https://example.com/?trawler-check=k3m9x2.4"
+            ])])
+        );
+    }
+
+    #[test]
+    fn each_route_opens_only_on_the_host_it_was_written_for() {
+        let keychain = Route::Keychain { pem: String::new() };
+        let certificate = Route::Certificate { pem: String::new() };
+        assert_eq!(route_commands("windows", &keychain, &cert()), None);
+        assert_eq!(route_commands("macos", &certificate, &cert()), None);
+        for route in
+            [Route::ProxySettings, keychain, certificate, Route::Browser { mark: "a.1".into() }]
+        {
+            assert_eq!(route_commands("linux", &route, &cert()), None);
         }
     }
 
@@ -147,11 +206,13 @@ mod tests {
     }
 
     #[test]
-    fn only_the_three_routes_deserialize() {
+    fn only_the_named_routes_deserialize() {
         let parsed: Route = serde_json::from_str(r#"{"name":"proxy-settings"}"#).unwrap();
         assert_eq!(parsed, Route::ProxySettings);
         let parsed: Route = serde_json::from_str(r#"{"name":"browser","mark":"a.1"}"#).unwrap();
         assert_eq!(parsed, Route::Browser { mark: "a.1".into() });
+        let parsed: Route = serde_json::from_str(r#"{"name":"certificate","pem":"p"}"#).unwrap();
+        assert_eq!(parsed, Route::Certificate { pem: "p".into() });
         assert!(serde_json::from_str::<Route>(r#"{"name":"url","url":"https://evil"}"#).is_err());
     }
 }

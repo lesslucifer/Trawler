@@ -179,7 +179,11 @@ function picker(host: Host): Chapter {
 function autoThis(host: Host): Chapter[] {
   const device = DEVICE[host];
   const setUp = `set up ${device}`;
-  const trustRoute = host === "macos" ? `"open in Keychain Access"` : `"save…"`;
+  const trustRoute = {
+    macos: `"open in Keychain Access"`,
+    windows: `"open the certificate"`,
+    linux: `"save…"`,
+  }[host];
   const trustBack =
     host === "macos"
       ? `"remove the certificate", bare, and "do it by hand"`

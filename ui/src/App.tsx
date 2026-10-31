@@ -665,7 +665,7 @@ export default function App({
   // opens. The browser's request carries this window's mark, so it settles the
   // tasks as the in-app one does (DEC-62).
   const openRoute = async (route: RouteName) => {
-    if (route === "keychain") {
+    if (route === "keychain" || route === "certificate") {
       await invoke("open_route", {
         route: { name: route, pem: await client.caCertPem() },
       });

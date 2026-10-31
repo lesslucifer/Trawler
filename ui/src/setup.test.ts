@@ -554,8 +554,8 @@ describe("a guide's steps are the route, and everything else says what it is", (
   it("what is left in the sequence is short enough to read before starting", () => {
     expect(setup("this").trust.guide?.steps).toHaveLength(3);
     expect(setup("this").route.guide?.steps).toHaveLength(4);
-    expect(setup("this", { os: "windows" }).trust.guide?.steps).toHaveLength(2);
-    expect(setup("this", { os: "windows" }).route.guide?.steps).toHaveLength(1);
+    expect(setup("this", { os: "windows" }).trust.guide?.steps).toHaveLength(3);
+    expect(setup("this", { os: "windows" }).route.guide?.steps).toHaveLength(4);
     expect(setup("ios").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").trust.guide?.steps).toHaveLength(3);
     expect(setup("android-sim").route.guide?.steps).toHaveLength(1);
@@ -1143,10 +1143,43 @@ describe("This Mac's by-hand routes", () => {
     expect(setup("ios-sim").route.guide).toEqual(setup("this").route.guide);
   });
 
-  it.each(["windows", "linux"] as const)("no route or recording is offered on %s yet", (os) => {
-    const s = setup("this", { os });
+  it("no route or recording is offered on linux yet", () => {
+    const s = setup("this", { os: "linux" });
     expect(routes(guides(s))).toEqual([]);
     expect(media(guides(s))).toEqual([]);
     expect(s.tryRoutes).toBeUndefined();
+  });
+});
+
+describe("This PC's by-hand routes", () => {
+  const pc = () => setup("this", { os: "windows" });
+  const routes = (steps: GuideStep[]) => steps.flat().filter(isRoute).map((p) => p.open);
+  const media = (steps: GuideStep[]) => steps.flat().filter(isMedia).map((p) => p.media);
+
+  it("the certificate opens in Windows' own dialog, its store page recorded", () => {
+    const trust = pc().trust.guide!;
+    expect(routes(trust.steps)).toEqual(["certificate"]);
+    expect(media(trust.steps)).toEqual(["windows-install-cert"]);
+    expect(commands(trust.alternatives!)).toEqual(["certutil -addstore -f ROOT \"$HOME\\Downloads\\trawler-ca.pem\""]);
+  });
+
+  it("the user's own import comes off without an administrator, set up this PC's with one", () => {
+    expect(commands(pc().trust.guide!.undo!)).toEqual([
+      'certutil -user -delstore ROOT "Trawler Proxy CA"',
+      'certutil -delstore ROOT "Trawler Proxy CA"',
+    ]);
+  });
+
+  it("the proxy opens on its Settings page, the values to type copyable, the command another way", () => {
+    const route = pc().route.guide!;
+    expect(routes(route.steps)).toEqual(["proxy-settings"]);
+    expect(media(route.steps)).toEqual(["windows-proxy"]);
+    expect(values(route.steps)).toEqual(["127.0.0.1", "9999"]);
+    expect(commands(route.alternatives!)).toHaveLength(1);
+  });
+
+  it("the request's other ways are the browser, by route, then PowerShell", () => {
+    expect(pc().tryRoutes).toEqual([{ open: "browser", label: "open example.com in your browser" }]);
+    expect(pc().tryLead).toBe("In PowerShell, run:");
   });
 });

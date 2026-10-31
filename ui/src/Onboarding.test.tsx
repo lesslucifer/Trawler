@@ -131,7 +131,7 @@ const TRUST_BACK = {
 } as const;
 
 // Each host's by-hand routes start where its own guide does: a Mac's in its
-// settings and Keychain Access (W12), a PC's at the save and its commands.
+// settings and Keychain Access, a PC's in its Settings and certificate dialog (W12).
 const FIRST_STEP = {
   macos: {
     trust: "Add it to your login keychain",
@@ -139,9 +139,9 @@ const FIRST_STEP = {
     steps: "3 steps",
   },
   windows: {
-    trust: "Save Trawler's certificate as trawler-ca.pem",
-    route: "In PowerShell, run:",
-    steps: "2 steps",
+    trust: "Open it in Windows' certificate dialog",
+    route: "Open the proxy settings",
+    steps: "3 steps",
   },
 } as const;
 
@@ -3451,8 +3451,44 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
     ).toBeInTheDocument();
   });
 
-  it("off macOS, the guides offer no route and no recording yet", () => {
+  it.each([
+    ["the certificate", 1, "open the certificate", "certificate"],
+    ["the proxy", 2, "open Proxy settings", "proxy-settings"],
+  ] as const)(
+    "on Windows, %s's route asks the shell for its screen by name",
+    (_what, n, label, route) => {
+      const onOpenRoute = vi.fn(async () => {});
+      draw({ os: "windows", onOpenRoute });
+      fireEvent.click(within(task(n)).getByText(MANUAL));
+
+      fireEvent.click(within(task(n)).getByRole("button", { name: label }));
+
+      expect(onOpenRoute).toHaveBeenCalledWith(route);
+    },
+  );
+
+  it("on Windows, the steps no route reaches show their recording", () => {
     draw({ os: "windows" });
+
+    const step = within(task(1)).getByTestId("step-media").closest("li")!;
+    expect(
+      within(step)
+        .getAllByTestId("menu-path")
+        .map((p) => p.textContent),
+    ).toEqual([
+      "Install Certificate…→Next",
+      "Place all certificates in the following store→Browse…→Trusted Root Certification Authorities",
+    ]);
+    expect(within(step).getByText("Windows 11")).toBeInTheDocument();
+    expect(
+      within(task(2)).getByLabelText(
+        /^Settings: Network & internet → Proxy → Manual proxy setup/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("on Linux, the guides offer no route and no recording yet", () => {
+    draw({ os: "linux" });
 
     expect(screen.queryByTestId("step-media")).toBeNull();
     expect(screen.queryByRole("button", { name: /^open / })).toBeNull();
