@@ -390,7 +390,7 @@ describe("this machine is instructed for the host it is running on", () => {
 
   it("Windows gets certutil and the registry command", () => {
     const text = everything(setup("this", { os: "windows" }));
-    expect(text).toMatch(/certutil -addstore/);
+    expect(text).toMatch(/certutil -user -addstore/);
     expect(text).toMatch(/ProxyServer .*127\.0\.0\.1:9999/);
   });
 
@@ -676,11 +676,12 @@ describe("each platform names the one certificate file its installer opens", () 
     }
   });
 
-  it("gives an iPhone the profile, Android DER, and every other platform PEM", () => {
+  it("gives an iPhone the profile, Android and another Windows PC a .cer, and every other platform PEM", () => {
     expect(caFormatFor("ios")).toBe("mobileconfig");
     expect(caFormatFor("android")).toBe("cer");
     expect(caFormatFor("android-sim")).toBe("cer");
-    for (const id of ["this", "mac", "windows", "ubuntu", "ios-sim"] as const) {
+    expect(caFormatFor("windows")).toBe("cer");
+    for (const id of ["this", "mac", "ubuntu", "ios-sim"] as const) {
       expect(caFormatFor(id)).toBe("pem");
     }
   });
@@ -821,14 +822,15 @@ describe("Windows' commands run in the shell their sentence names", () => {
   });
 
   it("the route writes the address, then enables it, joined as PowerShell runs them", () => {
-    const [route] = commands(setup("windows").route.guide!.steps);
+    const { alternatives } = setup("windows").route.guide!;
+    const [route] = commands(alternatives!);
     expect(route).toMatch(/\/v ProxyServer \/t REG_SZ \/d 192\.168\.1\.24:9999 \/f; reg add .* \/v ProxyEnable \/t REG_DWORD \/d 1 \/f$/);
-    expect(leadOf(setup("windows").route.guide!.steps[0])).toBe("In PowerShell, run:");
+    expect(leadOf(alternatives![0])).toBe("In PowerShell, run:");
   });
 
-  it("the certificate is installed as administrator, whose terminal opens elsewhere", () => {
-    expect(commands(setup("windows").trust.guide!.steps)).toEqual([
-      'certutil -addstore -f ROOT "$HOME\\Downloads\\trawler-ca.pem"',
+  it("the certificate's command needs no administrator, and names the folder its terminal does not open in", () => {
+    expect(commands(setup("windows").trust.guide!.alternatives!)).toEqual([
+      'certutil -user -addstore -f ROOT "$HOME\\Downloads\\trawler-ca.cer"',
     ]);
   });
 });
@@ -841,7 +843,7 @@ describe("another computer's trust command reads the file its download step name
 
   it.each([
     ["mac", "~/Downloads/trawler-ca.pem"],
-    ["windows", '"$HOME\\Downloads\\trawler-ca.pem"'],
+    ["windows", '"$HOME\\Downloads\\trawler-ca.cer"'],
     ["ubuntu", '"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"'],
   ] as const)("%s", (id, path) => {
     const file = downloaded(id).match(/it downloads (\S+)\.$/)![1];
@@ -1065,10 +1067,21 @@ describe("the Android device's steps name what a stock Android shows", () => {
 // "to turn it off later" says, on every platform and every host.
 describe("each platform's way to stop routing is one source", () => {
   const HOSTS: HostOs[] = ["macos", "windows", "linux", "other"];
-  it.each(HOSTS)("on %s, setup's undo is routeUndo for every platform", (os) => {
+  // W14's Q4: a desktop's settings page is its way back by hand, and the quit
+  // dialog keeps routeUndo's command alone.
+  it.each(HOSTS)("on %s, setup's undo runs routeUndo's commands for every platform", (os) => {
     for (const id of PLATFORM_IDS) {
-      expect(setupFor(id, ctx({ os })).route.guide?.undo, `${id}`).toEqual(routeUndo(id, os));
+      const undo = setupFor(id, ctx({ os })).route.guide?.undo;
+      if (undo === undefined) continue;
+      expect(commands(undo), `${id}`).toEqual(commands(routeUndo(id, os)));
     }
+  });
+
+  it("the quit dialog's way back on Windows names the shell, never an API", () => {
+    for (const id of ["this", "windows"] as const) {
+      expect(routeUndo(id, "windows")[0][0]).toBe("In PowerShell, run:");
+    }
+    expect(JSON.stringify(PLATFORM_IDS.map((id) => routeUndo(id, "windows")))).not.toMatch(/WinINET/);
   });
 
   it("needs no address: an off-machine platform has its way back before reach is armed", () => {
@@ -1171,7 +1184,7 @@ describe("This PC's by-hand routes", () => {
     const trust = pc().trust.guide!;
     expect(routes(trust.steps)).toEqual(["certificate"]);
     expect(media(trust.steps)).toEqual(["windows-install-cert"]);
-    expect(commands(trust.alternatives!)).toEqual(["certutil -addstore -f ROOT \"$HOME\\Downloads\\trawler-ca.pem\""]);
+    expect(commands(trust.alternatives!)).toEqual(["certutil -user -addstore -f ROOT \"$HOME\\Downloads\\trawler-ca.pem\""]);
   });
 
   it("the user's own import comes off without an administrator, set up this PC's with one", () => {
@@ -1299,11 +1312,101 @@ describe("Another Mac, walked by hand (W13)", () => {
   it("keeps Ethernet behind a ?, on the route and on its way back (W5, Q4)", () => {
     const ethernet = /^On Ethernet, click Ethernet in place of Wi-Fi/;
     expect(route.notes).toEqual([expect.stringMatching(ethernet)]);
-    expect(route.undo![0].find(isHelp)).toMatchObject({ topic: "on Ethernet", help: expect.stringMatching(ethernet) });
+    expect(route.undo![1].find(isHelp)).toMatchObject({ topic: "on Ethernet", help: expect.stringMatching(ethernet) });
   });
 
   it("asks no why its lead already says (E2)", () => {
     expect([mac.trust.why, mac.route.why, mac.try.why]).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+// W14: Another Windows PC takes This PC's steps by hand on that PC, from the
+// .cer Windows opens in its certificate dialog, and each command is the other way.
+describe("Another Windows PC, walked by hand (W14)", () => {
+  const pc = setup("windows");
+  const trust = pc.trust.guide!;
+  const route = pc.route.guide!;
+  const sentence = (step: GuideStep) => step.filter((p): p is string => typeof p === "string").join(" ");
+  const paths = (step: GuideStep) => step.filter(isPath).map((p) => p.path);
+
+  it("downloads the .cer and imports it through Windows' dialog with its recording (I1, W3)", () => {
+    expect(trust.steps.map(sentence)).toEqual([
+      "On that PC, open — it downloads trawler-ca.cer.",
+      "Open trawler-ca.cer from Downloads",
+      "Click and choose",
+      "Click and on the warning",
+    ]);
+    expect(values([trust.steps[0]])).toEqual([REACH.caUrls.cer]);
+    expect(paths(trust.steps[2])).toEqual([
+      ["Install Certificate…", "Next"],
+      ["Place all certificates in the following store", "Browse…", "Trusted Root Certification Authorities"],
+    ]);
+    expect(trust.steps[2].find(isMedia)).toMatchObject({ media: "windows-install-cert", shows: "Windows 11" });
+    expect(trust.steps.slice(2)).toEqual(setup("this", { os: "windows" }).trust.guide!.steps.slice(1));
+    expect(commands(trust.steps)).toEqual([]);
+  });
+
+  it("sets the proxy on Settings' page with its recording, the server and port above (I2)", () => {
+    expect(sentence(route.steps[0])).toBe("On that PC, open");
+    expect(paths(route.steps[0])).toEqual([["Settings", "Network & internet", "Proxy"]]);
+    expect(route.steps[1].find(isMedia)?.media).toBe("windows-proxy");
+    expect(sentence(route.steps[2])).toBe("Turn on — with the server and port above");
+    expect(route.steps.flatMap((step) => step.filter(isRoute))).toEqual([]);
+    expect(commands(route.steps)).toEqual([]);
+  });
+
+  it("keeps each command as the other way, led by the shell it runs in (E1, E2, Q3)", () => {
+    expect(trust.alternatives!.map((step) => step[0])).toEqual(["In PowerShell, run:"]);
+    expect(route.alternatives!.map((step) => step[0])).toEqual(["In PowerShell, run:"]);
+    expect(everything(pc)).not.toMatch(/as administrator, run:\n?.*addstore/);
+  });
+
+  it("removes the certificate from the user's store by hand first, then from both by command (W2, I3)", () => {
+    expect(paths(trust.undo![0])).toEqual([
+      ["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", "Trawler Proxy CA"],
+    ]);
+    expect(commands(trust.undo!)).toEqual([
+      'certutil -user -delstore ROOT "Trawler Proxy CA"',
+      'certutil -delstore ROOT "Trawler Proxy CA"',
+    ]);
+    expect(trust.undo).toEqual(setup("this", { os: "windows" }).trust.guide!.undo);
+  });
+
+  it("turns the proxy off in Settings first, the command as Or, and names no API (I3, W1)", () => {
+    expect(sentence(route.undo![0])).toBe("Turn off in and click");
+    expect(paths(route.undo![0])[1]).toEqual(["Settings", "Network & internet", "Proxy", "Manual proxy setup", "Edit"]);
+    expect(route.undo![1][0]).toBe("Or in PowerShell, run:");
+    expect(everything(pc)).not.toMatch(/WinINET/);
+  });
+
+  it("says what outranks the proxy, and what the command leaves open apps, behind a ? (N1, N2)", () => {
+    for (const guide of [route, setup("this", { os: "windows" }).route.guide!]) {
+      expect(guide.steps[3].find(isHelp)).toMatchObject({
+        topic: "if nothing arrives",
+        help: expect.stringContaining("Automatically detect settings and Use setup script"),
+      });
+      expect(guide.alternatives![0].find(isHelp)).toMatchObject({ topic: "apps already open" });
+      expect(guide.notes).toBeUndefined();
+    }
+  });
+});
+
+// W14's X1: a Mac set up in System Settings is undone there too.
+describe("a Mac's proxy way back is by hand first", () => {
+  it.each([
+    ["this", "macos"],
+    ["mac", "macos"],
+    ["ios-sim", "macos"],
+  ] as const)("%s", (id, os) => {
+    const undo = setup(id, { os }).route.guide!.undo!;
+    expect(undo[0].filter(isPath).map((p) => p.path)).toEqual([
+      ["Web proxy (HTTP)"],
+      ["Secure web proxy (HTTPS)"],
+      ["System Settings", "Network", "Wi-Fi", "Details…", "Proxies"],
+      ["OK"],
+    ]);
+    expect(undo[1][0]).toBe("Or in Terminal, run:");
+    expect(undo[1].find(isHelp)?.topic).toBe("on Ethernet");
   });
 });
 

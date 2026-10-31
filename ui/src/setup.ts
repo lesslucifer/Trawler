@@ -383,6 +383,13 @@ export function deviceName(id: PlatformId, os: HostOs): string {
 }
 
 const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const lowered = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+// A command offered after a by-hand way to the same end is its other way.
+const orStep = ([lead, ...rest]: GuideStep): GuideStep => [
+  typeof lead === "string" ? `Or ${lowered(lead)}` : lead,
+  ...rest,
+];
 
 function openWhere(id: PlatformId, os: HostOs): string {
   return PLATFORMS[id].openWhere ?? `on ${HOST_NOUN[os]}`;
@@ -579,7 +586,7 @@ const macTrustCommand = (file: string): CommandPart => ({
 const MAC_KEYCHAIN_UNDO: GuideStep[] = [
   ["In Keychain Access, search Trawler and delete", { path: [CA_NAME] }],
   [
-    `Or ${IN_TERMINAL.charAt(0).toLowerCase()}${IN_TERMINAL.slice(1)}`,
+    `Or ${lowered(IN_TERMINAL)}`,
     {
       command: `security delete-certificate -c "${CA_NAME}" login.keychain; sudo security delete-certificate -c "${CA_NAME}" /Library/Keychains/System.keychain`,
       label: "the removal command",
@@ -590,6 +597,50 @@ const MAC_KEYCHAIN_UNDO: GuideStep[] = [
 // Windows' commands are written for PowerShell, the shell Windows opens from
 // Start, Win+X and Terminal: 5.1 there rejects `&&` (C1).
 const POWERSHELL_ADMIN = "In PowerShell as administrator, run:";
+const IN_POWERSHELL = "In PowerShell, run:";
+const WINDOWS_OS_VERSION = "Windows 11";
+const TRUSTED_ROOT_STORE = [
+  "Place all certificates in the following store",
+  "Browse…",
+  "Trusted Root Certification Authorities",
+];
+
+// Windows' certificate dialog imports into the user's Trusted Root store,
+// which asks for no administrator; the command writes the same store (W14's
+// Q3). "Set up this PC" and older commands wrote every user's, so the way back
+// reaches both.
+const WINDOWS_IMPORT: GuideStep[] = [
+  [
+    "Click",
+    { path: ["Install Certificate…", "Next"] },
+    "and choose",
+    { path: TRUSTED_ROOT_STORE },
+    {
+      media: "windows-install-cert",
+      alt: `Certificate Import Wizard: ${TRUSTED_ROOT_STORE.join(" → ")}, then Finish and Yes`,
+      shows: WINDOWS_OS_VERSION,
+    },
+  ],
+  ["Click", { path: ["OK", "Next", "Finish"] }, "and", { path: ["Yes"] }, "on the warning"],
+];
+
+const windowsTrustCommand = (file: string): GuideStep => [
+  IN_POWERSHELL,
+  { command: `certutil -user -addstore -f ROOT ${file}`, label: "the trust command" },
+];
+
+const WINDOWS_CERT_UNDO: GuideStep[] = [
+  [
+    "Start, search",
+    { path: ["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", CA_NAME] },
+    "and delete it",
+  ],
+  [`Or ${lowered(IN_POWERSHELL)}`, { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
+  [
+    `If it was trusted for every user, ${lowered(POWERSHELL_ADMIN)}`,
+    { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the administrator's removal command" },
+  ],
+];
 
 // The trust command reads the certificate file at `file`, which is wherever
 // the step before it left it.
@@ -606,11 +657,10 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
     notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
   }),
   windows: (file) => ({
-    install: [[POWERSHELL_ADMIN, { command: `certutil -addstore -f ROOT ${file}`, label: "the trust command" }]],
+    install: [[`Open ${CA_FILES.cer} from Downloads`], ...WINDOWS_IMPORT],
+    alternatives: [windowsTrustCommand(file)],
     undoTitle: "to remove it later",
-    undo: [
-      [POWERSHELL_ADMIN, { command: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" }],
-    ],
+    undo: WINDOWS_CERT_UNDO,
     notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
   }),
   linux: (file) => ({
@@ -673,6 +723,16 @@ const PROXIES_STEP: GuideStep = [
 ];
 const BOTH_PROXIES: StepPart[] = ["Turn on", { path: ["Web proxy (HTTP)"] }, "and", { path: ["Secure web proxy (HTTPS)"] }];
 const CLICK_OK: GuideStep = ["Click", { path: ["OK"] }];
+const MAC_PROXY_OFF: GuideStep = [
+  "Turn off",
+  { path: ["Web proxy (HTTP)"] },
+  "and",
+  { path: ["Secure web proxy (HTTPS)"] },
+  "in",
+  { path: ["System Settings", "Network", ...PROXIES_PATH] },
+  "and click",
+  { path: ["OK"] },
+];
 
 function macRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
   return {
@@ -680,7 +740,7 @@ function macRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
     notes: [ON_ETHERNET],
     alternatives: [[IN_TERMINAL, { command: routeCommand("macos", addr)!, label: "the proxy command" }]],
     undoTitle: "to turn it off later",
-    undo: reversal("macos"),
+    undo: proxyOffByHand(MAC_PROXY_OFF, "macos"),
   };
 }
 
@@ -700,76 +760,73 @@ const thatMacRoute = (addr: string): Guide =>
   macRoute(addr, ["On that Mac, open", { path: ["System Settings", "Network"] }], ["— each with the server and port above"]);
 
 // This PC's own routes (W12's Q5): the certificate opens in Windows' own
-// dialog, whose import into the user's Trusted Root store asks for no
-// administrator, and the proxy in its Settings page. Each command is the other way.
-const WINDOWS_OS_VERSION = "Windows 11";
-const IN_POWERSHELL = "In PowerShell, run:";
-const TRUSTED_ROOT_STORE = [
-  "Place all certificates in the following store",
-  "Browse…",
-  "Trusted Root Certification Authorities",
-];
-
+// dialog and the proxy in its Settings page. Each command is the other way.
 function thisPcTrust(file: string): Guide {
   return {
-    steps: [
-      ["Open it in Windows' certificate dialog", { open: "certificate", label: "open the certificate" }],
-      [
-        "Click",
-        { path: ["Install Certificate…", "Next"] },
-        "and choose",
-        { path: TRUSTED_ROOT_STORE },
-        {
-          media: "windows-install-cert",
-          alt: `Certificate Import Wizard: ${TRUSTED_ROOT_STORE.join(" → ")}, then Finish and Yes`,
-          shows: WINDOWS_OS_VERSION,
-        },
-      ],
-      ["Click", { path: ["OK", "Next", "Finish"] }, "and", { path: ["Yes"] }, "on the warning"],
-    ],
-    alternatives: [saveCaStep("pem"), ...OS_TRUST.windows(file).install],
+    steps: [["Open it in Windows' certificate dialog", { open: "certificate", label: "open the certificate" }], ...WINDOWS_IMPORT],
+    alternatives: [saveCaStep("pem"), windowsTrustCommand(file)],
     undoTitle: "to remove it later",
-    undo: [
-      [IN_POWERSHELL, { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
-      [
-        `If set up this PC trusted it, ${POWERSHELL_ADMIN.charAt(0).toLowerCase()}${POWERSHELL_ADMIN.slice(1)}`,
-        { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the administrator's removal command" },
-      ],
-    ],
+    undo: WINDOWS_CERT_UNDO,
   };
 }
 
+const PROXY_PAGE = ["Settings", "Network & internet", "Proxy"];
 const MANUAL_PROXY_SETUP = ["Manual proxy setup", "Use a proxy server", "Set up"];
+const PC_PROXY_OFF: GuideStep = [
+  "Turn off",
+  { path: ["Use a proxy server"] },
+  "in",
+  { path: [...PROXY_PAGE, "Manual proxy setup", "Edit"] },
+  "and click",
+  { path: ["Save"] },
+];
 
-function thisPcRoute(addr: string): Guide {
-  const { host, port } = splitProxyAddr(addr);
+// Detection and a setup script each outrank a manual proxy (W5's N2), and the
+// registry writes tell no running app, where Settings does (W5's N1).
+const NOTHING_ARRIVES: HelpPart = {
+  help: "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy.",
+  topic: "if nothing arrives",
+};
+const APPS_ALREADY_OPEN: HelpPart = {
+  help: "Apps already open may keep their old setting until restarted.",
+  topic: "apps already open",
+};
+
+function pcRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
   return {
     steps: [
-      ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }],
+      first,
       [
         "Click",
         { path: MANUAL_PROXY_SETUP },
         {
           media: "windows-proxy",
-          alt: `Settings: Network & internet → Proxy → ${MANUAL_PROXY_SETUP.join(" → ")}, the proxy on`,
+          alt: `Settings: ${PROXY_PAGE.slice(1).join(" → ")} → ${MANUAL_PROXY_SETUP.join(" → ")}, the proxy on`,
           shows: WINDOWS_OS_VERSION,
         },
       ],
-      [
-        "Turn on",
-        { path: ["Use a proxy server"] },
-        "— with proxy IP address",
-        { copy: host, label: "the proxy server", wire: "proxy host" },
-        "and port",
-        { copy: String(port), label: "the proxy port", wire: "proxy port" },
-      ],
-      ["Click", { path: ["Save"] }],
+      ["Turn on", { path: ["Use a proxy server"] }, ...values],
+      ["Click", { path: ["Save"] }, NOTHING_ARRIVES],
     ],
-    alternatives: [[IN_POWERSHELL, { command: routeCommand("windows", addr)!, label: "the proxy command" }]],
+    alternatives: [[IN_POWERSHELL, { command: routeCommand("windows", addr)!, label: "the proxy command" }, APPS_ALREADY_OPEN]],
     undoTitle: "to turn it off later",
-    undo: reversal("windows"),
+    undo: proxyOffByHand(PC_PROXY_OFF, "windows"),
   };
 }
+
+function thisPcRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return pcRoute(addr, ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }], [
+    "— with proxy IP address",
+    { copy: host, label: "the proxy server", wire: "proxy host" },
+    "and port",
+    { copy: String(port), label: "the proxy port", wire: "proxy port" },
+  ]);
+}
+
+// That PC's route is walked by hand, as that Mac's is (W14's I2).
+const thatPcRoute = (addr: string): Guide =>
+  pcRoute(addr, ["On that PC, open", { path: PROXY_PAGE }], ["— with the server and port above"]);
 
 // This Linux machine's own route: GNOME's Network panel, whose proxy page
 // keeps its edits until Save. Its command is the other way.
@@ -863,9 +920,10 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
   }
 }
 
-const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
-  macos: IN_TERMINAL,
-  windows: "In PowerShell, run:",
+// The desktops with a settings page route by hand; these route by command.
+type CommandRouted = "linux" | "terminal";
+
+const ROUTE_LEAD: Record<CommandRouted, string> = {
   linux: "GNOME — run:",
   terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
 };
@@ -881,7 +939,13 @@ function reversal(t: OsTarget | "terminal"): GuideStep[] {
   return [t === "macos" ? [...said, { help: ON_ETHERNET, topic: "on Ethernet" }] : said];
 }
 
-function osRoute(t: OsTarget | "terminal", addr: string): Guide {
+// A desktop set up by hand undoes it there too, its command the other way
+// (W14's Q4); the quit dialog keeps the command alone, through routeUndo.
+function proxyOffByHand(byHand: GuideStep, t: OsTarget): GuideStep[] {
+  return [byHand, ...reversal(t).map(orStep)];
+}
+
+function osRoute(t: CommandRouted, addr: string): Guide {
   return {
     steps: [[ROUTE_LEAD[t], { command: routeCommand(t, addr)!, label: "the proxy command" }]],
     undoTitle: "to turn it off later",
@@ -942,10 +1006,11 @@ const ANDROID_WIFI_PROXY = "Settings → Network & internet → Internet → ⚙
 // Each platform gets the one format its installer opens: an iPhone installs a
 // configuration profile from Safari, Files and AirDrop alike, where a bare
 // certificate installs from none of them; Android's CA installer reads DER and
-// lists .cer; every desktop trust command and simctl read PEM.
+// lists .cer; Windows opens a .cer in its certificate dialog and has no handler
+// for .pem (W14's Q2); every other desktop trust command and simctl read PEM.
 export function caFormatFor(id: PlatformId): CaFormat {
   if (id === "ios") return "mobileconfig";
-  if (id === "android" || id === "android-sim") return "cer";
+  if (id === "android" || id === "android-sim" || id === "windows") return "cer";
   return "pem";
 }
 
@@ -1019,6 +1084,12 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
   };
 }
 
+function anotherMachineRoute(target: OsTarget, addr: string): Guide {
+  if (target === "macos") return thatMacRoute(addr);
+  if (target === "windows") return thatPcRoute(addr);
+  return osRoute("linux", addr);
+}
+
 function anotherMachineSetup(
   id: PlatformId,
   os: HostOs,
@@ -1043,7 +1114,7 @@ function anotherMachineSetup(
     },
     route: {
       title: `On ${device}, send its traffic to Trawler`,
-      guide: reach === null ? undefined : target === "macos" ? thatMacRoute(reach.proxy) : osRoute(target, reach.proxy),
+      guide: reach === null ? undefined : anotherMachineRoute(target, reach.proxy),
     },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),

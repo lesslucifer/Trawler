@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae5fced9f34851f0dfade78" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W14 plan: wording and display, Another Windows PC</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W14 — wording and display: Another Windows PC</h1>
+      <p>W12's pattern and W13's help rule on Another Windows PC: each task leads with what a person does on that PC without a terminal, using This PC's Windows 11 recordings. Each command becomes the other way, and every way back undoes every way in.</p>
+      <div class="meta">v2 · 2026-10-31 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W14</span> · branch <code>wu/onboard-revamp/another-windows-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W5</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> ("1. Yes 2. yes 3. ok 4. ok", 2026-10-31). Q1–Q4 are A. The findings and
+      N1–N3 are taken with them. X1 is taken, since it was proposed on Q4 being A. Found by reading the Another Windows PC
+      reels at the epic tip (<code>c4f7f445</code>: <code>macos-windows</code>, <code>windows-windows</code>,
+      <code>linux-windows</code>, filmed 2026-10-31 after the last UI change) and the source of its guide. Round 22 of the
+      <a href="2026-09-17-onboarding-design-run.html">design run</a> closed on your "just execute it" and is archived.
+      Every finding is built.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      On Another Windows PC, on every host, each state of the setup screen leads with the one thing to do next. Every word
+      names one thing one way, never an API name, and is true on the host it is shown on. Each by-hand step on that PC
+      offers a route without a terminal or an administrator where one exists, with verified media, and keeps its command
+      as the other way. Every way back undoes every way in. What explains shows only on request (W13's R1). A test holds
+      each rule.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONBRVP · epic W14 block · UC-ONBOARD: Another Windows PC's guides · the emphasis rule W12 set · help on request
+      (W13's R1, H1) · W5's N1–N3, deferred here · the epic's Q11 (interactive first, media as the fallback) · the setup
+      screen's design run, re-opened at round 22 · shell-side only: the core stays out (the epic's non-goals). The core
+      already serves <code>/ca.cer</code>.
+    </p>
+
+    <h2 id="today">What Another Windows PC shows today</h2>
+    <div class="diagram" data-c="today-diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph T1["1 · Allow that PC to connect"]
+    a1["not done — Trawler answers on this PC only"] --> a2["[allow devices on Ethernet to connect] ?"]
+    a2 --> a3["declined: not allowed — Trawler still answers on this PC only."]
+  end
+  T1 --> T2
+  subgraph T2["2 · On that PC, install Trawler's certificate"]
+    b1["can't check here — that PC's first HTTPS request confirms it"] --> b2["1. On that PC, open …/ca.pem — it downloads trawler-ca.pem ?"]
+    b2 --> b3["2. In PowerShell as administrator, run:
+▇ certutil -addstore -f ROOT &quot;$HOME\Downloads\trawler-ca.pem&quot; ▇"]
+    b3 -.-> b4["way back: admin certutil -delstore ROOT (machine store only)"]
+  end
+  T2 --> T3
+  subgraph T3["3 · On that PC, send its traffic to Trawler"]
+    c1["can't check here"] --> c2["SERVER · PORT"] --> c3["› 1 step: In PowerShell, run: ▇ reg add … ProxyServer …; reg add … ProxyEnable … ▇"]
+    c3 -.-> c4["way back: Disable the WinINET proxy (keeps the saved address): ▇ reg add … /d 0 ▇"]
+  end
+  T3 --> T4
+  subgraph T4["4 · Make a request from that PC"]
+    d1["not done — waiting for the first request"] --> d2["On that PC, open https://example.com/?trawler-check=…"]
+  end
+      </pre>
+      <div class="caption">Windows host, the address allowed (<code>windows-windows/walk-05-armed</code>; the other two
+        hosts differ only in the host noun). Tasks 1 and 4 already carry W13's shared fixes. Tasks 2 and 3 are still
+        commands only: the heaviest element is an administrator's PowerShell command.</div>
+    </div>
+
+    <h2 id="checked">What I checked</h2>
+    <table data-c="checked">
+      <tr><th>Tried</th><th>Result</th><th>Used by</th></tr>
+      <tr><td>The Another Windows PC reels on all three hosts (frames <code>walk-01</code>…<code>walk-05</code>)</td>
+        <td>Same guide on every host: only the host noun differs. No reel films task 3's guide open or a done state</td><td>every finding</td></tr>
+      <tr><td><code>anotherMachineSetup</code>, <code>OS_TRUST.windows</code>, <code>osRoute("windows")</code> in <code>ui/src/setup.ts</code></td>
+        <td>W12 built This PC's guide as <code>thisPcTrust</code> and <code>thisPcRoute</code>. Another Windows PC still reads
+        <code>OS_TRUST.windows</code> and <code>ROUTE_LEAD.windows</code>. <code>ROUTE_LEAD.windows</code> is used by Another
+        Windows PC alone, and This PC lists <code>OS_TRUST.windows</code>'s command under <em>other ways</em></td><td>E1 · E2 · I1 · I2 · Q3</td></tr>
+      <tr><td><code>reversal("windows")</code> and <code>routeUndo</code></td>
+        <td>One proxy way back, read by This PC, Another Windows PC and the close dialog (W11's S4). Its lead comes from
+        <code>proxyOffSteps</code> in <code>ui/src/proxyTargets.ts</code></td><td>W1 · Q1 · Q4</td></tr>
+      <tr><td>This PC's open-the-certificate route (<code>ui/src-tauri/src/route.rs</code>)</td>
+        <td>It saves a <code>.cer</code> and starts that file. Windows opens <code>.cer</code> and <code>.crt</code> in its
+        certificate dialog on a double-click and has no handler for <code>.pem</code>. The file that PC downloads today is
+        <code>trawler-ca.pem</code>, so it cannot be opened by hand</td><td>W3 · I1 · Q2</td></tr>
+      <tr><td>The core's CA routes (<code>src/api/routes.rs</code>)</td>
+        <td><code>/ca.cer</code> already serves DER as <code>trawler-ca.cer</code> (Android's). <code>certutil -addstore</code>
+        reads DER as well as PEM, so the command keeps working on that file. No core change</td><td>Q2</td></tr>
+      <tr><td>W12's recordings <code>windows-install-cert</code> and <code>windows-proxy</code></td>
+        <td>Filmed on Windows 11. They start on the certificate dialog and on Settings › Network &amp; internet › Proxy.
+        That PC shows the same two screens after opening the downloaded <code>.cer</code> and after opening Settings by hand.
+        The typed values differ (127.0.0.1, 7420), as W13's reuse of <code>macos-proxies</code> accepted</td><td>I1 · I2 · M1</td></tr>
+      <tr><td>The shell's open command</td>
+        <td>It opens screens on this machine only, so no route on that PC can be a button</td><td>I1 · I2</td></tr>
+      <tr><td>Unverified here</td>
+        <td>Whether Windows shows its <em>Open File – Security Warning</em> before opening a downloaded <code>.cer</code>.
+        The steps read true either way. A real PC confirms it at W20 (W5's real-device check)</td><td>I1</td></tr>
+    </table>
+
+    <h2 id="leads">Part 1 — what leads</h2>
+    <table data-c="leads">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>E1</td>
+        <td><strong>The certificate's only route needs an administrator's PowerShell.</strong> The heaviest element on
+        screen (walk-05). A person who cannot elevate on that PC has no way through.</td>
+        <td>The by-hand route leads (I1). The command goes under <em>other ways</em> (Q3), as on This PC.</td><td>take</td></tr>
+      <tr><td>E2</td>
+        <td><strong>Task 3's only route is a registry command,</strong> behind a collapsed <em>1 step</em>.</td>
+        <td>The by-hand route leads (I2). The command goes under <em>other ways</em>.</td><td>take</td></tr>
+      <tr><td>E3</td>
+        <td><strong>Task 1 says one thing twice when allowing is declined</strong> (walk-04, every off-machine platform).
+        The state line reads <em>Trawler answers on this PC only</em>, and the outcome under the button reads <em>not allowed —
+        Trawler still answers on this PC only.</em> (F19: one statement per fact.)</td>
+        <td>The outcome reads <em>not allowed</em>. It still marks that the dialog closed with a no, which the comment on
+        <code>armNote</code> says is its job. Shared code, so Q1.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="wording">Part 2 — wording</h2>
+    <table data-c="wording">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>W1</td>
+        <td><strong>The proxy's way back names an API</strong> (W5's N3). <em>Disable the WinINET proxy (keeps the saved
+        address):</em>. Windows never shows the word WinINET. The parenthesis explains, and by R1 an explanation belongs behind help.</td>
+        <td><em>In PowerShell, run:</em>, the lead the route command already uses. The parenthesis goes. One lead in
+        <code>proxyOffSteps</code>, so This PC and the close dialog read it too (Q1).</td><td>take</td></tr>
+      <tr><td>W2</td>
+        <td><strong>The certificate's way back misses a way in.</strong> It deletes from the machine store
+        (<code>certutil -delstore ROOT</code>, administrator). The by-hand route (I1) imports into the user's store, where
+        that command never looks.</td>
+        <td>This PC's way back, as one constant both read, as This Mac and that Mac share theirs: the user-store command,
+        and the administrator's for when the command ran. Its by-hand route is I3.</td><td>take</td></tr>
+      <tr><td>W3</td>
+        <td><strong>The file named is one Windows cannot open.</strong> The step says <em>it downloads trawler-ca.pem</em>.
+        Windows has no handler for <code>.pem</code>.</td>
+        <td>That PC downloads <code>trawler-ca.cer</code> from <code>/ca.cer</code> (Q2). The download step, the by-hand step
+        and the command name the same file through one constant, as W5's C2 required.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
+    <table data-c="routes">
+      <tr><th>#</th><th>The step today</th><th>Proposed route</th><th>Ruling</th></tr>
+      <tr><td>I1</td>
+        <td>The certificate: download, then an administrator's command.</td>
+        <td><em>On that PC, open</em> <code>&lt;/ca.cer url&gt;</code> <em>— it downloads trawler-ca.cer</em> (with W13's
+        <em>?</em>) · <em>Open trawler-ca.cer from Downloads</em> · <em>Click</em> Install Certificate… → Next <em>and
+        choose</em> Place all certificates in the following store → Browse… → Trusted Root Certification Authorities, with
+        <code>windows-install-cert</code> · <em>Click</em> OK → Next → Finish <em>and</em> Yes <em>on the warning</em>. These are
+        This PC's steps 2 and 3 as they are. The command goes under <em>other ways</em>.</td><td>take</td></tr>
+      <tr><td>I2</td>
+        <td>The proxy: one registry command.</td>
+        <td><em>On that PC, open</em> Settings → Network &amp; internet → Proxy · <em>Click</em> Manual proxy setup → Use a proxy
+        server → Set up, with <code>windows-proxy</code> · <em>Turn on</em> Use a proxy server <em>— with the server and port
+        above</em> · <em>Click</em> Save. The command goes under <em>other ways</em>.</td><td>take</td></tr>
+      <tr><td>I3</td>
+        <td>Both ways back are commands only.</td>
+        <td>Per Q4. A: certificate, <em>Start, search</em> Manage user certificates → Trusted Root Certification Authorities →
+        Certificates → Trawler Proxy CA <em>and delete it</em>, then the commands as <em>Or</em>. Proxy, <em>In</em> Settings →
+        Network &amp; internet → Proxy → Manual proxy setup → Edit, <em>turn off</em> Use a proxy server <em>and click</em> Save,
+        then the command as <em>Or</em>. The same on This PC, since both read one constant.</td><td>take</td></tr>
+      <tr><td>M1</td>
+        <td>No recording shows that PC.</td>
+        <td>None needed: I1 and I2 reuse W12's two Windows 11 recordings. Their screens are the same on any Windows 11 PC.
+        Each keeps its alt text and its <em>Windows 11</em> label, so a reader on Windows 10 knows the screens may differ.
+        No shot list, nothing for you to record. I3's steps are text only: each is one screen, already named in full.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="handed">Handed in from W5</h2>
+    <table data-c="handed">
+      <tr><th>#</th><th>What</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>N1</td>
+        <td><strong>The registry command does not tell running apps that the proxy changed.</strong> "Set up this PC" sends
+        WinINET's settings-changed refresh after the same writes (<code>ui/src-tauri/src/setup.rs</code>). The command does not.</td>
+        <td>The Settings route (I2) leads. Settings applies the change through Windows itself. Behind a <em>?</em> beside
+        the command under <em>other ways</em>: <em>Apps already open may keep their old setting until restarted.</em></td><td>take</td></tr>
+      <tr><td>N2</td>
+        <td><strong>Automatic detection or a setup script outranks a manual proxy.</strong> On a network that answers
+        either, the route sets a proxy nothing uses.</td>
+        <td>Behind a <em>?</em> beside I2's Save step: <em>Nothing arrives? On the same page, turn off Automatically detect
+        settings and Use setup script — either one outranks this proxy.</em></td><td>take</td></tr>
+      <tr><td>N3</td>
+        <td><strong>WinINET named in the way back, and no certificate route without a terminal.</strong></td>
+        <td>W1, and I1 with W3.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="noticed">Noticed outside Another Windows PC's words</h2>
+    <table data-c="noticed">
+      <tr><th>#</th><th>What</th><th>Where it goes</th><th>Ruling</th></tr>
+      <tr><td>X1</td>
+        <td>If Q4 is A, the two Windows guides undo the proxy by hand while This Mac and Another Mac still undo it with a
+        command only (W12, W13).</td>
+        <td>proposed: here, in the same commit as I3. <em>In</em> System Settings → Network → Wi-Fi → Details… → Proxies,
+        <em>turn off</em> both proxies <em>and click</em> OK, with the command as <em>Or</em> and W13's Ethernet help kept.
+        Ubuntu gets its own in W15</td><td>take</td></tr>
+    </table>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Proposed</th><th>Ruling</th></tr>
+      <tr><td>Q1</td>
+        <td><strong>Who gets the fixes made in shared code?</strong> E3 reaches every off-machine platform. W1 reaches This
+        PC and the close dialog. W2, Q3 and I3 reach This PC.<br>
+        <strong>A</strong> fixed once, for everything that shares it, as W13's Q1 ruled ·
+        <strong>B</strong> Another Windows PC only, through overrides</td>
+        <td>A. One fix makes each word true wherever it shows. The close dialog's change is wording only: its
+        layout and help stay with R2's epic.</td><td>A</td></tr>
+      <tr><td>Q2</td>
+        <td><strong>Which file does that PC download?</strong><br>
+        <strong>A</strong> <code>trawler-ca.cer</code> (DER, <code>/ca.cer</code>): the file This PC's route opens ·
+        <strong>B</strong> <code>trawler-ca.crt</code> (PEM, <code>/ca.crt</code>), which Windows also opens ·
+        <strong>C</strong> keep <code>.pem</code>, command only</td>
+        <td>A. It is the file This PC's route opens, and the core already serves it for Android. <code>/ca.crt</code> is
+        the URL the core keeps for older clients, and the screen names none of them. C keeps E1.</td><td>A</td></tr>
+      <tr><td>Q3</td>
+        <td><strong>Which command sits under <em>other ways</em>?</strong><br>
+        <strong>A</strong> the user store, no administrator: <code>certutil -user -addstore -f ROOT &lt;file&gt;</code>,
+        for which Windows asks Yes in its own warning ·
+        <strong>B</strong> keep the administrator's machine-store command</td>
+        <td>A. It lands in the same store as the by-hand route, so the first line of the way back covers both, and it needs
+        no elevation. The administrator's removal stays in the way back for anyone who ran the old command or "Set up this PC".</td><td>A</td></tr>
+      <tr><td>Q4</td>
+        <td><strong>Do the ways back get a by-hand route (I3)?</strong><br>
+        <strong>A</strong> yes, by hand first and the command as <em>Or</em>, on both Windows guides. The close dialog keeps
+        the one command, with W1's lead ·
+        <strong>B</strong> commands only, as the Mac guides are today</td>
+        <td>A. A person who set up by hand should not need a terminal to undo it. The close dialog stays one action
+        until R2's epic redesigns it.</td><td>A</td></tr>
+    </table>
+
+    <h2 id="design">Design</h2>
+    <p data-c="design">Round 22 of the setup screen's <a href="2026-09-17-onboarding-design-run.html">design run</a> on
+      your rulings: Another Windows PC's by-hand routes with their recordings, the commands under <em>other ways</em>, the
+      ways back, and task 1's declined outcome. No new component: W12's StepMedia, MenuPath and path parts and W13's Help
+      carry it. You review the round before the build.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Try this…</th><th>…and see</th></tr>
+      <tr><td>Another Windows PC, allowing declined</td><td>task 1: <em>not done — Trawler answers on this PC only</em>, and
+        under the button <em>not allowed</em> alone</td></tr>
+      <tr><td>allowed</td><td>task 2's guide open: open <code>/ca.cer</code> (it downloads <code>trawler-ca.cer</code>), open
+        it from Downloads, Install Certificate → Trusted Root Certification Authorities with its recording, Finish and Yes.
+        The no-administrator command sits under <em>other ways</em></td></tr>
+      <tr><td>task 3's steps</td><td>Settings → Network &amp; internet → Proxy → Manual proxy setup with its recording, the
+        server and port above, Save. What to check when nothing arrives sits behind its <em>?</em>. The command sits under
+        <em>other ways</em>, with its restart note behind a <em>?</em></td></tr>
+      <tr><td>task 2 and task 3 read done</td><td>each way back by hand first, then its commands. The certificate's way
+        back reaches both stores. No <em>WinINET</em> anywhere</td></tr>
+      <tr><td>This PC, every state</td><td>the same ways back and the user-store command under <em>other ways</em> (Q1).
+        Its routes and recordings unchanged</td></tr>
+      <tr><td>the close dialog on a Windows host</td><td><em>In PowerShell, run:</em> and the proxy-off command</td></tr>
+      <tr><td>every other off-machine platform, allowing declined</td><td><em>not allowed</em> alone (E3)</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code></td><td>green; Another Windows PC gains chapters for task 2 and task 3's
+        open guides</td></tr>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="tests">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>Another Windows PC's by-hand routes and their media
+        (I1, I2); the commands under alternatives, the certificate's without an administrator (E1, E2, Q3); one file name
+        from download to command, <code>.cer</code> (W3, Q2); the certificate's way back reaches both stores, shared with
+        This PC (W2); the by-hand ways back first (I3); N1's and N2's help on their steps; no step says WinINET (W1)</td></tr>
+      <tr><td>unit</td><td><code>ui/src/proxyTargets.test.ts</code></td><td>Windows' lead names the shell (W1)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>the declined outcome is <em>not
+        allowed</em> alone (E3); task 2's by-hand route open and its command shut under <em>other ways</em> (E1)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>across every host, off-machine
+        platform and state: no explanatory text outside a help host (R1), with N1 and N2 among them</td></tr>
+      <tr><td>integration</td><td><code>ui/src/ProxyCloseDialog.test.tsx</code></td><td>the Windows way back reads W1's
+        lead</td></tr>
+      <tr><td>e2e</td><td>—</td><td>waived at the WU: the steps run on a second PC, which is not hermetic. Emphasis is
+        judged by your reading of the reels (the epic's e2e plan). The journeys and the real-PC walk stay with W20</td></tr>
+    </table>
+
+    <h2 id="where">Where the changes land</h2>
+    <table data-c="where">
+      <tr><th>Where</th><th>For</th></tr>
+      <tr><td><code>ui/src/setup.ts</code>: that PC's guide built from This PC's steps; the shared certificate way back;
+        the Windows command; <code>caFormatFor("windows")</code></td><td>E1 · E2 · W2 · W3 · I1–I3 · N1 · N2 · Q2 · Q3</td></tr>
+      <tr><td><code>ui/src/proxyTargets.ts</code>: Windows' lead</td><td>W1</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code>: <code>armNote</code></td><td>E3</td></tr>
+      <tr><td><code>ui/e2e/walkthrough/script.ts</code></td><td>new chapters</td></tr>
+      <tr><td>the design run · UC-ONBOARD's Another Windows PC guides</td><td>all</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
+      <tr><td>2</td><td>the plan with your rulings</td></tr>
+      <tr><td>3</td><td>the design run's round 22, for you to review</td></tr>
+      <tr><td>4</td><td>the words (E3, W1–W3)</td></tr>
+      <tr><td>5</td><td>the routes with their media, the commands under <em>other ways</em>, the help (E1, E2, I1, I2, N1, N2, Q3)</td></tr>
+      <tr><td>6</td><td>the ways back by hand (I3, X1 if taken)</td></tr>
+      <tr><td>7</td><td>the walkthrough's new chapters</td></tr>
+      <tr><td>8</td><td>UC-ONBOARD's Another Windows PC guides</td></tr>
+      <tr><td>9</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

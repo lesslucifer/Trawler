@@ -156,7 +156,7 @@ const PROMPT_UNSHOWABLE =
 // Declining the replace-a-foreign-proxy confirm resolves nothing rather than
 // rejecting, so it is not a failure and may not be worded as one — but it is
 // still an act, and an act that leaves the screen identical to one nobody
-// performed is the outcome armNote exists to refuse. Each names the halves it
+// performed is the outcome ARM_NOTE exists to refuse. Each names the halves it
 // did not do, because the combined action has two and the proxy one has one.
 // While a write runs, its task's state line says "setting up" and this note
 // says the one thing left to the user, so neither repeats the other (F19).
@@ -214,15 +214,13 @@ const unsetProxyNote = (os: HostOs): ActionNotes => ({
 // Arming is the shell's dialog and then the bind. A yes needs no note — what is
 // listening is the task's state, and it says so a line above. A no does: the
 // dialog closes, the button comes back, and without this the screen says
-// exactly what it says after a success.
-const armNote = (here: string): ActionNotes => ({
+// exactly what it says after a success. Where Trawler answers is the state
+// line's to say, so the note says only what happened (W14's E3).
+const ARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "waiting for your answer…" },
-  nothing: {
-    tone: "mute",
-    text: `not allowed — Trawler still answers on ${here} only.`,
-  },
+  nothing: { tone: "mute", text: "not allowed" },
   failed: { tone: "warn", text: "couldn't start listening on that address." },
-});
+};
 
 const DISARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "stopping…" },
@@ -778,7 +776,7 @@ function NetworkTask({
                 label={`allow devices on ${network.name} to connect`}
                 caption={`other devices on ${network.name} will be able to use this proxy and see captured traffic until Trawler quits`}
                 action={arm}
-                note={armNote(here)}
+                note={ARM_NOTE}
                 onClick={arm.trigger}
               />
             </div>

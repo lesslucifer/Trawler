@@ -2167,6 +2167,19 @@ describe("another device, where this machine's own traffic may be arriving too",
     expect(within(task(2)).getByRole("button", { name: /the trust command/i }).closest("details")).not.toBeNull();
   });
 
+  it("walks that PC's certificate and proxy by hand, each command the other way (W14's E1, E2)", () => {
+    draw({ reach: ARMED, deviceMark: MARK });
+    pick("Another Windows PC");
+
+    expect(task(2)).toHaveTextContent("it downloads trawler-ca.cer.");
+    expect(task(2)).toHaveTextContent("Open trawler-ca.cer from Downloads");
+    expect(within(task(2)).getByTestId("step-media")).toBeInTheDocument();
+    expect(within(task(2)).getByText("other ways").closest("details")).not.toHaveAttribute("open");
+    expect(within(task(2)).getByRole("button", { name: /the trust command/i }).closest("details")).not.toBeNull();
+    expect(within(task(3)).getByRole("button", { name: /the proxy command/i }).closest("details")).not.toBeNull();
+    expect(task(3)).toHaveTextContent("On that PC, open");
+  });
+
   it("gives a phone the address as a code to scan as well (DEC-57)", () => {
     draw({ reach: ARMED, deviceMark: MARK });
     pick("iPhone or iPad");
@@ -2372,7 +2385,9 @@ describe("the address is an offer, not a menu", () => {
     );
   });
 
-  it("a refused confirm says what is still true", async () => {
+  // W14's E3: the state line a line above says where Trawler answers, so the
+  // outcome says only what happened.
+  it("a refused confirm says only that it was refused", async () => {
     draw({ reach: UNARMED, onArmReach: vi.fn(async () => null) });
     pick("iPhone or iPad");
 
@@ -2380,13 +2395,8 @@ describe("the address is an offer, not a menu", () => {
       screen.getByRole("button", { name: "allow devices on Wi-Fi to connect" }),
     );
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "not allowed — Trawler still answers on this Mac only.",
-        ),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("not allowed")).toBeInTheDocument());
+    expect(screen.getAllByText(/Trawler answers on this Mac only/)).toHaveLength(1);
   });
 
   it("a machine with no address to offer says so instead of offering one", () => {

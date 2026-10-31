@@ -25,7 +25,7 @@ export function proxyOffSteps(t: ProxyTarget): string[] {
     case "macos":
       return ["In Terminal, run:", snippet];
     case "windows":
-      return ["Disable the WinINET proxy (keeps the saved address):", snippet];
+      return ["In PowerShell, run:", snippet];
     case "linux":
       return ["GNOME — back to no proxy:", snippet];
     case "terminal":
