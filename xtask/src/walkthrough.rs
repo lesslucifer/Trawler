@@ -12,6 +12,8 @@ use std::process::Command;
 use serde::Deserialize;
 
 pub const FINDINGS: std::ops::RangeInclusive<u32> = 1..=30;
+pub const SUPERSEDED: [(&str, &str); 1] = [("R20", "W3.D8")];
+pub const REVAMP_FINDINGS: [&str; 2] = ["W3.D6", "W3.D8"];
 pub const HOSTS: [&str; 3] = ["macos", "windows", "linux"];
 pub const PLATFORMS: [&str; 8] =
     ["this", "mac", "windows", "ubuntu", "ios-sim", "android-sim", "ios", "android"];
@@ -47,6 +49,10 @@ pub struct PlanChapter {
     pub findings: Vec<String>,
 }
 
+fn superseded_by(finding: &str) -> Option<&'static str> {
+    SUPERSEDED.iter().find(|(old, _)| *old == finding).map(|(_, successor)| *successor)
+}
+
 pub fn parse_plan(raw: &str) -> Result<Plan, String> {
     serde_yaml::from_str(raw).map_err(|e| format!("the walkthrough plan does not parse: {e}"))
 }
@@ -64,16 +70,22 @@ pub fn judge_plan(plan: &Plan) -> Result<(), String> {
         .flat_map(|c| c.findings.iter().map(String::as_str))
         .collect();
     for n in FINDINGS {
-        if !named.contains(format!("R{n}").as_str()) {
-            problems.push(format!("no chapter names R{n}"));
+        let finding = format!("R{n}");
+        let filmed_as = superseded_by(&finding).unwrap_or(&finding);
+        if !named.contains(filmed_as) {
+            problems.push(format!("no chapter names {filmed_as}"));
         }
     }
     for finding in &named {
-        let known = finding
+        if let Some(successor) = superseded_by(finding) {
+            problems.push(format!("a chapter names {finding}, which {successor} superseded"));
+            continue;
+        }
+        let reviewed = finding
             .strip_prefix('R')
             .and_then(|n| n.parse::<u32>().ok())
             .is_some_and(|n| FINDINGS.contains(&n));
-        if !known {
+        if !reviewed && !REVAMP_FINDINGS.contains(finding) {
             problems.push(format!("a chapter names {finding}, which is no finding of the review"));
         }
     }
@@ -594,7 +606,10 @@ mod tests {
                 });
             }
         }
-        let every: Vec<String> = FINDINGS.map(|n| format!("R{n}")).collect();
+        let every: Vec<String> = FINDINGS
+            .map(|n| format!("R{n}"))
+            .map(|f| superseded_by(&f).map_or(f, str::to_string))
+            .collect();
         reels[0].launches[0].chapters[0].findings = every;
         Plan { reels }
     }
@@ -617,6 +632,32 @@ mod tests {
         let mut plan = full_plan();
         plan.reels[1].launches[0].chapters[0].findings.push("R31".into());
         assert!(judge_plan(&plan).unwrap_err().contains("R31, which is no finding"));
+    }
+
+    #[test]
+    fn a_superseded_finding_is_filmed_as_its_successor() {
+        let mut plan = full_plan();
+        let findings = &mut plan.reels[0].launches[0].chapters[0].findings;
+        assert!(findings.contains(&"W3.D8".to_string()));
+        findings.retain(|f| f != "W3.D8");
+        let err = judge_plan(&plan).unwrap_err();
+        assert!(err.contains("no chapter names W3.D8"), "{err}");
+    }
+
+    #[test]
+    fn naming_a_superseded_finding_is_refused_by_its_successor() {
+        let mut plan = full_plan();
+        plan.reels[1].launches[0].chapters[0].findings.push("R20".into());
+        assert!(judge_plan(&plan).unwrap_err().contains("R20, which W3.D8 superseded"));
+    }
+
+    #[test]
+    fn a_revamp_finding_counts_only_when_listed() {
+        let mut plan = full_plan();
+        plan.reels[1].launches[0].chapters[0].findings.push("W3.D6".into());
+        assert_eq!(judge_plan(&plan), Ok(()));
+        plan.reels[2].launches[0].chapters[0].findings.push("W3.D9".into());
+        assert!(judge_plan(&plan).unwrap_err().contains("W3.D9, which is no finding"));
     }
 
     #[test]
