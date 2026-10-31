@@ -532,8 +532,8 @@ const CA_SHOWN: Record<
     findings: ["R27", "W13.I1"],
   },
   windows: {
-    says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read",
-    findings: ["R27"],
+    says: "opens /ca.cer, which downloads trawler-ca.cer; then trawler-ca.cer from Downloads, Install Certificate → Trusted Root Certification Authorities with its recording, Finish and Yes — the certutil -user command under other ways",
+    findings: ["R27", "W14.I1"],
   },
   ubuntu: {
     says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read",
@@ -573,8 +573,8 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.script({ allow_reach: false });
         await w.click(allow);
       },
-      expect: `"not allowed — Trawler still answers on ${host === "macos" ? "this Mac" : host === "windows" ? "this PC" : "this machine"} only"; nothing is armed`,
-      findings: [],
+      expect: `"not allowed" alone, under the state line that says Trawler answers on ${DEVICE[host]} only; nothing is armed`,
+      findings: ["W14.E3"],
       anchor: ['[data-testid="arm-reach-status"]'],
     },
     {
@@ -592,16 +592,29 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       ],
     },
   ];
+  if (platform === "mac" || platform === "windows")
+    chapters.push({
+      id: "download-help",
+      title: "What to check when the download fails",
+      act: (w) => w.openHelp(2),
+      expect: `under the certificate URL, its ? open: "Doesn't load? ${platform === "mac" ? "That Mac" : "That PC"} can't reach this one — check both are on the same network, and that ${DEVICE[host]}'s firewall lets Trawler accept incoming connections."`,
+      findings: ["W13.R1"],
+      anchor: [task(2)],
+    });
+  if (platform === "windows")
+    chapters.push({
+      id: "route-open",
+      title: "That PC's proxy, by hand",
+      act: async (w) => {
+        await w.openGuide(3);
+        await w.openHelp(3);
+      },
+      expect: `task 3's four steps: Settings → Network & internet → Proxy on that PC, Manual proxy setup → Use a proxy server → Set up with its recording, Use a proxy server on with the server and port above, Save; under Save's ? "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy."; the reg command under other ways`,
+      findings: ["W14.I2", "W14.N2"],
+      anchor: [task(3)],
+    });
   if (platform === "mac")
     chapters.push(
-      {
-        id: "download-help",
-        title: "What to check when the download fails",
-        act: (w) => w.openHelp(2),
-        expect: `under the certificate URL, its ? open: "Doesn't load? That Mac can't reach this one — check both are on the same network, and that ${host === "macos" ? "this Mac" : host === "windows" ? "this PC" : "this machine"}'s firewall lets Trawler accept incoming connections."`,
-        findings: ["W13.R1"],
-        anchor: [task(2)],
-      },
       {
         id: "route-open",
         title: "That Mac's proxy, by hand",

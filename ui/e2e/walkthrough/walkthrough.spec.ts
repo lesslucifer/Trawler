@@ -132,7 +132,7 @@ const walk: Walk = {
     for (const help of await $$(
       `[data-testid="task-${n}"] button[aria-label^="help:"][aria-expanded="false"]`,
     ))
-      await help.click();
+      if (await help.isDisplayed()) await help.click();
   },
   async dot() {
     await $('[data-testid="status-dot"]').click();
