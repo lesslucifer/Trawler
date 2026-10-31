@@ -30,6 +30,7 @@ import {
   type HostOs,
   type PlatformId,
   type PlatformSetup,
+  isHelp,
   isMedia,
   isPath,
   isRoute,
@@ -135,7 +136,7 @@ describe("another device's own request is one address, opened where it is", () =
   it.each(OFF)("%s: the address is a value, said where it is opened", (id) => {
     const [said, value] = checkStep(id, "macos", ADDRESS);
 
-    expect(said).toMatch(/^or open this one (on|in) /);
+    expect(said).toBe(`On ${deviceName(id, "macos")}, open`);
     expect(value).toMatchObject({ copy: ADDRESS, label: "the address to open" });
   });
 
@@ -143,7 +144,7 @@ describe("another device's own request is one address, opened where it is", () =
   it("once proved, it is the address to check again", () => {
     const [said] = checkStep("ios", "macos", ADDRESS, true);
 
-    expect(said).toBe("to check again, open this one on your iPhone");
+    expect(said).toBe("to check again, open it on your iPhone");
   });
 
   it("a phone scans it, and a computer does not (DEC-57)", () => {
@@ -281,9 +282,9 @@ describe("a platform that needs reach has no instructions until it exists", () =
 });
 
 describe("every platform's instructions are its own", () => {
-  it.each(PLATFORM_IDS.filter((id) => id !== "this"))("%s says where to open a website, and why it settles setup", (id) => {
-    expect(setup(id).try.title).toMatch(/^Open any website /);
-    expect(setup(id).try.why).toBe("the first decrypted request is what proves setup works");
+  it.each(PLATFORM_IDS.filter((id) => id !== "this"))("%s names what its request does, with no why the lead already says (W13's Q2, E2)", (id) => {
+    expect(setup(id).try.title).toBe(`Make a request from ${deviceName(id, "macos")}`);
+    expect(setup(id).try.why).toBeUndefined();
   });
 
   it("this names what its request does, and keeps only the why its lead does not say (W12's Q2, Q3)", () => {
@@ -612,11 +613,11 @@ describe("the words each platform is spoken about in", () => {
     expect(reachTaskTitle(id, "macos")).toBe(`Allow ${deviceName(id, "macos")} to connect`);
   });
 
-  it("a website is opened ON a machine and IN a simulator", () => {
+  it("a request is made FROM the device, whatever it is", () => {
     expect(setup("this").try.title).toBe("Make a request from this Mac");
-    expect(setup("ios").try.title).toBe("Open any website on your iPhone");
-    expect(setup("ios-sim").try.title).toBe("Open any website in the Simulator");
-    expect(setup("android-sim").try.title).toBe("Open any website in the emulator");
+    expect(setup("ios").try.title).toBe("Make a request from your iPhone");
+    expect(setup("ios-sim").try.title).toBe("Make a request from the Simulator");
+    expect(setup("android-sim").try.title).toBe("Make a request from the emulator");
   });
 
   it.each(PLATFORM_IDS)("%s titles its tasks by what the user does, never by a zone", (id) => {
@@ -844,7 +845,8 @@ describe("another computer's trust command reads the file its download step name
     ["ubuntu", '"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"'],
   ] as const)("%s", (id, path) => {
     const file = downloaded(id).match(/it downloads (\S+)\.$/)![1];
-    const installs = commands(setup(id).trust.guide!.steps);
+    const guide = setup(id).trust.guide!;
+    const installs = commands([...guide.steps, ...(guide.alternatives ?? [])]);
 
     expect(path).toContain(file);
     expect(installs.length).toBeGreaterThan(0);
@@ -1234,5 +1236,90 @@ describe("the steps a probe leaves open", () => {
 
   it.each(["macos", "windows"] as const)("on %s, none: its browsers read the store it probes", (os) => {
     expect(setup("this", { os }).trust.guide!.unprobed).toBeUndefined();
+  });
+});
+
+// W13: Another Mac is walked by hand on that Mac, since nothing here opens a
+// screen on it, with This Mac's recordings, and each command is the other way.
+describe("Another Mac, walked by hand (W13)", () => {
+  const mac = setup("mac");
+  const trust = mac.trust.guide!;
+  const route = mac.route.guide!;
+  const sentence = (step: GuideStep) => step.filter((p): p is string => typeof p === "string").join(" ");
+  const paths = (step: GuideStep) => step.filter(isPath).map((p) => p.path);
+
+  it("installs through the login keychain, the trust set by hand with its recording (I1)", () => {
+    expect(trust.steps.map(sentence)).toEqual([
+      "On that Mac, open — it downloads trawler-ca.pem.",
+      "Open trawler-ca.pem from Downloads, choose and click",
+      "Search Trawler, double-click and set",
+      "Close the window and enter your password.",
+    ]);
+    expect(paths(trust.steps[1])).toEqual([["login"], ["Add"]]);
+    expect(paths(trust.steps[2])).toEqual([["Trawler Proxy CA"], ["Trust", "When using this certificate", "Always Trust"]]);
+    expect(trust.steps[2].find(isMedia)?.media).toBe("macos-always-trust");
+    expect(commands(trust.steps)).toEqual([]);
+  });
+
+  it("keeps the System keychain command as the other way, led in the app it runs in (E3, W1)", () => {
+    expect(trust.alternatives).toEqual([
+      [
+        "In Terminal, run:",
+        {
+          command: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem",
+          label: "the trust command",
+        },
+      ],
+    ]);
+    expect(everything(mac)).not.toMatch(/Run it in a terminal|^Run[: —]/m);
+  });
+
+  it("names the certificate as Keychain Access lists it (W2)", () => {
+    expect(everything(mac)).not.toContain("Trawler CA ");
+    expect(everything(mac)).not.toMatch(/the Trawler CA\b/);
+  });
+
+  it("removes it from both keychains, whichever way installed it (W6, D1)", () => {
+    expect(paths(trust.undo![0])).toEqual([["Trawler Proxy CA"]]);
+    const [removal] = commands(trust.undo!);
+    expect(removal).toContain("login.keychain");
+    expect(removal).toContain("/Library/Keychains/System.keychain");
+  });
+
+  it("sets the proxy through System Settings with its recording, the command the other way (I2)", () => {
+    expect(paths(route.steps[0])).toEqual([["System Settings", "Network"]]);
+    expect(sentence(route.steps[0])).toBe("On that Mac, open");
+    expect(route.steps[1].find(isMedia)?.media).toBe("macos-proxies");
+    expect(sentence(route.steps[2])).toContain("each with the server and port above");
+    expect(route.steps.flatMap((step) => step.filter(isRoute))).toEqual([]);
+    expect(commands(route.steps)).toEqual([]);
+    expect(commands(route.alternatives!)[0]).toContain("networksetup -setwebproxy Wi-Fi 192.168.1.24 9999");
+  });
+
+  it("keeps Ethernet behind a ?, on the route and on its way back (W5, Q4)", () => {
+    const ethernet = /^On Ethernet, click Ethernet in place of Wi-Fi/;
+    expect(route.notes).toEqual([expect.stringMatching(ethernet)]);
+    expect(route.undo![0].find(isHelp)).toMatchObject({ topic: "on Ethernet", help: expect.stringMatching(ethernet) });
+  });
+
+  it("asks no why its lead already says (E2)", () => {
+    expect([mac.trust.why, mac.route.why, mac.try.why]).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+// W4's N2, here: the download is the first thing a device does that must reach
+// this machine, so what to check when it cannot waits behind a ? beside it.
+describe("every download step says what to check when it does not load", () => {
+  it.each(["mac", "windows", "ubuntu", "ios", "android"] as const)("%s", (id) => {
+    const help = setup(id).trust.guide!.steps[0].find(isHelp);
+
+    expect(help?.topic).toBe("if it doesn't load");
+    expect(help?.help).toBe(
+      `Doesn't load? ${deviceName(id, "macos").replace(/^./, (c) => c.toUpperCase())} can't reach this one — check both are on the same network, and that this Mac's firewall lets Trawler accept incoming connections.`,
+    );
+  });
+
+  it("names the host as the host does", () => {
+    expect(setup("mac", { os: "windows" }).trust.guide!.steps[0].find(isHelp)?.help).toContain("this PC's firewall");
   });
 });

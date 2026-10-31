@@ -53,6 +53,8 @@ export interface Walk {
   choose(label: string): Promise<void>;
   click(prefix: string): Promise<void>;
   closeGuide(task: number): Promise<void>;
+  openGuide(task: number): Promise<void>;
+  openHelp(task: number): Promise<void>;
   dot(): Promise<void>;
   filter(text: string): Promise<void>;
   hit(opts?: { untrusted?: boolean }): Promise<void>;
@@ -226,7 +228,7 @@ function autoThis(host: Host): Chapter[] {
       id: "both-done",
       title: "Both done",
       act: reread({ trust: "trusted", proxy: OURS }),
-      expect: `no install route offered as work: task 1 keeps ${trustBack}${host === "macos" ? `, with "the proxy stays set"` : ""}; task 2 "stop routing through Trawler", "the certificate stays trusted" and "do it by hand"; task 3's request is the one framed control, its browser and terminal under "other ways"`,
+      expect: `no install route offered as work: task 1 keeps ${trustBack}${host === "macos" ? `, with "the proxy stays set" behind its ?` : ""}; task 2 "stop routing through Trawler", "the certificate stays trusted" behind its ?, and "do it by hand"; task 3's request is the one framed control, its browser and terminal under "other ways"`,
       findings: ["R13", "W12.E2", "W12.E3"],
       anchor: [task(2)],
     },
@@ -240,7 +242,7 @@ function autoThis(host: Host): Chapter[] {
               await w.click("remove the certificate");
               await w.recheck();
             },
-            expect: `task 1 reads not done again, its certificate steps open with ${trustRoute} the one framed control; task 2 stays done, "stop routing through Trawler" without "the certificate stays trusted"`,
+            expect: `task 1 reads not done again, its certificate steps open with ${trustRoute} the one framed control; task 2 stays done, "stop routing through Trawler" with no ? saying "the certificate stays trusted"`,
             findings: [],
             anchor: [task(1)],
           },
@@ -526,8 +528,8 @@ const CA_SHOWN: Record<
   { says: string; findings: string[] }
 > = {
   mac: {
-    says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read",
-    findings: ["R27"],
+    says: "opens /ca.pem, which downloads trawler-ca.pem; then trawler-ca.pem from Downloads into login, Trawler Proxy CA set to Always Trust with its recording, and the password — the System keychain command under other ways",
+    findings: ["R27", "W13.I1"],
   },
   windows: {
     says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read",
@@ -548,7 +550,7 @@ const CA_SHOWN: Record<
 };
 
 function offMachine(host: Host, platform: Platform): Chapter[] {
-  const allow = "Allow devices on";
+  const allow = "allow devices on";
   const ca = CA_SHOWN[platform as keyof typeof CA_SHOWN];
   const chapters: Chapter[] = [
     firstPaint(host),
@@ -571,7 +573,7 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.script({ allow_reach: false });
         await w.click(allow);
       },
-      expect: `"not allowed — Trawler still answers on this machine only"; nothing is armed`,
+      expect: `"not allowed — Trawler still answers on ${host === "macos" ? "this Mac" : host === "windows" ? "this PC" : "this machine"} only"; nothing is armed`,
       findings: [],
       anchor: ['[data-testid="arm-reach-status"]'],
     },
@@ -582,14 +584,36 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.script({ allow_reach: true });
         await w.click(allow);
       },
-      expect: `task 1 reads allowed, listening on 192.168.1.23; the tasks below are no longer dimmed, the certificate task's guide is open, and the device's server and port are shown. The certificate task ${ca.says}`,
-      findings: ["R10", ...ca.findings],
+      expect: `task 1 reads allowed, listening on 192.168.1.23; the tasks below are no longer dimmed, the certificate task's guide is open, and the device's server and port are shown. The certificate task ${ca.says}. No task has a why line; the last is a request from the device, its address at the weight of a step, with no "or"`,
+      findings: ["R10", "W13.E1", ...ca.findings],
       anchor: [
         '[data-testid="device-address"]',
         '[data-wire="certificate url"]',
       ],
     },
   ];
+  if (platform === "mac")
+    chapters.push(
+      {
+        id: "download-help",
+        title: "What to check when the download fails",
+        act: (w) => w.openHelp(2),
+        expect: `under the certificate URL, its ? open: "Doesn't load? That Mac can't reach this one — check both are on the same network, and that ${host === "macos" ? "this Mac" : host === "windows" ? "this PC" : "this machine"}'s firewall lets Trawler accept incoming connections."`,
+        findings: ["W13.R1"],
+        anchor: [task(2)],
+      },
+      {
+        id: "route-open",
+        title: "That Mac's proxy, by hand",
+        act: async (w) => {
+          await w.openGuide(3);
+          await w.openHelp(3);
+        },
+        expect: `task 3's four steps: System Settings → Network on that Mac, Wi-Fi → Details… → Proxies with its recording, both proxies on with the server and port above, OK; the Ethernet hint under its ?; the networksetup command under other ways`,
+        findings: ["W13.I2", "W13.R1"],
+        anchor: [task(3)],
+      },
+    );
   if (platform === "ios" || platform === "android")
     chapters.push({
       id: "not-decrypting",

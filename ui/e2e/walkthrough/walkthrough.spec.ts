@@ -125,6 +125,15 @@ const walk: Walk = {
   async closeGuide(n: number) {
     await $(`[data-testid="task-${n}"] details[open] > summary`).click();
   },
+  async openGuide(n: number) {
+    await $(`[data-testid="task-${n}"] details:not([open]) > summary`).click();
+  },
+  async openHelp(n: number) {
+    for (const help of await $$(
+      `[data-testid="task-${n}"] button[aria-label^="help:"][aria-expanded="false"]`,
+    ))
+      await help.click();
+  },
   async dot() {
     await $('[data-testid="status-dot"]').click();
   },

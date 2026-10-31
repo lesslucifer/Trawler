@@ -1051,7 +1051,7 @@ test("entering setup reads the reach state rather than assuming one", async () =
   expect(armReach).not.toHaveBeenCalled();
   await waitFor(() =>
     expect(screen.getByTestId("task-1")).toHaveTextContent(
-      "not done — Trawler answers on this machine only",
+      "not done — Trawler answers on this Mac only",
     ),
   );
 });
@@ -1071,7 +1071,7 @@ test("with no address, check again reads the core's reach anew and offers what i
 
   await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
   expect(
-    await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }),
+    await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }),
   ).toBeInTheDocument();
 });
 
@@ -1084,20 +1084,20 @@ test("a refused confirm arms nothing — no POST, no address, no listening", asy
   const armReach = vi.fn(async () => ARMED);
   await offMachine({ reach: async () => UNARMED, armReach });
 
-  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+  fireEvent.click(await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("confirm_reach", { address: "192.168.1.24" }),
   );
   expect(armReach).not.toHaveBeenCalled();
   expect(screen.getByTestId("task-1")).toHaveTextContent(
-    "not done — Trawler answers on this machine only",
+    "not done — Trawler answers on this Mac only",
   );
   expect(screen.queryByTestId("device-address")).toBeNull();
   // F13: the refusal reaches the screen as a refusal. Without it the dialog
   // closes, the button comes back, and nothing distinguishes a no from a yes.
   expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
-    "not allowed — Trawler still answers on this machine only",
+    "not allowed — Trawler still answers on this Mac only",
   );
 });
 
@@ -1108,7 +1108,7 @@ test("an allowed confirm arms that address, and the screen renders what answered
   const armReach = vi.fn(async () => ARMED);
   await offMachine({ reach: async () => UNARMED, armReach });
 
-  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+  fireEvent.click(await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }));
 
   await waitFor(() => expect(armReach).toHaveBeenCalledWith("192.168.1.24"));
   expect(screen.queryByTestId("arm-reach-status")).toBeNull();
@@ -1131,7 +1131,7 @@ test("stop listening takes the exposure away without asking again", async () => 
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "confirm_reach")).toHaveLength(0);
   await waitFor(() =>
     expect(screen.getByTestId("task-1")).toHaveTextContent(
-      "not done — Trawler answers on this machine only",
+      "not done — Trawler answers on this Mac only",
     ),
   );
 });
@@ -1420,7 +1420,7 @@ describe("a reach read in flight across an allow or a stop lands nothing", () =>
     fireEvent(window, new Event("focus"));
     await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+    fireEvent.click(await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }));
     await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
     await stale.release(UNARMED);
 
@@ -1439,11 +1439,11 @@ describe("a reach read in flight across an allow or a stop lands nothing", () =>
 
     fireEvent.click(screen.getByRole("button", { name: "stop listening" }));
     await waitFor(() =>
-      expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this machine only"),
+      expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this Mac only"),
     );
     await stale.release(ARMED);
 
-    expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this machine only");
+    expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this Mac only");
   });
 });
 
@@ -1626,7 +1626,7 @@ test("a core that will not say leaves the screen saying Trawler answers here onl
 
   await waitFor(() =>
     expect(screen.getByTestId("task-1")).toHaveTextContent(
-      "not done — Trawler answers on this machine only",
+      "not done — Trawler answers on this Mac only",
     ),
   );
   expect(screen.queryByTestId("device-address")).toBeNull();

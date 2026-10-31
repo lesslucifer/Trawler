@@ -13,7 +13,10 @@ use serde::Deserialize;
 
 pub const FINDINGS: std::ops::RangeInclusive<u32> = 1..=30;
 pub const SUPERSEDED: [(&str, &str); 1] = [("R20", "W3.D8")];
-pub const REVAMP_FINDINGS: [&str; 6] = ["W3.D6", "W3.D8", "W12.E1", "W12.E2", "W12.E3", "W12.E4"];
+pub const REVAMP_FINDINGS: [&str; 10] = [
+    "W3.D6", "W3.D8", "W12.E1", "W12.E2", "W12.E3", "W12.E4", "W13.E1", "W13.I1", "W13.I2",
+    "W13.R1",
+];
 pub const HOSTS: [&str; 3] = ["macos", "windows", "linux"];
 pub const PLATFORMS: [&str; 8] =
     ["this", "mac", "windows", "ubuntu", "ios-sim", "android-sim", "ios", "android"];

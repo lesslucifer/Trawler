@@ -22,6 +22,7 @@ import {
   Button,
   CopyText,
   Disclosure,
+  Help,
   Notice,
   Select,
   StatusLine,
@@ -155,7 +156,7 @@ const PROMPT_UNSHOWABLE =
 // Declining the replace-a-foreign-proxy confirm resolves nothing rather than
 // rejecting, so it is not a failure and may not be worded as one — but it is
 // still an act, and an act that leaves the screen identical to one nobody
-// performed is the outcome ARM_NOTE exists to refuse. Each names the halves it
+// performed is the outcome armNote exists to refuse. Each names the halves it
 // did not do, because the combined action has two and the proxy one has one.
 // While a write runs, its task's state line says "setting up" and this note
 // says the one thing left to the user, so neither repeats the other (F19).
@@ -214,14 +215,14 @@ const unsetProxyNote = (os: HostOs): ActionNotes => ({
 // listening is the task's state, and it says so a line above. A no does: the
 // dialog closes, the button comes back, and without this the screen says
 // exactly what it says after a success.
-const ARM_NOTE: ActionNotes = {
+const armNote = (here: string): ActionNotes => ({
   running: { tone: "pending", text: "waiting for your answer…" },
   nothing: {
     tone: "mute",
-    text: "not allowed — Trawler still answers on this machine only.",
+    text: `not allowed — Trawler still answers on ${here} only.`,
   },
   failed: { tone: "warn", text: "couldn't start listening on that address." },
-};
+});
 
 const DISARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "stopping…" },
@@ -260,8 +261,8 @@ const ONE_ACT_CAPTION: Record<"macos" | "windows", string> = {
   windows: "one Windows approval — it does steps 1 and 2",
 };
 
-const noAddress = (device: string) =>
-  `this machine holds no network address a second device could reach it at. Join the network ${device} is on, then check again.`;
+const noAddress = (here: string, device: string) =>
+  `${here} holds no network address a second device could reach it at. Join the network ${device} is on, then check again.`;
 
 // The save resolves a full path natively and a bare name in the browser; the
 // steps below name a file, so the note does too.
@@ -377,7 +378,7 @@ function ActionNote({
 
 // Fork D4: disabled in flight AND a progress line beside it — both halves or
 // neither, so a dead control is never the only signal. The caption says what
-// the button does, so it stays under the button and above what happened.
+// the button does, so it waits behind the button's ? (W13's R1).
 function Action({
   testId,
   label,
@@ -397,18 +398,24 @@ function Action({
   frame?: "bare";
   disabled?: boolean;
 }) {
+  const button = (
+    <Button
+      onClick={onClick}
+      frame={frame}
+      tone={frame === "bare" ? "mute" : undefined}
+      disabled={disabled || action.state === "running"}
+    >
+      {label}
+    </Button>
+  );
   return (
     <div>
-      <Button
-        onClick={onClick}
-        frame={frame}
-        tone={frame === "bare" ? "mute" : undefined}
-        disabled={disabled || action.state === "running"}
-      >
-        {label}
-      </Button>
-      {caption !== undefined && (
-        <p className="pt-2 font-ui text-chrome text-ink-mute">{caption}</p>
+      {caption === undefined ? (
+        button
+      ) : (
+        <Help topic="what this does" text={caption}>
+          {button}
+        </Help>
       )}
       <ActionNote testId={testId} action={action} note={note} />
     </div>
@@ -470,16 +477,12 @@ function GuideView({
   const undo = guide.undo ?? [];
   return (
     <Disclosure summary={summary} defaultOpen={defaultOpen}>
-      <GuideSteps steps={guide.steps} save={save} open={open} framed={framed} />
-      {guide.notes?.map((note) => (
-        <p
-          key={note}
-          data-testid="guide-note"
-          className="pt-2 font-ui text-chrome text-ink-mute"
-        >
-          {note}
-        </p>
-      ))}
+      <GuideSteps
+        steps={withNotes(guide.steps, guide.notes)}
+        save={save}
+        open={open}
+        framed={framed}
+      />
       {alternatives.length > 0 && (
         <div className="pt-3">
           <Disclosure summary="other ways">
@@ -496,6 +499,16 @@ function GuideView({
       )}
     </Disclosure>
   );
+}
+
+// A note is true of the steps and nothing to do, so it waits behind a ? at the
+// end of the last one (W13's R1).
+function withNotes(steps: GuideStep[], notes?: string[]): GuideStep[] {
+  if (!notes?.length || steps.length === 0) return steps;
+  return [
+    ...steps.slice(0, -1),
+    [...steps[steps.length - 1], { help: notes.join(" "), topic: "a note on these steps" }],
+  ];
 }
 
 // This machine's other ways to make the request: its browser, where a route
@@ -736,13 +749,13 @@ function NetworkTask({
       title={title}
       status={
         lost === null
-          ? verdict("not-done", "Trawler answers on this machine only")
+          ? verdict("not-done", `Trawler answers on ${here} only`)
           : verdict("not-working", `${here} no longer holds ${lost}`)
       }
     >
       {network === undefined ? (
         <>
-          <Notice tone="mute">{noAddress(device)}</Notice>
+          <Notice tone="mute">{noAddress(here, device)}</Notice>
           {onReread && (
             <div data-testid="reread-reach" className="pt-2">
               <Button onClick={onReread} frame="bare" tone="mute">
@@ -762,17 +775,14 @@ function NetworkTask({
             <div className="pt-3">
               <Action
                 testId="arm-reach"
-                label={`Allow devices on ${network.name} to connect`}
+                label={`allow devices on ${network.name} to connect`}
+                caption={`other devices on ${network.name} will be able to use this proxy and see captured traffic until Trawler quits`}
                 action={arm}
-                note={ARM_NOTE}
+                note={armNote(here)}
                 onClick={arm.trigger}
               />
             </div>
           )}
-          <p className="pt-2 font-ui text-chrome text-ink-mute">
-            other devices on {network.name} will be able to use this proxy and
-            see captured traffic until Trawler quits
-          </p>
         </>
       )}
     </TaskStep>
@@ -1259,9 +1269,15 @@ function PlatformSetup({
   const refusedHere =
     certificateOwnsRefusal && (addressRefused !== null || evidence.unanswered);
   const refusalNote =
-    addressTest !== undefined && addressRefused !== null
-      ? addressTest.refused
-      : notDecryptingHere(deviceName(platform, os), setup.notDecrypting);
+    addressTest !== undefined && addressRefused !== null ? (
+      addressTest.refused
+    ) : setup.notDecrypting === undefined ? (
+      notDecryptingHere(deviceName(platform, os))
+    ) : (
+      <Help topic="if you already did" text={setup.notDecrypting}>
+        {notDecryptingHere(deviceName(platform, os))}
+      </Help>
+    );
 
   const trustGuide = guideFor(
     setup.trust.guide,
@@ -1518,7 +1534,7 @@ function PlatformSetup({
           {deviceMark !== undefined && (
             <div
               data-testid="check-address"
-              className="pt-2 font-ui text-chrome text-ink-mute"
+              className="pt-2 font-ui text-body text-ink-body"
             >
               <StepParts
                 step={checkStep(
