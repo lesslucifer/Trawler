@@ -49,7 +49,7 @@
     </table>
 
     <h2 id="requirement">Requirement</h2>
-    <p class="callout" data-c="requirement">
+    <p class="callout" data-item="requirement" data-c="requirement">
       On Another Mac, on every host, each state of the setup screen leads with the one thing to do next and shows the
       optional, the explanatory and the done as secondary. Every word names one thing one way and is true on the host it
       is shown on. Each by-hand step on that Mac offers a route without a terminal where one exists, with verified media,
@@ -58,7 +58,7 @@
     </p>
 
     <h2 id="mapping">Mapping</h2>
-    <p data-c="mapping">
+    <p data-item="maps-to" data-c="mapping">
       E-ONBRVP · epic W13 block · UC-ONBOARD: Another Mac's guides · the emphasis rule W12 set · W4's N1 and N2, handed
       here · the epic's Q11 (interactive first, media as the fallback) · the setup screen's design run, re-opened at round
       21 · shell-side only: the core stays out (the epic's non-goals).
@@ -264,7 +264,7 @@ flowchart TB
       component design. W12's StepMedia, MenuPath and path parts carry the rest. You review both before the build.</p>
 
     <h2 id="expected">Expected result</h2>
-    <table data-c="expected">
+    <table data-item="expected" data-c="expected">
       <tr><th>Try this…</th><th>…and see</th></tr>
       <tr><td>Another Mac, nothing allowed</td><td>task 1: no why line, <em>not done — Trawler answers on this Mac only</em>,
         <em>allow devices on Ethernet to connect</em> framed</td></tr>
@@ -285,7 +285,7 @@ flowchart TB
     </table>
 
     <h2 id="tests">Test plan</h2>
-    <table data-c="tests">
+    <table data-item="test-plan" data-c="tests">
       <tr><th>Level</th><th>File</th><th>Checks</th></tr>
       <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>Another Mac's leads parse (W1); the CA's one name
         (W2); the Ethernet note on route and undo (W5); the undo reaches both keychains (W6); the by-hand routes and their
