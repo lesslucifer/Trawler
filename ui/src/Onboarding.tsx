@@ -1,8 +1,22 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { markedUrl, REQUEST_HOST, type AnotherDevice, type RequestRoute } from "./ownRequest";
+import {
+  markedUrl,
+  REQUEST_HOST,
+  type AnotherDevice,
+  type RequestRoute,
+} from "./ownRequest";
 import { useAction, type ActionHandle, type ActionState } from "./useAction";
-import { GuideSteps as SharedGuideSteps, StepParts, type StepControls } from "./manualSteps";
-import { COPY, opensOn, type OnbEvent, type OnbState } from "./onboardingMachine";
+import {
+  GuideSteps as SharedGuideSteps,
+  StepParts,
+  type StepControls,
+} from "./manualSteps";
+import {
+  COPY,
+  opensOn,
+  type OnbEvent,
+  type OnbState,
+} from "./onboardingMachine";
 import { UNREACHABLE, type ReachState } from "./api";
 import {
   Button,
@@ -10,7 +24,6 @@ import {
   Disclosure,
   Notice,
   Select,
-  Spinner,
   StatusLine,
   TaskStep,
   TimestampText,
@@ -18,7 +31,6 @@ import {
 } from "./components/index";
 import {
   canAutoSetup,
-  canProbe,
   CA_FILES,
   caFormatFor,
   checkStep,
@@ -71,6 +83,7 @@ import {
   setUpOn,
   storesTrusted,
   simulatorTrustStatus,
+  removeCaNote,
   stopRoutingNote,
   trafficReading,
   trafficStatus,
@@ -114,7 +127,9 @@ const UNANSWERED = "choose a device";
 // An action that resolves a string names what it produced; the note quotes that
 // name rather than the one we asked for, since the two differ whenever the user
 // renames the file in the save dialog.
-type ActionNotes = Partial<Record<ActionState, ActionNote | ((named: string) => ActionNote)>>;
+type ActionNotes = Partial<
+  Record<ActionState, ActionNote | ((named: string) => ActionNote)>
+>;
 
 interface ActionNote {
   tone: NoticeTone;
@@ -124,7 +139,8 @@ interface ActionNote {
 // A prompt the user dismissed is not a failure the OS gets to word: it is the
 // one outcome they chose, and the way back in is the same button or the steps
 // below it (F18). The tool's own text is still payload, and stays reachable.
-const PROMPT_CANCELLED = "the password prompt was cancelled. Try again, or do it by hand.";
+const PROMPT_CANCELLED =
+  "the password prompt was cancelled. Try again, or do it by hand.";
 
 // An approval the OS could not show never reached the user, so it is not theirs
 // to have cancelled (-60007); the task's state line says what it left undone.
@@ -151,13 +167,33 @@ const SETUP_NOTE: ActionNotes = {
 
 const SETPROXY_NOTE: ActionNotes = {
   running: { tone: "pending", text: APPROVE },
-  nothing: { tone: "mute", text: "nothing changed — the other proxy is still the one in use." },
-  failed: { tone: "warn", text: "setting the proxy failed — do it by hand below." },
+  nothing: {
+    tone: "mute",
+    text: "nothing changed — the other proxy is still the one in use.",
+  },
+  failed: {
+    tone: "warn",
+    text: "setting the proxy failed — do it by hand below.",
+  },
+};
+
+const REMOVE_CA_NOTE: ActionNotes = {
+  running: { tone: "pending", text: "removing the certificate…" },
+  failed: {
+    tone: "warn",
+    text: "couldn't remove the certificate — do it by hand below.",
+  },
 };
 
 const UNSETPROXY_NOTE: ActionNotes = {
-  running: { tone: "pending", text: "turning the proxy off — approve the prompt…" },
-  failed: { tone: "warn", text: "couldn't turn the proxy off — do it by hand below." },
+  running: {
+    tone: "pending",
+    text: "turning the proxy off — approve the prompt…",
+  },
+  failed: {
+    tone: "warn",
+    text: "couldn't turn the proxy off — do it by hand below.",
+  },
 };
 
 // Arming is the shell's dialog and then the bind. A yes needs no note — what is
@@ -166,7 +202,10 @@ const UNSETPROXY_NOTE: ActionNotes = {
 // exactly what it says after a success.
 const ARM_NOTE: ActionNotes = {
   running: { tone: "pending", text: "waiting for your answer…" },
-  nothing: { tone: "mute", text: "not allowed — Trawler still answers on this machine only." },
+  nothing: {
+    tone: "mute",
+    text: "not allowed — Trawler still answers on this machine only.",
+  },
   failed: { tone: "warn", text: "couldn't start listening on that address." },
 };
 
@@ -181,14 +220,23 @@ const DISARM_NOTE: ActionNotes = {
 // success and was not.
 const REQUEST_ROUTE: Record<RequestRoute, ActionNote> = {
   through: { tone: "ok", text: `${REQUEST_HOST} answered through Trawler.` },
-  undecrypted: { tone: "warn", text: "the request reached Trawler and didn't decrypt." },
-  around: { tone: "warn", text: `${REQUEST_HOST} answered, but not through Trawler.` },
+  undecrypted: {
+    tone: "warn",
+    text: "the request reached Trawler and didn't decrypt.",
+  },
+  around: {
+    tone: "warn",
+    text: `${REQUEST_HOST} answered, but not through Trawler.`,
+  },
 };
 
 const MAKE_REQUEST_NOTE: ActionNotes = {
   running: { tone: "pending", text: `waiting for ${REQUEST_HOST}…` },
   done: (route) => REQUEST_ROUTE[route as RequestRoute],
-  failed: { tone: "warn", text: `the request to ${REQUEST_HOST} didn't complete.` },
+  failed: {
+    tone: "warn",
+    text: `the request to ${REQUEST_HOST} didn't complete.`,
+  },
 };
 
 // The one act's prompt is the host's: macOS asks for a password, Windows for
@@ -214,8 +262,14 @@ const saveCaNote = (named: string): ActionNotes => ({
         ? `saved as ${named}. Now trust it with the steps here.`
         : `saved as ${fileName(path)} — the steps here name ${named}, so use ${fileName(path)} instead.`,
   }),
-  nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
-  failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
+  nothing: {
+    tone: "mute",
+    text: "nothing was saved — the save was cancelled.",
+  },
+  failed: {
+    tone: "warn",
+    text: "couldn't save the certificate — check that Trawler is running.",
+  },
 });
 
 const TICK_MS = 1000;
@@ -253,7 +307,10 @@ function useGraceEdge(tunnelAt: number | null): number {
 }
 
 // The address's refusal, held past a retry of it until the retry settles.
-function useSettledRefusal(newest: AddressRefusal | undefined): { refusal: AddressRefusal | undefined; now: number } {
+function useSettledRefusal(newest: AddressRefusal | undefined): {
+  refusal: AddressRefusal | undefined;
+  now: number;
+} {
   const now = useGraceEdge(newest?.at ?? null);
   const [held, setHeld] = useState<AddressRefusal | undefined>(undefined);
   const refusal = settledRefusal(newest, held, now);
@@ -271,17 +328,30 @@ function ActionNote({
   note: ActionNotes;
 }) {
   const failed = action.state === "failed" ? action.failure : undefined;
-  const prompt = failed?.refused ? PROMPT_CANCELLED : failed?.unshowable ? PROMPT_UNSHOWABLE : null;
+  const prompt = failed?.refused
+    ? PROMPT_CANCELLED
+    : failed?.unshowable
+      ? PROMPT_UNSHOWABLE
+      : null;
   const entry = note[action.state];
   const shown = typeof entry === "function" ? entry(action.named) : entry;
   if (!shown && prompt === null) return null;
   return (
-    <div data-testid={`${testId}-status`} data-state={action.state} className="pt-chrome-y">
-      <Notice tone={prompt === null ? shown!.tone : "mute"}>{prompt ?? shown!.text}</Notice>
+    <div
+      data-testid={`${testId}-status`}
+      data-state={action.state}
+      className="pt-chrome-y"
+    >
+      <Notice tone={prompt === null ? shown!.tone : "mute"}>
+        {prompt ?? shown!.text}
+      </Notice>
       {action.state === "failed" && action.failure !== undefined && (
         <div className="pt-2">
           <Disclosure summary="details">
-            <p data-wire="command output" className="font-mono text-chrome text-ink-mute">
+            <p
+              data-wire="command output"
+              className="font-mono text-chrome text-ink-mute"
+            >
               {action.failure.detail}
             </p>
           </Disclosure>
@@ -335,7 +405,10 @@ const ZONE_LABEL = "font-ui text-chrome uppercase tracking-label text-ink-mute";
 
 // The save control's outcome is this screen's note, so the shared step
 // renderer is handed it rather than knowing about actions' wording.
-function GuideSteps({ steps, ...controls }: { steps: GuideStep[] } & StepControls) {
+function GuideSteps({
+  steps,
+  ...controls
+}: { steps: GuideStep[] } & StepControls) {
   const { save } = controls;
   return (
     <SharedGuideSteps
@@ -343,7 +416,13 @@ function GuideSteps({ steps, ...controls }: { steps: GuideStep[] } & StepControl
       {...controls}
       saveNote={
         save &&
-        ((format) => <ActionNote testId="save-ca" action={save} note={saveCaNote(CA_FILES[format])} />)
+        ((format) => (
+          <ActionNote
+            testId="save-ca"
+            action={save}
+            note={saveCaNote(CA_FILES[format])}
+          />
+        ))
       }
     />
   );
@@ -379,7 +458,11 @@ function GuideView({
     <Disclosure summary={summary} defaultOpen={defaultOpen}>
       <GuideSteps steps={guide.steps} save={save} open={open} framed={framed} />
       {guide.notes?.map((note) => (
-        <p key={note} data-testid="guide-note" className="pt-2 font-ui text-chrome text-ink-mute">
+        <p
+          key={note}
+          data-testid="guide-note"
+          className="pt-2 font-ui text-chrome text-ink-mute"
+        >
           {note}
         </p>
       ))}
@@ -404,9 +487,17 @@ function GuideView({
 // This machine's other ways to make the request: its browser, where a route
 // opens one, then a terminal.
 function tryOtherWays(setup: PlatformGuides): GuideStep[] {
-  const routes = (setup.tryRoutes ?? []).map((route): GuideStep => ["Open it in your browser", route]);
+  const routes = (setup.tryRoutes ?? []).map((route): GuideStep => [
+    "Open it in your browser",
+    route,
+  ]);
   const command: GuideStep[] = setup.tryCommand
-    ? [[setup.tryLead ?? "In a terminal, run:", { command: setup.tryCommand, label: "the try-it command" }]]
+    ? [
+        [
+          setup.tryLead ?? "In a terminal, run:",
+          { command: setup.tryCommand, label: "the try-it command" },
+        ],
+      ]
     : [];
   return [...routes, ...command];
 }
@@ -441,7 +532,10 @@ function TryRequest({
         />
       )}
       {other.length > 0 && (
-        <div data-testid="try-other-ways" className={request.trigger ? "pt-3" : ""}>
+        <div
+          data-testid="try-other-ways"
+          className={request.trigger ? "pt-3" : ""}
+        >
           <Disclosure summary="other ways">
             <GuideSteps steps={other} open={open} />
           </Disclosure>
@@ -452,7 +546,10 @@ function TryRequest({
   return (
     <div data-testid="try-request" className="pt-2">
       {folded ? (
-        <Disclosure summary="make another request" defaultOpen={request.state !== "idle"}>
+        <Disclosure
+          summary="make another request"
+          defaultOpen={request.state !== "idle"}
+        >
           {body}
         </Disclosure>
       ) : (
@@ -464,7 +561,13 @@ function TryRequest({
 
 // The outcome reads where the request that produces it is made, which is the one
 // thing DEC-13 accepts as proof that setup is over.
-function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Traffic }) {
+function ProvenOutcome({
+  device,
+  traffic,
+}: {
+  device: string | null;
+  traffic: Traffic;
+}) {
   const now = useNow();
   if (trafficReading(traffic, now) !== "capturing") return null;
   return (
@@ -473,7 +576,11 @@ function ProvenOutcome({ device, traffic }: { device: string | null; traffic: Tr
         tone="ok"
         detail={
           <span>
-            last request <TimestampText timestamp={traffic.lastDecryptedAt} format="relative" />
+            last request{" "}
+            <TimestampText
+              timestamp={traffic.lastDecryptedAt}
+              format="relative"
+            />
           </span>
         }
       >
@@ -505,41 +612,6 @@ function TrafficState({ read }: { read: (now: number) => StepStatusView }) {
   );
 }
 
-// One reading of this machine governs both probed tasks, so one control re-takes
-// it. The time stamps the reading: a probe is a snapshot, and nothing pushes
-// when the user changes a setting elsewhere.
-function ProbeRow({
-  probing,
-  probedAt,
-  onRecheck,
-}: {
-  probing: boolean;
-  probedAt: number | null;
-  onRecheck: () => void;
-}) {
-  return (
-    <div
-      data-testid="probe"
-      className="flex items-center justify-end gap-chrome-gap px-4 font-ui text-control text-ink-mute"
-    >
-      {probing ? (
-        <span className="flex items-center gap-chrome-gap">
-          <Spinner /> checking this machine…
-        </span>
-      ) : (
-        probedAt !== null && (
-          <span>
-            checked <TimestampText timestamp={probedAt} format="relative" />
-          </span>
-        )
-      )}
-      <Button onClick={onRecheck} frame="bare" tone="mute" disabled={probing}>
-        check again
-      </Button>
-    </div>
-  );
-}
-
 const addressLabel = (address: ReachState["interfaces"][number]) =>
   `${address.name} · ${address.address}`;
 
@@ -562,7 +634,10 @@ function AddressChoice({
   return (
     <>
       <p className={ZONE_LABEL}>address to use</p>
-      <p data-testid="listen-on" className="pt-2 font-ui text-body text-ink-body">
+      <p
+        data-testid="listen-on"
+        className="pt-2 font-ui text-body text-ink-body"
+      >
         {addressLabel(chosen)}
       </p>
       {others.length > 0 && (
@@ -645,7 +720,11 @@ function NetworkTask({
     <TaskStep
       n={n}
       title={title}
-      why={lost === null ? "Trawler answers on this machine only until you do" : undefined}
+      why={
+        lost === null
+          ? "Trawler answers on this machine only until you do"
+          : undefined
+      }
       status={
         lost === null
           ? verdict("not-done", "Trawler answers on this machine only")
@@ -665,7 +744,11 @@ function NetworkTask({
         </>
       ) : (
         <>
-          <AddressChoice addresses={reach.interfaces} value={network.address} onChange={onChoose} />
+          <AddressChoice
+            addresses={reach.interfaces}
+            value={network.address}
+            onChange={onChoose}
+          />
           {arm.trigger && (
             <div className="pt-3">
               <Action
@@ -678,8 +761,8 @@ function NetworkTask({
             </div>
           )}
           <p className="pt-2 font-ui text-chrome text-ink-mute">
-            other devices on {network.name} will be able to use this proxy and see captured traffic
-            until Trawler quits
+            other devices on {network.name} will be able to use this proxy and
+            see captured traffic until Trawler quits
           </p>
         </>
       )}
@@ -722,9 +805,16 @@ function guideFor(
   underButton: boolean,
 ): TaskGuide | undefined {
   if (guide === undefined) return undefined;
-  if (!done) return { guide: { ...guide, undo: undefined }, summary: underButton ? MANUAL : stepCount(guide) };
+  if (!done)
+    return {
+      guide: { ...guide, undo: undefined },
+      summary: underButton ? MANUAL : stepCount(guide),
+    };
   return guide.undo?.length
-    ? { guide: { steps: guide.undo }, summary: underButton ? MANUAL : (guide.undoTitle ?? "to undo it later") }
+    ? {
+        guide: { steps: guide.undo },
+        summary: underButton ? MANUAL : (guide.undoTitle ?? "to undo it later"),
+      }
     : undefined;
 }
 
@@ -759,7 +849,8 @@ function GuidedTask({
   action?: ReactNode;
   children?: ReactNode;
 } & StepControls) {
-  const body = guide !== undefined || action !== undefined || children !== undefined;
+  const body =
+    guide !== undefined || action !== undefined || children !== undefined;
   return (
     <TaskStep
       n={n}
@@ -803,7 +894,6 @@ interface SetupProps {
   trustProbe?: TrustProbe;
   proxy?: ProxyReading;
   probing?: boolean;
-  probedAt?: number | null;
   traffic?: Traffic;
   ownProofAt?: number | null;
   simulators?: readonly SimulatorTrust[];
@@ -819,7 +909,7 @@ interface SetupProps {
   onSaveCa?: (format: CaFormat) => Promise<string | null>;
   onSetProxy?: () => Promise<null | void>;
   onUnsetProxy?: () => Promise<void>;
-  onRecheck?: () => void;
+  onRemoveCa?: () => Promise<void>;
   onArmReach?: (address: string) => Promise<null | void>;
   onDisarmReach?: () => Promise<void>;
   onRereadReach?: () => void;
@@ -838,7 +928,9 @@ export type RouteAct = "set" | "unset" | null;
 // until the re-read lands the old reading still says ours. A conclusive
 // reading replaces both; one that could not read replaces neither, because a
 // probe that never answers may not strand a machine this app just changed.
-export function useRouteMemory(status: ProxyReading["status"]): [RouteAct, (act: RouteAct) => void] {
+export function useRouteMemory(
+  status: ProxyReading["status"],
+): [RouteAct, (act: RouteAct) => void] {
   const [act, setAct] = useState<RouteAct>(null);
   useEffect(() => {
     if (status !== "unknown") setAct(null);
@@ -869,7 +961,10 @@ export function Onboarding({
           <p className="pt-2 font-ui text-body text-ink-body">{PURPOSE}</p>
         </div>
 
-        <div data-testid="platform" className="flex flex-wrap items-center gap-3 px-4">
+        <div
+          data-testid="platform"
+          className="flex flex-wrap items-center gap-3 px-4"
+        >
           <p className={ZONE_LABEL}>{QUESTION}</p>
           <Select
             options={platformChoices(setup.os ?? "other")}
@@ -909,7 +1004,11 @@ export function BackToFlows({ onBack }: { onBack: () => void }) {
 
 // Another device's tasks read the traffic they are handed unless told this
 // machine's own may be in it.
-const UNMIXED: AnotherDevice = { provedAt: null, mixed: false, wire: NO_TRAFFIC };
+const UNMIXED: AnotherDevice = {
+  provedAt: null,
+  mixed: false,
+  wire: NO_TRAFFIC,
+};
 const NO_SIMULATORS: readonly SimulatorTrust[] = [];
 const NO_EMULATORS: readonly EmulatorReading[] = [];
 
@@ -920,7 +1019,6 @@ function PlatformSetup({
   trustProbe = "unknown",
   proxy = NO_PROXY_READING,
   probing = false,
-  probedAt = null,
   traffic = NO_TRAFFIC,
   ownProofAt = null,
   simulators = NO_SIMULATORS,
@@ -933,7 +1031,7 @@ function PlatformSetup({
   onSaveCa,
   onSetProxy,
   onUnsetProxy,
-  onRecheck,
+  onRemoveCa,
   onArmReach,
   onDisarmReach,
   onRereadReach,
@@ -943,7 +1041,9 @@ function PlatformSetup({
   onRouteAct,
 }: SetupProps & { platform: PlatformId }) {
   const [listenOn, setListenOn] = useState<string | null>(null);
-  const open = onOpenRoute && ((route: RouteName) => void onOpenRoute(route).catch(() => undefined));
+  const open =
+    onOpenRoute &&
+    ((route: RouteName) => void onOpenRoute(route).catch(() => undefined));
 
   const routing =
     (act: "set" | "unset") =>
@@ -952,12 +1052,20 @@ function PlatformSetup({
       return outcome;
     };
 
-  const setUp = useAction(onSetUpThisMachine && (() => onSetUpThisMachine().then(routing("set"))));
+  const setUp = useAction(
+    onSetUpThisMachine && (() => onSetUpThisMachine().then(routing("set"))),
+  );
   const saveCa = useAction(onSaveCa && (() => onSaveCa(caFormatFor(platform))));
-  const setProxyAction = useAction(onSetProxy && (() => onSetProxy().then(routing("set"))));
-  const unsetProxyAction = useAction(onUnsetProxy && (() => onUnsetProxy().then(routing("unset"))));
+  const setProxyAction = useAction(
+    onSetProxy && (() => onSetProxy().then(routing("set"))),
+  );
+  const unsetProxyAction = useAction(
+    onUnsetProxy && (() => onUnsetProxy().then(routing("unset"))),
+  );
+  const removeCa = useAction(onRemoveCa);
   const chosen =
-    reach.interfaces.find((i) => i.address === listenOn)?.address ?? reach.interfaces[0]?.address;
+    reach.interfaces.find((i) => i.address === listenOn)?.address ??
+    reach.interfaces[0]?.address;
   const arm = useAction(
     onArmReach && chosen !== undefined ? () => onArmReach(chosen) : undefined,
   );
@@ -967,7 +1075,11 @@ function PlatformSetup({
   const request = useAction(platform === "this" ? onMakeRequest : undefined);
 
   const lost = lostAddress(reach);
-  const allowed = reach.armed && reach.proxy !== null && reach.ca_urls !== null && lost === null;
+  const allowed =
+    reach.armed &&
+    reach.proxy !== null &&
+    reach.ca_urls !== null &&
+    lost === null;
   const setup = setupFor(platform, {
     os,
     proxyAddr,
@@ -1003,7 +1115,9 @@ function PlatformSetup({
   const mixed = (anotherDevice && device.mixed) || sharedWire;
   const graceEdge = useGraceEdge(traffic.openTunnelAt);
   const evidence = evidenceOf(traffic, graceEdge);
-  const routeEvidence = sharedWire ? evidenceOf(device.wire, graceEdge) : evidence;
+  const routeEvidence = sharedWire
+    ? evidenceOf(device.wire, graceEdge)
+    : evidence;
   const ownProved = platform === "this" && ownProofAt !== null;
   const first = offMachine ? 1 : 0;
   const tryStep = first + 3;
@@ -1018,17 +1132,19 @@ function PlatformSetup({
   const addressTest = setup.addressTest;
   const address = useSettledRefusal(device.refusal);
   const addressRefused =
-    addressTest === undefined ? null : refusedAddress(address.refusal, evidence, reading, address.now);
+    addressTest === undefined
+      ? null
+      : refusedAddress(address.refusal, evidence, reading, address.now);
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = probesOwnStore(platform)
     ? (storesTrusted(simulators) ?? device.provedAt !== null)
     : adb
       ? (storesTrusted(emulators) ?? evidence.decrypted)
       : !probesTrust(platform)
-      ? evidence.decrypted && addressRefused === null
-      : trustUnread
-        ? ownProved
-        : trustProbe === "trusted";
+        ? evidence.decrypted && addressRefused === null
+        : trustUnread
+          ? ownProved
+          : trustProbe === "trusted";
   const routeUnread = probesRoute(platform) && proxy.status === "unknown";
   const routeByOwnRequest = platform === "this";
   const routeDone =
@@ -1048,16 +1164,24 @@ function PlatformSetup({
       ? setUp.trigger
       : undefined;
   const setProxyHere =
-    routeHere && setUpHere === undefined && !routeDone ? setProxyAction.trigger : undefined;
+    routeHere && setUpHere === undefined && !routeDone
+      ? setProxyAction.trigger
+      : undefined;
   const reverseHere =
     routeHere && unsetProxyAction.trigger && routeAct !== "unset"
       ? routeDone || routeAct === "set"
       : false;
+  const removeHere =
+    trustHere && os === "macos" && trustDone ? removeCa.trigger : undefined;
 
   // The action the user just took outranks the re-read it triggers, and the one
   // combined action outranks both halves it is running.
   const busy = (own: ActionHandle, r: Running): Running =>
-    setUp.state === "running" || own.state === "running" ? r : probing ? "checking" : null;
+    setUp.state === "running" || own.state === "running"
+      ? r
+      : probing
+        ? "checking"
+        : null;
 
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
@@ -1067,11 +1191,26 @@ function PlatformSetup({
   const trustState = probesOwnStore(platform)
     ? simulatorTrustStatus(simulators, busy(setUp, "installing"), reading)
     : probesTrust(platform)
-      ? trustStatus(trustProbe, busy(setUp, "installing"), byOwnRequest("trust", ownProofAt, tryStep))
+      ? trustStatus(
+          trustProbe,
+          busy(setUp, "installing"),
+          byOwnRequest("trust", ownProofAt, tryStep),
+        )
       : adb
-        ? emulatorTrustStatus(emulators, busy(setUp, "installing"), reading, evidence, confirmHttpsOn(platform, os))
+        ? emulatorTrustStatus(
+            emulators,
+            busy(setUp, "installing"),
+            reading,
+            evidence,
+            confirmHttpsOn(platform, os),
+          )
         : addressTest
-          ? addressTrustStatus(evidence, reading, addressRefused, confirmHttpsOn(platform, os))
+          ? addressTrustStatus(
+              evidence,
+              reading,
+              addressRefused,
+              confirmHttpsOn(platform, os),
+            )
           : deviceTrustStatus(evidence, reading, confirmHttpsOn(platform, os));
   const routeState = probesRoute(platform)
     ? proxyStatus(proxy.status, busy(setProxyAction, "setting"), {
@@ -1081,7 +1220,13 @@ function PlatformSetup({
           : routeByTraffic(routeEvidence, setup.confirmOn),
       })
     : adb
-      ? emulatorRouteStatus(emulators, busy(setProxyAction, "setting"), reading, evidence, setup.confirmOn)
+      ? emulatorRouteStatus(
+          emulators,
+          busy(setProxyAction, "setting"),
+          reading,
+          evidence,
+          setup.confirmOn,
+        )
       : deviceRouteStatus(evidence, reading, setup.confirmOn);
   // A tunnel nothing decrypted says the certificate is the step left, so the
   // certificate task says it, once, while it is not done; once it is, the
@@ -1089,19 +1234,31 @@ function PlatformSetup({
   // the try task wherever the refusal may be any device's: This machine's
   // store unread (D7), another device's traffic mixed with this one's (A3), and
   // the emulator, whose own services refuse a certificate it holds (W8's S2).
-  const emulatorRefused = adb ? emulatorRefusal(trustedEmulators(emulators)) : undefined;
+  const emulatorRefused = adb
+    ? emulatorRefusal(trustedEmulators(emulators))
+    : undefined;
   const certificateOwnsRefusal = addressTest
     ? addressRefused !== null
     : !trustDone && !trustUnread && !mixed && !adb;
-  const refusedHere = certificateOwnsRefusal && (addressRefused !== null || evidence.unanswered);
+  const refusedHere =
+    certificateOwnsRefusal && (addressRefused !== null || evidence.unanswered);
   const refusalNote =
     addressTest !== undefined && addressRefused !== null
       ? addressTest.refused
       : notDecryptingHere(deviceName(platform, os), setup.notDecrypting);
 
-  const trustGuide = guideFor(setup.trust.guide, trustDone, setUpHere !== undefined);
-  const routeUnderButton = setUpHere !== undefined || setProxyHere !== undefined;
-  const routeGuide = guideFor(setup.route.guide, routeDone, routeDone ? reverseHere : routeUnderButton);
+  const trustGuide = guideFor(
+    setup.trust.guide,
+    trustDone,
+    trustDone ? removeHere !== undefined : setUpHere !== undefined,
+  );
+  const routeUnderButton =
+    setUpHere !== undefined || setProxyHere !== undefined;
+  const routeGuide = guideFor(
+    setup.route.guide,
+    routeDone,
+    routeDone ? reverseHere : routeUnderButton,
+  );
 
   // One guide is open. A failed action's route comes first, because its note
   // says the steps below do it by hand. Otherwise it is the first whose task is
@@ -1110,12 +1267,14 @@ function PlatformSetup({
   // job — the button is the route, and the steps are what a reader asks for.
   // Nothing observes a task on another device, so off-machine the first guided
   // task stays open until a decrypted request says the whole job is over.
-  const failedRoute = failedHere(setUp, setUpHere !== undefined)
-    ? "trust"
-    : failedHere(setProxyAction, setProxyHere !== undefined) ||
-        failedHere(unsetProxyAction, reverseHere)
-      ? "route"
-      : null;
+  const failedRoute =
+    failedHere(setUp, setUpHere !== undefined) ||
+    failedHere(removeCa, removeHere !== undefined)
+      ? "trust"
+      : failedHere(setProxyAction, setProxyHere !== undefined) ||
+          failedHere(unsetProxyAction, reverseHere)
+        ? "route"
+        : null;
   // Every sentence that says "the steps below" has them open — a failure's note
   // and the certificate task's account of a refusal — each in its own task, so
   // one never closes the steps another points at. Only where nothing points is
@@ -1126,7 +1285,11 @@ function PlatformSetup({
   const guidesOpen = !blocked && traffic.lastDecryptedAt === null;
   const trustGuideOpen =
     trustPointed ||
-    (byReading && guidesOpen && trustGuide !== undefined && !trustDone && setUpHere === undefined);
+    (byReading &&
+      guidesOpen &&
+      trustGuide !== undefined &&
+      !trustDone &&
+      setUpHere === undefined);
   const routeGuideOpen =
     routePointed ||
     (byReading &&
@@ -1141,17 +1304,19 @@ function PlatformSetup({
   // This machine's request once both halves read done. Everything else is bare
   // (W12's E1, E2).
   const proved = traffic.lastDecryptedAt !== null;
-  const next: "set-up" | "set-proxy" | "trust-guide" | "route-guide" | "request" | null = setUpHere
-    ? "set-up"
-    : setProxyHere
-      ? "set-proxy"
-      : trustGuideOpen && !trustDone
-        ? "trust-guide"
-        : routeGuideOpen && !routeDone
-          ? "route-guide"
-          : platform === "this" && trustDone && routeDone && !proved
-            ? "request"
-            : null;
+  const next:
+    "set-up" | "set-proxy" | "trust-guide" | "route-guide" | "request" | null =
+    setUpHere
+      ? "set-up"
+      : setProxyHere
+        ? "set-proxy"
+        : trustGuideOpen && !trustDone
+          ? "trust-guide"
+          : routeGuideOpen && !routeDone
+            ? "route-guide"
+            : platform === "this" && trustDone && routeDone && !proved
+              ? "request"
+              : null;
   const bare = (framed: boolean) => (framed ? undefined : ("bare" as const));
 
   // It does both tasks, so it belongs to neither: it leads them, and says which
@@ -1172,8 +1337,8 @@ function PlatformSetup({
 
   // The action and its reversal are two controls, not two halves of one, and a
   // reversal that failed leaves the way out open: the proxy it could not turn
-  // off is still set. It names the half it performs — only the proxy can be
-  // put back, and DEC-13 never offered to untrust a store.
+  // off is still set. Each names the half it performs: stopping the proxy
+  // leaves the certificate, and removing the certificate leaves the proxy.
   const routeAction = (setProxyHere || reverseHere) && (
     <>
       {setProxyHere && (
@@ -1238,6 +1403,20 @@ function PlatformSetup({
           save={onSaveCa ? saveCa : undefined}
           open={open}
           framed={next === "trust-guide"}
+          action={
+            removeHere && (
+              <Action
+                testId="remove-ca"
+                label="remove the certificate"
+                caption={removeCaNote(routeDone)}
+                action={removeCa}
+                note={REMOVE_CA_NOTE}
+                onClick={removeHere}
+                frame="bare"
+                disabled={probing}
+              />
+            )
+          }
         >
           {refusedHere && (
             <div data-testid="traffic-remedy" className="pb-2">
@@ -1260,28 +1439,52 @@ function PlatformSetup({
         >
           {proxy.status === "foreign" && probesRoute(platform) && (
             <div data-testid="foreign-proxy" className="pb-2">
-              <Notice tone="mute">{foreignProxyNotice(here, proxy.address)}</Notice>
+              <Notice tone="mute">
+                {foreignProxyNotice(here, proxy.address)}
+              </Notice>
             </div>
           )}
-          {needsReach(platform) && allowed && <ServerAndPort proxy={reach.proxy!} />}
+          {needsReach(platform) && allowed && (
+            <ServerAndPort proxy={reach.proxy!} />
+          )}
         </GuidedTask>
 
-        <GuidedTask n={tryStep} task={setup.try} dim={blocked} waitsOn={waitsOn}>
+        <GuidedTask
+          n={tryStep}
+          task={setup.try}
+          dim={blocked}
+          waitsOn={waitsOn}
+        >
           <TrafficState
             read={(now) => {
-              const addressNow = addressTest !== undefined && addressRefusedNow(device.refusal, now);
+              const addressNow =
+                addressTest !== undefined &&
+                addressRefusedNow(device.refusal, now);
               return mixed
                 ? mixedTryStatus(device.wire, now, traffic.lastDecryptedAt, {
-                    refusedAfterProof: addressNow ? addressTest.maybeRefused : setup.refusedAfterProof,
+                    refusedAfterProof: addressNow
+                      ? addressTest.maybeRefused
+                      : setup.refusedAfterProof,
                     trustedOn:
-                      probesOwnStore(platform) && storesTrusted(simulators) ? trustedSimulators(simulators) : null,
-                    refused: emulatorRefused ?? (addressNow ? addressTest.maybeRefused : addressTest?.elsewhereRefused),
+                      probesOwnStore(platform) && storesTrusted(simulators)
+                        ? trustedSimulators(simulators)
+                        : null,
+                    refused:
+                      emulatorRefused ??
+                      (addressNow
+                        ? addressTest.maybeRefused
+                        : addressTest?.elsewhereRefused),
                     ownsRefusal: certificateOwnsRefusal,
                   })
                 : trafficStatus(traffic, now, {
                     ownsRefusal: certificateOwnsRefusal,
                     trustedOn: platform === "this" && trustDone ? here : null,
-                    proofStays: platform === "this" ? "once-quiet" : anotherDevice ? "past-anything" : "never",
+                    proofStays:
+                      platform === "this"
+                        ? "once-quiet"
+                        : anotherDevice
+                          ? "past-anything"
+                          : "never",
                     refusedAfterProof: setup.refusedAfterProof,
                     refused: emulatorRefused ?? addressTest?.elsewhereRefused,
                   });
@@ -1297,7 +1500,10 @@ function PlatformSetup({
             />
           )}
           {deviceMark !== undefined && (
-            <div data-testid="check-address" className="pt-2 font-ui text-chrome text-ink-mute">
+            <div
+              data-testid="check-address"
+              className="pt-2 font-ui text-chrome text-ink-mute"
+            >
               <StepParts
                 step={checkStep(
                   platform,
@@ -1310,10 +1516,6 @@ function PlatformSetup({
           )}
         </GuidedTask>
       </div>
-
-      {(((probesTrust(platform) || probesRoute(platform)) && canProbe(os)) || adb) && onRecheck && (
-        <ProbeRow probing={probing} probedAt={probedAt} onRecheck={onRecheck} />
-      )}
 
       <ProvenOutcome
         device={

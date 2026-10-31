@@ -7,7 +7,7 @@ use std::process::Command;
 
 use serde::Deserialize;
 
-use crate::setup::SetupError;
+use crate::setup::{argv, SetupError, LOGIN_KEYCHAIN};
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(tag = "name", rename_all = "kebab-case")]
@@ -33,10 +33,6 @@ fn valid_mark(mark: &str) -> bool {
     })
 }
 
-fn argv(parts: &[&str]) -> Vec<String> {
-    parts.iter().map(ToString::to_string).collect()
-}
-
 // Each route as the commands that open it, in order. The certificate is added
 // to the login keychain first: opening the file instead asks which keychain,
 // and the default it offers may be one that holds no trust (W12's recording).
@@ -47,13 +43,7 @@ fn route_commands(os: &str, route: &Route, cert: &Path) -> Option<Vec<Vec<String
     match route {
         Route::ProxySettings => Some(vec![argv(&["open", MACOS_NETWORK_SETTINGS])]),
         Route::Keychain { .. } => Some(vec![
-            argv(&[
-                "security",
-                "add-certificates",
-                "-k",
-                "login.keychain",
-                &cert.to_string_lossy(),
-            ]),
+            argv(&["security", "add-certificates", "-k", LOGIN_KEYCHAIN, &cert.to_string_lossy()]),
             argv(&["open", "-a", "Keychain Access"]),
         ]),
         Route::Browser { mark } => {

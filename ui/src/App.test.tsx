@@ -354,7 +354,7 @@ test("a core that cannot serve its certificate leaves the trust probe unread, ne
   vi.mocked(api.caCertPem).mockRejectedValue(new Error("GET /ca.pem failed: 500"));
   render(<App api={api} initialState={ONBOARDING} />);
 
-  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+  await readingLanded();
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "ca_trusted")).toHaveLength(0);
   expect(screen.getByTestId("task-1")).not.toHaveTextContent("done — installed and trusted");
 });
@@ -478,6 +478,26 @@ test("Stop routing invokes unset_proxy after the proxy was set", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "stop routing through Trawler" }));
 
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("unset_proxy"));
+});
+
+test("remove the certificate hands the shell the certificate the core serves, then reads this machine again", async () => {
+  onMacHost();
+  watchPaused();
+  let trust = "trusted";
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return trust;
+    if (name === "proxy_in_use") return { status: "none", address: null };
+    if (name === "remove_ca") trust = "absent";
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "remove the certificate" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("remove_ca", { pem: PEM }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "remove the certificate" })).toBeNull());
+  expect(screen.getByTestId("task-1")).toHaveTextContent("not done");
 });
 
 // A tunnel is a live signal about traffic, so it settles the task the traffic
@@ -773,24 +793,24 @@ test("a launch straight into the list says nothing — the moment it announces i
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
-// The probes are a snapshot of this machine. Two things re-take it without an
-// action: the control above the steps, and the window coming back into focus —
-// which is when the user has just been in System Settings.
-test("check again and window focus each re-read both probes, and the reading is stamped", async () => {
+// The probes are a snapshot of this machine, re-taken without anyone asking:
+// the window coming back into focus is when the user has just been in System
+// Settings, and nothing on the screen offers to re-take it by hand.
+test("window focus re-reads both probes, and no control asks to", async () => {
   onMacHost();
   watchPaused();
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
-  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+  await readingLanded();
   expect(probes()).toBe(2);
-
-  fireEvent.click(screen.getByRole("button", { name: "check again" }));
-  await waitFor(() => expect(probes()).toBe(4));
-  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+  expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
 
   fireEvent(window, new Event("focus"));
-  await waitFor(() => expect(probes()).toBe(6));
+  await waitFor(() => expect(probes()).toBe(4));
 });
+
+const readingLanded = () =>
+  waitFor(() => expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking"));
 
 const probes = () =>
   vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
@@ -829,7 +849,7 @@ describe("this machine is read again wherever its answer can change", () => {
     });
 
   const settled = async () => {
-    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
+    await readingLanded();
     return probes();
   };
 
@@ -901,8 +921,8 @@ describe("this machine is read again wherever its answer can change", () => {
     fireEvent(window, new Event("focus"));
 
     await waitFor(() => expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_in_use").length).toBe(2));
-    expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
     expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking");
+    expect(screen.getByTestId("task-2")).not.toHaveTextContent("checking");
     expect(screen.getByRole("button", { name: "set up this Mac" })).toBeEnabled();
   });
 
@@ -957,7 +977,7 @@ describe("the watch", () => {
     await tick();
 
     await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
-    expect(screen.getByTestId("probe")).not.toHaveTextContent("checking this machine…");
+    expect(screen.getByTestId("task-2")).not.toHaveTextContent("checking");
   });
 
   it("pauses while the window is hidden, and reads at once when it shows again", async () => {
@@ -2948,7 +2968,7 @@ test("setup opens in checking and holds its buttons until its own reading lands 
   fireEvent.click(screen.getByTestId("status-dot"));
 
   expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeDisabled();
-  expect(screen.getByTestId("probe")).toHaveTextContent("checking this machine…");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("checking");
 
   await act(async () => answerProxy({ status: "none", address: null }));
   expect(await screen.findByRole("button", { name: "set the system proxy" })).toBeEnabled();

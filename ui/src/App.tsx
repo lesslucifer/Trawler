@@ -1,7 +1,21 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { downloadDir } from "@tauri-apps/api/path";
-import { createApi, defaultProxyAddr, UNREACHABLE, type FlowView, type ReachState, type TrawlerApi } from "./api";
+import {
+  createApi,
+  defaultProxyAddr,
+  UNREACHABLE,
+  type FlowView,
+  type ReachState,
+  type TrawlerApi,
+} from "./api";
 import {
   CA_FILES,
   hostOs,
@@ -112,10 +126,14 @@ type Pane = { kind: "inspector"; id: string } | { kind: "composer" } | null;
 
 // The watch re-reads reach every few seconds, and an answer the screen already
 // holds may move nothing on it (U4).
-const sameReach = (a: ReachState, b: ReachState) => JSON.stringify(a) === JSON.stringify(b);
+const sameReach = (a: ReachState, b: ReachState) =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 function hostOptions(hosts: string[]): SelectOption[] {
-  return [{ id: ANY, label: "any host" }, ...hosts.map((h) => ({ id: h, label: h }))];
+  return [
+    { id: ANY, label: "any host" },
+    ...hosts.map((h) => ({ id: h, label: h })),
+  ];
 }
 
 // The dot changes on its own once after a capture, when it goes quiet, so the
@@ -132,9 +150,19 @@ function useNowPast(edge: number | null): number {
   return Date.now();
 }
 
-export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
+export default function App({
+  api,
+  initialState,
+}: {
+  api?: TrawlerApi;
+  initialState?: OnbState;
+}) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
+  const [state, dispatch] = useReducer(
+    reduce,
+    initialState,
+    (s) => s ?? initial(),
+  );
   const {
     filter,
     flows,
@@ -158,9 +186,16 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [pane, setPane] = useState<Pane>(null);
   const inspected = pane?.kind === "inspector" ? pane.id : null;
   const [retryNonce, setRetryNonce] = useState(0);
-  const { flow: detail, failed: detailFailed } = useFlowDetail(client, inspected, retryNonce);
+  const { flow: detail, failed: detailFailed } = useFlowDetail(
+    client,
+    inspected,
+    retryNonce,
+  );
   const { kept, seedId, open: openDraft, edit, send } = useDraft(client);
-  const inspect = useCallback((id: string) => setPane({ kind: "inspector", id }), []);
+  const inspect = useCallback(
+    (id: string) => setPane({ kind: "inspector", id }),
+    [],
+  );
   const compose = (seed: FlowView | null) => {
     openDraft(seed);
     setPane({ kind: "composer" });
@@ -187,10 +222,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     let live = true;
     const asked = Date.now();
     launchSent.current = { at: asked, answered: answeredRef.current };
-    const patience = setTimeout(() => live && setLaunchUnanswered(true), LAUNCH_PATIENCE_MS);
+    const patience = setTimeout(
+      () => live && setLaunchUnanswered(true),
+      LAUNCH_PATIENCE_MS,
+    );
     client.listFlows({}).then(
       (flows) =>
-        live && dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected", at: asked }),
+        live &&
+        dispatch(
+          isDecryptedHttps(flows)
+            ? { t: "captured" }
+            : { t: "not-detected", at: asked },
+        ),
       () => live && setLaunchUnanswered(true),
     );
     return () => {
@@ -213,7 +256,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const [justSetUp, setJustSetUp] = useState(false);
 
   useEffect(() => {
-    if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(everything, state.since ?? undefined)) {
+    if (
+      state.phase === "onboarding" &&
+      !state.everProven &&
+      isDecryptedHttps(everything, state.since ?? undefined)
+    ) {
       setJustSetUp(true);
       dispatch({ t: "captured" });
     }
@@ -249,13 +296,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // Trawler? A probe is a snapshot, and nothing pushes when the user changes a
   // setting in System Settings — so it is read again wherever its answer can
   // change (DEC-62): as setup opens, after every action whatever its outcome,
-  // on "check again", when the window regains focus, when the core comes back
+  // when the window regains focus, when the core comes back
   // serving a certificate that may be new, and on a watch while setup shows. A
   // read the user asked for shows itself; one they did not is quiet, and moves
   // only the time the reading carries (U4). Only the newest read may land.
   // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
-  const [proxyReading, setProxyReading] = useState<ProxyReading>(NO_PROXY_READING);
+  const [proxyReading, setProxyReading] =
+    useState<ProxyReading>(NO_PROXY_READING);
   const [simulators, setSimulators] = useState<readonly SimulatorTrust[]>([]);
   const [emulators, setEmulators] = useState<readonly EmulatorReading[]>([]);
   // adb starts a server of its own where none runs, so the emulator is read
@@ -263,11 +311,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const readsEmulators = useRef(false);
   readsEmulators.current = readsOverAdb(state.chosen);
   const [probing, setProbing] = useState(false);
-  const [probedAt, setProbedAt] = useState<number | null>(null);
   // When this machine's proxy read off or another, so nothing of its own could
   // be arriving: another device's unmarked evidence is only what arrived then
   // (DEC-63 rule 3), and whatever the reading does later leaves it there.
-  const [clearReadings, setClearReadings] = useState<ClearReadings>(NO_CLEAR_READINGS);
+  const [clearReadings, setClearReadings] =
+    useState<ClearReadings>(NO_CLEAR_READINGS);
   const [machineReads] = useState(newestRead);
 
   const readMachine = useCallback(
@@ -282,20 +330,31 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       // running Simulator's own store is asked about it too (W7's Q1).
       const pem = client.caCertPem();
       const trust = pem
-        .then((live) => invoke<TrustProbe | undefined>("ca_trusted", { pem: live }))
+        .then((live) =>
+          invoke<TrustProbe | undefined>("ca_trusted", { pem: live }),
+        )
         .then(
           (p): TrustProbe => p ?? "unknown",
           (): TrustProbe => "unknown",
         );
       const running = pem
-        .then((live) => invoke<SimulatorTrust[] | undefined>("simulator_trust", { pem: live }))
+        .then((live) =>
+          invoke<SimulatorTrust[] | undefined>("simulator_trust", {
+            pem: live,
+          }),
+        )
         .then(
           (read): readonly SimulatorTrust[] => read ?? [],
           (): readonly SimulatorTrust[] => [],
         );
       const adb = readsEmulators.current
         ? pem
-            .then((live) => invoke<EmulatorReading[] | undefined>("emulator_readings", { pem: live, port }))
+            .then((live) =>
+              invoke<EmulatorReading[] | undefined>("emulator_readings", {
+                pem: live,
+                port,
+              }),
+            )
             .then(
               (read): readonly EmulatorReading[] => read ?? [],
               (): readonly EmulatorReading[] => [],
@@ -303,23 +362,36 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         : Promise.resolve<readonly EmulatorReading[]>([]);
       // A shell that answers with nothing has read nothing, which is what
       // "unknown" means — and the screen may not crash on the difference.
-      const route = invoke<ProxyReading | undefined>("proxy_in_use", { host, port }).then(
+      const route = invoke<ProxyReading | undefined>("proxy_in_use", {
+        host,
+        port,
+      }).then(
         (reading) => reading ?? NO_PROXY_READING,
         () => NO_PROXY_READING,
       );
-      void Promise.all([trust, route, running, adb]).then(([t, r, sims, emus]) => {
-        if (!landing()) return;
-        const landed = Date.now();
-        setTrustProbe(t);
-        setProxyReading(r);
-        setSimulators((held) => (JSON.stringify(held) === JSON.stringify(sims) ? held : sims));
-        setEmulators((held) => (JSON.stringify(held) === JSON.stringify(emus) ? held : emus));
-        setClearReadings((was) =>
-          nextClearReadings(was, !mayCarryOwnTraffic(r.status), { sent, landed }, READINGS_APART_MAX_MS),
-        );
-        setProbing(false);
-        setProbedAt(landed);
-      });
+      void Promise.all([trust, route, running, adb]).then(
+        ([t, r, sims, emus]) => {
+          if (!landing()) return;
+          const landed = Date.now();
+          setTrustProbe(t);
+          setProxyReading(r);
+          setSimulators((held) =>
+            JSON.stringify(held) === JSON.stringify(sims) ? held : sims,
+          );
+          setEmulators((held) =>
+            JSON.stringify(held) === JSON.stringify(emus) ? held : emus,
+          );
+          setClearReadings((was) =>
+            nextClearReadings(
+              was,
+              !mayCarryOwnTraffic(r.status),
+              { sent, landed },
+              READINGS_APART_MAX_MS,
+            ),
+          );
+          setProbing(false);
+        },
+      );
     },
     [client, proxyAddr, machineReads],
   );
@@ -452,13 +524,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const named = useMemo(
     () => ({
       ...reach,
-      interfaces: reach.interfaces.map((i) => ({ ...i, name: portNames[i.name] ?? i.name })),
+      interfaces: reach.interfaces.map((i) => ({
+        ...i,
+        name: portNames[i.name] ?? i.name,
+      })),
     }),
     [reach, portNames],
   );
 
   const ownProofAt = useMemo(
-    () => (state.phase === "onboarding" ? ownRequestProvedAt(everything, state.since) : null),
+    () =>
+      state.phase === "onboarding"
+        ? ownRequestProvedAt(everything, state.since)
+        : null,
     [state.phase, everything, state.since],
   );
 
@@ -469,9 +547,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // The emulator needs no allow - it reaches this machine's loopback - so its
   // evidence starts with the session (W8).
   const sharedWire = sharesHostWire(state.chosen);
-  const deviceSince = needsReach(state.chosen) ? deviceEvidenceSince(state.since, armedSince) : state.since;
+  const deviceSince = needsReach(state.chosen)
+    ? deviceEvidenceSince(state.since, armedSince)
+    : state.since;
   const deviceClear = sharedWire ? NO_CLEAR_READINGS : clearReadings;
-  const mark = marksItsOwn(state.chosen) ? deviceMark(state.since, state.chosen) : undefined;
+  const mark = marksItsOwn(state.chosen)
+    ? deviceMark(state.since, state.chosen)
+    : undefined;
   const device = useMemo(
     () =>
       state.phase === "onboarding" && mark !== undefined
@@ -482,7 +564,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             tunnelAt(REQUEST_HOST),
           )
         : undefined,
-    [state.phase, everything, mark, deviceSince, deviceClear, tunnelTimes, tunnelAt],
+    [
+      state.phase,
+      everything,
+      mark,
+      deviceSince,
+      deviceClear,
+      tunnelTimes,
+      tunnelAt,
+    ],
   );
 
   // The confirm comes first and the bind only on a yes — the shell asks,
@@ -491,7 +581,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // the refusal is returned rather than swallowed, because a screen that cannot
   // tell a no from a yes says nothing about either.
   const armReach = async (address: string) => {
-    const allowed = await invoke<boolean>("confirm_reach", { address }).catch(() => false);
+    const allowed = await invoke<boolean>("confirm_reach", { address }).catch(
+      () => false,
+    );
     if (!allowed) return null;
     landReach(await client.armReach(address));
     return undefined;
@@ -507,8 +599,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   // folder, so it moves nothing.
   const [savedCa, setSavedCa] = useState<SavedCa>({});
   const saveCa = async (format: CaFormat) => {
-    const path = await saveBody(await client.caFile(format), CA_FILES[format], downloadDir);
-    if (path !== null && isFullPath(path)) setSavedCa((was) => ({ ...was, [format]: path }));
+    const path = await saveBody(
+      await client.caFile(format),
+      CA_FILES[format],
+      downloadDir,
+    );
+    if (path !== null && isFullPath(path))
+      setSavedCa((was) => ({ ...was, [format]: path }));
     return path;
   };
 
@@ -560,12 +657,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     await invoke("unset_proxy");
   });
 
+  const removeCa = thenRead(async () => {
+    await invoke("remove_ca", { pem: await client.caCertPem() });
+  });
+
   // A by-hand step's route: the shell opens it by name, and builds what it
   // opens. The browser's request carries this window's mark, so it settles the
   // tasks as the in-app one does (DEC-62).
   const openRoute = async (route: RouteName) => {
     if (route === "keychain") {
-      await invoke("open_route", { route: { name: route, pem: await client.caCertPem() } });
+      await invoke("open_route", {
+        route: { name: route, pem: await client.caCertPem() },
+      });
     } else if (route === "browser") {
       await invoke("open_route", { route: { name: route, mark: nextMark() } });
     } else {
@@ -580,7 +683,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const awaitingOwn = useRef<{ mark: string; seen: () => void } | null>(null);
   useEffect(() => {
     const waiting = awaitingOwn.current;
-    if (waiting !== null && everything.some((f) => isOwnRequest(f, waiting.mark))) waiting.seen();
+    if (
+      waiting !== null &&
+      everything.some((f) => isOwnRequest(f, waiting.mark))
+    )
+      waiting.seen();
   }, [everything]);
 
   const makeOwnRequest = async (): Promise<RequestRoute> => {
@@ -593,11 +700,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       () => true,
       () => false,
     );
-    const grace = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), TUNNEL_GRACE_MS));
+    const grace = new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), TUNNEL_GRACE_MS),
+    );
     const decrypted = await Promise.race([seen, grace]);
     if (awaitingOwn.current?.mark === mark) awaitingOwn.current = null;
-    const route = requestRoute({ decrypted, tunnelAt: tunnelAt(REQUEST_HOST), sentAt, answered });
-    if (route === null) throw new Error(`the request to ${REQUEST_HOST} didn't complete`);
+    const route = requestRoute({
+      decrypted,
+      tunnelAt: tunnelAt(REQUEST_HOST),
+      sentAt,
+      answered,
+    });
+    if (route === null)
+      throw new Error(`the request to ${REQUEST_HOST} didn't complete`);
     return route;
   };
 
@@ -629,7 +744,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     ]);
     return {
       answering: reached !== null,
-      ownAddresses: (reached ?? reachAtQuit.current).interfaces.map((i) => i.address),
+      ownAddresses: (reached ?? reachAtQuit.current).interfaces.map(
+        (i) => i.address,
+      ),
       reachArmed: reached?.armed ?? false,
       emulator,
     };
@@ -663,8 +780,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, [state.phase]);
 
   const setUp = () => go({ t: "re-invoke", at: Date.now() });
-  const setUpAnother = () => go({ t: "re-invoke", at: Date.now(), another: true });
-  const now = useNowPast(lastCaptureAt == null ? null : lastCaptureAt + QUIET_AFTER_MS);
+  const setUpAnother = () =>
+    go({ t: "re-invoke", at: Date.now(), another: true });
+  const now = useNowPast(
+    lastCaptureAt == null ? null : lastCaptureAt + QUIET_AFTER_MS,
+  );
   const dot = (
     <StatusDot
       status={dotStatus(lastCaptureAt, now)}
@@ -680,7 +800,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         action={
           <>
             <Button onClick={setUpAnother}>set up another device</Button>
-            <Button frame="bare" tone="mute" onClick={() => setJustSetUp(false)}>
+            <Button
+              frame="bare"
+              tone="mute"
+              onClick={() => setJustSetUp(false)}
+            >
               dismiss
             </Button>
           </>
@@ -707,7 +831,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       data-testid="reach-chip"
       className="flex items-center gap-control-gap rounded-button border border-hairline px-chrome-x font-ui text-chrome text-ink-mute"
     >
-      <span>{lost === null ? `reachable on ${splitProxyAddr(reach.proxy).host}` : `no longer reachable on ${lost}`}</span>
+      <span>
+        {lost === null
+          ? `reachable on ${splitProxyAddr(reach.proxy).host}`
+          : `no longer reachable on ${lost}`}
+      </span>
       {disarm.trigger && (
         <Button
           frame="bare"
@@ -763,8 +891,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }, [state.phase, silent]);
 
   useEffect(() => {
-    if (state.phase !== "checking" || answered <= launchSent.current.answered) return;
-    dispatch(isDecryptedHttps(everything) ? { t: "captured" } : { t: "not-detected", at: launchSent.current.at });
+    if (state.phase !== "checking" || answered <= launchSent.current.answered)
+      return;
+    dispatch(
+      isDecryptedHttps(everything)
+        ? { t: "captured" }
+        : { t: "not-detected", at: launchSent.current.at },
+    );
   }, [state.phase, answered, everything]);
 
   const setupHeader = (
@@ -782,8 +915,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
         {launchUnanswered && (
-          <div data-testid="empty" className="flex h-full items-center justify-center p-12">
-            <NotAnswering retrying={retrying} onRetry={retryConnection} region />
+          <div
+            data-testid="empty"
+            className="flex h-full items-center justify-center p-12"
+          >
+            <NotAnswering
+              retrying={retrying}
+              onRetry={retryConnection}
+              region
+            />
           </div>
         )}
       </Layout>
@@ -797,7 +937,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
-        <div data-testid="empty" className="flex h-full flex-col items-center justify-center gap-6 p-12">
+        <div
+          data-testid="empty"
+          className="flex h-full flex-col items-center justify-center gap-6 p-12"
+        >
           <NotAnswering
             trailing="Setup can't check this computer or see your requests until it's back."
             retrying={retrying}
@@ -811,7 +954,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   }
 
   if (state.phase === "onboarding") {
-    const traffic = device?.traffic ?? sessionTraffic(everything, state.since, tunnelTimes);
+    const traffic =
+      device?.traffic ?? sessionTraffic(everything, state.since, tunnelTimes);
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
@@ -823,7 +967,6 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           trustProbe={trustProbe}
           proxy={proxyReading}
           probing={probing}
-          probedAt={probedAt}
           routeAct={routeAct}
           onRouteAct={setRouteAct}
           traffic={traffic}
@@ -837,7 +980,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
-          onRecheck={() => readMachine("shown")}
+          onRemoveCa={removeCa}
           reach={named}
           onArmReach={armReach}
           onDisarmReach={disarmReach}
@@ -862,7 +1005,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         // banner is the one a user can come back to.
         notAnswering && (flows.length > 0 || refused !== null) ? (
           <NotAnswering
-            trailing={flows.length > 0 ? "The requests below are the last it sent. New ones will show up once it's back." : undefined}
+            trailing={
+              flows.length > 0
+                ? "The requests below are the last it sent. New ones will show up once it's back."
+                : undefined
+            }
             retrying={retrying}
             onRetry={retryConnection}
           />

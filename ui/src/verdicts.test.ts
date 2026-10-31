@@ -30,6 +30,7 @@ import {
   setUpOn,
   storesTrusted,
   simulatorTrustStatus,
+  removeCaNote,
   stopRoutingNote,
   trafficStatus,
   trustByTraffic,
@@ -211,6 +212,11 @@ test.each([
 test("the reversal's line names the certificate only where it reads trusted, and only that it stays (W12's E3)", () => {
   expect(stopRoutingNote(true)).toBe("the certificate stays trusted");
   expect(stopRoutingNote(false)).toBeUndefined();
+});
+
+test("removing the certificate says only that a proxy it leaves is still set", () => {
+  expect(removeCaNote(true)).toBe("the proxy stays set");
+  expect(removeCaNote(false)).toBeUndefined();
 });
 
 // Task 3 is the traffic layer, judged against a clock. The complaint that

@@ -5,18 +5,19 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 
+const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
+pub(crate) const LOGIN_KEYCHAIN: &str = "login.keychain";
+
+pub(crate) fn argv(parts: &[&str]) -> Vec<String> {
+    parts.iter().map(ToString::to_string).collect()
+}
+
 fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
     let cert = cert.to_string_lossy().into_owned();
     let argv: &[&str] = match os {
-        "macos" => &[
-            "security",
-            "add-trusted-cert",
-            "-d",
-            "-r",
-            "trustRoot",
-            "-k",
-            "/Library/Keychains/System.keychain",
-        ],
+        "macos" => {
+            &["security", "add-trusted-cert", "-d", "-r", "trustRoot", "-k", SYSTEM_KEYCHAIN]
+        }
         "windows" => &["certutil", "-addstore", "-f", "ROOT"],
         _ => return None,
     };
@@ -883,6 +884,77 @@ pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), S
         setup_error("no automatic setup on this system — follow the guided steps")
     })?;
     run_all(commands, NO_INSTALL_DETAIL)
+}
+
+pub(crate) const NO_REMOVE_DETAIL: &str =
+    "couldn't remove the certificate — no detail; use the steps below";
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Held {
+    login: bool,
+    system: bool,
+    admin_trust: bool,
+}
+
+// A keychain that did not answer cannot vouch for holding nothing. The admin
+// trust list names certificates, not bytes, so a name in it only asks for the
+// removal that is harmless where it finds nothing.
+fn macos_held(
+    thumbprint: &str,
+    login: Option<&Ran>,
+    system: Option<&Ran>,
+    admin_trust: Option<&Ran>,
+) -> Option<Held> {
+    let holds = |out: Option<&Ran>| {
+        out.filter(|out| out.ok).map(|out| lists_thumbprint(&out.stdout, thumbprint))
+    };
+    Some(Held {
+        login: holds(login)?,
+        system: holds(system)?,
+        admin_trust: admin_trust.is_some_and(|out| out.stdout.contains(CA_COMMON_NAME)),
+    })
+}
+
+// Each copy goes with the trust written for it: a trust setting outlives its
+// certificate, and the same bytes added back would read trusted with nobody
+// having said so. The login keychain is the user's own; the System keychain and
+// the admin trust ask for an administrator, once, in one script.
+fn remove_ca_commands(cert: &Path, thumbprint: &str, held: &Held) -> Vec<Vec<String>> {
+    let hash = thumbprint.to_ascii_uppercase();
+    let delete_from =
+        |keychain: &str| argv(&["security", "delete-certificate", "-t", "-Z", &hash, keychain]);
+    let mut commands = Vec::new();
+    if held.login {
+        commands.push(delete_from(LOGIN_KEYCHAIN));
+    }
+    if held.system || held.admin_trust {
+        let untrust = argv(&["security", "remove-trusted-cert", "-d", &cert.to_string_lossy()]);
+        let then = if held.system { quoted(&delete_from(SYSTEM_KEYCHAIN)) } else { "true".into() };
+        commands.push(elevated_script(&format!("{} ; {then}", quoted(&untrust))));
+    }
+    commands
+}
+
+#[cfg_attr(not(feature = "scenario"), tauri::command)]
+pub fn remove_ca(pem: String) -> Result<(), SetupError> {
+    if std::env::consts::OS != "macos" {
+        return Err(setup_error("no automatic removal on this system — follow the steps"));
+    }
+    let thumbprint = live_body(&pem)
+        .and_then(|live| thumbprint(&live))
+        .ok_or_else(|| setup_error("not a PEM certificate"))?;
+    let cert = staged_cert(&pem)?;
+    let search = |keychain: &str| {
+        ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-Z", keychain])
+    };
+    let held = macos_held(
+        &thumbprint,
+        search(LOGIN_KEYCHAIN).as_ref(),
+        search(SYSTEM_KEYCHAIN).as_ref(),
+        ran("security", &["dump-trust-settings", "-d"]).as_ref(),
+    )
+    .ok_or_else(|| setup_error("couldn't read the keychains"))?;
+    run_all(remove_ca_commands(&cert, &thumbprint, &held), NO_REMOVE_DETAIL)
 }
 
 // The actual system proxy state, classified against Trawler's own address — the
@@ -1913,6 +1985,84 @@ mod tests {
     fn a_mac_whose_tools_did_not_run_cannot_say() {
         assert_eq!(macos_trust(&live(), || None, never_verified), None);
         assert_eq!(macos_trust(&live(), || answered(LIVE), || None), None);
+    }
+
+    const HASH: &str = "61b175631438ca67af33a923d85c823bbad8a0cc";
+    const HASH_LISTED: &str = "SHA-1 hash: 61B175631438CA67AF33A923D85C823BBAD8A0CC\nkeychain: \"/Users/u/Library/Keychains/login.keychain-db\"\n";
+    const ADMIN_TRUSTS_TRAWLER: &str = "Number of trusted certs = 1\nCert 0: Trawler Proxy CA\n";
+
+    #[test]
+    fn removal_reads_which_keychain_holds_the_live_certificate_by_its_hash() {
+        let other = "SHA-1 hash: 0000000000000000000000000000000000000000\n";
+        assert_eq!(
+            macos_held(HASH, answered(HASH_LISTED).as_ref(), answered(other).as_ref(), None),
+            Some(Held { login: true, system: false, admin_trust: false })
+        );
+        assert_eq!(
+            macos_held(
+                HASH,
+                answered("").as_ref(),
+                answered(HASH_LISTED).as_ref(),
+                answered(ADMIN_TRUSTS_TRAWLER).as_ref()
+            ),
+            Some(Held { login: false, system: true, admin_trust: true })
+        );
+    }
+
+    #[test]
+    fn removal_that_could_not_search_a_keychain_cannot_say_what_to_remove() {
+        assert_eq!(macos_held(HASH, None, answered("").as_ref(), None), None);
+        assert_eq!(
+            macos_held(HASH, answered("").as_ref(), exited_non_zero("").as_ref(), None),
+            None
+        );
+    }
+
+    #[test]
+    fn removing_from_the_login_keychain_takes_its_trust_and_asks_no_administrator() {
+        let held = Held { login: true, ..Held::default() };
+        assert_eq!(
+            remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &held),
+            vec![argv(&[
+                "security",
+                "delete-certificate",
+                "-t",
+                "-Z",
+                &HASH.to_ascii_uppercase(),
+                "login.keychain"
+            ])]
+        );
+    }
+
+    #[test]
+    fn removing_from_the_system_keychain_drops_its_admin_trust_under_one_prompt() {
+        let held = Held { system: true, admin_trust: true, ..Held::default() };
+        let commands = remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &held);
+        assert_eq!(commands.len(), 1);
+        assert_eq!(commands[0][0], "osascript");
+        assert!(commands[0][2].contains(&format!(
+            "'security' 'remove-trusted-cert' '-d' '/tmp/trawler-ca.pem' ; 'security' 'delete-certificate' '-t' '-Z' '{}' '/Library/Keychains/System.keychain'",
+            HASH.to_ascii_uppercase()
+        )));
+        assert!(commands[0][2].ends_with("with administrator privileges"));
+    }
+
+    // Recorded on the owner's Mac: a trust left behind by a deleted System copy
+    // trusted the same bytes added back to the login keychain.
+    #[test]
+    fn an_admin_trust_the_system_keychain_outlived_is_removed_with_the_login_copy() {
+        let held = Held { login: true, admin_trust: true, ..Held::default() };
+        let commands = remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &held);
+        assert_eq!(commands.len(), 2);
+        assert!(commands[1][2]
+            .contains("'security' 'remove-trusted-cert' '-d' '/tmp/trawler-ca.pem' ; true"));
+    }
+
+    #[test]
+    fn nothing_held_removes_nothing() {
+        assert!(
+            remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &Held::default()).is_empty()
+        );
     }
 
     #[test]

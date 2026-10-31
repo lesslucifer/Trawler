@@ -13,7 +13,7 @@ use serde::Deserialize;
 use crate::setup::{
     command_failed, read_proxy, read_proxy_among, trust_word, EmulatorProxy, EmulatorReading,
     ProxyRead, ProxyReading, SetupError, SimulatorTrust, Trust, NO_INSTALL_DETAIL,
-    NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
+    NO_REMOVE_DETAIL, NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -106,6 +106,7 @@ pub struct Scenario {
     set_up: Outcome,
     set_proxy: Outcome,
     unset_proxy: Outcome,
+    remove_ca: Outcome,
     allow_reach: bool,
     allow_replace: bool,
     interface_names: HashMap<String, String>,
@@ -121,6 +122,7 @@ pub struct Patch {
     set_up: Option<Outcome>,
     set_proxy: Option<Outcome>,
     unset_proxy: Option<Outcome>,
+    remove_ca: Option<Outcome>,
     allow_reach: Option<bool>,
     allow_replace: Option<bool>,
     interface_names: Option<HashMap<String, String>>,
@@ -136,6 +138,7 @@ impl Scenario {
             set_up,
             set_proxy,
             unset_proxy,
+            remove_ca,
             allow_reach,
             allow_replace,
             interface_names,
@@ -160,6 +163,9 @@ impl Scenario {
         }
         if let Some(v) = unset_proxy {
             self.unset_proxy = v;
+        }
+        if let Some(v) = remove_ca {
+            self.remove_ca = v;
         }
         if let Some(v) = allow_reach {
             self.allow_reach = v;
@@ -224,6 +230,12 @@ impl Scenario {
         self.proxy = ProxyOs::Unset;
         Ok(())
     }
+
+    fn remove_ca(&mut self) -> Result<(), SetupError> {
+        run(&self.remove_ca, NO_REMOVE_DETAIL)?;
+        self.trust = TrustOs::Absent;
+        Ok(())
+    }
 }
 
 fn run(outcome: &Outcome, no_detail: &str) -> Result<(), SetupError> {
@@ -284,6 +296,11 @@ pub fn set_proxy(state: Shared<'_>, host: String, port: u16) -> Result<(), Setup
 #[tauri::command]
 pub fn unset_proxy(state: Shared<'_>) -> Result<(), SetupError> {
     with(&state, Scenario::unset_proxy)
+}
+
+#[tauri::command]
+pub fn remove_ca(state: Shared<'_>) -> Result<(), SetupError> {
+    with(&state, Scenario::remove_ca)
 }
 
 // A filmed route opens no real screen: what it would open is the shell's own
@@ -365,6 +382,7 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             set_proxy,
             set_up_this_machine,
             unset_proxy,
+            remove_ca,
             proxy_status,
             proxy_in_use,
             interface_names,
@@ -507,6 +525,18 @@ mod tests {
             Err(command_failed("User cancelled. (-128)", NO_INSTALL_DETAIL))
         );
         assert_eq!(s.trust_reading(), "absent", "a refused set-up changed nothing");
+    }
+
+    #[test]
+    fn a_removed_certificate_reads_absent_and_a_refused_removal_leaves_it_trusted() {
+        let mut s = patched(
+            r#"{"trust":"trusted","remove_ca":{"fails":{"stderr":"User cancelled. (-128)"}}}"#,
+        );
+        assert_eq!(s.remove_ca(), Err(command_failed("User cancelled. (-128)", NO_REMOVE_DETAIL)));
+        assert_eq!(s.trust_reading(), "trusted");
+        s.apply(serde_json::from_str(r#"{"remove_ca":"ok"}"#).unwrap());
+        assert_eq!(s.remove_ca(), Ok(()));
+        assert_eq!(s.trust_reading(), "absent");
     }
 
     #[test]

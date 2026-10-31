@@ -26,6 +26,7 @@ pub fn run() {
         setup::set_proxy,
         setup::set_up_this_machine,
         setup::unset_proxy,
+        setup::remove_ca,
         setup::proxy_status,
         setup::proxy_in_use,
         setup::interface_names,
