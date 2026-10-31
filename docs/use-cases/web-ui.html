@@ -635,11 +635,19 @@
     <div data-c="uc-onboard-acts">
       <p><strong>One act on this machine, one password prompt.</strong> Where the host can do the work
       (macOS, Windows), installing the certificate and setting the system proxy are a single elevated
-      action — one prompt, not two — and the two single commands survive as the manual route beneath it.
-      <strong>An action follows its task's reading.</strong> The one act is offered only while both halves
-      read undone. Once either reads done, each task carries its own: "Set the system proxy" with its steps,
-      or the certificate's steps. There is no install-only button and no command behind one. A task read done
-      offers no action and keeps only its undo. A refused authorization is the user's own outcome, worded as
+      action — one prompt, not two — and each task keeps its own by-hand route. It does both tasks, so it
+      sits above them and says so: <em>it does steps 1 and 2</em>. <strong>An action follows its task's
+      reading.</strong> The one act is offered only while both halves read undone. Once either reads done,
+      each task carries its own: <em>set the system proxy</em> with its steps, or the certificate's steps.
+      There is no install-only button and no command behind one. A task read done offers no action and keeps
+      one way back; a task not done offers no way back.
+      <strong>The next thing to do leads (E-ONBRVP.W12).</strong> One control on the screen is framed, and it
+      is the next thing to do: the one act, else the proxy's action, else the open guide's first control, else
+      the try task's request once both halves read done. Every other control is bare. A by-hand route is
+      <em>do it by hand</em> wherever a button leads, a step count where none does. It opens the right screen
+      first where one can be opened, shows the control no route reaches in a recording under the step, and
+      keeps the command as <em>other ways</em>. Once a request decrypted, the try task folds its request
+      under <em>make another request</em>. A refused authorization is the user's own outcome, worded as
       one, with the tool's text under a disclosure; a real failure keeps the OS's words and opens the manual
       route. An approval the OS could not show (macOS's -60007) is neither. The user answered the password
       prompt, and the trust write asked for a second approval that never reached them. It reads <em>macOS
@@ -648,7 +656,7 @@
       exit.</p>
       <table>
         <tr><th>Act</th><th>What it costs</th><th>What it says afterwards</th></tr>
-        <tr><td>Set up this machine — offered only while neither half reads done</td><td>one confirm (the OS
+        <tr><td>Set up this machine — above the tasks, offered only while neither half reads done</td><td>one confirm (the OS
           elevation prompt)</td>
           <td>the probes say whether it is done — the click never does</td></tr>
         <tr><td>Set the system proxy — the proxy half, once the certificate reads done</td><td>one confirm</td>
@@ -661,8 +669,9 @@
           captured traffic becomes readable and that the exposure ends when Trawler quits</td>
           <td>the task reads <em>listening on &lt;host&gt; until Trawler quits</em>, and a chip in the
             header holds it for as long as it holds</td></tr>
-        <tr><td>Make a request to example.com — This machine's try task only, beside opening a website and the
-          curl command (<a href="../decisions/dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>)</td>
+        <tr><td>Make a request to example.com — This machine's try task only (<em>Make a request from this
+          Mac</em>), its browser and the curl command under <em>other ways</em>
+          (<a href="../decisions/dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>)</td>
           <td>none — one request changes nothing on this host. It runs on a click only, never on its own</td>
           <td>which way it went, as the core saw it: <em>through Trawler</em>, <em>reached Trawler and didn't
             decrypt</em>, or <em>answered, but not through Trawler</em> — or that it did not complete. The note
@@ -671,8 +680,14 @@
         <tr><td>Stop routing through Trawler — inside the proxy task</td><td>none — reversing is not a new
           exposure</td>
           <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
-            say so and point at the certificate task's steps to remove it. Nothing claims to untrust a
-            store</td></tr>
+            say <em>the certificate stays trusted</em>. Its own steps are under <em>do it by hand</em>. Nothing
+            claims to untrust a store</td></tr>
+        <tr><td>Open a by-hand step's screen — macOS: <em>open in Keychain Access</em>, <em>open Proxy
+          settings</em>, <em>open example.com in your browser</em> (E-ONBRVP.W12)</td>
+          <td>none of its own. Keychain Access adds the certificate to the login keychain; trusting it there
+            asks for the user's password</td>
+          <td>nothing: the step's own reading moves. The shell opens a closed set of names and builds what it
+            opens; the browser's request carries this window's mark (DEC-62)</td></tr>
       </table>
     </div>
 
