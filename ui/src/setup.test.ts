@@ -862,25 +862,34 @@ describe("Linux's certificate task installs into every store, each a step of its
   ] as const;
   const trustOf = (id: PlatformId, os: HostOs) => setup(id, { os }).trust.guide!;
   const leads = (steps: GuideStep[]) => steps.map((step) => step.find((p) => typeof p === "string"));
+  const paths = (step: GuideStep) => step.flatMap((p) => (typeof p === "object" && "path" in p ? [p.path] : []));
 
   it.each(LINUX)("%s on %s: Firefox, then Chrome, then the system's tools", (id, os) => {
     const [, ...stores] = trustOf(id, os).steps;
 
-    expect(leads(stores)).toEqual([
-      'In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".',
-      "For Chrome, run:",
-      "For curl and the system's tools, run:",
+    expect(leads(stores)).toEqual(["In Firefox's Settings, click", "For Chrome, run:", "For curl and the system's tools, run:"]);
+    expect(paths(stores[0])).toEqual([
+      ["Privacy and security", "Connection and software security", "Advanced settings", "Manage certificates", "Authorities", "Import…"],
+      ["Trust this CA to identify websites"],
     ]);
+    expect(stores[0]).toContain(", choose trawler-ca.pem and tick");
     expect(trustOf(id, os).alternatives).toBeUndefined();
   });
 
   it.each(LINUX)("%s on %s: the way back undoes each store, in the same order", (id, os) => {
     const { undo } = trustOf(id, os);
 
-    expect(leads(undo!)).toEqual([
-      "In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities → Trawler Proxy CA → Delete or Distrust.",
-      "For Chrome, run:",
-      "For curl and the system's tools, run:",
+    expect(leads(undo!)).toEqual(["In Firefox's Settings, click", "For Chrome, run:", "For curl and the system's tools, run:"]);
+    expect(paths(undo![0])).toEqual([
+      [
+        "Privacy and security",
+        "Connection and software security",
+        "Advanced settings",
+        "Manage certificates",
+        "Authorities",
+        "Trawler Proxy CA",
+        "Delete or Distrust…",
+      ],
     ]);
   });
 
@@ -1143,10 +1152,10 @@ describe("This Mac's by-hand routes", () => {
     expect(setup("ios-sim").route.guide).toEqual(setup("this").route.guide);
   });
 
-  it("no route or recording is offered on linux yet", () => {
-    const s = setup("this", { os: "linux" });
+  it("an unknown host is offered no route, and only the recording of Linux's Firefox step", () => {
+    const s = setup("this", { os: "other" });
     expect(routes(guides(s))).toEqual([]);
-    expect(media(guides(s))).toEqual([]);
+    expect(media(guides(s)).map((m) => m.media)).toEqual(["linux-firefox-import"]);
     expect(s.tryRoutes).toBeUndefined();
   });
 });
@@ -1181,5 +1190,32 @@ describe("This PC's by-hand routes", () => {
   it("the request's other ways are the browser, by route, then PowerShell", () => {
     expect(pc().tryRoutes).toEqual([{ open: "browser", label: "open example.com in your browser" }]);
     expect(pc().tryLead).toBe("In PowerShell, run:");
+  });
+});
+
+describe("This Linux machine's by-hand routes", () => {
+  const linux = () => setup("this", { os: "linux" });
+  const routes = (steps: GuideStep[]) => steps.flat().filter(isRoute).map((p) => p.open);
+  const media = (steps: GuideStep[]) => steps.flat().filter(isMedia).map((p) => p.media);
+
+  it("the certificate has no route, Firefox's import recorded", () => {
+    const trust = linux().trust.guide!;
+    expect(routes(trust.steps)).toEqual([]);
+    expect(media(trust.steps)).toEqual(["linux-firefox-import"]);
+  });
+
+  it("the proxy opens on GNOME's Network panel, the values to type copyable, the command another way", () => {
+    const route = linux().route.guide!;
+    expect(routes(route.steps)).toEqual(["proxy-settings"]);
+    expect(media(route.steps)).toEqual(["linux-proxy"]);
+    expect(values(route.steps)).toEqual(["127.0.0.1", "9999"]);
+    expect(route.alternatives![0][0]).toBe("GNOME — run:");
+    expect(commands(route.alternatives!)).toEqual([expect.stringMatching(/^gsettings set org\.gnome\.system\.proxy mode 'manual'/)]);
+    expect(route.notes).toBeUndefined();
+  });
+
+  it("the request's other ways are the browser, by route, then a terminal", () => {
+    expect(linux().tryRoutes).toEqual([{ open: "browser", label: "open example.com in your browser" }]);
+    expect(linux().tryLead).toBe("In a terminal, run:");
   });
 });

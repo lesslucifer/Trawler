@@ -800,9 +800,7 @@ describe("each task holds its own route, under the one button", () => {
   // note or another way. Firefox reads the system's store on macOS and Windows.
   it("gives each of Linux's three stores a step, browsers first, and names Firefox on Linux only", () => {
     draw({ os: "linux" });
-    const firefox = within(task(1)).getByText(
-      /^In Firefox: .* → Authorities → Import → trawler-ca\.pem/,
-    );
+    const firefox = within(task(1)).getByTestId("step-media").closest("li")!;
     const [chrome] = within(task(1)).getAllByText("For Chrome, run:");
     const [system] = within(task(1)).getAllByText(
       "For curl and the system's tools, run:",
@@ -3487,10 +3485,39 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
     ).toBeInTheDocument();
   });
 
-  it("on Linux, the guides offer no route and no recording yet", () => {
+  it("on Linux, the proxy's route asks the shell for its screen by name, and the certificate has none", () => {
+    const onOpenRoute = vi.fn(async () => {});
+    draw({ os: "linux", onOpenRoute });
+
+    fireEvent.click(
+      within(task(2)).getByRole("button", { name: "open Network settings" }),
+    );
+
+    expect(onOpenRoute).toHaveBeenCalledWith("proxy-settings");
+    expect(
+      within(task(1)).queryByRole("button", { name: /^open / }),
+    ).toBeNull();
+  });
+
+  it("on Linux, Firefox's import and GNOME's proxy show their recording", () => {
     draw({ os: "linux" });
 
-    expect(screen.queryByTestId("step-media")).toBeNull();
-    expect(screen.queryByRole("button", { name: /^open / })).toBeNull();
+    const step = within(task(1)).getByTestId("step-media").closest("li")!;
+    expect(
+      within(step)
+        .getAllByTestId("menu-path")
+        .map((p) => p.textContent),
+    ).toEqual([
+      "Privacy and security→Connection and software security→Advanced settings→Manage certificates→Authorities→Import…",
+      "Trust this CA to identify websites",
+    ]);
+    expect(
+      within(step).getByText("Ubuntu 26.04, Firefox 154"),
+    ).toBeInTheDocument();
+    expect(
+      within(task(2)).getByLabelText(
+        /^Settings: Network → Proxy → Network Proxy → Configuration → Manual/,
+      ),
+    ).toBeInTheDocument();
   });
 });

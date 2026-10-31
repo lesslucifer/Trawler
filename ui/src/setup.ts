@@ -110,7 +110,13 @@ export interface RoutePart {
 }
 // A recording of a step no route finishes, named here and bundled by the
 // screen, so this module stays free of assets (W12's M1).
-export type MediaName = "macos-always-trust" | "macos-proxies" | "windows-install-cert" | "windows-proxy";
+export type MediaName =
+  | "macos-always-trust"
+  | "macos-proxies"
+  | "windows-install-cert"
+  | "windows-proxy"
+  | "linux-firefox-import"
+  | "linux-proxy";
 export interface MediaPart {
   media: MediaName;
   alt: string;
@@ -481,7 +487,16 @@ const REFUSED_AFTER_PROOF_LINUX =
 // older one where it exists (C3); a Chrome never opened has made neither, and
 // certutil adds only to a database it was asked to create. certutil is not on
 // a stock Ubuntu (C2).
-const FIREFOX_AUTHORITIES = "In Firefox: Settings → Privacy & Security → Certificates → View Certificates → Authorities";
+const FIREFOX_AUTHORITIES = [
+  "Privacy and security",
+  "Connection and software security",
+  "Advanced settings",
+  "Manage certificates",
+  "Authorities",
+];
+const IN_FIREFOX = "In Firefox's Settings, click";
+const TRUST_WEBSITES = "Trust this CA to identify websites";
+const LINUX_OS_VERSION = "Ubuntu 26.04";
 const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
 const NSS_DB_MADE =
   "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
@@ -540,7 +555,17 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   }),
   linux: (file) => ({
     install: [
-      [`${FIREFOX_AUTHORITIES} → Import → ${PEM_FILE}, then tick "Trust this CA to identify websites".`],
+      [
+        IN_FIREFOX,
+        { path: [...FIREFOX_AUTHORITIES, "Import…"] },
+        `, choose ${PEM_FILE} and tick`,
+        { path: [TRUST_WEBSITES] },
+        {
+          media: "linux-firefox-import",
+          alt: `Firefox: ${FIREFOX_AUTHORITIES.join(" → ")} → Import… → ${PEM_FILE} → ${TRUST_WEBSITES}`,
+          shows: `${LINUX_OS_VERSION}, Firefox 154`,
+        },
+      ],
       [
         FOR_CHROME,
         {
@@ -558,7 +583,7 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
     ],
     undoTitle: "to remove it later",
     undo: [
-      [`${FIREFOX_AUTHORITIES} → Trawler Proxy CA → Delete or Distrust.`],
+      [IN_FIREFOX, { path: [...FIREFOX_AUTHORITIES, "Trawler Proxy CA", "Delete or Distrust…"] }],
       [FOR_CHROME, { command: `certutil -d ${NSS_DB} -D -n trawler`, label: "the Chrome removal command" }],
       [
         FOR_SYSTEM_TOOLS,
@@ -729,12 +754,49 @@ function thisPcRoute(addr: string): Guide {
   };
 }
 
-// The route a host's own machine takes: its settings screen on macOS and
-// Windows, else the command its desktop answers to.
+// This Linux machine's own route: GNOME's Network panel, whose proxy page
+// keeps its edits until Save. Its command is the other way.
+const GNOME_MANUAL_PROXY = ["Proxy", "Network Proxy", "Configuration", "Manual"];
+
+function thisLinuxRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return {
+    steps: [
+      ["Open the network settings", { open: "proxy-settings", label: "open Network settings" }],
+      [
+        "Click",
+        { path: GNOME_MANUAL_PROXY },
+        {
+          media: "linux-proxy",
+          alt: `Settings: Network → ${GNOME_MANUAL_PROXY.join(" → ")}, both proxies set`,
+          shows: LINUX_OS_VERSION,
+        },
+      ],
+      [
+        "Set",
+        { path: ["HTTP Proxy"] },
+        "and",
+        { path: ["HTTPS Proxy"] },
+        "— each with URL",
+        { copy: host, label: "the proxy server", wire: "proxy host" },
+        "and port",
+        { copy: String(port), label: "the proxy port", wire: "proxy port" },
+      ],
+      ["Click", { path: ["Save"] }],
+    ],
+    alternatives: [[ROUTE_LEAD.linux, { command: routeCommand("linux", addr)!, label: "the proxy command" }]],
+    undoTitle: "to turn it off later",
+    undo: reversal("linux"),
+  };
+}
+
+// The route a host's own machine takes: its settings screen on macOS, Windows
+// and Linux, else the command a terminal answers to.
 function localRoute(os: HostOs, addr: string): Guide {
   if (os === "macos") return thisMacRoute(addr);
   if (os === "windows") return thisPcRoute(addr);
-  return osRoute(os === "other" ? "terminal" : hostTarget(os), addr);
+  if (os === "linux") return thisLinuxRoute(addr);
+  return osRoute("terminal", addr);
 }
 
 const TRY_LEAD: Record<HostOs, string> = {
@@ -925,9 +987,9 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
     tryLead: TRY_LEAD[os],
     tryRoutes:
-      os === "macos" || os === "windows"
-        ? [{ open: "browser", label: `open ${REQUEST_HOST} in your browser` }]
-        : undefined,
+      os === "other"
+        ? undefined
+        : [{ open: "browser", label: `open ${REQUEST_HOST} in your browser` }],
     confirmOn: confirmOn("this", os),
     notDecrypting: trust.notDecrypting,
   };

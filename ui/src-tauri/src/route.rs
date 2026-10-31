@@ -3,7 +3,7 @@
 // a route and never hands the shell something to open.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use serde::Deserialize;
 
@@ -22,6 +22,20 @@ const MACOS_NETWORK_SETTINGS: &str =
     "x-apple.systempreferences:com.apple.Network-Settings.extension";
 const WINDOWS_PROXY_SETTINGS: &str = "ms-settings:network-proxy";
 const WINDOWS_CER: &str = "trawler-ca.cer";
+const GNOME_NETWORK_PANEL: [&str; 12] = [
+    "gdbus",
+    "call",
+    "--session",
+    "--dest",
+    "org.gnome.Settings",
+    "--object-path",
+    "/org/gnome/Settings",
+    "--method",
+    "org.gtk.Actions.Activate",
+    "launch-panel",
+    "[<('network', @av [])>]",
+    "{}",
+];
 const REQUEST_URL: &str = "https://example.com/?trawler-check=";
 const ALREADY_IN_KEYCHAIN: &str = "already in";
 
@@ -41,6 +55,8 @@ fn valid_mark(mark: &str) -> bool {
 // and the default it offers may be one that holds no trust (W12's recording).
 // Windows opens each through `start`, which returns once the screen is up: the
 // certificate dialog runs inside its opener and would hold the command open.
+// GNOME's Settings is asked over D-Bus for its Network panel, so it starts
+// outside the shell's process.
 fn route_commands(os: &str, route: &Route, cert: &Path) -> Option<Vec<Vec<String>>> {
     if let Route::Browser { mark } = route {
         if !valid_mark(mark) {
@@ -61,6 +77,10 @@ fn route_commands(os: &str, route: &Route, cert: &Path) -> Option<Vec<Vec<String
         ("windows", Route::Certificate { .. }) => Some(vec![windows_start(&cert)]),
         ("windows", Route::Browser { mark }) => {
             Some(vec![windows_start(&format!("{REQUEST_URL}{mark}"))])
+        }
+        ("linux", Route::ProxySettings) => Some(vec![argv(&GNOME_NETWORK_PANEL)]),
+        ("linux", Route::Browser { mark }) => {
+            Some(vec![argv(&["xdg-open", &format!("{REQUEST_URL}{mark}")])])
         }
         _ => None,
     }
@@ -88,16 +108,35 @@ pub fn open_route(route: Route) -> Result<(), SetupError> {
     let commands = route_commands(std::env::consts::OS, &route, &cert)
         .ok_or_else(|| crate::setup::setup_error("this route does not open on this system"))?;
     for command in commands {
-        let out = Command::new(&command[0])
-            .args(&command[1..])
-            .output()
-            .map_err(|e| crate::setup::setup_error(e.to_string()))?;
-        let stderr = String::from_utf8_lossy(&out.stderr);
-        if !succeeded(out.status.success(), &stderr) {
-            return Err(crate::setup::setup_error(stderr.trim().to_string()));
-        }
+        run(&command, std::env::consts::OS)?;
     }
     Ok(())
+}
+
+// A browser xdg-open starts holds every pipe it inherits until the user quits
+// it, so on Linux the shell waits on the opener's exit alone.
+fn run(command: &[String], os: &str) -> Result<(), SetupError> {
+    let mut cmd = Command::new(&command[0]);
+    cmd.args(&command[1..]);
+    if os == "linux" {
+        let status = cmd
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map_err(|e| crate::setup::setup_error(e.to_string()))?;
+        return if status.success() {
+            Ok(())
+        } else {
+            Err(crate::setup::setup_error(format!("{} failed: {status}", command[0])))
+        };
+    }
+    let out = cmd.output().map_err(|e| crate::setup::setup_error(e.to_string()))?;
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    if succeeded(out.status.success(), &stderr) {
+        Ok(())
+    } else {
+        Err(crate::setup::setup_error(stderr.trim().to_string()))
+    }
 }
 
 #[cfg(test)]
@@ -149,6 +188,7 @@ mod tests {
             let route = Route::Browser { mark: mark.into() };
             assert_eq!(route_commands("macos", &route, &cert()), None, "{mark}");
             assert_eq!(route_commands("windows", &route, &cert()), None, "{mark}");
+            assert_eq!(route_commands("linux", &route, &cert()), None, "{mark}");
         }
     }
 
@@ -191,11 +231,40 @@ mod tests {
         let certificate = Route::Certificate { pem: String::new() };
         assert_eq!(route_commands("windows", &keychain, &cert()), None);
         assert_eq!(route_commands("macos", &certificate, &cert()), None);
-        for route in
-            [Route::ProxySettings, keychain, certificate, Route::Browser { mark: "a.1".into() }]
-        {
-            assert_eq!(route_commands("linux", &route, &cert()), None);
+        assert_eq!(route_commands("linux", &keychain, &cert()), None);
+        assert_eq!(route_commands("linux", &certificate, &cert()), None);
+        for route in [Route::ProxySettings, Route::Browser { mark: "a.1".into() }] {
+            assert_eq!(route_commands("freebsd", &route, &cert()), None);
         }
+    }
+
+    #[test]
+    fn linux_proxy_settings_asks_gnome_settings_for_its_network_panel() {
+        assert_eq!(
+            route_commands("linux", &Route::ProxySettings, &cert()),
+            Some(vec![argv(&GNOME_NETWORK_PANEL)])
+        );
+    }
+
+    #[test]
+    fn linux_browser_opens_the_marked_address() {
+        let route = Route::Browser { mark: "k3m9x2.4".into() };
+        assert_eq!(
+            route_commands("linux", &route, &cert()),
+            Some(vec![argv(&["xdg-open", "https://example.com/?trawler-check=k3m9x2.4"])])
+        );
+    }
+
+    #[test]
+    fn on_linux_an_opener_is_done_when_it_exits_though_what_it_started_runs_on() {
+        let started = std::time::Instant::now();
+        assert!(run(&argv(&["sh", "-c", "sleep 5 & exit 0"]), "linux").is_ok());
+        assert!(started.elapsed() < std::time::Duration::from_secs(3));
+    }
+
+    #[test]
+    fn on_linux_an_opener_that_fails_is_an_error() {
+        assert!(run(&argv(&["sh", "-c", "exit 3"]), "linux").is_err());
     }
 
     #[test]

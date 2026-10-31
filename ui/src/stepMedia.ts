@@ -8,6 +8,10 @@ import installCertMp4 from "./assets/setup/windows-install-cert.mp4";
 import installCertWebm from "./assets/setup/windows-install-cert.webm";
 import windowsProxyMp4 from "./assets/setup/windows-proxy.mp4";
 import windowsProxyWebm from "./assets/setup/windows-proxy.webm";
+import firefoxImportMp4 from "./assets/setup/linux-firefox-import.mp4";
+import firefoxImportWebm from "./assets/setup/linux-firefox-import.webm";
+import linuxProxyMp4 from "./assets/setup/linux-proxy.mp4";
+import linuxProxyWebm from "./assets/setup/linux-proxy.webm";
 
 // Each recording a step names, as the bundler fingerprints it: shipped with the
 // app, never fetched (W12's M1).
@@ -16,4 +20,6 @@ export const STEP_MEDIA: Record<MediaName, StepMediaSource> = {
   "macos-proxies": { kind: "video", src: { mp4: proxiesMp4, webm: proxiesWebm } },
   "windows-install-cert": { kind: "video", src: { mp4: installCertMp4, webm: installCertWebm } },
   "windows-proxy": { kind: "video", src: { mp4: windowsProxyMp4, webm: windowsProxyWebm } },
+  "linux-firefox-import": { kind: "video", src: { mp4: firefoxImportMp4, webm: firefoxImportWebm } },
+  "linux-proxy": { kind: "video", src: { mp4: linuxProxyMp4, webm: linuxProxyWebm } },
 };
