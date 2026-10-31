@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6ae62c079f34851f0dfadea0" data-artifact="wu-plan" data-status="awaiting-rulings">
+<html lang="en" data-htmldoc-id="6ae62c079f34851f0dfadea0" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,16 +10,18 @@
     <div class="inner">
       <h1>E-ONBRVP.W15 — wording and display: Another Ubuntu machine</h1>
       <p>W12's pattern and W13's help rule on Another Ubuntu machine: each task leads with what a person does on that machine without a terminal, using This machine's Ubuntu 26.04 recordings. Each command becomes the other way, and every way back undoes every way in.</p>
-      <div class="meta">v1 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W15</span> · branch <code>wu/onboard-revamp/another-ubuntu-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W6</div>
+      <div class="meta">v2 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W15</span> · branch <code>wu/onboard-revamp/another-ubuntu-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W6</div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Waiting for your rulings</strong> on eleven findings, W6's four hand-ins and four questions. I found them by reading the Another
-      Ubuntu machine reels at the epic tip (<code>c970c4ab</code>: <code>macos-ubuntu</code>, <code>windows-ubuntu</code>,
-      <code>linux-ubuntu</code>, filmed 2026-11-01 after W14's last UI change), the source of its guide, and W12's
-      <code>linux-proxy</code> recording, frame by frame.
+      <strong>Every point is ruled</strong> ("go with your proposed, no need to ask me anything, just implement it", 2026-11-01).
+      Q1–Q4 are A, and the findings and N1–N4 are taken with them. Q3's recording is yours to make, so the build ships
+      Chrome's step as text, with labels checked against Chromium's own strings, and the recording is owed (see the result).
+      I found the findings by reading the Another Ubuntu machine reels at the epic tip (<code>c970c4ab</code>:
+      <code>macos-ubuntu</code>, <code>windows-ubuntu</code>, <code>linux-ubuntu</code>, filmed 2026-11-01 after W14's last
+      UI change), the source of its guide, and W12's <code>linux-proxy</code> recording, frame by frame.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -96,10 +98,11 @@ flowchart TB
         browser, and the try task uses a browser</td><td>W4</td></tr>
       <tr><td>The shell's open command</td>
         <td>It opens screens on this machine only, so no route on that machine can be a button</td><td>I1 · I2</td></tr>
-      <tr><td>Unverified here</td>
-        <td>Chrome's certificate manager labels on Linux (<em>Manage certificates → Local certificates → Installed by you →
-        Trusted certificates → Import</em>), and that Chromium's snap shows the same page. No recording exists. Q3's
-        recording settles them before the build; nothing is built on a label not seen</td><td>I1 · I3 · N3 · Q3</td></tr>
+      <tr><td>Chromium's certificate manager strings (<code>chrome/app/certificate_manager.grdp</code>)</td>
+        <td><em>Local certificates</em>, <em>Installed by you</em>, <em>Trusted Certificates</em>, <em>Import</em> and a
+        per-certificate <em>Delete</em> are its own labels; Chromium's snap ships the same page. What it adds lands in
+        Chrome's own store, not the NSS database the command writes, so the way back reaches both. No recording shows it
+        yet (Q3)</td><td>I1 · I3 · N3 · Q3</td></tr>
     </table>
 
     <h2 id="leads">Part 1 — what leads</h2>
@@ -109,16 +112,16 @@ flowchart TB
         <td><strong>Chrome's only route is the heaviest element on screen:</strong> a two-line <code>sudo</code> command that
         installs a package, creates a database and imports (walk-05). A person without <code>sudo</code> on that machine has
         no way into Chrome.</td>
-        <td>The by-hand route leads (I1). The command goes under <em>other ways</em> (Q4).</td><td></td></tr>
+        <td>The by-hand route leads (I1). The command goes under <em>other ways</em> (Q4).</td><td>take</td></tr>
       <tr><td>E2</td>
         <td><strong>An optional step reads as required.</strong> Step 4 of 4, <em>For curl and the system's tools</em>, needs
         <code>sudo</code> and covers no browser. Task 4 asks for a website, so nothing on this screen needs it.</td>
-        <td>It goes under <em>other ways</em> on Another Ubuntu machine. The guide becomes three steps: download, Firefox,
-        Chrome. This machine on Linux per Q2.</td><td></td></tr>
+        <td>It goes under <em>other ways</em> on Another Ubuntu machine. The guide keeps no <code>sudo</code>: download, Firefox's
+        two steps (W3), Chrome. This machine on Linux per Q2.</td><td>take</td></tr>
       <tr><td>E3</td>
         <td><strong>Task 3's only route is a <code>gsettings</code> command,</strong> behind a collapsed <em>1 step</em>, while
         This machine on Linux already walks the same Settings page by hand.</td>
-        <td>The by-hand route leads (I2). The command goes under <em>other ways</em>.</td><td></td></tr>
+        <td>The by-hand route leads (I2). The command goes under <em>other ways</em>.</td><td>take</td></tr>
     </table>
 
     <h2 id="wording">Part 2 — wording</h2>
@@ -128,20 +131,20 @@ flowchart TB
         <td><strong>The proxy command's lead names a desktop, not a place</strong>: <em>GNOME — run:</em>. Ubuntu never says
         GNOME in its Settings, and run over SSH the command sets nothing (W6's N1).</td>
         <td><em>In a terminal on that machine, run:</em> (<em>In a terminal, run:</em> on This machine), with a <em>?</em>:
-        <em>Run it on that machine's desktop — over SSH it sets nothing.</em> One lead in <code>ROUTE_LEAD.linux</code> (Q1).</td><td></td></tr>
+        <em>Run it on that machine's desktop — over SSH it sets nothing.</em> One lead in <code>ROUTE_LEAD.linux</code> (Q1).</td><td>take</td></tr>
       <tr><td>W2</td>
         <td><strong>The proxy's way back names a desktop</strong>: <em>GNOME — back to no proxy:</em>.</td>
         <td><em>In a terminal, run:</em>, the lead the try command already uses on Linux. One lead in
-        <code>proxyOffSteps</code>, so This machine and the close dialog read it too (Q1).</td><td></td></tr>
+        <code>proxyOffSteps</code>, so This machine and the close dialog read it too (Q1).</td><td>take</td></tr>
       <tr><td>W3</td>
         <td><strong>Firefox's step breaks on a comma and misses its last click.</strong> <em>, choose trawler-ca.pem and
         tick</em> starts a line on its own under the path, and the recording's final <em>OK</em> is never named.</td>
         <td>Two steps: <em>In Firefox's Settings, click</em> Privacy and security → … → Import…, with its recording ·
-        <em>Choose trawler-ca.pem, tick</em> Trust this CA to identify websites <em>and click</em> OK. Shared (Q1).</td><td></td></tr>
+        <em>Choose trawler-ca.pem, tick</em> Trust this CA to identify websites <em>and click</em> OK. Shared (Q1).</td><td>take</td></tr>
       <tr><td>W4</td>
         <td><strong>The not-decrypting remedy leads with the system command</strong>, which covers no browser.</td>
         <td><em>Already did? Firefox and Chrome each keep their own store — install it in the browser you opened the
-        address in, then restart it. Apps that pin their own certificate never decrypt.</em> Shared (Q1).</td><td></td></tr>
+        address in, then restart it. Apps that pin their own certificate never decrypt.</em> Shared (Q1).</td><td>take</td></tr>
     </table>
 
     <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
@@ -150,33 +153,33 @@ flowchart TB
       <tr><td>I1</td>
         <td>Chrome: one <code>sudo</code> command.</td>
         <td><em>In Chrome or Chromium's Settings, click</em> Privacy and security → Security → Manage certificates → Local
-        certificates → Installed by you → Trusted certificates → Import <em>and choose trawler-ca.pem</em>, with its recording
-        (Q3). No <code>sudo</code>, no package. The command goes under <em>other ways</em>.</td><td></td></tr>
+        certificates → Installed by you → Trusted Certificates → Import <em>and choose trawler-ca.pem</em>, with its recording
+        (Q3). No <code>sudo</code>, no package. The command goes under <em>other ways</em>.</td><td>take</td></tr>
       <tr><td>I2</td>
         <td>The proxy: one <code>gsettings</code> command.</td>
         <td><em>On that machine, open</em> Settings → Network · <em>Click</em> Proxy → Network Proxy → Configuration → Manual,
         with <code>linux-proxy</code> · <em>Set</em> HTTP Proxy <em>and</em> HTTPS Proxy <em>— each with the server and port
         above</em> · <em>Click</em> Save. This machine on Linux's steps as they are, with the first one walked by hand, as
-        that Mac's and that PC's are.</td><td></td></tr>
+        that Mac's and that PC's are.</td><td>take</td></tr>
       <tr><td>I3</td>
         <td>Firefox's way back is by hand; Chrome's, the system's and the proxy's are commands only.</td>
         <td>By hand first, the command as <em>Or</em> (W14's Q4). Chrome: <em>In Chrome or Chromium's Settings, click</em> …
-        Installed by you → Trusted certificates → Trawler Proxy CA <em>and delete it</em>. System: <em>If you ran the system
+        Installed by you → Trusted Certificates → Trawler Proxy CA <em>and delete it</em>. System: <em>If you ran the system
         command, run:</em>. Proxy: <em>Turn off</em> Network Proxy <em>in</em> Settings → Network → Proxy <em>and click</em>
-        Save. This closes W14's X1 for Ubuntu; This machine on Linux reads the same (Q1).</td><td></td></tr>
+        Save. This closes W14's X1 for Ubuntu; This machine on Linux reads the same (Q1).</td><td>take</td></tr>
       <tr><td>M1</td>
         <td>No recording shows Chrome's certificate manager.</td>
         <td><code>linux-proxy</code> is reused for I2: that machine shows the same page. Chrome gets one new recording,
         <code>linux-chrome-import</code>, from the shot list below (Q3). I3's steps are text only: each is one screen, named
-        in full.</td><td></td></tr>
+        in full.</td><td>take</td></tr>
     </table>
 
     <table data-c="shot-list">
       <tr><th>Shot</th><th>Machine</th><th>Starts on</th><th>Ends on</th><th>Shows</th></tr>
       <tr><td><code>linux-chrome-import</code></td><td>Ubuntu 26.04, Google Chrome stable, a throwaway certificate named
         <code>trawler-ca.pem</code> in Downloads</td><td>Chrome Settings</td><td>Trawler Proxy CA listed under Installed by you
-        → Trusted certificates</td><td>Privacy and security → Security → Manage certificates → Local certificates → Installed by
-        you → Trusted certificates → Import → trawler-ca.pem</td></tr>
+        → Trusted Certificates</td><td>Privacy and security → Security → Manage certificates → Local certificates → Installed by
+        you → Trusted Certificates → Import → trawler-ca.pem</td></tr>
     </table>
 
     <h2 id="handed">Handed in from W6</h2>
@@ -185,20 +188,20 @@ flowchart TB
       <tr><td>N1</td>
         <td><strong><code>gsettings</code> needs that machine's desktop session.</strong> Over SSH it has no session bus and
         sets nothing.</td>
-        <td>The Settings route (I2) leads, so the command is the other way. W1's <em>?</em> says where to run it.</td><td></td></tr>
+        <td>The Settings route (I2) leads, so the command is the other way. W1's <em>?</em> says where to run it.</td><td>take</td></tr>
       <tr><td>N2</td>
         <td><strong>The GNOME proxy reaches only apps that read it.</strong> Firefox and Chrome do; curl, apt and snap do
         not.</td>
         <td>Behind a <em>?</em> beside I2's Save step: <em>Firefox and Chrome follow this proxy. Terminal tools such as curl
-        and apt do not — they read HTTPS_PROXY.</em></td><td></td></tr>
+        and apt do not — they read HTTPS_PROXY.</em></td><td>take</td></tr>
       <tr><td>N3</td>
         <td><strong>Chromium on Ubuntu is a snap</strong> whose store lives under <code>~/snap/chromium/</code>; the Chrome
         command never reaches it.</td>
         <td>I1: Chromium's own settings import into its own store, so the by-hand route names <em>Chrome or Chromium</em>. The
-        command stays Chrome's, and its label says so.</td><td></td></tr>
+        command stays Chrome's, and its label says so.</td><td>take</td></tr>
       <tr><td>N4</td>
         <td><strong>② has four steps</strong>, and the emphasis was left to W15.</td>
-        <td>E1 and E2: three steps, none needing <code>sudo</code>.</td><td></td></tr>
+        <td>E1 and E2: four steps, none needing <code>sudo</code>.</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -209,7 +212,7 @@ flowchart TB
         the close dialog on a Linux host.<br>
         <strong>A</strong> fixed once, for everything that shares it, as W13's and W14's Q1 ruled ·
         <strong>B</strong> Another Ubuntu machine only, through overrides</td>
-        <td>A. One fix makes each word true wherever it shows. The close dialog's change is wording only.</td><td></td></tr>
+        <td>A. One fix makes each word true wherever it shows. The close dialog's change is wording only.</td><td>A</td></tr>
       <tr><td>Q2</td>
         <td><strong>Where does the system-tools step go on This machine on Linux?</strong> Its probe reads the system
         bundle, and its done line says <em>done — trusted by the system's tools</em> (W12's Q4).<br>
@@ -217,19 +220,19 @@ flowchart TB
         ways</em> ·
         <strong>B</strong> under <em>other ways</em> on both</td>
         <td>A. On This machine the status reads that store, so the step that fills it stays on the path the status
-        describes. That machine has no probe; there the step is optional.</td><td></td></tr>
+        describes. That machine has no probe; there the step is optional.</td><td>A</td></tr>
       <tr><td>Q3</td>
         <td><strong>Chrome's by-hand step: media or text?</strong><br>
         <strong>A</strong> you record <code>linux-chrome-import</code> from the shot list; I verify its labels against I1
         and I3, then build ·
         <strong>B</strong> text only, its labels unverified until W20's real-device check</td>
-        <td>A. Its labels are the one thing here I could not see, and Firefox's step already has its recording.</td><td></td></tr>
+        <td>A. Its labels are the one thing here I could not see, and Firefox's step already has its recording.</td><td>A — built as text until you record it; its labels checked against Chromium's strings</td></tr>
       <tr><td>Q4</td>
         <td><strong>Does Chrome's command keep creating the database?</strong><br>
         <strong>A</strong> yes, as W6's C3 built, under <em>other ways</em> as <em>the Chrome command</em> ·
         <strong>B</strong> drop the command: the by-hand route covers Chrome</td>
         <td>A. A machine reached only by SSH, or a person scripting it, still needs it. Under <em>other ways</em> it no
-        longer leads.</td><td></td></tr>
+        longer leads.</td><td>A</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
@@ -241,8 +244,8 @@ flowchart TB
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
       <tr><th>Try this…</th><th>…and see</th></tr>
-      <tr><td>Another Ubuntu machine, allowed</td><td>task 2's guide open, three steps: open <code>/ca.pem</code>; Firefox's
-        Import… with its recording, then choose, tick and OK; Chrome or Chromium's Import with its recording. The Chrome
+      <tr><td>Another Ubuntu machine, allowed</td><td>task 2's guide open, four steps: open <code>/ca.pem</code>; Firefox's
+        Import… with its recording, then choose, tick and OK; Chrome or Chromium's Import (text until its recording lands). The Chrome
         command and the system command sit under <em>other ways</em></td></tr>
       <tr><td>task 3's steps</td><td>Settings → Network on that machine, Proxy → Network Proxy → Configuration → Manual with its
         recording, HTTP and HTTPS Proxy with the server and port above, Save. Which apps follow it sits behind Save's
