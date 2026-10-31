@@ -183,6 +183,13 @@
     .late .a-mc-late{display:block}
     .a-help-text{display:none}
     .helped .a-help-text,.a-help-open .a-help-text{display:block}
+    /* round 22 — Another Windows PC (waiting, its proof), on the same
+       reach and late toggles as Another Mac. */
+    .a-pf-pc{display:none}
+    .p-pc .a-pf-machine,.p-pc .a-pf-probed{display:none}
+    .p-pc .a-pf-pc{display:block}
+    .p-pc [data-zone="done"]{display:none}
+    .p-pc.late [data-zone="done"]{display:block}
   </style>
 </head>
 <body>
@@ -190,12 +197,12 @@
     <div class="inner">
       <h1>Design run — the onboarding screen</h1>
       <p>The design of record for the setup screen: what it shows for every platform and every reading, and the sentences it says.</p>
-      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 by E-ONBRVP.W8 · round 18 on 2026-10-25 by E-ONBRVP.W9 · round 19 on 2026-10-26 by E-ONBRVP.W10 · round 20 on 2026-10-31 by E-ONBRVP.W12 · round 21 on 2026-10-31 · Trawler · T3 (docs/work/) ·
-        <strong>E-ONBRVP.W13</strong> · branch <code>wu/onboard-revamp/another-mac-wording</code> ·
+      <div class="meta">Design run · opened 2026-09-17 · rounds 7–8 on 2026-09-26 by E-ONBREV.W4 · round 9 on 2026-09-27 by E-ONBREV.W3 · round 10 on 2026-09-28 by E-ONBRVP.W1 · round 11 on 2026-09-28 by E-ONBRVP.W2 · round 12 on 2026-09-30 by E-ONBRVP.W3 · round 13 on 2026-10-23 by E-ONBRVP.W4 · round 14 on 2026-10-24 by E-ONBRVP.W5 · round 15 on 2026-10-24 by E-ONBRVP.W6 · round 16 on 2026-10-24 by E-ONBRVP.W7 · round 17 on 2026-10-24 by E-ONBRVP.W8 · round 18 on 2026-10-25 by E-ONBRVP.W9 · round 19 on 2026-10-26 by E-ONBRVP.W10 · round 20 on 2026-10-31 by E-ONBRVP.W12 · round 21 on 2026-10-31 by E-ONBRVP.W13 · round 22 on 2026-10-31 · Trawler · T3 (docs/work/) ·
+        <strong>E-ONBRVP.W14</strong> · branch <code>wu/onboard-revamp/another-windows-wording</code> ·
         epic <a href="2026-09-27-onboard-revamp-plan.html">E-ONBRVP</a> · rounds 1–6 by E-ONBOARD, 7–9 by E-ONBREV, whose docs are archived out of git</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="archived">
+  <main data-artifact="design-run" data-status="draft">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Mounted from the real <code>ui/src/components/</code>. The buttons under it switch platform and state — read each one alone.</p>
@@ -222,6 +229,7 @@
             <div class="a-pf-ubuntu" id="m-picker-ubuntu"></div>
             <div class="a-pf-emu" id="m-picker-emu"></div>
             <div class="a-pf-mac" id="m-picker-mac"></div>
+            <div class="a-pf-pc" id="m-picker-pc"></div>
           </div>
 
           <div class="a-zone" data-zone="steps">
@@ -310,6 +318,13 @@
                 <div class="a-mc-late" id="m-steps-mac-late"></div>
               </div>
             </div>
+            <div class="a-pf-pc">
+              <div class="a-rch-off" id="m-steps-pc-unreached"></div>
+              <div class="a-rch-on">
+                <div class="a-mc-wait" id="m-steps-pc-waiting"></div>
+                <div class="a-mc-late" id="m-steps-pc-late"></div>
+              </div>
+            </div>
           </div>
 
           <div class="a-zone a-pf-probed flex items-center justify-end gap-chrome-gap px-4" data-zone="probe">
@@ -334,6 +349,8 @@
               data-label-off="▶ platform: Another Ubuntu machine" data-label-on="◀ back to this machine">▶ platform: Another Ubuntu machine</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="p-mac"
               data-label-off="▶ platform: Another Mac" data-label-on="◀ back to this machine">▶ platform: Another Mac</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-pc"
+              data-label-off="▶ platform: Another Windows PC" data-label-on="◀ back to this machine">▶ platform: Another Windows PC</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="helped"
               data-label-off="▶ every ? open" data-label-on="◀ every ? shut">▶ every ? open</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="p-emu"
@@ -564,7 +581,13 @@
           <>In Keychain Access, search Trawler and delete <MenuPath path={["Trawler Proxy CA"]} /></>,
           <>Or in Terminal, run:{command('security delete-certificate -c "Trawler Proxy CA" login.keychain; sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
         ];
-        const ROUTE_UNDO = [<>In Terminal, run:{command(PROXY_OFF_CMD, "the proxy-off command")}</>];
+        /* Round 22 (X1 · Q4): a way back by hand first, the command as Or —
+           whoever set the proxy in System Settings undoes it there. */
+        const MAC_ROUTE_OFF_BY_HAND = <span>In <MenuPath path={["System Settings", "Network", "Wi-Fi", "Details…", "Proxies"]} />, turn off <MenuPath path={["Web proxy (HTTP)"]} /> and <MenuPath path={["Secure web proxy (HTTPS)"]} /> and click <MenuPath path={["OK"]} /></span>;
+        const ROUTE_UNDO = [
+          MAC_ROUTE_OFF_BY_HAND,
+          <Help topic="on Ethernet" text={ROUTE_NOTE}>Or in Terminal, run:{command(PROXY_OFF_CMD, "the proxy-off command")}</Help>,
+        ];
 
         /* Round 20 (I3 · M1): the file opens where the trust is set, and the
            one control no route reaches is shown, not only named. */
@@ -1389,7 +1412,7 @@
                 </div>
                 <div className="pt-3">
                   {done
-                    ? <WayBack title="to turn it off later" steps={[<Help topic="on Ethernet" text={ETHERNET}>In Terminal, run:{command(PROXY_OFF_CMD, "the proxy-off command")}</Help>]} />
+                    ? <WayBack title="to turn it off later" steps={ROUTE_UNDO} />
                     : <Steps n={4}><Guide steps={MAC_ROUTE_STEPS} notes={[ETHERNET]} alternatives={[<>In Terminal, run:{command(MAC_ROUTE_REMOTE, "the proxy command")}</>]} /></Steps>}
                 </div>
               </>}
@@ -1413,6 +1436,121 @@
         mount("m-steps-mac-unreached", macTasks("unreached"));
         mount("m-steps-mac-waiting", macTasks("waiting"));
         mount("m-steps-mac-late", macTasks("late"));
+
+        /* ---- another Windows PC: This PC's routes, walked on that PC by hand */
+        /* Round 22 (E1 · E2 · W1–W3 · I1–I3 · N1 · N2 · Q2–Q4). That PC
+           downloads the .cer, the one file Windows opens in its certificate
+           dialog; from there its steps are This PC's, with W12's recordings.
+           Each command is the other way, the certificate's needing no
+           administrator. The ways back are by hand first; the certificate's
+           reaches the user's store and every user's, since either route may
+           have run. What to check when nothing arrives, and what the command
+           leaves running apps, are behind a ?. */
+        const PC_CERT = "http://192.168.1.24:7421/ca.cer";
+        const PC_UNREACHABLE = "Doesn't load? That PC can't reach this one — check both are on the same network, and that this Mac's firewall lets Trawler accept incoming connections.";
+        const TRUSTED_ROOT = ["Place all certificates in the following store", "Browse…", "Trusted Root Certification Authorities"];
+        const THAT_PC_TRUST = [
+          <Help topic="if it doesn't load" text={PC_UNREACHABLE}>On that PC, open {copyable(PC_CERT, "the certificate URL", "certificate url")} — it downloads trawler-ca.cer.</Help>,
+          "Open trawler-ca.cer from Downloads",
+          <>
+            <span>Click <MenuPath path={["Install Certificate…", "Next"]} /> and choose <MenuPath path={TRUSTED_ROOT} /></span>
+            <StepMedia kind="video" alt={`Certificate Import Wizard: ${TRUSTED_ROOT.join(" → ")}, then Finish and Yes`} shows="Windows 11" />
+          </>,
+          <span>Click <MenuPath path={["OK", "Next", "Finish"]} /> and <MenuPath path={["Yes"]} /> on the warning</span>,
+        ];
+        const PC_TRUST_CMD = <>In PowerShell, run:{command('certutil -user -addstore -f ROOT "$HOME\\Downloads\\trawler-ca.cer"', "the trust command")}</>;
+        const MANUAL_PROXY = ["Manual proxy setup", "Use a proxy server", "Set up"];
+        const PC_NOTHING_ARRIVES = "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy.";
+        const PC_ROUTE_STEPS = [
+          <span>On that PC, open <MenuPath path={["Settings", "Network & internet", "Proxy"]} /></span>,
+          <>
+            <span>Click <MenuPath path={MANUAL_PROXY} /></span>
+            <StepMedia kind="video" alt={`Settings: Network & internet → Proxy → ${MANUAL_PROXY.join(" → ")}, the proxy on`} shows="Windows 11" />
+          </>,
+          <span>Turn on <MenuPath path={["Use a proxy server"]} /> — with the server and port above</span>,
+          <Help topic="if nothing arrives" text={PC_NOTHING_ARRIVES}><span>Click <MenuPath path={["Save"]} /></span></Help>,
+        ];
+        const PC_ROUTE_REMOTE = 'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d 192.168.1.24:7420 /f; reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f';
+        const PC_ROUTE_CMD = <Help topic="apps already open" text="Apps already open may keep their old setting until restarted.">In PowerShell, run:{command(PC_ROUTE_REMOTE, "the proxy command")}</Help>;
+        /* Round 22 (W2 · I3): one way back for This PC and that PC. */
+        const PC_TRUST_UNDO = [
+          <span>Start, search <MenuPath path={["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", "Trawler Proxy CA"]} /> and delete it</span>,
+          <>Or in PowerShell, run:{command('certutil -user -delstore ROOT "Trawler Proxy CA"', "the removal command")}</>,
+          <>If it was trusted for every user, in PowerShell as administrator, run:{command('certutil -delstore ROOT "Trawler Proxy CA"', "the administrator's removal command")}</>,
+        ];
+        /* Round 22 (W1): the lead names the shell, as every command's does. */
+        const PC_ROUTE_UNDO = [
+          <span>In <MenuPath path={["Settings", "Network & internet", "Proxy", "Manual proxy setup", "Edit"]} />, turn off <MenuPath path={["Use a proxy server"]} /> and click <MenuPath path={["Save"]} /></span>,
+          <>Or in PowerShell, run:{command('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f', "the proxy-off command")}</>,
+        ];
+        const PC = {
+          waiting: { trust: sv("◐", "muted", "can't check here — that PC's first HTTPS request confirms it"), route: sv("◐", "muted", "can't check here — that PC's first request confirms it"), try: WAITING },
+          late: MAC.late,
+        };
+        const pcTasks = (variant) => {
+          const armed = variant !== "unreached";
+          const lines = PC[variant === "unreached" ? "waiting" : variant];
+          const done = variant === "late";
+          return (
+          <Section variant="band" title="">
+            <div className="flex flex-col gap-4">
+            <TaskStep n={1} title="Allow that PC to connect"
+                      status={armed
+                        ? sv("✓", "ok", "done — listening on 192.168.1.24 until Trawler quits")
+                        : sv("○", "muted", "not done — Trawler answers on this Mac only")}>
+              {armed
+                ? <Button frame="bare" tone="mute" onClick={noop}>stop listening</Button>
+                : <>
+                    {addressOffer("10.0.4.9")}
+                    {/* Round 22 (E3): declined, the outcome alone — the state line says the rest. */}
+                    <p className="pt-2 font-ui text-chrome text-ink-mute">not allowed</p>
+                  </>}
+            </TaskStep>
+            <TaskStep n={2} title="On that PC, install Trawler's certificate" dim={!armed}
+                      why={armed ? undefined : "after step 1"} status={armed ? lines.trust : undefined}>
+              {armed && (done
+                ? <WayBack title="to remove it later" steps={PC_TRUST_UNDO} />
+                : <Steps n={4} open><Guide steps={THAT_PC_TRUST} alternatives={[PC_TRUST_CMD]} /></Steps>)}
+            </TaskStep>
+            <TaskStep n={3} title="On that PC, send its traffic to Trawler" dim={!armed}
+                      why={armed ? undefined : "after step 1"} status={armed ? lines.route : undefined}>
+              {armed && <>
+                <div className="flex gap-4">
+                  <div>
+                    <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">server</p>
+                    <p className="pt-2">{copyable("192.168.1.24", "the proxy host", "proxy host")}</p>
+                  </div>
+                  <div>
+                    <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">port</p>
+                    <p className="pt-2">{copyable("7420", "the proxy port", "proxy port")}</p>
+                  </div>
+                </div>
+                <div className="pt-3">
+                  {done
+                    ? <WayBack title="to turn it off later" steps={PC_ROUTE_UNDO} />
+                    : <Steps n={4}><Guide steps={PC_ROUTE_STEPS} alternatives={[PC_ROUTE_CMD]} /></Steps>}
+                </div>
+              </>}
+            </TaskStep>
+            <TaskStep n={4} title="Make a request from that PC" dim={!armed} why={armed ? undefined : "after step 1"}>
+              {armed && <>
+                {done
+                  ? <>
+                      {line("a-oq-live", sv("✓", "ok", "done — capturing traffic"))}
+                      {line("a-oq-kept", sv("✓", "ok", "done — decrypted at 14:02, nothing since"))}
+                    </>
+                  : <StatusLine status={lines.try} />}
+                {checkAddressPlain(done, "that PC")}
+              </>}
+            </TaskStep>
+            </div>
+          </Section>
+          );
+        };
+        mount("m-picker-pc", picker("windows"));
+        mount("m-steps-pc-unreached", pcTasks("unreached"));
+        mount("m-steps-pc-waiting", pcTasks("waiting"));
+        mount("m-steps-pc-late", pcTasks("late"));
 
         /* Round 20 (D1): PROPOSED — TimestampText's relative mode takes the
            sentence's font; it reads as words, not as a clock. Drawn until built. */
@@ -1602,10 +1740,11 @@
         <tr><td>the list's ⋮</td><td><em>set up another device</em></td></tr>
         <tr><td>another proxy</td><td><em>another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.</em></td></tr>
         <tr><td>a declined replacement</td><td><em>nothing changed — the other proxy is still the one in use, and the certificate was not installed.</em> (one act) · the first clause alone (the proxy action)</td></tr>
-        <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed — Trawler still answers on this machine only.</em></td></tr>
+        <tr><td>the network task</td><td><em>Allow your iPhone to connect</em> · <em>Allow devices on my Wi-Fi to connect</em> · <em>other devices on your Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits</em> · declined: <em>not allowed</em> (round 22, E3: the state line above already says where Trawler answers)</td></tr>
         <tr><td>undecrypted traffic, in the certificate task (any platform, while it is not done)</td><td><em>something reached Trawler and did not decrypt — your iPhone does not trust Trawler's certificate yet. The steps below install it.</em> — naming the chosen device (<em>this Mac</em>, <em>your iPhone</em>, …), with the steps open. Never on the Simulator, whose wire is this Mac's too (round 16), nor on the emulator, whose own services refuse a certificate it holds (round 17), nor on a phone, which says its own (rounds 18 and 19)</td></tr>
         <tr><td>undecrypted traffic, in the try task (once the certificate task is done, on This machine where no probe read its store, or on another device whose traffic this Mac's may be mixed with)</td><td><em>something is connecting and none of it is decrypting — the device it comes from does not trust Trawler's certificate yet. Finish the certificate step on that device.</em> · the chosen platform's certificate reads trusted: <em>something is connecting and none of it is decrypting — this Mac trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em> where this machine's certificate reads trusted · another device after its proof (round 14), under <em>done — decrypted at 14:02</em>: <em>something else is connecting and not decrypting — one request already did, so it is an app that pins its certificate or keeps a store of its own, or another device.</em></td></tr>
-        <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell as administrator, run:</em> <span class="font-mono">certutil -addstore -f ROOT "$HOME\Downloads\trawler-ca.pem"</span> on another PC · another Mac's trust command reads <span class="font-mono">~/Downloads/trawler-ca.pem</span>, another Ubuntu machine's <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> (round 15) · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
+        <tr><td>Another Windows PC (round 22)</td><td>certificate: <em>On that PC, open</em> <span class="font-mono">http://192.168.1.24:7421/ca.cer</span> <em>— it downloads trawler-ca.cer.</em> (? <em>Doesn't load? That PC can't reach this one — …</em>) · <em>Open trawler-ca.cer from Downloads</em> · <em>Click</em> Install Certificate… → Next <em>and choose</em> Place all certificates in the following store → Browse… → Trusted Root Certification Authorities + video · <em>Click</em> OK → Next → Finish <em>and</em> Yes <em>on the warning</em> · other ways: <em>In PowerShell, run:</em> the user-store command · proxy: <em>On that PC, open</em> Settings → Network &amp; internet → Proxy · <em>Click</em> Manual proxy setup → Use a proxy server → Set up + video · <em>Turn on</em> Use a proxy server <em>— with the server and port above</em> · <em>Click</em> Save (? <em>Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy.</em>) · other ways: <em>In PowerShell, run:</em> the two writes (? <em>Apps already open may keep their old setting until restarted.</em>) · ways back, This PC's too: <em>Start, search</em> Manage user certificates → Trusted Root Certification Authorities → Certificates → Trawler Proxy CA <em>and delete it</em> · <em>Or in PowerShell, run:</em> <span class="font-mono">certutil -user -delstore ROOT "Trawler Proxy CA"</span> · <em>If it was trusted for every user, in PowerShell as administrator, run:</em> <span class="font-mono">certutil -delstore ROOT "Trawler Proxy CA"</span> · <em>In</em> Settings → Network &amp; internet → Proxy → Manual proxy setup → Edit<em>, turn off</em> Use a proxy server <em>and click</em> Save · <em>Or in PowerShell, run:</em> the proxy-off write. The close dialog keeps the one command, led <em>In PowerShell, run:</em> (W1; no <em>WinINET</em> anywhere) · a Mac's proxy way back (X1): <em>In</em> System Settings → Network → Wi-Fi → Details… → Proxies<em>, turn off</em> Web proxy (HTTP) <em>and</em> Secure web proxy (HTTPS) <em>and click</em> OK · <em>Or in Terminal, run:</em> the proxy-off command, Ethernet behind its ?</td></tr>
+        <tr><td>a computer's commands and notes (round 14)</td><td>Windows: <em>In PowerShell, run:</em> the two proxy writes joined by <span class="font-mono">;</span> · <em>In PowerShell, run:</em> <span class="font-mono">certutil -user -addstore -f ROOT "$HOME\Downloads\trawler-ca.cer"</span> on another PC and under This PC's <em>other ways</em>, no administrator (round 22, Q3) · another Mac's trust command reads <span class="font-mono">~/Downloads/trawler-ca.pem</span>, another Ubuntu machine's <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> (round 15) · a refusal's advice on macOS and Windows: <em>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</em></td></tr>
         <tr><td>Linux's certificate steps (round 15)</td><td><em>In Firefox: Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify websites".</em> · <em>For Chrome, run:</em> <span class="font-mono">sudo apt install -y libnss3-tools &amp;&amp; { [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb &amp;&amp; certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; } &amp;&amp; certutil -d "sql:$([ -d ~/.pki/nssdb ] &amp;&amp; echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)" -A -t C,, -n trawler -i …</span> · <em>For curl and the system's tools, run:</em> the system command · the same three under <em>to remove it later</em>, Firefox's ending <em>→ Trawler Proxy CA → Delete or Distrust.</em> · the refusal's advice: <em>Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.</em> · another Ubuntu machine after its proof: <em>something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.</em></td></tr>
         <tr><td>the Simulator (round 16)</td><td>task 1: <em>done — trusted in iPhone 17 Pro</em> · <em>done — trusted in every running Simulator</em> · <em>not done — not in iPhone 17 Pro</em> · <em>not done — not in 2 running Simulators</em> · none read: <em>can't check here — the address in step 3 confirms it</em>, then <em>done — the Simulator's request decrypted at 14:02</em> · its steps: <em>With the Simulator running, run:</em> <span class="font-mono">for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done</span> · <em>Restart the Simulator so apps pick the new root up.</em> · <em>to remove it later</em>: <em>Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included.</em> · task 3: <em>or open this one in the Simulator</em> with its marked address · a refusal, task 1 trusted: <em>something is connecting and none of it is decrypting — iPhone 17 Pro trusts Trawler's certificate, so it comes from another device, or from an app with a certificate store of its own, that does not trust it yet.</em></td></tr>
         <tr><td>the saved file in a command (round 16)</td><td>before a save, This machine's, the Simulator's and the emulator's (round 17, <span class="font-mono">trawler-ca.cer</span>) commands read Downloads, where the save dialog opens: <span class="font-mono">~/Downloads/trawler-ca.pem</span> on macOS · <span class="font-mono">"$HOME\Downloads\trawler-ca.pem"</span> on Windows · <span class="font-mono">"$(xdg-user-dir DOWNLOAD)/trawler-ca.pem"</span> on Linux; after it, the path the save returned, quoted for that shell</td></tr>
@@ -1756,6 +1895,7 @@
         <tr><td>Round 20, on the build — recording the macOS videos found that opening the certificate asks which keychain and offers iCloud, which holds no trust, and that a certificate the route adds sits in the login keychain, where the removal command did not reach</td><td>mockup — task 1's route adds to the login keychain itself (<em>Add it to your login keychain</em> · <em>open in Keychain Access</em>), so it leads and the save moves under <em>other ways</em> with the command it serves; the way back reaches both keychains; the proxy's path is a step per act, its recording on the path · copy · proposals — StepMedia, MenuPath and TimestampText's relative mode built. W12's design/v1 note cites the blob this amendment leaves</td><td><code>DEC-53</code> · <code>DEC-16</code></td></tr>
         <tr><td>Round 21 — the owner's rulings on E-ONBRVP.W13's plan, 2026-10-31: "all go with your pick except Q4, I don't want too many small texts on the screen, add a help button to show alt text, try to hide unimportant information … this should be a design rule and applicable to all screens"; the rule's reach "setup now, rest new epic"; the ? reveals the hidden text, and a risk warning is no exception</td><td>mockup — Another Mac as a platform: no why lines, task 4 <em>Make a request from that Mac</em> with its address at body weight, the certificate by hand through the login keychain with W12's recording, the proxy through System Settings with its recording, each command under <em>other ways</em>, the way back reaching both keychains. Every why line, note, caption and warning on the setup screen behind a ? (Help) — This machine, the Simulator, the emulator, iPhone, Android, Ubuntu. Task 1 lowercase and in the host's noun; every task 4 a request, its address at body weight · proposals — Help, TaskStep's help, Button's expanded, the rule · keyboard — the ?</td><td>taste · <code>keyboard-parity</code> · <code>Button</code> @anatomy · <code>TaskStep</code> @anatomy</td></tr>
         <tr><td>Round 21, close — "LGTM, let's proceed it", on Another Mac walked by hand with W12's recordings, every explanation on the setup screen behind a ?, and the Help design</td><td>nothing further. verify-doc green, then archived; W13's design/v1 note cites the blob this commit leaves</td><td><code>DEC-53</code></td></tr>
+        <tr><td>Round 22 — the owner's rulings on E-ONBRVP.W14's plan, 2026-10-31: "1. Yes 2. yes 3. ok 4. ok" — shared fixes once for all who share them, that PC downloads the .cer, the user-store command under other ways, the ways back by hand first</td><td>mockup — Another Windows PC as a platform: the .cer download, This PC's import steps with W12's recording, Settings' proxy page with its recording, each command under <em>other ways</em> (the certificate's without an administrator), what to check when nothing arrives and what the command leaves open apps behind a ?, the ways back by hand first, the certificate's reaching both stores; task 1's declined outcome <em>not allowed</em> alone · a Mac's proxy way back by hand first (X1) · copy — Another Windows PC's sentences, the commands row, the declined sentence</td><td>taste · <code>Help</code> @use · <code>MenuPath</code> @anatomy · <code>StepMedia</code> @use</td></tr>
       </tbody>
     </table>
 
