@@ -1,0 +1,38 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W13
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the epic that takes help on request to every screen beyond setup, after which the rule enters the rulebook; the certificate download as reach proof (X1)"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: Another Mac walked by hand with the same recordings, and what explains a line behind a ? on every platform"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: Another Mac's steps walked by hand with This Mac's recordings, each command the other way, the way back reaching both keychains; every platform's last task a request from the device; the reading rule of help on request"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 21 of the design run: Another Mac walked by hand, every explanation behind a ?, the Help proposal, closed on the owner's word"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status and the emphasis rule's help on request"
+  - path: "docs/work/2026-10-31-onboard-revamp-w13-another-mac-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W13's plan: findings, rulings, the owner's rule of help on request and its reach"
+  - path: "docs/work/2026-10-31-onboard-revamp-w13-another-mac-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W13's result: what shipped against the plan's rows, the deviations, the evidence"
+  - path: "docs/work/components/help.html"
+    tier: T3
+    action: deleted
+    distills: "Help's component design, retired into the component's TSDoc in ui/src/components/Help.tsx"
+    distilled_to: "none: every fork is carried by the TSDoc tags @use, @avoid and @states in ui/src/components/Help.tsx"
