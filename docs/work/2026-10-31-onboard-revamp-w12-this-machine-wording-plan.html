@@ -10,17 +10,17 @@
     <div class="inner">
       <h1>E-ONBRVP.W12 — wording and display: This machine</h1>
       <p>This machine's tasks lead with the one thing to do next, say each thing once and in one name, and give every step the easiest route there is: a button that opens the right screen first, a recorded image or video where none can.</p>
-      <div class="meta">v1 · 2026-10-31 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W12</span> · branch <code>wu/onboard-revamp/this-machine-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W3 · sets the pattern W13–W19 reuse</div>
+      <div class="meta">v2 · 2026-10-31 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W12</span> · branch <code>wu/onboard-revamp/this-machine-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W3 · sets the pattern W13–W19 reuse</div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Waiting for your rulings</strong> on fifteen findings and five questions. Found by filming This
-      machine on every host at the epic tip (<code>28995cd</code>) with <code>cargo xtask ui walkthrough</code> and
-      reading each frame beside <code>setup.ts</code> and <code>Onboarding.tsx</code>. The walkthrough itself has
-      been red since W3 (N1), so these reels were filmed with that one line reverted in the working tree and then
-      restored. W6 handed one finding here (its N4, now W6 below). Nothing is built yet.
+      <strong>Every point is ruled</strong> ("1. ok 2. ok 3. ok 4. ok 5. all", 2026-10-31). The findings are taken
+      as proposed; Q1–Q4 are A; Q5 is A, with media recorded on all three hosts, macOS, Windows and Linux. Next: the
+      walkthrough films again (N1), then round 20 of the design run and the media slot's component design, for your
+      review before the build. Found by filming This machine on every host at the epic tip (<code>28995cd</code>)
+      with that one walkthrough line reverted in the working tree and then restored.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -85,7 +85,7 @@
           task 1. Task 2 shows only its state and <em>do it manually</em>, so a reader scanning task 2 sees no way to
           do it except by hand, and no hint that the button above already covers it (walk-03).</td>
         <td>Per Q1. A: while the one act is offered, it leads above the numbered tasks with its caption. Tasks 1 and 2
-          keep their state lines and their by-hand route.</td><td></td></tr>
+          keep their state lines and their by-hand route.</td><td>take</td></tr>
       <tr><td>E2</td>
         <td><strong>Task 3's action never leads, and its alternative does.</strong> <em>make a request to
           example.com</em> is a bare button that reads as text, at the same weight before tasks 1–2 are done (when it
@@ -93,7 +93,7 @@
           an alternative, is the heaviest element on the screen (walk-03, walk-10).</td>
         <td>The request is task 3's action. It has a frame while it is the next thing: tasks 1 and 2 read done, or
           read <em>can't check here</em> (the request is what settles them). Otherwise it is bare. The curl command and
-          the browser route (I1) go under a collapsed <em>other ways</em>. The title follows Q2.</td><td></td></tr>
+          the browser route (I1) go under a collapsed <em>other ways</em>. The title follows Q2.</td><td>take</td></tr>
       <tr><td>E3</td>
         <td><strong>A done task keeps its doing.</strong> Task 2 done shows <em>stop routing through Trawler</em>,
           a two-sentence caption and <em>to turn it off later</em>: two routes to one undo, between the reader and step 3
@@ -102,19 +102,19 @@
         <td>A done task shows its state and one way back. Task 2: the reversal button, with its by-hand steps behind its
           own <em>do it by hand</em>, as under every other button. Its caption keeps only what the label does not say:
           <em>the certificate stays trusted</em>, and only when it is. Task 3: its request and other ways fold under
-          <em>make another request</em>.</td><td></td></tr>
+          <em>make another request</em>.</td><td>take</td></tr>
       <tr><td>E4</td>
         <td><strong>An undone task offers its undo.</strong> <em>to remove it later</em> and <em>to turn it off
           later</em> sit inside the install route before anything is installed. That is a third collapsed line beside
           <em>other ways</em>, two levels deep under <em>do it manually</em> (walk-08).</td>
         <td>An undone task's guide holds only ways to do it. The way back shows once the task reads done, as it does now,
-          and in the quit dialog (W11), which reads <code>routeUndo</code> either way.</td><td></td></tr>
+          and in the quit dialog (W11), which reads <code>routeUndo</code> either way.</td><td>take</td></tr>
       <tr><td>E5</td>
         <td><strong>The why lines repeat the lead.</strong> The lead says the device must trust the certificate and
           send its traffic to Trawler. Each task then says its half again under its title, so every task is title, why
           and state before anything to do.</td>
         <td>Per Q3. A: a why line stays only where it says what the lead does not. On This machine, that is only the
-          route's (<em>while Trawler runs</em>: the proxy outlives nothing). The trust and try tasks lose theirs.</td><td></td></tr>
+          route's (<em>while Trawler runs</em>: the proxy outlives nothing). The trust and try tasks lose theirs.</td><td>take</td></tr>
     </table>
 
     <h2 id="wording">Part 2 — wording</h2>
@@ -126,7 +126,7 @@
           do it by hand</em> (three failure notes), <em>The steps below do it by hand</em> (-60007).</td>
         <td>One name: the summary reads <em>do it by hand</em> under a button, and the step count where there is
           none (a count promises no automatic route: F10). Every note points at it in those words:
-          <em>… — do it by hand below.</em></td><td></td></tr>
+          <em>… — do it by hand below.</em></td><td>take</td></tr>
       <tr><td>W2</td>
         <td><strong>macOS's prompt, said on Windows.</strong> <em>one password prompt</em> under <em>Set up this
           PC</em>, where Windows asks Yes or No. <em>approve the prompt that just opened</em> under <em>Set the
@@ -135,18 +135,18 @@
           dialog only.</td>
         <td>Prompt words per host. macOS: <em>password prompt</em>. Windows: <em>one Windows approval</em>, and
           the cancel note <em>the approval was cancelled</em>. Setting or clearing the proxy on Windows names no prompt:
-          its running note is <em>setting the proxy…</em> or <em>turning the proxy off…</em></td><td></td></tr>
+          its running note is <em>setting the proxy…</em> or <em>turning the proxy off…</em></td><td>take</td></tr>
       <tr><td>W3</td>
         <td><strong>Leads that don't parse.</strong> <em>Run it in a terminal:</em>, where <em>it</em> can only
           be step 1's file. <em>Run — this sets the Wi-Fi service; change the name for Ethernet:</em>, an aside before
           the command. <em>GNOME — run:</em></td>
         <td><em>In Terminal, run:</em> for macOS's trust and route commands. The Ethernet caveat becomes the
           route's note: <em>On Ethernet, change Wi-Fi to Ethernet in the command.</em> Linux: <em>On GNOME, run in
-          a terminal:</em></td><td></td></tr>
+          a terminal:</em></td><td>take</td></tr>
       <tr><td>W4</td>
         <td><strong>A name the Mac never shows.</strong> <em>set the Trawler CA to Always Trust</em>. Keychain
           Access lists <em>Trawler Proxy CA</em>, the name the undo step and every removal command use.</td>
-        <td><em>Trawler Proxy CA</em>, from the one constant the other steps read.</td><td></td></tr>
+        <td><em>Trawler Proxy CA</em>, from the one constant the other steps read.</td><td>take</td></tr>
       <tr><td>W5</td>
         <td><strong>Case breaks the house style.</strong> <code>Button</code> labels are lowercase, but
           <em>Set up this Mac</em> and <em>Set the system proxy</em> are capitalised. Notes open lowercase, except
@@ -154,13 +154,13 @@
           after a full stop.</td>
         <td><em>set up this Mac</em> · <em>set the system proxy</em> · <em>the password prompt was cancelled. Try
           again…</em> · <em>saved as trawler-ca.pem. Now trust it…</em> A test reads every label and note This
-          machine can show against the rule.</td><td></td></tr>
+          machine can show against the rule.</td><td>take</td></tr>
       <tr><td>W6</td>
         <td><strong>Linux's done claims every store</strong> (W6's N4, handed here). <em>done — installed and
           trusted</em> reads the system bundle only. Firefox and Chrome keep stores of their own that nothing here
           reads, and the done task folds its guide to the undo, which hides both browser steps.</td>
         <td>Per Q4. A: Linux reads <em>done — trusted by the system's tools</em>, and the two browser steps stay
-          offered under the state line, since nothing settles them but a browser's own request.</td><td></td></tr>
+          offered under the state line, since nothing settles them but a browser's own request.</td><td>take</td></tr>
     </table>
 
     <h2 id="display">Part 3 — display</h2>
@@ -171,14 +171,14 @@
           few seconds ago</em> set the time in mono. <code>TimestampText</code> is clock text for list rows, and its
           relative mode is being used as prose (every frame).</td>
         <td>A relative time inside a sentence is set in the sentence's font. The component design decides whether that
-          is a <code>TimestampText</code> mode or a sibling.</td><td></td></tr>
+          is a <code>TimestampText</code> mode or a sibling.</td><td>take</td></tr>
       <tr><td>D2</td>
         <td><strong>A menu path reads as prose.</strong> <em>In Firefox: Settings → Privacy &amp; Security → Certificates
           → View Certificates → Authorities → Import → trawler-ca.pem, then tick "Trust this CA to identify
           websites".</em> is two lines of body text. The controls to find don't stand out from the words around them
           (<code>linux-this/walk-02</code>). macOS's Keychain path and every phone's Settings path have the same shape.</td>
         <td>A path is a step part of its own, as a value and a command already are. Each control's name is set apart from
-          the sentence, and the arrows stay. W13–W19 reuse it for their Settings paths.</td><td></td></tr>
+          the sentence, and the arrows stay. W13–W19 reuse it for their Settings paths.</td><td>take</td></tr>
     </table>
 
     <h2 id="routes">Part 4 — interactive routes and media (the epic's Q11)</h2>
@@ -190,26 +190,26 @@
         <td>Under task 3's <em>other ways</em>: <em>open example.com in your browser</em>. The shell opens the
           window's marked address (<code>?trawler-check=…</code>) in the default browser, so it settles the tasks
           as the in-app request does (DEC-62), and a refusal there names the browser. DEC-62 gains this as a second
-          sender of the same mark.</td><td></td></tr>
+          sender of the same mark.</td><td>take</td></tr>
       <tr><td>I2</td>
         <td><strong>The proxy's only by-hand route is a command.</strong></td>
         <td>The by-hand route leads with <em>open Proxy settings</em> and the two values to type, server and port,
           each copyable. Windows: <code>ms-settings:network-proxy</code>, the Proxy page itself. macOS: System Settings ›
           Network (then the service › Details › Proxies: media, M1). GNOME: <code>gnome-control-center network</code>.
-          The command stays, under <em>other ways</em>.</td><td></td></tr>
+          The command stays, under <em>other ways</em>.</td><td>take</td></tr>
       <tr><td>I3</td>
         <td><strong>The certificate's only by-hand route is an elevated command</strong> (on macOS a double-click as
           the other way).</td>
         <td>macOS: <em>open it in Keychain Access</em> (the shell opens the saved file), then Always Trust by hand with
           media (M1). Windows: per Q5. Linux keeps its three steps: no route opens Firefox's certificate manager or the
-          NSS database.</td><td></td></tr>
+          NSS database.</td><td>take</td></tr>
       <tr><td>M1</td>
         <td><strong>Steps no route can finish</strong>: a screen opens, and the user must still find the control.</td>
         <td>One image or short video each, from a shot list I write (host, OS version, start and end frame, the control it
           must show). You record, and I check each against its list (frames pulled with ffmpeg). Candidates: macOS
           Keychain Access › Trawler Proxy CA › Trust › Always Trust · macOS Network › Wi-Fi › Details › Proxies · Firefox
           › Certificates › Authorities › Import (Linux) · Windows › Proxy › Manual proxy setup. A component design for the
-          media slot (the epic's W12 block). Its scope is Q5.</td><td></td></tr>
+          media slot (the epic's W12 block). Its scope is Q5.</td><td>take</td></tr>
     </table>
     <p>Every route goes through one new shell command that takes a closed set of names (a settings screen, the saved
       certificate, the marked address) and builds the URL or path itself, so the webview never hands the shell a URL to
@@ -225,36 +225,36 @@
           on its reels.</td>
         <td>proposed: here, first. R20 is marked superseded by W3's D8. A chapter may also name an E-ONBRVP finding as
           <code>W&lt;n&gt;.&lt;id&gt;</code> (<code>W3.D8</code>), and the judge checks it against a list in the
-          plan. W12's new states get chapters.</td><td></td></tr>
+          plan. W12's new states get chapters.</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
     <table data-c="questions">
-      <tr><th>#</th><th>Question</th><th>Proposed</th></tr>
+      <tr><th>#</th><th>Question</th><th>Proposed</th><th>Ruling</th></tr>
       <tr><td>Q1</td>
         <td><strong>Where does the one act sit?</strong><br/>
           A above the numbered tasks, while it is offered ·
           B in task 1 as today, and task 2's by-hand summary says <em>set up this Mac does this too</em></td>
         <td>A. It does two tasks, so it belongs to neither. Once either task reads done it is gone, and each task carries
-          its own action, as now (UC-ONBOARD).</td></tr>
+          its own action, as now (UC-ONBOARD).</td><td>A</td></tr>
       <tr><td>Q2</td>
         <td><strong>What is task 3 called?</strong><br/>
           A <em>Make a request from this Mac</em>: true of the button, the browser and curl alike ·
           B keep <em>Open any website on this Mac</em></td>
         <td>A. The title should name what its leading action does. B names the route E2 moves under <em>other
-          ways</em>.</td></tr>
+          ways</em>.</td><td>A</td></tr>
       <tr><td>Q3</td>
         <td><strong>Which why lines stay?</strong><br/>
           A only those that say what the lead does not: on This machine, the route's ·
           B all, as today</td>
-        <td>A. Applied to This machine here. W13–W19 apply the same rule to their own.</td></tr>
+        <td>A. Applied to This machine here. W13–W19 apply the same rule to their own.</td><td>A</td></tr>
       <tr><td>Q4</td>
         <td><strong>Linux's certificate task once the system bundle trusts it.</strong><br/>
           A <em>done — trusted by the system's tools</em>, with the two browser steps still offered ·
           B the words only, with the guide folded to its undo as today ·
           C read NSS too (a new probe, and a new DEC beside DEC-62)</td>
         <td>A. It says only what was read, and keeps the steps nothing has settled. C is a probe the epic's Q8 allows, but
-          Firefox's own store would still be unread.</td></tr>
+          Firefox's own store would still be unread.</td><td>A</td></tr>
       <tr><td>Q5</td>
         <td><strong>How much step help ships in W12?</strong><br/>
           A routes I1–I3 and media M1 for the hosts you can record on. Windows This machine saves
@@ -263,7 +263,7 @@
           B the same, with Windows' certificate left to W14 (W5's N3) ·
           C routes only: the media slot and shot lists land, and the recordings move to W20</td>
         <td>A. It sets the whole pattern W13–W19 reuse. Which hosts can you record on? A host you cannot record on
-          keeps its command and is named in the result.</td></tr>
+          keeps its command and is named in the result.</td><td>A · media on all three hosts</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
