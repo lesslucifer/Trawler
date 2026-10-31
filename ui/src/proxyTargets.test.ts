@@ -19,4 +19,10 @@ describe("the reversal every target carries", () => {
     expect(steps[steps.length - 1]).toBe(proxyOffSnippet(t));
     expect(new Set(steps).size).toBe(steps.length);
   });
+
+  // W14's W1: the lead names the shell the command runs in, as every Windows
+  // command's does, never the API it writes.
+  it("leads Windows' command with PowerShell", () => {
+    expect(proxyOffSteps("windows")).toEqual(["In PowerShell, run:", proxyOffSnippet("windows")]);
+  });
 });

@@ -1096,9 +1096,7 @@ test("a refused confirm arms nothing — no POST, no address, no listening", asy
   expect(screen.queryByTestId("device-address")).toBeNull();
   // F13: the refusal reaches the screen as a refusal. Without it the dialog
   // closes, the button comes back, and nothing distinguishes a no from a yes.
-  expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
-    "not allowed — Trawler still answers on this Mac only",
-  );
+  expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(/^not allowed$/);
 });
 
 test("an allowed confirm arms that address, and the screen renders what answered", async () => {
