@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU another-windows-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W14
+branch: wu/onboard-revamp/another-windows-wording
+base: c4f7f4450c74c48545c455bc339333d1ee9d8323
+head: 1d7075c1b1386baeed30c714412f78ffddd03ce7
+diff_sha256: f05d0ce0cfeeac7ea07552bd32e20d7cd23ec41187949d3f1da70d89269577b5
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 106
+    finders: 38
+    total: 135
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "ARM_NOTE's declined note reads 'not allowed' with no terminal period, beside its failed note that ends in one"
+    waived: "round 22 of the design run, closed on the owner's word, draws exactly 'not allowed': it reads as a state word like the status vocabulary's 'not done', not a sentence; Onboarding.test.tsx and App.test.tsx pin it"
+verdict: PASS
+date: 2026-11-01
