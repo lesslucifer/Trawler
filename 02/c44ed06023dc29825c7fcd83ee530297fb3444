@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU another-mac-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W13
+branch: wu/onboard-revamp/another-mac-wording
+base: 9160b1d82770c6c7ee8d8e9736f2b45153274469
+head: 02c44ed06023dc29825c7fcd83ee530297fb3444
+diff_sha256: 5ebbf12b11904c7e30c772d625bbc6dbff77e8cb644f88c4df438a6430ef5ef2
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    gate0: 144
+    total: 173
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 3 }
+findings: { found: 3, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "StepParts renders only the first help part of a step, and only beside said text"
+    waived: "every step builder adds at most one help part and always beside a sentence - downloadStep, reversal's macOS hint, and withNotes joining a guide's notes into one; setup.test.ts and Onboarding.test.tsx pin each"
+  - finding: "Help finds the trigger for focus return and its open styling through IconButton rendering a direct child button"
+    waived: "Help.test.tsx pins both - focus back on the ? after Esc, and the open ink - so a change to IconButton's markup goes red there rather than silently"
+  - finding: "MAC_KEYCHAIN_UNDO lowercases IN_TERMINAL by hand beside the new capitalised helper"
+    waived: "moved verbatim from thisMacTrust, where it predates W13; the two transforms go opposite ways and each has one caller"
+verdict: PASS
+date: 2026-10-31
