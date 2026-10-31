@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W13
+base: 9160b1d82770c6c7ee8d8e9736f2b45153274469
+design_sha256: 712bb813db9e33f19cf0506aadddb4d7b8bca4f6aee8562ed8c6e1b0cb5c926b
+verdict: PASS
+artifacts: [docs/work/2026-09-17-onboarding-design-run.html, docs/work/components/help.html]
+implements:
+  - path: docs/work/components/help.html
+    blob: 802ddfe59cc9a872d012f37fa4590b7e5fa20923
+    built: [ui/src/components/Help.tsx, ui/src/components/Button.tsx, ui/src/components/IconButton.tsx, ui/src/components/TaskStep.tsx]
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: 086a82c940706de034d02c46ed142a358895fa85
+    built: [ui/src/Onboarding.tsx, ui/src/manualSteps.tsx]
+date: 2026-10-31
