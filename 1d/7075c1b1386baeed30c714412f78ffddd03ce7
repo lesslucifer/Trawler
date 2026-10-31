@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 1d7075c1b1386baeed30c714412f78ffddd03ce7
+base: c4f7f4450c74c48545c455bc339333d1ee9d8323
+tier: key
+signer: vuluu
+report: docs/work/2026-10-31-onboard-revamp-w14-another-windows-wording-result.html
+report_sha256: 370b1dc56c4ec782f8c25fd4d4a2ff3f55473803ea5108945ad027f25e2b7e33
+date: 2026-11-01
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBqGXGGlfrq6gz6I3LJ6jL7Uyckas20j6bu1dXWWiPjiaNdV7uykoebpu
+  WyLsy3uAO98WfFg05V+5fBECZNF4sA
+  -----END SSH SIGNATURE-----
