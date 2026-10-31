@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3864b0f37dde7c9e7250ff683a8a6498e6daf3a5
+base: 28995cdccbacfb4a88a8f064578f67cebe365c96
+tier: key
+signer: vuluu
+report: docs/work/2026-10-31-onboard-revamp-w12-this-machine-wording-result.html
+report_sha256: a8f95df7eb2e1e7f4af1c0f56227b44400d33e7ebba24d0e3361b496a84ea619
+date: 2026-10-31
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBA2oFchY5FqBY+MkcM3J7WQbDLHT0T8SLZ/szwBM+aKuDvollrfhSajv
+  eZ2W3y2DaGfPrQbnmnIjgj1VzBCbkO
+  -----END SSH SIGNATURE-----
