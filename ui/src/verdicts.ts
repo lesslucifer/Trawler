@@ -167,15 +167,20 @@ export function evidenceOf(seen: Traffic, now: number): Evidence {
 // A probe that concludes is the whole state (DEC-33) - traffic, however much of
 // it, never turns it green. Where it cannot conclude, the reading is whatever
 // the caller names for that host: This machine's own request (DEC-62).
+// Where the probe reads only the system's own store, its "trusted" says so:
+// Linux's browsers keep stores of their own (W12's W6).
+export const SYSTEM_TOOLS_TRUSTED = "trusted by the system's tools";
+
 export function trustStatus(
   probe: TrustProbe,
   running: Running,
   unread: StepStatusView,
+  trusted = "installed and trusted",
 ): StepStatusView {
   if (running === "checking")
     return verdict("checking", "the certificate store");
   if (running) return SETTING_UP;
-  if (probe === "trusted") return verdict("done", "installed and trusted");
+  if (probe === "trusted") return verdict("done", trusted);
   if (probe === "installed")
     return verdict("not-done", "installed, not trusted");
   if (probe === "absent") return verdict("not-done", "not installed");

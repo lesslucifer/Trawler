@@ -154,6 +154,9 @@ export interface Guide {
   alternatives?: GuideStep[];
   undoTitle?: string;
   undo?: GuideStep[];
+  // Steps for stores no probe reads, still offered once the probed one reads
+  // done: Linux's browsers keep their own (W12's W6).
+  unprobed?: GuideStep[];
 }
 
 // One numbered task of a platform's setup: what the user does, why it is worth
@@ -503,8 +506,30 @@ const NSS_DB_MADE =
 const FOR_CHROME = "For Chrome, run:";
 const FOR_SYSTEM_TOOLS = "For curl and the system's tools, run:";
 
+const linuxBrowserSteps = (file: string): GuideStep[] => [
+  [
+    IN_FIREFOX,
+    { path: [...FIREFOX_AUTHORITIES, "Import…"] },
+    `, choose ${PEM_FILE} and tick`,
+    { path: [TRUST_WEBSITES] },
+    {
+      media: "linux-firefox-import",
+      alt: `Firefox: ${FIREFOX_AUTHORITIES.join(" → ")} → Import… → ${PEM_FILE} → ${TRUST_WEBSITES}`,
+      shows: `${LINUX_OS_VERSION}, Firefox 154`,
+    },
+  ],
+  [
+    FOR_CHROME,
+    {
+      command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
+      label: "the Chrome command",
+    },
+  ],
+];
+
 interface OsTrust {
   install: GuideStep[];
+  unprobed?: GuideStep[];
   alternatives?: GuideStep[];
   undoTitle: string;
   undo: GuideStep[];
@@ -555,24 +580,7 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
   }),
   linux: (file) => ({
     install: [
-      [
-        IN_FIREFOX,
-        { path: [...FIREFOX_AUTHORITIES, "Import…"] },
-        `, choose ${PEM_FILE} and tick`,
-        { path: [TRUST_WEBSITES] },
-        {
-          media: "linux-firefox-import",
-          alt: `Firefox: ${FIREFOX_AUTHORITIES.join(" → ")} → Import… → ${PEM_FILE} → ${TRUST_WEBSITES}`,
-          shows: `${LINUX_OS_VERSION}, Firefox 154`,
-        },
-      ],
-      [
-        FOR_CHROME,
-        {
-          command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
-          label: "the Chrome command",
-        },
-      ],
+      ...linuxBrowserSteps(file),
       [
         FOR_SYSTEM_TOOLS,
         {
@@ -581,6 +589,7 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
         },
       ],
     ],
+    unprobed: linuxBrowserSteps(file),
     undoTitle: "to remove it later",
     undo: [
       [IN_FIREFOX, { path: [...FIREFOX_AUTHORITIES, "Trawler Proxy CA", "Delete or Distrust…"] }],
@@ -976,6 +985,7 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
               undo: trust.undo,
+              unprobed: trust.unprobed && [saveCaStep(caFormatFor("this")), ...trust.unprobed],
             },
     },
     route: {

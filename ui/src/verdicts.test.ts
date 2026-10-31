@@ -36,6 +36,7 @@ import {
   trustByTraffic,
   trustedEmulators,
   trustedSimulators,
+  SYSTEM_TOOLS_TRUSTED,
   trustStatus,
   STATE_WORDS,
   TUNNEL_GRACE_MS,
@@ -112,6 +113,15 @@ test("trustStatus: the local probe is the whole state, said as done or not done"
     tone: "muted",
     short: "not done — not installed",
   });
+});
+
+// W12's W6: where the probe read only the system's store, done says whose trust it is.
+test("trustStatus: a trusted store reads as the caller names it, and only when trusted", () => {
+  expect(trustStatus("trusted", null, UNREAD, SYSTEM_TOOLS_TRUSTED)).toMatchObject({
+    glyph: "✓",
+    short: "done — trusted by the system's tools",
+  });
+  expect(trustStatus("absent", null, UNREAD, SYSTEM_TOOLS_TRUSTED).short).toBe("not done — not installed");
 });
 
 // D2: a copy in the keychain nobody marked Always Trust is its own answer.

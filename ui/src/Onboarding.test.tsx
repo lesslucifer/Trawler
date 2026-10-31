@@ -673,6 +673,9 @@ describe("a trusted certificate is removed by its own button", () => {
       screen.queryByRole("button", { name: "remove the certificate" }),
     ).toBeNull();
     expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
+    cleanup();
+    draw({ os: "linux", trustProbe: "absent" });
+    expect(within(task(1)).getByText(/^sudo cp /)).toBeInTheDocument();
   });
 
   it("waits for a reading in flight", () => {
@@ -3168,7 +3171,7 @@ describe("This machine where no probe answers", () => {
     expect(task(2)).toHaveTextContent(
       `done — step 3's request came through at ${clock(at)}`,
     );
-    expect(within(task(1)).queryByText("3 steps")).toBeNull();
+    expect(within(task(1)).getByText("3 steps")).toBeInTheDocument();
     expect(within(task(2)).queryByText("1 step")).toBeNull();
   });
 
@@ -3520,4 +3523,134 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
       ),
     ).toBeInTheDocument();
   });
+});
+
+// W12's W2: each host names its own prompt. macOS asks for a password, Windows
+// for an approval, and Windows does not ask before the proxy changes.
+describe("the prompt each host shows, and none where it shows none", () => {
+  const pending = () => vi.fn(() => new Promise<void>(() => {}));
+
+  it("a Windows No reads as a cancelled approval, not a password prompt", async () => {
+    draw({
+      os: "windows",
+      onSetUpThisMachine: vi.fn(() =>
+        Promise.reject({
+          refused: true,
+          detail: "The operation was canceled by the user.",
+        }),
+      ),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "set up this PC" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "the approval was cancelled. Try again, or do it by hand.",
+        ),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/password/)).toBeNull();
+  });
+
+  it.each(["windows"] as const)(
+    "on %s, setting the proxy names no prompt",
+    async (os) => {
+      draw({
+        os,
+        trustProbe: "trusted",
+        proxy: { status: "none", address: null },
+        onSetProxy: pending(),
+      });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "set the system proxy" }),
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("set-proxy-status")).toHaveTextContent(
+          "setting the proxy…",
+        ),
+      );
+      expect(screen.queryByText(/prompt/)).toBeNull();
+    },
+  );
+
+  it.each(["windows"] as const)(
+    "on %s, turning the proxy off names no prompt",
+    async (os) => {
+      draw({
+        os,
+        trustProbe: "trusted",
+        proxy: { status: "ours", address: "127.0.0.1:7420" },
+        onUnsetProxy: pending(),
+      });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "stop routing through Trawler" }),
+      );
+
+      await waitFor(() =>
+        expect(screen.getByTestId("unset-proxy-status")).toHaveTextContent(
+          "turning the proxy off…",
+        ),
+      );
+      expect(screen.queryByText(/prompt/)).toBeNull();
+    },
+  );
+
+  it("on macOS, setting the proxy still asks for the prompt it opens", async () => {
+    draw({
+      trustProbe: "trusted",
+      proxy: { status: "none", address: null },
+      onSetProxy: pending(),
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "set the system proxy" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("set-proxy-status")).toHaveTextContent(
+        "approve the prompt that just opened",
+      ),
+    );
+  });
+});
+
+// W12's W6: Linux's probe reads the system's store, which no browser reads, so
+// a done certificate task says whose trust it read and keeps the browsers' steps.
+describe("This Linux machine's certificate, trusted by the system's tools", () => {
+  it("reads whose trust it is, and keeps Firefox's and Chrome's steps with the way back", () => {
+    draw({ os: "linux", trustProbe: "trusted" });
+
+    expect(screen.getByTestId("task-1-state")).toHaveTextContent(
+      /done — trusted by the system's tools$/,
+    );
+    fireEvent.click(within(task(1)).getByText("3 steps"));
+    expect(
+      within(task(1)).getAllByText("In Firefox's Settings, click", {
+        exact: false,
+      }),
+    ).toHaveLength(2);
+    expect(
+      within(task(1)).getAllByText("For Chrome, run:")[0],
+    ).toBeInTheDocument();
+    expect(within(task(1)).queryByText(/^sudo cp /)).toBeNull();
+    expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
+    cleanup();
+    draw({ os: "linux", trustProbe: "absent" });
+    expect(within(task(1)).getByText(/^sudo cp /)).toBeInTheDocument();
+  });
+
+  it.each(["macos", "windows"] as const)(
+    "on %s, the store it read is the one the browsers read",
+    (os) => {
+      draw({ os, trustProbe: "trusted" });
+
+      expect(screen.getByTestId("task-1-state")).toHaveTextContent(
+        /done — installed and trusted$/,
+      );
+    },
+  );
 });

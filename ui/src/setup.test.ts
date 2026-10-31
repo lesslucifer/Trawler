@@ -1219,3 +1219,20 @@ describe("This Linux machine's by-hand routes", () => {
     expect(linux().tryLead).toBe("In a terminal, run:");
   });
 });
+
+// W12's W6: the probe reads the system's store, so the browsers' steps are
+// what a done certificate task still offers, with the file they import.
+describe("the steps a probe leaves open", () => {
+  it("on this Linux machine, saving the file, then Firefox and Chrome", () => {
+    const { unprobed } = setup("this", { os: "linux" }).trust.guide!;
+    expect(unprobed!.map((step) => step.find((p) => typeof p === "string"))).toEqual([
+      "Save Trawler's certificate as trawler-ca.pem",
+      "In Firefox's Settings, click",
+      "For Chrome, run:",
+    ]);
+  });
+
+  it.each(["macos", "windows"] as const)("on %s, none: its browsers read the store it probes", (os) => {
+    expect(setup("this", { os }).trust.guide!.unprobed).toBeUndefined();
+  });
+});

@@ -632,7 +632,9 @@ function expectedTrustState(s: State): RegExp {
       : /^◐\s*can't check here — the request in step 3 confirms it$/;
   if (m.trustConcluded)
     return {
-      trusted: /^✓\s*done — installed and trusted$/,
+      trusted: browsersUnprobed(s)
+        ? /^✓\s*done — trusted by the system's tools$/
+        : /^✓\s*done — installed and trusted$/,
       installed: /^○\s*not done — installed, not trusted$/,
       absent: /^○\s*not done — not installed$/,
     }[s.trust as "trusted" | "installed" | "absent"];
@@ -645,6 +647,12 @@ function expectedTrustState(s: State): RegExp {
   if (m.refused) return /^⚠\s*not working — nothing decrypted$/;
   return /^◐\s*can't check here — .+'s first HTTPS request confirms it$/;
 }
+
+// This Linux machine's probe reads the system's store only, and its browsers
+// keep their own: the done task says so and keeps their steps (W12's W6).
+const browsersUnprobed = (s: State) =>
+  s.platform === "this" && (s.os === "linux" || s.os === "other");
+const STEP_COUNT = /^\d+ steps?$/;
 
 function expectedRouteState(s: State): RegExp {
   const m = model(s);
@@ -826,9 +834,12 @@ const RULES: Record<string, Rule> = {
       ...(m.trustDone ? [m.trustN] : []),
       ...(m.routeDone ? [m.routeN] : []),
     ].map((n) => task(o, n));
+    const keeps = (t: { n: number }, g: string) =>
+      WAY_BACK.has(g) ||
+      (t.n === m.trustN && browsersUnprobed(s) && STEP_COUNT.test(g));
     const wrong = done.filter(
       (t) =>
-        t.guides.some((g) => !WAY_BACK.has(g)) ||
+        t.guides.some((g) => !keeps(t, g)) ||
         t.openGuides.some(
           (g) => g !== "details" && !(WAY_BACK.has(g) && POINTS.test(t.text)),
         ) ||

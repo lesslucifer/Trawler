@@ -89,6 +89,7 @@ import {
   trafficStatus,
   trustedEmulators,
   trustedSimulators,
+  SYSTEM_TOOLS_TRUSTED,
   trustStatus,
   TUNNEL_GRACE_MS,
   verdict,
@@ -129,7 +130,7 @@ const UNANSWERED = "choose a device";
 // renames the file in the save dialog.
 type ActionNotes = Partial<
   Record<ActionState, ActionNote | ((named: string) => ActionNote)>
->;
+> & { refused?: string };
 
 interface ActionNote {
   tone: NoticeTone;
@@ -139,8 +140,12 @@ interface ActionNote {
 // A prompt the user dismissed is not a failure the OS gets to word: it is the
 // one outcome they chose, and the way back in is the same button or the steps
 // below it (F18). The tool's own text is still payload, and stays reachable.
+// Each host names its own prompt: macOS asks for a password, Windows for an
+// approval (W12's W2).
 const PROMPT_CANCELLED =
   "the password prompt was cancelled. Try again, or do it by hand.";
+const APPROVAL_CANCELLED =
+  "the approval was cancelled. Try again, or do it by hand.";
 
 // An approval the OS could not show never reached the user, so it is not theirs
 // to have cancelled (-60007); the task's state line says what it left undone.
@@ -156,17 +161,23 @@ const PROMPT_UNSHOWABLE =
 // says the one thing left to the user, so neither repeats the other (F19).
 const APPROVE = "approve the prompt that just opened";
 
-const SETUP_NOTE: ActionNotes = {
+const setupNote = (os: HostOs): ActionNotes => ({
+  refused: os === "windows" ? APPROVAL_CANCELLED : PROMPT_CANCELLED,
   running: { tone: "pending", text: APPROVE },
   nothing: {
     tone: "mute",
     text: "nothing changed — the other proxy is still the one in use, and the certificate was not installed.",
   },
   failed: { tone: "warn", text: "setting up failed — do it by hand below." },
-};
+});
 
-const SETPROXY_NOTE: ActionNotes = {
-  running: { tone: "pending", text: APPROVE },
+// Only macOS asks before the proxy changes: Windows and GNOME write the user's
+// own settings, so their notes name no prompt (W12's W2).
+const setProxyNote = (os: HostOs): ActionNotes => ({
+  running: {
+    tone: "pending",
+    text: os === "macos" ? APPROVE : "setting the proxy…",
+  },
   nothing: {
     tone: "mute",
     text: "nothing changed — the other proxy is still the one in use.",
@@ -175,7 +186,7 @@ const SETPROXY_NOTE: ActionNotes = {
     tone: "warn",
     text: "setting the proxy failed — do it by hand below.",
   },
-};
+});
 
 const REMOVE_CA_NOTE: ActionNotes = {
   running: { tone: "pending", text: "removing the certificate…" },
@@ -185,16 +196,19 @@ const REMOVE_CA_NOTE: ActionNotes = {
   },
 };
 
-const UNSETPROXY_NOTE: ActionNotes = {
+const unsetProxyNote = (os: HostOs): ActionNotes => ({
   running: {
     tone: "pending",
-    text: "turning the proxy off — approve the prompt…",
+    text:
+      os === "macos"
+        ? "turning the proxy off — approve the prompt…"
+        : "turning the proxy off…",
   },
   failed: {
     tone: "warn",
     text: "couldn't turn the proxy off — do it by hand below.",
   },
-};
+});
 
 // Arming is the shell's dialog and then the bind. A yes needs no note — what is
 // listening is the task's state, and it says so a line above. A no does: the
@@ -329,7 +343,7 @@ function ActionNote({
 }) {
   const failed = action.state === "failed" ? action.failure : undefined;
   const prompt = failed?.refused
-    ? PROMPT_CANCELLED
+    ? (note.refused ?? PROMPT_CANCELLED)
     : failed?.unshowable
       ? PROMPT_UNSHOWABLE
       : null;
@@ -810,6 +824,11 @@ function guideFor(
       guide: { ...guide, undo: undefined },
       summary: underButton ? MANUAL : stepCount(guide),
     };
+  if (guide.unprobed)
+    return {
+      guide: { ...guide, steps: guide.unprobed },
+      summary: underButton ? MANUAL : stepCount({ steps: guide.unprobed }),
+    };
   return guide.undo?.length
     ? {
         guide: { steps: guide.undo },
@@ -1195,6 +1214,7 @@ function PlatformSetup({
           trustProbe,
           busy(setUp, "installing"),
           byOwnRequest("trust", ownProofAt, tryStep),
+          setup.trust.guide?.unprobed && SYSTEM_TOOLS_TRUSTED,
         )
       : adb
         ? emulatorTrustStatus(
@@ -1328,7 +1348,7 @@ function PlatformSetup({
         label={`set up ${here}`}
         caption={ONE_ACT_CAPTION[os === "windows" ? "windows" : "macos"]}
         action={setUp}
-        note={SETUP_NOTE}
+        note={setupNote(os)}
         onClick={setUpHere}
         disabled={probing}
       />
@@ -1347,7 +1367,7 @@ function PlatformSetup({
           label="set the system proxy"
           frame={bare(next === "set-proxy")}
           action={setProxyAction}
-          note={SETPROXY_NOTE}
+          note={setProxyNote(os)}
           onClick={setProxyHere}
           disabled={probing}
         />
@@ -1359,7 +1379,7 @@ function PlatformSetup({
             label="stop routing through Trawler"
             caption={stopRoutingNote(trustDone)}
             action={unsetProxyAction}
-            note={UNSETPROXY_NOTE}
+            note={unsetProxyNote(os)}
             onClick={unsetProxyAction.trigger}
             frame="bare"
             disabled={probing}
