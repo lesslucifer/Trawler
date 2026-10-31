@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W15
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "a row for the window's e2e and the walkthrough red on this host at the epic tip, the app's abort and the two emulator journeys"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: Another Ubuntu machine imports in each browser's own settings and sets its proxy on GNOME's page, no sudo on its path"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: Another Ubuntu machine walked by hand, Chrome's and the system store's commands as other ways, This machine on Linux keeping its probed store as a step, both Linux guides undoing by hand first, no lead naming the desktop"
+  - path: "docs/work/2026-09-17-onboarding-design-run.html"
+    tier: T3
+    action: updated
+    distills: "round 23 of the design run: Another Ubuntu machine's browsers and proxy walked by hand, the ways back by hand first, closed on the owner's word"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status line names W15"
+  - path: "docs/work/2026-11-01-onboard-revamp-w15-another-ubuntu-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W15's plan: findings, the rulings, W6's hand-ins and the Chrome shot list"
+  - path: "docs/work/2026-11-01-onboard-revamp-w15-another-ubuntu-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W15's result: what shipped against the plan's rows, the deviations, the evidence"
