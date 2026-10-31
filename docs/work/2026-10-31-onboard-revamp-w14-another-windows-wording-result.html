@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae614539f34851f0dfade9b" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W14 result: Another Windows PC's wording and display</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W14 — result: Another Windows PC's wording and display</h1>
+      <p>Another Windows PC is walked by hand from the .cer Windows opens, with This PC's recordings, and each command is the other way. Every desktop's way back is by hand first.</p>
+      <div class="meta">v1 · 2026-11-01 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W14</span> · branch <code>wu/onboard-revamp/another-windows-wording</code> · <a href="2026-10-31-onboard-revamp-w14-another-windows-wording-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="2026-09-17-onboarding-design-run.html">design run</a>, round 22</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>Another Windows PC, allowing declined → the state line, and <em>not allowed</em> alone under the button</td><td>as expected, on every off-machine platform (E3, Q1)</td><td>delivered</td></tr>
+      <tr><td>allowed → open <code>/ca.cer</code>, open <code>trawler-ca.cer</code> from Downloads, Install Certificate → Trusted Root Certification Authorities with its recording, Finish and Yes; the no-administrator command under <em>other ways</em></td><td>as expected; the import steps are This PC's own, shared (I1, W3, E1, Q2, Q3)</td><td>delivered</td></tr>
+      <tr><td>task 3's steps → Settings → Network &amp; internet → Proxy → Manual proxy setup with its recording, the server and port above, Save; what to check behind its ?; the command under <em>other ways</em> with its restart note behind a ?</td><td>as expected, on This PC too, which shares the route (I2, E2, N1, N2)</td><td>delivered</td></tr>
+      <tr><td>tasks 2 and 3 read done → each way back by hand first, then its commands; the certificate's reaches both stores; no <em>WinINET</em></td><td>as expected (W1, W2, I3, Q4)</td><td>delivered</td></tr>
+      <tr><td>This PC, every state → the same ways back and the user-store command</td><td>as expected; its routes and recordings unchanged (Q1)</td><td>delivered</td></tr>
+      <tr><td>the close dialog on a Windows host → <em>In PowerShell, run:</em> and the proxy-off command</td><td>as expected; the dialog keeps the command alone (W1, Q4)</td><td>delivered</td></tr>
+      <tr><td>X1 → a Mac's proxy way back by hand first</td><td>This Mac, Another Mac and the Simulator (which follows this Mac's proxy): System Settings → … → Proxies, both off, OK; the command as <em>Or</em> with Ethernet behind its ?</td><td>delivered</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code> green with that PC's new chapters</td><td>green: 24 reels, 166 chapters; that PC's <em>download-help</em> and <em>route-open</em> on every host, and every off-machine <em>arm-declined</em> expecting <em>not allowed</em> alone</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>commits 4, 5, 6: the words, then the routes, then the ways back</td><td>one commit (<code>f85ab1f3</code>)</td><td>all three rebuilt the same Windows block of <code>setup.ts</code>, and the tests that hold them change together</td></tr>
+      <tr><td>the round reviewed before the build</td><td>closed on "just execute it"</td><td>the owner's word after round 22 was drafted</td></tr>
+      <tr><td>—</td><td>the test "setup's undo is routeUndo" now reads "setup's undo runs routeUndo's commands"</td><td>Q4 parts the setup screen's way back (by hand first) from the close dialog's (the command alone) on purpose</td></tr>
+      <tr><td>—</td><td>the walkthrough clicks only a <em>?</em> it can see</td><td>that PC's command <em>?</em> sits inside a shut <em>other ways</em></td></tr>
+      <tr><td>—</td><td>the design run's snapshot was refused (413)</td><td>the htmldoc server's body limit, already noted in W5's result; git holds the round's diff</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code> (that PC walked by hand: the .cer download, This PC's import steps with the recording, Settings' page with its recording, each command the other way without an administrator, one certificate way back for both Windows guides reaching both stores, the proxy's way back by hand first, no WinINET, what outranks the proxy and what the command leaves open apps behind a ?; a Mac's proxy way back by hand first on This Mac, Another Mac and the Simulator; the setup screen's ways back run the close dialog's commands; the format per platform) · <code>ui/src/proxyTargets.test.ts</code> (Windows' lead names PowerShell) · <code>xtask/src/walkthrough.rs</code> (W14's findings listed)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code> (the declined outcome alone, the state line said once; that PC's certificate and proxy by hand, each command shut under <em>other ways</em>) · <code>ui/src/App.test.tsx</code> (the refused confirm) · <code>ui/src/onboardingMatrix.test.tsx</code> (every reading, unchanged rules, green) · <code>ui/src/ProxyCloseDialog.test.tsx</code> (green)</td></tr>
+      <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> at the tip: green (4 specs, 46 tests). The by-hand steps run on a second PC, which is not hermetic: waived at the WU, judged on the reels, the journeys and the real-PC walk W20's</td></tr>
+      <tr><td>suites</td><td>UI 65 files, 32,238 tests green · <code>tsc -b</code> and eslint green · xtask 306 + suites green</td></tr>
+      <tr><td>design</td><td>round 22 of the design run, closed and archived on "just execute it" (<code>0074aa81</code>). No new component</td></tr>
+      <tr><td>commits</td><td>plan <code>63673443</code> · <code>c8de843e</code> · round 22 <code>7499a409</code>, closed <code>0074aa81</code> · build <code>f85ab1f3</code> · walkthrough <code>a39f9ef0</code> · T2 <code>bbbf7586</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> says Another Windows PC is walked by hand from the .cer Windows opens with This PC's recordings, its certificate command needs no administrator, both Windows guides share one way back reaching both stores, every desktop's proxy way back is by hand first while the quit dialog keeps the command, and a declined allow reads <em>not allowed</em> alone. Its index row follows. <a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>'s scope row that handed Windows' wording here reads settled. No component contract changed.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W15–W19: each platform's own words, and W15 Ubuntu's proxy way back by hand first like the other desktops. W20: the setup journeys in e2e, and a real Windows PC walking the steps: whether Windows shows its Open File warning before a downloaded .cer, and the Settings route reaching running apps.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
