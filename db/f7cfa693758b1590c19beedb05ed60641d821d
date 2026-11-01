@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU android-emulator-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W17
+branch: wu/onboard-revamp/android-emulator-wording
+base: fccdd1fe6d8840bf27cb0d6afe6d7760ebffe172
+head: dbf7cfa693758b1590c19beedb05ed60641d821d
+diff_sha256: 81298f4512bbd39e440f0736cca3f8a3211c4d549c9c95b7bd605f11a6cc841c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 3
+  stage_seconds:
+    gate0: 167
+    total: 190
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "setUpEmulator in App.tsx repeats the two invokes of installOnEmulators and routeEmulators"
+    waived: "the same shape as setUpSimulator beside it, which repeats trust_simulators and set_proxy; one act is two calls in order, and sharing them through the thenRead-wrapped handlers would re-read the machine between the halves"
+  - finding: "setup.ts names Android Studio's default SDK folders in the adb-not-found help while the shell finds them separately"
+    waived: "the help is shown only when the shell found no SDK, so it cannot quote what the shell found; it names where a stock install puts it, which is the user's fix"
+  - finding: "routeUndo(\"android-sim\", os) without an sdk, as the quit dialog calls it, prints a bare adb"
+    waived: "the quit dialog holds no SDK reading; recorded as a follow-up in the WU result"
+verdict: PASS
+date: 2026-11-01
