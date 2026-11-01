@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W16
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: updated
+    distills: "v8: its quoted screen lines say task where they point at one; no rule changed"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the iOS Simulator leads with buttons since simctl asks for no password, and a line that points at a task names a task"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the Simulator's one act, trust in the Simulator, open the Simulator and open it in the Simulator, no restart, Simulator's own erase, no Simulator running; the framing order puts the certificate task's own control first; the act table gains the Simulator's acts; task, never step"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status line names W16, ruled and built"
+  - path: "docs/work/2026-11-01-onboard-revamp-w16-ios-simulator-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W16's plan: findings from the reel and a throwaway Simulator, W7's hand-ins, the owner's rulings and the waived design run"
+  - path: "docs/work/2026-11-01-onboard-revamp-w16-ios-simulator-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W16's result: what shipped, the deviations, the evidence and the follow-ups"
