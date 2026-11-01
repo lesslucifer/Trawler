@@ -13,10 +13,11 @@ use serde::Deserialize;
 
 pub const FINDINGS: std::ops::RangeInclusive<u32> = 1..=30;
 pub const SUPERSEDED: [(&str, &str); 1] = [("R20", "W3.D8")];
-pub const REVAMP_FINDINGS: [&str; 24] = [
+pub const REVAMP_FINDINGS: [&str; 36] = [
     "W3.D6", "W3.D8", "W12.E1", "W12.E2", "W12.E3", "W12.E4", "W13.E1", "W13.I1", "W13.I2",
     "W13.R1", "W14.E3", "W14.I1", "W14.I2", "W14.N2", "W15.E1", "W15.E2", "W15.I2", "W15.N2",
-    "W16.E1", "W16.E2", "W16.E3", "W16.I1", "W16.I3", "W16.W4",
+    "W16.E1", "W16.E2", "W16.E3", "W16.I1", "W16.I3", "W16.W4", "W17.D1", "W17.E1", "W17.E2",
+    "W17.E3", "W17.I1", "W17.I2", "W17.I3", "W17.I4", "W17.I5", "W17.N1", "W17.W4", "W17.I6",
 ];
 pub const HOSTS: [&str; 3] = ["macos", "windows", "linux"];
 pub const PLATFORMS: [&str; 8] =
@@ -660,6 +661,7 @@ mod tests {
         let mut plan = full_plan();
         plan.reels[1].launches[0].chapters[0].findings.push("W3.D6".into());
         plan.reels[1].launches[0].chapters[0].findings.push("W16.I1".into());
+        plan.reels[1].launches[0].chapters[0].findings.push("W17.I5".into());
         assert_eq!(judge_plan(&plan), Ok(()));
         plan.reels[2].launches[0].chapters[0].findings.push("W3.D9".into());
         assert!(judge_plan(&plan).unwrap_err().contains("W3.D9, which is no finding"));

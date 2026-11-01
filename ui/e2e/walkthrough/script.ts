@@ -24,9 +24,16 @@ export type ProxyOs =
   "unset" | "unreadable" | { set: { host: string; port: number } };
 export type Outcome = "ok" | { fails: { stderr: string } };
 
+export type EmulatorProxyOs = "ours" | "wifi-only" | "foreign" | "none" | "unreadable";
+
 export interface Patch {
   trust?: TrustOs;
   simulators?: { name: string; trust: TrustOs }[];
+  emulators?: { name: string; trust: TrustOs; proxy: EmulatorProxyOs }[];
+  android?: { adb: boolean; sdk: string | null; avd: { id: string; name: string } | null };
+  install_emulators?: Outcome;
+  route_emulators?: Outcome;
+  unroute_emulators?: Outcome;
   proxy?: ProxyOs;
   set_up?: Outcome;
   set_proxy?: Outcome;
@@ -514,20 +521,63 @@ function iosSim(host: Host): Chapter[] {
   ];
 }
 
+// The SDK where Android Studio puts it on each host, as its shell writes it.
+const ANDROID_SDK: Record<Host, string> = {
+  macos: "$HOME/Library/Android/sdk",
+  windows: "$env:LOCALAPPDATA\\Android\\Sdk",
+  linux: "$HOME/Android/Sdk",
+};
+const AVD = { id: "Pixel_7_API_35", name: "Pixel 7 API 35" };
+const EMULATOR = AVD.name;
+
 function androidSim(host: Host): Chapter[] {
   const chapters: Chapter[] = [
     firstPaint(host),
     picker(host),
     {
       id: "chosen",
-      title: "The Android emulator chosen",
+      title: "The Android emulator chosen, none running",
       act: async (w) => {
+        await w.script({ android: { adb: true, sdk: ANDROID_SDK[host], avd: AVD }, emulators: [] });
         await w.closePicker();
         await w.choose("Android emulator");
       },
-      expect: `each task carries its own steps and the first guide is open. Nothing observes the emulator, so the guide does not advance by itself (the rule Q3 keeps). The certificate task saves trawler-ca.cer, pushes it with adb and picks trawler-ca.cer in the installer, and names no .pem`,
-      findings: ["R10", "R26", "R28"],
-      anchor: [task(1)],
+      expect: `task 1 reads "not done — no emulator running", its steps open and "open ${EMULATOR}" the one framed control. The certificate task saves trawler-ca.cer, pushes it with the SDK's own adb (${ANDROID_SDK[host]}) and picks trawler-ca.cer in the installer, its Settings path set apart with its ? after the last name; it names no .pem`,
+      findings: ["R10", "R26", "R28", "W17.W4", "W17.I4", "W17.N1", "W17.D1"],
+      anchor: [button(`open ${EMULATOR}`)],
+    },
+    {
+      id: "running",
+      title: "An emulator running",
+      act: async (w) => {
+        await w.script({ emulators: [{ name: EMULATOR, trust: "absent", proxy: "none" }] });
+        await w.recheck();
+      },
+      expect: `"set up the emulator", the one framed control, above the tasks; task 1 reads "not done — not in ${EMULATOR}" with its save, push and Settings path shut under "do it by hand"; neither task has a button of its own`,
+      findings: ["W17.E1", "W17.E2"],
+      anchor: [button("set up the emulator")],
+    },
+    {
+      id: "set-up",
+      title: "The emulator set up",
+      act: async (w) => {
+        await w.click("set up the emulator");
+        await w.recheck();
+      },
+      expect: `task 1 reads "done — trusted in ${EMULATOR}" and task 2 "done — ${EMULATOR} routes through Trawler", with "stop routing the emulator" bare inside it; task 3's "open it in the emulator" is the one framed control, the marked address beside it`,
+      findings: ["W17.I1", "W17.I2", "W17.E3", "W17.I3", "W17.I6"],
+      anchor: [button("open it in the emulator")],
+    },
+    {
+      id: "no-su",
+      title: "An emulator whose image has no su",
+      act: async (w) => {
+        await w.script({ emulators: [{ name: EMULATOR, trust: "unreadable", proxy: "none" }] });
+        await w.recheck();
+      },
+      expect: `no one act; task 1's steps open on "send it to the emulator", the one framed control, then the path from Encryption & credentials; task 2 offers "route the emulator", bare`,
+      findings: ["W17.I5"],
+      anchor: [button("send it to the emulator")],
     },
   ];
   if (host === "linux")
