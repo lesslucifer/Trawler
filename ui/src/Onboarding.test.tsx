@@ -3977,12 +3977,13 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     expect(shape()).toEqual(idle);
   });
 
-  // S2: adb lists one still booting, and its button waits beside the line that says so.
-  it("with one starting, the button waits and says it is starting", () => {
+  // S2: adb lists one still booting: task 1 says so, once, and the button waits.
+  it("with one starting, task 1 says so and the button waits", () => {
     emulator({ emulators: [], emulatorStarting: true });
 
     expect(within(zone("one-act")!).getByRole("button", { name: "open Pixel 7 API 35" })).toBeDisabled();
-    expect(zone("emulator-starting")).toHaveTextContent("starting the emulator…");
+    expect(task(1)).toHaveTextContent("not done — the emulator is starting");
+    expect(screen.getByTestId("steps")).not.toHaveTextContent("no emulator running");
     expect(framed()).toEqual([]);
   });
 

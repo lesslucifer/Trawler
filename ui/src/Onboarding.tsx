@@ -216,8 +216,6 @@ const OPEN_EMULATOR_CAPTION = "It starts the emulator you used last.";
 const OPEN_EMULATOR_THEN_SET_UP =
   `${OPEN_EMULATOR_CAPTION} Once it runs, setting it up takes this place.`;
 
-const EMULATOR_STARTING = "starting the emulator…";
-
 // adb and su ask for nothing, so no note names a prompt (W17's Q3).
 const SET_UP_EMULATOR_NOTE: ActionNotes = {
   running: { tone: "pending", text: "setting up the emulator…" },
@@ -1379,6 +1377,7 @@ function PlatformSetup({
             reading,
             evidence,
             confirmHttpsOn(platform, os),
+            emulatorStarting,
           )
         : addressTest
           ? addressTrustStatus(
@@ -1545,8 +1544,7 @@ function PlatformSetup({
   const bare = (framed: boolean) => (framed ? undefined : ("bare" as const));
 
   // While none runs, the place the one act will stand starts the emulator; a
-  // start already under way holds it, the button waiting above its line (W17's
-  // S1, S2).
+  // start already under way leaves the button waiting (W17's S1, S2).
   const opener =
     start === undefined ? null : !("open" in start) ? (
       <div
@@ -1569,11 +1567,6 @@ function PlatformSetup({
           frame={bare(next === "start")}
           disabled={!startHere}
         />
-        {emulatorStarting && (
-          <div data-testid="emulator-starting" className="pt-chrome-y">
-            <Notice tone="pending">{EMULATOR_STARTING}</Notice>
-          </div>
-        )}
       </div>
     );
 

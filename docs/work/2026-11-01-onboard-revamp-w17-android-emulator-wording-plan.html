@@ -390,8 +390,8 @@ flowchart TB
         in place, disabled until one runs. Starting it swaps the lead's button, and nothing else moves</td></tr>
       <tr><td>S2</td><td>adb lists an emulator while it boots, and its store and proxy read <em>unknown</em> until
         Android is up: the screen passes through the no-<code>su</code> layout first</td><td>an emulator counts as
-        running once <code>sys.boot_completed</code> reads 1. Before that the lead reads <em>starting the
-        emulator…</em> in place of its button</td></tr>
+        running once <code>sys.boot_completed</code> reads 1. Before that task 1 reads <em>not done — the emulator
+        is starting</em>, and the lead's button waits, disabled</td></tr>
       <tr><td>S3</td><td>whether <code>su</code> answers is known only once one runs, so a Google Play image changes
         layout as it starts</td><td>the AVD used last says it: <code>PlayStore.enabled</code> in its
         <code>config.ini</code>. A Play image shows <em>send it to the emulator</em>'s layout before it runs</td></tr>

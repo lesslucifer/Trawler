@@ -1140,7 +1140,7 @@ describe("the emulator's commands reach every emulator running, and route it on 
       "adb not found? Android Studio puts it in ~/Library/Android/sdk/platform-tools — set ANDROID_HOME if your SDK is elsewhere.",
     );
     expect(helps(guides(emulator({ os: "windows" })))).toContain(
-      "adb not found? Android Studio puts it in %LOCALAPPDATA%\\Android\\Sdk\\platform-tools — set ANDROID_HOME if your SDK is elsewhere.",
+      "adb not found? Android Studio puts it in $env:LOCALAPPDATA\\Android\\Sdk\\platform-tools — set ANDROID_HOME if your SDK is elsewhere.",
     );
   });
 

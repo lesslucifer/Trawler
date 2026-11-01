@@ -1044,6 +1044,16 @@ describe("the emulator's certificate and proxy", () => {
     expect(emulatorTrustStatus(null, null, reading(), NO_EVIDENCE, CONFIRM_HTTPS).short).not.toMatch(/no emulator/);
   });
 
+  // W17's S2: one adb lists still booting is not running yet, and is said to be starting.
+  it("says the emulator is starting where one boots and none runs", () => {
+    expect(emulatorTrustStatus([], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS, true)).toEqual(
+      verdict("not-done", "the emulator is starting"),
+    );
+    expect(emulatorTrustStatus([], null, reading(), decrypted, CONFIRM_HTTPS, true).short).toBe(
+      "done — a request decrypted at 14:02",
+    );
+  });
+
   // S2: its own services refuse a user certificate it holds.
   it("never reads a refusal as its certificate not working", () => {
     for (const read of [null, [emu("Pixel 7 API 35", "unknown")]])

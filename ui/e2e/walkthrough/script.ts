@@ -559,9 +559,9 @@ function androidSim(host: Host): Chapter[] {
         await w.script({ android: { ...SDK, starting: true } });
         await w.recheck();
       },
-      expect: `"open ${EMULATOR}" disabled in its place, "starting the emulator…" under it; the tasks as they were`,
+      expect: `"open ${EMULATOR}" disabled in its place; task 1 reads "not done — the emulator is starting", and nothing else changed`,
       findings: ["W17.S2"],
-      anchor: ['[data-testid="emulator-starting"]'],
+      anchor: [task(1)],
     },
     {
       id: "running",

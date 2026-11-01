@@ -1295,7 +1295,7 @@ function emulatorTool(target: OsTarget, sdk: string | null): string {
 const SDK_HOME: Record<OsTarget, string> = {
   macos: "~/Library/Android/sdk",
   linux: "~/Android/Sdk",
-  windows: "%LOCALAPPDATA%\\Android\\Sdk",
+  windows: "$env:LOCALAPPDATA\\Android\\Sdk",
 };
 
 const adbNotFound = (target: OsTarget): HelpPart => ({
