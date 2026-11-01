@@ -118,6 +118,8 @@ export type RouteName =
 export interface RoutePart {
   open: RouteName;
   label: string;
+  // It acts on a device that is not running yet (W17's S1).
+  disabled?: boolean;
 }
 // A recording of a step no route finishes, named here and bundled by the
 // screen, so this module stays free of assets (W12's M1).
@@ -203,6 +205,9 @@ export interface PlatformSetup {
   // The route that has the device itself make its marked request.
   deviceRoute?: RoutePart;
   deviceRouteHelp?: HelpPart;
+  // What starts the device while none runs: above the tasks, where the one act
+  // stands once one does (W17's S1).
+  start?: RoutePart | GuideStep;
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
@@ -1319,9 +1324,9 @@ const EMULATOR_HOST_HELP: HelpPart = {
 };
 
 // The dialog's own words on Android 15: Uninstall, then OK (W17's W2).
-const EMULATOR_UNINSTALL: GuideStep = [
+const emulatorUninstall = (trustedCredentials: RoutePart): GuideStep => [
   "Open",
-  { open: "trusted-credentials", label: "open Trusted credentials" },
+  trustedCredentials,
   "and tap",
   { path: [CA_NAME, "Uninstall", "OK"] },
 ];
@@ -1343,16 +1348,17 @@ const emulatorProxy = (value: string) => `shell settings put global http_proxy $
 // reading lands.
 export interface EmulatorContext {
   running?: boolean;
-  // su answered on every emulator running, so the shell writes its store.
+  // su answers on every emulator running, so the shell writes its store; with
+  // none running, the AVD used last says whether it will (W17's S3).
   rooted?: boolean;
   sdk?: AndroidSdk;
 }
 
-// With none running, the steps start by opening the AVD used last (W17's I4).
-function openEmulatorStep(avd: AndroidSdk["avd"]): GuideStep {
+// With none running, the AVD used last is opened from above the tasks (W17's I4, S1).
+function startEmulator(avd: AndroidSdk["avd"]): RoutePart | GuideStep {
   return avd === null
     ? ["In Android Studio, open", { path: ["Device Manager"] }, "and create an emulator."]
-    : [`Open ${avd.name}`, { open: "emulator", label: `open ${avd.name}` }];
+    : { open: "emulator", label: `open ${avd.name}` };
 }
 
 function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined, emulator: EmulatorContext): PlatformSetup {
@@ -1371,11 +1377,16 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
     { path: [...EMULATOR_SECURITY, ...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] },
     EMULATOR_USER_CA,
   ];
-  const sends = emulator.running === true && emulator.rooted === false;
+  // While none runs, the controls that act on one stand where they will, and
+  // wait for it (W17's S1).
+  const onEmulator = (part: RoutePart): RoutePart =>
+    emulator.running === false ? { ...part, disabled: true } : part;
+  const uninstall = emulatorUninstall(onEmulator({ open: "trusted-credentials", label: "open Trusted credentials" }));
+  const sends = emulator.rooted === false;
   const trust: Guide = sends
     ? {
         steps: [
-          ["Send Trawler's certificate to the emulator", { open: "emulator-certificate", label: "send it to the emulator" }],
+          ["Send Trawler's certificate to the emulator", onEmulator({ open: "emulator-certificate", label: "send it to the emulator" })],
           ["On the screen it opens, tap", { path: [...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] }, EMULATOR_USER_CA],
         ],
         alternatives: [
@@ -1388,11 +1399,10 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
           ],
         ],
         undoTitle: "to remove it later",
-        undo: [EMULATOR_UNINSTALL],
+        undo: [uninstall],
       }
     : {
         steps: [
-          ...(emulator.running === false ? [openEmulatorStep(avd)] : []),
           saveCaStep(format),
           [withEmulatorRunning(target), push, ...missingAdb],
           install,
@@ -1402,7 +1412,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
             ? [[`Or ${lowered(RUN_IN[target])}`, { command: `${emulatorTool(target, sdk)} -avd ${avd.id}`, label: "the start command" }]]
             : undefined,
         undoTitle: "to remove it later",
-        undo: [EMULATOR_UNINSTALL],
+        undo: [uninstall],
       };
   const route: Guide = {
     steps: [
@@ -1441,8 +1451,10 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
     trust: { title: "In the emulator, install the certificate", guide: trust },
     route: { title: "In the emulator, set the proxy", guide: route },
     try: tryTask("android-sim", os),
-    deviceRoute: emulator.running ? { open: "emulator-request", label: "open it in the emulator" } : undefined,
-    deviceRouteHelp: emulator.running ? CHROME_WELCOME : undefined,
+    deviceRoute:
+      emulator.running === undefined ? undefined : onEmulator({ open: "emulator-request", label: "open it in the emulator" }),
+    deviceRouteHelp: emulator.running === undefined ? undefined : CHROME_WELCOME,
+    start: emulator.running === false ? startEmulator(avd) : undefined,
     confirmOn: confirmOn("android-sim", os),
     refusedAfterProof: REFUSED_AFTER_PROOF_ANDROID,
   };

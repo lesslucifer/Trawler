@@ -185,7 +185,7 @@ const EMULATORS: Record<TrustProbe, EmulatorReading[]> = {
 const ANDROID_SDK = {
   adb: true,
   sdk: "$HOME/Library/Android/sdk",
-  avd: { id: "Pixel_7_API_35", name: EMULATOR },
+  avd: { id: "Pixel_7_API_35", name: EMULATOR, playStore: false },
 };
 
 const ARMED: ReachState = {
@@ -391,6 +391,8 @@ const WAY_BACK = new Set([
 const UNDO_SUMMARIES = new Set(["to remove it later", "to turn it off later"]);
 // A sentence that sends the reader to the steps under it (W12's W1).
 const POINTS = /the steps below|do it by hand below/i;
+const ON_EMULATOR =
+  /^(install in the emulator|route the emulator|open it in the emulator|send it to the emulator|open Trusted credentials)$/;
 const ACTION_LABEL =
   /^(set up |set the system proxy|stop routing|install in the emulator|route the emulator)/;
 
@@ -409,6 +411,7 @@ interface Outline {
   tasks: TaskOutline[];
   oneAct: string | null;
   framed: string[];
+  disabled: string[];
   labels: string[];
   between: string[];
   proven: string | null;
@@ -464,6 +467,9 @@ function outline(): Outline {
     labels: [...steps.querySelectorAll("button:not([aria-label])")].map(
       (b) => b.textContent?.trim() ?? "",
     ),
+    disabled: [...steps.querySelectorAll("button:not([aria-label])")]
+      .filter((b) => (b as HTMLButtonElement).disabled)
+      .map((b) => b.textContent?.trim() ?? ""),
     between: children
       .filter(
         (el) => !isTask(el) && el.getAttribute("data-testid") !== "one-act",
@@ -570,17 +576,19 @@ function model(s: State) {
   // answering; "unknown" is none running (RUNNING).
   const simulatorRunning = sharedWire && s.trust !== "unknown";
   // An emulator runs wherever the sweep reads one; su answered where its store
-  // read trusted or absent, so the shell writes it (EMULATORS, W17's Q2).
+  // read trusted or absent, so the shell writes it (EMULATORS, W17's Q2). With
+  // none running, the AVD used last is no Play image, so su will (W17's S3),
+  // and the layout is the one a running emulator shows (W17's S1).
   const emulatorRunning = emulator && s.trust !== "unknown";
-  const emulatorRooted =
-    emulator && (s.trust === "trusted" || s.trust === "absent");
+  const emulatorDown = emulator && !emulatorRunning;
+  const emulatorRooted = emulator && s.trust !== "installed";
   const oneAct =
     (((probesTrust || simulatorRunning) && auto) || emulatorRooted) &&
     !trustDone &&
     !routeDone;
   const trustSimulators = simulatorRunning && !oneAct && !trustDone;
   const installEmulators = emulatorRooted && !oneAct && !trustDone;
-  const routeEmulators = emulatorRunning && !oneAct && !routeDone;
+  const routeEmulators = emulator && !oneAct && !routeDone;
   // What the try task's clock says now: a refusal inside the window is "not
   // decrypting", however new the tunnel after it; one before it is quiet.
   const notDecryptingNow =
@@ -614,6 +622,7 @@ function model(s: State) {
     installEmulators,
     routeEmulators,
     emulatorRunning,
+    emulatorDown,
     trustSimulators,
     notDecryptingNow,
     here: deviceName("this", s.os),
@@ -833,6 +842,12 @@ const RULES: Record<string, Rule> = {
     (o, s) => {
       const m = model(s);
       if (o.framed.length > 1) return `framed: ${o.framed.join(", ")}`;
+      // With none running, what starts one is the next thing, and the sweep
+      // hands the screen no route to start it with (W17's S1).
+      if (m.emulatorDown)
+        return o.framed.length === 0
+          ? null
+          : `framed [${o.framed}], expected none`;
       // The Simulator's task 1 outranks task 2 while not done: its button, or
       // its open guide's route, which the sweep draws without the shell's open.
       // A failure that opened task 2's steps instead leaves the proxy's framed.
@@ -940,9 +955,24 @@ const RULES: Record<string, Rule> = {
       const m = model(s);
       const above = o.oneAct !== null && /^set up /.test(o.oneAct);
       const inTasks = withAction(o, "set up ");
-      return above === m.oneAct && inTasks.length === 0
+      const expected = m.oneAct && !m.emulatorDown;
+      return above === expected && inTasks.length === 0
         ? null
-        : `one act above: ${above}, in tasks [${inTasks}], expected ${m.oneAct}`;
+        : `one act above: ${above}, in tasks [${inTasks}], expected ${expected}`;
+    },
+
+  "time and place: with no emulator running, opening the AVD used last stands where the one act will, and what acts on one waits (W17's S1)":
+    (o, s) => {
+      const m = model(s);
+      const opens = o.oneAct !== null && o.oneAct.startsWith(`open ${EMULATOR}`);
+      if (opens !== m.emulatorDown)
+        return `above the tasks: ${o.oneAct}, expected the opener ${m.emulatorDown}`;
+      const live = o.labels.filter(
+        (label) => ON_EMULATOR.test(label) && !o.disabled.includes(label),
+      );
+      return m.emulatorDown && live.length > 0
+        ? `with none running, [${live}] can be clicked`
+        : null;
     },
 
   "time and place: the emulator's install and route exactly while its reading offers them, each in its own task (W17's I1, I2)":
@@ -1335,7 +1365,7 @@ describe("every offered action, in every outcome", () => {
     const button = [
       ...screen.getByTestId("steps").querySelectorAll("button"),
     ].find((b) => (b.textContent ?? "").trim().startsWith(a.label));
-    if (button === undefined) return;
+    if (button === undefined || button.disabled) return;
 
     await act(async () => {
       fireEvent.click(button);
@@ -1393,7 +1423,7 @@ describe("every offered action, while it runs", () => {
     const button = [
       ...screen.getByTestId("steps").querySelectorAll("button"),
     ].find((b) => (b.textContent ?? "").trim().startsWith(a.label));
-    if (button === undefined) return;
+    if (button === undefined || button.disabled) return;
 
     await act(async () => {
       fireEvent.click(button);

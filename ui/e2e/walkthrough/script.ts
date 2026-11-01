@@ -30,7 +30,12 @@ export interface Patch {
   trust?: TrustOs;
   simulators?: { name: string; trust: TrustOs }[];
   emulators?: { name: string; trust: TrustOs; proxy: EmulatorProxyOs }[];
-  android?: { adb: boolean; sdk: string | null; avd: { id: string; name: string } | null };
+  android?: {
+    adb: boolean;
+    sdk: string | null;
+    avd: { id: string; name: string; playStore?: boolean } | null;
+    starting?: boolean;
+  };
   install_emulators?: Outcome;
   route_emulators?: Outcome;
   unroute_emulators?: Outcome;
@@ -531,6 +536,7 @@ const AVD = { id: "Pixel_7_API_35", name: "Pixel 7 API 35" };
 const EMULATOR = AVD.name;
 
 function androidSim(host: Host): Chapter[] {
+  const SDK = { adb: true, sdk: ANDROID_SDK[host], avd: AVD };
   const chapters: Chapter[] = [
     firstPaint(host),
     picker(host),
@@ -538,23 +544,34 @@ function androidSim(host: Host): Chapter[] {
       id: "chosen",
       title: "The Android emulator chosen, none running",
       act: async (w) => {
-        await w.script({ android: { adb: true, sdk: ANDROID_SDK[host], avd: AVD }, emulators: [] });
+        await w.script({ android: SDK, emulators: [] });
         await w.closePicker();
         await w.choose("Android emulator");
       },
-      expect: `task 1 reads "not done — no emulator running", its steps open and "open ${EMULATOR}" the one framed control. The certificate task saves trawler-ca.cer, pushes it with the SDK's own adb (${ANDROID_SDK[host]}) and picks trawler-ca.cer in the installer, its Settings path set apart with its ? after the last name; it names no .pem`,
-      findings: ["R10", "R26", "R28", "W17.W4", "W17.I4", "W17.N1", "W17.D1"],
+      expect: `"open ${EMULATOR}" the one framed control above the tasks, where "set up the emulator" will stand; task 1 reads "not done — no emulator running" with its save, its push (the SDK's own adb, ${ANDROID_SDK[host]}) and its Settings path shut under "do it by hand", as task 2's steps are; task 3's "open it in the emulator" stands disabled`,
+      findings: ["R10", "R26", "R28", "W17.W4", "W17.I4", "W17.N1", "W17.S1"],
       anchor: [button(`open ${EMULATOR}`)],
+    },
+    {
+      id: "starting",
+      title: "The emulator starting",
+      act: async (w) => {
+        await w.script({ android: { ...SDK, starting: true } });
+        await w.recheck();
+      },
+      expect: `"open ${EMULATOR}" disabled in its place, "starting the emulator…" under it; the tasks as they were`,
+      findings: ["W17.S2"],
+      anchor: ['[data-testid="emulator-starting"]'],
     },
     {
       id: "running",
       title: "An emulator running",
       act: async (w) => {
-        await w.script({ emulators: [{ name: EMULATOR, trust: "absent", proxy: "none" }] });
+        await w.script({ android: SDK, emulators: [{ name: EMULATOR, trust: "absent", proxy: "none" }] });
         await w.recheck();
       },
-      expect: `"set up the emulator", the one framed control, above the tasks; task 1 reads "not done — not in ${EMULATOR}" with its save, push and Settings path shut under "do it by hand"; neither task has a button of its own`,
-      findings: ["W17.E1", "W17.E2"],
+      expect: `"set up the emulator", the one framed control, where "open ${EMULATOR}" stood; task 1 reads "not done — not in ${EMULATOR}", its steps still shut under "do it by hand"; task 3's "open it in the emulator" enabled; nothing else moved`,
+      findings: ["W17.E1", "W17.E2", "W17.S1"],
       anchor: [button("set up the emulator")],
     },
     {
@@ -569,14 +586,25 @@ function androidSim(host: Host): Chapter[] {
       anchor: [button("open it in the emulator")],
     },
     {
+      id: "play-chosen",
+      title: "A Google Play image used last, none running",
+      act: async (w) => {
+        await w.script({ android: { ...SDK, avd: { ...AVD, playStore: true } }, emulators: [] });
+        await w.recheck();
+      },
+      expect: `"open ${EMULATOR}" framed above the tasks, no one act to come; task 1's steps open on "send it to the emulator", disabled, then the path from Encryption & credentials; task 2's "route the emulator" and task 3's "open it in the emulator" disabled`,
+      findings: ["W17.S3"],
+      anchor: [button(`open ${EMULATOR}`)],
+    },
+    {
       id: "no-su",
       title: "An emulator whose image has no su",
       act: async (w) => {
         await w.script({ emulators: [{ name: EMULATOR, trust: "unreadable", proxy: "none" }] });
         await w.recheck();
       },
-      expect: `no one act; task 1's steps open on "send it to the emulator", the one framed control, then the path from Encryption & credentials; task 2 offers "route the emulator", bare`,
-      findings: ["W17.I5"],
+      expect: `the layout before it ran, its buttons enabled and the opener gone: task 1's steps open on "send it to the emulator", the one framed control, then the path from Encryption & credentials, its ? after trawler-ca.cer; task 2 offers "route the emulator", bare`,
+      findings: ["W17.I5", "W17.S3", "W17.D1"],
       anchor: [button("send it to the emulator")],
     },
   ];

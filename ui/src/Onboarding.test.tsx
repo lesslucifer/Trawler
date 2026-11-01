@@ -3923,7 +3923,7 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
   const SDK = {
     adb: true,
     sdk: "$HOME/Library/Android/sdk",
-    avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35" },
+    avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false },
   };
   const emulator = (props: Props) => {
     draw({
@@ -3941,20 +3941,62 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     pick("Android emulator");
   };
 
-  // W4, I4 · Q4: the shell read every emulator there is, and opening the AVD
-  // used last comes first.
-  it("with none running, says so, and opening the AVD used last is the one framed control", () => {
+  // W4, I4 · Q4 · S1: the shell read every emulator there is, and opening the
+  // AVD used last stands where the one act will.
+  it("with none running, says so, and opening the AVD used last is the one framed control, where the one act will stand", async () => {
     const onOpenRoute = vi.fn(async () => {});
     emulator({ emulators: [], onOpenRoute });
 
     expect(task(1)).toHaveTextContent("not done — no emulator running");
     expect(framed()).toEqual(["open Pixel 7 API 35"]);
+    expect(within(zone("one-act")!).getByRole("button", { name: "open Pixel 7 API 35" })).toBeEnabled();
+    openHelp(zone("one-act")!);
+    expect(helpText(zone("one-act")!).join(" ")).toMatch(/Once it runs, setting it up takes this place/);
     for (const name of ["set up the emulator", "install in the emulator", "route the emulator"])
       expect(screen.queryByRole("button", { name })).toBeNull();
-    expect(screen.queryByTestId("open-on-device")).toBeNull();
+    expect(guideOpen(1, MANUAL)).toBe(false);
+    expect(guideOpen(2, MANUAL)).toBe(false);
+    expect(within(zone("open-on-device")!).getByRole("button", { name: "open it in the emulator" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "open Pixel 7 API 35" }));
-    expect(onOpenRoute).toHaveBeenCalledWith("emulator");
+    await waitFor(() => expect(onOpenRoute).toHaveBeenCalledWith("emulator"));
+  });
+
+  // S1: an emulator starting swaps the button above the tasks, and moves nothing else.
+  it("lays the tasks out the same with none running as with one, nothing done", () => {
+    const shown = (el: Element) => el.parentElement?.closest("details") === null;
+    const shape = () =>
+      [1, 2, 3].map((n) => ({
+        guides: [...task(n).querySelectorAll("details")].filter(shown).map((d) => d.querySelector("summary")?.textContent),
+        buttons: [...task(n).querySelectorAll("button:not([aria-label])")].filter(shown).map((b) => b.textContent),
+      }));
+    emulator({ emulators: [] });
+    const idle = shape();
+    cleanup();
+    emulator({ emulators: running("absent") });
+    expect(shape()).toEqual(idle);
+  });
+
+  // S2: adb lists one still booting, and its button waits beside the line that says so.
+  it("with one starting, the button waits and says it is starting", () => {
+    emulator({ emulators: [], emulatorStarting: true });
+
+    expect(within(zone("one-act")!).getByRole("button", { name: "open Pixel 7 API 35" })).toBeDisabled();
+    expect(zone("emulator-starting")).toHaveTextContent("starting the emulator…");
+    expect(framed()).toEqual([]);
+  });
+
+  // S3: a Google Play image has no su, so its layout is the one with no one act
+  // before it runs, its buttons waiting.
+  it("with a Google Play image used last and none running, lays out send it to the emulator, disabled", () => {
+    emulator({ emulators: [], androidSdk: { ...SDK, avd: { ...SDK.avd, playStore: true } } });
+
+    expect(framed()).toEqual(["open Pixel 7 API 35"]);
+    openHelp(zone("one-act")!);
+    expect(helpText(zone("one-act")!).join(" ")).not.toMatch(/setting it up/);
+    expect(screen.queryByRole("button", { name: "set up the emulator" })).toBeNull();
+    expect(screen.getByRole("button", { name: "send it to the emulator" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "route the emulator" })).toBeDisabled();
   });
 
   // No reading - adb not found, or a read not landed - never says none runs.

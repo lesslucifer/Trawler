@@ -38,3 +38,21 @@ describe("a step's words", () => {
     expect(words().className).toContain("flex-wrap");
   });
 });
+
+// W17's S1: a route to a device that is not running stands in place, waiting,
+// and frames nothing.
+describe("a route that waits for its device", () => {
+  it("is disabled and never the framed control", () => {
+    render(
+      <StepParts
+        step={["Send it", { open: "emulator-certificate", label: "send it to the emulator", disabled: true }]}
+        open={() => undefined}
+        framed
+      />,
+    );
+
+    const send = screen.getByRole("button", { name: "send it to the emulator" });
+    expect(send).toBeDisabled();
+    expect(send.className).not.toContain("border-hairline");
+  });
+});

@@ -551,7 +551,7 @@ async function emulator() {
 const EMULATOR_SDK = {
   adb: true,
   sdk: "$HOME/Library/Android/sdk",
-  avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35" },
+  avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false },
 };
 
 function emulatorReads(

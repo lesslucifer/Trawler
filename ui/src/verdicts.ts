@@ -451,15 +451,18 @@ export interface EmulatorReading extends SimulatorTrust {
 }
 
 // The Android SDK as the shell found it (W17's N1, I4): whether adb answered,
-// the SDK its commands name as the host's shell writes it, and the AVD used last.
+// the SDK its commands name as the host's shell writes it, and the AVD used
+// last - a Google Play image's build has no su (W17's S3).
 export interface AndroidSdk {
   adb: boolean;
   sdk: string | null;
-  avd: { id: string; name: string } | null;
+  avd: { id: string; name: string; playStore: boolean } | null;
 }
 
+// starting: adb lists an emulator that has not finished booting (W17's S2).
 export interface EmulatorRead extends AndroidSdk {
   emulators: EmulatorReading[];
+  starting: boolean;
 }
 
 const each = (read: readonly SimulatorTrust[], every: string) =>

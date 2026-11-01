@@ -1020,6 +1020,7 @@ export default function App({
           simulators={simulators}
           emulators={emulatorRead?.adb ? emulatorRead.emulators : null}
           androidSdk={emulatorRead}
+          emulatorStarting={emulatorRead?.starting ?? false}
           savedCa={savedCa}
           deviceMark={mark}
           device={device}

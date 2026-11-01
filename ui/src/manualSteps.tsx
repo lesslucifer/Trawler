@@ -57,14 +57,16 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
   const scans = step.filter(isScan);
   const media = step.filter(isMedia);
   const frame = (control: boolean) => (framed && control ? {} : ({ frame: "bare", tone: "mute" } as const));
-  const firstControl = said.findIndex((part) => typeof part === "object" && (isRoute(part) || isSave(part)));
+  const firstControl = said.findIndex(
+    (part) => typeof part === "object" && ((isRoute(part) && !part.disabled) || isSave(part)),
+  );
   const parts = said.map((part, i) => {
     if (typeof part === "string") return <span key={i}>{part}</span>;
     if ("copy" in part) return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
     if (isPath(part)) return <MenuPath key={i} path={part.path} />;
     if (isRoute(part))
       return open ? (
-        <Button key={i} {...frame(i === firstControl)} onClick={() => open(part.open)}>
+        <Button key={i} {...frame(i === firstControl)} onClick={() => open(part.open)} disabled={part.disabled}>
           {part.label}
         </Button>
       ) : null;

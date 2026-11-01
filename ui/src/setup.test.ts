@@ -1144,11 +1144,14 @@ describe("the emulator's commands reach every emulator running, and route it on 
     );
   });
 
-  // W17's I4 · Q4: with none running, the steps open the AVD used last.
-  it("starts by opening the AVD used last only while none runs", () => {
-    const avd = { id: "Pixel_7_API_35", name: "Pixel 7 API 35" };
-    const idle = emulator({ emulator: { running: false, sdk: { adb: true, sdk: "$HOME/Library/Android/sdk", avd } } });
-    expect(idle.trust.guide!.steps[0]).toEqual(["Open Pixel 7 API 35", { open: "emulator", label: "open Pixel 7 API 35" }]);
+  // W17's I4 · Q4 · S1: with none running, the AVD used last is opened from
+  // above the tasks, and the steps are the ones a running emulator shows.
+  it("starts the AVD used last from above the tasks only while none runs", () => {
+    const avd = { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false };
+    const sdk = { adb: true, sdk: "$HOME/Library/Android/sdk", avd };
+    const idle = emulator({ emulator: { running: false, rooted: true, sdk } });
+    expect(idle.start).toEqual({ open: "emulator", label: "open Pixel 7 API 35" });
+    expect(idle.trust.guide!.steps).toEqual(emulator({ emulator: { running: true, rooted: true, sdk } }).trust.guide!.steps);
     expect(commands(idle.trust.guide!.alternatives!)).toEqual([
       `"$HOME/Library/Android/sdk/emulator/emulator" -avd Pixel_7_API_35`,
     ]);
@@ -1156,9 +1159,22 @@ describe("the emulator's commands reach every emulator running, and route it on 
       `"$HOME/Library/Android/sdk/emulator/emulator" -avd Pixel_7_API_35 -http-proxy http://127.0.0.1:9999`,
     );
     const none = emulator({ emulator: { running: false, sdk: { adb: true, sdk: null, avd: null } } });
-    expect(none.trust.guide!.steps[0]).toEqual(["In Android Studio, open", { path: ["Device Manager"] }, "and create an emulator."]);
-    for (const running of [undefined, true])
-      expect(emulator({ emulator: { running, rooted: true } }).trust.guide!.steps).toEqual(emulator().trust.guide!.steps);
+    expect(none.start).toEqual(["In Android Studio, open", { path: ["Device Manager"] }, "and create an emulator."]);
+    for (const running of [undefined, true]) expect(emulator({ emulator: { running, rooted: true } }).start).toBeUndefined();
+  });
+
+  // W17's S1: what acts on an emulator stands in place while none runs, and waits for one.
+  it("keeps what acts on an emulator in place while none runs, disabled", () => {
+    const idle = emulator({ emulator: { running: false, rooted: false } });
+    const running = emulator({ emulator: { running: true, rooted: false } });
+    expect(idle.trust.guide!.steps[0]).toEqual([
+      "Send Trawler's certificate to the emulator",
+      { open: "emulator-certificate", label: "send it to the emulator", disabled: true },
+    ]);
+    expect(running.trust.guide!.steps[0][1]).toEqual({ open: "emulator-certificate", label: "send it to the emulator" });
+    expect(idle.trust.guide!.undo![0][1]).toEqual({ open: "trusted-credentials", label: "open Trusted credentials", disabled: true });
+    expect(idle.deviceRoute).toEqual({ open: "emulator-request", label: "open it in the emulator", disabled: true });
+    expect(running.deviceRoute).toEqual({ open: "emulator-request", label: "open it in the emulator" });
   });
 
   // W17's I5: with no su, the shell sends the file and opens the screen that
@@ -1180,10 +1196,10 @@ describe("the emulator's commands reach every emulator running, and route it on 
     expect(saves(s)).toBe(1);
   });
 
-  // W17's I3: its own Chrome makes its request, once one runs to make it.
-  it("offers its request in the emulator only while one runs, with Chrome's welcome behind a ?", () => {
+  // W17's I3: its own Chrome makes its request, once adb reads the emulator.
+  it("offers its request in the emulator once adb reads it, with Chrome's welcome behind a ?", () => {
     expect(emulator().deviceRoute).toBeUndefined();
-    expect(emulator({ emulator: { running: false } }).deviceRoute).toBeUndefined();
+    expect(emulator().deviceRouteHelp).toBeUndefined();
     const running = emulator({ emulator: { running: true, rooted: true } });
     expect(running.deviceRoute).toEqual({ open: "emulator-request", label: "open it in the emulator" });
     expect(running.deviceRouteHelp?.help).toMatch(/Use without an account/);

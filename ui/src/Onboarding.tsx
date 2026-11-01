@@ -204,6 +204,20 @@ const TRUST_SIMULATORS_NOTE: ActionNotes = {
 const TRUST_SIMULATORS_CAPTION =
   "It trusts Trawler's certificate in every Simulator running now. Each keeps its own store: one you create or erase later needs this again.";
 
+const OPEN_EMULATOR_NOTE: ActionNotes = {
+  running: { tone: "pending", text: "opening it…" },
+  failed: {
+    tone: "warn",
+    text: "couldn't open it — open it from Android Studio's Device Manager.",
+  },
+};
+
+const OPEN_EMULATOR_CAPTION = "It starts the emulator you used last.";
+const OPEN_EMULATOR_THEN_SET_UP =
+  `${OPEN_EMULATOR_CAPTION} Once it runs, setting it up takes this place.`;
+
+const EMULATOR_STARTING = "starting the emulator…";
+
 // adb and su ask for nothing, so no note names a prompt (W17's Q3).
 const SET_UP_EMULATOR_NOTE: ActionNotes = {
   running: { tone: "pending", text: "setting up the emulator…" },
@@ -974,6 +988,8 @@ interface SetupProps {
   // `null` is no reading: adb not found, or a read not landed (W17's W4).
   emulators?: readonly EmulatorReading[] | null;
   androidSdk?: AndroidSdk | null;
+  // adb lists an emulator that has not finished booting (W17's S2).
+  emulatorStarting?: boolean;
   savedCa?: SavedCa;
   // Another device (DEC-63) - the Simulator, whose wire is this machine's too,
   // and the emulator, which arrives on its loopback, among them: the mark its
@@ -1106,6 +1122,7 @@ function PlatformSetup({
   simulators = NO_SIMULATORS,
   emulators = NO_EMULATORS,
   androidSdk = null,
+  emulatorStarting = false,
   savedCa,
   deviceMark,
   device = UNMIXED,
@@ -1159,11 +1176,19 @@ function PlatformSetup({
   const installEmulators = useAction(onInstallOnEmulators);
   const routeEmulators = useAction(onRouteEmulators);
   const unrouteEmulators = useAction(onUnrouteEmulators);
+  const openEmulator = useAction(
+    onOpenRoute && (() => onOpenRoute("emulator")),
+  );
   const running = emulators ?? NO_EMULATORS;
   const emulatorsRunning = running.length > 0;
-  // su answered on every one running, so the shell writes each store (W17's I1).
-  const emulatorsRooted =
-    emulatorsRunning && running.every((e) => e.trust !== "unknown");
+  // adb read none running. The screen keeps the layout one running will show,
+  // and what acts on one waits for it (W17's S1).
+  const emulatorDown = adb && emulators !== null && !emulatorsRunning;
+  // su answered on every one running, so the shell writes each store (W17's
+  // I1); with none, the AVD used last says whether it will (W17's S3).
+  const emulatorsRooted = emulatorsRunning
+    ? running.every((e) => e.trust !== "unknown")
+    : emulatorDown && androidSdk?.avd?.playStore !== true;
   const saveCa = useAction(onSaveCa && (() => onSaveCa(caFormatFor(platform))));
   const setProxyAction = useAction(
     onSetProxy && (() => onSetProxy().then(routing("set"))),
@@ -1197,7 +1222,7 @@ function PlatformSetup({
     simulatorsRunning: simulators === null ? undefined : simulatorsRunning,
     emulator: {
       running: emulators === null ? undefined : emulatorsRunning,
-      rooted: emulatorsRunning ? emulatorsRooted : undefined,
+      rooted: emulators === null ? undefined : emulatorsRooted,
       sdk: androidSdk ?? undefined,
     },
   });
@@ -1283,16 +1308,21 @@ function PlatformSetup({
   const oneActRoute = adb
     ? routeEmulators.trigger !== undefined
     : routeHere && setProxyAction.trigger !== undefined;
-  const setUpHere =
-    oneActStore && oneActRoute && !trustDone && !routeDone
-      ? setUp.trigger
-      : undefined;
+  // The one act's place is above the tasks whether or not it can run yet: with
+  // no emulator running, the button that starts one stands there instead.
+  const setUpLeads =
+    oneActStore &&
+    oneActRoute &&
+    !trustDone &&
+    !routeDone &&
+    setUp.trigger !== undefined;
+  const setUpHere = setUpLeads && !emulatorDown ? setUp.trigger : undefined;
   const installEmulatorsHere =
-    adb && emulatorsRooted && setUpHere === undefined && !trustDone
+    adb && emulatorsRooted && !setUpLeads && !trustDone
       ? installEmulators.trigger
       : undefined;
   const routeEmulatorsHere =
-    adb && emulatorsRunning && setUpHere === undefined && !routeDone
+    adb && (emulatorsRunning || emulatorDown) && !setUpLeads && !routeDone
       ? routeEmulators.trigger
       : undefined;
   // Its reversal answers the proxy adb read, never traffic that only reached.
@@ -1301,11 +1331,11 @@ function PlatformSetup({
       ? unrouteEmulators.trigger
       : undefined;
   const trustSimulatorsHere =
-    ownStore && simulatorsRunning && setUpHere === undefined && !trustDone
+    ownStore && simulatorsRunning && !setUpLeads && !trustDone
       ? trustSimulators.trigger
       : undefined;
   const setProxyHere =
-    routeHere && setUpHere === undefined && !routeDone
+    routeHere && !setUpLeads && !routeDone
       ? setProxyAction.trigger
       : undefined;
   const reverseHere =
@@ -1404,12 +1434,12 @@ function PlatformSetup({
     trustDone,
     trustDone
       ? removeHere !== undefined
-      : setUpHere !== undefined ||
+      : setUpLeads ||
           trustSimulatorsHere !== undefined ||
           installEmulatorsHere !== undefined,
   );
   const routeUnderButton =
-    setUpHere !== undefined ||
+    setUpLeads ||
     setProxyHere !== undefined ||
     routeEmulatorsHere !== undefined;
   const routeGuide = guideFor(
@@ -1453,7 +1483,7 @@ function PlatformSetup({
       guidesOpen &&
       trustGuide !== undefined &&
       !trustDone &&
-      setUpHere === undefined &&
+      !setUpLeads &&
       trustSimulatorsHere === undefined &&
       installEmulatorsHere === undefined);
   const routeGuideOpen =
@@ -1471,7 +1501,7 @@ function PlatformSetup({
   // Everything else is bare (W12's E1, E2; W16's E2).
   const proved = traffic.lastDecryptedAt !== null;
   const requestHere = platform === "this" || setup.deviceRoute !== undefined;
-  const next:
+  type Next =
     | "set-up"
     | "trust-simulators"
     | "install-emulators"
@@ -1480,7 +1510,9 @@ function PlatformSetup({
     | "route-emulators"
     | "route-guide"
     | "request"
-    | null = setUpHere
+    | "start"
+    | null;
+  const byOrder: Next = setUpHere
     ? "set-up"
     : trustSimulatorsHere
       ? "trust-simulators"
@@ -1497,7 +1529,53 @@ function PlatformSetup({
                 : requestHere && trustDone && routeDone && !proved
                   ? "request"
                   : null;
+  // With none running, everything left to do waits on one: what starts it is
+  // the next thing, wherever it can be clicked (W17's S1).
+  const start = emulatorDown ? setup.start : undefined;
+  const startHere =
+    start !== undefined &&
+    "open" in start &&
+    !emulatorStarting &&
+    openEmulator.trigger !== undefined;
+  const next: Next = !emulatorDown
+    ? byOrder
+    : startHere && !(trustDone && routeDone && proved)
+      ? "start"
+      : null;
   const bare = (framed: boolean) => (framed ? undefined : ("bare" as const));
+
+  // While none runs, the place the one act will stand starts the emulator; a
+  // start already under way holds it, the button waiting above its line (W17's
+  // S1, S2).
+  const opener =
+    start === undefined ? null : !("open" in start) ? (
+      <div
+        data-testid="one-act"
+        className="px-4 font-ui text-body text-ink-body"
+      >
+        <StepParts step={start} />
+      </div>
+    ) : (
+      <div data-testid="one-act" className="px-4">
+        <Action
+          testId="open-emulator"
+          label={start.label}
+          caption={
+            setUpLeads ? OPEN_EMULATOR_THEN_SET_UP : OPEN_EMULATOR_CAPTION
+          }
+          action={openEmulator}
+          note={OPEN_EMULATOR_NOTE}
+          onClick={openEmulator.trigger ?? (() => undefined)}
+          frame={bare(next === "start")}
+          disabled={!startHere}
+        />
+        {emulatorStarting && (
+          <div data-testid="emulator-starting" className="pt-chrome-y">
+            <Notice tone="pending">{EMULATOR_STARTING}</Notice>
+          </div>
+        )}
+      </div>
+    );
 
   // It does both tasks, so it belongs to neither: it leads them, and says which
   // it does (W12's E1).
@@ -1536,7 +1614,7 @@ function PlatformSetup({
           action={routeEmulators}
           note={ROUTE_EMULATORS_NOTE}
           onClick={routeEmulatorsHere}
-          disabled={probing}
+          disabled={probing || emulatorDown}
         />
       )}
       {unrouteEmulatorsHere && (
@@ -1599,7 +1677,7 @@ function PlatformSetup({
           />
         )}
 
-        {oneAct}
+        {opener ?? oneAct}
 
         <GuidedTask
           n={first + 1}
@@ -1634,7 +1712,7 @@ function PlatformSetup({
                 note={INSTALL_EMULATORS_NOTE}
                 onClick={installEmulatorsHere}
                 frame={bare(next === "install-emulators")}
-                disabled={probing}
+                disabled={probing || emulatorDown}
               />
             )) ||
             (removeHere && (
@@ -1739,6 +1817,7 @@ function PlatformSetup({
                   onClick={() => open(setup.deviceRoute!.open)}
                   frame={bare(next === "request")}
                   tone={next === "request" ? undefined : "mute"}
+                  disabled={setup.deviceRoute.disabled}
                 >
                   {setup.deviceRoute.label}
                 </Button>
