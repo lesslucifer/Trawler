@@ -126,7 +126,9 @@ fn succeeded(status_ok: bool, stderr: &str) -> bool {
     status_ok || stderr.contains(ALREADY_IN_KEYCHAIN)
 }
 
-#[cfg_attr(not(feature = "scenario"), tauri::command)]
+// Off the main thread: the Simulator's request reads xcode-select, may ask
+// Spotlight, and runs simctl once per running Simulator.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn open_route(route: Route) -> Result<(), SetupError> {
     let cert = staged(&route)?;
     let sims = match route {
