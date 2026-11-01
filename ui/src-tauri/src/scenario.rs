@@ -13,7 +13,8 @@ use serde::Deserialize;
 use crate::setup::{
     command_failed, read_proxy, read_proxy_among, trust_word, EmulatorProxy, EmulatorReading,
     ProxyRead, ProxyReading, SetupError, SimulatorTrust, Trust, NO_INSTALL_DETAIL,
-    NO_REMOVE_DETAIL, NO_SET_PROXY_DETAIL, NO_UNSET_PROXY_DETAIL,
+    NO_REMOVE_DETAIL, NO_SET_PROXY_DETAIL, NO_SIMULATOR_RUNNING, NO_SIMULATOR_TRUST_DETAIL,
+    NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -107,6 +108,7 @@ pub struct Scenario {
     set_proxy: Outcome,
     unset_proxy: Outcome,
     remove_ca: Outcome,
+    trust_simulators: Outcome,
     allow_reach: bool,
     allow_replace: bool,
     interface_names: HashMap<String, String>,
@@ -123,6 +125,7 @@ pub struct Patch {
     set_proxy: Option<Outcome>,
     unset_proxy: Option<Outcome>,
     remove_ca: Option<Outcome>,
+    trust_simulators: Option<Outcome>,
     allow_reach: Option<bool>,
     allow_replace: Option<bool>,
     interface_names: Option<HashMap<String, String>>,
@@ -139,6 +142,7 @@ impl Scenario {
             set_proxy,
             unset_proxy,
             remove_ca,
+            trust_simulators,
             allow_reach,
             allow_replace,
             interface_names,
@@ -166,6 +170,9 @@ impl Scenario {
         }
         if let Some(v) = remove_ca {
             self.remove_ca = v;
+        }
+        if let Some(v) = trust_simulators {
+            self.trust_simulators = v;
         }
         if let Some(v) = allow_reach {
             self.allow_reach = v;
@@ -228,6 +235,17 @@ impl Scenario {
     fn unset_proxy(&mut self) -> Result<(), SetupError> {
         run(&self.unset_proxy, NO_UNSET_PROXY_DETAIL)?;
         self.proxy = ProxyOs::Unset;
+        Ok(())
+    }
+
+    fn trust_simulators(&mut self) -> Result<(), SetupError> {
+        if self.simulators.is_empty() {
+            return Err(crate::setup::setup_error(NO_SIMULATOR_RUNNING));
+        }
+        run(&self.trust_simulators, NO_SIMULATOR_TRUST_DETAIL)?;
+        for simulator in &mut self.simulators {
+            simulator.trust = TrustOs::Trusted;
+        }
         Ok(())
     }
 
@@ -296,6 +314,11 @@ pub fn set_proxy(state: Shared<'_>, host: String, port: u16) -> Result<(), Setup
 #[tauri::command]
 pub fn unset_proxy(state: Shared<'_>) -> Result<(), SetupError> {
     with(&state, Scenario::unset_proxy)
+}
+
+#[tauri::command]
+pub fn trust_simulators(state: Shared<'_>) -> Result<(), SetupError> {
+    with(&state, Scenario::trust_simulators)
 }
 
 #[tauri::command]
@@ -383,6 +406,7 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             set_up_this_machine,
             unset_proxy,
             remove_ca,
+            trust_simulators,
             proxy_status,
             proxy_in_use,
             interface_names,
@@ -416,6 +440,21 @@ mod tests {
         assert!(!s.allow_reach && !s.allow_replace);
         assert_eq!(s.simulators_reading(), []);
         assert_eq!(s.emulators_reading(), []);
+    }
+
+    #[test]
+    fn trusting_the_simulators_trusts_every_one_running_and_fails_as_scripted() {
+        let mut s = patched(
+            r#"{"simulators":[{"name":"iPhone 17 Pro","trust":"absent"},{"name":"iPad mini","trust":"unreadable"}]}"#,
+        );
+        s.trust_simulators().expect("trusted");
+        assert!(s.simulators.iter().all(|sim| sim.trust == TrustOs::Trusted));
+        let mut failing = patched(
+            r#"{"simulators":[{"name":"iPhone 17 Pro","trust":"absent"}],"trust_simulators":{"fails":{"stderr":"simctl: error"}}}"#,
+        );
+        assert!(failing.trust_simulators().is_err());
+        assert_eq!(failing.simulators[0].trust, TrustOs::Absent);
+        assert!(Scenario::default().trust_simulators().is_err());
     }
 
     #[test]
