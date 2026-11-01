@@ -57,37 +57,41 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
   const scans = step.filter(isScan);
   const media = step.filter(isMedia);
   const frame = (control: boolean) => (framed && control ? {} : ({ frame: "bare", tone: "mute" } as const));
-  const firstControl = said.findIndex((part) => typeof part === "object" && (isRoute(part) || isSave(part)));
+  const firstControl = said.findIndex(
+    (part) => typeof part === "object" && ((isRoute(part) && !part.disabled) || isSave(part)),
+  );
+  const parts = said.map((part, i) => {
+    if (typeof part === "string") return <span key={i}>{part}</span>;
+    if ("copy" in part) return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
+    if (isPath(part)) return <MenuPath key={i} path={part.path} />;
+    if (isRoute(part))
+      return open ? (
+        <Button key={i} {...frame(i === firstControl)} onClick={() => open(part.open)} disabled={part.disabled}>
+          {part.label}
+        </Button>
+      ) : null;
+    return save?.trigger ? (
+      <Button key={i} {...frame(i === firstControl)} onClick={save.trigger} disabled={save.state === "running"}>
+        save…
+      </Button>
+    ) : null;
+  });
   return (
     <>
-      {said.length > 0 && (
-        <Explained help={help}>
-        <span className={`${help ? "inline-flex" : "flex"} flex-wrap items-center gap-chrome-gap`}>
-          {said.map((part, i) => {
-            if (typeof part === "string") return <span key={i}>{part}</span>;
-            if ("copy" in part)
-              return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
-            if (isPath(part)) return <MenuPath key={i} path={part.path} />;
-            if (isRoute(part))
-              return open ? (
-                <Button key={i} {...frame(i === firstControl)} onClick={() => open(part.open)}>
-                  {part.label}
-                </Button>
-              ) : null;
-            return save?.trigger ? (
-              <Button
-                key={i}
-                {...frame(i === firstControl)}
-                onClick={save.trigger}
-                disabled={save.state === "running"}
-              >
-                save…
-              </Button>
-            ) : null;
-          })}
-        </span>
-        </Explained>
-      )}
+      {said.length > 0 &&
+        (help ? (
+          // Words flowing as text, so the ? follows the last of them wherever it
+          // wraps; a flex row that wraps takes the full width and strands it (W17's D1).
+          <Explained help={help}>
+            <span data-testid="step-words">
+              {parts.filter((part) => part !== null).flatMap((part, i) => (i === 0 ? [part] : [" ", part]))}
+            </span>
+          </Explained>
+        ) : (
+          <span data-testid="step-words" className="flex flex-wrap items-center gap-chrome-gap">
+            {parts}
+          </span>
+        ))}
       {commands.map((part, i) => (
         <CommandBlock key={i} value={part.command} label={part.label} />
       ))}
@@ -104,7 +108,7 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
 }
 
 // What explains a step waits behind a ? at its end (W13's R1).
-function Explained({ help, children }: { help?: { help: string; topic: string }; children: ReactNode }) {
+export function Explained({ help, children }: { help?: { help: string; topic: string }; children: ReactNode }) {
   if (help === undefined) return <>{children}</>;
   return (
     <Help topic={help.topic} text={help.help}>

@@ -1651,7 +1651,7 @@ describe("the Android emulator, beside this machine's own traffic", () => {
 
   // S1: This machine set up first, its browser decrypting - the common path.
   it("is not proven by this machine's decrypted traffic", () => {
-    emulator({ emulators: [], ...mixedWire(capturing) });
+    emulator({ emulators: null, ...mixedWire(capturing) });
 
     expect(task(1)).toHaveTextContent(
       "can't check here — the address in task 3 confirms it",
@@ -3092,11 +3092,12 @@ describe("a command is a block, not a phrase inside a sentence", () => {
     draw();
     pick("Android emulator");
 
+    // W17's W5: behind the ? of the step it explains, in plain words.
     const android =
-      "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
+      "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.";
     const steps = within(task(1)).getAllByRole("listitem");
     expect(steps.map((step) => step.textContent).join(" ")).not.toContain(
-      "Apps targeting Android",
+      "An app trusts it",
     );
     openHelp(task(1));
     expect(helpText(task(1))).toContain(android);
@@ -3687,7 +3688,7 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
         .map((p) => p.textContent),
     ).toEqual([
       "Trawler Proxy CA",
-      "Trust→When using this certificate→Always Trust",
+      "Trust → When using this certificate → Always Trust",
     ]);
     expect(
       within(step).getByLabelText(/^Keychain Access: Trawler Proxy CA → Trust/),
@@ -3725,8 +3726,8 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
         .getAllByTestId("menu-path")
         .map((p) => p.textContent),
     ).toEqual([
-      "Install Certificate…→Next",
-      "Place all certificates in the following store→Browse…→Trusted Root Certification Authorities",
+      "Install Certificate… → Next",
+      "Place all certificates in the following store → Browse… → Trusted Root Certification Authorities",
     ]);
     expect(within(step).getByText("Windows 11")).toBeInTheDocument();
     expect(
@@ -3759,7 +3760,7 @@ describe("a by-hand step opens what it can (W12's I1-I3)", () => {
         .getAllByTestId("menu-path")
         .map((p) => p.textContent),
     ).toEqual([
-      "Privacy and security→Connection and software security→Advanced settings→Manage certificates→Authorities→Import…",
+      "Privacy and security → Connection and software security → Advanced settings → Manage certificates → Authorities → Import…",
     ]);
     expect(
       within(step).getByText("Ubuntu 26.04, Firefox 154"),
@@ -3900,4 +3901,263 @@ describe("This Linux machine's certificate, trusted by the system's tools", () =
       );
     },
   );
+});
+
+// ── W17: the emulator leads with what the shell can do through adb ──────────
+// adb and su write an emulator's store, set its proxy and open its Chrome with
+// no prompt, so each task leads with a button, and its one act does both.
+
+describe("the Android emulator leads with what the shell can do (W17)", () => {
+  const framed = () =>
+    [
+      ...screen
+        .getByTestId("steps")
+        .querySelectorAll("button:not([aria-label])"),
+    ]
+      .filter((b) => b.className.includes("border-hairline"))
+      .map((b) => b.textContent?.trim());
+  const running = (
+    trust: "trusted" | "absent" | "unknown",
+    proxy: EmulatorReading["proxy"] = "none",
+  ) => [{ name: "Pixel 7 API 35", trust, proxy }];
+  const SDK = {
+    adb: true,
+    sdk: "$HOME/Library/Android/sdk",
+    avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false },
+  };
+  const emulator = (props: Props) => {
+    draw({
+      proxy: { status: "none", address: null },
+      deviceMark: "b6qv",
+      device: { provedAt: null, mixed: false, wire: NO_TRAFFIC },
+      androidSdk: SDK,
+      onOpenRoute: vi.fn(async () => {}),
+      onSetUpEmulator: vi.fn(async () => {}),
+      onInstallOnEmulators: vi.fn(async () => {}),
+      onRouteEmulators: vi.fn(async () => {}),
+      onUnrouteEmulators: vi.fn(async () => {}),
+      ...props,
+    });
+    pick("Android emulator");
+  };
+
+  // W4, I4 · Q4 · S1: the shell read every emulator there is, and opening the
+  // AVD used last stands where the one act will.
+  it("with none running, says so, and opening the AVD used last is the one framed control, where the one act will stand", async () => {
+    const onOpenRoute = vi.fn(async () => {});
+    emulator({ emulators: [], onOpenRoute });
+
+    expect(task(1)).toHaveTextContent("not done — no emulator running");
+    expect(framed()).toEqual(["open Pixel 7 API 35"]);
+    expect(within(zone("one-act")!).getByRole("button", { name: "open Pixel 7 API 35" })).toBeEnabled();
+    openHelp(zone("one-act")!);
+    expect(helpText(zone("one-act")!).join(" ")).toMatch(/Once it runs, setting it up takes this place/);
+    for (const name of ["set up the emulator", "install in the emulator", "route the emulator"])
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    expect(guideOpen(1, MANUAL)).toBe(false);
+    expect(guideOpen(2, MANUAL)).toBe(false);
+    expect(within(zone("open-on-device")!).getByRole("button", { name: "open it in the emulator" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "open Pixel 7 API 35" }));
+    await waitFor(() => expect(onOpenRoute).toHaveBeenCalledWith("emulator"));
+  });
+
+  // S1: an emulator starting swaps the button above the tasks, and moves nothing else.
+  it("lays the tasks out the same with none running as with one, nothing done", () => {
+    const shown = (el: Element) => el.parentElement?.closest("details") === null;
+    const shape = () =>
+      [1, 2, 3].map((n) => ({
+        guides: [...task(n).querySelectorAll("details")].filter(shown).map((d) => d.querySelector("summary")?.textContent),
+        buttons: [...task(n).querySelectorAll("button:not([aria-label])")].filter(shown).map((b) => b.textContent),
+      }));
+    emulator({ emulators: [] });
+    const idle = shape();
+    cleanup();
+    emulator({ emulators: running("absent") });
+    expect(shape()).toEqual(idle);
+  });
+
+  // S2: adb lists one still booting: task 1 says so, once, and the button waits.
+  it("with one starting, task 1 says so and the button waits", () => {
+    emulator({ emulators: [], emulatorStarting: true });
+
+    expect(within(zone("one-act")!).getByRole("button", { name: "open Pixel 7 API 35" })).toBeDisabled();
+    expect(task(1)).toHaveTextContent("not done — the emulator is starting");
+    expect(screen.getByTestId("steps")).not.toHaveTextContent("no emulator running");
+    expect(framed()).toEqual([]);
+  });
+
+  // S3: a Google Play image has no su, so its layout is the one with no one act
+  // before it runs, its buttons waiting.
+  it("with a Google Play image used last and none running, lays out send it to the emulator, disabled", () => {
+    emulator({ emulators: [], androidSdk: { ...SDK, avd: { ...SDK.avd, playStore: true } } });
+
+    expect(framed()).toEqual(["open Pixel 7 API 35"]);
+    openHelp(zone("one-act")!);
+    expect(helpText(zone("one-act")!).join(" ")).not.toMatch(/setting it up/);
+    expect(screen.queryByRole("button", { name: "set up the emulator" })).toBeNull();
+    expect(screen.getByRole("button", { name: "send it to the emulator" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "route the emulator" })).toBeDisabled();
+  });
+
+  // No reading - adb not found, or a read not landed - never says none runs.
+  it("with no emulator read, says what will confirm it and offers nothing a reading would", () => {
+    emulator({ emulators: null, androidSdk: { adb: false, sdk: null, avd: null } });
+
+    expect(task(1)).toHaveTextContent("can't check here — the emulator's first HTTPS request confirms it");
+    expect(task(1)).not.toHaveTextContent("no emulator running");
+    for (const name of ["set up the emulator", "install in the emulator", "route the emulator"])
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    openHelp(task(1));
+    expect(helpText(task(1)).join(" ")).toMatch(/adb not found\?/);
+  });
+
+  // Q2: both halves are the shell's wherever su answers, so one act does them.
+  it("with one running and nothing done, set up the emulator leads and runs the emulator's own act", async () => {
+    const onSetUpEmulator = vi.fn(async () => {});
+    const onSetUpThisMachine = vi.fn(async () => {});
+    const onRouteAct = vi.fn();
+    emulator({ emulators: running("absent", "wifi-only"), onSetUpEmulator, onSetUpThisMachine, onRouteAct });
+
+    expect(framed()).toEqual(["set up the emulator"]);
+    expect(within(zone("one-act")!).getByRole("button", { name: "set up the emulator" })).toBeInTheDocument();
+    openHelp(zone("one-act")!);
+    expect(helpText(zone("one-act")!)).toContain("no prompt — it does tasks 1 and 2 in every emulator running");
+    expect(guideOpen(1, MANUAL)).toBe(false);
+    expect(guideOpen(2, MANUAL)).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "set up the emulator" }));
+    await waitFor(() => expect(onSetUpEmulator).toHaveBeenCalledOnce());
+    expect(onSetUpThisMachine).not.toHaveBeenCalled();
+    expect(onRouteAct).not.toHaveBeenCalled();
+  });
+
+  // E1, E2: once either half is done, each task leads with its own button,
+  // the first task not done framed.
+  it("with the proxy already set, install in the emulator is the one framed control, what it does behind its ?", () => {
+    const onInstallOnEmulators = vi.fn(async () => {});
+    emulator({ emulators: running("absent", "ours"), onInstallOnEmulators });
+
+    expect(framed()).toEqual(["install in the emulator"]);
+    expect(screen.queryByRole("button", { name: "route the emulator" })).toBeNull();
+    expect(within(task(2)).getByRole("button", { name: "stop routing the emulator" })).toBeInTheDocument();
+    openHelp(task(1));
+    expect(helpText(task(1))).toContain(
+      "It installs Trawler's certificate in every emulator running now. Each keeps its own store: one you create or wipe later needs this again.",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "install in the emulator" }));
+    expect(onInstallOnEmulators).toHaveBeenCalledOnce();
+  });
+
+  it("with the certificate in, route the emulator is the one framed control", () => {
+    const onRouteEmulators = vi.fn(async () => {});
+    emulator({ emulators: running("trusted", "wifi-only"), onRouteEmulators });
+
+    expect(framed()).toEqual(["route the emulator"]);
+    expect(within(task(2)).getByRole("button", { name: "route the emulator" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "route the emulator" }));
+    expect(onRouteEmulators).toHaveBeenCalledOnce();
+  });
+
+  // I5: with no su, the shell sends the file and opens the screen that lists
+  // the installer; there is no one act, and the route has its own button.
+  it("with no su, sending the certificate is the one framed control and no one act is offered", () => {
+    const onOpenRoute = vi.fn(async () => {});
+    emulator({ emulators: running("unknown"), onOpenRoute });
+
+    expect(zone("one-act")).toBeNull();
+    expect(screen.queryByRole("button", { name: "install in the emulator" })).toBeNull();
+    expect(framed()).toEqual(["send it to the emulator"]);
+    expect(within(task(2)).getByRole("button", { name: "route the emulator" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "send it to the emulator" }));
+    expect(onOpenRoute).toHaveBeenCalledWith("emulator-certificate");
+  });
+
+  // The click produces nothing the screen reads as done: the store does.
+  it("reads done from the emulator's store, never from the click", async () => {
+    const props: Props = {
+      proxy: { status: "none", address: null },
+      deviceMark: "b6qv",
+      device: { provedAt: null, mixed: false, wire: NO_TRAFFIC },
+      androidSdk: SDK,
+      emulators: running("absent", "ours"),
+      onInstallOnEmulators: vi.fn(async () => {}),
+    };
+    const { rerender } = draw(props);
+    pick("Android emulator");
+
+    fireEvent.click(screen.getByRole("button", { name: "install in the emulator" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "install in the emulator" })).toBeEnabled(),
+    );
+    expect(task(1)).toHaveTextContent("not done — not in Pixel 7 API 35");
+
+    rerender(screenAt({ ...props, emulators: running("trusted", "ours") }));
+    expect(task(1)).toHaveTextContent("done — trusted in Pixel 7 API 35");
+    expect(screen.queryByRole("button", { name: "install in the emulator" })).toBeNull();
+  });
+
+  it("a failed install says so and opens its steps by hand", async () => {
+    emulator({
+      emulators: running("absent", "ours"),
+      onInstallOnEmulators: vi.fn(() =>
+        Promise.reject({ refused: false, detail: "/system/bin/sh: su: inaccessible or not found" }),
+      ),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "install in the emulator" }));
+
+    await waitFor(() =>
+      expect(
+        within(task(1)).getByText("couldn't install it in the emulator — do it by hand below."),
+      ).toBeInTheDocument(),
+    );
+    expect(guideOpen(1, MANUAL)).toBe(true);
+  });
+
+  it("a failed route says so and opens its steps by hand", async () => {
+    emulator({
+      emulators: running("trusted", "none"),
+      onRouteEmulators: vi.fn(() => Promise.reject({ refused: false, detail: "adb: device offline" })),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "route the emulator" }));
+
+    await waitFor(() =>
+      expect(within(task(2)).getByText("couldn't route the emulator — do it by hand below.")).toBeInTheDocument(),
+    );
+    expect(guideOpen(2, MANUAL)).toBe(true);
+  });
+
+  // E3, I3: both halves done, the request is the one thing left, and the
+  // emulator's own Chrome makes it.
+  it("with both done, open it in the emulator is the one framed control, Chrome's welcome behind its ?", () => {
+    const onOpenRoute = vi.fn(async () => {});
+    emulator({ emulators: running("trusted", "ours"), onOpenRoute });
+
+    expect(framed()).toEqual(["open it in the emulator"]);
+    expect(zone("check-address")).toHaveTextContent("https://example.com/?trawler-check=b6qv");
+    openHelp(zone("open-on-device")!);
+    expect(helpText(zone("open-on-device")!).join(" ")).toMatch(/Use without an account/);
+
+    fireEvent.click(screen.getByRole("button", { name: "open it in the emulator" }));
+    expect(onOpenRoute).toHaveBeenCalledWith("emulator-request");
+  });
+
+  // I6: the way back opens its screen; the proxy's is a button once routed.
+  it("stops routing the emulator only once adb reads it routed", async () => {
+    const onUnrouteEmulators = vi.fn(async () => {});
+    emulator({ emulators: running("trusted", "ours"), onUnrouteEmulators });
+
+    fireEvent.click(within(task(2)).getByRole("button", { name: "stop routing the emulator" }));
+    await waitFor(() => expect(onUnrouteEmulators).toHaveBeenCalledOnce());
+    cleanup();
+
+    emulator({ emulators: running("trusted", "none") });
+    expect(screen.queryByRole("button", { name: "stop routing the emulator" })).toBeNull();
+    expect(within(task(2)).getByRole("button", { name: "route the emulator" })).toBeInTheDocument();
+  });
 });

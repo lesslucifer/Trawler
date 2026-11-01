@@ -11,7 +11,7 @@ describe("MenuPath", () => {
   it("reads as the path, in click order, with an arrow between names", () => {
     const { container } = render(<MenuPath path={PATH} />);
 
-    expect(container.textContent).toBe("Trust→When using this certificate→Always Trust");
+    expect(container.textContent).toBe(PATH.join(" → "));
     expect(names(container)).toEqual(PATH);
   });
 
@@ -23,10 +23,14 @@ describe("MenuPath", () => {
     expect(parts.filter((p) => p.textContent !== "→").every((p) => p.className.includes("text-ink"))).toBe(true);
   });
 
-  it("breaks between names, never inside one", () => {
+  // W17's D1: a box that wraps takes the full width, so a ? after the path
+  // would fall to a line of its own; text flows on after the last name.
+  it("breaks between names, never inside one, flowing as text", () => {
     const { container } = render(<MenuPath path={PATH} />);
 
-    expect(container.querySelector("[data-testid=menu-path]")!.className).toContain("flex-wrap");
+    const path = container.querySelector("[data-testid=menu-path]")!;
+    expect(path.className).not.toMatch(/flex/);
+    expect(path.textContent).toBe(PATH.join(" → "));
     for (const name of container.querySelectorAll("[data-testid=menu-path] > span:not(.text-ink-mute)")) {
       expect(name.className).toContain("whitespace-nowrap");
     }

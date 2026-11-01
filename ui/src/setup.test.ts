@@ -94,6 +94,12 @@ const saves = (s: PlatformSetup): number =>
 
 const everything = (s: PlatformSetup): string => [prose(s), ...copies(s)].join("\n");
 
+const helps = (steps: readonly GuideStep[]): string[] =>
+  steps.flatMap((step) => step.flatMap((p) => (typeof p === "object" && "help" in p ? [p.help] : [])));
+
+const paths = (steps: readonly GuideStep[]): string[][] =>
+  steps.flatMap((step) => step.flatMap((p) => (typeof p === "object" && "path" in p ? [[...p.path]] : [])));
+
 const setup = (id: PlatformId, over = {}) => setupFor(id, ctx(over));
 
 // Every tool any platform's instructions reach for. A string opening with one
@@ -346,7 +352,7 @@ describe("the Android emulator and the Android device stop sharing one answer", 
   });
 
   it("both state the Android 7+ user-CA caveat, because it is true of both", () => {
-    expect(prose(emulator())).toMatch(/network security config/);
+    expect(helps(guides(emulator())).join("\n")).toMatch(/network security config/);
     expect(prose(device())).toMatch(/network security config/);
   });
 });
@@ -572,7 +578,8 @@ describe("a guide's steps are the route, and everything else says what it is", (
     expect(notes(setup("android"))).toContain(
       "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
     );
-    expect(notes(setup("android-sim")).join("\n")).toMatch(/10\.0\.2\.2 is the alias/);
+    // W17's W5: the emulator explains its steps behind their ?, and has no notes.
+    expect(notes(setup("android-sim"))).toEqual([]);
   });
 
   it("a second way in is an alternative, not a step the reader also takes", () => {
@@ -738,7 +745,9 @@ describe("each platform names the one certificate file its installer opens", () 
   it("names the file to pick in each phone installer", () => {
     expect(prose(setup("ios"))).toMatch(/VPN & Device Management → Trawler Proxy CA → Install/);
     expect(prose(setup("android"))).toMatch(/CA certificate → Install anyway → the trawler-ca file it downloaded\./);
-    expect(prose(setup("android-sim"))).toMatch(/CA certificate → Install anyway → ☰ → Downloads → trawler-ca\.cer\./);
+    expect(paths(guides(setup("android-sim")))).toContainEqual(
+      expect.arrayContaining(["CA certificate", "Install anyway", "☰", "Downloads", "trawler-ca.cer"]),
+    );
   });
 });
 
@@ -1049,8 +1058,10 @@ describe("the emulator's commands reach every emulator running, and route it on 
       both(emulator({ os })).flatMap((g) => [...g.steps, ...(g.undo ?? [])])
         .filter((step) => commands([step]).some((c) => /\badb\b/.test(c)))
         .map((step) => step.find((p): p is string => typeof p === "string"));
-    expect(leads("windows")).toEqual(["With the emulator running, in PowerShell, run:", "In PowerShell, run:", "In PowerShell, run:"]);
-    expect(leads("macos")).toEqual(["With the emulator running, in a terminal, run:", "In a terminal, run:", "In a terminal, run:"]);
+    // W17's W1: the shell first, named as each host names it.
+    expect(leads("windows")).toEqual(["In PowerShell, with the emulator running, run:", "In PowerShell, run:", "In PowerShell, run:"]);
+    expect(leads("macos")).toEqual(["In Terminal, with the emulator running, run:", "In Terminal, run:", "In Terminal, run:"]);
+    expect(leads("linux")).toEqual(["In a terminal, with the emulator running, run:", "In a terminal, run:", "In a terminal, run:"]);
   });
 
   // C4 · Q3: a Wi-Fi proxy routes nothing where the emulator sends over its
@@ -1068,25 +1079,130 @@ describe("the emulator's commands reach every emulator running, and route it on 
   it("offers the Settings route only with mobile data off, and the start-up flag on this machine's own address", () => {
     const route = emulator({ proxyAddr: "127.0.0.1:8123" }).route.guide!;
     const [settings, flag] = route.alternatives!;
-    expect(settings[0]).toMatch(/turn Mobile data off, then AndroidWifi ⚙ → ✎ → Advanced options → Proxy → Manual/);
+    expect(paths([settings])).toEqual([
+      ["Network & internet", "Internet"],
+      ["Mobile data"],
+      ["AndroidWifi ⚙", "✎", "Advanced options", "Proxy", "Manual"],
+    ]);
+    expect(settings.find((p) => typeof p === "string" && /turn off/.test(p))).toBeDefined();
     expect(values([settings])).toEqual(["10.0.2.2", "8123"]);
+    expect(helps([settings])).toEqual(["10.0.2.2 is the address every emulator reaches the machine it runs on by."]);
     // C3: the flag is read by the emulator process on this machine, where 10.0.2.2 is nothing.
     expect(commands([flag])).toEqual(["emulator -avd <name> -http-proxy http://127.0.0.1:8123"]);
     expect(everything(emulator())).not.toMatch(/-http-proxy http:\/\/10\.0\.2\.2/);
   });
 
-  // C5: Android 15 has no Settings → Security, and a pushed file is not under Recent.
+  // C5: Android 15 has no Settings → Security, and a pushed file is not under
+  // Recent. W17's W2, W3: its controls set apart, and its dialog's own Uninstall.
   it("names Android 15's own paths, to install and to remove", () => {
     const s = emulator();
-    expect(prose(s)).toContain(
-      "Install it: Settings → Security & privacy → More security & privacy → Encryption & credentials → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → trawler-ca.cer.",
-    );
-    expect(s.trust.guide!.undo).toEqual([
+    expect(paths(s.trust.guide!.steps)).toEqual([
       [
-        "Settings → Security & privacy → More security & privacy → Encryption & credentials → Trusted credentials → User → Trawler Proxy CA → Remove.",
+        "Security & privacy",
+        "More security & privacy",
+        "Encryption & credentials",
+        "Install a certificate",
+        "CA certificate",
+        "Install anyway",
+        "☰",
+        "Downloads",
+        "trawler-ca.cer",
       ],
     ]);
-    expect(prose(s)).not.toMatch(/Settings → Security →|Settings → Wi-Fi →/);
+    expect(s.trust.guide!.undo).toEqual([
+      [
+        "Open",
+        { open: "trusted-credentials", label: "open Trusted credentials" },
+        "and tap",
+        { path: ["Trawler Proxy CA", "Uninstall", "OK"] },
+      ],
+    ]);
+    expect(paths(s.route.guide!.undo!)).toEqual([["AndroidWifi ⚙", "✎", "Advanced options", "Proxy", "None"], ["Mobile data"]]);
+    expect(everything(s)).not.toMatch(/→|Remove\./);
+  });
+
+  // W17's N1: a stock Android Studio puts adb on no PATH, so each command names
+  // the SDK the shell found, as that host's shell writes it.
+  it("names the adb the shell found, and says where to look where it found none", () => {
+    const sdkAt = (os: HostOs, sdk: string) =>
+      setup("android-sim", { os, emulator: { sdk: { adb: true, sdk, avd: null } } });
+    const mac = commands(guides(sdkAt("macos", "$HOME/Library/Android/sdk")));
+    expect(mac[0]).toBe(
+      `adb="$HOME/Library/Android/sdk/platform-tools/adb"; for d in $("$adb" devices | grep -Eo '^emulator-[0-9]+'); do "$adb" -s $d push ~/Downloads/trawler-ca.cer /sdcard/Download/; done`,
+    );
+    const windows = commands(guides(sdkAt("windows", "$env:LOCALAPPDATA\\Android\\Sdk")));
+    expect(windows[0]).toBe(
+      `$adb = "$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe"; & $adb devices | Select-String '^emulator-\\d+' | ForEach-Object { & $adb -s $_.Matches[0].Value push "$HOME\\Downloads\\trawler-ca.cer" /sdcard/Download/ }`,
+    );
+    expect(helps(guides(sdkAt("macos", "$HOME/Library/Android/sdk")))).not.toContainEqual(expect.stringMatching(/adb not found/));
+    const unfound = helps(guides(emulator()));
+    expect(unfound).toContain(
+      "adb not found? Android Studio puts it in ~/Library/Android/sdk/platform-tools — set ANDROID_HOME if your SDK is elsewhere.",
+    );
+    expect(helps(guides(emulator({ os: "windows" })))).toContain(
+      "adb not found? Android Studio puts it in $env:LOCALAPPDATA\\Android\\Sdk\\platform-tools — set ANDROID_HOME if your SDK is elsewhere.",
+    );
+  });
+
+  // W17's I4 · Q4 · S1: with none running, the AVD used last is opened from
+  // above the tasks, and the steps are the ones a running emulator shows.
+  it("starts the AVD used last from above the tasks only while none runs", () => {
+    const avd = { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false };
+    const sdk = { adb: true, sdk: "$HOME/Library/Android/sdk", avd };
+    const idle = emulator({ emulator: { running: false, rooted: true, sdk } });
+    expect(idle.start).toEqual({ open: "emulator", label: "open Pixel 7 API 35" });
+    expect(idle.trust.guide!.steps).toEqual(emulator({ emulator: { running: true, rooted: true, sdk } }).trust.guide!.steps);
+    expect(commands(idle.trust.guide!.alternatives!)).toEqual([
+      `"$HOME/Library/Android/sdk/emulator/emulator" -avd Pixel_7_API_35`,
+    ]);
+    expect(commands(idle.route.guide!.alternatives!)).toContain(
+      `"$HOME/Library/Android/sdk/emulator/emulator" -avd Pixel_7_API_35 -http-proxy http://127.0.0.1:9999`,
+    );
+    const none = emulator({ emulator: { running: false, sdk: { adb: true, sdk: null, avd: null } } });
+    expect(none.start).toEqual(["In Android Studio, open", { path: ["Device Manager"] }, "and create an emulator."]);
+    for (const running of [undefined, true]) expect(emulator({ emulator: { running, rooted: true } }).start).toBeUndefined();
+  });
+
+  // W17's S1: what acts on an emulator stands in place while none runs, and waits for one.
+  it("keeps what acts on an emulator in place while none runs, disabled", () => {
+    const idle = emulator({ emulator: { running: false, rooted: false } });
+    const running = emulator({ emulator: { running: true, rooted: false } });
+    expect(idle.trust.guide!.steps[0]).toEqual([
+      "Send Trawler's certificate to the emulator",
+      { open: "emulator-certificate", label: "send it to the emulator", disabled: true },
+    ]);
+    expect(running.trust.guide!.steps[0][1]).toEqual({ open: "emulator-certificate", label: "send it to the emulator" });
+    expect(idle.trust.guide!.undo![0][1]).toEqual({ open: "trusted-credentials", label: "open Trusted credentials", disabled: true });
+    expect(idle.deviceRoute).toEqual({ open: "emulator-request", label: "open it in the emulator", disabled: true });
+    expect(running.deviceRoute).toEqual({ open: "emulator-request", label: "open it in the emulator" });
+  });
+
+  // W17's I5: with no su, the shell sends the file and opens the screen that
+  // lists the installer; pushing it by hand is the other way.
+  it("sends the certificate where su cannot write it, the push the other way", () => {
+    const s = emulator({ emulator: { running: true, rooted: false } });
+    const [send, tap] = s.trust.guide!.steps;
+    expect(send).toEqual([
+      "Send Trawler's certificate to the emulator",
+      { open: "emulator-certificate", label: "send it to the emulator" },
+    ]);
+    expect(paths([tap])).toEqual([
+      ["Encryption & credentials", "Install a certificate", "CA certificate", "Install anyway", "☰", "Downloads", "trawler-ca.cer"],
+    ]);
+    expect(helps([tap])).toEqual([expect.stringMatching(/network security config/)]);
+    const [byHand] = s.trust.guide!.alternatives!;
+    expect(byHand.some((p) => typeof p === "object" && "save" in p)).toBe(true);
+    expect(commands([byHand])).toHaveLength(1);
+    expect(saves(s)).toBe(1);
+  });
+
+  // W17's I3: its own Chrome makes its request, once adb reads the emulator.
+  it("offers its request in the emulator once adb reads it, with Chrome's welcome behind a ?", () => {
+    expect(emulator().deviceRoute).toBeUndefined();
+    expect(emulator().deviceRouteHelp).toBeUndefined();
+    const running = emulator({ emulator: { running: true, rooted: true } });
+    expect(running.deviceRoute).toEqual({ open: "emulator-request", label: "open it in the emulator" });
+    expect(running.deviceRouteHelp?.help).toMatch(/Use without an account/);
   });
 
   it("is the one platform adb reads, and every platform but This machine marks its own request", () => {

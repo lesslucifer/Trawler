@@ -333,7 +333,9 @@ test("the emulator is read through adb only while it is the platform chosen", as
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) =>
-    name === "emulator_readings" ? [{ name: "Pixel 7 API 35", trust: "trusted", proxy: "ours" }] : undefined,
+    name === "emulator_readings"
+      ? { adb: true, sdk: null, avd: null, emulators: [{ name: "Pixel 7 API 35", trust: "trusted", proxy: "ours" }] }
+      : undefined,
   );
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
@@ -531,6 +533,129 @@ test("a Simulator read that failed never says none runs", async () => {
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("simulator_trust", { pem: PEM }));
   expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the address in task 3 confirms it");
   expect(screen.queryByText(/no Simulator running/)).toBeNull();
+});
+
+// W17: adb and su write a running emulator's store, set its proxy and open its
+// Chrome, so the screen asks the shell for each by name, with the certificate
+// the core serves now, this window's port or the emulator's own mark.
+async function emulator() {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Android emulator");
+  return api;
+}
+
+const EMULATOR_SDK = {
+  adb: true,
+  sdk: "$HOME/Library/Android/sdk",
+  avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false },
+};
+
+function emulatorReads(
+  trust: "absent" | "trusted" | "unknown",
+  proxy: "none" | "ours",
+  over: Record<string, () => unknown> = {},
+) {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name in over) return over[name]();
+    if (name === "emulator_readings")
+      return { ...EMULATOR_SDK, emulators: [{ name: "Pixel 7 API 35", trust, proxy }] };
+    return undefined;
+  });
+}
+
+test("Set up the emulator installs on every running emulator first, then routes each, and touches this Mac's proxy nowhere", async () => {
+  emulatorReads("absent", "none");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the emulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("route_emulators", { port: 7999 }));
+  const names = vi.mocked(invoke).mock.calls.map(([n]) => n);
+  expect(names.indexOf("install_on_emulators")).toBeLessThan(names.indexOf("route_emulators"));
+  expect(invoke).toHaveBeenCalledWith("install_on_emulators", { pem: PEM });
+  expect(names).not.toContain("set_proxy");
+});
+
+test("an emulator that refused the install is left unrouted", async () => {
+  emulatorReads("absent", "none", {
+    install_on_emulators: () => {
+      throw { refused: false, detail: "/system/bin/sh: su: inaccessible or not found" };
+    },
+  });
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the emulator" }));
+
+  await screen.findByText("setting up failed — do it by hand below.");
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "route_emulators")).toHaveLength(0);
+});
+
+test("route the emulator and its reversal ask the shell by name with this window's port", async () => {
+  emulatorReads("trusted", "none");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "route the emulator" }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("route_emulators", { port: 7999 }));
+
+  emulatorReads("trusted", "ours");
+  fireEvent.focus(window);
+  fireEvent.click(await screen.findByRole("button", { name: "stop routing the emulator" }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("unroute_emulators"));
+});
+
+test("open it in the emulator carries the mark the emulator's address shows", async () => {
+  emulatorReads("trusted", "ours");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open it in the emulator" }));
+
+  const shown = screen.getByTestId("check-address").textContent!.match(/trawler-check=([a-z0-9]+)/)![1];
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "emulator-request", mark: shown } }),
+  );
+});
+
+test("with no su, send it to the emulator hands the shell the certificate the core serves now", async () => {
+  emulatorReads("unknown", "none");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "send it to the emulator" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "emulator-certificate", pem: PEM } }),
+  );
+});
+
+test("with none running, opening the AVD used last asks the shell for the emulator by name", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "emulator_readings" ? { ...EMULATOR_SDK, emulators: [] } : undefined,
+  );
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open Pixel 7 API 35" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "emulator" } }));
+});
+
+// W17's W4: before a read lands, where it failed, and where adb did not answer,
+// there is no reading - and none of them says no emulator runs.
+test.each([
+  ["a read not landed", () => new Promise(() => {})],
+  ["a read that failed", () => Promise.reject(new Error("ipc down"))],
+  ["adb not found", () => ({ adb: false, sdk: null, avd: null, emulators: [] })],
+])("%s never says no emulator runs", async (_case, answer) => {
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "emulator_readings" ? answer() : undefined,
+  );
+  await emulator();
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("emulator_readings", { pem: PEM, port: 7999 }));
+  expect(screen.getByTestId("task-1")).toHaveTextContent(/can't check here|checking/);
+  expect(screen.queryByText(/no emulator running/)).toBeNull();
 });
 
 test("Set the system proxy invokes set_proxy with the configured address, and proves nothing", async () => {
@@ -3274,7 +3399,13 @@ describe("quitting", () => {
     onMacHost();
     vi.mocked(invoke).mockImplementation(async (name: string) => {
       if (name === "proxy_status") return { status: "none", address: null };
-      if (name === "emulator_readings") return [{ name: "Pixel_7_API_35", trust: "trusted", proxy: "wifi-only" }];
+      if (name === "emulator_readings")
+        return {
+          adb: true,
+          sdk: null,
+          avd: null,
+          emulators: [{ name: "Pixel_7_API_35", trust: "trusted", proxy: "wifi-only" }],
+        };
       return undefined;
     });
     const { api } = mockApi(() => []);

@@ -11,10 +11,11 @@ use std::sync::Mutex;
 use serde::Deserialize;
 
 use crate::setup::{
-    command_failed, read_proxy, read_proxy_among, trust_word, EmulatorProxy, EmulatorReading,
-    ProxyRead, ProxyReading, SetupError, SimulatorTrust, Trust, NO_INSTALL_DETAIL,
-    NO_REMOVE_DETAIL, NO_SET_PROXY_DETAIL, NO_SIMULATOR_RUNNING, NO_SIMULATOR_TRUST_DETAIL,
-    NO_UNSET_PROXY_DETAIL,
+    command_failed, read_proxy, read_proxy_among, setup_error, trust_word, Avd, EmulatorProxy,
+    EmulatorRead, EmulatorReading, ProxyRead, ProxyReading, SetupError, SimulatorTrust, Trust,
+    NO_EMULATOR_INSTALL_DETAIL, NO_EMULATOR_ROUTE_DETAIL, NO_EMULATOR_RUNNING,
+    NO_EMULATOR_UNROUTE_DETAIL, NO_INSTALL_DETAIL, NO_REMOVE_DETAIL, NO_SET_PROXY_DETAIL,
+    NO_SIMULATOR_RUNNING, NO_SIMULATOR_TRUST_DETAIL, NO_UNSET_PROXY_DETAIL,
 };
 
 const HOST_VAR: &str = "TRAWLER_SCENARIO_HOST";
@@ -76,6 +77,31 @@ pub struct EmulatorOs {
     proxy: EmulatorProxyOs,
 }
 
+// The SDK as this host finds it: whether adb answers, the SDK its commands name,
+// and the AVD used last.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct AndroidOs {
+    adb: bool,
+    sdk: Option<String>,
+    avd: Option<AvdOs>,
+    #[serde(default)]
+    starting: bool,
+}
+
+impl Default for AndroidOs {
+    fn default() -> Self {
+        Self { adb: true, sdk: None, avd: None, starting: false }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct AvdOs {
+    id: String,
+    name: String,
+    #[serde(default, rename = "playStore")]
+    play_store: bool,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ProxyOs {
@@ -103,12 +129,16 @@ pub struct Scenario {
     trust: TrustOs,
     simulators: Vec<SimulatorOs>,
     emulators: Vec<EmulatorOs>,
+    android: AndroidOs,
     proxy: ProxyOs,
     set_up: Outcome,
     set_proxy: Outcome,
     unset_proxy: Outcome,
     remove_ca: Outcome,
     trust_simulators: Outcome,
+    install_emulators: Outcome,
+    route_emulators: Outcome,
+    unroute_emulators: Outcome,
     allow_reach: bool,
     allow_replace: bool,
     interface_names: HashMap<String, String>,
@@ -120,12 +150,16 @@ pub struct Patch {
     trust: Option<TrustOs>,
     simulators: Option<Vec<SimulatorOs>>,
     emulators: Option<Vec<EmulatorOs>>,
+    android: Option<AndroidOs>,
     proxy: Option<ProxyOs>,
     set_up: Option<Outcome>,
     set_proxy: Option<Outcome>,
     unset_proxy: Option<Outcome>,
     remove_ca: Option<Outcome>,
     trust_simulators: Option<Outcome>,
+    install_emulators: Option<Outcome>,
+    route_emulators: Option<Outcome>,
+    unroute_emulators: Option<Outcome>,
     allow_reach: Option<bool>,
     allow_replace: Option<bool>,
     interface_names: Option<HashMap<String, String>>,
@@ -137,12 +171,16 @@ impl Scenario {
             trust,
             simulators,
             emulators,
+            android,
             proxy,
             set_up,
             set_proxy,
             unset_proxy,
             remove_ca,
             trust_simulators,
+            install_emulators,
+            route_emulators,
+            unroute_emulators,
             allow_reach,
             allow_replace,
             interface_names,
@@ -155,6 +193,9 @@ impl Scenario {
         }
         if let Some(v) = emulators {
             self.emulators = v;
+        }
+        if let Some(v) = android {
+            self.android = v;
         }
         if let Some(v) = proxy {
             self.proxy = v;
@@ -173,6 +214,15 @@ impl Scenario {
         }
         if let Some(v) = trust_simulators {
             self.trust_simulators = v;
+        }
+        if let Some(v) = install_emulators {
+            self.install_emulators = v;
+        }
+        if let Some(v) = route_emulators {
+            self.route_emulators = v;
+        }
+        if let Some(v) = unroute_emulators {
+            self.unroute_emulators = v;
         }
         if let Some(v) = allow_reach {
             self.allow_reach = v;
@@ -201,6 +251,59 @@ impl Scenario {
             .iter()
             .map(|e| EmulatorReading::new(e.name.clone(), e.trust.reading(), &e.proxy.reading()))
             .collect()
+    }
+
+    fn emulator_read(&self) -> EmulatorRead {
+        let AndroidOs { adb, sdk, avd, starting } = &self.android;
+        EmulatorRead {
+            adb: *adb,
+            sdk: sdk.clone(),
+            avd: avd.as_ref().map(|a| Avd {
+                id: a.id.clone(),
+                name: a.name.clone(),
+                play_store: a.play_store,
+            }),
+            emulators: if *adb { self.emulators_reading() } else { Vec::new() },
+            starting: *adb && *starting,
+        }
+    }
+
+    fn emulators_running(&self) -> Result<(), SetupError> {
+        if self.android.adb && !self.emulators.is_empty() {
+            Ok(())
+        } else {
+            Err(setup_error(NO_EMULATOR_RUNNING))
+        }
+    }
+
+    // An image with no su refuses the write, as the real one does.
+    fn install_emulators(&mut self) -> Result<(), SetupError> {
+        self.emulators_running()?;
+        run(&self.install_emulators, NO_EMULATOR_INSTALL_DETAIL)?;
+        if self.emulators.iter().any(|e| e.trust == TrustOs::Unreadable) {
+            return Err(command_failed(
+                "/system/bin/sh: su: inaccessible or not found",
+                NO_EMULATOR_INSTALL_DETAIL,
+            ));
+        }
+        for emulator in &mut self.emulators {
+            emulator.trust = TrustOs::Trusted;
+        }
+        Ok(())
+    }
+
+    fn route_emulators(
+        &mut self,
+        proxy: EmulatorProxyOs,
+        outcome: &Outcome,
+        no_detail: &str,
+    ) -> Result<(), SetupError> {
+        self.emulators_running()?;
+        run(outcome, no_detail)?;
+        for emulator in &mut self.emulators {
+            emulator.proxy = proxy;
+        }
+        Ok(())
     }
 
     fn proxy_read(&self) -> ProxyRead {
@@ -285,8 +388,29 @@ pub fn simulator_trust(state: Shared<'_>) -> Vec<SimulatorTrust> {
 }
 
 #[tauri::command]
-pub fn emulator_readings(state: Shared<'_>) -> Vec<EmulatorReading> {
-    with(&state, |s| s.emulators_reading())
+pub fn emulator_readings(state: Shared<'_>) -> EmulatorRead {
+    with(&state, |s| s.emulator_read())
+}
+
+#[tauri::command]
+pub fn install_on_emulators(state: Shared<'_>) -> Result<(), SetupError> {
+    with(&state, Scenario::install_emulators)
+}
+
+#[tauri::command]
+pub fn route_emulators(state: Shared<'_>) -> Result<(), SetupError> {
+    with(&state, |s| {
+        let outcome = s.route_emulators.clone();
+        s.route_emulators(EmulatorProxyOs::Ours, &outcome, NO_EMULATOR_ROUTE_DETAIL)
+    })
+}
+
+#[tauri::command]
+pub fn unroute_emulators(state: Shared<'_>) -> Result<(), SetupError> {
+    with(&state, |s| {
+        let outcome = s.unroute_emulators.clone();
+        s.route_emulators(EmulatorProxyOs::None, &outcome, NO_EMULATOR_UNROUTE_DETAIL)
+    })
 }
 
 #[tauri::command]
@@ -407,6 +531,9 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             unset_proxy,
             remove_ca,
             trust_simulators,
+            install_on_emulators,
+            route_emulators,
+            unroute_emulators,
             proxy_status,
             proxy_in_use,
             interface_names,
@@ -487,6 +614,75 @@ mod tests {
                 EmulatorReading::new("Pixel Fold".into(), None, &EmulatorProxy::Unknown),
             ]
         );
+    }
+
+    #[test]
+    fn the_emulator_read_carries_the_scripted_sdk_and_no_adb_reads_no_emulator() {
+        let s = patched(
+            r#"{"android":{"adb":true,"sdk":"$HOME/Library/Android/sdk","avd":{"id":"Pixel_7_API_35","name":"Pixel 7 API 35"},"starting":true},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
+        );
+        let read = s.emulator_read();
+        assert!(read.adb);
+        assert!(read.starting);
+        assert_eq!(read.sdk.as_deref(), Some("$HOME/Library/Android/sdk"));
+        assert_eq!(
+            read.avd,
+            Some(Avd {
+                id: "Pixel_7_API_35".into(),
+                name: "Pixel 7 API 35".into(),
+                play_store: false
+            })
+        );
+        assert_eq!(read.emulators.len(), 1);
+        let play = patched(
+            r#"{"android":{"adb":true,"sdk":null,"avd":{"id":"Pixel_8","name":"Pixel 8","playStore":true}}}"#,
+        );
+        assert!(play.emulator_read().avd.is_some_and(|avd| avd.play_store));
+        assert!(!play.emulator_read().starting);
+        let no_adb = patched(
+            r#"{"android":{"adb":false,"sdk":null,"avd":null},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
+        );
+        assert!(!no_adb.emulator_read().adb);
+        assert!(no_adb.emulator_read().emulators.is_empty());
+        assert!(Scenario::default().emulator_read().adb);
+    }
+
+    #[test]
+    fn installing_trusts_every_running_emulator_and_an_image_with_no_su_refuses() {
+        let mut s = patched(
+            r#"{"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"},{"name":"Pixel Fold","trust":"absent","proxy":"none"}]}"#,
+        );
+        s.install_emulators().expect("installed");
+        assert!(s.emulators.iter().all(|e| e.trust == TrustOs::Trusted));
+        let mut no_su = patched(
+            r#"{"emulators":[{"name":"Pixel 7 API 35","trust":"unreadable","proxy":"none"}]}"#,
+        );
+        assert!(no_su.install_emulators().is_err());
+        assert_eq!(no_su.emulators[0].trust, TrustOs::Unreadable);
+        let mut failing = patched(
+            r#"{"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}],"install_emulators":{"fails":{"stderr":"adb: device offline"}}}"#,
+        );
+        assert_eq!(
+            failing.install_emulators(),
+            Err(command_failed("adb: device offline", NO_EMULATOR_INSTALL_DETAIL))
+        );
+        assert_eq!(Scenario::default().install_emulators(), Err(setup_error(NO_EMULATOR_RUNNING)));
+    }
+
+    #[test]
+    fn routing_and_unrouting_move_every_running_emulators_proxy_and_fail_as_scripted() {
+        let mut s =
+            patched(r#"{"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#);
+        s.route_emulators(EmulatorProxyOs::Ours, &Outcome::Ok, NO_EMULATOR_ROUTE_DETAIL).unwrap();
+        assert_eq!(s.emulators[0].proxy, EmulatorProxyOs::Ours);
+        let refused = Outcome::Fails { stderr: "adb: device offline".into() };
+        assert!(s
+            .route_emulators(EmulatorProxyOs::None, &refused, NO_EMULATOR_UNROUTE_DETAIL)
+            .is_err());
+        assert_eq!(s.emulators[0].proxy, EmulatorProxyOs::Ours);
+        assert!(Scenario::default()
+            .route_emulators(EmulatorProxyOs::Ours, &Outcome::Ok, NO_EMULATOR_ROUTE_DETAIL)
+            .is_err());
     }
 
     #[test]

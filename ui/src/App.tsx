@@ -34,7 +34,7 @@ import {
   NO_PROXY_READING,
   setUpOn,
   TUNNEL_GRACE_MS,
-  type EmulatorReading,
+  type EmulatorRead,
   type ProxyReading,
   type SimulatorTrust,
   type TrustProbe,
@@ -307,7 +307,9 @@ export default function App({
   const [simulators, setSimulators] = useState<
     readonly SimulatorTrust[] | null
   >(null);
-  const [emulators, setEmulators] = useState<readonly EmulatorReading[]>([]);
+  // No reading until one lands: adb not found is no reading either, and none
+  // of it says no emulator runs (W17's W4).
+  const [emulatorRead, setEmulatorRead] = useState<EmulatorRead | null>(null);
   // adb starts a server of its own where none runs, so the emulator is read
   // only while it is the platform chosen (W8's Q1).
   const readsEmulators = useRef(false);
@@ -352,16 +354,16 @@ export default function App({
       const adb = readsEmulators.current
         ? pem
             .then((live) =>
-              invoke<EmulatorReading[] | undefined>("emulator_readings", {
+              invoke<EmulatorRead | undefined>("emulator_readings", {
                 pem: live,
                 port,
               }),
             )
             .then(
-              (read): readonly EmulatorReading[] => read ?? [],
-              (): readonly EmulatorReading[] => [],
+              (read): EmulatorRead | null => read ?? null,
+              (): null => null,
             )
-        : Promise.resolve<readonly EmulatorReading[]>([]);
+        : Promise.resolve(null);
       // A shell that answers with nothing has read nothing, which is what
       // "unknown" means — and the screen may not crash on the difference.
       const route = invoke<ProxyReading | undefined>("proxy_in_use", {
@@ -380,7 +382,7 @@ export default function App({
           setSimulators((held) =>
             JSON.stringify(held) === JSON.stringify(sims) ? held : sims,
           );
-          setEmulators((held) =>
+          setEmulatorRead((held) =>
             JSON.stringify(held) === JSON.stringify(emus) ? held : emus,
           );
           setClearReadings((was) =>
@@ -669,6 +671,25 @@ export default function App({
     return undefined;
   });
 
+  // su writes every running emulator's store with no prompt, so the install
+  // goes first: no emulator is left routing through a proxy it does not trust.
+  const installOnEmulators = thenRead(async () => {
+    await invoke("install_on_emulators", { pem: await client.caCertPem() });
+  });
+
+  const routeEmulators = thenRead(async () => {
+    await invoke("route_emulators", { port: splitProxyAddr(proxyAddr).port });
+  });
+
+  const unrouteEmulators = thenRead(async () => {
+    await invoke("unroute_emulators");
+  });
+
+  const setUpEmulator = thenRead(async () => {
+    await invoke("install_on_emulators", { pem: await client.caCertPem() });
+    await invoke("route_emulators", { port: splitProxyAddr(proxyAddr).port });
+  });
+
   const unsetProxy = thenRead(async () => {
     await invoke("unset_proxy");
   });
@@ -681,13 +702,17 @@ export default function App({
   // opens. The browser's request carries this window's mark, so it settles the
   // tasks as the in-app one does (DEC-62).
   const openRoute = async (route: RouteName) => {
-    if (route === "keychain" || route === "certificate") {
+    if (
+      route === "keychain" ||
+      route === "certificate" ||
+      route === "emulator-certificate"
+    ) {
       await invoke("open_route", {
         route: { name: route, pem: await client.caCertPem() },
       });
     } else if (route === "browser") {
       await invoke("open_route", { route: { name: route, mark: nextMark() } });
-    } else if (route === "simulator-request") {
+    } else if (route === "simulator-request" || route === "emulator-request") {
       await invoke("open_route", { route: { name: route, mark } });
     } else {
       await invoke("open_route", { route: { name: route } });
@@ -749,12 +774,15 @@ export default function App({
       ? client
           .caCertPem()
           .then((pem) =>
-            invoke<EmulatorReading[] | undefined>("emulator_readings", {
+            invoke<EmulatorRead | undefined>("emulator_readings", {
               pem,
               port: splitProxyAddr(proxyAddr).port,
             }),
           )
-          .then((read) => read?.find((e) => e.proxy === "ours")?.name ?? null)
+          .then(
+            (read) =>
+              read?.emulators.find((e) => e.proxy === "ours")?.name ?? null,
+          )
       : Promise.resolve(null);
     const [reached, emulator] = await Promise.all([
       bounded<ReachState | null>(client.reach(), null),
@@ -990,13 +1018,19 @@ export default function App({
           traffic={traffic}
           ownProofAt={ownProofAt}
           simulators={simulators}
-          emulators={emulators}
+          emulators={emulatorRead?.adb ? emulatorRead.emulators : null}
+          androidSdk={emulatorRead}
+          emulatorStarting={emulatorRead?.starting ?? false}
           savedCa={savedCa}
           deviceMark={mark}
           device={device}
           onSetUpThisMachine={setUpThisMachine}
           onSetUpSimulator={setUpSimulator}
           onTrustSimulators={trustSimulators}
+          onSetUpEmulator={setUpEmulator}
+          onInstallOnEmulators={installOnEmulators}
+          onRouteEmulators={routeEmulators}
+          onUnrouteEmulators={unrouteEmulators}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}

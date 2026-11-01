@@ -1017,18 +1017,46 @@ describe("the emulator's certificate and proxy", () => {
     expect(emulatorTrustStatus(unread, null, reading(AT_1402, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
       verdict("done", "the emulator's request decrypted at 14:02"),
     );
-    expect(emulatorTrustStatus([], null, reading(), decrypted, CONFIRM_HTTPS)).toEqual(
+    expect(emulatorTrustStatus(null, null, reading(), decrypted, CONFIRM_HTTPS)).toEqual(
       verdict("done", "a request decrypted at 14:02"),
     );
-    expect(emulatorTrustStatus([], null, reading(null, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+    expect(emulatorTrustStatus(null, null, reading(null, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
       awaiting("the address in task 3 confirms it"),
     );
-    expect(emulatorTrustStatus([], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(awaiting(CONFIRM_HTTPS));
+    expect(emulatorTrustStatus(null, null, reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(awaiting(CONFIRM_HTTPS));
+  });
+
+  // W17's W4: a reading that found none says so; no reading - adb not found, or
+  // a read not landed - never does, and a proof still reads done.
+  it("says no emulator runs only where a reading found none", () => {
+    expect(emulatorTrustStatus([], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+      verdict("not-done", "no emulator running"),
+    );
+    expect(emulatorTrustStatus([], null, reading(null, true), refused, CONFIRM_HTTPS)).toEqual(
+      verdict("not-done", "no emulator running"),
+    );
+    expect(emulatorTrustStatus([], null, reading(AT_1402, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
+      verdict("done", "the emulator's request decrypted at 14:02"),
+    );
+    expect(emulatorTrustStatus([], null, reading(), decrypted, CONFIRM_HTTPS).short).toBe(
+      "done — a request decrypted at 14:02",
+    );
+    expect(emulatorTrustStatus(null, null, reading(), NO_EVIDENCE, CONFIRM_HTTPS).short).not.toMatch(/no emulator/);
+  });
+
+  // W17's S2: one adb lists still booting is not running yet, and is said to be starting.
+  it("says the emulator is starting where one boots and none runs", () => {
+    expect(emulatorTrustStatus([], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS, true)).toEqual(
+      verdict("not-done", "the emulator is starting"),
+    );
+    expect(emulatorTrustStatus([], null, reading(), decrypted, CONFIRM_HTTPS, true).short).toBe(
+      "done — a request decrypted at 14:02",
+    );
   });
 
   // S2: its own services refuse a user certificate it holds.
   it("never reads a refusal as its certificate not working", () => {
-    for (const read of [[], [emu("Pixel 7 API 35", "unknown")]])
+    for (const read of [null, [emu("Pixel 7 API 35", "unknown")]])
       expect(emulatorTrustStatus(read, null, reading(), refused, CONFIRM_HTTPS)).toEqual(awaiting(CONFIRM_HTTPS));
   });
 

@@ -438,6 +438,8 @@ export function simulatorTrustStatus(
 }
 
 export const NO_SIMULATOR_RUNNING = "no Simulator running";
+export const NO_EMULATOR_RUNNING = "no emulator running";
+export const EMULATOR_STARTING = "the emulator is starting";
 
 // What the shell read of each emulator running, through adb (W8's Q1, Q2):
 // the name of its AVD, its own user store, and the proxy it sends through -
@@ -449,21 +451,40 @@ export interface EmulatorReading extends SimulatorTrust {
   proxy: EmulatorProxy;
 }
 
+// The Android SDK as the shell found it (W17's N1, I4): whether adb answered,
+// the SDK its commands name as the host's shell writes it, and the AVD used
+// last - a Google Play image's build has no su (W17's S3).
+export interface AndroidSdk {
+  adb: boolean;
+  sdk: string | null;
+  avd: { id: string; name: string; playStore: boolean } | null;
+}
+
+// starting: adb lists an emulator that has not finished booting (W17's S2).
+export interface EmulatorRead extends AndroidSdk {
+  emulators: EmulatorReading[];
+  starting: boolean;
+}
+
 const each = (read: readonly SimulatorTrust[], every: string) =>
   read.length === 1 ? read[0].name : every;
 
 // The emulator's certificate, read from its own store where adb reads one, and
 // otherwise from what could have come from it (DEC-63 rule 9). Its own services
 // refuse a user certificate by design, so a refusal is never this task's (S2).
+// `null` is no reading at all - adb not found, or a read not landed - and never
+// says none runs (W17's W4); one adb lists still booting is not running yet (S2).
 export function emulatorTrustStatus(
-  read: readonly EmulatorReading[],
+  emulators: readonly EmulatorReading[] | null,
   running: Running,
   reading: DeviceReading,
   evidence: Evidence,
   confirmOn: string,
+  starting = false,
 ): StepStatusView {
   if (running === "checking")
     return verdict("checking", "the certificate store");
+  const read = emulators ?? [];
   const missing = read.filter((e) => e.trust === "absent");
   if (missing.length === 1)
     return verdict("not-done", `not in ${missing[0].name}`);
@@ -483,6 +504,11 @@ export function emulatorTrustStatus(
     return verdict(
       "done",
       `a request decrypted at ${clock(evidence.decryptedAt)}`,
+    );
+  if (emulators?.length === 0)
+    return verdict(
+      "not-done",
+      starting ? EMULATOR_STARTING : NO_EMULATOR_RUNNING,
     );
   return awaiting(
     reading.mixed
