@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W18
+base: 32f6a1a0db08b2bb20674895b527ef6ff574206b
+design_sha256: 3e9668b3ab70d63372fb83960d783457af20117532185d4c25e4aa0d50b1fbc8
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/Onboarding.tsx
+    why: "a phone's try task takes parts W12's design run already gave this screen: dimmed with its waits-on line, as a blocked task is, until the phone's traffic may arrive, and its address step's code framed when it is the next thing - the one framed control W12 set. Nothing new renders. The owner waived a design run for W18 (2026-11-01: '4. no design')"
+  - path: ui/src/manualSteps.tsx
+    why: "a step with no control to click frames its code in the hairline border and button radius the framed control already wears; QrCode itself unchanged. The owner waived a design run for W18 (Q4 A)"
+  - path: ui/src/components/StepMedia.tsx
+    why: "the media keeps its own width (self-start, w-auto, max-w-full) and is never taller than the new step-media token, so a phone's portrait recording stands narrow instead of stretching to the column; landscape recordings, wider than the pane, render as before. TSDoc anatomy updated to say so. Under the owner's Q4 waiver"
+date: 2026-11-01
