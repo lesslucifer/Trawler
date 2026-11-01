@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU ios-simulator-wording -> epic/onboard-revamp (round 3)"
+epic: E-ONBRVP
+wu: E-ONBRVP.W16
+branch: wu/onboard-revamp/ios-simulator-wording
+base: fbc5cd7c4f5043958271ef3acfc4cb1a414be50e
+head: 8489af1cdf914ee666bf37c0bd276b85faa1e9db
+diff_sha256: 76a5b00f4d7b72702975af5ee48e008e9a32b59074486f48f0acb9035f6a956a
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 43
+    total: 146
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 2 }
+findings: { found: 3, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "ui/src/Onboarding.tsx reads probesOwnStore(platform) as 'this is the Simulator' to pick the Simulator's handlers, label and trust action"
+    waived: "the Simulator is the one platform with a store of its own the shell writes; a second such platform would bring its own handlers and rulings, and the flag already names the property those actions depend on"
+  - finding: "ui/src/App.tsx setUpSimulator repeats the replace-confirm, address split and set_proxy invoke that setProxy owns"
+    waived: "it mirrors setUpThisMachine, which inlines the same confirm and split; composing the two acts would re-read the machine between them through thenRead, and the reuse dimension is retired"
+verdict: PASS
+date: 2026-11-01
