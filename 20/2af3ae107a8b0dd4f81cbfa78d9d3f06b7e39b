@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU android-emulator-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W17
+branch: wu/onboard-revamp/android-emulator-wording
+base: fccdd1fe6d8840bf27cb0d6afe6d7760ebffe172
+head: 202af3ae107a8b0dd4f81cbfa78d9d3f06b7e39b
+diff_sha256: d75d1cb8b4180bcc3cede052fb85d39beb887569ba4069776526a871a3e2c654
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 3
+  stage_seconds:
+    gate0: 109
+    total: 196
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "while an emulator boots, task 1 reads no emulator running beside starting the emulator (verdicts.ts emulatorTrustStatus reads no starting)"
+    waived: "fixed in the commit after this tip, which a new round reviews; this note records the round as it ran"
+  - finding: "the adb-not-found help on Windows names the SDK as %LOCALAPPDATA% while its commands run in PowerShell"
+    waived: "fixed in the commit after this tip, which a new round reviews"
+  - finding: "App's setUpEmulator invokes install_on_emulators and route_emulators beside the two handlers that invoke each"
+    waived: "the one act runs the two shell commands in order and stops on a refused install; a helper shared with the single acts would wrap two invoke calls and hide that order"
+  - finding: "PlatformSetup holds the emulator's layout policy (emulatorDown, setUpLeads, the opener, next) beside the Simulator's"
+    waived: "PlatformSetup is where every platform's next-control and one-act policy already lives (W12, W16); moving it out is a refactor outside W17"
+verdict: PASS
+date: 2026-11-01
