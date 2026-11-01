@@ -1276,7 +1276,7 @@ test("with no address, check again reads the core's reach anew and offers what i
   await offMachine({ reach });
 
   const task1 = screen.getByTestId("task-1");
-  await waitFor(() => expect(task1).toHaveTextContent("Join the network your iPhone is on"));
+  await waitFor(() => expect(task1).toHaveTextContent("Join the network your iPhone or iPad is on"));
   fireEvent.click(within(task1).getByRole("button", { name: "check again" }));
 
   await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));

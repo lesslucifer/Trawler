@@ -284,7 +284,7 @@ describe("the one question, asked in the user's words", () => {
 
     expect(picker()).toHaveTextContent("iPhone or iPad");
     expect(screen.queryByRole("listbox")).toBeNull();
-    expect(task(1)).toHaveTextContent("Allow your iPhone to connect");
+    expect(task(1)).toHaveTextContent("Allow your iPhone or iPad to connect");
   });
 
   it("holds its width whatever the answer is, so the row beside it does not move", () => {
@@ -1773,7 +1773,7 @@ describe("a phone, before the network is allowed", () => {
   it("leads with the one task that is this machine's to do", () => {
     phone();
 
-    expect(task(1)).toHaveTextContent("Allow your iPhone to connect");
+    expect(task(1)).toHaveTextContent("Allow your iPhone or iPad to connect");
     expect(task(1)).toHaveTextContent(
       "not done — Trawler answers on this Mac only",
     );
@@ -1886,10 +1886,10 @@ describe("a phone, once it may connect", () => {
     armedPhone();
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — your iPhone's first HTTPS request confirms it",
+      "can't check here — your iPhone or iPad's first HTTPS request confirms it",
     );
     expect(task(3)).toHaveTextContent(
-      "can't check here — your iPhone's first request confirms it",
+      "can't check here — your iPhone or iPad's first request confirms it",
     );
     expect(task(2)).not.toHaveAttribute("data-dim");
   });
@@ -1899,7 +1899,7 @@ describe("a phone, once it may connect", () => {
 
     expect(screen.queryByText("do it by hand")).toBeNull();
     expect(task(2)).toHaveTextContent(
-      /Settings → General → VPN & Device Management/,
+      /In Settings, tap Profile Downloaded/,
     );
   });
 
@@ -1996,9 +1996,9 @@ describe("the iPhone, whose test is the address it is offered", () => {
       "not working — example.com did not decrypt",
     );
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
-      `example.com did not decrypt on your iPhone — turn on full trust: ${TRUST_SWITCH}. Not listed there? The profile is not installed — the steps below install it.`,
+      `example.com did not decrypt on your iPhone or iPad — turn on full trust: ${TRUST_SWITCH}. Not listed there? The profile is not installed — the steps below install it.`,
     );
-    expect(open("On your iPhone, open")).toBe(true);
+    expect(open("Scan with the camera, or open")).toBe(true);
     expect(task(4)).toHaveTextContent(
       "not working — arriving but not decrypting",
     );
@@ -2071,11 +2071,11 @@ describe("the iPhone, whose test is the address it is offered", () => {
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
       /turn on full trust/,
     );
-    expect(open("On your iPhone, open")).toBe(true);
+    expect(open("Scan with the camera, or open")).toBe(true);
     expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(provedAt)}`);
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
     expect(screen.getByTestId("check-address")).toHaveTextContent(
-      "to check again, open it on your iPhone",
+      "to check again, scan it or open",
     );
   });
 
@@ -2130,7 +2130,7 @@ describe("the iPhone, whose test is the address it is offered", () => {
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
-      `example.com did not decrypt — if you opened it on your iPhone, turn on full trust: ${TRUST_SWITCH}. Not listed there? The profile is not installed — the certificate step installs it.`,
+      `example.com did not decrypt — if you opened it on your iPhone or iPad, turn on full trust: ${TRUST_SWITCH}. Not listed there? The profile is not installed — the certificate step installs it.`,
     );
     expect(document.body.textContent).not.toMatch(
       /Finish the certificate step/,
@@ -2202,7 +2202,7 @@ describe("the Android device, whose test is the address it is offered", () => {
     expect(within(task(2)).getByTestId("traffic-remedy")).toHaveTextContent(
       `${STORE_LACKS} The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.`,
     );
-    expect(open("On your Android device, open")).toBe(true);
+    expect(open("Scan with the camera, or open")).toBe(true);
     expect(within(task(4)).queryByTestId("traffic-remedy")).toBeNull();
   });
 
@@ -2219,10 +2219,10 @@ describe("the Android device, whose test is the address it is offered", () => {
     expect(task(2)).toHaveTextContent(
       `not working — example.com did not decrypt at ${clock(refusedAt)}, after decrypting at ${clock(provedAt)}`,
     );
-    expect(open("On your Android device, open")).toBe(true);
+    expect(open("Scan with the camera, or open")).toBe(true);
     expect(task(4)).toHaveTextContent(`done — decrypted at ${clock(provedAt)}`);
     expect(screen.getByTestId("check-address")).toHaveTextContent(
-      "to check again, open it on your Android device",
+      "to check again, scan it or open",
     );
   });
 
@@ -2351,11 +2351,11 @@ describe("another device, where this machine's own traffic may be arriving too",
   });
 
   it("gives a phone the address as a code to scan as well (DEC-57)", () => {
-    draw({ reach: ARMED, deviceMark: MARK });
+    draw({ reach: ARMED, traffic: arriving, deviceMark: MARK });
     pick("iPhone or iPad");
 
     expect(within(task(4)).getByTestId("check-address")).toHaveTextContent(
-      "On your iPhone, open",
+      "Scan with the camera, or open",
     );
     expect(within(task(4)).getByTestId("scan-code")).toBeInTheDocument();
   });
@@ -2635,7 +2635,7 @@ describe("the address is an offer, not a menu", () => {
     pick("iPhone or iPad");
 
     expect(task(1)).toHaveTextContent(
-      "Join the network your iPhone is on, then check again.",
+      "Join the network your iPhone or iPad is on, then check again.",
     );
     fireEvent.click(
       within(task(1)).getByRole("button", { name: "check again" }),
