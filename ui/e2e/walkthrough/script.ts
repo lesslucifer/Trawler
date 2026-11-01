@@ -26,11 +26,13 @@ export type Outcome = "ok" | { fails: { stderr: string } };
 
 export interface Patch {
   trust?: TrustOs;
+  simulators?: { name: string; trust: TrustOs }[];
   proxy?: ProxyOs;
   set_up?: Outcome;
   set_proxy?: Outcome;
   unset_proxy?: Outcome;
   remove_ca?: Outcome;
+  trust_simulators?: Outcome;
   allow_reach?: boolean;
   allow_replace?: boolean;
   interface_names?: Record<string, string>;
@@ -434,9 +436,9 @@ function iosSim(host: Host): Chapter[] {
       await w.closePicker();
       await w.choose("iOS Simulator");
     },
-    expect: `task 1 carries the Simulator's own certificate steps; task 2 offers "set the system proxy", which the Simulator follows`,
-    findings: [],
-    anchor: [button("set the system proxy")],
+    expect: `task 1 reads "not done — no Simulator running", its steps open and "open the Simulator" the one framed control; no "Restart" step; task 2's "set the system proxy" is bare below it`,
+    findings: ["W16.W4", "W16.I3", "W16.E2"],
+    anchor: [button("open the Simulator")],
   };
   if (host !== "macos")
     return [
@@ -486,6 +488,28 @@ function iosSim(host: Host): Chapter[] {
       expect: `task 2 reads not done again and offers "set the system proxy"`,
       findings: [],
       anchor: [button("set the system proxy")],
+    },
+    {
+      id: "running",
+      title: "A Simulator running",
+      act: async (w) => {
+        await w.script({ simulators: [{ name: "iPhone 17 Pro", trust: "absent" }] });
+        await w.recheck();
+      },
+      expect: `"set up the Simulator", the one framed control, above the tasks; task 1 reads "not done — not in iPhone 17 Pro" with its save and command shut under "do it by hand"; task 2 has no button of its own`,
+      findings: ["W16.E1"],
+      anchor: [button("set up the Simulator")],
+    },
+    {
+      id: "trusted",
+      title: "The Simulator set up",
+      act: async (w) => {
+        await w.click("set up the Simulator");
+        await w.recheck();
+      },
+      expect: `task 1 reads "done — trusted in iPhone 17 Pro" and task 2 done; task 3's "open it in the Simulator" is the one framed control, the marked address beside it`,
+      findings: ["W16.I1", "W16.E3"],
+      anchor: [button("open it in the Simulator")],
     },
   ];
 }
