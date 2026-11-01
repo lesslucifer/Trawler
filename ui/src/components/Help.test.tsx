@@ -78,4 +78,16 @@ describe("Help", () => {
     fireEvent.click(trigger);
     expect(trigger.parentElement!.className).toContain("[&>button]:text-ink");
   });
+
+  // Middle-aligned, the 24px box centred on the line's x-height and sat the ?
+  // below the title it explains; on the baseline, the ? reads as the line's,
+  // and pulled in so its box never pushes the line - and its number - down.
+  it("sets its ? on the baseline of the line it explains", () => {
+    renderHelp();
+    const box = screen.getByRole("button", { name: "help: on Ethernet" }).parentElement!;
+
+    expect(box.className).toContain("align-baseline");
+    expect(box.className).not.toContain("align-middle");
+    expect(box.className).toContain("-my-chrome-y");
+  });
 });
