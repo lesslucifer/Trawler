@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W16
+base: fbc5cd7c4f5043958271ef3acfc4cb1a414be50e
+design_sha256: f1aefd419b56a2194c36a267a0d6473f901b561b5b7c195010634210c6a4b2ee
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wiring only: two shell calls (trust_simulators, and it before set_proxy for the one act), the Simulator request route's mark, and a Simulator reading held as none until one lands; nothing it renders changed shape"
+  - path: ui/src/Onboarding.tsx
+    why: "the Simulator's tasks take parts W12's design run already gave this screen, in the slots it gave them: the one act above the tasks, an Action under a task's status, a route button in a guide step and under the try task's status, the one framed control; the framing order and four words changed. The owner waived a design run for W16 (2026-11-01: 'I don't need the design run, just build it')"
+  - path: ui/src/components/CommandBlock.tsx
+    why: "one class: a command wraps at spaces instead of at any character; its TSDoc anatomy line says so. Layout, surface and copy affordance unchanged"
+date: 2026-11-01
