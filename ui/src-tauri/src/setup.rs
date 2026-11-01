@@ -551,11 +551,10 @@ impl EmulatorReading {
 
 // A GUI app inherits no shell profile, so the SDK is looked for where Android
 // Studio puts it before the PATH is tried.
-fn adb_candidates(
+fn sdk_candidates(
     os: &str,
     var: impl Fn(&str) -> Option<std::ffi::OsString>,
 ) -> Vec<std::path::PathBuf> {
-    let exe = if os == "windows" { "adb.exe" } else { "adb" };
     let home = || var("HOME").map(std::path::PathBuf::from);
     let installed = match os {
         "macos" => home().map(|h| h.join("Library/Android/sdk")),
@@ -569,8 +568,146 @@ fn adb_candidates(
         .iter()
         .filter_map(|key| var(key).map(std::path::PathBuf::from))
         .chain(installed)
-        .map(|sdk| sdk.join("platform-tools").join(exe))
         .collect()
+}
+
+fn sdk_tool(os: &str, sdk: &Path, dir: &str, tool: &str) -> std::path::PathBuf {
+    let exe = if os == "windows" { format!("{tool}.exe") } else { tool.to_string() };
+    sdk.join(dir).join(exe)
+}
+
+fn adb_candidates(
+    os: &str,
+    var: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Vec<std::path::PathBuf> {
+    sdk_candidates(os, var).iter().map(|sdk| sdk_tool(os, sdk, "platform-tools", "adb")).collect()
+}
+
+// The SDK that holds adb, as the user's own shell writes it, so a printed
+// command names a tool the user can run where a stock install put none on the
+// PATH (E-ONBRVP.W17's N1). A path the shell's double quotes would change is
+// not offered.
+fn spelled_sdk(
+    os: &str,
+    sdk: &Path,
+    var: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Option<String> {
+    let path = sdk.to_str()?;
+    let (key, written, special): (&str, &str, &[char]) = if os == "windows" {
+        ("LOCALAPPDATA", "$env:LOCALAPPDATA", &['"', '`', '$'])
+    } else {
+        ("HOME", "$HOME", &['"', '`', '$', '\\'])
+    };
+    if path.contains(special) {
+        return None;
+    }
+    let base = var(key).and_then(|b| b.into_string().ok()).filter(|b| !b.is_empty());
+    Some(match base.as_deref().and_then(|b| path.strip_prefix(b)) {
+        Some(rest) if rest.starts_with(['/', '\\']) => format!("{written}{rest}"),
+        _ => path.to_string(),
+    })
+}
+
+// The AVD used last: each start rewrites `hardware-qemu.ini` in its folder, and
+// its `config.ini` carries the name Device Manager shows (W17's Q4).
+const AVD_LAUNCHED: &str = "hardware-qemu.ini";
+const AVD_DISPLAY_NAME: &str = "avd.ini.displayname=";
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct Avd {
+    pub(crate) id: String,
+    pub(crate) name: String,
+}
+
+fn avd_home(
+    os: &str,
+    var: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Option<std::path::PathBuf> {
+    if let Some(dir) = var("ANDROID_AVD_HOME") {
+        return Some(dir.into());
+    }
+    if let Some(dir) = var("ANDROID_USER_HOME") {
+        return Some(std::path::PathBuf::from(dir).join("avd"));
+    }
+    let home = var(if os == "windows" { "USERPROFILE" } else { "HOME" })?;
+    Some(std::path::PathBuf::from(home).join(".android").join("avd"))
+}
+
+fn ini_value<'a>(ini: &'a str, key: &str) -> Option<&'a str> {
+    ini.lines().find_map(|line| line.trim().strip_prefix(key)).map(str::trim)
+}
+
+fn last_avd(avds: &Path) -> Option<Avd> {
+    let modified = |path: &Path| std::fs::metadata(path).and_then(|m| m.modified()).ok();
+    std::fs::read_dir(avds)
+        .ok()?
+        .flatten()
+        .filter_map(|entry| {
+            let ini = entry.path();
+            if ini.extension()? != "ini" {
+                return None;
+            }
+            let id = ini.file_stem()?.to_str()?.to_string();
+            let dir =
+                std::path::PathBuf::from(ini_value(&std::fs::read_to_string(&ini).ok()?, "path=")?);
+            let config = std::fs::read_to_string(dir.join("config.ini")).ok()?;
+            let name = ini_value(&config, AVD_DISPLAY_NAME)
+                .filter(|n| !n.is_empty())
+                .map_or_else(|| id.replace('_', " "), ToString::to_string);
+            let used =
+                modified(&dir.join(AVD_LAUNCHED)).or_else(|| modified(&dir.join("config.ini")));
+            Some((used, Avd { id, name }))
+        })
+        .max_by(|(a, _), (b, _)| a.cmp(b))
+        .map(|(_, avd)| avd)
+}
+
+// Where adb and the emulator are, and which emulators run, for the commands
+// that act on them: every one running gets the act, as every printed command
+// reaches every one (W8's C2).
+#[derive(Debug, Default)]
+pub(crate) struct Emulators {
+    pub(crate) adb: String,
+    pub(crate) emulator: String,
+    pub(crate) running: Vec<String>,
+    pub(crate) last_avd: Option<Avd>,
+}
+
+impl Emulators {
+    pub(crate) fn read() -> Self {
+        let os = std::env::consts::OS;
+        let var = |key: &str| std::env::var_os(key);
+        let sdk = sdk_candidates(os, var)
+            .into_iter()
+            .find(|sdk| sdk_tool(os, sdk, "platform-tools", "adb").is_file());
+        let tool = |dir: &str, name: &str| {
+            sdk.as_deref().map_or_else(
+                || name.to_string(),
+                |sdk| sdk_tool(os, sdk, dir, name).to_string_lossy().into_owned(),
+            )
+        };
+        let adb = tool("platform-tools", "adb");
+        let running = ran(&adb, &["devices"])
+            .filter(|out| out.ok)
+            .map(|out| running_emulators(&out.stdout))
+            .unwrap_or_default();
+        Self {
+            emulator: tool("emulator", "emulator"),
+            running,
+            last_avd: avd_home(os, var).as_deref().and_then(last_avd),
+            adb,
+        }
+    }
+
+    pub(crate) fn on(&self, serial: &str, args: &[&str]) -> Vec<String> {
+        let mut argv = argv(&[&self.adb, "-s", serial]);
+        argv.extend(args.iter().map(ToString::to_string));
+        argv
+    }
+
+    fn on_each(&self, args: &[&str]) -> Vec<Vec<String>> {
+        self.running.iter().map(|serial| self.on(serial, args)).collect()
+    }
 }
 
 fn running_emulators(devices: &str) -> Vec<String> {
@@ -677,17 +814,16 @@ fn der_bytes(live: &str) -> Option<Vec<u8>> {
     base64::engine::general_purpose::STANDARD.decode(live).ok()
 }
 
+// None where adb did not answer: no emulator is a reading only adb can give.
 fn emulators_read(
-    live: &str,
+    live: Option<&str>,
     port: u16,
     adb: impl Fn(&[&str]) -> Option<Ran>,
-) -> Vec<EmulatorReading> {
-    let Some(devices) = adb(&["devices"]).filter(|out| out.ok) else {
-        return Vec::new();
-    };
-    let der = der_bytes(live);
+) -> Option<Vec<EmulatorReading>> {
+    let devices = adb(&["devices"]).filter(|out| out.ok)?;
+    let der = live.and_then(der_bytes);
     let store = user_ca_script();
-    running_emulators(&devices.stdout)
+    let read = running_emulators(&devices.stdout)
         .into_iter()
         .map(|serial| {
             let on = |args: &[&str]| adb(&[&["-s", serial.as_str()], args].concat());
@@ -706,26 +842,157 @@ fn emulators_read(
             );
             EmulatorReading::new(name, trust, &proxy)
         })
-        .collect()
+        .collect();
+    Some(read)
+}
+
+// What the screen knows of the emulator: whether adb answered, the SDK its
+// commands name, the AVD used last, and each emulator running (W17's W4, I4).
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
+pub struct EmulatorRead {
+    pub(crate) adb: bool,
+    pub(crate) sdk: Option<String>,
+    pub(crate) avd: Option<Avd>,
+    pub(crate) emulators: Vec<EmulatorReading>,
 }
 
 // Read-only probe: which emulators run, does each one's own store hold the
-// certificate the core serves now, and where does each send its traffic? None
-// running is the screen's unread, and its tasks fall back to its marked request
-// (DEC-63). The window asks only while the emulator is the platform chosen:
-// adb starts a server of its own where none runs.
+// certificate the core serves now, and where does each send its traffic? A
+// certificate that does not read leaves each store unknown, never the
+// emulators unlisted. The window asks only while the emulator is the platform
+// chosen: adb starts a server of its own where none runs.
 #[cfg_attr(not(feature = "scenario"), tauri::command(async))]
-pub fn emulator_readings(pem: String, port: u16) -> Vec<EmulatorReading> {
-    let Some(live) = live_body(&pem) else {
-        return Vec::new();
-    };
+pub fn emulator_readings(pem: String, port: u16) -> EmulatorRead {
     let os = std::env::consts::OS;
-    let adb = adb_candidates(os, |key| std::env::var_os(key))
-        .into_iter()
-        .find(|path| path.is_file())
-        .unwrap_or_else(|| std::path::PathBuf::from("adb"));
-    let adb = adb.to_string_lossy();
-    emulators_read(&live, port, |args| ran(&adb, args))
+    let var = |key: &str| std::env::var_os(key);
+    let found = adb_candidates(os, var).into_iter().find(|path| path.is_file());
+    let sdk = found.as_deref().and_then(Path::parent).and_then(Path::parent);
+    let adb = found.as_deref().map_or_else(|| "adb".into(), |p| p.to_string_lossy());
+    let live = live_body(&pem);
+    let emulators = emulators_read(live.as_deref(), port, |args| ran(&adb, args));
+    EmulatorRead {
+        adb: emulators.is_some(),
+        sdk: sdk.and_then(|sdk| spelled_sdk(os, sdk, var)),
+        avd: avd_home(os, var).as_deref().and_then(last_avd),
+        emulators: emulators.unwrap_or_default(),
+    }
+}
+
+// Android names each user CA by the old OpenSSL hash of its subject, an index
+// after it where two subjects share one: every Trawler CA shares its subject,
+// so a store may already hold another core's at `.0`.
+fn der_element(bytes: &[u8]) -> Option<(usize, usize)> {
+    let first = *bytes.get(1)?;
+    let (header, len) = if first < 0x80 {
+        (2, usize::from(first))
+    } else {
+        let n = usize::from(first & 0x7f);
+        if n == 0 || n > 4 {
+            return None;
+        }
+        let len = bytes.get(2..2 + n)?.iter().fold(0usize, |acc, b| (acc << 8) | usize::from(*b));
+        (2 + n, len)
+    };
+    let total = header.checked_add(len)?;
+    (bytes.len() >= total).then_some((header, total))
+}
+
+fn der_subject(cert: &[u8]) -> Option<&[u8]> {
+    let (header, _) = der_element(cert)?;
+    let tbs = &cert[header..];
+    let (header, total) = der_element(tbs)?;
+    let mut rest = &tbs[header..total];
+    let mut fields = Vec::new();
+    while !rest.is_empty() {
+        let (_, len) = der_element(rest)?;
+        fields.push(&rest[..len]);
+        rest = &rest[len..];
+    }
+    let versioned = usize::from(fields.first()?.first() == Some(&0xa0));
+    fields.get(versioned + 4).copied()
+}
+
+fn subject_hash_old(der: &[u8]) -> Option<String> {
+    use md5::{Digest as _, Md5};
+    let digest = Md5::digest(der_subject(der)?);
+    Some(format!("{:08x}", u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]])))
+}
+
+const STAGED_DER: &str = "/data/local/tmp/trawler-ca.der";
+
+// Written as root where Android's own installer would write it, then announced,
+// so a browser already open trusts it without a restart (W17's I1).
+fn user_ca_install_script(hash: &str) -> String {
+    format!(
+        "su 0 sh -c 'd={USER_CA_STORE}; t={STAGED_DER}; mkdir -p $d && chown system:system $d && chmod 755 $d && i=0 && while [ -e $d/{hash}.$i ] && ! cmp -s $t $d/{hash}.$i; do i=$((i+1)); done && cp $t $d/{hash}.$i && chown system:system $d/{hash}.$i && chmod 644 $d/{hash}.$i && restorecon -R $d && rm $t && am broadcast -a android.security.action.TRUST_STORE_CHANGED >/dev/null'"
+    )
+}
+
+fn emulator_install_commands(emus: &Emulators, der: &Path, hash: &str) -> Vec<Vec<String>> {
+    let script = user_ca_install_script(hash);
+    let der = der.to_string_lossy();
+    emus.running
+        .iter()
+        .flat_map(|serial| {
+            [emus.on(serial, &["push", &der, STAGED_DER]), emus.on(serial, &["shell", &script])]
+        })
+        .collect()
+}
+
+pub(crate) fn staged_der(pem: &str, name: &str) -> Result<std::path::PathBuf, SetupError> {
+    let der = live_body(pem)
+        .and_then(|live| der_bytes(&live))
+        .ok_or_else(|| setup_error("not a PEM certificate"))?;
+    let path = std::env::temp_dir().join(name);
+    std::fs::write(&path, der).map_err(|e| setup_error(e.to_string()))?;
+    Ok(path)
+}
+
+fn emulator_route_commands(emus: &Emulators, value: &str) -> Vec<Vec<String>> {
+    emus.on_each(&["shell", "settings", "put", "global", "http_proxy", value])
+}
+
+pub(crate) const NO_EMULATOR_RUNNING: &str = "no emulator is running — start one, then try again";
+pub(crate) const NO_EMULATOR_INSTALL_DETAIL: &str =
+    "couldn't install it in the emulator — no detail; use the steps below";
+pub(crate) const NO_EMULATOR_ROUTE_DETAIL: &str =
+    "couldn't route the emulator — no detail; use the steps below";
+pub(crate) const NO_EMULATOR_UNROUTE_DETAIL: &str =
+    "couldn't stop routing the emulator — no detail; use the steps below";
+
+fn running(emus: Emulators) -> Result<Emulators, SetupError> {
+    if emus.running.is_empty() {
+        Err(setup_error(NO_EMULATOR_RUNNING))
+    } else {
+        Ok(emus)
+    }
+}
+
+// An emulator is a test device and su asks for nothing, so the click is the
+// whole consent (W17's Q3).
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn install_on_emulators(pem: String) -> Result<(), SetupError> {
+    let der = staged_der(&pem, "trawler-ca.der")?;
+    let hash = std::fs::read(&der)
+        .ok()
+        .and_then(|bytes| subject_hash_old(&bytes))
+        .ok_or_else(|| setup_error("not a certificate Android can name"))?;
+    let emus = running(Emulators::read())?;
+    run_all(emulator_install_commands(&emus, &der, &hash), NO_EMULATOR_INSTALL_DETAIL)
+}
+
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn route_emulators(port: u16) -> Result<(), SetupError> {
+    checked_address(EMULATOR_HOST_ALIAS, port)?;
+    let emus = running(Emulators::read())?;
+    let value = format!("{EMULATOR_HOST_ALIAS}:{port}");
+    run_all(emulator_route_commands(&emus, &value), NO_EMULATOR_ROUTE_DETAIL)
+}
+
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn unroute_emulators() -> Result<(), SetupError> {
+    let emus = running(Emulators::read())?;
+    run_all(emulator_route_commands(&emus, ":0"), NO_EMULATOR_UNROUTE_DETAIL)
 }
 
 // The kernel calls a device `en1`; its owner calls it Wi-Fi, in the same
@@ -2574,7 +2841,7 @@ mod tests {
         let live = "MIIBpAECAw==";
         let der = der_bytes(live).unwrap();
         let asked = std::cell::RefCell::new(Vec::new());
-        let read = emulators_read(live, 7420, |args| {
+        let read = emulators_read(Some(live), 7420, |args| {
             asked.borrow_mut().push(args.join(" "));
             match args {
                 ["devices"] => answered(ADB_DEVICES),
@@ -2591,7 +2858,8 @@ mod tests {
                 }
                 _ => None,
             }
-        });
+        })
+        .expect("adb answered");
         assert_eq!(
             read,
             [
@@ -2608,10 +2876,212 @@ mod tests {
     }
 
     #[test]
-    fn no_adb_or_no_emulator_reads_nothing() {
-        assert_eq!(emulators_read("MIIB", 7420, |_| None), []);
-        assert_eq!(emulators_read("MIIB", 7420, |_| exited_non_zero("")), []);
-        assert_eq!(emulators_read("MIIB", 7420, |_| answered("List of devices attached\n\n")), []);
+    fn no_adb_is_no_reading_and_no_emulator_is_one() {
+        assert_eq!(emulators_read(Some("MIIB"), 7420, |_| None), None);
+        assert_eq!(emulators_read(Some("MIIB"), 7420, |_| exited_non_zero("")), None);
+        assert_eq!(
+            emulators_read(Some("MIIB"), 7420, |_| answered("List of devices attached\n\n")),
+            Some(vec![])
+        );
+    }
+
+    #[test]
+    fn a_certificate_that_does_not_read_leaves_each_emulator_listed_and_its_store_unknown() {
+        let read = emulators_read(None, 7420, |args| match args {
+            ["devices"] => answered(ADB_DEVICES),
+            ["-s", _, "shell", "getprop", _] => answered("\n"),
+            _ => None,
+        })
+        .expect("adb answered");
+        assert_eq!(read.len(), 2);
+        assert!(read.iter().all(|e| e.trust == trust_word(None)));
+    }
+
+    const ANDROID_CA: &str = "-----BEGIN CERTIFICATE-----
+MIIBjTCCATSgAwIBAgIUEluwT45SZ7hQPwp2s/2SgtYX4IEwCgYIKoZIzj0EAwIw
+LTEZMBcGA1UEAwwQVHJhd2xlciBQcm94eSBDQTEQMA4GA1UECgwHVHJhd2xlcjAe
+Fw0yNjExMDEwNjA5NTVaFw0zNjEwMjkwNjA5NTVaMC0xGTAXBgNVBAMMEFRyYXds
+ZXIgUHJveHkgQ0ExEDAOBgNVBAoMB1RyYXdsZXIwWTATBgcqhkjOPQIBBggqhkjO
+PQMBBwNCAAQH6bjS3GrJ72fOHT2PtTt1sj9OHagtIoF5erErXdK04ckqSgXCxWNP
+AG886uAwCrn33L+l2vQyCCnJrUIyCQGJozIwMDAdBgNVHQ4EFgQUijMZ8kLjBgTM
+bcHkeIM1PHjeaiIwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAs
+k+Jq39rckTYg7cUtzO/mFYYtpuuo+0MW+mC0/NjqZQIgBvaqdde8xAjOw9nqsBrB
+NecwLoyuObd5tf9Qwxdkolo=
+-----END CERTIFICATE-----";
+
+    #[test]
+    fn a_user_ca_is_named_as_openssl_names_it_for_android() {
+        let der = der_bytes(&live_body(ANDROID_CA).unwrap()).unwrap();
+        assert_eq!(subject_hash_old(&der).as_deref(), Some("d082df7e"));
+        assert_eq!(subject_hash_old(&[0x30, 0x03, 0x02, 0x01, 0x01]), None);
+        assert_eq!(subject_hash_old(&[]), None);
+    }
+
+    fn two_emulators() -> Emulators {
+        Emulators {
+            adb: "/sdk/platform-tools/adb".into(),
+            emulator: "/sdk/emulator/emulator".into(),
+            running: vec!["emulator-5554".into(), "emulator-5556".into()],
+            last_avd: None,
+        }
+    }
+
+    #[test]
+    fn the_install_pushes_the_der_and_writes_it_as_root_on_every_running_emulator() {
+        let commands = emulator_install_commands(
+            &two_emulators(),
+            Path::new("/tmp/trawler-ca.der"),
+            "d082df7e",
+        );
+        let script = user_ca_install_script("d082df7e");
+        let on = |serial: &str| {
+            [
+                argv(&[
+                    "/sdk/platform-tools/adb",
+                    "-s",
+                    serial,
+                    "push",
+                    "/tmp/trawler-ca.der",
+                    STAGED_DER,
+                ]),
+                argv(&["/sdk/platform-tools/adb", "-s", serial, "shell", &script]),
+            ]
+        };
+        assert_eq!(commands, [on("emulator-5554"), on("emulator-5556")].concat());
+        for part in [
+            "su 0 sh -c",
+            "/data/misc/user/0/cacerts-added",
+            "d082df7e.$i",
+            "! cmp -s $t",
+            "chown system:system",
+            "chmod 644",
+            "restorecon -R",
+            "am broadcast -a android.security.action.TRUST_STORE_CHANGED",
+        ] {
+            assert!(script.contains(part), "{part}");
+        }
+        assert!(emulator_install_commands(&Emulators::default(), Path::new("/t"), "h").is_empty());
+    }
+
+    #[test]
+    fn routing_sets_the_global_proxy_on_every_running_emulator_and_unrouting_clears_it() {
+        let set = |serial: &str, value: &str| {
+            argv(&[
+                "/sdk/platform-tools/adb",
+                "-s",
+                serial,
+                "shell",
+                "settings",
+                "put",
+                "global",
+                "http_proxy",
+                value,
+            ])
+        };
+        assert_eq!(
+            emulator_route_commands(&two_emulators(), "10.0.2.2:7420"),
+            [set("emulator-5554", "10.0.2.2:7420"), set("emulator-5556", "10.0.2.2:7420")]
+        );
+        assert_eq!(
+            emulator_route_commands(&two_emulators(), ":0"),
+            [set("emulator-5554", ":0"), set("emulator-5556", ":0")]
+        );
+    }
+
+    #[test]
+    fn no_emulator_running_is_refused_before_any_command_runs() {
+        assert_eq!(running(Emulators::default()).unwrap_err(), setup_error(NO_EMULATOR_RUNNING));
+        assert!(running(two_emulators()).is_ok());
+    }
+
+    #[test]
+    fn the_sdk_is_spelled_as_the_users_own_shell_writes_it() {
+        let vars = |key: &str| match key {
+            "HOME" => Some("/Users/me".into()),
+            "LOCALAPPDATA" => Some(r"C:\Users\me\AppData\Local".into()),
+            _ => None,
+        };
+        assert_eq!(
+            spelled_sdk("macos", Path::new("/Users/me/Library/Android/sdk"), vars).as_deref(),
+            Some("$HOME/Library/Android/sdk")
+        );
+        assert_eq!(
+            spelled_sdk("windows", Path::new(r"C:\Users\me\AppData\Local\Android\Sdk"), vars)
+                .as_deref(),
+            Some(r"$env:LOCALAPPDATA\Android\Sdk")
+        );
+        assert_eq!(
+            spelled_sdk("linux", Path::new("/opt/android-sdk"), vars).as_deref(),
+            Some("/opt/android-sdk")
+        );
+        assert_eq!(
+            spelled_sdk("macos", Path::new("/Users/meme/sdk"), vars).as_deref(),
+            Some("/Users/meme/sdk")
+        );
+        assert_eq!(spelled_sdk("macos", Path::new("/Users/me/$dk"), vars), None);
+        assert_eq!(spelled_sdk("linux", Path::new("/opt/\"sdk"), vars), None);
+    }
+
+    fn avds(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("trawler-test-avds-{}-{name}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn avd(home: &Path, id: &str, config: &str, launched_secs_ago: Option<u64>) {
+        let dir = home.join(format!("{id}.avd"));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(home.join(format!("{id}.ini")), format!("path={}\n", dir.display()))
+            .unwrap();
+        std::fs::write(dir.join("config.ini"), config).unwrap();
+        if let Some(ago) = launched_secs_ago {
+            let launched = std::fs::File::create(dir.join(AVD_LAUNCHED)).unwrap();
+            launched
+                .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(ago))
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn the_avd_used_last_is_the_one_whose_launch_file_is_newest_by_its_display_name() {
+        let home = avds("last");
+        avd(&home, "Pixel_7_API_35", "avd.ini.displayname=Pixel 7 API 35\n", Some(3_600));
+        avd(&home, "Pixel_Fold_API_34", "hw.lcd.width=1080\n", Some(60));
+        assert_eq!(
+            last_avd(&home),
+            Some(Avd { id: "Pixel_Fold_API_34".into(), name: "Pixel Fold API 34".into() })
+        );
+        avd(&home, "Pixel_7_API_35", "avd.ini.displayname=Pixel 7 API 35\n", Some(1));
+        assert_eq!(
+            last_avd(&home),
+            Some(Avd { id: "Pixel_7_API_35".into(), name: "Pixel 7 API 35".into() })
+        );
+        assert_eq!(last_avd(&avds("none")), None);
+        assert_eq!(last_avd(&home.join("missing")), None);
+    }
+
+    #[test]
+    fn the_avd_folder_is_where_android_studio_points_it() {
+        let vars = |key: &str| match key {
+            "HOME" => Some("/Users/me".into()),
+            "USERPROFILE" => Some(r"C:\Users\me".into()),
+            _ => None,
+        };
+        assert_eq!(avd_home("macos", vars), Some(PathBuf::from("/Users/me/.android/avd")));
+        assert_eq!(
+            avd_home("windows", vars),
+            Some(PathBuf::from(r"C:\Users\me").join(".android").join("avd"))
+        );
+        assert_eq!(
+            avd_home("linux", |key| (key == "ANDROID_USER_HOME").then(|| "/u".into())),
+            Some(PathBuf::from("/u/avd"))
+        );
+        assert_eq!(
+            avd_home("linux", |key| (key != "HOME").then(|| "/a".into())),
+            Some(PathBuf::from("/a"))
+        );
     }
 
     // ── The proxy HTTPS goes through now (D3 · D5 · D8) ─────────────────────

@@ -449,6 +449,18 @@ export interface EmulatorReading extends SimulatorTrust {
   proxy: EmulatorProxy;
 }
 
+// The Android SDK as the shell found it (W17's N1, I4): whether adb answered,
+// the SDK its commands name as the host's shell writes it, and the AVD used last.
+export interface AndroidSdk {
+  adb: boolean;
+  sdk: string | null;
+  avd: { id: string; name: string } | null;
+}
+
+export interface EmulatorRead extends AndroidSdk {
+  emulators: EmulatorReading[];
+}
+
 const each = (read: readonly SimulatorTrust[], every: string) =>
   read.length === 1 ? read[0].name : every;
 

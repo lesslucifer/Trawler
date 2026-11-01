@@ -333,7 +333,9 @@ test("the emulator is read through adb only while it is the platform chosen", as
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) =>
-    name === "emulator_readings" ? [{ name: "Pixel 7 API 35", trust: "trusted", proxy: "ours" }] : undefined,
+    name === "emulator_readings"
+      ? { adb: true, sdk: null, avd: null, emulators: [{ name: "Pixel 7 API 35", trust: "trusted", proxy: "ours" }] }
+      : undefined,
   );
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
@@ -3274,7 +3276,13 @@ describe("quitting", () => {
     onMacHost();
     vi.mocked(invoke).mockImplementation(async (name: string) => {
       if (name === "proxy_status") return { status: "none", address: null };
-      if (name === "emulator_readings") return [{ name: "Pixel_7_API_35", trust: "trusted", proxy: "wifi-only" }];
+      if (name === "emulator_readings")
+        return {
+          adb: true,
+          sdk: null,
+          avd: null,
+          emulators: [{ name: "Pixel_7_API_35", trust: "trusted", proxy: "wifi-only" }],
+        };
       return undefined;
     });
     const { api } = mockApi(() => []);

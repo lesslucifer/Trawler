@@ -34,6 +34,7 @@ import {
   NO_PROXY_READING,
   setUpOn,
   TUNNEL_GRACE_MS,
+  type EmulatorRead,
   type EmulatorReading,
   type ProxyReading,
   type SimulatorTrust,
@@ -352,13 +353,13 @@ export default function App({
       const adb = readsEmulators.current
         ? pem
             .then((live) =>
-              invoke<EmulatorReading[] | undefined>("emulator_readings", {
+              invoke<EmulatorRead | undefined>("emulator_readings", {
                 pem: live,
                 port,
               }),
             )
             .then(
-              (read): readonly EmulatorReading[] => read ?? [],
+              (read): readonly EmulatorReading[] => read?.emulators ?? [],
               (): readonly EmulatorReading[] => [],
             )
         : Promise.resolve<readonly EmulatorReading[]>([]);
@@ -749,12 +750,15 @@ export default function App({
       ? client
           .caCertPem()
           .then((pem) =>
-            invoke<EmulatorReading[] | undefined>("emulator_readings", {
+            invoke<EmulatorRead | undefined>("emulator_readings", {
               pem,
               port: splitProxyAddr(proxyAddr).port,
             }),
           )
-          .then((read) => read?.find((e) => e.proxy === "ours")?.name ?? null)
+          .then(
+            (read) =>
+              read?.emulators.find((e) => e.proxy === "ours")?.name ?? null,
+          )
       : Promise.resolve(null);
     const [reached, emulator] = await Promise.all([
       bounded<ReachState | null>(client.reach(), null),
