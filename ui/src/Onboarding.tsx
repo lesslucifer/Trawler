@@ -255,8 +255,8 @@ const MAKE_REQUEST_NOTE: ActionNotes = {
 // The one act's prompt is the host's: macOS asks for a password, Windows for
 // an approval (W12's W2), and either does the two tasks below it.
 const ONE_ACT_CAPTION: Record<"macos" | "windows", string> = {
-  macos: "one password prompt — it does steps 1 and 2",
-  windows: "one Windows approval — it does steps 1 and 2",
+  macos: "one password prompt — it does tasks 1 and 2",
+  windows: "one Windows approval — it does tasks 1 and 2",
 };
 
 const noAddress = (here: string, device: string) =>
@@ -1209,7 +1209,7 @@ function PlatformSetup({
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
   const blocked = offMachine && !allowed;
-  const waitsOn = chosen === undefined ? undefined : "after step 1";
+  const waitsOn = chosen === undefined ? undefined : "after task 1";
 
   const trustState = probesOwnStore(platform)
     ? simulatorTrustStatus(simulators, busy(setUp, "installing"), reading)

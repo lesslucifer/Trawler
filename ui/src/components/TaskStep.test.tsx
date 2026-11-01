@@ -60,12 +60,12 @@ describe("TaskStep", () => {
   });
 
   it("dims a task whose precondition is not met, and keeps its number", () => {
-    render(<TaskStep n={2} title="On your iPhone, install the certificate" waitsOn="after step 1" dim />);
+    render(<TaskStep n={2} title="On your iPhone, install the certificate" waitsOn="after task 1" dim />);
 
     const task = screen.getByTestId("task-2");
     expect(task.className).toContain("opacity-disabled");
     expect(task).toHaveTextContent("2");
-    expect(task).toHaveTextContent("after step 1");
+    expect(task).toHaveTextContent("after task 1");
   });
 
   it("an undimmed task carries no dimming at all", () => {

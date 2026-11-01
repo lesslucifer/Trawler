@@ -219,15 +219,15 @@ export function byOwnRequest(
   if (provedAt === null)
     return awaiting(
       task === "trust"
-        ? `the request in step ${tryStep} confirms it`
+        ? `the request in task ${tryStep} confirms it`
         : "the same request confirms it",
     );
   const at = clock(provedAt);
   return verdict(
     "done",
     task === "trust"
-      ? `step ${tryStep}'s request decrypted at ${at}`
-      : `step ${tryStep}'s request came through at ${at}`,
+      ? `task ${tryStep}'s request decrypted at ${at}`
+      : `task ${tryStep}'s request came through at ${at}`,
   );
 }
 
@@ -289,7 +289,7 @@ export function deviceTrustStatus(
       `a request decrypted at ${clock(evidence.decryptedAt)}`,
     );
   if (reading.mixed)
-    return awaiting(`the address in step ${reading.tryStep} confirms it`);
+    return awaiting(`the address in task ${reading.tryStep} confirms it`);
   return trustByTraffic(evidence, confirmOn);
 }
 
@@ -374,7 +374,7 @@ export function addressTrustStatus(
         : `${refused.host} did not decrypt at ${clock(refused.at)}, after decrypting at ${clock(proof)}`,
     );
   if (proof === null && !reading.mixed && evidence.refused)
-    return awaiting(`the address in step ${reading.tryStep} confirms it`);
+    return awaiting(`the address in task ${reading.tryStep} confirms it`);
   return deviceTrustStatus(evidence, reading, confirmOn);
 }
 
@@ -429,8 +429,12 @@ export function simulatorTrustStatus(
       "done",
       `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`,
     );
-  return awaiting(`the address in step ${reading.tryStep} confirms it`);
+  // The shell read every store there is, and there is none (W16's W4).
+  if (read.length === 0) return verdict("not-done", NO_SIMULATOR_RUNNING);
+  return awaiting(`the address in task ${reading.tryStep} confirms it`);
 }
+
+export const NO_SIMULATOR_RUNNING = "no Simulator running";
 
 // What the shell read of each emulator running, through adb (W8's Q1, Q2):
 // the name of its AVD, its own user store, and the proxy it sends through -
@@ -479,7 +483,7 @@ export function emulatorTrustStatus(
     );
   return awaiting(
     reading.mixed
-      ? `the address in step ${reading.tryStep} confirms it`
+      ? `the address in task ${reading.tryStep} confirms it`
       : confirmOn,
   );
 }

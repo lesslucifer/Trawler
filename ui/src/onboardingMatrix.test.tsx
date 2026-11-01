@@ -593,8 +593,9 @@ function expectedTrustState(s: State): RegExp {
     if (s.trust === "absent") return /^○\s*not done — not in iPhone 17 Pro$/;
     if (s.marked)
       return /^✓\s*done — the Simulator's request decrypted at \d\d:\d\d$/;
+    if (s.trust === "unknown") return /^○\s*not done — no Simulator running$/;
     return new RegExp(
-      `^◐\\s*can't check here — the address in step ${m.tryN} confirms it$`,
+      `^◐\\s*can't check here — the address in task ${m.tryN} confirms it$`,
     );
   }
   if (m.emulator) {
@@ -605,7 +606,7 @@ function expectedTrustState(s: State): RegExp {
     if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
     if (m.mixed)
       return new RegExp(
-        `^◐\\s*can't check here — the address in step ${m.tryN} confirms it$`,
+        `^◐\\s*can't check here — the address in task ${m.tryN} confirms it$`,
       );
     return /^◐\s*can't check here — the emulator's first HTTPS request confirms it$/;
   }
@@ -620,18 +621,18 @@ function expectedTrustState(s: State): RegExp {
         `^✓\\s*done — ${device}'s request decrypted at \\d\\d:\\d\\d$`,
       );
     if (m.mixed)
-      return /^◐\s*can't check here — the address in step 4 confirms it$/;
+      return /^◐\s*can't check here — the address in task 4 confirms it$/;
     if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
     if (m.refused)
-      return /^◐\s*can't check here — the address in step 4 confirms it$/;
+      return /^◐\s*can't check here — the address in task 4 confirms it$/;
     return new RegExp(
       `^◐\\s*can't check here — ${device}'s first HTTPS request confirms it$`,
     );
   }
   if (m.probesTrust && !m.trustConcluded)
     return s.own
-      ? /^✓\s*done — step 3's request decrypted at \d\d:\d\d$/
-      : /^◐\s*can't check here — the request in step 3 confirms it$/;
+      ? /^✓\s*done — task 3's request decrypted at \d\d:\d\d$/
+      : /^◐\s*can't check here — the request in task 3 confirms it$/;
   if (m.trustConcluded)
     return {
       trusted: browsersUnprobed(s)
@@ -642,7 +643,7 @@ function expectedTrustState(s: State): RegExp {
     }[s.trust as "trusted" | "installed" | "absent"];
   if (s.marked) return /^✓\s*done — .+'s request decrypted at \d\d:\d\d$/;
   if (m.mixed)
-    return /^◐\s*can't check here — the address in step 4 confirms it$/;
+    return /^◐\s*can't check here — the address in task 4 confirms it$/;
   if (m.decrypted && OFF_MACHINE.has(s.platform))
     return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
   if (m.decrypted) return /^✓\s*done — a request decrypted$/;
@@ -678,7 +679,7 @@ function expectedRouteState(s: State): RegExp {
   if (s.proxy === "none") return /^○\s*not done — the system proxy is off$/;
   if (s.platform === "this")
     return s.own
-      ? /^✓\s*done — step 3's request came through at \d\d:\d\d$/
+      ? /^✓\s*done — task 3's request came through at \d\d:\d\d$/
       : /^◐\s*can't check here — the same request confirms it$/;
   return /^◐\s*can't check here — .+'s first request confirms it$/;
 }
@@ -1292,7 +1293,7 @@ describe("every offered action, while it runs", () => {
 
 // A "can't check here" is a promise, so it must name something the screen can
 // be shown, and showing it must move the line. This machine's promise is its
-// own request in step 3 (D6); every other device's is its own first request.
+// own request in task 3 (D6); every other device's is its own first request.
 function settledBy(
   s: State,
   promise: string,
@@ -1300,10 +1301,10 @@ function settledBy(
   const m = model(s);
   if (
     (OFF_MACHINE.has(s.platform) &&
-      /^(the address in step 4|the same request) confirms it$/.test(promise)) ||
-    (m.sharedWire && /^the address in step \d confirms it$/.test(promise)) ||
+      /^(the address in task 4|the same request) confirms it$/.test(promise)) ||
+    (m.sharedWire && /^the address in task \d confirms it$/.test(promise)) ||
     (m.emulator &&
-      /^(the address in step \d|the same request) confirms it$/.test(promise))
+      /^(the address in task \d|the same request) confirms it$/.test(promise))
   )
     return {
       evidence: { ...s, marked: true },
@@ -1312,7 +1313,7 @@ function settledBy(
           (t) => t.n === m.tryN && t.text.includes(`trawler-check=${MARK}`),
         ),
     };
-  if (/^(the request in step 3|the same request) confirms it$/.test(promise))
+  if (/^(the request in task 3|the same request) confirms it$/.test(promise))
     return {
       evidence: { ...s, own: true },
       offered: (o) =>

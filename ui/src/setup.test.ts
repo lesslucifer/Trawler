@@ -466,12 +466,33 @@ describe("the Simulator is trusted through its own keychain and routed through t
   });
 
   // W7's C3: `keychain reset` exits 0 and leaves the root trusted.
-  it("reverses that trust by the erase, and says what the erase costs", () => {
+  // W16's W3: Simulator's own menu, set apart; what it costs on request.
+  it("reverses that trust by the erase, in Simulator's own menu, with what it wipes behind a ?", () => {
     const s = setup("ios-sim");
     expect(s.trust.guide!.undo).toEqual([
-      ["Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included."],
+      [
+        "In the Simulator's menu bar, click",
+        { path: ["Device", "Erase All Content and Settings"] },
+        {
+          help: "It wipes everything in that Simulator. Nothing removes Trawler's root alone.",
+          topic: "what it wipes",
+        },
+      ],
     ]);
     expect(everything(s)).not.toMatch(/keychain .*reset/);
+  });
+
+  // W16's W1, N1: the command names where it runs, and what to do when xcrun
+  // finds no simctl waits behind its ?.
+  it("runs its command in Terminal, with the fix for a missing simctl on request", () => {
+    const step = setup("ios-sim").trust.guide!.steps.find((s) => s.some(isCommand))!;
+    expect(step[0]).toBe("In Terminal, with the Simulator running, run:");
+    expect(step.filter(isHelp)).toEqual([
+      {
+        help: "simctl not found? Run sudo xcode-select -s /Applications/Xcode.app first.",
+        topic: "if simctl is not found",
+      },
+    ]);
   });
 
   it("routes through the host's own guide, because the proxy it follows is the host's", () => {

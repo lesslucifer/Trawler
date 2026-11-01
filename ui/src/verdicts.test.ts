@@ -377,13 +377,13 @@ describe("the short form every state carries", () => {
     [
       "trust · this machine, awaiting its own request",
       trustStatus("unknown", null, byOwnRequest("trust", null, 3)),
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
       undefined,
     ],
     [
       "trust · this machine, its own request decrypted",
       trustStatus("unknown", null, byOwnRequest("trust", AT_1402, 3)),
-      "done — step 3's request decrypted at 14:02",
+      "done — task 3's request decrypted at 14:02",
       undefined,
     ],
     [
@@ -411,7 +411,7 @@ describe("the short form every state carries", () => {
     [
       "proxy · this machine, its own request came through",
       proxyStatus("unknown", null, { device: "this machine", unread: byOwnRequest("route", AT_1402, 3) }),
-      "done — step 3's request came through at 14:02",
+      "done — task 3's request came through at 14:02",
       undefined,
     ],
     [
@@ -615,14 +615,14 @@ describe("This machine's own request stands in for a probe that cannot answer", 
     const trust = byOwnRequest("trust", null, 3);
     const route = byOwnRequest("route", null, 3);
 
-    expect(trust).toEqual(awaiting("the request in step 3 confirms it"));
+    expect(trust).toEqual(awaiting("the request in task 3 confirms it"));
     expect(route).toEqual(awaiting("the same request confirms it"));
     expect(trust.short).not.toBe(route.short);
   });
 
   it("once it came through decrypted, both tasks are done with the time it did", () => {
-    expect(byOwnRequest("trust", AT_1402, 3)).toEqual(verdict("done", "step 3's request decrypted at 14:02"));
-    expect(byOwnRequest("route", AT_1402, 3)).toEqual(verdict("done", "step 3's request came through at 14:02"));
+    expect(byOwnRequest("trust", AT_1402, 3)).toEqual(verdict("done", "task 3's request decrypted at 14:02"));
+    expect(byOwnRequest("route", AT_1402, 3)).toEqual(verdict("done", "task 3's request came through at 14:02"));
   });
 });
 
@@ -732,7 +732,7 @@ describe("another device's two tasks read what could have come from it", () => {
     const trust = deviceTrustStatus(NO_EVIDENCE, mixed, FIRST_HTTPS);
     const route = deviceRouteStatus(NO_EVIDENCE, mixed, FIRST);
 
-    expect(trust).toEqual(awaiting("the address in step 4 confirms it"));
+    expect(trust).toEqual(awaiting("the address in task 4 confirms it"));
     expect(route).toEqual(awaiting("the same request confirms it"));
     expect(trust.short).not.toBe(route.short);
   });
@@ -859,7 +859,7 @@ describe("a device whose test is its address", () => {
   it("any other refusal before a proof points at the address, never at the certificate", () => {
     const refusing = ev({ reached: true, unanswered: true, refused: true });
     expect(addressTrustStatus(refusing, IPHONE, null, FIRST_HTTPS)).toEqual(
-      awaiting("the address in step 4 confirms it"),
+      awaiting("the address in task 4 confirms it"),
     );
   });
 
@@ -869,7 +869,7 @@ describe("a device whose test is its address", () => {
       verdict("done", "a request decrypted at 14:02"),
     );
     expect(addressTrustStatus(NO_EVIDENCE, { ...IPHONE, mixed: true }, null, FIRST_HTTPS)).toEqual(
-      awaiting("the address in step 4 confirms it"),
+      awaiting("the address in task 4 confirms it"),
     );
   });
 
@@ -938,8 +938,17 @@ describe("the Simulator's certificate", () => {
 
   // S1: this Mac's own traffic is on the Simulator's wire, so only the store
   // or the mark is its reading - and a store that reads absent outranks a mark.
+  it("says no Simulator runs where the shell read none, and a proof still reads done", () => {
+    expect(simulatorTrustStatus([], null, reading())).toEqual(verdict("not-done", "no Simulator running"));
+    expect(simulatorTrustStatus([], null, reading(AT_1402))).toEqual(
+      verdict("done", "the Simulator's request decrypted at 14:02"),
+    );
+  });
+
   it("falls back to its own marked request where no store answered, and to that alone", () => {
-    expect(simulatorTrustStatus([], null, reading())).toEqual(awaiting("the address in step 3 confirms it"));
+    expect(simulatorTrustStatus([sim("iPhone 17 Pro", "unknown")], null, reading())).toEqual(
+      awaiting("the address in task 3 confirms it"),
+    );
     expect(simulatorTrustStatus([sim("iPhone 17 Pro", "unknown")], null, reading(AT_1402))).toEqual(
       verdict("done", "the Simulator's request decrypted at 14:02"),
     );
@@ -1011,7 +1020,7 @@ describe("the emulator's certificate and proxy", () => {
       verdict("done", "a request decrypted at 14:02"),
     );
     expect(emulatorTrustStatus([], null, reading(null, true), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(
-      awaiting("the address in step 3 confirms it"),
+      awaiting("the address in task 3 confirms it"),
     );
     expect(emulatorTrustStatus([], null, reading(), NO_EVIDENCE, CONFIRM_HTTPS)).toEqual(awaiting(CONFIRM_HTTPS));
   });
@@ -1115,6 +1124,6 @@ describe("whether this machine's own traffic may be arriving (DEC-63)", () => {
 });
 
 test("This machine's own request is named by the step its try task is", () => {
-  expect(byOwnRequest("trust", null, 4)).toEqual(awaiting("the request in step 4 confirms it"));
-  expect(byOwnRequest("trust", AT_1402, 4)).toEqual(verdict("done", "step 4's request decrypted at 14:02"));
+  expect(byOwnRequest("trust", null, 4)).toEqual(awaiting("the request in task 4 confirms it"));
+  expect(byOwnRequest("trust", AT_1402, 4)).toEqual(verdict("done", "task 4's request decrypted at 14:02"));
 });

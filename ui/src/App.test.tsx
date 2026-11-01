@@ -1192,7 +1192,7 @@ test("another device's marked request settles its tasks, where nothing else of t
   rows = [flow({ uri: "https://example.com/", started_at: later })];
   fire();
   await waitFor(() => expect(screen.getByTestId("traffic-state")).toBeInTheDocument());
-  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
 
   rows = [...rows, flow({ id: "f2", uri: address, started_at: later })];
   fire();
@@ -1277,7 +1277,7 @@ test("requests from while this machine's proxy pointed here stay unplaced once i
   rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
   fire();
   await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
-  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
 
   proxy = { status: "none", address: null };
   fireEvent(window, new Event("focus"));
@@ -1361,7 +1361,7 @@ test("what arrives after the last reading of this machine's proxy as off is no o
 
   expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it");
   await rereadOnFocus();
-  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
   expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — the same request confirms it");
 });
 
@@ -3051,8 +3051,8 @@ describe("This machine's own request", () => {
 
     await waitFor(() => expect(note()).toHaveTextContent("example.com answered through Trawler."));
     expect(own.url()).toMatch(/^https:\/\/example\.com\/\?trawler-check=[a-z0-9]+\.\d+$/);
-    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — step 3's request decrypted at \d\d:\d\d/);
-    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — step 3's request came through at \d\d:\d\d/);
+    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — task 3's request decrypted at \d\d:\d\d/);
+    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — task 3's request came through at \d\d:\d\d/);
   });
 
   const afterGrace = async (answer: (url: string, own: ReturnType<typeof onLinuxWith>) => Promise<Response>) => {
@@ -3072,7 +3072,7 @@ describe("This machine's own request", () => {
         throw new TypeError("Load failed");
       });
       await waitFor(() => expect(note()).toHaveTextContent("the request reached Trawler and didn't decrypt."));
-      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in step 3 confirms it");
+      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in task 3 confirms it");
     } finally {
       vi.useRealTimers();
     }

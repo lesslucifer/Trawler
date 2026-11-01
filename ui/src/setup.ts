@@ -1321,6 +1321,24 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platform
 const simulatorTrustCommand = (file: string) =>
   `for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ${file}; done`;
 
+// xcrun follows xcode-select, which may point at the Command Line Tools, and
+// those hold no simctl (W7's N1).
+const SIMCTL_NOT_FOUND: HelpPart = {
+  help: "simctl not found? Run sudo xcode-select -s /Applications/Xcode.app first.",
+  topic: "if simctl is not found",
+};
+
+// simctl adds a root and removes none, and a keychain reset leaves it, so the
+// erase is the only way back (W7's C3); its labels are Simulator's own menu.
+const SIMULATOR_ERASE: GuideStep = [
+  "In the Simulator's menu bar, click",
+  { path: ["Device", "Erase All Content and Settings"] },
+  {
+    help: "It wipes everything in that Simulator. Nothing removes Trawler's root alone.",
+    topic: "what it wipes",
+  },
+];
+
 function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
   const host = HOST_NOUN[os];
   const format = caFormatFor("ios-sim");
@@ -1328,17 +1346,14 @@ function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platfor
     steps: [
       saveCaStep(format),
       [
-        "With the Simulator running, run:",
+        "In Terminal, with the Simulator running, run:",
         { command: simulatorTrustCommand(savedFile("macos", format, saved)), label: "the trust command" },
+        SIMCTL_NOT_FOUND,
       ],
       ["Restart the Simulator so apps pick the new root up."],
     ],
     undoTitle: "to remove it later",
-    undo: [
-      [
-        "Erase that Simulator: Device → Erase All Content and Settings. It wipes everything in it, Trawler's root included.",
-      ],
-    ],
+    undo: [SIMULATOR_ERASE],
   };
   return {
     trust: {

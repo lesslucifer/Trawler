@@ -390,10 +390,10 @@ describe("this machine — three tasks, and one button that does two of them", (
     expect(
       screen.getByRole("button", { name: "set up this Mac" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("one password prompt — it does steps 1 and 2")).toBeNull();
+    expect(screen.queryByText("one password prompt — it does tasks 1 and 2")).toBeNull();
     openHelp(screen.getByTestId("one-act"));
     expect(
-      screen.getByText("one password prompt — it does steps 1 and 2"),
+      screen.getByText("one password prompt — it does tasks 1 and 2"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Install the certificate" }),
@@ -520,7 +520,7 @@ describe("this machine — three tasks, and one button that does two of them", (
     );
     // And it does not claim the tasks are done — that is still the probes' word.
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
   });
 
@@ -853,7 +853,7 @@ describe("each task holds its own route, under the one button", () => {
     ).toBeInTheDocument();
     openHelp(oneAct);
     expect(oneAct).toHaveTextContent(
-      "one password prompt — it does steps 1 and 2",
+      "one password prompt — it does tasks 1 and 2",
     );
     expect(
       within(task(1)).queryByRole("button", { name: "set up this Mac" }),
@@ -998,7 +998,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
     );
     openHelp(screen.getByTestId("one-act"));
     const line = screen.getByText(
-      "one password prompt — it does steps 1 and 2",
+      "one password prompt — it does tasks 1 and 2",
     );
     expect(
       line.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -1376,9 +1376,7 @@ describe("the iOS Simulator, beside this Mac's own traffic", () => {
   it("is not proven by this Mac's decrypted traffic", () => {
     simulator({ simulators: [], ...wire(capturing) });
 
-    expect(task(1)).toHaveTextContent(
-      "can't check here — the address in step 3 confirms it",
-    );
+    expect(task(1)).toHaveTextContent("not done — no Simulator running");
     expect(task(3)).toHaveTextContent(
       "can't check here — the address below confirms it",
     );
@@ -1488,7 +1486,7 @@ describe("the Android emulator, beside this machine's own traffic", () => {
     emulator({ emulators: [], ...mixedWire(capturing) });
 
     expect(task(1)).toHaveTextContent(
-      "can't check here — the address in step 3 confirms it",
+      "can't check here — the address in task 3 confirms it",
     );
     expect(task(2)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -1630,7 +1628,7 @@ describe("a phone, before the network is allowed", () => {
 
     for (const n of [2, 3, 4]) {
       expect(task(n)).toHaveAttribute("data-dim");
-      expect(task(n)).toHaveTextContent("after step 1");
+      expect(task(n)).toHaveTextContent("after task 1");
     }
     expect(screen.queryByText(/the certificate route opens once/)).toBeNull();
     expect(
@@ -1807,7 +1805,7 @@ describe("the iPhone, whose test is the address it is offered", () => {
       `done — a request reached Trawler at ${clock(refusedAt)}`,
     );
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(task(4)).toHaveTextContent(
@@ -1960,7 +1958,7 @@ describe("the iPhone, whose test is the address it is offered", () => {
     pick("iPhone or iPad");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
@@ -2014,7 +2012,7 @@ describe("the Android device, whose test is the address it is offered", () => {
       `done — a request reached Trawler at ${clock(refusedAt)}`,
     );
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
@@ -2091,7 +2089,7 @@ describe("the Android device, whose test is the address it is offered", () => {
     pick("Android device");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
       "example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.",
@@ -2117,7 +2115,7 @@ describe("another device, where this machine's own traffic may be arriving too",
     pick("Another Mac");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(task(3)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -2250,7 +2248,7 @@ describe("another device, where this machine's own traffic may be arriving too",
     pick("Another Mac");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(task(4)).toHaveTextContent(
@@ -2483,7 +2481,7 @@ describe("the address is an offer, not a menu", () => {
 
     for (const n of [2, 3, 4]) {
       expect(task(n)).toHaveAttribute("data-dim");
-      expect(task(n)).not.toHaveTextContent("after step 1");
+      expect(task(n)).not.toHaveTextContent("after task 1");
     }
   });
 });
@@ -2848,7 +2846,7 @@ test("no step reports itself done — every state on the screen has a source", (
 
   // Nothing read either store on this host, so neither task may claim one was.
   expect(task(1)).toHaveTextContent(
-    "can't check here — the request in step 3 confirms it",
+    "can't check here — the request in task 3 confirms it",
   );
   expect(task(2)).toHaveTextContent(
     "can't check here — the same request confirms it",
@@ -3225,11 +3223,11 @@ describe("This machine where no probe answers", () => {
   } as const;
   const onMakeRequest = vi.fn(async (): Promise<RequestRoute> => "through");
 
-  it("names the request in step 3 as what settles both tasks", () => {
+  it("names the request in task 3 as what settles both tasks", () => {
     draw({ os: "linux", ...unread, onMakeRequest });
 
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
     expect(task(2)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -3248,10 +3246,10 @@ describe("This machine where no probe answers", () => {
     draw({ os: "linux", ...unread, onMakeRequest, ownProofAt: at });
 
     expect(task(1)).toHaveTextContent(
-      `done — step 3's request decrypted at ${clock(at)}`,
+      `done — task 3's request decrypted at ${clock(at)}`,
     );
     expect(task(2)).toHaveTextContent(
-      `done — step 3's request came through at ${clock(at)}`,
+      `done — task 3's request came through at ${clock(at)}`,
     );
     expect(within(task(1)).getByText("4 steps")).toBeInTheDocument();
     expect(within(task(2)).queryByText("1 step")).toBeNull();
@@ -3263,7 +3261,7 @@ describe("This machine where no probe answers", () => {
 
     expect(task(3)).toHaveTextContent("done — capturing traffic");
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
     expect(task(2)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -3283,7 +3281,7 @@ describe("This machine where no probe answers", () => {
     });
 
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
     expect(task(1)).not.toHaveTextContent(
       "does not trust Trawler's certificate",

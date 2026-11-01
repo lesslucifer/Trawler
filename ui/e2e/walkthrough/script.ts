@@ -204,7 +204,7 @@ function autoThis(host: Host): Chapter[] {
         await w.closePicker();
         await reread({ trust: "absent", proxy: "unset" })(w);
       },
-      expect: `"${setUp}", the one framed control, above the tasks with "it does steps 1 and 2"; each task's "do it by hand" collapsed, with no way back inside it; task 3 "Make a request from ${device}" waiting, its request bare`,
+      expect: `"${setUp}", the one framed control, above the tasks with "it does tasks 1 and 2"; each task's "do it by hand" collapsed, with no way back inside it; task 3 "Make a request from ${device}" waiting, its request bare`,
       findings: ["W12.E1", "W12.E4"],
       anchor: [button(setUp)],
     },
@@ -386,7 +386,7 @@ function linuxThis(): Chapter[] {
         await w.script({ trust: "unreadable", proxy: "unreadable" });
         await w.recheck();
       },
-      expect: `a desktop gsettings does not answer for: task 2 reads "can't check here — the same request confirms it", not "the system proxy is off", and the request in step 3 is what settles it; no "check again" row, since the CA bundle and GNOME's proxy are re-read on their own`,
+      expect: `a desktop gsettings does not answer for: task 2 reads "can't check here — the same request confirms it", not "the system proxy is off", and the request in task 3 is what settles it; no "check again" row, since the CA bundle and GNOME's proxy are re-read on their own`,
       findings: ["R19", "W3.D6", "W3.D8"],
       anchor: [task(2)],
     },
@@ -562,7 +562,7 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.closePicker();
         await w.choose(platformLabel(host, platform));
       },
-      expect: `task 1 names the one address it will arm, Ethernet · 192.168.1.23, and its button and copy name Ethernet, not Wi-Fi. Tasks 2 onward are dimmed, numbered, and say "after step 1"`,
+      expect: `task 1 names the one address it will arm, Ethernet · 192.168.1.23, and its button and copy name Ethernet, not Wi-Fi. Tasks 2 onward are dimmed, numbered, and say "after task 1"`,
       findings: ["R9", "R21"],
       anchor: [task(1)],
     },
