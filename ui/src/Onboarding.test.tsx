@@ -4161,3 +4161,77 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     expect(within(task(2)).getByRole("button", { name: "route the emulator" })).toBeInTheDocument();
   });
 });
+
+// W18: nothing on this machine reaches a phone but its camera, so the code of
+// the next task is the one framed control, and the request's code waits until
+// something that may be the phone's arrives.
+describe("a phone's codes lead in turn", () => {
+  const PHONE_MARK = "k3m9";
+  const framedCodes = () =>
+    [...screen.getByTestId("steps").querySelectorAll("[data-framed] svg")].map(
+      (code) => code.getAttribute("aria-label"),
+    );
+  const framedButtons = () =>
+    [...screen.getByTestId("steps").querySelectorAll("button:not([aria-label])")].filter(
+      (b) => b.className.includes("border-hairline"),
+    );
+
+  it.each(["iPhone or iPad", "Android device"])(
+    "%s: the certificate code is framed, and the request waits on task 3 (E1, E2, Q1)",
+    (label) => {
+      draw({ reach: ARMED, deviceMark: PHONE_MARK });
+      pick(label);
+
+      expect(framedCodes()).toEqual(["the certificate URL, as a code to scan"]);
+      expect(framedButtons()).toEqual([]);
+      expect(task(4)).toHaveAttribute("data-dim", "true");
+      expect(task(4)).toHaveTextContent("after task 3");
+      expect(within(task(4)).queryByTestId("check-address")).toBeNull();
+    },
+  );
+
+  it.each(["iPhone or iPad", "Android device"])(
+    "%s: once its traffic arrives, the request's code is the framed one (E2, Q1)",
+    (label) => {
+      draw({ reach: ARMED, traffic: arriving, deviceMark: PHONE_MARK });
+      pick(label);
+
+      expect(task(4)).not.toHaveAttribute("data-dim", "true");
+      expect(framedCodes()).toEqual(["the address to open, as a code to scan"]);
+      expect(framedButtons()).toEqual([]);
+    },
+  );
+
+  it("while this Mac's traffic may be arriving, anything on the wire opens the request: its code tells the two apart", () => {
+    draw({
+      reach: ARMED,
+      device: { provedAt: null, mixed: true, wire: arriving },
+      deviceMark: PHONE_MARK,
+    });
+    pick("iPhone or iPad");
+
+    expect(within(task(4)).getByTestId("check-address")).toBeInTheDocument();
+    expect(framedCodes()).toEqual(["the address to open, as a code to scan"]);
+  });
+
+  it("once a request decrypts, no code is framed", () => {
+    draw({ reach: ARMED, traffic: capturing, deviceMark: PHONE_MARK });
+    pick("iPhone or iPad");
+
+    expect(framedCodes()).toEqual([]);
+    expect(within(task(4)).getByTestId("scan-code")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["macos", true],
+    ["windows", false],
+    ["linux", false],
+  ] as const)("on %s, Universal Clipboard is offered by the values: %s (I1)", (os, offered) => {
+    draw({ os, reach: ARMED });
+    pick("iPhone or iPad");
+
+    expect(
+      within(task(3)).queryByRole("button", { name: "help: copying the values" }) !== null,
+    ).toBe(offered);
+  });
+});

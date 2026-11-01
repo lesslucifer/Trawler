@@ -46,6 +46,7 @@ import {
   platformChoices,
   reachTaskTitle,
   readsOverAdb,
+  scansCodes,
   marksItsOwn,
   setupFor,
   sharesHostWire,
@@ -1500,6 +1501,14 @@ function PlatformSetup({
   // Everything else is bare (W12's E1, E2; W16's E2).
   const proved = traffic.lastDecryptedAt !== null;
   const requestHere = platform === "this" || setup.deviceRoute !== undefined;
+  // A phone's request code proves nothing until its traffic reaches Trawler, so
+  // it waits on the route, and then it is the next thing. While this machine's
+  // traffic may be arriving too, the address is what the tasks above name as
+  // their test, so it stays, and leads once anything arrives (W18's E2).
+  const mayBePhones =
+    routeDone || (mixed && evidenceOf(device.wire, graceEdge).reached);
+  const requestWaits = scansCodes(platform) && !routeDone && !mixed;
+  const requestCodeLeads = scansCodes(platform) && mayBePhones && !proved;
   type Next =
     | "set-up"
     | "trust-simulators"
@@ -1511,23 +1520,25 @@ function PlatformSetup({
     | "request"
     | "start"
     | null;
-  const byOrder: Next = setUpHere
-    ? "set-up"
-    : trustSimulatorsHere
-      ? "trust-simulators"
-      : installEmulatorsHere
-        ? "install-emulators"
-        : trustGuideOpen && !trustDone
-          ? "trust-guide"
-          : setProxyHere
-            ? "set-proxy"
-            : routeEmulatorsHere
-              ? "route-emulators"
-              : routeGuideOpen && !routeDone
-                ? "route-guide"
-                : requestHere && trustDone && routeDone && !proved
-                  ? "request"
-                  : null;
+  const byOrder: Next = requestCodeLeads
+    ? "request"
+    : setUpHere
+      ? "set-up"
+      : trustSimulatorsHere
+        ? "trust-simulators"
+        : installEmulatorsHere
+          ? "install-emulators"
+          : trustGuideOpen && !trustDone
+            ? "trust-guide"
+            : setProxyHere
+              ? "set-proxy"
+              : routeEmulatorsHere
+                ? "route-emulators"
+                : routeGuideOpen && !routeDone
+                  ? "route-guide"
+                  : requestHere && trustDone && routeDone && !proved
+                    ? "request"
+                    : null;
   // With none running, everything left to do waits on one: what starts it is
   // the next thing, wherever it can be clicked (W17's S1).
   const start = emulatorDown ? setup.start : undefined;
@@ -1756,8 +1767,8 @@ function PlatformSetup({
         <GuidedTask
           n={tryStep}
           task={setup.try}
-          dim={blocked}
-          waitsOn={waitsOn}
+          dim={blocked || requestWaits}
+          waitsOn={blocked ? waitsOn : `after task ${first + 2}`}
         >
           <TrafficState
             read={(now) => {
@@ -1823,6 +1834,7 @@ function PlatformSetup({
               className="pt-2 font-ui text-body text-ink-body"
             >
               <StepParts
+                framed={next === "request"}
                 step={checkStep(
                   platform,
                   os,
