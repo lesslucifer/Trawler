@@ -467,7 +467,8 @@
             machine's, so nothing unmarked is its own: where no store answers, its marked request settles its
             certificate, and its try task and the end read that request alone
             (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8).
-            With none running and nothing proved it reads <em>not done — no Simulator running</em></td></tr>
+            With none running and nothing proved it reads <em>not done — no Simulator running</em>; a read that
+            failed or has not landed is no reading, and says what will confirm it instead</td></tr>
         <tr><td>Android emulator</td><td>every host</td><td>its own user store and proxy, through adb, in each emulator running</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
           <td>it reaches Trawler on this machine's loopback, through a proxy of its own: its store and proxy are
             read through adb, by the name of its AVD (<em>done — trusted in Pixel 7 API 35</em>), and where adb reads
