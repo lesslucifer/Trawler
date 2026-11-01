@@ -273,7 +273,9 @@ function wireOf(s: State): { traffic: Traffic; markedAt: number | null } {
   return { traffic: { ...traffic, lastDecryptedAt, openTunnelAt }, markedAt };
 }
 
-type Handlers = Partial<Record<"setUp" | "setProxy" | "unset", Outcome>>;
+type Handlers = Partial<
+  Record<"setUp" | "setProxy" | "unset" | "trustSimulators", Outcome>
+>;
 
 // Nothing here asserts on a handler, so none is a mock: every mock is kept for
 // the whole file, and twenty thousand renders' worth outgrows a worker's heap.
@@ -322,6 +324,10 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       reach={s.armed ? ARMED : UNARMED}
       onSaveCa={nothingSaved}
       onSetUpThisMachine={settle(handlers.setUp ?? "done")}
+      onSetUpSimulator={settle(handlers.setUp ?? "done")}
+      onTrustSimulators={
+        settle(handlers.trustSimulators ?? "done") as () => Promise<void>
+      }
       onSetProxy={settle(handlers.setProxy ?? "done")}
       onUnsetProxy={settle(handlers.unset ?? "done") as () => Promise<void>}
       onArmReach={nothingAsync}
@@ -534,7 +540,12 @@ function model(s: State) {
     : !trustDone && !(probesTrust && !trustConcluded) && !mixed && !emulator;
   const auto = canAutoSetup(s.os);
   const routeHere = probesRoute && auto;
-  const oneAct = probesTrust && auto && !trustDone && !routeDone;
+  // A Simulator runs wherever the sweep reads a store, trusted, absent or not
+  // answering; "unknown" is none running (RUNNING).
+  const simulatorRunning = sharedWire && s.trust !== "unknown";
+  const oneAct =
+    (probesTrust || simulatorRunning) && auto && !trustDone && !routeDone;
+  const trustSimulators = simulatorRunning && !oneAct && !trustDone;
   // What the try task's clock says now: a refusal inside the window is "not
   // decrypting", however new the tunnel after it; one before it is quiet.
   const notDecryptingNow =
@@ -565,6 +576,7 @@ function model(s: State) {
     certificateOwnsRefusal,
     routeHere,
     oneAct,
+    trustSimulators,
     notDecryptingNow,
     here: deviceName("this", s.os),
   };
@@ -778,15 +790,28 @@ const RULES: Record<string, Rule> = {
   ) =>
     o.between.length === 0 ? null : `between tasks: ${o.between.join(" | ")}`,
 
-  "emphasis: one framed control at most, and it is the next thing to do (W12's E1, E2)":
+  "emphasis: one framed control at most, and it is the next thing to do (W12's E1, E2; W16's E2)":
     (o, s) => {
       const m = model(s);
       if (o.framed.length > 1) return `framed: ${o.framed.join(", ")}`;
+      // The Simulator's task 1 outranks task 2 while not done: its button, or
+      // its open guide's route, which the sweep draws without the shell's open.
+      // A failure that opened task 2's steps instead leaves the proxy's framed.
+      const trustGuideLeads =
+        m.sharedWire &&
+        !m.trustDone &&
+        task(o, m.trustN).openGuides.length > 0;
+      if (!m.oneAct && !m.trustSimulators && trustGuideLeads)
+        return o.framed.length === 0
+          ? null
+          : `framed [${o.framed}], expected none`;
       const expected = m.oneAct
-        ? /^set up this/
-        : m.routeHere && !m.routeDone && !m.oneAct
-          ? /^set the system proxy/
-          : null;
+        ? /^set up /
+        : m.trustSimulators
+          ? /^trust in the Simulator$/
+          : m.routeHere && !m.routeDone
+            ? /^set the system proxy/
+            : null;
       if (expected === null) return null;
       return o.framed.length === 1 && expected.test(o.framed[0])
         ? null
@@ -864,8 +889,8 @@ const RULES: Record<string, Rule> = {
   "time and place: the one act exactly while both halves read not done, above the tasks it does (W12's E1)":
     (o, s) => {
       const m = model(s);
-      const above = o.oneAct !== null && /^set up this/.test(o.oneAct);
-      const inTasks = withAction(o, "set up this");
+      const above = o.oneAct !== null && /^set up /.test(o.oneAct);
+      const inTasks = withAction(o, "set up ");
       return above === m.oneAct && inTasks.length === 0
         ? null
         : `one act above: ${above}, in tasks [${inTasks}], expected ${m.oneAct}`;
@@ -1175,14 +1200,25 @@ describe("every reading at rest", () => {
 // ── Every offered action, in every outcome ──────────────────────────────────
 
 const ACTIONS = [
-  { key: "setUp", label: "set up this", status: "set-up-status", sets: true },
+  { key: "setUp", label: "set up ", status: "set-up-status", routes: "set" },
   {
     key: "setProxy",
     label: "set the system proxy",
     status: "set-proxy-status",
-    sets: true,
+    routes: "set",
   },
-  { key: "unset", label: REVERSAL, status: "unset-proxy-status", sets: false },
+  {
+    key: "unset",
+    label: REVERSAL,
+    status: "unset-proxy-status",
+    routes: "unset",
+  },
+  {
+    key: "trustSimulators",
+    label: "trust in the Simulator",
+    status: "trust-simulators-status",
+    routes: null,
+  },
 ] as const;
 
 // One history per class of evidence - nothing, reached only, refused, decrypted,
@@ -1237,8 +1273,8 @@ describe("every offered action, in every outcome", () => {
       );
 
     const m = model(s);
-    const setIt = a.sets && outcome === "done";
-    const unsetIt = !a.sets && outcome === "done";
+    const setIt = a.routes === "set" && outcome === "done";
+    const unsetIt = a.routes === "unset" && outcome === "done";
     const reversal = m.routeHere && !unsetIt && (m.routeDone || setIt);
 
     // A failure the user did not choose says "do it by hand below", so the task

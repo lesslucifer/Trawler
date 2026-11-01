@@ -495,6 +495,26 @@ describe("the Simulator is trusted through its own keychain and routed through t
     ]);
   });
 
+  // W16's E4: Safari trusted a root simctl added at once, with no restart.
+  // I3: with none running, the steps start by opening one.
+  it("starts by opening the Simulator only while none runs, and asks for no restart", () => {
+    const idle = setup("ios-sim").trust.guide!.steps;
+    expect(idle[0]).toEqual(["Open the Simulator", { open: "simulator", label: "open the Simulator" }]);
+    expect(idle.map((step) => step.some(isSave) || step.some(isCommand))).toEqual([false, true, true]);
+
+    const running = setup("ios-sim", { simulatorsRunning: true }).trust.guide!.steps;
+    expect(running).toEqual(idle.slice(1));
+    expect(everything(setup("ios-sim"))).not.toMatch(/restart/i);
+  });
+
+  // I2: the Simulator's own Safari makes its request, once one runs to make it.
+  it("offers its request in the Simulator only while one runs", () => {
+    expect(setup("ios-sim").tryRoutes).toBeUndefined();
+    expect(setup("ios-sim", { simulatorsRunning: true }).tryRoutes).toEqual([
+      { open: "simulator-request", label: "open it in the Simulator" },
+    ]);
+  });
+
   it("routes through the host's own guide, because the proxy it follows is the host's", () => {
     const s = setup("ios-sim");
     expect(s.route.why).toMatch(/this Mac's system proxy/);

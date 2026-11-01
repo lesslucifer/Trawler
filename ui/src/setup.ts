@@ -103,7 +103,13 @@ export interface PathPart {
 }
 // A screen the shell opens for the step, by name: the set is closed and the
 // shell builds what it opens (W12's I1-I3).
-export type RouteName = "proxy-settings" | "keychain" | "certificate" | "browser";
+export type RouteName =
+  | "proxy-settings"
+  | "keychain"
+  | "certificate"
+  | "browser"
+  | "simulator"
+  | "simulator-request";
 export interface RoutePart {
   open: RouteName;
   label: string;
@@ -231,6 +237,7 @@ export interface SetupContext {
   proxyAddr: string;
   reach: ReachAddresses | null;
   saved?: SavedCa;
+  simulatorsRunning?: boolean;
 }
 
 interface PlatformFacts {
@@ -1328,6 +1335,8 @@ const SIMCTL_NOT_FOUND: HelpPart = {
   topic: "if simctl is not found",
 };
 
+const OPEN_THE_SIMULATOR: GuideStep = ["Open the Simulator", { open: "simulator", label: "open the Simulator" }];
+
 // simctl adds a root and removes none, and a keychain reset leaves it, so the
 // erase is the only way back (W7's C3); its labels are Simulator's own menu.
 const SIMULATOR_ERASE: GuideStep = [
@@ -1339,18 +1348,20 @@ const SIMULATOR_ERASE: GuideStep = [
   },
 ];
 
-function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
+// Safari trusts a root simctl adds at once, so no restart is a step (W16's E4).
+// With none running, the steps start by opening one (I3).
+function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa, running = false): PlatformSetup {
   const host = HOST_NOUN[os];
   const format = caFormatFor("ios-sim");
   const trust: Guide = {
     steps: [
+      ...(running ? [] : [OPEN_THE_SIMULATOR]),
       saveCaStep(format),
       [
         "In Terminal, with the Simulator running, run:",
         { command: simulatorTrustCommand(savedFile("macos", format, saved)), label: "the trust command" },
         SIMCTL_NOT_FOUND,
       ],
-      ["Restart the Simulator so apps pick the new root up."],
     ],
     undoTitle: "to remove it later",
     undo: [SIMULATOR_ERASE],
@@ -1367,6 +1378,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): Platfor
       guide: localRoute(os, proxyAddr),
     },
     try: tryTask("ios-sim", os),
+    tryRoutes: running ? [{ open: "simulator-request", label: "open it in the Simulator" }] : undefined,
     confirmOn: confirmOn("ios-sim", os),
   };
 }
@@ -1415,7 +1427,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
     case "ubuntu":
       return anotherMachineSetup(id, ctx.os, "linux", reach);
     case "ios-sim":
-      return simulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved);
+      return simulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved, ctx.simulatorsRunning);
     case "android-sim":
       return emulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved);
     case "ios":

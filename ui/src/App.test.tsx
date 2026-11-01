@@ -448,6 +448,78 @@ async function simulator(initial = ONBOARDING) {
   return api;
 }
 
+// W16: simctl writes a running Simulator's store and opens its Safari, so the
+// screen asks the shell for each by name, with the certificate the core
+// serves now or the Simulator's own mark - never a path or a URL.
+const RUNNING_SIMULATOR = [{ name: "iPhone 17 Pro", trust: "absent" }];
+
+function simulatorReads(trust: "absent" | "trusted", proxy: "none" | "ours", over: Record<string, () => unknown> = {}) {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name in over) return over[name]();
+    if (name === "simulator_trust") return [{ ...RUNNING_SIMULATOR[0], trust }];
+    if (name === "proxy_in_use") return { status: proxy, address: null };
+    return undefined;
+  });
+}
+
+test("Set up the Simulator trusts every running Simulator first, then sets this Mac's proxy", async () => {
+  simulatorReads("absent", "none");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the Simulator" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 }),
+  );
+  const names = vi.mocked(invoke).mock.calls.map(([n]) => n);
+  expect(names.indexOf("trust_simulators")).toBeLessThan(names.indexOf("set_proxy"));
+  expect(invoke).toHaveBeenCalledWith("trust_simulators", { pem: PEM });
+  expect(names).not.toContain("set_up_this_machine");
+});
+
+test("a Simulator that refused the trust leaves this Mac's proxy alone", async () => {
+  simulatorReads("absent", "none", {
+    trust_simulators: () => {
+      throw { refused: false, detail: "simctl: unable to find utility" };
+    },
+  });
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the Simulator" }));
+
+  await screen.findByText("setting up failed — do it by hand below.");
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
+});
+
+test("trust in the Simulator asks the shell with the certificate the core serves now", async () => {
+  simulatorReads("absent", "ours");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "trust in the Simulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("trust_simulators", { pem: PEM }));
+});
+
+test("open it in the Simulator carries the mark the Simulator's address shows", async () => {
+  simulatorReads("trusted", "ours");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open it in the Simulator" }));
+
+  const shown = screen.getByTestId("check-address").textContent!.match(/trawler-check=([a-z0-9]+)/)![1];
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator-request", mark: shown } }),
+  );
+});
+
+test("with none running, open the Simulator asks the shell for the Simulator by name", async () => {
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open the Simulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator" } }));
+});
+
 test("Set the system proxy invokes set_proxy with the configured address, and proves nothing", async () => {
   await simulator();
 
