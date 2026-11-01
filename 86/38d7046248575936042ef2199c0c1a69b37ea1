@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8638d7046248575936042ef2199c0c1a69b37ea1
+base: c970c4ab96efb25dc31ea51aa7f1a2a606db139e
+tier: key
+signer: vuluu
+report: docs/work/2026-11-01-onboard-revamp-w15-another-ubuntu-wording-result.html
+report_sha256: cad0cb3b1c8d3dff3544da803829aed9406c1ef6085477516b2e3536212c99eb
+date: 2026-11-01
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECuK3mkmMxcDeAW8rzTKtI1OecS80QYpANwdKfKdW+3egDf1K55nbYSTr
+  xauJKo3C9LrgYTAjezyw7U6ZLczgsL
+  -----END SSH SIGNATURE-----
