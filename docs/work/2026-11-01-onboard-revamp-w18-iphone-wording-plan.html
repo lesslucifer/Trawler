@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6ae706059f34851f0dfaded9" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6ae706059f34851f0dfaded9" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,18 +12,20 @@
       <p>W12's pattern and W13's help rule on the iPhone. Nothing on this machine can act on a phone, so the scannable
       code is the iPhone's button: the next one leads and is framed. Each Settings step becomes path parts in iOS 26's own
       words, the install starts from iOS's <em>Profile Downloaded</em>, and the certificate gains its way back.</p>
-      <div class="meta">v1 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W18</span> · branch <code>wu/onboard-revamp/iphone-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W9</div>
+      <div class="meta">v2 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W18</span> · branch <code>wu/onboard-revamp/iphone-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W9</div>
     </div>
   </header>
   <main>
 
-    <div class="callout warn" data-c="status">
-      <strong>Waiting for your rulings</strong> on every finding, W9's three hand-ins and Q1–Q4. I found the findings by
-      reading the <code>macos-</code>, <code>windows-</code> and <code>linux-ios</code> reels, filmed again at the epic tip
-      (<code>32f6a1a0</code>), and the source of the iPhone's guide. I read each label from the iOS 26.5 runtime installed
-      on this Mac, and I opened a throwaway profile in Safari on a throwaway iOS 26.5 Simulator. That Simulator, its
-      profile, its CA and the local server are all deleted. No iPhone is attached to this Mac, so nothing below was
-      tried on a device.
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> (the owner, 2026-11-01: "1. yes · 2. yes · 3. A · 4. no design"). Q1–Q4 are A,
+      and every finding and W9's three hand-ins are taken with them. There is no design run, so each rendered file the build
+      touches is declared <code>undesigned</code> on the design note, with that ruling as its reason. The WU adds no
+      component and no screen, so none needs a citation. I found the findings by reading the <code>macos-</code>,
+      <code>windows-</code> and <code>linux-ios</code> reels, filmed again at the epic tip (<code>32f6a1a0</code>), and the
+      source of the iPhone's guide. I read each label from the iOS 26.5 runtime installed on this Mac, and I opened a
+      throwaway profile in Safari on a throwaway iOS 26.5 Simulator. That Simulator, its profile, its CA and the local
+      server are all deleted. No iPhone is attached to this Mac, so nothing below was tried on a device.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -121,13 +123,13 @@ flowchart TB
         <td><strong>Nothing is framed.</strong> The screen's one route to a phone is a scannable code, yet the code is
         not treated as an act. The download code sits under a long sentence, at the same weight as everything else.</td>
         <td>The code of the first task not done is the one framed control: <em>Scan with your iPhone's camera</em> above
-        it, and the address beside it as the way to type it. Applies to the Android device too (Q1).</td><td></td></tr>
+        it, and the address beside it as the way to type it. Applies to the Android device too (Q1).</td><td>take</td></tr>
       <tr><td>E2</td>
         <td><strong>Two codes at once.</strong> Task 4's code shows from the moment the iPhone is allowed. Scanned
         before task 3, its request goes straight to example.com and proves nothing, and a user cannot tell which code
         comes first.</td>
         <td>Task 4's address and code wait, shut under <em>after task 3</em>, until a request from the iPhone reaches
-        Trawler (task 3 done). Then its code is the framed one.</td><td></td></tr>
+        Trawler (task 3 done). Then its code is the framed one.</td><td>take</td></tr>
     </table>
 
     <h2 id="wording">Part 2 — wording and display</h2>
@@ -138,29 +140,29 @@ flowchart TB
         undo. W12's D2 set another app's controls apart as path parts.</td>
         <td>Each becomes path parts, in the runtime's labels: <code>Configure Proxy</code> → <code>Manual</code>, then
         <code>Server</code> and <code>Port</code> with the values above, then <code>Save</code>; the undo ends
-        <code>Off</code> → <code>Save</code>.</td><td></td></tr>
+        <code>Off</code> → <code>Save</code>.</td><td>take</td></tr>
       <tr><td>W2</td>
         <td><strong>The install starts at the longest route</strong> (<em>Settings → General → VPN &amp; Device
         Management → …</em>) and skips Safari's <em>Allow</em>. After a download, iOS puts <em>Profile Downloaded</em>
         at the top of Settings.</td>
         <td>Step 1 ends <em>tap <code>Allow</code></em>. Step 2: <em>Open Settings, then</em> <code>Profile
         Downloaded</code> → <code>Install</code>, with the taps the recording shows. Its <em>?</em>: <em>Not at the top
-        of Settings? General → VPN &amp; Device Management → Trawler Proxy CA.</em> (with N4).</td><td></td></tr>
+        of Settings? General → VPN &amp; Device Management → Trawler Proxy CA.</em> (with N4).</td><td>take</td></tr>
       <tr><td>W3</td>
         <td><strong>Step 3 explains inline</strong>: <em>Installing does not: … Until it is on, Safari says This
         Connection Is Not Private.</em></td>
         <td>Step 3 is <em>Turn on full trust:</em> <code>General</code> → <code>About</code> → <code>Certificate Trust
         Settings</code> → <code>Trawler Proxy CA</code>. Its <em>?</em>: <em>Installing does not trust it. Until this is
-        on, Safari says This Connection Is Not Private.</em></td><td></td></tr>
+        on, Safari says This Connection Is Not Private.</em></td><td>take</td></tr>
       <tr><td>W4</td>
         <td><strong>The Not Verified note explains the wrong step.</strong> It sits behind step 3's <em>?</em>, and iOS
         shows <em>Not Verified</em> during step 2.</td>
-        <td>It moves behind step 2's <em>?</em>.</td><td></td></tr>
+        <td>It moves behind step 2's <em>?</em>.</td><td>take</td></tr>
       <tr><td>W5</td>
         <td><strong>Step 1 repeats the title's place</strong>: <em>On your iPhone, install the certificate</em>, then
         <em>On your iPhone, open …</em>.</td>
         <td>The step drops the place. Its lead becomes E1's <em>Scan with your iPhone's camera</em>, then <em>or open
-        &lt;address&gt; in Safari</em>.</td><td></td></tr>
+        &lt;address&gt; in Safari</em>.</td><td>take</td></tr>
     </table>
 
     <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
@@ -169,14 +171,14 @@ flowchart TB
       <tr><td>C1</td>
         <td>Download, and task 4's request: a code each, already built by W2.</td>
         <td>Kept, and led and framed by E1 and E2. No other interactive route exists: no code can open a Settings screen,
-        and no profile can set a Wi-Fi proxy on an unsupervised phone (What I checked).</td><td></td></tr>
+        and no profile can set a Wi-Fi proxy on an unsupervised phone (What I checked).</td><td>take</td></tr>
       <tr><td>I1</td>
         <td>Server and port: typed by hand on the phone.</td>
         <td>On a macOS host, a <em>?</em> by the values: <em>Same Apple ID on both? Copy a value here and paste it on your
-        iPhone.</em> (Universal Clipboard). Unverified on a device, so you check it at W20.</td><td></td></tr>
+        iPhone.</em> (Universal Clipboard). Unverified on a device, so you check it at W20.</td><td>take</td></tr>
       <tr><td>M1</td>
         <td>Install, trust and Wi-Fi: text only.</td>
-        <td>A recording beside each Settings step no code reaches, as W12's <code>StepMedia</code> does (Q2).</td><td></td></tr>
+        <td>A recording beside each Settings step no code reaches, as W12's <code>StepMedia</code> does (Q2).</td><td>take</td></tr>
     </table>
 
     <h2 id="handed">Handed in from W9</h2>
@@ -185,15 +187,15 @@ flowchart TB
       <tr><td>N1</td>
         <td><strong>The certificate task has no way back.</strong> Every other platform's has one.</td>
         <td><em>to remove it later</em>: <code>General</code> → <code>VPN &amp; Device Management</code> →
-        <code>Trawler Proxy CA</code> → <code>Remove Profile</code>, as path parts.</td><td></td></tr>
+        <code>Trawler Proxy CA</code> → <code>Remove Profile</code>, as path parts.</td><td>take</td></tr>
       <tr><td>N3</td>
         <td><strong><em>your iPhone</em> to an iPad user.</strong> The platform is <em>iPhone or iPad</em>.</td>
-        <td>Q3.</td><td></td></tr>
+        <td>Q3.</td><td>take</td></tr>
       <tr><td>N4</td>
         <td><strong>A second label for the same row:</strong> <em>VPN, DNS, &amp; Device Management</em>.</td>
         <td>W2's lead no longer passes that row. Where a path still does (W2's <em>?</em>, N1), it reads <code>VPN &amp;
         Device Management</code> and its <em>?</em> adds <em>(VPN, DNS, &amp; Device Management on some
-        devices)</em>.</td><td></td></tr>
+        devices)</em>.</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -203,7 +205,7 @@ flowchart TB
         <td><strong>Who gets E1 and E2?</strong> The Android device shares the device guide and both codes.<br>
         <strong>A</strong> both phones, fixed once in the shared code, as W13–W17's Q1 ruled ·
         <strong>B</strong> the iPhone only, and W19 decides for Android</td>
-        <td>A. The same two codes show the same way on Android today.</td><td></td></tr>
+        <td>A. The same two codes show the same way on Android today.</td><td>A</td></tr>
       <tr><td>Q2</td>
         <td><strong>Where do the recordings come from?</strong> No code reaches a Settings screen, so media is the route
         (the epic's Q11).<br>
@@ -213,23 +215,23 @@ flowchart TB
         <strong>B</strong> I write a shot list for all three steps, and you record them on a real iPhone ·
         <strong>C</strong> no media: path parts only</td>
         <td>A. It is the same iOS, and it needs no device. B can replace any of them later, and the Wi-Fi recording is
-        the one gap.</td><td></td></tr>
+        the one gap.</td><td>A</td></tr>
       <tr><td>Q3</td>
         <td><strong>How does the screen name an iPad?</strong><br>
         <strong>A</strong> <em>your iPhone or iPad</em> in titles and status lines, <em>it</em> inside the steps ·
         <strong>B</strong> <em>your device</em> everywhere ·
         <strong>C</strong> keep <em>your iPhone</em></td>
-        <td>A. It is the label the user chose, and iOS's own paths are the same on both.</td><td></td></tr>
+        <td>A. It is the label the user chose, and iOS's own paths are the same on both.</td><td>A</td></tr>
       <tr><td>Q4</td>
         <td><strong>A design run for this WU?</strong> E1 frames a code, which no screen does yet.<br>
         <strong>A</strong> none, as you ruled for W16 and W17: the frame is the <code>Action</code>'s, and every rendered
         file the build touches is declared <code>undesigned</code> with your ruling as the reason ·
         <strong>B</strong> a round of the setup screen's design run, reviewed before the build</td>
-        <td>A. No component or screen is added. <code>QrCode</code> keeps its anatomy, inside the existing frame.</td><td></td></tr>
+        <td>A. No component or screen is added. <code>QrCode</code> keeps its anatomy, inside the existing frame.</td><td>A</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
-    <p data-c="design">Set by Q4.</p>
+    <p data-c="design">None, by the owner's ruling of 2026-11-01 (Q4 A). The build uses the parts W12, W13 and W2 designed: the <code>Action</code> frame, path parts, <code>StepMedia</code>, <code>QrCode</code> and <code>Help</code>. Every rendered file the diff touches is declared <code>undesigned</code>, with that ruling as its reason.</p>
 
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
