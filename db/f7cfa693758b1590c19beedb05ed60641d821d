@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W17
+branch: HEAD
+changes:
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the Android emulator leads with buttons, its commands name the SDK the shell found, none running says so, and a step's ? follows its last word"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the emulator's one act where su answers, install in the emulator, route the emulator and its reversal, open the AVD used last, send it to the emulator where su does not, open it in the emulator; commands name the found SDK; no emulator running; Uninstall from Trusted credentials; the act table gains the emulator's acts; a step's ? follows its last word"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status line names W17, ruled and built"
+  - path: "docs/work/2026-11-01-onboard-revamp-w17-android-emulator-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W17's plan: findings from the reels and a throwaway emulator, W8's hand-ins, the owner's rulings (Q4 B: the AVD used last) and the waived design run"
+  - path: "docs/work/2026-11-01-onboard-revamp-w17-android-emulator-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W17's result: what shipped, the deviations, the evidence including the real-emulator check, and the follow-ups"
