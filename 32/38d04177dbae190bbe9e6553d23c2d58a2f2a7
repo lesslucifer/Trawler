@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU iphone-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W18
+branch: wu/onboard-revamp/iphone-wording
+base: 32f6a1a0db08b2bb20674895b527ef6ff574206b
+head: 3238d04177dbae190bbe9e6553d23c2d58a2f2a7
+diff_sha256: 44611901bbd2cc04497c316a8ca0e2d0ddbb1eaf0038adf14172e21e1d0d9f38
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 167
+    total: 221
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-01
