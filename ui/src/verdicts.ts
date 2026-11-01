@@ -438,6 +438,7 @@ export function simulatorTrustStatus(
 }
 
 export const NO_SIMULATOR_RUNNING = "no Simulator running";
+export const NO_EMULATOR_RUNNING = "no emulator running";
 
 // What the shell read of each emulator running, through adb (W8's Q1, Q2):
 // the name of its AVD, its own user store, and the proxy it sends through -
@@ -467,8 +468,10 @@ const each = (read: readonly SimulatorTrust[], every: string) =>
 // The emulator's certificate, read from its own store where adb reads one, and
 // otherwise from what could have come from it (DEC-63 rule 9). Its own services
 // refuse a user certificate by design, so a refusal is never this task's (S2).
+// `null` is no reading at all - adb not found, or a read not landed - and never
+// says none runs (W17's W4).
 export function emulatorTrustStatus(
-  read: readonly EmulatorReading[],
+  emulators: readonly EmulatorReading[] | null,
   running: Running,
   reading: DeviceReading,
   evidence: Evidence,
@@ -476,6 +479,7 @@ export function emulatorTrustStatus(
 ): StepStatusView {
   if (running === "checking")
     return verdict("checking", "the certificate store");
+  const read = emulators ?? [];
   const missing = read.filter((e) => e.trust === "absent");
   if (missing.length === 1)
     return verdict("not-done", `not in ${missing[0].name}`);
@@ -496,6 +500,7 @@ export function emulatorTrustStatus(
       "done",
       `a request decrypted at ${clock(evidence.decryptedAt)}`,
     );
+  if (emulators?.length === 0) return verdict("not-done", NO_EMULATOR_RUNNING);
   return awaiting(
     reading.mixed
       ? `the address in task ${reading.tryStep} confirms it`

@@ -11,10 +11,15 @@ import { Fragment } from "react";
  */
 export function MenuPath({ path }: { path: readonly string[] }) {
   return (
-    <span data-testid="menu-path" className="inline-flex flex-wrap items-baseline gap-x-chrome-gap">
+    <span data-testid="menu-path">
       {path.map((name, i) => (
         <Fragment key={`${i}:${name}`}>
-          {i > 0 && <span className="text-ink-mute">→</span>}
+          {i > 0 && (
+            <>
+              {" "}
+              <span className="text-ink-mute">→</span>{" "}
+            </>
+          )}
           <span className="whitespace-nowrap text-ink">{name}</span>
         </Fragment>
       ))}

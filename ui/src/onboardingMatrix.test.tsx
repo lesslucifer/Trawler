@@ -182,6 +182,11 @@ const EMULATORS: Record<TrustProbe, EmulatorReading[]> = {
   installed: [{ name: EMULATOR, trust: "unknown", proxy: "none" }],
   unknown: [],
 };
+const ANDROID_SDK = {
+  adb: true,
+  sdk: "$HOME/Library/Android/sdk",
+  avd: { id: "Pixel_7_API_35", name: EMULATOR },
+};
 
 const ARMED: ReachState = {
   armed: true,
@@ -274,7 +279,16 @@ function wireOf(s: State): { traffic: Traffic; markedAt: number | null } {
 }
 
 type Handlers = Partial<
-  Record<"setUp" | "setProxy" | "unset" | "trustSimulators", Outcome>
+  Record<
+    | "setUp"
+    | "setProxy"
+    | "unset"
+    | "trustSimulators"
+    | "installEmulators"
+    | "routeEmulators"
+    | "unrouteEmulators",
+    Outcome
+  >
 >;
 
 // Nothing here asserts on a handler, so none is a mock: every mock is kept for
@@ -319,6 +333,7 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       ownProofAt={s.own ? OWN_AT : null}
       simulators={RUNNING[s.trust]}
       emulators={EMULATORS[s.trust]}
+      androidSdk={ANDROID_SDK}
       deviceMark={MARK}
       device={{ provedAt: markedAt, mixed, wire: traffic, refusal }}
       reach={s.armed ? ARMED : UNARMED}
@@ -327,6 +342,16 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
       onSetUpSimulator={settle(handlers.setUp ?? "done")}
       onTrustSimulators={
         settle(handlers.trustSimulators ?? "done") as () => Promise<void>
+      }
+      onSetUpEmulator={settle(handlers.setUp ?? "done")}
+      onInstallOnEmulators={
+        settle(handlers.installEmulators ?? "done") as () => Promise<void>
+      }
+      onRouteEmulators={
+        settle(handlers.routeEmulators ?? "done") as () => Promise<void>
+      }
+      onUnrouteEmulators={
+        settle(handlers.unrouteEmulators ?? "done") as () => Promise<void>
       }
       onSetProxy={settle(handlers.setProxy ?? "done")}
       onUnsetProxy={settle(handlers.unset ?? "done") as () => Promise<void>}
@@ -366,7 +391,8 @@ const WAY_BACK = new Set([
 const UNDO_SUMMARIES = new Set(["to remove it later", "to turn it off later"]);
 // A sentence that sends the reader to the steps under it (W12's W1).
 const POINTS = /the steps below|do it by hand below/i;
-const ACTION_LABEL = /^(set up this|set the system proxy|stop routing)/;
+const ACTION_LABEL =
+  /^(set up |set the system proxy|stop routing|install in the emulator|route the emulator)/;
 
 interface TaskOutline {
   n: number;
@@ -543,9 +569,18 @@ function model(s: State) {
   // A Simulator runs wherever the sweep reads a store, trusted, absent or not
   // answering; "unknown" is none running (RUNNING).
   const simulatorRunning = sharedWire && s.trust !== "unknown";
+  // An emulator runs wherever the sweep reads one; su answered where its store
+  // read trusted or absent, so the shell writes it (EMULATORS, W17's Q2).
+  const emulatorRunning = emulator && s.trust !== "unknown";
+  const emulatorRooted =
+    emulator && (s.trust === "trusted" || s.trust === "absent");
   const oneAct =
-    (probesTrust || simulatorRunning) && auto && !trustDone && !routeDone;
+    (((probesTrust || simulatorRunning) && auto) || emulatorRooted) &&
+    !trustDone &&
+    !routeDone;
   const trustSimulators = simulatorRunning && !oneAct && !trustDone;
+  const installEmulators = emulatorRooted && !oneAct && !trustDone;
+  const routeEmulators = emulatorRunning && !oneAct && !routeDone;
   // What the try task's clock says now: a refusal inside the window is "not
   // decrypting", however new the tunnel after it; one before it is quiet.
   const notDecryptingNow =
@@ -576,6 +611,9 @@ function model(s: State) {
     certificateOwnsRefusal,
     routeHere,
     oneAct,
+    installEmulators,
+    routeEmulators,
+    emulatorRunning,
     trustSimulators,
     notDecryptingNow,
     here: deviceName("this", s.os),
@@ -616,6 +654,7 @@ function expectedTrustState(s: State): RegExp {
     if (s.marked)
       return /^✓\s*done — the emulator's request decrypted at \d\d:\d\d$/;
     if (m.decrypted) return /^✓\s*done — a request decrypted at \d\d:\d\d$/;
+    if (s.trust === "unknown") return /^○\s*not done — no emulator running$/;
     if (m.mixed)
       return new RegExp(
         `^◐\\s*can't check here — the address in task ${m.tryN} confirms it$`,
@@ -797,11 +836,17 @@ const RULES: Record<string, Rule> = {
       // The Simulator's task 1 outranks task 2 while not done: its button, or
       // its open guide's route, which the sweep draws without the shell's open.
       // A failure that opened task 2's steps instead leaves the proxy's framed.
+      // So does the emulator's (W17).
       const trustGuideLeads =
-        m.sharedWire &&
+        (m.sharedWire || m.emulator) &&
         !m.trustDone &&
         task(o, m.trustN).openGuides.length > 0;
-      if (!m.oneAct && !m.trustSimulators && trustGuideLeads)
+      if (
+        !m.oneAct &&
+        !m.trustSimulators &&
+        !m.installEmulators &&
+        trustGuideLeads
+      )
         return o.framed.length === 0
           ? null
           : `framed [${o.framed}], expected none`;
@@ -809,9 +854,13 @@ const RULES: Record<string, Rule> = {
         ? /^set up /
         : m.trustSimulators
           ? /^trust in the Simulator$/
-          : m.routeHere && !m.routeDone
-            ? /^set the system proxy/
-            : null;
+          : m.installEmulators
+            ? /^install in the emulator$/
+            : m.routeHere && !m.routeDone
+              ? /^set the system proxy/
+              : m.routeEmulators
+                ? /^route the emulator$/
+                : null;
       if (expected === null) return null;
       return o.framed.length === 1 && expected.test(o.framed[0])
         ? null
@@ -894,6 +943,20 @@ const RULES: Record<string, Rule> = {
       return above === m.oneAct && inTasks.length === 0
         ? null
         : `one act above: ${above}, in tasks [${inTasks}], expected ${m.oneAct}`;
+    },
+
+  "time and place: the emulator's install and route exactly while its reading offers them, each in its own task (W17's I1, I2)":
+    (o, s) => {
+      const m = model(s);
+      const install = withAction(o, "install in the emulator");
+      const route = withAction(o, "route the emulator");
+      const wanted = {
+        install: m.installEmulators ? [m.trustN] : [],
+        route: m.routeEmulators ? [m.routeN] : [],
+      };
+      return same(install, wanted.install) && same(route, wanted.route)
+        ? null
+        : `install in [${install}], route in [${route}], expected ${JSON.stringify(wanted)}`;
     },
 
   "time: the proxy's own action exactly while it reads not done and the one act is not offered":
@@ -1217,6 +1280,24 @@ const ACTIONS = [
     key: "trustSimulators",
     label: "trust in the Simulator",
     status: "trust-simulators-status",
+    routes: null,
+  },
+  {
+    key: "installEmulators",
+    label: "install in the emulator",
+    status: "install-emulators-status",
+    routes: null,
+  },
+  {
+    key: "routeEmulators",
+    label: "route the emulator",
+    status: "route-emulators-status",
+    routes: null,
+  },
+  {
+    key: "unrouteEmulators",
+    label: "stop routing the emulator",
+    status: "unroute-emulators-status",
     routes: null,
   },
 ] as const;

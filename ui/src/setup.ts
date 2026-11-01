@@ -6,6 +6,7 @@
 // Pure data and pure functions; no I/O, no React.
 
 import type { CaFormat, ReachState } from "./api";
+import type { AndroidSdk } from "./verdicts";
 import { REQUEST_HOST } from "./ownRequest";
 import type { ProxyTarget } from "./proxyTargets";
 import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
@@ -109,7 +110,11 @@ export type RouteName =
   | "certificate"
   | "browser"
   | "simulator"
-  | "simulator-request";
+  | "simulator-request"
+  | "emulator"
+  | "emulator-request"
+  | "emulator-certificate"
+  | "trusted-credentials";
 export interface RoutePart {
   open: RouteName;
   label: string;
@@ -197,6 +202,7 @@ export interface PlatformSetup {
   tryRoutes?: RoutePart[];
   // The route that has the device itself make its marked request.
   deviceRoute?: RoutePart;
+  deviceRouteHelp?: HelpPart;
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
@@ -241,6 +247,7 @@ export interface SetupContext {
   saved?: SavedCa;
   // Undefined while no Simulator reading has landed.
   simulatorsRunning?: boolean;
+  emulator?: EmulatorContext;
 }
 
 interface PlatformFacts {
@@ -936,9 +943,18 @@ function localRoute(os: HostOs, addr: string): Guide {
 
 const IN_A_TERMINAL = "In a terminal, run:";
 
-const TRY_LEAD: Record<HostOs, string> = {
+// Where a command runs, named as each host names its shell (W12's one name
+// per route).
+const IN_SHELL: Record<HostOs, string> = {
+  macos: "In Terminal",
+  windows: "In PowerShell",
+  linux: "In a terminal",
+  other: "In a terminal",
+};
+
+const RUN_IN: Record<HostOs, string> = {
   macos: IN_TERMINAL,
-  windows: "In PowerShell, run:",
+  windows: IN_POWERSHELL,
   linux: IN_A_TERMINAL,
   other: IN_A_TERMINAL,
 };
@@ -1140,7 +1156,7 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
     },
     try: { title: `Make a request from ${host}` },
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
-    tryLead: TRY_LEAD[os],
+    tryLead: RUN_IN[os],
     tryRoutes:
       os === "other"
         ? undefined
@@ -1245,79 +1261,188 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
 
 // adb reaches one device unless told which, and refuses with two of anything
 // attached: two emulators, or one and a phone on USB. So every command runs once
-// per emulator running, in the shell its sentence names (C2).
-const EACH_EMULATOR: Record<OsTarget, (args: string) => string> = {
-  macos: (args) => `for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d ${args}; done`,
-  linux: (args) => `for d in $(adb devices | grep -Eo '^emulator-[0-9]+'); do adb -s $d ${args}; done`,
-  windows: (args) =>
-    `adb devices | Select-String '^emulator-\\d+' | ForEach-Object { adb -s $_.Matches[0].Value ${args} }`,
+// per emulator running, in the shell its sentence names (C2). A stock Android
+// Studio puts neither adb nor the emulator on the PATH, so a command names the
+// SDK the shell found, as the user's own shell writes it (W17's N1).
+const SDK_TOOL: Record<OsTarget, (sdk: string, dir: string, tool: string) => string> = {
+  macos: (sdk, dir, tool) => `${sdk}/${dir}/${tool}`,
+  linux: (sdk, dir, tool) => `${sdk}/${dir}/${tool}`,
+  windows: (sdk, dir, tool) => `${sdk}\\${dir}\\${tool}.exe`,
 };
 
-const RUN_IN: Record<OsTarget, string> = {
-  macos: "In a terminal, run:",
-  linux: "In a terminal, run:",
-  windows: "In PowerShell, run:",
+function eachEmulator(target: OsTarget, sdk: string | null, args: string): string {
+  if (target === "windows") {
+    const [set, adb] =
+      sdk === null ? ["", "adb"] : [`$adb = "${SDK_TOOL.windows(sdk, "platform-tools", "adb")}"; `, "& $adb"];
+    return `${set}${adb} devices | Select-String '^emulator-\\d+' | ForEach-Object { ${adb} -s $_.Matches[0].Value ${args} }`;
+  }
+  const [set, adb] =
+    sdk === null ? ["", "adb"] : [`adb="${SDK_TOOL[target](sdk, "platform-tools", "adb")}"; `, '"$adb"'];
+  return `${set}for d in $(${adb} devices | grep -Eo '^emulator-[0-9]+'); do ${adb} -s $d ${args}; done`;
+}
+
+function emulatorTool(target: OsTarget, sdk: string | null): string {
+  if (sdk === null) return "emulator";
+  const path = `"${SDK_TOOL[target](sdk, "emulator", "emulator")}"`;
+  return target === "windows" ? `& ${path}` : path;
+}
+
+const SDK_HOME: Record<OsTarget, string> = {
+  macos: "~/Library/Android/sdk",
+  linux: "~/Android/Sdk",
+  windows: "%LOCALAPPDATA%\\Android\\Sdk",
 };
+
+const adbNotFound = (target: OsTarget): HelpPart => ({
+  help: `adb not found? Android Studio puts it in ${SDK_HOME[target]}${target === "windows" ? "\\" : "/"}platform-tools — set ANDROID_HOME if your SDK is elsewhere.`,
+  topic: "if adb is not found",
+});
+
+const withEmulatorRunning = (target: OsTarget) => `${IN_SHELL[target]}, with the emulator running, run:`;
 
 // Android 15's own paths: the emulator runs a stock image, so its menus are
-// the ones Google ships, where a phone's are its maker's (C5).
-const EMULATOR_CREDENTIALS = "Settings → Security & privacy → More security & privacy → Encryption & credentials";
+// the ones Google ships, where a phone's are its maker's (C5). Settings opens
+// More security & privacy from the shell, and the installer itself from
+// nowhere (W17's I5).
+const EMULATOR_SECURITY = ["Security & privacy", "More security & privacy"];
+const EMULATOR_INSTALLER = ["Encryption & credentials", "Install a certificate", "CA certificate", "Install anyway"];
+const EMULATOR_PICK_FILE = ["☰", "Downloads", CA_FILES.cer];
+
+const EMULATOR_USER_CA: HelpPart = {
+  help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
+  topic: "which apps trust it",
+};
+
+const EMULATOR_HOST_HELP: HelpPart = {
+  help: `${EMULATOR_HOST} is the address every emulator reaches the machine it runs on by.`,
+  topic: `what ${EMULATOR_HOST} is`,
+};
+
+// The dialog's own words on Android 15: Uninstall, then OK (W17's W2).
+const EMULATOR_UNINSTALL: GuideStep = [
+  "Open",
+  { open: "trusted-credentials", label: "open Trusted credentials" },
+  "and tap",
+  { path: [CA_NAME, "Uninstall", "OK"] },
+];
+
+const EMULATOR_WIFI_PROXY = ["AndroidWifi ⚙", "✎", "Advanced options", "Proxy"];
+
+// A new emulator's Chrome opens on its welcome, and the address after it (W17's I3).
+const CHROME_WELCOME: HelpPart = {
+  help: "A new emulator's Chrome shows Welcome to Chrome first: tap Use without an account, and the address opens.",
+  topic: "if Chrome shows its welcome",
+};
 
 // The global proxy covers every network the emulator has. Its Wi-Fi is the
 // network a phone's steps name, but an emulator sends over its mobile one
 // wherever that is the default, and a Wi-Fi proxy then routes nothing (C4).
 const emulatorProxy = (value: string) => `shell settings put global http_proxy ${value}`;
 
-function emulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
+// What the shell read of the emulator, for its steps: undefined until a
+// reading lands.
+export interface EmulatorContext {
+  running?: boolean;
+  // su answered on every emulator running, so the shell writes its store.
+  rooted?: boolean;
+  sdk?: AndroidSdk;
+}
+
+// With none running, the steps start by opening the AVD used last (W17's I4).
+function openEmulatorStep(avd: AndroidSdk["avd"]): GuideStep {
+  return avd === null
+    ? ["In Android Studio, open", { path: ["Device Manager"] }, "and create an emulator."]
+    : [`Open ${avd.name}`, { open: "emulator", label: `open ${avd.name}` }];
+}
+
+function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined, emulator: EmulatorContext): PlatformSetup {
   const { port } = splitProxyAddr(proxyAddr);
   const format = caFormatFor("android-sim");
   const target = hostTarget(os);
-  const each = EACH_EMULATOR[target];
-  const trust: Guide = {
-    steps: [
-      saveCaStep(format),
-      [
-        `With the emulator running, ${RUN_IN[target].charAt(0).toLowerCase()}${RUN_IN[target].slice(1)}`,
-        {
-          command: each(`push ${savedFile(target, format, saved)} /sdcard/Download/`),
-          label: "the push command",
-        },
-      ],
-      [
-        `Install it: ${EMULATOR_CREDENTIALS} → Install a certificate → CA certificate → Install anyway → ☰ → Downloads → ${CA_FILES[format]}.`,
-      ],
-    ],
-    notes: [ANDROID_USER_CA],
-    undoTitle: "to remove it later",
-    undo: [[`${EMULATOR_CREDENTIALS} → Trusted credentials → User → ${CA_NAME} → Remove.`]],
+  const sdk = emulator.sdk?.sdk ?? null;
+  const avd = emulator.sdk?.avd ?? null;
+  const missingAdb = sdk === null ? [adbNotFound(target)] : [];
+  const push: CommandPart = {
+    command: eachEmulator(target, sdk, `push ${savedFile(target, format, saved)} /sdcard/Download/`),
+    label: "the push command",
   };
+  const install: GuideStep = [
+    "In the emulator's Settings, tap",
+    { path: [...EMULATOR_SECURITY, ...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] },
+    EMULATOR_USER_CA,
+  ];
+  const sends = emulator.running === true && emulator.rooted === false;
+  const trust: Guide = sends
+    ? {
+        steps: [
+          ["Send Trawler's certificate to the emulator", { open: "emulator-certificate", label: "send it to the emulator" }],
+          ["On the screen it opens, tap", { path: [...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] }, EMULATOR_USER_CA],
+        ],
+        alternatives: [
+          [
+            `Or save Trawler's certificate as ${CA_FILES[format]}`,
+            { save: format },
+            `and push it: ${lowered(withEmulatorRunning(target))}`,
+            push,
+            ...missingAdb,
+          ],
+        ],
+        undoTitle: "to remove it later",
+        undo: [EMULATOR_UNINSTALL],
+      }
+    : {
+        steps: [
+          ...(emulator.running === false ? [openEmulatorStep(avd)] : []),
+          saveCaStep(format),
+          [withEmulatorRunning(target), push, ...missingAdb],
+          install,
+        ],
+        alternatives:
+          emulator.running === false && avd !== null
+            ? [[`Or ${lowered(RUN_IN[target])}`, { command: `${emulatorTool(target, sdk)} -avd ${avd.id}`, label: "the start command" }]]
+            : undefined,
+        undoTitle: "to remove it later",
+        undo: [EMULATOR_UNINSTALL],
+      };
   const route: Guide = {
     steps: [
-      [RUN_IN[target], { command: each(emulatorProxy(`${EMULATOR_HOST}:${port}`)), label: "the proxy command" }],
+      [
+        RUN_IN[target],
+        { command: eachEmulator(target, sdk, emulatorProxy(`${EMULATOR_HOST}:${port}`)), label: "the proxy command" },
+        ...missingAdb,
+      ],
     ],
-    notes: [`${EMULATOR_HOST} is the alias every emulator resolves to the machine it runs on.`],
     alternatives: [
       [
-        "Or in the emulator: Settings → Network & internet → Internet → turn Mobile data off, then AndroidWifi ⚙ → ✎ → Advanced options → Proxy → Manual, server",
+        "Or in the emulator's Settings, tap",
+        { path: ["Network & internet", "Internet"] },
+        "— turn off",
+        { path: ["Mobile data"] },
+        "— then tap",
+        { path: [...EMULATOR_WIFI_PROXY, "Manual"] },
+        "— server",
         { copy: EMULATOR_HOST, label: "the emulator's host", wire: "proxy host" },
         "port",
         { copy: String(port), label: "the proxy port", wire: "proxy port" },
+        EMULATOR_HOST_HELP,
       ],
       [
         `Or start it with the proxy already set — the emulator reads this address on ${HOST_NOUN[os]}:`,
         {
-          command: `emulator -avd <name> -http-proxy http://127.0.0.1:${port}`,
+          command: `${emulatorTool(target, sdk)} -avd ${avd?.id ?? "<name>"} -http-proxy http://127.0.0.1:${port}`,
           label: "the emulator command",
         },
       ],
     ],
     undoTitle: DEVICE_PROXY_UNDO,
-    undo: routeUndo("android-sim", os),
+    undo: routeUndo("android-sim", os, sdk),
   };
   return {
     trust: { title: "In the emulator, install the certificate", guide: trust },
     route: { title: "In the emulator, set the proxy", guide: route },
     try: tryTask("android-sim", os),
+    deviceRoute: emulator.running ? { open: "emulator-request", label: "open it in the emulator" } : undefined,
+    deviceRouteHelp: emulator.running ? CHROME_WELCOME : undefined,
     confirmOn: confirmOn("android-sim", os),
     refusedAfterProof: REFUSED_AFTER_PROOF_ANDROID,
   };
@@ -1389,7 +1514,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa, running?
 // Each platform's way to stop routing through Trawler, needing no address: the
 // quit dialog shows it whether or not that platform's tasks can be written yet
 // (W11's S4), and setup's "to turn it off later" is the same steps.
-export function routeUndo(id: PlatformId, os: HostOs): GuideStep[] {
+export function routeUndo(id: PlatformId, os: HostOs, sdk: string | null = null): GuideStep[] {
   const target = hostTarget(os);
   switch (id) {
     case "this":
@@ -1403,8 +1528,14 @@ export function routeUndo(id: PlatformId, os: HostOs): GuideStep[] {
       return reversal("linux");
     case "android-sim":
       return [
-        [RUN_IN[target], { command: EACH_EMULATOR[target](emulatorProxy(":0")), label: "the proxy-off command" }],
-        ["Set in Settings? AndroidWifi ⚙ → ✎ → Advanced options → Proxy → None, and turn Mobile data back on."],
+        [RUN_IN[target], { command: eachEmulator(target, sdk, emulatorProxy(":0")), label: "the proxy-off command" }],
+        [
+          "Set in Settings? Tap",
+          { path: [...EMULATOR_WIFI_PROXY, "None"] },
+          "— and turn",
+          { path: ["Mobile data"] },
+          "back on.",
+        ],
       ];
     case "ios":
       return [["Settings → Wi-Fi → the network → Configure Proxy → Off."]];
@@ -1432,7 +1563,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
     case "ios-sim":
       return simulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved, ctx.simulatorsRunning);
     case "android-sim":
-      return emulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved);
+      return emulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved, ctx.emulator ?? {});
     case "ios":
     case "android":
       return deviceSetup(id, ctx.os, reach);
