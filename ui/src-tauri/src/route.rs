@@ -461,6 +461,7 @@ mod tests {
             last_avd: Some(crate::setup::Avd {
                 id: "Pixel_7_API_35".into(),
                 name: "Pixel 7 API 35".into(),
+                play_store: false,
             }),
         }
     }

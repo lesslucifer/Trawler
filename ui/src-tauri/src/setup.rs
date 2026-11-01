@@ -609,14 +609,18 @@ fn spelled_sdk(
 }
 
 // The AVD used last: each start rewrites `hardware-qemu.ini` in its folder, and
-// its `config.ini` carries the name Device Manager shows (W17's Q4).
+// its `config.ini` carries the name Device Manager shows (W17's Q4) and whether
+// its image is a Google Play one, whose production build has no su (W17's S3).
 const AVD_LAUNCHED: &str = "hardware-qemu.ini";
 const AVD_DISPLAY_NAME: &str = "avd.ini.displayname=";
+const AVD_PLAY_STORE: &str = "PlayStore.enabled=";
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Avd {
     pub(crate) id: String,
     pub(crate) name: String,
+    #[serde(rename = "playStore")]
+    pub(crate) play_store: bool,
 }
 
 fn avd_home(
@@ -654,9 +658,10 @@ fn last_avd(avds: &Path) -> Option<Avd> {
             let name = ini_value(&config, AVD_DISPLAY_NAME)
                 .filter(|n| !n.is_empty())
                 .map_or_else(|| id.replace('_', " "), ToString::to_string);
+            let play_store = matches!(ini_value(&config, AVD_PLAY_STORE), Some("yes" | "true"));
             let used =
                 modified(&dir.join(AVD_LAUNCHED)).or_else(|| modified(&dir.join("config.ini")));
-            Some((used, Avd { id, name }))
+            Some((used, Avd { id, name, play_store }))
         })
         .max_by(|(a, _), (b, _)| a.cmp(b))
         .map(|(_, avd)| avd)
@@ -689,7 +694,7 @@ impl Emulators {
         let adb = tool("platform-tools", "adb");
         let running = ran(&adb, &["devices"])
             .filter(|out| out.ok)
-            .map(|out| running_emulators(&out.stdout))
+            .map(|out| booted_emulators(&out.stdout, |args| ran(&adb, args)))
             .unwrap_or_default();
         Self {
             emulator: tool("emulator", "emulator"),
@@ -716,6 +721,22 @@ fn running_emulators(devices: &str) -> Vec<String> {
         .filter_map(|line| match line.split_whitespace().collect::<Vec<_>>()[..] {
             [serial, "device"] if serial.starts_with("emulator-") => Some(serial.to_string()),
             _ => None,
+        })
+        .collect()
+}
+
+fn listed_emulators(devices: &str) -> usize {
+    devices.lines().filter(|line| line.starts_with("emulator-")).count()
+}
+
+// adb lists an emulator from its first seconds, and its store and proxy read
+// nothing until Android is up, so one counts as running once it has booted (W17's S2).
+fn booted_emulators(devices: &str, adb: impl Fn(&[&str]) -> Option<Ran>) -> Vec<String> {
+    running_emulators(devices)
+        .into_iter()
+        .filter(|serial| {
+            adb(&["-s", serial, "shell", "getprop", "sys.boot_completed"])
+                .is_some_and(|out| out.ok && out.stdout.trim() == "1")
         })
         .collect()
 }
@@ -814,16 +835,24 @@ fn der_bytes(live: &str) -> Option<Vec<u8>> {
     base64::engine::general_purpose::STANDARD.decode(live).ok()
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct EmulatorsNow {
+    running: Vec<EmulatorReading>,
+    starting: bool,
+}
+
 // None where adb did not answer: no emulator is a reading only adb can give.
 fn emulators_read(
     live: Option<&str>,
     port: u16,
     adb: impl Fn(&[&str]) -> Option<Ran>,
-) -> Option<Vec<EmulatorReading>> {
+) -> Option<EmulatorsNow> {
     let devices = adb(&["devices"]).filter(|out| out.ok)?;
     let der = live.and_then(der_bytes);
     let store = user_ca_script();
-    let read = running_emulators(&devices.stdout)
+    let booted = booted_emulators(&devices.stdout, &adb);
+    let starting = booted.len() < listed_emulators(&devices.stdout);
+    let running = booted
         .into_iter()
         .map(|serial| {
             let on = |args: &[&str]| adb(&[&["-s", serial.as_str()], args].concat());
@@ -843,17 +872,19 @@ fn emulators_read(
             EmulatorReading::new(name, trust, &proxy)
         })
         .collect();
-    Some(read)
+    Some(EmulatorsNow { running, starting })
 }
 
 // What the screen knows of the emulator: whether adb answered, the SDK its
-// commands name, the AVD used last, and each emulator running (W17's W4, I4).
+// commands name, the AVD used last, each emulator running, and whether one is
+// still booting (W17's W4, I4, S2).
 #[derive(Debug, PartialEq, Eq, serde::Serialize)]
 pub struct EmulatorRead {
     pub(crate) adb: bool,
     pub(crate) sdk: Option<String>,
     pub(crate) avd: Option<Avd>,
     pub(crate) emulators: Vec<EmulatorReading>,
+    pub(crate) starting: bool,
 }
 
 // Read-only probe: which emulators run, does each one's own store hold the
@@ -869,12 +900,13 @@ pub fn emulator_readings(pem: String, port: u16) -> EmulatorRead {
     let sdk = found.as_deref().and_then(Path::parent).and_then(Path::parent);
     let adb = found.as_deref().map_or_else(|| "adb".into(), |p| p.to_string_lossy());
     let live = live_body(&pem);
-    let emulators = emulators_read(live.as_deref(), port, |args| ran(&adb, args));
+    let now = emulators_read(live.as_deref(), port, |args| ran(&adb, args));
     EmulatorRead {
-        adb: emulators.is_some(),
+        adb: now.is_some(),
         sdk: sdk.and_then(|sdk| spelled_sdk(os, sdk, var)),
         avd: avd_home(os, var).as_deref().and_then(last_avd),
-        emulators: emulators.unwrap_or_default(),
+        starting: now.as_ref().is_some_and(|now| now.starting),
+        emulators: now.map(|now| now.running).unwrap_or_default(),
     }
 }
 
@@ -2845,6 +2877,7 @@ mod tests {
             asked.borrow_mut().push(args.join(" "));
             match args {
                 ["devices"] => answered(ADB_DEVICES),
+                ["-s", _, "shell", "getprop", "sys.boot_completed"] => answered("1\n"),
                 ["-s", "emulator-5554", "shell", "getprop", _] => answered("Pixel_7_API_35\n"),
                 ["-s", _, "shell", "getprop", _] => answered("\n"),
                 ["-s", "emulator-5554", "shell", script] if script.starts_with("su 0") => {
@@ -2861,7 +2894,7 @@ mod tests {
         })
         .expect("adb answered");
         assert_eq!(
-            read,
+            read.running,
             [
                 EmulatorReading::new(
                     "Pixel 7 API 35".into(),
@@ -2881,7 +2914,33 @@ mod tests {
         assert_eq!(emulators_read(Some("MIIB"), 7420, |_| exited_non_zero("")), None);
         assert_eq!(
             emulators_read(Some("MIIB"), 7420, |_| answered("List of devices attached\n\n")),
-            Some(vec![])
+            Some(EmulatorsNow { running: vec![], starting: false })
+        );
+    }
+
+    #[test]
+    fn an_emulator_still_booting_is_starting_and_never_read_as_running() {
+        let asked = std::cell::RefCell::new(Vec::new());
+        let now = emulators_read(Some("MIIB"), 7420, |args| {
+            asked.borrow_mut().push(args.join(" "));
+            match args {
+                ["devices"] => answered("List of devices attached\nemulator-5554\tdevice\n\n"),
+                ["-s", _, "shell", "getprop", "sys.boot_completed"] => answered("\n"),
+                _ => None,
+            }
+        });
+        assert_eq!(now, Some(EmulatorsNow { running: vec![], starting: true }));
+        assert_eq!(
+            *asked.borrow(),
+            ["devices", "-s emulator-5554 shell getprop sys.boot_completed"]
+        );
+        let offline = |args: &[&str]| match args {
+            ["devices"] => answered("List of devices attached\nemulator-5554\toffline\n\n"),
+            _ => None,
+        };
+        assert_eq!(
+            emulators_read(Some("MIIB"), 7420, offline),
+            Some(EmulatorsNow { running: vec![], starting: true })
         );
     }
 
@@ -2889,12 +2948,14 @@ mod tests {
     fn a_certificate_that_does_not_read_leaves_each_emulator_listed_and_its_store_unknown() {
         let read = emulators_read(None, 7420, |args| match args {
             ["devices"] => answered(ADB_DEVICES),
+            ["-s", _, "shell", "getprop", "sys.boot_completed"] => answered("1\n"),
             ["-s", _, "shell", "getprop", _] => answered("\n"),
             _ => None,
         })
         .expect("adb answered");
-        assert_eq!(read.len(), 2);
-        assert!(read.iter().all(|e| e.trust == trust_word(None)));
+        assert_eq!(read.running.len(), 2);
+        assert!(read.starting);
+        assert!(read.running.iter().all(|e| e.trust == trust_word(None)));
     }
 
     const ANDROID_CA: &str = "-----BEGIN CERTIFICATE-----
@@ -3051,15 +3112,39 @@ NecwLoyuObd5tf9Qwxdkolo=
         avd(&home, "Pixel_Fold_API_34", "hw.lcd.width=1080\n", Some(60));
         assert_eq!(
             last_avd(&home),
-            Some(Avd { id: "Pixel_Fold_API_34".into(), name: "Pixel Fold API 34".into() })
+            Some(Avd {
+                id: "Pixel_Fold_API_34".into(),
+                name: "Pixel Fold API 34".into(),
+                play_store: false
+            })
         );
         avd(&home, "Pixel_7_API_35", "avd.ini.displayname=Pixel 7 API 35\n", Some(1));
         assert_eq!(
             last_avd(&home),
-            Some(Avd { id: "Pixel_7_API_35".into(), name: "Pixel 7 API 35".into() })
+            Some(Avd {
+                id: "Pixel_7_API_35".into(),
+                name: "Pixel 7 API 35".into(),
+                play_store: false
+            })
         );
         assert_eq!(last_avd(&avds("none")), None);
         assert_eq!(last_avd(&home.join("missing")), None);
+    }
+
+    #[test]
+    fn a_google_play_image_is_told_by_its_config() {
+        let home = avds("play");
+        avd(
+            &home,
+            "Pixel_8_Play",
+            "PlayStore.enabled=yes\ntag.id=google_apis_playstore\n",
+            Some(1),
+        );
+        assert!(last_avd(&home).is_some_and(|avd| avd.play_store));
+        avd(&home, "Pixel_8_Play", "PlayStore.enabled=true\n", Some(1));
+        assert!(last_avd(&home).is_some_and(|avd| avd.play_store));
+        avd(&home, "Pixel_8_Play", "PlayStore.enabled=no\ntag.id=google_apis\n", Some(1));
+        assert!(last_avd(&home).is_some_and(|avd| !avd.play_store));
     }
 
     #[test]

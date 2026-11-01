@@ -84,11 +84,13 @@ pub struct AndroidOs {
     adb: bool,
     sdk: Option<String>,
     avd: Option<AvdOs>,
+    #[serde(default)]
+    starting: bool,
 }
 
 impl Default for AndroidOs {
     fn default() -> Self {
-        Self { adb: true, sdk: None, avd: None }
+        Self { adb: true, sdk: None, avd: None, starting: false }
     }
 }
 
@@ -96,6 +98,8 @@ impl Default for AndroidOs {
 pub struct AvdOs {
     id: String,
     name: String,
+    #[serde(default, rename = "playStore")]
+    play_store: bool,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -250,12 +254,17 @@ impl Scenario {
     }
 
     fn emulator_read(&self) -> EmulatorRead {
-        let AndroidOs { adb, sdk, avd } = &self.android;
+        let AndroidOs { adb, sdk, avd, starting } = &self.android;
         EmulatorRead {
             adb: *adb,
             sdk: sdk.clone(),
-            avd: avd.as_ref().map(|a| Avd { id: a.id.clone(), name: a.name.clone() }),
+            avd: avd.as_ref().map(|a| Avd {
+                id: a.id.clone(),
+                name: a.name.clone(),
+                play_store: a.play_store,
+            }),
             emulators: if *adb { self.emulators_reading() } else { Vec::new() },
+            starting: *adb && *starting,
         }
     }
 
@@ -610,16 +619,26 @@ mod tests {
     #[test]
     fn the_emulator_read_carries_the_scripted_sdk_and_no_adb_reads_no_emulator() {
         let s = patched(
-            r#"{"android":{"adb":true,"sdk":"$HOME/Library/Android/sdk","avd":{"id":"Pixel_7_API_35","name":"Pixel 7 API 35"}},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
+            r#"{"android":{"adb":true,"sdk":"$HOME/Library/Android/sdk","avd":{"id":"Pixel_7_API_35","name":"Pixel 7 API 35"},"starting":true},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
         );
         let read = s.emulator_read();
         assert!(read.adb);
+        assert!(read.starting);
         assert_eq!(read.sdk.as_deref(), Some("$HOME/Library/Android/sdk"));
         assert_eq!(
             read.avd,
-            Some(Avd { id: "Pixel_7_API_35".into(), name: "Pixel 7 API 35".into() })
+            Some(Avd {
+                id: "Pixel_7_API_35".into(),
+                name: "Pixel 7 API 35".into(),
+                play_store: false
+            })
         );
         assert_eq!(read.emulators.len(), 1);
+        let play = patched(
+            r#"{"android":{"adb":true,"sdk":null,"avd":{"id":"Pixel_8","name":"Pixel 8","playStore":true}}}"#,
+        );
+        assert!(play.emulator_read().avd.is_some_and(|avd| avd.play_store));
+        assert!(!play.emulator_read().starting);
         let no_adb = patched(
             r#"{"android":{"adb":false,"sdk":null,"avd":null},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
         );
