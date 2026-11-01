@@ -496,18 +496,19 @@ const NOT_DECRYPTING_SYSTEM_STORE =
   "Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.";
 
 const NOT_DECRYPTING_LINUX =
-  "Already did? The system command covers curl and the system's tools, not browsers: Firefox and Chrome each keep a store of their own, and each has its own step below. Apps that pin their own certificate never decrypt.";
+  "Already did? Firefox and Chrome each keep their own store — install it in the browser you opened the address in, then restart it. Apps that pin their own certificate never decrypt.";
 
 const REFUSED_AFTER_PROOF_LINUX =
   "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.";
 
 // Linux has three stores and the browsers read neither of the other two:
-// Firefox keeps its own, Chrome the NSS database, and curl and the system's
-// tools the system bundle. Each is a step, browsers first, because the try task
-// opens a browser (C1). Chromium moved the NSS database at M146 and keeps an
-// older one where it exists (C3); a Chrome never opened has made neither, and
-// certutil adds only to a database it was asked to create. certutil is not on
-// a stock Ubuntu (C2).
+// Firefox keeps its own, Chrome its own beside the NSS database, and curl and
+// the system's tools the system bundle. Each browser is a step walked in its
+// own settings, because the try task opens a browser (C1, W15's I1); Chrome's
+// command is the other way. Chromium moved the NSS database at M146 and keeps
+// an older one where it exists (C3); a Chrome never opened has made neither,
+// and certutil adds only to a database it was asked to create. certutil is not
+// on a stock Ubuntu (C2).
 const FIREFOX_AUTHORITIES = [
   "Privacy and security",
   "Connection and software security",
@@ -523,31 +524,35 @@ const NSS_DB_MADE =
   "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
 const FOR_CHROME = "For Chrome, run:";
 const FOR_SYSTEM_TOOLS = "For curl and the system's tools, run:";
+const IN_CHROME = "In Chrome or Chromium's Settings, click";
+const CHROME_TRUSTED = [
+  "Privacy and security",
+  "Security",
+  "Manage certificates",
+  "Local certificates",
+  "Installed by you",
+  "Trusted Certificates",
+];
 
-const linuxBrowserSteps = (file: string): GuideStep[] => [
+const LINUX_BROWSER_STEPS: GuideStep[] = [
   [
     IN_FIREFOX,
     { path: [...FIREFOX_AUTHORITIES, "Import…"] },
-    `, choose ${PEM_FILE} and tick`,
-    { path: [TRUST_WEBSITES] },
     {
       media: "linux-firefox-import",
       alt: `Firefox: ${FIREFOX_AUTHORITIES.join(" → ")} → Import… → ${PEM_FILE} → ${TRUST_WEBSITES}`,
       shows: `${LINUX_OS_VERSION}, Firefox 154`,
     },
   ],
-  [
-    FOR_CHROME,
-    {
-      command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
-      label: "the Chrome command",
-    },
-  ],
+  [`Choose ${PEM_FILE}, tick`, { path: [TRUST_WEBSITES] }, "and click", { path: ["OK"] }],
+  [IN_CHROME, { path: [...CHROME_TRUSTED, "Import"] }, `and choose ${PEM_FILE}`],
 ];
 
 interface OsTrust {
   install: GuideStep[];
-  unprobed?: GuideStep[];
+  // The store This machine's probe reads: a step where the status reads it,
+  // another way where nothing does (W15's Q2).
+  probedStore?: GuideStep;
   alternatives?: GuideStep[];
   undoTitle: string;
   undo: GuideStep[];
@@ -664,23 +669,33 @@ const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
     notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
   }),
   linux: (file) => ({
-    install: [
-      ...linuxBrowserSteps(file),
+    install: LINUX_BROWSER_STEPS,
+    probedStore: [
+      FOR_SYSTEM_TOOLS,
+      {
+        command: `sudo cp ${file} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
+        label: "the trust command",
+      },
+    ],
+    alternatives: [
       [
-        FOR_SYSTEM_TOOLS,
+        FOR_CHROME,
         {
-          command: `sudo cp ${file} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
-          label: "the trust command",
+          command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
+          label: "the Chrome command",
         },
       ],
     ],
-    unprobed: linuxBrowserSteps(file),
     undoTitle: "to remove it later",
     undo: [
-      [IN_FIREFOX, { path: [...FIREFOX_AUTHORITIES, "Trawler Proxy CA", "Delete or Distrust…"] }],
-      [FOR_CHROME, { command: `certutil -d ${NSS_DB} -D -n trawler`, label: "the Chrome removal command" }],
+      [IN_FIREFOX, { path: [...FIREFOX_AUTHORITIES, CA_NAME, "Delete or Distrust…"] }],
+      [IN_CHROME, { path: [...CHROME_TRUSTED, CA_NAME] }, "and delete it"],
       [
-        FOR_SYSTEM_TOOLS,
+        "If you ran the Chrome command, run:",
+        { command: `certutil -d ${NSS_DB} -D -n trawler`, label: "the Chrome removal command" },
+      ],
+      [
+        "If you ran the system command, run:",
         {
           command:
             "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
@@ -828,15 +843,36 @@ function thisPcRoute(addr: string): Guide {
 const thatPcRoute = (addr: string): Guide =>
   pcRoute(addr, ["On that PC, open", { path: PROXY_PAGE }], ["— with the server and port above"]);
 
-// This Linux machine's own route: GNOME's Network panel, whose proxy page
-// keeps its edits until Save. Its command is the other way.
+// GNOME's Network panel, whose proxy page keeps its edits until Save; its
+// command is the other way. Only apps that read GNOME's proxy follow it (W6's
+// N2), and gsettings needs the desktop's session, which SSH has not (W6's N1).
 const GNOME_MANUAL_PROXY = ["Proxy", "Network Proxy", "Configuration", "Manual"];
+const LINUX_PROXY_OFF: GuideStep = [
+  "Turn off",
+  { path: ["Network Proxy"] },
+  "in",
+  { path: ["Settings", "Network", "Proxy"] },
+  "and click",
+  { path: ["Save"] },
+];
+const WHAT_FOLLOWS_IT: HelpPart = {
+  help: "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY.",
+  topic: "what follows it",
+};
+const ON_ITS_DESKTOP: HelpPart = {
+  help: "Run it on that machine's desktop — over SSH it sets nothing.",
+  topic: "where to run it",
+};
 
-function thisLinuxRoute(addr: string): Guide {
-  const { host, port } = splitProxyAddr(addr);
+function linuxRoute(
+  addr: string,
+  first: GuideStep,
+  values: StepPart[],
+  command: (cmd: CommandPart) => GuideStep,
+): Guide {
   return {
     steps: [
-      ["Open the network settings", { open: "proxy-settings", label: "open Network settings" }],
+      first,
       [
         "Click",
         { path: GNOME_MANUAL_PROXY },
@@ -846,23 +882,38 @@ function thisLinuxRoute(addr: string): Guide {
           shows: LINUX_OS_VERSION,
         },
       ],
-      [
-        "Set",
-        { path: ["HTTP Proxy"] },
-        "and",
-        { path: ["HTTPS Proxy"] },
-        "— each with URL",
-        { copy: host, label: "the proxy server", wire: "proxy host" },
-        "and port",
-        { copy: String(port), label: "the proxy port", wire: "proxy port" },
-      ],
-      ["Click", { path: ["Save"] }],
+      ["Set", { path: ["HTTP Proxy"] }, "and", { path: ["HTTPS Proxy"] }, ...values],
+      ["Click", { path: ["Save"] }, WHAT_FOLLOWS_IT],
     ],
-    alternatives: [[ROUTE_LEAD.linux, { command: routeCommand("linux", addr)!, label: "the proxy command" }]],
+    alternatives: [command({ command: routeCommand("linux", addr)!, label: "the proxy command" })],
     undoTitle: "to turn it off later",
-    undo: reversal("linux"),
+    undo: proxyOffByHand(LINUX_PROXY_OFF, "linux"),
   };
 }
+
+function thisLinuxRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return linuxRoute(
+    addr,
+    ["Open the network settings", { open: "proxy-settings", label: "open Network settings" }],
+    [
+      "— each with URL",
+      { copy: host, label: "the proxy server", wire: "proxy host" },
+      "and port",
+      { copy: String(port), label: "the proxy port", wire: "proxy port" },
+    ],
+    (cmd) => [IN_A_TERMINAL, cmd],
+  );
+}
+
+// That machine's route is walked by hand, as that Mac's is (W15's I2).
+const thatUbuntuRoute = (addr: string): Guide =>
+  linuxRoute(
+    addr,
+    ["On that machine, open", { path: ["Settings", "Network"] }],
+    ["— each with the server and port above"],
+    (cmd) => ["In a terminal on that machine, run:", cmd, ON_ITS_DESKTOP],
+  );
 
 // The route a host's own machine takes: its settings screen on macOS, Windows
 // and Linux, else the command a terminal answers to.
@@ -870,14 +921,16 @@ function localRoute(os: HostOs, addr: string): Guide {
   if (os === "macos") return thisMacRoute(addr);
   if (os === "windows") return thisPcRoute(addr);
   if (os === "linux") return thisLinuxRoute(addr);
-  return osRoute("terminal", addr);
+  return terminalRoute(addr);
 }
+
+const IN_A_TERMINAL = "In a terminal, run:";
 
 const TRY_LEAD: Record<HostOs, string> = {
   macos: IN_TERMINAL,
   windows: "In PowerShell, run:",
-  linux: "In a terminal, run:",
-  other: "In a terminal, run:",
+  linux: IN_A_TERMINAL,
+  other: IN_A_TERMINAL,
 };
 
 // A browser on another computer saves the certificate to Downloads, and so
@@ -920,13 +973,6 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
   }
 }
 
-// The desktops with a settings page route by hand; these route by command.
-type CommandRouted = "linux" | "terminal";
-
-const ROUTE_LEAD: Record<CommandRouted, string> = {
-  linux: "GNOME — run:",
-  terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
-};
 
 // proxyOffSteps owns the reversal's prose and splices its command in as a step;
 // the screen needs the same sentences with the command as a value to take, so
@@ -945,11 +991,17 @@ function proxyOffByHand(byHand: GuideStep, t: OsTarget): GuideStep[] {
   return [byHand, ...reversal(t).map(orStep)];
 }
 
-function osRoute(t: CommandRouted, addr: string): Guide {
+// A host with no desktop known routes its shell alone.
+function terminalRoute(addr: string): Guide {
   return {
-    steps: [[ROUTE_LEAD[t], { command: routeCommand(t, addr)!, label: "the proxy command" }]],
+    steps: [
+      [
+        "Export the proxy in your shell (curl, npm and most CLIs honour it):",
+        { command: routeCommand("terminal", addr)!, label: "the proxy command" },
+      ],
+    ],
     undoTitle: "to turn it off later",
-    undo: reversal(t),
+    undo: reversal("terminal"),
   };
 }
 
@@ -1060,11 +1112,15 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
           : os === "windows"
             ? thisPcTrust(file)
             : {
-              steps: [saveCaStep(caFormatFor("this")), ...trust.install],
+              steps: [
+                saveCaStep(caFormatFor("this")),
+                ...trust.install,
+                ...(trust.probedStore ? [trust.probedStore] : []),
+              ],
               alternatives: trust.alternatives,
               undoTitle: trust.undoTitle,
               undo: trust.undo,
-              unprobed: trust.unprobed && [saveCaStep(caFormatFor("this")), ...trust.unprobed],
+              unprobed: trust.probedStore && [saveCaStep(caFormatFor("this")), ...trust.install],
             },
     },
     route: {
@@ -1087,7 +1143,7 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
 function anotherMachineRoute(target: OsTarget, addr: string): Guide {
   if (target === "macos") return thatMacRoute(addr);
   if (target === "windows") return thatPcRoute(addr);
-  return osRoute("linux", addr);
+  return thatUbuntuRoute(addr);
 }
 
 function anotherMachineSetup(
@@ -1107,7 +1163,7 @@ function anotherMachineSetup(
           ? undefined
           : {
               steps: [downloadStep(id, os, reach, format), ...trust.install],
-              alternatives: trust.alternatives,
+              alternatives: [...(trust.alternatives ?? []), ...(trust.probedStore ? [trust.probedStore] : [])],
               undoTitle: trust.undoTitle,
               undo: trust.undo,
             },
