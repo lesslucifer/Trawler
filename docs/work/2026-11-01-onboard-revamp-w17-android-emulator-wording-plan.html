@@ -376,6 +376,30 @@ flowchart TB
       <tr><td>UC-ONBOARD's emulator guides</td><td>all</td></tr>
     </table>
 
+    <h2 id="steady">After review: one layout before and after an emulator runs</h2>
+    <p data-c="steady">The owner, 2026-11-01, on the built result: <em>the UX before and after opening the emulator
+      changes significantly; it is unexpected to the user</em>. Today none running opens task 1 on four steps by hand
+      with the start button among them, and an emulator starting replaces them with <em>set up the emulator</em> above
+      the tasks, shuts both guides and adds task 3's button. Taken, and ruled by that request:</p>
+    <table data-c="steady-findings">
+      <tr><th>#</th><th>Today</th><th>After</th></tr>
+      <tr><td>S1</td><td>the controls an emulator running shows appear only once it runs; the start button sits in
+        task 1's steps</td><td>none running shows the layout one running will: <em>open Pixel 7 API 35</em> framed
+        where <em>set up the emulator</em> will stand, the guides shut under <em>do it by hand</em>, and the emulator's
+        own buttons (<em>send it to the emulator</em>, <em>route the emulator</em>, <em>open it in the emulator</em>)
+        in place, disabled until one runs. Starting it swaps the lead's button, and nothing else moves</td></tr>
+      <tr><td>S2</td><td>adb lists an emulator while it boots, and its store and proxy read <em>unknown</em> until
+        Android is up: the screen passes through the no-<code>su</code> layout first</td><td>an emulator counts as
+        running once <code>sys.boot_completed</code> reads 1. Before that the lead reads <em>starting the
+        emulator…</em> in place of its button</td></tr>
+      <tr><td>S3</td><td>whether <code>su</code> answers is known only once one runs, so a Google Play image changes
+        layout as it starts</td><td>the AVD used last says it: <code>PlayStore.enabled</code> in its
+        <code>config.ini</code>. A Play image shows <em>send it to the emulator</em>'s layout before it runs</td></tr>
+      <tr><td>S4</td><td>the iOS Simulator has the same shift (W16)</td><td>left as it is: its filmed chapters set
+        this Mac's proxy while none runs, and changing that redraws W16's design. Proposed as a follow-up for the
+        owner to rule</td></tr>
+    </table>
+
     <h2 id="commits">Commits</h2>
     <table data-c="commits">
       <tr><th>#</th><th>Commit</th></tr>
@@ -387,6 +411,9 @@ flowchart TB
       <tr><td>6</td><td>the walkthrough's new chapters</td></tr>
       <tr><td>7</td><td>UC-ONBOARD's emulator guides</td></tr>
       <tr><td>8</td><td>the result report</td></tr>
+      <tr><td>9</td><td>after review: this section</td></tr>
+      <tr><td>10</td><td>the shell: booted, starting, the Play image (S2, S3)</td></tr>
+      <tr><td>11</td><td>the screen's one layout, its walkthrough chapters, UC-ONBOARD and the result (S1–S3)</td></tr>
     </table>
 
   </main>
