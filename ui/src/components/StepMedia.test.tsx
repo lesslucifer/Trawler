@@ -29,7 +29,7 @@ describe("StepMedia", () => {
     const { container } = render(<StepMedia media={media} alt={ALT} shows="iOS 26.5" />);
 
     expect(container.querySelector("video, img")!.className.split(" ")).toEqual(
-      expect.arrayContaining(["w-auto", "max-w-full", "max-h-step-media"]),
+      expect.arrayContaining(["w-auto", "max-w-full", "max-h-step-media", "self-start"]),
     );
   });
 
