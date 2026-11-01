@@ -43,7 +43,9 @@ function Value({ value, label, wire }: { value: string; label: string; wire: str
 
 // A route opens a screen for the step it sits in, so it is a control in the
 // sentence, as the save is. The guide's first control is the one framed where
-// it is the next thing to do on the screen (W12's E1).
+// it is the next thing to do on the screen (W12's E1). A step with no control
+// to click frames its code: a phone's camera is the only way this machine
+// reaches it (W18's E1).
 export interface StepControls {
   save?: ActionHandle;
   open?: (route: RouteName) => void;
@@ -60,6 +62,7 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
   const firstControl = said.findIndex(
     (part) => typeof part === "object" && ((isRoute(part) && !part.disabled) || isSave(part)),
   );
+  const framesScan = framed && firstControl === -1;
   const parts = said.map((part, i) => {
     if (typeof part === "string") return <span key={i}>{part}</span>;
     if ("copy" in part) return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
@@ -100,7 +103,13 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
       ))}
       {scans.map((part, i) => (
         <div key={i} data-testid="scan-code" className="pt-2">
-          <QrCode value={part.copy} label={part.label} />
+          {framesScan && i === 0 ? (
+            <div data-framed className="inline-block rounded-button border border-hairline p-control-x">
+              <QrCode value={part.copy} label={part.label} />
+            </div>
+          ) : (
+            <QrCode value={part.copy} label={part.label} />
+          )}
         </div>
       ))}
     </>

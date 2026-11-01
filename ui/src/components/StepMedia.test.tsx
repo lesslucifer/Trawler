@@ -21,6 +21,18 @@ describe("StepMedia", () => {
     expect(screen.getByText("macOS 26").tagName).toBe("FIGCAPTION");
   });
 
+  // W18: a phone's portrait recording stands narrow rather than a screen tall.
+  it.each([
+    ["video", VIDEO],
+    ["image", IMAGE],
+  ] as const)("a %s keeps its aspect within the pane's width and the step-media height", (_kind, media) => {
+    const { container } = render(<StepMedia media={media} alt={ALT} shows="iOS 26.5" />);
+
+    expect(container.querySelector("video, img")!.className.split(" ")).toEqual(
+      expect.arrayContaining(["w-auto", "max-w-full", "max-h-step-media", "self-start"]),
+    );
+  });
+
   it("an image carries the path as its alt text", () => {
     render(<StepMedia media={IMAGE} alt={ALT} shows="macOS 26" />);
 

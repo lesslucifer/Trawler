@@ -642,11 +642,11 @@ const CA_SHOWN: Record<
     findings: ["R27", "W15.E1", "W15.E2"],
   },
   ios: {
-    says: "opens /ca.mobileconfig in Safari, which downloads trawler-ca.mobileconfig, installs Trawler Proxy CA from VPN & Device Management, and says why iOS calls it Not Verified; its other way saves the same profile to AirDrop over, and no .pem is named",
-    findings: ["R23", "R24", "R27", "R28"],
+    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.mobileconfig in Safari, then tap Allow\"; then Profile Downloaded → Install → Install → Install → Done and General → About → Certificate Trust Settings, Trawler Proxy CA → Continue, each with its iOS 26.5 recording; its other way saves trawler-ca.mobileconfig to AirDrop over, \"to remove it later\" ends Remove Profile, and no .pem is named. Task 4 is dimmed, \"after task 3\", with no code",
+    findings: ["R23", "R24", "R27", "R28", "W18.E1", "W18.E2", "W18.W2", "W18.M1", "W18.N1"],
   },
   android: {
-    says: "opens /ca.cer, which downloads Trawler's certificate, and the install step reaches the CA installer by Settings' search and picks the trawler-ca file it downloaded; its other way saves trawler-ca.cer",
+    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.cer\", which downloads Trawler's certificate, and the install step reaches the CA installer by Settings' search and picks the trawler-ca file it downloaded; its other way saves trawler-ca.cer. Task 4 is dimmed, \"after task 3\", with no code",
     findings: ["R25", "R27", "R28"],
   },
 };
@@ -741,6 +741,28 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         anchor: [task(3)],
       },
     );
+  if (platform === "ios")
+    chapters.push(
+      {
+        id: "certificate-help",
+        title: "What the certificate's steps explain on request",
+        act: (w) => w.openHelp(2),
+        expect: `task 2's ? open: the download's "Doesn't load? …"; the install's "It asks for your passcode on the way. Not at the top of Settings? General → VPN & Device Management → Trawler Proxy CA (VPN, DNS, & Device Management on some devices). iOS marks the profile Not Verified: it is yours, not signed by a company."; the trust switch's "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private."`,
+        findings: ["W18.W3", "W18.W4", "W18.N4"],
+        anchor: [task(2)],
+      },
+      {
+        id: "route-open",
+        title: "The iPhone's proxy, by hand",
+        act: async (w) => {
+          await w.openGuide(3);
+          await w.openHelp(3);
+        },
+        expect: `task 3's two steps as path parts: In Settings, tap Wi-Fi then ⓘ by the network it is on, then Configure Proxy → Manual; Server and Port with the values above, then Save${host === "macos" ? `; under its ? "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad."` : ", with no ?"}`,
+        findings: ["W18.W1", "W18.I1"],
+        anchor: [task(3)],
+      },
+    );
   if (platform === "ios" || platform === "android")
     chapters.push({
       id: "not-decrypting",
@@ -749,12 +771,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.hit({ untrusted: true });
         await w.pause(3_500);
       },
-      expect:
-        platform === "ios"
-          ? `task 2 reads "not working — nothing decrypted" and its steps are open; the remedy says the profile's trust is a separate switch, names Settings → General → About → Certificate Trust Settings → Trawler Proxy CA, and makes a website in Safari the test. Step 3 says installing does not trust`
-          : `task 2 reads "not working — nothing decrypted" and its steps are open; the remedy names where Trawler Proxy CA sits in the User store, that most apps ignore a user certificate, and makes a website in Chrome the test`,
-      findings: platform === "ios" ? ["R29", "R30"] : ["R30"],
-      anchor: ['[data-testid="traffic-remedy"]'],
+      expect: `task 2 still reads "can't check here — the address in task 4 confirms it" and task 3 reads done; task 4 is no longer dimmed: "not working — arriving but not decrypting", its note naming ${platform === "ios" ? "Apple's own services" : "Android's own services"} and the address as the test, and the address's code is now the one framed control`,
+      findings: platform === "ios" ? ["R29", "R30", "W18.E2"] : ["R30", "W18.E2"],
+      anchor: ['[data-testid="check-address"]'],
     });
   if (platform === "ios")
     chapters.push(

@@ -411,6 +411,7 @@ interface Outline {
   tasks: TaskOutline[];
   oneAct: string | null;
   framed: string[];
+  framedCodes: string[];
   disabled: string[];
   labels: string[];
   between: string[];
@@ -464,6 +465,9 @@ function outline(): Outline {
     framed: [...steps.querySelectorAll("button:not([aria-label])")]
       .filter((b) => b.className.includes("border-hairline"))
       .map((b) => b.textContent?.trim() ?? ""),
+    framedCodes: [...steps.querySelectorAll("[data-framed] svg")].map(
+      (code) => code.getAttribute("aria-label") ?? "",
+    ),
     labels: [...steps.querySelectorAll("button:not([aria-label])")].map(
       (b) => b.textContent?.trim() ?? "",
     ),
@@ -591,6 +595,12 @@ function model(s: State) {
   const routeEmulators = emulator && !oneAct && !routeDone;
   // What the try task's clock says now: a refusal inside the window is "not
   // decrypting", however new the tunnel after it; one before it is quiet.
+  // A phone's request code waits until something that may be its traffic
+  // arrives; while this machine's may be too, it is the test the tasks name,
+  // so it stays (W18's E2).
+  const requestWaits = phone && !routeDone && !mixed;
+  const requestCodeLeads =
+    phone && (routeDone || (mixed && onWire.reached)) && !decrypted;
   const notDecryptingNow =
     h === "refused" ||
     h === "refused-and-retrying" ||
@@ -609,6 +619,7 @@ function model(s: State) {
       sharedWire,
     },
     ...{ emulator, anotherDevice, phone, addressRefused },
+    ...{ requestWaits, requestCodeLeads },
     trustN: first + 1,
     routeN: first + 2,
     tryN: first + 3,
@@ -881,6 +892,32 @@ const RULES: Record<string, Rule> = {
         ? null
         : `framed [${o.framed}], expected ${expected}`;
     },
+
+  "emphasis: a phone's one framed control is the code of what comes next (W18's E1, E2)":
+    (o, s) => {
+      const m = model(s);
+      if (!m.phone) return o.framedCodes.length === 0 ? null : `framed codes [${o.framedCodes}]`;
+      // Before the network is allowed, task 1's button is the next thing.
+      if (m.blocked) return o.framedCodes.length === 0 ? null : `framed codes [${o.framedCodes}]`;
+      if (o.framed.length > 0) return `framed buttons [${o.framed}]`;
+      const expected = m.requestCodeLeads
+          ? ["the address to open, as a code to scan"]
+          : !m.trustDone && task(o, m.trustN).openGuides.length > 0
+            ? ["the certificate URL, as a code to scan"]
+            : [];
+      return JSON.stringify(o.framedCodes) === JSON.stringify(expected)
+        ? null
+        : `framed codes [${o.framedCodes}], expected [${expected}]`;
+    },
+
+  "time: a phone's request code waits until its traffic may arrive (W18's E2)": (o, s) => {
+    const m = model(s);
+    if (!m.phone || m.blocked) return null;
+    const shown = task(o, m.tryN).text.includes("trawler-check=");
+    return shown === !m.requestWaits
+      ? null
+      : `task ${m.tryN}'s address ${shown ? "shown" : "withheld"}, expected ${m.requestWaits ? "withheld" : "shown"}`;
+  },
 
   "words: every platform's controls are lowercase (W12's W5, W13's W4)": (o) => {
     const capital = o.labels.filter((label) => /^[A-Z]/.test(label));

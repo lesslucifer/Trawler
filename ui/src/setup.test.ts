@@ -139,18 +139,26 @@ describe("another device's own request is one address, opened where it is", () =
   const ADDRESS = "https://example.com/?trawler-check=k3m9";
   const OFF = ["mac", "windows", "ubuntu", "ios", "android"] as const;
 
-  it.each(OFF)("%s: the address is a value, said where it is opened", (id) => {
+  it.each(["mac", "windows", "ubuntu"] as const)("%s: the address is a value, said where it is opened", (id) => {
     const [said, value] = checkStep(id, "macos", ADDRESS);
 
     expect(said).toBe(`On ${deviceName(id, "macos")}, open`);
     expect(value).toMatchObject({ copy: ADDRESS, label: "the address to open" });
   });
 
+  // W18's E1, W5: the task names the phone, so its code leads the step.
+  it.each(["ios", "android"] as const)("%s: the code leads, and the address is the way to type it", (id) => {
+    const [said, value] = checkStep(id, "macos", ADDRESS);
+
+    expect(said).toBe("Scan with the camera, or open");
+    expect(value).toMatchObject({ copy: ADDRESS, label: "the address to open", scan: true });
+  });
+
   // W9's S3: once proved, opening it again is the re-check.
   it("once proved, it is the address to check again", () => {
     const [said] = checkStep("ios", "macos", ADDRESS, true);
 
-    expect(said).toBe("to check again, open it on your iPhone");
+    expect(said).toBe("to check again, scan it or open");
   });
 
   it("a phone scans it, and a computer does not (DEC-57)", () => {
@@ -637,7 +645,7 @@ describe("the words each platform is spoken about in", () => {
     ["ubuntu", "that machine"],
     ["ios-sim", "the Simulator"],
     ["android-sim", "the emulator"],
-    ["ios", "your iPhone"],
+    ["ios", "your iPhone or iPad"],
     ["android", "your Android device"],
   ];
 
@@ -664,7 +672,7 @@ describe("the words each platform is spoken about in", () => {
 
   it("a request is made FROM the device, whatever it is", () => {
     expect(setup("this").try.title).toBe("Make a request from this Mac");
-    expect(setup("ios").try.title).toBe("Make a request from your iPhone");
+    expect(setup("ios").try.title).toBe("Make a request from your iPhone or iPad");
     expect(setup("ios-sim").try.title).toBe("Make a request from the Simulator");
     expect(setup("android-sim").try.title).toBe("Make a request from the emulator");
   });
@@ -735,15 +743,16 @@ describe("each platform names the one certificate file its installer opens", () 
     }
   });
 
+  // W18's W2, W4: Safari asks first, and Not Verified is the install's to explain.
   it("sends an iPhone to Safari for the profile, says why iOS calls it Not Verified, and never names a .pem", () => {
-    const text = everything(setup("ios"));
-    expect(text).toMatch(/in Safari/);
-    expect(text).toMatch(/Not Verified/);
-    expect(text).not.toMatch(/\.pem\b/);
+    const [download, install] = numbered(setup("ios"));
+    expect(download).toEqual(expect.arrayContaining(["in Safari, then tap", { path: ["Allow"] }]));
+    expect(helps([install]).join(" ")).toMatch(/Not Verified: it is yours/);
+    expect(everything(setup("ios"))).not.toMatch(/\.pem\b/);
   });
 
   it("names the file to pick in each phone installer", () => {
-    expect(prose(setup("ios"))).toMatch(/VPN & Device Management → Trawler Proxy CA → Install/);
+    expect(paths(numbered(setup("ios")))).toContainEqual(["Profile Downloaded", "Install", "Install", "Install", "Done"]);
     expect(prose(setup("android"))).toMatch(/CA certificate → Install anyway → the trawler-ca file it downloaded\./);
     expect(paths(guides(setup("android-sim")))).toContainEqual(
       expect.arrayContaining(["CA certificate", "Install anyway", "☰", "Downloads", "trawler-ca.cer"]),
@@ -803,10 +812,10 @@ describe("each platform says what to check when its traffic does not decrypt", (
     const SWITCH = "turn on full trust: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA";
 
     expect(refused).toBe(
-      `example.com did not decrypt on your iPhone — ${SWITCH}. Not listed there? The profile is not installed — the steps below install it.`,
+      `example.com did not decrypt on your iPhone or iPad — ${SWITCH}. Not listed there? The profile is not installed — the steps below install it.`,
     );
     expect(maybeRefused).toBe(
-      `example.com did not decrypt — if you opened it on your iPhone, ${SWITCH}. Not listed there? The profile is not installed — the certificate step installs it.`,
+      `example.com did not decrypt — if you opened it on your iPhone or iPad, ${SWITCH}. Not listed there? The profile is not installed — the certificate step installs it.`,
     );
   });
 
@@ -853,10 +862,17 @@ describe("each platform says what to check when its traffic does not decrypt", (
     expect(notes(setup(id, { os }))).toEqual([]);
   });
 
+  // W18's W3: the step says what to do; why a second switch waits behind its ?.
   it("the iPhone's trust step says installing does not trust, and what Safari says until it does", () => {
-    const steps = setup("ios").trust.guide!.steps.map((step) => step.join(" "));
-    expect(steps[2]).toMatch(/^Then turn on full trust\. Installing does not: Settings → General → About → Certificate Trust Settings → Trawler Proxy CA\./);
-    expect(steps[2]).toMatch(/Until it is on, Safari says This Connection Is Not Private\./);
+    const trust = setup("ios").trust.guide!.steps[2];
+    expect(paths([trust])).toEqual([
+      ["General", "About", "Certificate Trust Settings"],
+      ["Trawler Proxy CA", "Continue"],
+    ]);
+    expect(trust.filter((p) => typeof p === "string").join(" ")).not.toMatch(/Installing|Safari/);
+    expect(helps([trust])).toEqual([
+      "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private.",
+    ]);
   });
 });
 
@@ -1654,5 +1670,93 @@ describe("every download step says what to check when it does not load", () => {
 
   it("names the host as the host does", () => {
     expect(setup("mac", { os: "windows" }).trust.guide!.steps[0].find(isHelp)?.help).toContain("this PC's firewall");
+  });
+});
+
+// W18: the iPhone's guide, in iOS 26's own labels.
+describe("the iPhone's guide is the next thing, in iOS's own words", () => {
+  const ios = (over = {}) => setup("ios", over);
+
+  it("every Settings route is path parts, never arrow text (W1)", () => {
+    expect(prose(ios())).not.toMatch(/→/);
+    expect(paths(numbered(ios()))).toEqual([
+      ["Allow"],
+      ["Profile Downloaded", "Install", "Install", "Install", "Done"],
+      ["General", "About", "Certificate Trust Settings"],
+      ["Trawler Proxy CA", "Continue"],
+      ["Wi-Fi"],
+      ["ⓘ"],
+      ["Configure Proxy", "Manual"],
+      ["Server"],
+      ["Port"],
+      ["Save"],
+    ]);
+  });
+
+  it("the install's long way waits behind its ?, with the row's second name (W2, N4)", () => {
+    const install = numbered(ios())[1];
+    expect(helps([install])).toEqual([
+      "It asks for your passcode on the way. Not at the top of Settings? General → VPN & Device Management → Trawler Proxy CA (VPN, DNS, & Device Management on some devices). iOS marks the profile Not Verified: it is yours, not signed by a company.",
+    ]);
+  });
+
+  it("the certificate has its way back, ending Remove Profile (N1)", () => {
+    const trust = ios().trust.guide!;
+    expect(trust.undoTitle).toBe("to remove it later");
+    expect(paths(trust.undo!)).toEqual([["General", "VPN & Device Management", "Trawler Proxy CA", "Remove Profile"]]);
+    expect(helps(trust.undo!)).toEqual(["The row reads VPN, DNS, & Device Management on some devices."]);
+  });
+
+  it("the proxy's way back ends Off, then Save", () => {
+    expect(paths(routeUndo("ios", "macos"))).toEqual([["Wi-Fi"], ["ⓘ"], ["Configure Proxy", "Off", "Save"]]);
+  });
+
+  it("no step repeats the place its task's title names (W5)", () => {
+    for (const step of numbered(ios())) {
+      expect(step.filter((p) => typeof p === "string").join(" ")).not.toMatch(/iPhone|iPad/);
+    }
+  });
+
+  it("names an iPad as the user chose it, in titles and status lines (Q3)", () => {
+    const s = ios();
+    expect([s.trust.title, s.route.title, s.try.title, s.confirmOn]).toEqual([
+      "On your iPhone or iPad, install the certificate",
+      "On your iPhone or iPad, set the Wi-Fi proxy",
+      "Make a request from your iPhone or iPad",
+      "your iPhone or iPad's first request confirms it",
+    ]);
+  });
+
+  it("each Settings step no code reaches carries its recording, naming its path and iOS version (M1)", () => {
+    const media = numbered(ios()).flatMap((step) => step.filter(isMedia));
+    expect(media).toEqual([
+      {
+        media: "ios-install-profile",
+        alt: "Settings: Profile Downloaded → Install → Install → Install → Done",
+        shows: "iOS 26.5",
+      },
+      {
+        media: "ios-full-trust",
+        alt: "Settings: General → About → Certificate Trust Settings → Trawler Proxy CA → Continue",
+        shows: "iOS 26.5",
+      },
+    ]);
+  });
+
+  it("a Mac offers Universal Clipboard by the values, and no other host does (I1)", () => {
+    const valuesStep = (os: HostOs) => numbered(setup("ios", { os }))[4];
+    expect(helps([valuesStep("macos")])).toEqual([
+      "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad.",
+    ]);
+    expect(helps([valuesStep("windows")])).toEqual([]);
+    expect(helps([valuesStep("linux")])).toEqual([]);
+  });
+
+  it("a phone's certificate code leads its step, on both phones (E1, Q1)", () => {
+    for (const id of ["ios", "android"] as const) {
+      const [lead, url] = numbered(setup(id))[0];
+      expect(lead).toBe("Scan with the camera, or open");
+      expect(url).toMatchObject({ label: "the certificate URL", scan: true });
+    }
   });
 });

@@ -100,6 +100,9 @@ export default {
       // A code a phone's camera opens from a laptop screen at arm's length: at
       // this size a certificate URL's ~33 modules each get about 4px.
       "scan-code": "128px",
+      // A phone's portrait recording, held to about the height of a desktop
+      // one at pane width, so a step never grows past one screen of its own.
+      "step-media": "480px",
     },
     // Heights a zone may take of the panel that hosts it. Everything else
     // derives from spacing; `zone-cap` is the one relationship the panel needs:

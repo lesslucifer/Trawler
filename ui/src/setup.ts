@@ -129,7 +129,9 @@ export type MediaName =
   | "windows-install-cert"
   | "windows-proxy"
   | "linux-firefox-import"
-  | "linux-proxy";
+  | "linux-proxy"
+  | "ios-install-profile"
+  | "ios-full-trust";
 export interface MediaPart {
   media: MediaName;
   alt: string;
@@ -367,8 +369,8 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
   },
   ios: {
     label: "iPhone or iPad",
-    device: "your iPhone",
-    openWhere: "on your iPhone",
+    device: "your iPhone or iPad",
+    openWhere: "on your iPhone or iPad",
     probesTrust: false,
     probesRoute: false,
     probesOwnStore: false,
@@ -435,8 +437,15 @@ export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
 // try task's title already says to open a website there, so this is the one.
 // Once proved, opening it again is the one re-read a device allows (W9's S3).
 export function checkStep(id: PlatformId, os: HostOs, url: string, again = false): GuideStep {
+  const lead = PLATFORMS[id].scans
+    ? again
+      ? "to check again, scan it or open"
+      : SCAN_OR_OPEN
+    : again
+      ? `to check again, open it ${openWhere(id, os)}`
+      : `${capitalised(openWhere(id, os))}, open`;
   return [
-    again ? `to check again, open it ${openWhere(id, os)}` : `${capitalised(openWhere(id, os))}, open`,
+    lead,
     { copy: url, label: "the address to open", wire: "check url", scan: PLATFORMS[id].scans },
   ];
 }
@@ -495,6 +504,10 @@ export function sharesHostWire(id: PlatformId): boolean {
 
 export function needsReach(id: PlatformId): boolean {
   return PLATFORMS[id].needsReach;
+}
+
+export function scansCodes(id: PlatformId): boolean {
+  return PLATFORMS[id].scans;
 }
 
 export function readsOverAdb(id: PlatformId): boolean {
@@ -1045,17 +1058,77 @@ const EMULATOR_HOST = "10.0.2.2";
 const ANDROID_USER_CA =
   "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
 
-const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not signed by a company.";
+// The task's title names the device, so a step on it starts at what to do,
+// and the code a phone scans leads its own sentence (W18's E1, W5).
+const SCAN_OR_OPEN = "Scan with the camera, or open";
+
+// iOS 26's own labels. After a download Settings lists the profile at its top,
+// so the install starts there and the long way is its fallback (W18's W2); the
+// row reads VPN, DNS, & Device Management on some devices (W9's N4).
+const IOS_OS_VERSION = "iOS 26.5";
+const IOS_INSTALL = ["Profile Downloaded", "Install", "Install", "Install", "Done"];
+const IOS_DEVICE_MANAGEMENT = ["General", "VPN & Device Management", CA_NAME];
+const IOS_TRUST = ["General", "About", "Certificate Trust Settings"];
+const IOS_WIFI_PROXY_LEAD: StepPart[] = [
+  "In Settings, tap",
+  { path: ["Wi-Fi"] },
+  "then",
+  { path: ["ⓘ"] },
+  "by the network it is on, then",
+];
+const IOS_DNS_VARIANT = "VPN, DNS, & Device Management on some devices";
+
+const IOS_INSTALL_STEP: GuideStep = [
+  "In Settings, tap",
+  { path: IOS_INSTALL },
+  {
+    media: "ios-install-profile",
+    alt: `Settings: ${IOS_INSTALL.join(" → ")}`,
+    shows: IOS_OS_VERSION,
+  },
+  {
+    help: `It asks for your passcode on the way. Not at the top of Settings? ${IOS_DEVICE_MANAGEMENT.join(" → ")} (${IOS_DNS_VARIANT}). iOS marks the profile Not Verified: it is yours, not signed by a company.`,
+    topic: "if it is not there",
+  },
+];
+
+const IOS_TRUST_STEP: GuideStep = [
+  "Turn on full trust: in Settings, tap",
+  { path: IOS_TRUST },
+  "then turn on",
+  { path: [CA_NAME, "Continue"] },
+  {
+    media: "ios-full-trust",
+    alt: `Settings: ${[...IOS_TRUST, CA_NAME, "Continue"].join(" → ")}`,
+    shows: IOS_OS_VERSION,
+  },
+  {
+    help: "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private.",
+    topic: "why a second switch",
+  },
+];
+
+const IOS_REMOVE_STEP: GuideStep = [
+  "In Settings, tap",
+  { path: [...IOS_DEVICE_MANAGEMENT, "Remove Profile"] },
+  { help: `The row reads ${IOS_DNS_VARIANT}.`, topic: "if the row reads differently" },
+];
 
 const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
 
 // The profile and the trust switch refuse alike, and the switch is the step a
 // user who installed misses, so it leads (W9's S2).
+// A Mac signed in to the same Apple ID pastes onto the phone (W18's I1).
+const UNIVERSAL_CLIPBOARD: HelpPart = {
+  help: "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad.",
+  topic: "copying the values",
+};
+
 const IOS_TRUST_FIRST = `turn on full trust: ${IOS_TRUST_PATH}. Not listed there? The profile is not installed`;
 
 const IOS_ADDRESS_TEST: AddressTest = {
-  refused: `${REQUEST_HOST} did not decrypt on your iPhone — ${IOS_TRUST_FIRST} — the steps below install it.`,
-  maybeRefused: `${REQUEST_HOST} did not decrypt — if you opened it on your iPhone, ${IOS_TRUST_FIRST} — the certificate step installs it.`,
+  refused: `${REQUEST_HOST} did not decrypt ${PLATFORMS.ios.openWhere} — ${IOS_TRUST_FIRST} — the steps below install it.`,
+  maybeRefused: `${REQUEST_HOST} did not decrypt — if you opened it ${PLATFORMS.ios.openWhere}, ${IOS_TRUST_FIRST} — the certificate step installs it.`,
   elsewhereRefused:
     "something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.",
 };
@@ -1109,13 +1182,18 @@ function downloadStep(
   os: HostOs,
   reach: ReachAddresses,
   format: CaFormat,
-  { how = "", scan = false, file = CA_FILES[format] }: { how?: string; scan?: boolean; file?: string } = {},
+  {
+    how = "",
+    scan = false,
+    file = CA_FILES[format],
+    then,
+  }: { how?: string; scan?: boolean; file?: string; then?: StepPart[] } = {},
 ): GuideStep {
   const device = deviceName(id, os);
   return [
-    `On ${device}, open`,
+    scan ? SCAN_OR_OPEN : `On ${device}, open`,
     { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url", scan },
-    `${how}— it downloads ${file}.`,
+    ...(then ?? [`${how}— it downloads ${file}.`]),
     unreachable(device, os),
   ];
 }
@@ -1223,20 +1301,20 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              downloadStep(id, os, reach, format, { how: "in Safari ", scan: PLATFORMS[id].scans }),
-              [
-                `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
-              ],
-              [
-                `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
-              ],
+              downloadStep(id, os, reach, format, {
+                scan: PLATFORMS[id].scans,
+                then: ["in Safari, then tap", { path: ["Allow"] }],
+              }),
+              IOS_INSTALL_STEP,
+              IOS_TRUST_STEP,
             ]
           : [
               downloadStep(id, os, reach, format, { scan: PLATFORMS[id].scans, file: "Trawler's certificate" }),
               [ANDROID_INSTALL],
             ],
-        notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
+        notes: ios ? undefined : [ANDROID_USER_CA],
         alternatives: [carryOver],
+        ...(ios && { undoTitle: "to remove it later", undo: [IOS_REMOVE_STEP] }),
       };
   const route: Guide | undefined =
     reach === null
@@ -1244,8 +1322,16 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              ["Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual."],
-              ["Put the server and port above into it, and save."],
+              [...IOS_WIFI_PROXY_LEAD, { path: ["Configure Proxy", "Manual"] }],
+              [
+                "Put the server and port above into",
+                { path: ["Server"] },
+                "and",
+                { path: ["Port"] },
+                "then tap",
+                { path: ["Save"] },
+                ...(os === "macos" ? [UNIVERSAL_CLIPBOARD] : []),
+              ],
             ]
           : [
               [`Menus differ by maker; on stock Android: ${ANDROID_WIFI_PROXY} → Manual.`],
@@ -1550,7 +1636,7 @@ export function routeUndo(id: PlatformId, os: HostOs, sdk: string | null = null)
         ],
       ];
     case "ios":
-      return [["Settings → Wi-Fi → the network → Configure Proxy → Off."]];
+      return [[...IOS_WIFI_PROXY_LEAD, { path: ["Configure Proxy", "Off", "Save"] }]];
     case "android":
       return [[`${ANDROID_WIFI_PROXY} → None.`]];
   }
