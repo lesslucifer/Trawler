@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W18
+branch: HEAD
+changes:
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: a phone's codes lead in turn, the certificate's framed first and the request's waiting until the phone's traffic may arrive; the iPhone's steps are iOS 26's own, from Profile Downloaded, with recordings and a way back ending Remove Profile"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: a phone's codes lead in turn - the certificate's code framed while its steps are next, the request's address dimmed after task 3 until something that may be the phone's arrives, kept while this machine's traffic may be arriving; the iPhone's steps in iOS 26's own words with recordings, what explains behind each step's ?, ways back ending Remove Profile and Off -> Save, Universal Clipboard on a Mac, your iPhone or iPad in every title and status line"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status line names W18, ruled, built and its result waiting for review"
+  - path: "docs/work/2026-11-01-onboard-revamp-w18-iphone-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W18's plan: findings from the reels, the iOS 26.5 runtime's strings and a throwaway Simulator, W9's hand-ins, and the owner's rulings (Q1-Q4 A, no design run)"
+  - path: "docs/work/2026-11-01-onboard-revamp-w18-iphone-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W18's result: what shipped, the deviations (StepMedia's height cap, E2 kept while mixed, the walkthrough's request chapters red on this host), the evidence and the follow-ups for W20 and W19"
