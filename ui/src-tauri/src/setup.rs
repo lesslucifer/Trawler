@@ -334,9 +334,16 @@ fn plist_value(plist: &str, key: &str) -> Option<String> {
     )
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct RunningSimulator {
+    name: String,
+    udid: String,
+    store: std::path::PathBuf,
+}
+
 // The running devices, by the name the Simulator's own window shows, each with
-// the store it trusts from.
-fn running_simulators(devices: &Path) -> Vec<(String, std::path::PathBuf)> {
+// the UDID simctl addresses it by and the store it trusts from.
+fn running_simulators(devices: &Path) -> Vec<RunningSimulator> {
     let Ok(entries) = std::fs::read_dir(devices) else {
         return Vec::new();
     };
@@ -347,7 +354,11 @@ fn running_simulators(devices: &Path) -> Vec<(String, std::path::PathBuf)> {
             if plist_value(&plist, "state")? != SIMULATOR_BOOTED {
                 return None;
             }
-            Some((plist_value(&plist, "name")?, entry.path().join(SIMULATOR_TRUST_STORE)))
+            Some(RunningSimulator {
+                name: plist_value(&plist, "name")?,
+                udid: entry.file_name().to_string_lossy().into_owned(),
+                store: entry.path().join(SIMULATOR_TRUST_STORE),
+            })
         })
         .collect();
     running.sort();
@@ -376,18 +387,20 @@ fn simulator_store_trust(
     }
 }
 
+// A certificate that does not read leaves every running store unknown, never
+// the Simulators unlisted: none listed is the screen's "none running".
 fn simulators_trust(
     devices: &Path,
-    live: &str,
+    live: Option<&str>,
     query: impl Fn(&Path, &str) -> Option<Ran>,
 ) -> Vec<SimulatorTrust> {
-    let der_hex = der_hex(live);
+    let der_hex = live.and_then(der_hex);
     running_simulators(devices)
         .into_iter()
-        .map(|(name, store)| {
+        .map(|sim| {
             let reading =
-                der_hex.as_deref().and_then(|hex| simulator_store_trust(&store, hex, &query));
-            SimulatorTrust::new(name, reading)
+                der_hex.as_deref().and_then(|hex| simulator_store_trust(&sim.store, hex, &query));
+            SimulatorTrust::new(sim.name, reading)
         })
         .collect()
 }
@@ -402,12 +415,92 @@ fn sqlite_read(store: &Path, sql: &str) -> Option<Ran> {
 #[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn simulator_trust(pem: String) -> Vec<SimulatorTrust> {
     let home = std::env::var_os("HOME");
-    match (std::env::consts::OS, home, live_body(&pem)) {
-        ("macos", Some(home), Some(live)) => {
-            simulators_trust(&Path::new(&home).join(SIMULATOR_DEVICES), &live, sqlite_read)
-        }
+    match (std::env::consts::OS, home) {
+        ("macos", Some(home)) => simulators_trust(
+            &Path::new(&home).join(SIMULATOR_DEVICES),
+            live_body(&pem).as_deref(),
+            sqlite_read,
+        ),
         _ => Vec::new(),
     }
+}
+
+// `xcrun` follows xcode-select, and the Command Line Tools it may point at hold
+// no simctl; the Xcode that holds Simulator.app does (E-ONBRVP.W16's N1).
+const XCODE_DEVELOPER: &str = ".app/Contents/Developer";
+const SIMULATOR_APP_IN_DEVELOPER: &str = "/Applications/Simulator.app";
+const SIMULATOR_BUNDLE_QUERY: &str = "kMDItemCFBundleIdentifier == 'com.apple.iphonesimulator'";
+
+fn simulator_developer_dir(
+    selected: &str,
+    simulator_apps: impl FnOnce() -> String,
+) -> Option<String> {
+    if selected.trim().ends_with(XCODE_DEVELOPER) {
+        return None;
+    }
+    simulator_apps()
+        .lines()
+        .filter_map(|app| app.trim().strip_suffix(SIMULATOR_APP_IN_DEVELOPER))
+        .find(|dir| dir.ends_with(XCODE_DEVELOPER))
+        .map(ToString::to_string)
+}
+
+pub(crate) fn simctl(developer_dir: Option<&str>, args: &[&str]) -> Vec<String> {
+    let mut argv = developer_dir
+        .map_or_else(Vec::new, |dir| vec!["env".to_string(), format!("DEVELOPER_DIR={dir}")]);
+    argv.extend(["xcrun", "simctl"].iter().chain(args).map(ToString::to_string));
+    argv
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Simulators {
+    pub(crate) developer_dir: Option<String>,
+    pub(crate) running: Vec<String>,
+}
+
+impl Simulators {
+    pub(crate) fn read() -> Self {
+        let Some(home) = std::env::var_os("HOME") else {
+            return Self::default();
+        };
+        let running = running_simulators(&Path::new(&home).join(SIMULATOR_DEVICES))
+            .into_iter()
+            .map(|sim| sim.udid)
+            .collect();
+        let stdout = |program: &str, args: &[&str]| {
+            ran(program, args).filter(|r| r.ok).map(|r| r.stdout).unwrap_or_default()
+        };
+        let developer_dir = simulator_developer_dir(&stdout("xcode-select", &["-p"]), || {
+            stdout("mdfind", &[SIMULATOR_BUNDLE_QUERY])
+        });
+        Self { developer_dir, running }
+    }
+}
+
+fn simulator_trust_commands(sims: &Simulators, cert: &Path) -> Vec<Vec<String>> {
+    let cert = cert.to_string_lossy();
+    sims.running
+        .iter()
+        .map(|udid| {
+            simctl(sims.developer_dir.as_deref(), &["keychain", udid, "add-root-cert", &cert])
+        })
+        .collect()
+}
+
+pub(crate) const NO_SIMULATOR_RUNNING: &str = "no Simulator is running — open one, then try again";
+pub(crate) const NO_SIMULATOR_TRUST_DETAIL: &str =
+    "couldn't trust it in the Simulator — no detail; use the steps below";
+
+// simctl writes a Simulator's store with no password, so the click is the
+// whole consent (W16's Q3); every running Simulator gets it, as the command does.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
+pub fn trust_simulators(pem: String) -> Result<(), SetupError> {
+    let cert = staged_cert(&pem)?;
+    let sims = Simulators::read();
+    if sims.running.is_empty() {
+        return Err(setup_error(NO_SIMULATOR_RUNNING));
+    }
+    run_all(simulator_trust_commands(&sims, &cert), NO_SIMULATOR_TRUST_DETAIL)
 }
 
 // Each running Android emulator, read through adb (E-ONBRVP.W8): the name of
@@ -2201,7 +2294,7 @@ mod tests {
         let devices = simulators("asked");
         simulator(&devices, "A", "iPhone 17 Pro", 3, true);
         let asked = std::cell::RefCell::new(String::new());
-        simulators_trust(&devices, "MIIB", |_, sql| {
+        simulators_trust(&devices, Some("MIIB"), |_, sql| {
             asked.replace(sql.to_string());
             answered("1\n")
         });
@@ -2215,7 +2308,7 @@ mod tests {
         simulator(&devices, "A", "iPhone 17 Pro", 3, true);
         simulator(&devices, "B", "iPad Air 11-inch (M4)", 1, true);
         simulator(&devices, "C", "iPad mini (A17 Pro)", 3, true);
-        let read = simulators_trust(&devices, "MIIB", |store, _| {
+        let read = simulators_trust(&devices, Some("MIIB"), |store, _| {
             answered(if store.starts_with(devices.join("A")) { "1" } else { "0" })
         });
         assert_eq!(
@@ -2233,13 +2326,13 @@ mod tests {
         let devices = simulators("unread");
         simulator(&devices, "A", "iPhone 17 Pro", 3, false);
         assert_eq!(
-            simulators_trust(&devices, "MIIB", never_queried),
+            simulators_trust(&devices, Some("MIIB"), never_queried),
             [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
         );
         simulator(&devices, "A", "iPhone 17 Pro", 3, true);
         for answer in [Some((false, "")), Some((true, "Error: no such table: tsettings")), None] {
             assert_eq!(
-                simulators_trust(&devices, "MIIB", |_, _| {
+                simulators_trust(&devices, Some("MIIB"), |_, _| {
                     answer.map(|(ok, stdout)| Ran { ok, stdout: stdout.into() })
                 }),
                 [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
@@ -2249,12 +2342,86 @@ mod tests {
     }
 
     #[test]
+    fn a_certificate_that_does_not_read_leaves_each_running_simulator_unknown() {
+        let devices = simulators("unreadable-cert");
+        simulator(&devices, "A", "iPhone 17 Pro", 3, true);
+        assert_eq!(
+            simulators_trust(&devices, None, never_queried),
+            [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
+        );
+        let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    #[test]
     fn no_simulator_running_or_none_installed_reads_nothing() {
         let devices = simulators("none");
         simulator(&devices, "A", "iPhone 17 Pro", 1, true);
-        assert_eq!(simulators_trust(&devices, "MIIB", never_queried), []);
-        assert_eq!(simulators_trust(&devices.join("absent"), "MIIB", never_queried), []);
+        assert_eq!(simulators_trust(&devices, Some("MIIB"), never_queried), []);
+        assert_eq!(simulators_trust(&devices.join("absent"), Some("MIIB"), never_queried), []);
         let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    #[test]
+    fn a_running_simulator_is_addressed_by_its_udid() {
+        let devices = simulators("udid");
+        simulator(&devices, "F8B53282-E662-4C67-B106-81760F47AEA4", "iPhone 17 Pro", 3, true);
+        simulator(&devices, "13CE9116-3056-4FBB-BC1D-068189E9842A", "iPhone 17", 1, true);
+        let running = running_simulators(&devices);
+        assert_eq!(
+            running.iter().map(|s| s.udid.as_str()).collect::<Vec<_>>(),
+            ["F8B53282-E662-4C67-B106-81760F47AEA4"]
+        );
+        let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    const XCODE_DEVELOPER_DIR: &str = "/Applications/Xcode.app/Contents/Developer";
+    const SIMULATOR_APP: &str =
+        "/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app\n";
+
+    #[test]
+    fn simctl_runs_under_the_xcode_holding_the_simulator_only_where_xcode_select_points_elsewhere()
+    {
+        let never =
+            || -> String { unreachable!("an Xcode already selected asks Spotlight nothing") };
+        assert_eq!(simulator_developer_dir(&format!("{XCODE_DEVELOPER_DIR}\n"), never), None);
+        assert_eq!(
+            simulator_developer_dir("/Library/Developer/CommandLineTools\n", || SIMULATOR_APP
+                .into())
+            .as_deref(),
+            Some(XCODE_DEVELOPER_DIR)
+        );
+        assert_eq!(simulator_developer_dir("", String::new), None);
+        assert_eq!(simulator_developer_dir("", || "/Users/me/Simulator.app\n".into()), None);
+    }
+
+    #[test]
+    fn simctl_is_xcrun_unless_a_developer_dir_is_named() {
+        assert_eq!(simctl(None, &["list"]), argv(&["xcrun", "simctl", "list"]));
+        assert_eq!(
+            simctl(Some(XCODE_DEVELOPER_DIR), &["list"]),
+            argv(&[
+                "env",
+                &format!("DEVELOPER_DIR={XCODE_DEVELOPER_DIR}"),
+                "xcrun",
+                "simctl",
+                "list"
+            ])
+        );
+    }
+
+    #[test]
+    fn the_certificate_is_trusted_on_every_running_simulator() {
+        let sims = Simulators { developer_dir: None, running: vec!["A".into(), "B".into()] };
+        assert_eq!(
+            simulator_trust_commands(&sims, Path::new("/tmp/trawler-ca.pem")),
+            [
+                argv(&["xcrun", "simctl", "keychain", "A", "add-root-cert", "/tmp/trawler-ca.pem"]),
+                argv(&["xcrun", "simctl", "keychain", "B", "add-root-cert", "/tmp/trawler-ca.pem"]),
+            ]
+        );
+        assert!(
+            simulator_trust_commands(&Simulators::default(), Path::new("/tmp/x.pem")).is_empty()
+        );
     }
 
     // ── Each running emulator, through adb (E-ONBRVP.W8) ────────────────────

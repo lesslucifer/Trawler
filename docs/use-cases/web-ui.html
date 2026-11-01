@@ -466,7 +466,9 @@
             (<em>done — trusted in iPhone 17 Pro</em>), never from the host's keychain. Its wire is this
             machine's, so nothing unmarked is its own: where no store answers, its marked request settles its
             certificate, and its try task and the end read that request alone
-            (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8)</td></tr>
+            (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8).
+            With none running and nothing proved it reads <em>not done — no Simulator running</em>; a read that
+            failed or has not landed is no reading, and says what will confirm it instead</td></tr>
         <tr><td>Android emulator</td><td>every host</td><td>its own user store and proxy, through adb, in each emulator running</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
           <td>it reaches Trawler on this machine's loopback, through a proxy of its own: its store and proxy are
             read through adb, by the name of its AVD (<em>done — trusted in Pixel 7 API 35</em>), and where adb reads
@@ -496,8 +498,9 @@
       This machine's and the Simulator's read it from Downloads, where the save dialog opens, until a save returns
       another path, which the command prints quoted for its shell. A command installs a tool the system does not ship before
       using it, and finds a folder or database wherever this version and this language put it. The Simulator's
-      reaches every Simulator running — <code>booted</code> names only the one booted last — and its way back is
-      the erase, because <code>keychain reset</code> leaves the root trusted. The emulator's push reads the saved file
+      reaches every Simulator running — <code>booted</code> names only the one booted last — and asks for no restart,
+      since Safari trusts the root at once. Its way back is Simulator's own <em>Device → Erase All Content and
+      Settings</em>, because <code>keychain reset</code> leaves the root trusted and nothing removes it alone. The emulator's push reads the saved file
       the same way, and each of its adb commands runs once per emulator running — a bare <code>adb</code> refuses with
       two of anything attached. Its route is the global proxy (<code>settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>),
       which covers its mobile network too: a Wi-Fi proxy routes nothing where that is the default, so the Settings
@@ -562,7 +565,7 @@
       Trawler settles the route task. This machine is the exception: its
       try-it command names the proxy itself, and any other device's request says nothing about it, so only a
       probe or its own request — marked <code>?trawler-check=…</code>, captured decrypted this session — may
-      settle its tasks. Where nothing has, the line says what will — <em>the request in step 3 confirms it</em>
+      settle its tasks. Where nothing has, the line says what will — <em>the request in task 3 confirms it</em>
       — never a false "not set up", and a refusal nothing can place is the try task's to word. A phone that trusts the certificate and points here
       reads as two true facts side by side: not trusted on this machine, and capturing traffic.</p>
       <p><strong>Another device reads only what could have come from it</strong>
@@ -573,7 +576,7 @@
       it arrived between two readings of this machine's proxy as off or another proxy, taken by the watch — so within one 3 s
       tick of arriving, and nothing that arrived while the window was hidden — with its time — <em>done — a request
       decrypted at 14:02</em>. Where it points here or cannot be read and nothing is that device's yet, the tasks
-      read <em>can't check here — the address in step 4 confirms it</em>, a refusal is the try task's and names no
+      read <em>can't check here — the address in task 4 confirms it</em>, a refusal is the try task's and names no
       device, and no success line shows. Every proof lasts the session, whatever this machine's proxy reads after
       it; a reach read that failed takes none back. Its try task's proof outlasts whatever follows it that does not
       decrypt: a refusal is a note under <em>done — decrypted at 14:02</em>, never <em>not working</em>.</p>
@@ -591,7 +594,7 @@
       proof it reads <em>… did not decrypt at 15:10, after decrypting at 14:02</em>: the profile removed, or full trust
       turned off; the try task keeps its proof and offers the address <em>to check again</em>. Any other refusal is the
       try task's note, naming Apple's own services, and leaves the certificate task at <em>can't check here — the
-      address in step 4 confirms it</em>; where the address's refusal may be this machine's, the note says what to do
+      address in task 4 confirms it</em>; where the address's refusal may be this machine's, the note says what to do
       if it was the iPhone's
       (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 10).</p>
       <p><strong>The Android device's test is its address too</strong>: Android's own services ignore a user
@@ -640,14 +643,16 @@
       action — one prompt, not two — and each task keeps its own by-hand route. Each host names its own
       prompt: macOS a password prompt, Windows an approval. Windows asks nothing before the proxy changes, so
       its proxy notes name no prompt (E-ONBRVP.W12). It does both tasks, so it
-      sits above them and says so: <em>it does steps 1 and 2</em>. <strong>An action follows its task's
+      sits above them and says so: <em>it does tasks 1 and 2</em>. A task is named a task wherever a line
+      points at one, never a step (E-ONBRVP.W16). <strong>An action follows its task's
       reading.</strong> The one act is offered only while both halves read undone. Once either reads done,
       each task carries its own: <em>set the system proxy</em> with its steps, or the certificate's steps.
       There is no install-only button and no command behind one. A task read done offers no action and keeps
       one way back; a task not done offers no way back.
       <strong>The next thing to do leads (E-ONBRVP.W12).</strong> One control on the screen is framed, and it
-      is the next thing to do: the one act, else the proxy's action, else the open guide's first control, else
-      the try task's request once both halves read done. Every other control is bare. A by-hand route is
+      is the next thing to do: the one act, else the certificate task's own control while it reads undone — its
+      button, else its open guide's first — else the proxy's action or its open guide's first, else the try task's
+      request once both halves read done. Every other control is bare. A by-hand route is
       <em>do it by hand</em> wherever a button leads, a step count where none does. It opens the right screen
       first where one can be opened, shows the control no route reaches in a recording under the step, and
       keeps the command as <em>other ways</em>. Once a request decrypted, the try task folds its request
@@ -672,7 +677,18 @@
       that machine needs <code>sudo</code>. This machine on Linux keeps the system store as its last step, since its
       probe reads that store. Both Linux guides undo by hand first, then each command that may have run. No lead names
       the desktop: commands run <em>in a terminal</em>, on that machine's desktop, since over SSH
-      <code>gsettings</code> sets nothing. Every platform but This machine titles its last task <em>Make a request from</em> the device,
+      <code>gsettings</code> sets nothing.
+      <strong>The iOS Simulator leads with buttons (E-ONBRVP.W16)</strong>: <code>simctl</code> writes its store and
+      opens its Safari with no password, so <em>set up the Simulator</em> sits above the tasks while both read undone —
+      it trusts every running Simulator first, then sets this Mac's proxy, and asks nothing more than the proxy's own
+      prompt. Once either half reads done, the certificate task leads with <em>trust in the Simulator</em>, what it
+      does behind its <em>?</em>; with none running, its steps open on <em>open the Simulator</em>. The save and the
+      command are its <em>do it by hand</em>, the command <em>in Terminal</em>, with what to do when
+      <code>simctl</code> is not found behind its <em>?</em>; the shell itself runs <code>simctl</code> under the
+      Xcode that holds Simulator.app wherever <code>xcode-select</code> points elsewhere. Its try task offers
+      <em>open it in the Simulator</em>, which opens the marked address in each running Simulator's Safari; the
+      address stays beside it. Every Simulator status still comes from its store or its marked request, never
+      a click. Every platform but This machine titles its last task <em>Make a request from</em> the device,
       and sets the address it offers at the weight of a step. A refused authorization is the user's own outcome, worded as
       one, with the tool's text under a disclosure; a real failure keeps the OS's words and opens the manual
       route. An approval the OS could not show (macOS's -60007) is neither. The user answered the password
@@ -687,6 +703,11 @@
           <td>the probes say whether it is done — the click never does</td></tr>
         <tr><td>Set the system proxy — the proxy half, once the certificate reads done</td><td>one confirm</td>
           <td>the same: the proxy probe says whether it is done</td></tr>
+        <tr><td>Set up the Simulator — above the tasks while both read undone and one runs; trust in the
+          Simulator — the certificate half alone (E-ONBRVP.W16)</td><td>none for the store, which <code>simctl</code>
+          writes in every running Simulator; the proxy's own confirm for the one act</td>
+          <td>each Simulator's store says whether it is done, by name — the click never does. A failure says so and
+            opens the steps by hand</td></tr>
         <tr><td>Replace a proxy this machine already has</td>
           <td>a second confirm naming the proxy it is about to replace</td>
           <td>the ask states the old proxy does not come back. A refusal writes nothing and says which

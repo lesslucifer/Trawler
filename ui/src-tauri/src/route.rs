@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 
 use serde::Deserialize;
 
-use crate::setup::{argv, SetupError, LOGIN_KEYCHAIN};
+use crate::setup::{argv, simctl, SetupError, Simulators, LOGIN_KEYCHAIN, NO_SIMULATOR_RUNNING};
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(tag = "name", rename_all = "kebab-case")]
@@ -16,6 +16,8 @@ pub enum Route {
     Keychain { pem: String },
     Certificate { pem: String },
     Browser { mark: String },
+    Simulator,
+    SimulatorRequest { mark: String },
 }
 
 const MACOS_NETWORK_SETTINGS: &str =
@@ -50,6 +52,12 @@ fn valid_mark(mark: &str) -> bool {
     })
 }
 
+// A device's mark is the four characters `deviceMark` hashes to (DEC-63).
+fn valid_device_mark(mark: &str) -> bool {
+    (1..=8).contains(&mark.len())
+        && mark.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+}
+
 // Each route as the commands that open it, in order. The certificate is added
 // to the login keychain first: opening the file instead asks which keychain,
 // and the default it offers may be one that holds no trust (W12's recording).
@@ -57,11 +65,16 @@ fn valid_mark(mark: &str) -> bool {
 // certificate dialog runs inside its opener and would hold the command open.
 // GNOME's Settings is asked over D-Bus for its Network panel, so it starts
 // outside the shell's process.
-fn route_commands(os: &str, route: &Route, cert: &Path) -> Option<Vec<Vec<String>>> {
-    if let Route::Browser { mark } = route {
-        if !valid_mark(mark) {
-            return None;
-        }
+fn route_commands(
+    os: &str,
+    route: &Route,
+    cert: &Path,
+    sims: &Simulators,
+) -> Option<Vec<Vec<String>>> {
+    match route {
+        Route::Browser { mark } if !valid_mark(mark) => return None,
+        Route::SimulatorRequest { mark } if !valid_device_mark(mark) => return None,
+        _ => {}
     }
     let cert = cert.to_string_lossy();
     match (os, route) {
@@ -72,6 +85,17 @@ fn route_commands(os: &str, route: &Route, cert: &Path) -> Option<Vec<Vec<String
         ]),
         ("macos", Route::Browser { mark }) => {
             Some(vec![argv(&["open", &format!("{REQUEST_URL}{mark}")])])
+        }
+        ("macos", Route::Simulator) => Some(vec![argv(&["open", "-a", "Simulator"])]),
+        ("macos", Route::SimulatorRequest { mark }) => {
+            let url = format!("{REQUEST_URL}{mark}");
+            let developer_dir = sims.developer_dir.as_deref();
+            Some(
+                sims.running
+                    .iter()
+                    .map(|udid| simctl(developer_dir, &["openurl", udid, &url]))
+                    .collect(),
+            )
         }
         ("windows", Route::ProxySettings) => Some(vec![windows_start(WINDOWS_PROXY_SETTINGS)]),
         ("windows", Route::Certificate { .. }) => Some(vec![windows_start(&cert)]),
@@ -102,11 +126,20 @@ fn succeeded(status_ok: bool, stderr: &str) -> bool {
     status_ok || stderr.contains(ALREADY_IN_KEYCHAIN)
 }
 
-#[cfg_attr(not(feature = "scenario"), tauri::command)]
+// Off the main thread: the Simulator's request reads xcode-select, may ask
+// Spotlight, and runs simctl once per running Simulator.
+#[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn open_route(route: Route) -> Result<(), SetupError> {
     let cert = staged(&route)?;
-    let commands = route_commands(std::env::consts::OS, &route, &cert)
+    let sims = match route {
+        Route::SimulatorRequest { .. } => Simulators::read(),
+        _ => Simulators::default(),
+    };
+    let commands = route_commands(std::env::consts::OS, &route, &cert, &sims)
         .ok_or_else(|| crate::setup::setup_error("this route does not open on this system"))?;
+    if commands.is_empty() {
+        return Err(crate::setup::setup_error(NO_SIMULATOR_RUNNING));
+    }
     for command in commands {
         run(&command, std::env::consts::OS)?;
     }
@@ -147,10 +180,14 @@ mod tests {
         PathBuf::from("/tmp/trawler-ca.pem")
     }
 
+    fn opens(os: &str, route: &Route) -> Option<Vec<Vec<String>>> {
+        route_commands(os, route, &cert(), &Simulators::default())
+    }
+
     #[test]
     fn macos_proxy_settings_opens_the_network_pane() {
         assert_eq!(
-            route_commands("macos", &Route::ProxySettings, &cert()),
+            opens("macos", &Route::ProxySettings),
             Some(vec![argv(&["open", MACOS_NETWORK_SETTINGS])])
         );
     }
@@ -159,7 +196,7 @@ mod tests {
     fn macos_keychain_adds_to_login_then_opens_keychain_access() {
         let route = Route::Keychain { pem: String::new() };
         assert_eq!(
-            route_commands("macos", &route, &cert()),
+            opens("macos", &route),
             Some(vec![
                 argv(&[
                     "security",
@@ -177,7 +214,7 @@ mod tests {
     fn macos_browser_opens_the_marked_address() {
         let route = Route::Browser { mark: "k3m9x2.4".into() };
         assert_eq!(
-            route_commands("macos", &route, &cert()),
+            opens("macos", &route),
             Some(vec![argv(&["open", "https://example.com/?trawler-check=k3m9x2.4"])])
         );
     }
@@ -186,16 +223,65 @@ mod tests {
     fn a_mark_that_is_not_the_windows_own_opens_nothing() {
         for mark in ["", "k3m9", "k3m9.", ".4", "K3M9.4", "k3m9.4&x=1", "k3m9.4 --args", "../a.1"] {
             let route = Route::Browser { mark: mark.into() };
-            assert_eq!(route_commands("macos", &route, &cert()), None, "{mark}");
-            assert_eq!(route_commands("windows", &route, &cert()), None, "{mark}");
-            assert_eq!(route_commands("linux", &route, &cert()), None, "{mark}");
+            assert_eq!(opens("macos", &route), None, "{mark}");
+            assert_eq!(opens("windows", &route), None, "{mark}");
+            assert_eq!(opens("linux", &route), None, "{mark}");
+        }
+    }
+
+    #[test]
+    fn macos_opens_the_simulator_app() {
+        assert_eq!(
+            opens("macos", &Route::Simulator),
+            Some(vec![argv(&["open", "-a", "Simulator"])])
+        );
+    }
+
+    #[test]
+    fn the_simulators_request_opens_its_marked_address_on_every_running_simulator() {
+        let sims = Simulators {
+            developer_dir: Some("/Applications/Xcode.app/Contents/Developer".into()),
+            running: vec!["A".into(), "B".into()],
+        };
+        let route = Route::SimulatorRequest { mark: "b6qv".into() };
+        let open = |udid: &str| {
+            argv(&[
+                "env",
+                "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer",
+                "xcrun",
+                "simctl",
+                "openurl",
+                udid,
+                "https://example.com/?trawler-check=b6qv",
+            ])
+        };
+        assert_eq!(
+            route_commands("macos", &route, &cert(), &sims),
+            Some(vec![open("A"), open("B")])
+        );
+        assert_eq!(opens("macos", &route), Some(vec![]));
+    }
+
+    #[test]
+    fn a_device_mark_that_is_not_one_opens_nothing() {
+        let sims = Simulators { developer_dir: None, running: vec!["A".into()] };
+        for mark in ["", "B6QV", "b6qv&x=1", "b6qv --args", "../a", "k3m9x2.4", "123456789"] {
+            let route = Route::SimulatorRequest { mark: mark.into() };
+            assert_eq!(route_commands("macos", &route, &cert(), &sims), None, "{mark}");
+        }
+    }
+
+    #[test]
+    fn the_simulator_routes_open_on_macos_only() {
+        for os in ["windows", "linux"] {
+            assert_eq!(opens(os, &Route::Simulator), None);
         }
     }
 
     #[test]
     fn windows_proxy_settings_starts_the_proxy_page() {
         assert_eq!(
-            route_commands("windows", &Route::ProxySettings, &cert()),
+            opens("windows", &Route::ProxySettings),
             Some(vec![argv(&["cmd", "/C", "start", "", "ms-settings:network-proxy"])])
         );
     }
@@ -205,7 +291,7 @@ mod tests {
         let route = Route::Certificate { pem: String::new() };
         let cer = PathBuf::from("C:\\Temp\\trawler-ca.cer");
         assert_eq!(
-            route_commands("windows", &route, &cer),
+            route_commands("windows", &route, &cer, &Simulators::default()),
             Some(vec![argv(&["cmd", "/C", "start", "", "C:\\Temp\\trawler-ca.cer"])])
         );
     }
@@ -214,7 +300,7 @@ mod tests {
     fn windows_browser_starts_the_marked_address() {
         let route = Route::Browser { mark: "k3m9x2.4".into() };
         assert_eq!(
-            route_commands("windows", &route, &cert()),
+            opens("windows", &route),
             Some(vec![argv(&[
                 "cmd",
                 "/C",
@@ -229,28 +315,25 @@ mod tests {
     fn each_route_opens_only_on_the_host_it_was_written_for() {
         let keychain = Route::Keychain { pem: String::new() };
         let certificate = Route::Certificate { pem: String::new() };
-        assert_eq!(route_commands("windows", &keychain, &cert()), None);
-        assert_eq!(route_commands("macos", &certificate, &cert()), None);
-        assert_eq!(route_commands("linux", &keychain, &cert()), None);
-        assert_eq!(route_commands("linux", &certificate, &cert()), None);
+        assert_eq!(opens("windows", &keychain), None);
+        assert_eq!(opens("macos", &certificate), None);
+        assert_eq!(opens("linux", &keychain), None);
+        assert_eq!(opens("linux", &certificate), None);
         for route in [Route::ProxySettings, Route::Browser { mark: "a.1".into() }] {
-            assert_eq!(route_commands("freebsd", &route, &cert()), None);
+            assert_eq!(opens("freebsd", &route), None);
         }
     }
 
     #[test]
     fn linux_proxy_settings_asks_gnome_settings_for_its_network_panel() {
-        assert_eq!(
-            route_commands("linux", &Route::ProxySettings, &cert()),
-            Some(vec![argv(&GNOME_NETWORK_PANEL)])
-        );
+        assert_eq!(opens("linux", &Route::ProxySettings), Some(vec![argv(&GNOME_NETWORK_PANEL)]));
     }
 
     #[test]
     fn linux_browser_opens_the_marked_address() {
         let route = Route::Browser { mark: "k3m9x2.4".into() };
         assert_eq!(
-            route_commands("linux", &route, &cert()),
+            opens("linux", &route),
             Some(vec![argv(&["xdg-open", "https://example.com/?trawler-check=k3m9x2.4"])])
         );
     }

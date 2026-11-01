@@ -189,6 +189,19 @@ const setProxyNote = (os: HostOs): ActionNotes => ({
   },
 });
 
+// simctl asks for nothing, so its note has no prompt to name (W16's Q3).
+const TRUST_SIMULATORS_NOTE: ActionNotes = {
+  running: { tone: "pending", text: "trusting it in the Simulator…" },
+  failed: {
+    tone: "warn",
+    text: "couldn't trust it in the Simulator — do it by hand below.",
+  },
+};
+
+// Each Simulator keeps its own store (W7's N2).
+const TRUST_SIMULATORS_CAPTION =
+  "It trusts Trawler's certificate in every Simulator running now. Each keeps its own store: one you create or erase later needs this again.";
+
 const REMOVE_CA_NOTE: ActionNotes = {
   running: { tone: "pending", text: "removing the certificate…" },
   failed: {
@@ -255,8 +268,8 @@ const MAKE_REQUEST_NOTE: ActionNotes = {
 // The one act's prompt is the host's: macOS asks for a password, Windows for
 // an approval (W12's W2), and either does the two tasks below it.
 const ONE_ACT_CAPTION: Record<"macos" | "windows", string> = {
-  macos: "one password prompt — it does steps 1 and 2",
-  windows: "one Windows approval — it does steps 1 and 2",
+  macos: "one password prompt — it does tasks 1 and 2",
+  windows: "one Windows approval — it does tasks 1 and 2",
 };
 
 const noAddress = (here: string, device: string) =>
@@ -919,7 +932,7 @@ interface SetupProps {
   probing?: boolean;
   traffic?: Traffic;
   ownProofAt?: number | null;
-  simulators?: readonly SimulatorTrust[];
+  simulators?: readonly SimulatorTrust[] | null;
   emulators?: readonly EmulatorReading[];
   savedCa?: SavedCa;
   // Another device (DEC-63) - the Simulator, whose wire is this machine's too,
@@ -929,6 +942,8 @@ interface SetupProps {
   device?: AnotherDevice;
   reach?: ReachState;
   onSetUpThisMachine?: () => Promise<null | void>;
+  onSetUpSimulator?: () => Promise<null | void>;
+  onTrustSimulators?: () => Promise<void>;
   onSaveCa?: (format: CaFormat) => Promise<string | null>;
   onSetProxy?: () => Promise<null | void>;
   onUnsetProxy?: () => Promise<void>;
@@ -1051,6 +1066,8 @@ function PlatformSetup({
   device = UNMIXED,
   reach = UNREACHABLE,
   onSetUpThisMachine,
+  onSetUpSimulator,
+  onTrustSimulators,
   onSaveCa,
   onSetProxy,
   onUnsetProxy,
@@ -1075,9 +1092,12 @@ function PlatformSetup({
       return outcome;
     };
 
-  const setUp = useAction(
-    onSetUpThisMachine && (() => onSetUpThisMachine().then(routing("set"))),
-  );
+  const ownStore = probesOwnStore(platform);
+  const onSetUp = ownStore ? onSetUpSimulator : onSetUpThisMachine;
+  const setUp = useAction(onSetUp && (() => onSetUp().then(routing("set"))));
+  const trustSimulators = useAction(onTrustSimulators);
+  const stores = simulators ?? NO_SIMULATORS;
+  const simulatorsRunning = stores.length > 0;
   const saveCa = useAction(onSaveCa && (() => onSaveCa(caFormatFor(platform))));
   const setProxyAction = useAction(
     onSetProxy && (() => onSetProxy().then(routing("set"))),
@@ -1108,6 +1128,7 @@ function PlatformSetup({
     proxyAddr,
     reach: allowed ? { proxy: reach.proxy!, caUrls: reach.ca_urls! } : null,
     saved: savedCa,
+    simulatorsRunning: simulators === null ? undefined : simulatorsRunning,
   });
   const here = deviceName("this", os);
 
@@ -1160,7 +1181,7 @@ function PlatformSetup({
       : refusedAddress(address.refusal, evidence, reading, address.now);
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = probesOwnStore(platform)
-    ? (storesTrusted(simulators) ?? device.provedAt !== null)
+    ? (storesTrusted(stores) ?? device.provedAt !== null)
     : adb
       ? (storesTrusted(emulators) ?? evidence.decrypted)
       : !probesTrust(platform)
@@ -1181,10 +1202,20 @@ function PlatformSetup({
   // One prompt for the one thing most users want, and only while both halves
   // are this machine's to change and neither reads done (F27). Once either
   // does, each task carries its own, and the certificate never gets an
-  // install-only button (UC-ONBOARD).
+  // install-only button (UC-ONBOARD). The Simulator's store is the shell's to
+  // write wherever one runs, with no prompt of its own (W16's Q2).
+  const oneActStore = ownStore ? simulatorsRunning : trustHere;
   const setUpHere =
-    trustHere && routeHere && setProxyAction.trigger && !trustDone && !routeDone
+    oneActStore &&
+    routeHere &&
+    setProxyAction.trigger &&
+    !trustDone &&
+    !routeDone
       ? setUp.trigger
+      : undefined;
+  const trustSimulatorsHere =
+    ownStore && simulatorsRunning && setUpHere === undefined && !trustDone
+      ? trustSimulators.trigger
       : undefined;
   const setProxyHere =
     routeHere && setUpHere === undefined && !routeDone
@@ -1209,10 +1240,14 @@ function PlatformSetup({
   // Off-machine, every task after the network one needs an address that does
   // not exist yet — so they keep their numbers and say which step comes first.
   const blocked = offMachine && !allowed;
-  const waitsOn = chosen === undefined ? undefined : "after step 1";
+  const waitsOn = chosen === undefined ? undefined : "after task 1";
 
-  const trustState = probesOwnStore(platform)
-    ? simulatorTrustStatus(simulators, busy(setUp, "installing"), reading)
+  const trustState = ownStore
+    ? simulatorTrustStatus(
+        simulators,
+        busy(trustSimulators, "installing"),
+        reading,
+      )
     : probesTrust(platform)
       ? trustStatus(
           trustProbe,
@@ -1280,7 +1315,9 @@ function PlatformSetup({
   const trustGuide = guideFor(
     setup.trust.guide,
     trustDone,
-    trustDone ? removeHere !== undefined : setUpHere !== undefined,
+    trustDone
+      ? removeHere !== undefined
+      : setUpHere !== undefined || trustSimulatorsHere !== undefined,
   );
   const routeUnderButton =
     setUpHere !== undefined || setProxyHere !== undefined;
@@ -1299,6 +1336,7 @@ function PlatformSetup({
   // task stays open until a decrypted request says the whole job is over.
   const failedRoute =
     failedHere(setUp, setUpHere !== undefined) ||
+    failedHere(trustSimulators, trustSimulatorsHere !== undefined) ||
     failedHere(removeCa, removeHere !== undefined)
       ? "trust"
       : failedHere(setProxyAction, setProxyHere !== undefined) ||
@@ -1319,7 +1357,8 @@ function PlatformSetup({
       guidesOpen &&
       trustGuide !== undefined &&
       !trustDone &&
-      setUpHere === undefined);
+      setUpHere === undefined &&
+      trustSimulatorsHere === undefined);
   const routeGuideOpen =
     routePointed ||
     (byReading &&
@@ -1330,21 +1369,29 @@ function PlatformSetup({
       !routeUnderButton);
 
   // One control on the screen is framed, and it is the next thing to do: the
-  // one act, else the proxy's action, else the open guide's first control, else
-  // This machine's request once both halves read done. Everything else is bare
-  // (W12's E1, E2).
+  // one act, else the first task not done's own control - its action, else its
+  // open guide's first - else the request once both halves read done.
+  // Everything else is bare (W12's E1, E2; W16's E2).
   const proved = traffic.lastDecryptedAt !== null;
+  const requestHere = platform === "this" || setup.deviceRoute !== undefined;
   const next:
-    "set-up" | "set-proxy" | "trust-guide" | "route-guide" | "request" | null =
-    setUpHere
-      ? "set-up"
-      : setProxyHere
-        ? "set-proxy"
-        : trustGuideOpen && !trustDone
-          ? "trust-guide"
+    | "set-up"
+    | "trust-simulators"
+    | "trust-guide"
+    | "set-proxy"
+    | "route-guide"
+    | "request"
+    | null = setUpHere
+    ? "set-up"
+    : trustSimulatorsHere
+      ? "trust-simulators"
+      : trustGuideOpen && !trustDone
+        ? "trust-guide"
+        : setProxyHere
+          ? "set-proxy"
           : routeGuideOpen && !routeDone
             ? "route-guide"
-            : platform === "this" && trustDone && routeDone && !proved
+            : requestHere && trustDone && routeDone && !proved
               ? "request"
               : null;
   const bare = (framed: boolean) => (framed ? undefined : ("bare" as const));
@@ -1355,7 +1402,7 @@ function PlatformSetup({
     <div data-testid="one-act" className="px-4">
       <Action
         testId="set-up"
-        label={`set up ${here}`}
+        label={`set up ${ownStore ? deviceName(platform, os) : here}`}
         caption={ONE_ACT_CAPTION[os === "windows" ? "windows" : "macos"]}
         action={setUp}
         note={setupNote(os)}
@@ -1434,7 +1481,19 @@ function PlatformSetup({
           open={open}
           framed={next === "trust-guide"}
           action={
-            removeHere && (
+            (trustSimulatorsHere && (
+              <Action
+                testId="trust-simulators"
+                label="trust in the Simulator"
+                caption={TRUST_SIMULATORS_CAPTION}
+                action={trustSimulators}
+                note={TRUST_SIMULATORS_NOTE}
+                onClick={trustSimulatorsHere}
+                frame={bare(next === "trust-simulators")}
+                disabled={probing}
+              />
+            )) ||
+            (removeHere && (
               <Action
                 testId="remove-ca"
                 label="remove the certificate"
@@ -1445,7 +1504,7 @@ function PlatformSetup({
                 frame="bare"
                 disabled={probing}
               />
-            )
+            ))
           }
         >
           {refusedHere && (
@@ -1496,8 +1555,8 @@ function PlatformSetup({
                       ? addressTest.maybeRefused
                       : setup.refusedAfterProof,
                     trustedOn:
-                      probesOwnStore(platform) && storesTrusted(simulators)
-                        ? trustedSimulators(simulators)
+                      probesOwnStore(platform) && storesTrusted(stores)
+                        ? trustedSimulators(stores)
                         : null,
                     refused:
                       emulatorRefused ??
@@ -1528,6 +1587,17 @@ function PlatformSetup({
               other={tryOtherWays(setup)}
               open={open}
             />
+          )}
+          {open && setup.deviceRoute && (
+            <div data-testid="open-on-device" className="pt-2">
+              <Button
+                onClick={() => open(setup.deviceRoute!.open)}
+                frame={bare(next === "request")}
+                tone={next === "request" ? undefined : "mute"}
+              >
+                {setup.deviceRoute.label}
+              </Button>
+            </div>
           )}
           {deviceMark !== undefined && (
             <div

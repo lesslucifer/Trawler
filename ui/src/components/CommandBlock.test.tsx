@@ -34,11 +34,12 @@ describe("CommandBlock", () => {
     expect(code.className).toContain("font-mono");
   });
 
-  it("wraps rather than truncating — a cut command is a broken command", () => {
+  it("wraps at spaces rather than truncating or splitting a token — a cut command is a broken command", () => {
     const { container } = render(<CommandBlock value={TRUST} label="the trust command" />);
 
     const code = container.querySelector("code")!;
-    expect(code.className).toContain("break-all");
+    expect(code.className).toContain("break-words");
+    expect(code.className).not.toContain("break-all");
     expect(code.className).toContain("whitespace-pre-wrap");
     expect(code.className).not.toMatch(/truncate|overflow|text-ellipsis|whitespace-nowrap/);
   });

@@ -448,6 +448,91 @@ async function simulator(initial = ONBOARDING) {
   return api;
 }
 
+// W16: simctl writes a running Simulator's store and opens its Safari, so the
+// screen asks the shell for each by name, with the certificate the core
+// serves now or the Simulator's own mark - never a path or a URL.
+const RUNNING_SIMULATOR = [{ name: "iPhone 17 Pro", trust: "absent" }];
+
+function simulatorReads(trust: "absent" | "trusted", proxy: "none" | "ours", over: Record<string, () => unknown> = {}) {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name in over) return over[name]();
+    if (name === "simulator_trust") return [{ ...RUNNING_SIMULATOR[0], trust }];
+    if (name === "proxy_in_use") return { status: proxy, address: null };
+    return undefined;
+  });
+}
+
+test("Set up the Simulator trusts every running Simulator first, then sets this Mac's proxy", async () => {
+  simulatorReads("absent", "none");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the Simulator" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 }),
+  );
+  const names = vi.mocked(invoke).mock.calls.map(([n]) => n);
+  expect(names.indexOf("trust_simulators")).toBeLessThan(names.indexOf("set_proxy"));
+  expect(invoke).toHaveBeenCalledWith("trust_simulators", { pem: PEM });
+  expect(names).not.toContain("set_up_this_machine");
+});
+
+test("a Simulator that refused the trust leaves this Mac's proxy alone", async () => {
+  simulatorReads("absent", "none", {
+    trust_simulators: () => {
+      throw { refused: false, detail: "simctl: unable to find utility" };
+    },
+  });
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the Simulator" }));
+
+  await screen.findByText("setting up failed — do it by hand below.");
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
+});
+
+test("trust in the Simulator asks the shell with the certificate the core serves now", async () => {
+  simulatorReads("absent", "ours");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "trust in the Simulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("trust_simulators", { pem: PEM }));
+});
+
+test("open it in the Simulator carries the mark the Simulator's address shows", async () => {
+  simulatorReads("trusted", "ours");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open it in the Simulator" }));
+
+  const shown = screen.getByTestId("check-address").textContent!.match(/trawler-check=([a-z0-9]+)/)![1];
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator-request", mark: shown } }),
+  );
+});
+
+test("with none running, open the Simulator asks the shell for the Simulator by name", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "simulator_trust" ? [] : undefined));
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open the Simulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator" } }));
+});
+
+test("a Simulator read that failed never says none runs", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "simulator_trust") throw new Error("ipc down");
+    return undefined;
+  });
+  await simulator();
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("simulator_trust", { pem: PEM }));
+  expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the address in task 3 confirms it");
+  expect(screen.queryByText(/no Simulator running/)).toBeNull();
+});
+
 test("Set the system proxy invokes set_proxy with the configured address, and proves nothing", async () => {
   await simulator();
 
@@ -1192,7 +1277,7 @@ test("another device's marked request settles its tasks, where nothing else of t
   rows = [flow({ uri: "https://example.com/", started_at: later })];
   fire();
   await waitFor(() => expect(screen.getByTestId("traffic-state")).toBeInTheDocument());
-  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
 
   rows = [...rows, flow({ id: "f2", uri: address, started_at: later })];
   fire();
@@ -1277,7 +1362,7 @@ test("requests from while this machine's proxy pointed here stay unplaced once i
   rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
   fire();
   await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
-  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
 
   proxy = { status: "none", address: null };
   fireEvent(window, new Event("focus"));
@@ -1361,7 +1446,7 @@ test("what arrives after the last reading of this machine's proxy as off is no o
 
   expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it");
   await rereadOnFocus();
-  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in step 4 confirms it");
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
   expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — the same request confirms it");
 });
 
@@ -3051,8 +3136,8 @@ describe("This machine's own request", () => {
 
     await waitFor(() => expect(note()).toHaveTextContent("example.com answered through Trawler."));
     expect(own.url()).toMatch(/^https:\/\/example\.com\/\?trawler-check=[a-z0-9]+\.\d+$/);
-    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — step 3's request decrypted at \d\d:\d\d/);
-    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — step 3's request came through at \d\d:\d\d/);
+    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — task 3's request decrypted at \d\d:\d\d/);
+    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — task 3's request came through at \d\d:\d\d/);
   });
 
   const afterGrace = async (answer: (url: string, own: ReturnType<typeof onLinuxWith>) => Promise<Response>) => {
@@ -3072,7 +3157,7 @@ describe("This machine's own request", () => {
         throw new TypeError("Load failed");
       });
       await waitFor(() => expect(note()).toHaveTextContent("the request reached Trawler and didn't decrypt."));
-      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in step 3 confirms it");
+      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in task 3 confirms it");
     } finally {
       vi.useRealTimers();
     }

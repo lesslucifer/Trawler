@@ -304,7 +304,9 @@ export default function App({
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyReading, setProxyReading] =
     useState<ProxyReading>(NO_PROXY_READING);
-  const [simulators, setSimulators] = useState<readonly SimulatorTrust[]>([]);
+  const [simulators, setSimulators] = useState<
+    readonly SimulatorTrust[] | null
+  >(null);
   const [emulators, setEmulators] = useState<readonly EmulatorReading[]>([]);
   // adb starts a server of its own where none runs, so the emulator is read
   // only while it is the platform chosen (W8's Q1).
@@ -344,8 +346,8 @@ export default function App({
           }),
         )
         .then(
-          (read): readonly SimulatorTrust[] => read ?? [],
-          (): readonly SimulatorTrust[] => [],
+          (read): readonly SimulatorTrust[] | null => read ?? null,
+          (): null => null,
         );
       const adb = readsEmulators.current
         ? pem
@@ -653,6 +655,20 @@ export default function App({
     return undefined;
   });
 
+  // simctl writes every running Simulator's store with no prompt, so the trust
+  // goes first: a proxy is never left routing a Simulator that does not trust it.
+  const trustSimulators = thenRead(async () => {
+    await invoke("trust_simulators", { pem: await client.caCertPem() });
+  });
+
+  const setUpSimulator = thenRead(async () => {
+    if (!(await replaceAllowed())) return null;
+    await invoke("trust_simulators", { pem: await client.caCertPem() });
+    const { host, port } = splitProxyAddr(proxyAddr);
+    await invoke("set_proxy", { host, port });
+    return undefined;
+  });
+
   const unsetProxy = thenRead(async () => {
     await invoke("unset_proxy");
   });
@@ -671,6 +687,8 @@ export default function App({
       });
     } else if (route === "browser") {
       await invoke("open_route", { route: { name: route, mark: nextMark() } });
+    } else if (route === "simulator-request") {
+      await invoke("open_route", { route: { name: route, mark } });
     } else {
       await invoke("open_route", { route: { name: route } });
     }
@@ -977,6 +995,8 @@ export default function App({
           deviceMark={mark}
           device={device}
           onSetUpThisMachine={setUpThisMachine}
+          onSetUpSimulator={setUpSimulator}
+          onTrustSimulators={trustSimulators}
           onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}

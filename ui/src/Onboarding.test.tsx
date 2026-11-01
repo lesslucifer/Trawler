@@ -88,6 +88,8 @@ function Host(props: Props) {
       proxyAddr={ADDR}
       onRemoveCa={vi.fn(async () => {})}
       onSetUpThisMachine={vi.fn(async () => {})}
+      onSetUpSimulator={vi.fn(async () => {})}
+      onTrustSimulators={vi.fn(async () => {})}
       onSaveCa={vi.fn(async () => null)}
       onSetProxy={vi.fn(async () => {})}
       onUnsetProxy={vi.fn(async () => {})}
@@ -390,10 +392,10 @@ describe("this machine — three tasks, and one button that does two of them", (
     expect(
       screen.getByRole("button", { name: "set up this Mac" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("one password prompt — it does steps 1 and 2")).toBeNull();
+    expect(screen.queryByText("one password prompt — it does tasks 1 and 2")).toBeNull();
     openHelp(screen.getByTestId("one-act"));
     expect(
-      screen.getByText("one password prompt — it does steps 1 and 2"),
+      screen.getByText("one password prompt — it does tasks 1 and 2"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Install the certificate" }),
@@ -520,7 +522,7 @@ describe("this machine — three tasks, and one button that does two of them", (
     );
     // And it does not claim the tasks are done — that is still the probes' word.
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
   });
 
@@ -853,7 +855,7 @@ describe("each task holds its own route, under the one button", () => {
     ).toBeInTheDocument();
     openHelp(oneAct);
     expect(oneAct).toHaveTextContent(
-      "one password prompt — it does steps 1 and 2",
+      "one password prompt — it does tasks 1 and 2",
     );
     expect(
       within(task(1)).queryByRole("button", { name: "set up this Mac" }),
@@ -998,7 +1000,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
     );
     openHelp(screen.getByTestId("one-act"));
     const line = screen.getByText(
-      "one password prompt — it does steps 1 and 2",
+      "one password prompt — it does tasks 1 and 2",
     );
     expect(
       line.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -1320,33 +1322,199 @@ describe("the iOS Simulator", () => {
 
     expect(task(2)).toHaveTextContent("Send this Mac's traffic to Trawler");
     expect(task(2)).toHaveTextContent("not done — the system proxy is off");
-    expect(
-      within(task(2)).getByRole("button", { name: "set the system proxy" }),
-    ).toBeInTheDocument();
   });
 
-  it("renders its trust guide open under a count — nothing automatic stands above it", () => {
+  // W16's E1: the shell trusts it, so the save and the command are its by hand.
+  it("keeps its save and command shut under do it by hand, with no restart step", () => {
     simulator();
 
-    expect(within(task(1)).queryByText("do it by hand")).toBeNull();
-    expect(within(task(1)).getByText("3 steps")).toBeInTheDocument();
-    expect(open("3 steps")).toBe(true);
+    expect(guideOpen(1, MANUAL)).toBe(false);
     expect(commandNamed("the trust command")).toHaveTextContent(
       "for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ~/Downloads/trawler-ca.pem; done",
     );
+    expect(screen.getByTestId("steps")).not.toHaveTextContent(/restart/i);
   });
 
   it("leaves the routing steps behind the button that does them", () => {
     simulator();
 
-    expect(within(task(2)).getByText("do it by hand")).toBeInTheDocument();
-    expect(open("do it by hand")).toBe(false);
+    expect(guideOpen(2, MANUAL)).toBe(false);
   });
 
   it("is told to open a website in it, not on it", () => {
     simulator();
 
     expect(task(3)).toHaveTextContent("Make a request from the Simulator");
+  });
+});
+
+// ── W16: the Simulator leads with what the shell can do ─────────────────────
+// simctl writes a Simulator's store and opens its Safari with no password, so
+// each of its tasks leads with a button, and its one act does both halves.
+
+describe("the iOS Simulator leads with what the shell can do (W16)", () => {
+  const framed = () =>
+    [
+      ...screen
+        .getByTestId("steps")
+        .querySelectorAll("button:not([aria-label])"),
+    ]
+      .filter((b) => b.className.includes("border-hairline"))
+      .map((b) => b.textContent?.trim());
+  const running = (trust: "trusted" | "absent" | "unknown") => [
+    { name: "iPhone 17 Pro", trust },
+  ];
+  const simulator = (props: Props) => {
+    draw({
+      trustProbe: "absent",
+      proxy: { status: "none", address: null },
+      deviceMark: "b6qv",
+      device: { provedAt: null, mixed: true, wire: NO_TRAFFIC },
+      onOpenRoute: vi.fn(async () => {}),
+      ...props,
+    });
+    pick("iOS Simulator");
+  };
+
+  // W4, I3: the shell read every store there is, and opening one comes first.
+  it("with none running, says so, and opening the Simulator is the one framed control", () => {
+    const onOpenRoute = vi.fn(async () => {});
+    simulator({ simulators: [], onOpenRoute });
+
+    expect(task(1)).toHaveTextContent("not done — no Simulator running");
+    expect(guideOpen(1, "3 steps")).toBe(true);
+    expect(framed()).toEqual(["open the Simulator"]);
+    expect(screen.queryByRole("button", { name: "set up the Simulator" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "trust in the Simulator" })).toBeNull();
+    expect(screen.queryByTestId("open-on-device")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "open the Simulator" }));
+    expect(onOpenRoute).toHaveBeenCalledWith("simulator");
+  });
+
+  // A read that failed or has not landed is no reading: it never says none runs.
+  it("with no Simulator read yet, says what will confirm it and offers nothing a reading would", () => {
+    simulator({ simulators: null });
+
+    expect(task(1)).toHaveTextContent("can't check here — the address in task 3 confirms it");
+    expect(task(1)).not.toHaveTextContent("no Simulator running");
+    for (const name of ["open the Simulator", "set up the Simulator", "trust in the Simulator"])
+      expect(screen.queryByRole("button", { name })).toBeNull();
+  });
+
+  // Q2: both halves are the shell's, so one act does them, as on this Mac.
+  it("with one running and nothing done, set up the Simulator leads and runs the Simulator's own act", async () => {
+    const onSetUpSimulator = vi.fn(async () => {});
+    const onSetUpThisMachine = vi.fn(async () => {});
+    simulator({ simulators: running("absent"), onSetUpSimulator, onSetUpThisMachine });
+
+    expect(framed()).toEqual(["set up the Simulator"]);
+    expect(within(zone("one-act")!).getByRole("button", { name: "set up the Simulator" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "set the system proxy" })).toBeNull();
+    expect(guideOpen(1, MANUAL)).toBe(false);
+    expect(guideOpen(2, MANUAL)).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "set up the Simulator" }));
+    await waitFor(() => expect(onSetUpSimulator).toHaveBeenCalledOnce());
+    expect(onSetUpThisMachine).not.toHaveBeenCalled();
+  });
+
+  // E2: the first task not done frames its own control, never task 2's.
+  it("with the proxy already set, trust in the Simulator is the one framed control, what it does behind its ?", () => {
+    const onTrustSimulators = vi.fn(async () => {});
+    simulator({
+      simulators: running("absent"),
+      proxy: { status: "ours", address: null },
+      onTrustSimulators,
+    });
+
+    expect(framed()).toEqual(["trust in the Simulator"]);
+    openHelp(task(1));
+    expect(helpText(task(1))).toContain(
+      "It trusts Trawler's certificate in every Simulator running now. Each keeps its own store: one you create or erase later needs this again.",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "trust in the Simulator" }));
+    expect(onTrustSimulators).toHaveBeenCalledOnce();
+  });
+
+  it("with the proxy not set and no one act, task 1's button still outranks task 2's", () => {
+    simulator({ simulators: running("absent"), onSetUpSimulator: undefined });
+
+    expect(framed()).toEqual(["trust in the Simulator"]);
+    expect(
+      within(task(2)).getByRole("button", { name: "set the system proxy" }),
+    ).toBeInTheDocument();
+  });
+
+  // The click produces nothing the screen reads as done: the store does.
+  it("reads done from the Simulator's store, never from the click", async () => {
+    const props: Props = {
+      trustProbe: "absent",
+      proxy: { status: "ours", address: null },
+      deviceMark: "b6qv",
+      device: { provedAt: null, mixed: true, wire: NO_TRAFFIC },
+      simulators: running("absent"),
+    };
+    const { rerender } = draw(props);
+    pick("iOS Simulator");
+
+    fireEvent.click(screen.getByRole("button", { name: "trust in the Simulator" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "trust in the Simulator" })).toBeEnabled(),
+    );
+    expect(task(1)).toHaveTextContent("not done — not in iPhone 17 Pro");
+
+    rerender(screenAt({ ...props, simulators: running("trusted") }));
+    expect(task(1)).toHaveTextContent("done — trusted in iPhone 17 Pro");
+    expect(screen.queryByRole("button", { name: "trust in the Simulator" })).toBeNull();
+  });
+
+  it("a failed trust says so and opens its steps by hand", async () => {
+    simulator({
+      simulators: running("absent"),
+      proxy: { status: "ours", address: null },
+      onTrustSimulators: vi.fn(() =>
+        Promise.reject({ refused: false, detail: "simctl: unable to find utility" }),
+      ),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "trust in the Simulator" }));
+
+    await waitFor(() =>
+      expect(
+        within(task(1)).getByText("couldn't trust it in the Simulator — do it by hand below."),
+      ).toBeInTheDocument(),
+    );
+    expect(guideOpen(1, MANUAL)).toBe(true);
+  });
+
+  // E3, I2: both halves done, the request is the one thing left, and the
+  // Simulator's own Safari makes it.
+  it("with both done, open it in the Simulator is the one framed control, its address still beside it", () => {
+    const onOpenRoute = vi.fn(async () => {});
+    simulator({
+      simulators: running("trusted"),
+      proxy: { status: "ours", address: null },
+      onOpenRoute,
+    });
+
+    expect(framed()).toEqual(["open it in the Simulator"]);
+    expect(zone("check-address")).toHaveTextContent("https://example.com/?trawler-check=b6qv");
+
+    fireEvent.click(screen.getByRole("button", { name: "open it in the Simulator" }));
+    expect(onOpenRoute).toHaveBeenCalledWith("simulator-request");
+  });
+
+  it("once the Simulator's request decrypted, nothing is framed", () => {
+    simulator({
+      simulators: running("trusted"),
+      proxy: { status: "ours", address: null },
+      traffic: capturing,
+      device: { provedAt: ago(1_000), mixed: true, wire: capturing },
+    });
+
+    expect(framed()).toEqual([]);
   });
 });
 
@@ -1376,9 +1544,7 @@ describe("the iOS Simulator, beside this Mac's own traffic", () => {
   it("is not proven by this Mac's decrypted traffic", () => {
     simulator({ simulators: [], ...wire(capturing) });
 
-    expect(task(1)).toHaveTextContent(
-      "can't check here — the address in step 3 confirms it",
-    );
+    expect(task(1)).toHaveTextContent("not done — no Simulator running");
     expect(task(3)).toHaveTextContent(
       "can't check here — the address below confirms it",
     );
@@ -1488,7 +1654,7 @@ describe("the Android emulator, beside this machine's own traffic", () => {
     emulator({ emulators: [], ...mixedWire(capturing) });
 
     expect(task(1)).toHaveTextContent(
-      "can't check here — the address in step 3 confirms it",
+      "can't check here — the address in task 3 confirms it",
     );
     expect(task(2)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -1630,7 +1796,7 @@ describe("a phone, before the network is allowed", () => {
 
     for (const n of [2, 3, 4]) {
       expect(task(n)).toHaveAttribute("data-dim");
-      expect(task(n)).toHaveTextContent("after step 1");
+      expect(task(n)).toHaveTextContent("after task 1");
     }
     expect(screen.queryByText(/the certificate route opens once/)).toBeNull();
     expect(
@@ -1807,7 +1973,7 @@ describe("the iPhone, whose test is the address it is offered", () => {
       `done — a request reached Trawler at ${clock(refusedAt)}`,
     );
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(task(4)).toHaveTextContent(
@@ -1960,7 +2126,7 @@ describe("the iPhone, whose test is the address it is offered", () => {
     pick("iPhone or iPad");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
@@ -2014,7 +2180,7 @@ describe("the Android device, whose test is the address it is offered", () => {
       `done — a request reached Trawler at ${clock(refusedAt)}`,
     );
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
@@ -2091,7 +2257,7 @@ describe("the Android device, whose test is the address it is offered", () => {
     pick("Android device");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(4)).getByTestId("traffic-remedy")).toHaveTextContent(
       "example.com did not decrypt — if you opened it on your Android device, Trawler Proxy CA is not in its user store: the certificate step installs it.",
@@ -2117,7 +2283,7 @@ describe("another device, where this machine's own traffic may be arriving too",
     pick("Another Mac");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(task(3)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -2250,7 +2416,7 @@ describe("another device, where this machine's own traffic may be arriving too",
     pick("Another Mac");
 
     expect(task(2)).toHaveTextContent(
-      "can't check here — the address in step 4 confirms it",
+      "can't check here — the address in task 4 confirms it",
     );
     expect(within(task(2)).queryByTestId("traffic-remedy")).toBeNull();
     expect(task(4)).toHaveTextContent(
@@ -2483,7 +2649,7 @@ describe("the address is an offer, not a menu", () => {
 
     for (const n of [2, 3, 4]) {
       expect(task(n)).toHaveAttribute("data-dim");
-      expect(task(n)).not.toHaveTextContent("after step 1");
+      expect(task(n)).not.toHaveTextContent("after task 1");
     }
   });
 });
@@ -2848,7 +3014,7 @@ test("no step reports itself done — every state on the screen has a source", (
 
   // Nothing read either store on this host, so neither task may claim one was.
   expect(task(1)).toHaveTextContent(
-    "can't check here — the request in step 3 confirms it",
+    "can't check here — the request in task 3 confirms it",
   );
   expect(task(2)).toHaveTextContent(
     "can't check here — the same request confirms it",
@@ -3225,11 +3391,11 @@ describe("This machine where no probe answers", () => {
   } as const;
   const onMakeRequest = vi.fn(async (): Promise<RequestRoute> => "through");
 
-  it("names the request in step 3 as what settles both tasks", () => {
+  it("names the request in task 3 as what settles both tasks", () => {
     draw({ os: "linux", ...unread, onMakeRequest });
 
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
     expect(task(2)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -3248,10 +3414,10 @@ describe("This machine where no probe answers", () => {
     draw({ os: "linux", ...unread, onMakeRequest, ownProofAt: at });
 
     expect(task(1)).toHaveTextContent(
-      `done — step 3's request decrypted at ${clock(at)}`,
+      `done — task 3's request decrypted at ${clock(at)}`,
     );
     expect(task(2)).toHaveTextContent(
-      `done — step 3's request came through at ${clock(at)}`,
+      `done — task 3's request came through at ${clock(at)}`,
     );
     expect(within(task(1)).getByText("4 steps")).toBeInTheDocument();
     expect(within(task(2)).queryByText("1 step")).toBeNull();
@@ -3263,7 +3429,7 @@ describe("This machine where no probe answers", () => {
 
     expect(task(3)).toHaveTextContent("done — capturing traffic");
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
     expect(task(2)).toHaveTextContent(
       "can't check here — the same request confirms it",
@@ -3283,7 +3449,7 @@ describe("This machine where no probe answers", () => {
     });
 
     expect(task(1)).toHaveTextContent(
-      "can't check here — the request in step 3 confirms it",
+      "can't check here — the request in task 3 confirms it",
     );
     expect(task(1)).not.toHaveTextContent(
       "does not trust Trawler's certificate",

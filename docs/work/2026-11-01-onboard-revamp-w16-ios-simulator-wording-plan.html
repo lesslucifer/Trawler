@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae6b74b9f34851f0dfadeb0" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W16 plan: wording and display, iOS Simulator</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W16 — wording and display: iOS Simulator</h1>
+      <p>W12's pattern and W13's help rule on the iOS Simulator. Every step there can be a button, because <code>simctl</code> needs no password, so each task leads with a button, keeps its command as the other way, and drops a step nothing needs.</p>
+      <div class="meta">v2 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W16</span> · branch <code>wu/onboard-revamp/ios-simulator-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W7</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> (the owner, 2026-11-01: "1. all · 2. yes · 3. no need to ask"). Q1–Q3 are A, and
+      every finding and N1–N4 are taken with them. The owner waived the design run ("I don't need the design run, just
+      build it"), so round 24 is not opened. Each rendered file the build touches is declared <code>undesigned</code> on
+      the design note, with that ruling as its reason. The WU adds no component and no screen, so none needs a citation. I
+      found the findings by reading the <code>macos-ios-sim</code> reel, which I filmed on this Mac at the epic tip
+      (<code>fbc5cd7c</code>), the source of its guide, and each step tried on a throwaway iOS 26.5 Simulator.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      On the iOS Simulator, each state of the setup screen leads with the one thing to do next. That thing is a button
+      wherever the shell can do the step itself, and its command stays as the other way. Every word names one thing one
+      way and is true of what the screen read. No step asks for what nothing needs. The way back names the Simulator's own
+      menu. What explains shows only on request (W13's R1). A test holds each rule.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONBRVP · epic W16 block · UC-ONBOARD: the Simulator's guides · the emphasis rule W12 set (one framed control,
+      the one act above the tasks) · help on request (W13's R1) · W7's N1–N3 and its open restart step, deferred here · the
+      epic's Q11 (interactive first, media as the fallback) · no design run (the owner, 2026-11-01) ·
+      shell-side only, as the epic's Q8 allows: the core stays out.
+    </p>
+
+    <h2 id="today">What the iOS Simulator shows today</h2>
+    <div class="diagram" data-c="today-diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph T1["1 · Trust Trawler's certificate in the Simulator ?"]
+    a0["◐ can't check here — the address in step 3 confirms it"]
+    a1["1. Save Trawler's certificate as trawler-ca.pem · save…"] --> a2["2. With the Simulator running, run:
+▇ for d in $(xcrun simctl list devices booted | grep … ); do xcrun simctl keychain $
+d add-root-cert ~/Downloads/trawler-ca.pem; done ▇"]
+    a2 --> a3["3. Restart the Simulator so apps pick the new root up."]
+    a3 -.-> a4["way back: Erase that Simulator: Device → Erase All Content and Settings. It wipes everything …"]
+  end
+  T1 --> T2
+  subgraph T2["2 · Send this Mac's traffic to Trawler ?"]
+    b0["○ not done — the system proxy is off"] --> b1["[ set the system proxy ] ← the framed control"]
+    b1 --> b2["› do it by hand"]
+  end
+  T2 --> T3
+  subgraph T3["3 · Make a request from the Simulator"]
+    c1["In the Simulator, open https://example.com/?trawler-check=…"]
+  end
+      </pre>
+      <div class="caption">macOS, nothing set up yet (<code>macos-ios-sim/walk-03-chosen</code>). The Simulator runs beside
+        macOS only, so the Windows and Linux reels film just its absence from the list. Task 1's guide is the open one, but
+        the framed control sits in task 2. The heaviest element is a shell loop that wraps inside <code>$d</code>.</div>
+    </div>
+
+    <h2 id="checked">What I checked</h2>
+    <table data-c="checked">
+      <tr><th>Tried</th><th>Result</th><th>Used by</th></tr>
+      <tr><td>The <code>macos-ios-sim</code> reel, filmed again at <code>fbc5cd7c</code> (frames <code>walk-01</code>…<code>walk-06</code>)</td>
+        <td>All six chapters filmed in one run. The cached reel in <code>target/walkthrough</code> had stopped after chapter
+        4, the roadmap's walkthrough abort. No chapter films a Simulator running, a store read, task 3's address used, or
+        the way back</td><td>every finding · the walkthrough commit</td></tr>
+      <tr><td><code>simulatorSetup</code>, <code>simulatorTrustCommand</code> and <code>routeUndo("ios-sim")</code> in <code>ui/src/setup.ts</code></td>
+        <td>Task 1 is <em>save</em>, a command and a restart, with no button. Task 2 is This Mac's own route. Task 3 has no
+        <code>tryRoutes</code>, so it is a value to copy. The way back is one sentence with no path parts</td><td>E1 · E3 · E4 · W1 · W3</td></tr>
+      <tr><td>The framing rule in <code>ui/src/Onboarding.tsx</code></td>
+        <td><code>next</code> prefers the proxy's action over the open trust guide, so <em>set the system proxy</em> (task
+        2) is framed while task 1's guide is open above it. On This machine the one act <em>set up this Mac</em> hides the
+        conflict</td><td>E2 · Q2</td></tr>
+      <tr><td><code>simulatorTrustStatus</code> in <code>ui/src/verdicts.ts</code></td>
+        <td>With no Simulator running and no request proved, ① reads <em>can't check here — the address in step 3
+        confirms it</em>. The shell can check: it reads every running Simulator's store, and none is running. <em>step
+        3</em> means task 3, but task 1 has a step 3 of its own (<em>Restart the Simulator</em>). Every platform's
+        awaiting line says <em>step</em> the same way</td><td>W2 · W4</td></tr>
+      <tr><td><code>CommandBlock</code> (<code>ui/src/components/CommandBlock.tsx</code>)</td>
+        <td><code>break-all</code> wraps any command inside a word. Here the line breaks between <code>$</code> and
+        <code>d</code> (walk-03)</td><td>D1 · Q1</td></tr>
+      <tr><td>Restart, tried: <code>xcrun simctl keychain &lt;udid&gt; add-root-cert</code>, then <code>xcrun simctl openurl</code>
+        with Safari already open and no restart</td>
+        <td>Before the add, Safari read <em>This Connection Is Not Private</em>. Two seconds after it, without a restart,
+        the same Safari loaded the page from a local HTTPS server signed by the throwaway CA, and the server logged the
+        <code>GET</code>. The restart step asks for nothing Safari needs</td><td>E4 · N4</td></tr>
+      <tr><td><code>xcrun simctl openurl &lt;udid&gt; &lt;url&gt;</code></td>
+        <td>Opens the address in Safari on that Simulator, with no window focused and no prompt</td><td>I2</td></tr>
+      <tr><td><code>xcrun simctl keychain</code> (Xcode 26)</td>
+        <td>Offers <code>add-root-cert</code>, <code>add-cert</code> and <code>reset</code>, with no removal. W7 found
+        that <code>reset</code> leaves the root. The erase is still the only way back</td><td>W3</td></tr>
+      <tr><td>Simulator.app's own menu (<code>MainMenu.nib</code>, Xcode 26)</td>
+        <td><em>Device</em> holds <em>Erase All Content and Settings</em> and <em>Restart</em>. The way back's labels are
+        Simulator's own</td><td>W3</td></tr>
+      <tr><td>LaunchServices: <code>com.apple.iphonesimulator</code></td>
+        <td>Found inside Xcode (<code>…/Developer/Applications/Simulator.app</code>), so <code>open -a Simulator</code>
+        reaches it without a path</td><td>I3 · N1</td></tr>
+      <tr><td>DEC-56 (the app may prove capture itself)</td>
+        <td>It governs a request the app makes through the proxy. <em>Open it in the Simulator</em> has the Simulator's own
+        Safari make the request, as W12's browser route does on this Mac, so it is a route and needs no new DEC</td><td>I2</td></tr>
+      <tr><td>Unverified here</td>
+        <td>Whether a root added by <code>simctl</code> shows in the Simulator's <em>Certificate Trust Settings</em>. The
+        Settings deep link opened only Settings' root page, and going further needs UI automation. Nothing proposed below
+        depends on it</td><td>—</td></tr>
+    </table>
+
+    <h2 id="leads">Part 1 — what leads</h2>
+    <table data-c="leads">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>E1</td>
+        <td><strong>Task 1's only route is the heaviest element on screen:</strong> a save, then a shell loop to paste into
+        Terminal. Yet <code>simctl</code> asks for no password, so the shell could run it.</td>
+        <td>A <em>trust in the Simulator</em> button leads (I1). The save and the command go under <em>other ways</em>.</td><td>take</td></tr>
+      <tr><td>E2</td>
+        <td><strong>The framed control is in the wrong task.</strong> Task 1's guide is open and comes first, but <em>set
+        the system proxy</em> in task 2 is the one framed (walk-03).</td>
+        <td>The one act leads and is framed (Q2). Without it, the first task not done frames its own control.</td><td>take</td></tr>
+      <tr><td>E3</td>
+        <td><strong>Task 3 is a value to copy</strong> into the Simulator's Safari by hand. This machine's task 3 is a
+        button.</td>
+        <td><em>open it in the Simulator</em> (I2) leads. The address stays printed beside it.</td><td>take</td></tr>
+      <tr><td>E4</td>
+        <td><strong>A step nothing needs:</strong> <em>3. Restart the Simulator so apps pick the new root up.</em> Safari
+        trusted the root at once, without a restart (What I checked).</td>
+        <td>The step goes, which also closes W7's open check.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="wording">Part 2 — wording and display</h2>
+    <table data-c="wording">
+      <tr><th>#</th><th>What goes wrong today</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>W1</td>
+        <td><strong>The command's lead names no place:</strong> <em>With the Simulator running, run:</em>. Every other Mac
+        command says <em>In Terminal, run:</em> (W12's one name per route).</td>
+        <td>Under <em>other ways</em>: <em>Or, with the Simulator running, in Terminal run:</em>.</td><td>take</td></tr>
+      <tr><td>W2</td>
+        <td><strong><em>Step</em> means two things.</strong> <em>the address in step 3 confirms it</em> means task 3,
+        under a task whose own guide has a step 3.</td>
+        <td><em>the address in task 3 confirms it</em>, in the one shared line, so every platform reads it (Q1).</td><td>take</td></tr>
+      <tr><td>W3</td>
+        <td><strong>The way back points nowhere and buries its warning:</strong> <em>Erase that Simulator: Device → Erase
+        All Content and Settings. It wipes everything in it, Trawler's root included.</em> The menu is plain text, and
+        <em>that Simulator</em> names no window.</td>
+        <td><em>In the Simulator's menu bar, click</em> Device → Erase All Content and Settings, as path parts, with a
+        <em>?</em>: <em>It wipes everything in that Simulator. Nothing removes Trawler's root alone.</em></td><td>take</td></tr>
+      <tr><td>W4</td>
+        <td><strong><em>Can't check here</em> when the screen can.</strong> With no Simulator running, the shell has read
+        every store there is: none.</td>
+        <td><em>not done — no Simulator running</em>, with <em>open the Simulator</em> leading (I3). Once one runs, the
+        store reading takes over on the 3-second watch. A request already proved still reads done, as W7 ruled.</td><td>take</td></tr>
+      <tr><td>D1</td>
+        <td><strong>Commands wrap inside a word</strong>: <code>$</code> on one line, <code>d</code> on the next (walk-03).
+        <code>CommandBlock</code> breaks anywhere.</td>
+        <td>It wraps at spaces, and breaks inside a word only where the word is longer than the line. This touches every
+        command on every platform (Q1).</td><td>take</td></tr>
+    </table>
+
+    <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
+    <table data-c="routes">
+      <tr><th>#</th><th>The step today</th><th>Proposed route</th><th>Ruling</th></tr>
+      <tr><td>I1</td>
+        <td>Trust: save, then paste a loop into Terminal.</td>
+        <td><strong><em>trust in the Simulator</em></strong>: the shell writes the live certificate to a private temp file
+        and runs <code>simctl keychain &lt;udid&gt; add-root-cert</code> on every running Simulator (W7's C2). The store
+        probe, not the click, then reads <em>done — trusted in iPhone 17 Pro</em>. A failure says what failed and opens
+        <em>other ways</em>. No password.</td><td>take</td></tr>
+      <tr><td>I2</td>
+        <td>Task 3: copy the marked address into Safari.</td>
+        <td><strong><em>open it in the Simulator</em></strong>: a new shell route that runs <code>simctl openurl</code>
+        with the marked address on every running Simulator. Like W12's browser route, the shell builds the URL and checks
+        the mark.</td><td>take</td></tr>
+      <tr><td>I3</td>
+        <td>No Simulator running: the command does nothing, and the screen does not say so.</td>
+        <td><strong><em>open the Simulator</em></strong> (<code>open -a Simulator</code>, which boots the last device
+        used) leads task 1 until one runs. Then <em>trust in the Simulator</em> takes its place.</td><td>take</td></tr>
+      <tr><td>M1</td>
+        <td>—</td>
+        <td><strong>No media.</strong> Every step is a button. The way back is one menu in Simulator's own words (W3).</td><td>take</td></tr>
+    </table>
+
+    <h2 id="handed">Handed in from W7</h2>
+    <table data-c="handed">
+      <tr><th>#</th><th>What</th><th>Proposed fix</th><th>Ruling</th></tr>
+      <tr><td>N1</td>
+        <td><strong><code>xcode-select</code> pointing at the Command Line Tools</strong> fails every <code>simctl</code>
+        call with <em>unable to find utility "simctl"</em>.</td>
+        <td>The shell's calls set <code>DEVELOPER_DIR</code> to the Xcode that holds Simulator.app, as LaunchServices
+        finds it, so the buttons work either way. The command's <em>?</em>: <em>simctl not found? Run sudo xcode-select -s
+        /Applications/Xcode.app first.</em></td><td>take</td></tr>
+      <tr><td>N2</td>
+        <td><strong>Each Simulator keeps its own store</strong>, so a new or erased one starts empty.</td>
+        <td>Behind a <em>?</em> by I1's button: <em>Each Simulator keeps its own store. This trusts every one running now; one
+        you create or erase later needs it again.</em> The store reading already names each one.</td><td>take</td></tr>
+      <tr><td>N3</td>
+        <td><strong>The shell could run <code>add-root-cert</code> itself.</strong></td>
+        <td>I1.</td><td>take</td></tr>
+      <tr><td>N4</td>
+        <td><strong>Whether <em>restart the Simulator</em> survives the owner's check.</strong></td>
+        <td>E4: it does not, because the restart was tried and is not needed.</td><td>take</td></tr>
+    </table>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Proposed</th><th>Ruling</th></tr>
+      <tr><td>Q1</td>
+        <td><strong>Who gets the fixes made in shared code?</strong> W2 reaches every platform's awaiting line. D1 reaches
+        every command on every platform.<br>
+        <strong>A</strong> fixed once, for everything that shares it, as W13–W15's Q1 ruled ·
+        <strong>B</strong> the Simulator only</td>
+        <td>A. Both are true everywhere they show, and an override would keep the wrong word or the broken wrap on the
+        other seven platforms.</td><td>A</td></tr>
+      <tr><td>Q2</td>
+        <td><strong>Does the Simulator get a one act above its tasks?</strong><br>
+        <strong>A</strong> <em>set up the Simulator</em>, framed above the tasks: it trusts on every running Simulator and
+        sets this Mac's system proxy, and says it does both, as <em>set up this Mac</em> does (W12's E1). The task buttons
+        stay for one half ·
+        <strong>B</strong> no one act: each task leads with its own button</td>
+        <td>A. It is W12's pattern, and both halves are actions the shell already performs. With no Simulator running, it
+        gives way to <em>open the Simulator</em> (I3).</td><td>A</td></tr>
+      <tr><td>Q3</td>
+        <td><strong>Does writing to the Simulator's store ask first?</strong> <em>set up this Mac</em> is guarded by macOS's
+        password prompt. <code>simctl</code> asks for nothing.<br>
+        <strong>A</strong> no confirm: the click is the act and the button names it ·
+        <strong>B</strong> a confirm naming each Simulator it will write to</td>
+        <td>A. A Simulator is a test device. The status names each store it changed, and the way back stands beside it.</td><td>A</td></tr>
+    </table>
+
+    <h2 id="design">Design</h2>
+    <p data-c="design">None, by the owner's ruling of 2026-11-01. The build uses the parts W12 and W13 designed: the
+      <code>Action</code>, path parts, route parts and <code>Help</code>. <code>CommandBlock</code>'s anatomy line changes
+      with D1. Every rendered file the diff touches is declared <code>undesigned</code>, with that ruling as its reason.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Try this…</th><th>…and see</th></tr>
+      <tr><td>choose iOS Simulator, none running</td><td>① <em>not done — no Simulator running</em>, with <em>open the
+        Simulator</em> framed</td></tr>
+      <tr><td>a Simulator running, nothing set up</td><td><em>set up the Simulator</em> framed above the tasks (Q2); task 1
+        has <em>trust in the Simulator</em>, with N2 behind its <em>?</em>; the save and the command, led <em>Or, with the
+        Simulator running, in Terminal run:</em>, sit shut under <em>other ways</em>; no restart step</td></tr>
+      <tr><td>click <em>trust in the Simulator</em></td><td>① <em>done — trusted in iPhone 17 Pro</em> on the next store
+        read. A failure says what <code>simctl</code> answered and opens <em>other ways</em></td></tr>
+      <tr><td>click <em>open it in the Simulator</em></td><td>Safari in that Simulator opens the marked address; ③ settles
+        from the captured request, never from the click</td></tr>
+      <tr><td>task 1's way back</td><td>Device → Erase All Content and Settings as path parts, with what it wipes behind
+        its <em>?</em></td></tr>
+      <tr><td>any platform's command, narrow window</td><td>the line breaks at a space, never inside <code>$d</code></td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code></td><td>green; the Simulator reel gains <code>none-running</code>,
+        <code>trusted</code> and <code>route-open</code> chapters</td></tr>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="tests">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>the Simulator's guide: no restart step (E4); save and
+        command only under alternatives, led by Terminal (E1, W1); the way back's path parts and help (W3); N1's and N2's
+        help</td></tr>
+      <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code></td><td>the awaiting line says <em>task</em> on every
+        platform (W2); none running reads <em>no Simulator running</em>, and a proof still reads done (W4)</td></tr>
+      <tr><td>unit</td><td><code>ui/src/components/CommandBlock.test.tsx</code></td><td>wraps at spaces and breaks only
+        an over-long word (D1)</td></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code> · <code>route.rs</code></td><td>the trust argv runs on
+        each running Simulator with the live certificate's file; the open route runs on each one, with a checked mark;
+        <code>DEVELOPER_DIR</code> from Simulator.app's Xcode (I1–I3, N1)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>the one act and each button by state,
+        exactly one framed control (E1–E3, Q2); the click changes no status and the store reading does (I1); a failure opens
+        <em>other ways</em></td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>across every Simulator reading and
+        traffic state: one framed control, no explanatory text outside a help host (R1), no <em>step N</em> pointing at a
+        task</td></tr>
+      <tr><td>e2e</td><td>—</td><td>waived at the WU: a running Simulator is neither hermetic nor in CI, as W7 waived it.
+        Emphasis is judged by your reading of the reels. The real-Simulator journey stays with W20</td></tr>
+    </table>
+
+    <h2 id="where">Where the changes land</h2>
+    <table data-c="where">
+      <tr><th>Where</th><th>For</th></tr>
+      <tr><td><code>ui/src/setup.ts</code>: <code>simulatorSetup</code>, the Simulator's routes, its way back</td><td>E1 · E3 · E4 · W1 · W3 · N1 · N2</td></tr>
+      <tr><td><code>ui/src/verdicts.ts</code>: the awaiting line, none running</td><td>W2 · W4</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code>: the one act, the buttons, the framing rule</td><td>E1–E3 · I1–I3 · Q2</td></tr>
+      <tr><td><code>ui/src/components/CommandBlock.tsx</code></td><td>D1</td></tr>
+      <tr><td><code>ui/src-tauri/src/setup.rs</code> · <code>route.rs</code> · <code>scenario.rs</code>: the trust command,
+        the two routes, <code>DEVELOPER_DIR</code>, the harness scripting them</td><td>I1–I3 · N1</td></tr>
+      <tr><td><code>ui/e2e/walkthrough/script.ts</code></td><td>new chapters</td></tr>
+      <tr><td>UC-ONBOARD's Simulator guides</td><td>all</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
+      <tr><td>2</td><td>the plan with your rulings</td></tr>
+      <tr><td>3</td><td>the shell: the trust command, the two routes, <code>DEVELOPER_DIR</code> (I1–I3, N1)</td></tr>
+      <tr><td>4</td><td>the words and the wrap (W1–W4, D1)</td></tr>
+      <tr><td>5</td><td>the buttons, the one act, the guide without a restart (E1–E4, N2, Q2, Q3)</td></tr>
+      <tr><td>6</td><td>the walkthrough's new chapters</td></tr>
+      <tr><td>7</td><td>UC-ONBOARD's Simulator guides</td></tr>
+      <tr><td>8</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
