@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8489af1cdf914ee666bf37c0bd276b85faa1e9db
+base: fbc5cd7c4f5043958271ef3acfc4cb1a414be50e
+tier: key
+signer: vuluu
+report: docs/work/2026-11-01-onboard-revamp-w16-ios-simulator-wording-result.html
+report_sha256: 3c38b1bfb8fcc7487080482f39a29decbeddf272515dc50db74be99269f65027
+date: 2026-11-01
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECRlXl4KTOPfDg9EkKog4O4sXNwE1fJ1nPDc6ClEecbgDPqZqUoRO/ns0
+  wkVWWtq6OZV6iiLVzjHkKRfTQtB2II
+  -----END SSH SIGNATURE-----
