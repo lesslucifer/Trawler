@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU android-emulator-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W17
+branch: wu/onboard-revamp/android-emulator-wording
+base: fccdd1fe6d8840bf27cb0d6afe6d7760ebffe172
+head: ffca4e78800a467971fb5996cdc205dfe5ac5b1d
+diff_sha256: 6331adde64fd6236e1c708d6bf7eb6a84bb245cdcb9cab15dd334cf71831c1cb
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 4
+  stage_seconds:
+    gate0: 42
+    total: 121
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "with no AVD recorded, the screen lays out the su layout, so a Google Play image the user then creates changes layout when it boots"
+    waived: "with no AVD there is no image to read; the screen names Device Manager to create one, and the su layout is the stock Google APIs case. That one change is the only one nothing on disk can foretell"
+  - finding: "the e2e waiver leaves the sys.boot_completed gate and the PlayStore.enabled read unchecked against a real emulator"
+    waived: "sys.boot_completed is the property Android's own boot waits read; PlayStore.enabled was read from the owner's real AVD config this session; the real-emulator journey is W20's, as the plan and result say"
+  - finding: "setup.ts's IN_SHELL names each host's shell beside RUN_IN, which is built from IN_TERMINAL, IN_POWERSHELL and IN_A_TERMINAL"
+    waived: "RUN_IN reuses the leads other platforms' steps already name; IN_SHELL is the bare name the emulator's longer lead is built on. Folding one into the other rewrites those shared leads, outside W17's emulator"
+  - finding: "App's setUpEmulator invokes install_on_emulators and route_emulators beside the two handlers that invoke each"
+    waived: "the one act runs the two shell commands in order and stops on a refused install; a helper shared with the single acts would wrap two invoke calls and hide that order"
+verdict: PASS
+date: 2026-11-01
