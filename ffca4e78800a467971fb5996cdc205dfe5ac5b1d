@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W17
+base: fccdd1fe6d8840bf27cb0d6afe6d7760ebffe172
+design_sha256: 8b485cab60f5418510342298a50c173f9c2b60ac3dc71aa62ba694812ad56f75
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wiring only: the emulator reading held as none until one lands, four shell calls (install_on_emulators before route_emulators for the one act, unroute_emulators), the emulator's three routes by name, and the reading's starting flag handed on; nothing it renders changed shape"
+  - path: ui/src/Onboarding.tsx
+    why: "the emulator's tasks take parts W12's design run already gave this screen, in the slots it gave them: the one act above the tasks, an Action under a task's status, a route button in a guide step and under the try task's status with its ?, the one framed control. After review (S1-S3), the slot above the tasks holds an Action that opens the AVD used last while none runs, and the emulator's own buttons stand disabled until one does - the same parts in the same slots, Button's own disabled state. The owner waived a design run for W17 (2026-11-01: '5. no design') and asked for this change"
+  - path: ui/src/components/MenuPath.tsx
+    why: "its names flow as text, arrows spaced, instead of an inline-flex box, so a ? after a wrapped path follows the last name (W17's D1); its TSDoc anatomy already said inline, wrapping between names and never inside one. Names, tones and arrows unchanged"
+  - path: ui/src/manualSteps.tsx
+    why: "a step with help flows its words as text, so its ? follows the last word wherever the line wraps (W17's D1); a step without help keeps its row; a route that waits for its device renders Button's own disabled state and is never the framed control. Parts, controls and the ? itself unchanged"
+date: 2026-11-01
