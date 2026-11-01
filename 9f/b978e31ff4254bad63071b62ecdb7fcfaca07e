@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU ios-simulator-wording -> epic/onboard-revamp (round 2, read at 8db65a5d; 9fb978e3 adds only ui/src-tauri and docs, the code paths byte-identical)"
+epic: E-ONBRVP
+wu: E-ONBRVP.W16
+branch: wu/onboard-revamp/ios-simulator-wording
+base: fbc5cd7c4f5043958271ef3acfc4cb1a414be50e
+head: 9fb978e31ff4254bad63071b62ecdb7fcfaca07e
+diff_sha256: 81acb57be99db12c2026a5c2700b78df3f8aa84b9334839316b93981fa2d1a49
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    nit: 2
+  stage_seconds:
+    gate0: 41
+    finders: 104
+    total: 187
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 2 }
+findings: { found: 2, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "ui/src/App.tsx setUpSimulator orders trust then proxy across two shell commands, where set_up_this_machine owns its ordering in one"
+    waived: "the order the rule needs holds: a failed trust throws before set_proxy, and trust_simulators refuses when no Simulator runs, so a trust that trusted nothing never leaves the proxy set; set_proxy and remove_ca are already sequenced by the UI"
+  - finding: "ui/src/verdicts.ts NO_SIMULATOR_RUNNING is exported with no consumer outside verdicts.ts"
+    waived: "cosmetic; it sits with the module's other exported status wording and changes no behaviour"
+verdict: PASS
+date: 2026-11-01
