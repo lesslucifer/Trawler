@@ -10,13 +10,17 @@
     <div class="inner">
       <h1>E-ONBRVP.W17 — wording and display: Android emulator</h1>
       <p>W12's pattern and W13's help rule on the Android emulator. adb reaches every emulator running, and a Google APIs image answers <code>su</code>, so the shell can install, route, open the address and start an emulator. Each task leads with a button, keeps its command as the other way, and names the Settings path Android 15 actually shows.</p>
-      <div class="meta">v1 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W17</span> · branch <code>wu/onboard-revamp/android-emulator-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W8</div>
+      <div class="meta">v2 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W17</span> · branch <code>wu/onboard-revamp/android-emulator-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W8</div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Waiting for your rulings</strong> on seventeen findings, W8's two hand-ins and five questions. I found them by
+      <strong>Every point is ruled</strong> (the owner, 2026-11-01: "1. all · 2. one for both as other screens · 3. no
+      confirm · 4. most recent · 5. no design"). Every finding and both hand-ins are taken. Q1, Q2, Q3 and Q5 are A, and Q4
+      is B: the AVD used last gets the button. There is no design run, so each rendered file the build touches is declared
+      <code>undesigned</code> on the design note, with that ruling as its reason. The WU adds no component and no screen,
+      so none needs a citation. I found the findings by
       reading the <code>android-sim</code> reels, which I filmed again on all three hosts at the epic tip
       (<code>fccdd1fe</code>), and the source of its guide. I also tried each step on a throwaway Android 15 emulator
       (Google APIs image, API 35) against a throwaway CA and a local HTTPS server. The emulator, its AVD, the CA and the
@@ -129,7 +133,9 @@ flowchart TB
         <em>Use without an account</em> the address loaded and the server logged the marked <code>GET</code></td><td>I3</td></tr>
       <tr><td><code>emulator -list-avds</code>, and <code>emulator -avd &lt;name&gt;</code></td>
         <td>The first prints each AVD by the name Android Studio's Device Manager shows, with <code>_</code> for spaces.
-        The second boots one. I booted mine headless with <code>-no-window</code>; a user's boots with its window</td><td>I4 · Q4</td></tr>
+        The second boots one. I booted mine headless with <code>-no-window</code>; a user's boots with its window. Each
+        launch rewrites <code>hardware-qemu.ini</code> in the AVD's folder, and its <code>config.ini</code> carries
+        <code>avd.ini.displayname</code>, the name Device Manager shows</td><td>I4 · Q4</td></tr>
       <tr><td>DEC-56 (the app may prove capture itself)</td>
         <td><em>Open it in the emulator</em> has the emulator's own Chrome make the request, as W16's Simulator route does,
         so it is a route and needs no new DEC</td><td>I3</td></tr>
@@ -148,20 +154,20 @@ flowchart TB
         answers.</td>
         <td>The one act leads (Q2). Without it, <em>install in the emulator</em> leads task 1 (I1), or, with no
         <code>su</code>, <em>send it to the emulator</em> (I5). The save, the push and the Settings path go under <em>do it
-        by hand</em>.</td><td></td></tr>
+        by hand</em>.</td><td>take</td></tr>
       <tr><td>E2</td>
         <td><strong>Task 2's only route is a command in a shut guide.</strong> Setting the global proxy needs no root and no
         prompt.</td>
         <td><em>route the emulator</em> leads task 2 (I2). The command, the Settings route and the start-up flag go under
-        <em>do it by hand</em>.</td><td></td></tr>
+        <em>do it by hand</em>.</td><td>take</td></tr>
       <tr><td>E3</td>
         <td><strong>Task 3 is a value to copy</strong> into the emulator's Chrome by hand. Task 3 is a button on This
         machine and on the Simulator.</td>
-        <td><em>open it in the emulator</em> (I3) leads. The address stays printed beside it.</td><td></td></tr>
+        <td><em>open it in the emulator</em> (I3) leads. The address stays printed beside it.</td><td>take</td></tr>
       <tr><td>E4</td>
         <td><strong>With no emulator running, nothing on screen helps start one</strong>, and every command does
         nothing.</td>
-        <td><em>open Pixel 7 API 35</em> (I4) leads task 1 until one runs. Then the install takes its place.</td><td></td></tr>
+        <td><em>open Pixel 7 API 35</em> (I4) leads task 1 until one runs. Then the install takes its place.</td><td>take</td></tr>
     </table>
 
     <h2 id="wording">Part 2 — wording and display</h2>
@@ -172,35 +178,35 @@ flowchart TB
         running, in a terminal, run:</em>. W16 led every Mac command with <em>In Terminal</em>, and
         <code>RUN_IN</code> repeats <code>IN_A_TERMINAL</code>.</td>
         <td><em>In Terminal, with the emulator running, run:</em> on macOS, <em>In PowerShell, …</em> on Windows, and
-        <em>In a terminal, …</em> on Linux. Use one constant, not two.</td><td></td></tr>
+        <em>In a terminal, …</em> on Linux. Use one constant, not two.</td><td>take</td></tr>
       <tr><td>W2</td>
         <td><strong>The way back names a button Android 15 does not show:</strong> <em>… → Trusted credentials → User →
         Trawler … → Remove.</em> The dialog says <em>Uninstall</em>, then asks for <em>OK</em>.</td>
         <td><em>open Trusted credentials</em> (I6), then the path parts <code>Trawler …</code> → <code>Uninstall</code> →
-        <code>OK</code>.</td><td></td></tr>
+        <code>OK</code>.</td><td>take</td></tr>
       <tr><td>W3</td>
         <td><strong>Settings paths are plain arrow text</strong>: the install step, the Wi-Fi route and its undo. W12's D2
         set another app's controls apart as path parts.</td>
-        <td>Each becomes path parts. Each begins at the screen its route opens, where it has one (I5, I6).</td><td></td></tr>
+        <td>Each becomes path parts. Each begins at the screen its route opens, where it has one (I5, I6).</td><td>take</td></tr>
       <tr><td>W4</td>
         <td><strong><em>Can't check here</em> when the screen can, or cannot for another reason.</strong> No reading yet,
         adb not found and no emulator running all show the same line.</td>
         <td>Three answers. A read that has not landed is no reading, as W16 fixed for the Simulator. A read that found no
         emulator shows <em>not done — no emulator running</em>, with I4 leading. When adb is not found, the tasks fall back
-        to traffic as today, with N1's <em>?</em>. A request already proved still reads done, as W8 ruled.</td><td></td></tr>
+        to traffic as today, with N1's <em>?</em>. A request already proved still reads done, as W8 ruled.</td><td>take</td></tr>
       <tr><td>W5</td>
         <td><strong>The notes say what is nothing to do, in jargon, under the last step of the task:</strong> <em>Apps
         targeting Android 7+ only trust user CAs when their network security config opts in.</em> and <em>10.0.2.2 is the
         alias every emulator resolves to the machine it runs on.</em></td>
         <td>Each moves behind the <em>?</em> of the step it explains. The first: <em>Chrome trusts it. An app trusts it
         only if the app opts in to user certificates — yours can, in its network security config.</em> The second sits by
-        the Settings route's server value.</td><td></td></tr>
+        the Settings route's server value.</td><td>take</td></tr>
       <tr><td>D1</td>
         <td><strong>A step's <em>?</em> falls to a line of its own</strong> whenever the step's words wrap (walk-03).
         <code>StepParts</code> puts the words in one <code>inline-flex</code> box, which takes the full width once it
         wraps.</td>
         <td>The words flow inline, and the <em>?</em> follows the last word. This touches every step with help on every
-        platform (Q1).</td><td></td></tr>
+        platform (Q1).</td><td>take</td></tr>
     </table>
 
     <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
@@ -213,37 +219,39 @@ flowchart TB
         DER, copies it as <code>su</code> into the user store under its subject hash (<code>system:system</code>, 644,
         <code>restorecon</code>), and sends <code>TRUST_STORE_CHANGED</code> so an open Chrome trusts it. The store
         reading, not the click, then shows <em>done — trusted in Pixel 7 API 35</em>. A failure says what failed and opens
-        <em>do it by hand</em>.</td><td></td></tr>
+        <em>do it by hand</em>.</td><td>take</td></tr>
       <tr><td>I2</td>
         <td>Route: paste a loop into a terminal.</td>
         <td><strong><em>route the emulator</em></strong>: <code>settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>
-        on every running emulator, as the shell user. The proxy reading shows done.</td><td></td></tr>
+        on every running emulator, as the shell user. The proxy reading shows done.</td><td>take</td></tr>
       <tr><td>I3</td>
         <td>Task 3: copy the marked address into Chrome.</td>
         <td><strong><em>open it in the emulator</em></strong>: <code>am start -a android.intent.action.VIEW</code> with
         the marked address on every running emulator. The shell builds the URL and checks the mark, as for the Simulator.
         Its <em>?</em>: <em>A new emulator's Chrome shows Welcome to Chrome first: tap Use without an account, and the
-        address opens.</em></td><td></td></tr>
+        address opens.</em></td><td>take</td></tr>
       <tr><td>I4</td>
         <td>No emulator running: nothing to press.</td>
-        <td><strong><em>open &lt;AVD&gt;</em></strong>: the shell lists AVDs with <code>emulator -list-avds</code>, shows
-        each by the name Device Manager shows, and starts the chosen one, detached, with <code>emulator -avd</code> (Q4).
-        With no AVD, the step says to create one in Android Studio's Device Manager.</td><td></td></tr>
+        <td><strong><em>open &lt;AVD&gt;</em></strong>: the shell reads the AVD folder (<code>ANDROID_AVD_HOME</code>,
+        else <code>~/.android/avd</code>) and picks the AVD whose <code>hardware-qemu.ini</code> is newest, the one used last
+        (Q4 B). The button names it by its display name, and starts it, detached, with <code>emulator -avd</code>. The start
+        command sits under <em>do it by hand</em>. With no AVD, the step says to create one in Android Studio's Device
+        Manager.</td><td>take</td></tr>
       <tr><td>I5</td>
         <td>No <code>su</code> (a Google Play image): the push, then the full Settings path.</td>
         <td><strong><em>send it to the emulator</em></strong>: the shell pushes <code>trawler-ca.cer</code> to
         <code>Download</code> on every running emulator and opens <em>More security &amp; privacy</em>. Then the path
         parts are <code>Encryption &amp; credentials</code> → <code>Install a certificate</code> → <code>CA
-        certificate</code> → <code>Install anyway</code> → <code>trawler-ca.cer</code>.</td><td></td></tr>
+        certificate</code> → <code>Install anyway</code> → <code>trawler-ca.cer</code>.</td><td>take</td></tr>
       <tr><td>I6</td>
         <td>Ways back: a sentence each.</td>
         <td>Certificate: <strong><em>open Trusted credentials</em></strong> (the User tab), then W2's path parts. Proxy:
         <strong><em>stop routing the emulator</em></strong>, which sets <code>:0</code> on every running emulator, shown
         once task 2 reads done, as This machine's reversal is. The quit dialog keeps the command through
-        <code>routeUndo</code>.</td><td></td></tr>
+        <code>routeUndo</code>.</td><td>take</td></tr>
       <tr><td>M1</td>
         <td>—</td>
-        <td><strong>No media.</strong> Every step is a button, or path parts on a screen a button opened.</td><td></td></tr>
+        <td><strong>No media.</strong> Every step is a button, or path parts on a screen a button opened.</td><td>take</td></tr>
     </table>
 
     <h2 id="handed">Handed in from W8</h2>
@@ -255,10 +263,10 @@ flowchart TB
         <td>The reading carries the adb the shell found, and each command names that path, quoted, with <code>~</code> for
         home (<code>~/Library/Android/sdk/platform-tools/adb</code>). The buttons already use it. Where none is found, the
         command's <em>?</em> says: <em>adb not found? Android Studio puts it in &lt;the host's SDK path&gt;; set
-        ANDROID_HOME if yours is elsewhere.</em></td><td></td></tr>
+        ANDROID_HOME if yours is elsewhere.</em></td><td>take</td></tr>
       <tr><td>N2</td>
         <td><strong>Buttons that run the push and the proxy through adb.</strong></td>
-        <td>I1, I2 and I5.</td><td></td></tr>
+        <td>I1, I2 and I5.</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -268,46 +276,46 @@ flowchart TB
         <td><strong>Who gets the fixes made in shared code?</strong> D1 reaches every step with help on every platform.<br>
         <strong>A</strong> fixed once, for everything that shares it, as W13–W16's Q1 ruled ·
         <strong>B</strong> the emulator only</td>
-        <td>A. A <em>?</em> stranded on its own line is wrong wherever it shows.</td><td></td></tr>
+        <td>A. A <em>?</em> stranded on its own line is wrong wherever it shows.</td><td>A</td></tr>
       <tr><td>Q2</td>
         <td><strong>Does the emulator get a one act above its tasks?</strong><br>
         <strong>A</strong> <em>set up the emulator</em>, framed above the tasks wherever I1 is offered: it installs on
         every running emulator, routes it, and says it does both, as <em>set up the Simulator</em> does. Without
         <code>su</code> there is no one act: I5 and I2 each lead their task ·
         <strong>B</strong> no one act: each task leads with its own button</td>
-        <td>A. It is W12's and W16's pattern, and both halves are things the shell does.</td><td></td></tr>
+        <td>A. It is W12's and W16's pattern, and both halves are things the shell does.</td><td>A</td></tr>
       <tr><td>Q3</td>
         <td><strong>Does writing the root as <code>su</code> ask first?</strong> It bypasses Android's own installer and
         its <em>Install anyway</em> warning.<br>
         <strong>A</strong> no confirm: the click is the act and the button names it ·
         <strong>B</strong> a confirm naming each emulator</td>
         <td>A, as W16's Q3. An emulator is a test device. Settings lists the root, its <em>Uninstall</em> removes it
-        (checked), and the way back stands beside it.</td><td></td></tr>
+        (checked), and the way back stands beside it.</td><td>A</td></tr>
       <tr><td>Q4</td>
         <td><strong>Which emulator does I4 start, when there are several AVDs?</strong><br>
         <strong>A</strong> one button per AVD, by its Device Manager name ·
         <strong>B</strong> one button for the AVD whose files changed last, with the others under <em>other ways</em></td>
-        <td>A. The list is short and the user knows which one they test on. B guesses from file times.</td><td></td></tr>
+        <td>A. The list is short and the user knows which one they test on. B guesses from file times.</td><td>B: the
+        AVD used last, read from the file each launch rewrites</td></tr>
       <tr><td>Q5</td>
         <td><strong>A design run for this WU?</strong><br>
         <strong>A</strong> none, as you ruled for W16: the build uses W12's and W13's parts (the <code>Action</code>,
         route, path and help parts), and every rendered file it touches is declared <code>undesigned</code> with your
         ruling as the reason ·
         <strong>B</strong> round 24 of the setup screen's design run, reviewed before the build</td>
-        <td>A. No component or screen is added. I4's list of AVDs is a row of route buttons.</td><td></td></tr>
+        <td>A. No component or screen is added. I4's list of AVDs is a row of route buttons.</td><td>A</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
-    <p data-c="design">Depends on Q5. Under A, there is no design run, and the design note declares each touched
-      rendered file <code>undesigned</code> with your ruling. Under B, round 24 of the
-      <a href="2026-09-17-onboarding-design-run.html">design run</a> covers the one act, the five buttons, the path parts,
-      the help and D1's wrap, and you review it before the build.</p>
+    <p data-c="design">None, by the owner's ruling of 2026-11-01 (Q5 A). The build uses the parts W12, W13 and W16
+      designed: the <code>Action</code>, route, path and help parts. Every rendered file the diff touches is declared
+      <code>undesigned</code>, with that ruling as its reason.</p>
 
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
       <tr><th>Try this…</th><th>…and see</th></tr>
       <tr><td>choose Android emulator, none running</td><td>① <em>not done — no emulator running</em>, with <em>open
-        Pixel 7 API 35</em> framed, one button per AVD</td></tr>
+        Pixel 7 API 35</em>, the AVD used last, framed</td></tr>
       <tr><td>choose it before the first read lands, or with no adb found</td><td>never <em>no emulator running</em>. With
         no adb found, the traffic line as today, and N1's <em>?</em> on the command</td></tr>
       <tr><td>an emulator running (Google APIs), nothing set up</td><td><em>set up the emulator</em> framed above the
@@ -331,7 +339,7 @@ flowchart TB
     <table data-item="test-plan" data-c="tests">
       <tr><th>Level</th><th>File</th><th>Checks</th></tr>
       <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>the emulator's guide by state: the start step while
-        none runs, one per AVD (I4); the save, the push and the path only under <em>do it by hand</em> (E1, E2); each
+        none runs, naming the AVD used last (I4); the save, the push and the path only under <em>do it by hand</em> (E1, E2); each
         command led per host, naming the found adb (W1, N1); path parts for install, Wi-Fi and the ways back with
         <em>Uninstall</em> (W2, W3); the notes behind their steps' <em>?</em> (W5)</td></tr>
       <tr><td>unit</td><td><code>ui/src/verdicts.test.ts</code></td><td>no reading, adb not found and none running read
@@ -340,7 +348,7 @@ flowchart TB
         its last word (D1)</td></tr>
       <tr><td>unit</td><td><code>ui/src-tauri/src/setup.rs</code> · <code>route.rs</code></td><td>the install argv per
         running emulator: push, the <code>su</code> copy under the subject hash, the broadcast; the proxy and its
-        <code>:0</code>; the open route's checked mark; the AVD list parsed and an AVD outside it refused; the found adb
+        <code>:0</code>; the open route's checked mark; the AVD used last found by its newest <code>hardware-qemu.ini</code>, shown by its display name; the found adb
         reported (I1–I6, N1)</td></tr>
       <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>the one act and each button by state,
         exactly one framed control (E1–E4, Q2); the click changes no status and the reading does (I1, I2); a failure opens
@@ -363,7 +371,7 @@ flowchart TB
       <tr><td><code>ui/src/Onboarding.tsx</code> · <code>ui/src/App.tsx</code>: the one act, the buttons, no reading yet</td><td>E1–E4 · I1–I6 · Q2 · W4</td></tr>
       <tr><td><code>ui/src/manualSteps.tsx</code></td><td>D1</td></tr>
       <tr><td><code>ui/src-tauri/src/setup.rs</code> · <code>route.rs</code> · <code>scenario.rs</code>: install, route,
-        unroute, send, open, the AVD list, the found adb, the harness scripting them</td><td>I1–I6 · N1</td></tr>
+        unroute, send, open, the AVD used last, the found adb, the harness scripting them</td><td>I1–I6 · N1</td></tr>
       <tr><td><code>ui/e2e/walkthrough/script.ts</code> · <code>xtask/src/walkthrough.rs</code></td><td>new chapters, W17's findings listed</td></tr>
       <tr><td>UC-ONBOARD's emulator guides</td><td>all</td></tr>
     </table>
@@ -373,7 +381,7 @@ flowchart TB
       <tr><th>#</th><th>Commit</th></tr>
       <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
       <tr><td>2</td><td>the plan with your rulings</td></tr>
-      <tr><td>3</td><td>the shell: install, route, unroute, send, open, the AVD list, the found adb (I1–I6, N1)</td></tr>
+      <tr><td>3</td><td>the shell: install, route, unroute, send, open, the AVD used last, the found adb (I1–I6, N1)</td></tr>
       <tr><td>4</td><td>the words, the paths and the <em>?</em> (W1–W5, D1)</td></tr>
       <tr><td>5</td><td>the buttons, the one act, no reading yet (E1–E4, I1–I6, Q2–Q4)</td></tr>
       <tr><td>6</td><td>the walkthrough's new chapters</td></tr>
