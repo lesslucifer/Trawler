@@ -513,11 +513,24 @@ test("open it in the Simulator carries the mark the Simulator's address shows", 
 });
 
 test("with none running, open the Simulator asks the shell for the Simulator by name", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "simulator_trust" ? [] : undefined));
   await simulator();
 
   fireEvent.click(await screen.findByRole("button", { name: "open the Simulator" }));
 
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator" } }));
+});
+
+test("a Simulator read that failed never says none runs", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "simulator_trust") throw new Error("ipc down");
+    return undefined;
+  });
+  await simulator();
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("simulator_trust", { pem: PEM }));
+  expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the address in task 3 confirms it");
+  expect(screen.queryByText(/no Simulator running/)).toBeNull();
 });
 
 test("Set the system proxy invokes set_proxy with the configured address, and proves nothing", async () => {

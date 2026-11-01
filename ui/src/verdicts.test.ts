@@ -940,6 +940,7 @@ describe("the Simulator's certificate", () => {
   // or the mark is its reading - and a store that reads absent outranks a mark.
   it("says no Simulator runs where the shell read none, and a proof still reads done", () => {
     expect(simulatorTrustStatus([], null, reading())).toEqual(verdict("not-done", "no Simulator running"));
+    expect(simulatorTrustStatus(null, null, reading())).toEqual(awaiting("the address in task 3 confirms it"));
     expect(simulatorTrustStatus([], null, reading(AT_1402))).toEqual(
       verdict("done", "the Simulator's request decrypted at 14:02"),
     );

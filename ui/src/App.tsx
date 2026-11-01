@@ -304,7 +304,9 @@ export default function App({
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyReading, setProxyReading] =
     useState<ProxyReading>(NO_PROXY_READING);
-  const [simulators, setSimulators] = useState<readonly SimulatorTrust[]>([]);
+  const [simulators, setSimulators] = useState<
+    readonly SimulatorTrust[] | null
+  >(null);
   const [emulators, setEmulators] = useState<readonly EmulatorReading[]>([]);
   // adb starts a server of its own where none runs, so the emulator is read
   // only while it is the platform chosen (W8's Q1).
@@ -344,8 +346,8 @@ export default function App({
           }),
         )
         .then(
-          (read): readonly SimulatorTrust[] => read ?? [],
-          (): readonly SimulatorTrust[] => [],
+          (read): readonly SimulatorTrust[] | null => read ?? null,
+          (): null => null,
         );
       const adb = readsEmulators.current
         ? pem

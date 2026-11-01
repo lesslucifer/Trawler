@@ -387,12 +387,14 @@ fn simulator_store_trust(
     }
 }
 
+// A certificate that does not read leaves every running store unknown, never
+// the Simulators unlisted: none listed is the screen's "none running".
 fn simulators_trust(
     devices: &Path,
-    live: &str,
+    live: Option<&str>,
     query: impl Fn(&Path, &str) -> Option<Ran>,
 ) -> Vec<SimulatorTrust> {
-    let der_hex = der_hex(live);
+    let der_hex = live.and_then(der_hex);
     running_simulators(devices)
         .into_iter()
         .map(|sim| {
@@ -413,10 +415,12 @@ fn sqlite_read(store: &Path, sql: &str) -> Option<Ran> {
 #[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn simulator_trust(pem: String) -> Vec<SimulatorTrust> {
     let home = std::env::var_os("HOME");
-    match (std::env::consts::OS, home, live_body(&pem)) {
-        ("macos", Some(home), Some(live)) => {
-            simulators_trust(&Path::new(&home).join(SIMULATOR_DEVICES), &live, sqlite_read)
-        }
+    match (std::env::consts::OS, home) {
+        ("macos", Some(home)) => simulators_trust(
+            &Path::new(&home).join(SIMULATOR_DEVICES),
+            live_body(&pem).as_deref(),
+            sqlite_read,
+        ),
         _ => Vec::new(),
     }
 }
@@ -2290,7 +2294,7 @@ mod tests {
         let devices = simulators("asked");
         simulator(&devices, "A", "iPhone 17 Pro", 3, true);
         let asked = std::cell::RefCell::new(String::new());
-        simulators_trust(&devices, "MIIB", |_, sql| {
+        simulators_trust(&devices, Some("MIIB"), |_, sql| {
             asked.replace(sql.to_string());
             answered("1\n")
         });
@@ -2304,7 +2308,7 @@ mod tests {
         simulator(&devices, "A", "iPhone 17 Pro", 3, true);
         simulator(&devices, "B", "iPad Air 11-inch (M4)", 1, true);
         simulator(&devices, "C", "iPad mini (A17 Pro)", 3, true);
-        let read = simulators_trust(&devices, "MIIB", |store, _| {
+        let read = simulators_trust(&devices, Some("MIIB"), |store, _| {
             answered(if store.starts_with(devices.join("A")) { "1" } else { "0" })
         });
         assert_eq!(
@@ -2322,13 +2326,13 @@ mod tests {
         let devices = simulators("unread");
         simulator(&devices, "A", "iPhone 17 Pro", 3, false);
         assert_eq!(
-            simulators_trust(&devices, "MIIB", never_queried),
+            simulators_trust(&devices, Some("MIIB"), never_queried),
             [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
         );
         simulator(&devices, "A", "iPhone 17 Pro", 3, true);
         for answer in [Some((false, "")), Some((true, "Error: no such table: tsettings")), None] {
             assert_eq!(
-                simulators_trust(&devices, "MIIB", |_, _| {
+                simulators_trust(&devices, Some("MIIB"), |_, _| {
                     answer.map(|(ok, stdout)| Ran { ok, stdout: stdout.into() })
                 }),
                 [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
@@ -2338,11 +2342,22 @@ mod tests {
     }
 
     #[test]
+    fn a_certificate_that_does_not_read_leaves_each_running_simulator_unknown() {
+        let devices = simulators("unreadable-cert");
+        simulator(&devices, "A", "iPhone 17 Pro", 3, true);
+        assert_eq!(
+            simulators_trust(&devices, None, never_queried),
+            [SimulatorTrust::new("iPhone 17 Pro".into(), None)]
+        );
+        let _ = std::fs::remove_dir_all(&devices);
+    }
+
+    #[test]
     fn no_simulator_running_or_none_installed_reads_nothing() {
         let devices = simulators("none");
         simulator(&devices, "A", "iPhone 17 Pro", 1, true);
-        assert_eq!(simulators_trust(&devices, "MIIB", never_queried), []);
-        assert_eq!(simulators_trust(&devices.join("absent"), "MIIB", never_queried), []);
+        assert_eq!(simulators_trust(&devices, Some("MIIB"), never_queried), []);
+        assert_eq!(simulators_trust(&devices.join("absent"), Some("MIIB"), never_queried), []);
         let _ = std::fs::remove_dir_all(&devices);
     }
 

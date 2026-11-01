@@ -932,7 +932,7 @@ interface SetupProps {
   probing?: boolean;
   traffic?: Traffic;
   ownProofAt?: number | null;
-  simulators?: readonly SimulatorTrust[];
+  simulators?: readonly SimulatorTrust[] | null;
   emulators?: readonly EmulatorReading[];
   savedCa?: SavedCa;
   // Another device (DEC-63) - the Simulator, whose wire is this machine's too,
@@ -1096,7 +1096,8 @@ function PlatformSetup({
   const onSetUp = ownStore ? onSetUpSimulator : onSetUpThisMachine;
   const setUp = useAction(onSetUp && (() => onSetUp().then(routing("set"))));
   const trustSimulators = useAction(onTrustSimulators);
-  const simulatorsRunning = simulators.length > 0;
+  const stores = simulators ?? NO_SIMULATORS;
+  const simulatorsRunning = stores.length > 0;
   const saveCa = useAction(onSaveCa && (() => onSaveCa(caFormatFor(platform))));
   const setProxyAction = useAction(
     onSetProxy && (() => onSetProxy().then(routing("set"))),
@@ -1127,7 +1128,7 @@ function PlatformSetup({
     proxyAddr,
     reach: allowed ? { proxy: reach.proxy!, caUrls: reach.ca_urls! } : null,
     saved: savedCa,
-    simulatorsRunning,
+    simulatorsRunning: simulators === null ? undefined : simulatorsRunning,
   });
   const here = deviceName("this", os);
 
@@ -1180,7 +1181,7 @@ function PlatformSetup({
       : refusedAddress(address.refusal, evidence, reading, address.now);
   const trustUnread = probesTrust(platform) && trustProbe === "unknown";
   const trustDone = probesOwnStore(platform)
-    ? (storesTrusted(simulators) ?? device.provedAt !== null)
+    ? (storesTrusted(stores) ?? device.provedAt !== null)
     : adb
       ? (storesTrusted(emulators) ?? evidence.decrypted)
       : !probesTrust(platform)
@@ -1372,8 +1373,7 @@ function PlatformSetup({
   // open guide's first - else the request once both halves read done.
   // Everything else is bare (W12's E1, E2; W16's E2).
   const proved = traffic.lastDecryptedAt !== null;
-  const deviceRoutes = platform === "this" ? undefined : setup.tryRoutes;
-  const requestHere = platform === "this" || deviceRoutes !== undefined;
+  const requestHere = platform === "this" || setup.deviceRoute !== undefined;
   const next:
     | "set-up"
     | "trust-simulators"
@@ -1555,8 +1555,8 @@ function PlatformSetup({
                       ? addressTest.maybeRefused
                       : setup.refusedAfterProof,
                     trustedOn:
-                      probesOwnStore(platform) && storesTrusted(simulators)
-                        ? trustedSimulators(simulators)
+                      probesOwnStore(platform) && storesTrusted(stores)
+                        ? trustedSimulators(stores)
                         : null,
                     refused:
                       emulatorRefused ??
@@ -1588,18 +1588,17 @@ function PlatformSetup({
               open={open}
             />
           )}
-          {open &&
-            deviceRoutes?.map((route) => (
-              <div key={route.open} data-testid="open-on-device" className="pt-2">
-                <Button
-                  onClick={() => open(route.open)}
-                  frame={bare(next === "request")}
-                  tone={next === "request" ? undefined : "mute"}
-                >
-                  {route.label}
-                </Button>
-              </div>
-            ))}
+          {open && setup.deviceRoute && (
+            <div data-testid="open-on-device" className="pt-2">
+              <Button
+                onClick={() => open(setup.deviceRoute!.open)}
+                frame={bare(next === "request")}
+                tone={next === "request" ? undefined : "mute"}
+              >
+                {setup.deviceRoute.label}
+              </Button>
+            </div>
+          )}
           {deviceMark !== undefined && (
             <div
               data-testid="check-address"

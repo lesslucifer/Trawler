@@ -1392,6 +1392,16 @@ describe("the iOS Simulator leads with what the shell can do (W16)", () => {
     expect(onOpenRoute).toHaveBeenCalledWith("simulator");
   });
 
+  // A read that failed or has not landed is no reading: it never says none runs.
+  it("with no Simulator read yet, says what will confirm it and offers nothing a reading would", () => {
+    simulator({ simulators: null });
+
+    expect(task(1)).toHaveTextContent("can't check here — the address in task 3 confirms it");
+    expect(task(1)).not.toHaveTextContent("no Simulator running");
+    for (const name of ["open the Simulator", "set up the Simulator", "trust in the Simulator"])
+      expect(screen.queryByRole("button", { name })).toBeNull();
+  });
+
   // Q2: both halves are the shell's, so one act does them, as on this Mac.
   it("with one running and nothing done, set up the Simulator leads and runs the Simulator's own act", async () => {
     const onSetUpSimulator = vi.fn(async () => {});

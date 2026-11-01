@@ -195,6 +195,8 @@ export interface PlatformSetup {
   tryCommand?: string;
   tryLead?: string;
   tryRoutes?: RoutePart[];
+  // The route that has the device itself make its marked request.
+  deviceRoute?: RoutePart;
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
@@ -237,6 +239,7 @@ export interface SetupContext {
   proxyAddr: string;
   reach: ReachAddresses | null;
   saved?: SavedCa;
+  // Undefined while no Simulator reading has landed.
   simulatorsRunning?: boolean;
 }
 
@@ -1350,12 +1353,12 @@ const SIMULATOR_ERASE: GuideStep = [
 
 // Safari trusts a root simctl adds at once, so no restart is a step (W16's E4).
 // With none running, the steps start by opening one (I3).
-function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa, running = false): PlatformSetup {
+function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa, running?: boolean): PlatformSetup {
   const host = HOST_NOUN[os];
   const format = caFormatFor("ios-sim");
   const trust: Guide = {
     steps: [
-      ...(running ? [] : [OPEN_THE_SIMULATOR]),
+      ...(running === false ? [OPEN_THE_SIMULATOR] : []),
       saveCaStep(format),
       [
         "In Terminal, with the Simulator running, run:",
@@ -1378,7 +1381,7 @@ function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa, running 
       guide: localRoute(os, proxyAddr),
     },
     try: tryTask("ios-sim", os),
-    tryRoutes: running ? [{ open: "simulator-request", label: "open it in the Simulator" }] : undefined,
+    deviceRoute: running ? { open: "simulator-request", label: "open it in the Simulator" } : undefined,
     confirmOn: confirmOn("ios-sim", os),
   };
 }

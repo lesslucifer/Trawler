@@ -410,13 +410,16 @@ export const trustedSimulators = (read: readonly SimulatorTrust[]) =>
 // The Simulator's certificate, read from its own store where one answers, and
 // otherwise from its own marked request: its wire is this machine's too, so
 // nothing else on it is its own (S1), and a refusal is never this task's (S2).
+// `null` is no reading at all - a read that failed or has not landed - and
+// never says none runs.
 export function simulatorTrustStatus(
-  read: readonly SimulatorTrust[],
+  stores: readonly SimulatorTrust[] | null,
   running: Running,
   reading: DeviceReading,
 ): StepStatusView {
   if (running === "checking")
     return verdict("checking", "the certificate store");
+  const read = stores ?? [];
   const missing = read.filter((s) => s.trust === "absent");
   if (missing.length === 1)
     return verdict("not-done", `not in ${missing[0].name}`);
@@ -430,7 +433,7 @@ export function simulatorTrustStatus(
       `${reading.device}'s request decrypted at ${clock(reading.provedAt)}`,
     );
   // The shell read every store there is, and there is none (W16's W4).
-  if (read.length === 0) return verdict("not-done", NO_SIMULATOR_RUNNING);
+  if (stores?.length === 0) return verdict("not-done", NO_SIMULATOR_RUNNING);
   return awaiting(`the address in task ${reading.tryStep} confirms it`);
 }
 
