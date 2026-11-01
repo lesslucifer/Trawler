@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: ffca4e78800a467971fb5996cdc205dfe5ac5b1d
+base: fccdd1fe6d8840bf27cb0d6afe6d7760ebffe172
+tier: key
+signer: vuluu
+report: docs/work/2026-11-01-onboard-revamp-w17-android-emulator-wording-result.html
+report_sha256: c8a0c48450762df9d4e443e9ed83acc96179be41b5dc2b30418846537aa5927f
+date: 2026-11-01
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECN52UPo1ZxGdd91M80si/3Mm4KSgSlvXOI7EvLzpLZw3BUuYJH+XXcVj
+  enBdLCEJVWWox3zZD6966+zvSspW4G
+  -----END SSH SIGNATURE-----
