@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3238d04177dbae190bbe9e6553d23c2d58a2f2a7
+base: 32f6a1a0db08b2bb20674895b527ef6ff574206b
+tier: key
+signer: vuluu
+report: docs/work/2026-11-01-onboard-revamp-w18-iphone-wording-result.html
+report_sha256: 021de69ed5abe7c43a66549ef3161645cdedc17be8d1f709bd99981d0d68bb09
+date: 2026-11-01
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA5pYrpfnrVhqVl4WR1X6rqnSKxf902Fc62c9LNtVDlZBShX30SNnI22L
+  Qn2LG2nZ+pRly8mQic1nPFnkC9x3oN
+  -----END SSH SIGNATURE-----
