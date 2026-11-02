@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W21
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "The other screens' row restated as notes on one switch (DEC-66, rulebook slug notes-on-one-switch); a new row for the e2e emulator journey that depends on the host's running emulator."
+  - path: "docs/decisions/dec-66-notes-show-together-on-one-switch.html"
+    tier: T2
+    action: added
+    distills: "DEC-66: notes on the setup screen are drawn under their lines while one switch is on; the switch starts off, the shell remembers it, the quit dialog follows it, no note is exempt; replaces W13's R1."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-66's routing row."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's reading rule: a note is drawn under its line while the one notes switch is on, not behind a ? per line."
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: added
+    distills: "The epic plan re-opened (v7) with W21's card and status; its links to archived WU docs point into docs/.archive."
+  - path: "docs/work/2026-11-02-onboard-revamp-w21-notes-toggle-plan.html"
+    tier: T3
+    action: added
+    distills: "W21's plan: the 33 notes ruled (25 kept, 8 dropped), the owner's rulings, test plan."
+  - path: "docs/work/2026-11-02-onboard-revamp-w21-notes-toggle-result.html"
+    tier: T3
+    action: added
+    distills: "W21's result: outcome, deviations (no design run, one-row steps, topics removed, the host-dependent e2e journey), evidence."
