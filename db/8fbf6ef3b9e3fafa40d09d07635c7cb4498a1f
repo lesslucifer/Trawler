@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-ONBRVP
+base: 78d519cc6da634e738655c2082210f53caa83507
+tip: db8fbf6ef3b9e3fafa40d09d07635c7cb4498a1f
+diff_sha256: c6e51efbc7a64e6e1061b1c84dedbd0f81530cec59c61febab7c55a18d4d6fb6
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-11-02
