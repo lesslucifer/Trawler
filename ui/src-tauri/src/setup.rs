@@ -211,8 +211,8 @@ fn macos_live_verifies(pem: &str) -> Option<bool> {
         std::env::temp_dir().join(format!("trawler-ca-probe-{}-{n}.pem", std::process::id()));
     std::fs::write(&cert, pem).ok()?;
     let argv = macos_verify_argv(&cert);
-    let verified =
-        Command::new(&argv[0]).args(&argv[1..]).output().ok().map(|out| out.status.success());
+    let args: Vec<&str> = argv[1..].iter().map(String::as_str).collect();
+    let verified = ran(&argv[0], &args).map(|out| out.ok);
     let _ = std::fs::remove_file(&cert);
     verified
 }
@@ -1041,12 +1041,9 @@ fn hardware_ports(os: &str) -> HashMap<String, String> {
     if os != "macos" {
         return HashMap::new();
     }
-    Command::new("networksetup")
-        .arg("-listallhardwareports")
-        .output()
-        .ok()
-        .filter(|listing| listing.status.success())
-        .map(|listing| parse_hardware_ports(&String::from_utf8_lossy(&listing.stdout)))
+    ran("networksetup", &["-listallhardwareports"])
+        .filter(|listing| listing.ok)
+        .map(|listing| parse_hardware_ports(&listing.stdout))
         .unwrap_or_default()
 }
 
@@ -1470,9 +1467,13 @@ fn names_trawler(set: &str, host: &str, own: &[String]) -> bool {
         || own.iter().any(|addr| bare(addr) == bare(set))
 }
 
+fn names_trawler_at(set: &str, at: u16, host: &str, port: u16, own: &[String]) -> bool {
+    at == port && names_trawler(set, host, own)
+}
+
 fn classify(read: &ProxyRead, host: &str, port: u16, own: &[String]) -> ProxyStatus {
     match read {
-        ProxyRead::Set(s, p) if *p == port && names_trawler(s, host, own) => ProxyStatus::Ours,
+        ProxyRead::Set(s, p) if names_trawler_at(s, *p, host, port, own) => ProxyStatus::Ours,
         ProxyRead::Set(..) => ProxyStatus::Foreign,
         ProxyRead::Off => ProxyStatus::None,
         ProxyRead::Unreadable => ProxyStatus::Unknown,
@@ -1718,7 +1719,7 @@ pub(crate) fn read_proxy_among(
 // would freeze the window it is deciding about.
 #[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn proxy_status(host: String, port: u16, own: Vec<String>) -> ProxyReading {
-    let ours = |set: &str, at: u16| at == port && names_trawler(set, &host, &own);
+    let ours = |set: &str, at: u16| names_trawler_at(set, at, &host, port, &own);
     read_proxy_among(&active_system_proxy(std::env::consts::OS, ours), &host, port, &own)
 }
 
