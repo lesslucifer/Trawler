@@ -259,6 +259,24 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     });
   });
 
+  // F26: the ⋮ menu is the list's own route back, and it moves as the dot
+  // does — the last device chosen was not this machine, so it stays answered.
+  it("the ⋮ menu's set up another device opens setup on the last device chosen", async () => {
+    await $('button[aria-label="capture actions"]').click();
+    const item = $('[role="menuitem"][aria-label="set up another device"]');
+    await item.waitForDisplayed({ timeout: 15_000 });
+    await item.click();
+
+    await expect($('[data-testid="lead"]')).toBeExisting();
+    await expect(picker()).toHaveText(
+      expect.stringContaining("Android emulator"),
+    );
+    await expect(dot()).toHaveAttribute("data-status", "connected");
+
+    await button("‹ show traffic").click();
+    await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
+  });
+
   // The quit-time confirm is not driven here: proxy_status reads the real system
   // proxy in this build, so a routed state is not hermetic, and WebDriver cannot
   // press the native menu's ⌘Q. Its rules are held by closeConfirm.test.tsx,

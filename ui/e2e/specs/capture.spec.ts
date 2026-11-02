@@ -109,3 +109,29 @@ describe("UC-6 / UC-7 — empty the capture, and bring a flow back", () => {
     expect(await rowCount()).toBe(0);
   });
 });
+
+// UC-ONBOARD's way into setup from a list nothing has reached (P4). The window's
+// own clear reads "All cleared", so the capture is emptied through the core
+// instead, as another client of the control API would — after a row, since the
+// window keeps reading "All cleared" until one arrives.
+describe("UC-ONBOARD — the empty list's route into setup", () => {
+  it("an empty capture offers set up capture, and it opens setup", async () => {
+    await hit();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "the list never refilled after the last clear",
+    });
+    await fetch(`${ports.api}/flows`, { method: "DELETE" });
+    const empty = $('[data-testid="empty"]');
+    await browser.waitUntil(
+      async () => (await empty.isExisting()) && (await empty.getText()).includes("Nothing captured yet"),
+      { timeout: 15_000, timeoutMsg: "the emptied capture never read as nothing captured" },
+    );
+
+    await empty.$("button=set up capture").click();
+    await $('[data-testid="lead"]').waitForExist({ timeout: 15_000 });
+
+    await $('//button[starts-with(normalize-space(.), "‹ show traffic")]').click();
+    await empty.waitForExist({ timeout: 15_000 });
+  });
+});
