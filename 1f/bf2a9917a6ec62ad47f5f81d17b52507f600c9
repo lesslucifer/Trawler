@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 1fbf2a9917a6ec62ad47f5f81d17b52507f600c9
+base: 6a205f2549d73d652dd10f7d40983d67eef1024d
+tier: key
+signer: vuluu
+report: docs/work/2026-11-02-onboard-revamp-w20-e2e-distill-result.html
+report_sha256: d6c04896aa795e14493aaa20d3add5f479310e695e99ee9d077b72d7d3f842a4
+date: 2026-11-02
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEABO6ET329FtmcbjD/uwHVqNZsQaYvcvptiKC1kNuJLAHgDQduLs1A9ud
+  gWSFupMIvMf87FVH0U51NONQoa6WgA
+  -----END SSH SIGNATURE-----
