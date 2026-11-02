@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBRVP
+wu: E-ONBRVP.W20
+branch: HEAD
+tests:
+  unit: { count: 19, covers: "The shell's release profile unwinds, so wry's objc2 catch can drop a WebKit scheme task that was already stopped instead of aborting the app: the detector reads only [profile.release] and refuses panic = \"abort\", and the shell's Cargo.toml passes it. The e2e window starts hidden and the walkthrough's is shown (a hidden page loads no recording). Every config that declares the window keeps minWidth >= 850, since a merged config replaces the windows array whole." }
+  integration: { waived: "W20 changes no product contract the screen states: the profile fix changes how a stopped IPC task ends, not what any reading says, and every contract the journeys cross is held at integration by W1-W19 (App.test.tsx, Onboarding.test.tsx, onboardingMatrix.test.tsx). The fix itself is held by the unit guard and by the walkthrough loop that found it (4 of 18 launches died under abort, 0 of 18 unwinding)." }
+  e2e: { count: 16, covers: "The window runs hidden; the two emulator journeys ask for their closing reading by a focus, since setup's watch reads only while visible (U3) and the emulator counts an unmarked request only between two readings (DEC-63). The list's two routes into setup: the ⋮ menu's set up another device opens setup on the last device chosen with the dot connected (F26), and a capture the core emptied offers set up capture, which opens setup. Five runs at the code tip, 48 of 48 each. The walkthrough, 24 reels and 201 chapters, filmed green with its hit reading around the request." }
