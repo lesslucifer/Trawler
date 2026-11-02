@@ -19,5 +19,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/setup-tests.ts"],
     exclude: ["e2e/**", "node_modules/**"],
+    // The onboarding matrix renders every state in one file, so one worker
+    // holds the whole sweep; node's default heap no longer fits it.
+    poolOptions: { forks: { execArgv: ["--max-old-space-size=8192"] } },
   },
 });

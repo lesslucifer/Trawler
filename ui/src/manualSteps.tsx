@@ -1,21 +1,150 @@
 import type { ReactNode } from "react";
-import { CopyText, Disclosure, Select, StepList } from "./components/index";
+import {
+  Button,
+  CommandBlock,
+  CopyText,
+  Disclosure,
+  Help,
+  MenuPath,
+  QrCode,
+  Select,
+  StepList,
+  StepMedia,
+} from "./components/index";
+import {
+  isCommand,
+  isHelp,
+  isMedia,
+  isPath,
+  isRoute,
+  isSave,
+  isScan,
+  type CaFormat,
+  type GuideStep,
+  type HelpPart,
+  type RouteName,
+} from "./setup";
+import { STEP_MEDIA } from "./stepMedia";
+import type { ActionHandle } from "./useAction";
 
-// The two screens that show manual instructions share this shape: pick a target,
-// read its steps, grab its command. StepList's @use asks for a command step to
-// arrive as a CopyText, so the command is REPLACED in place rather than appended
-// beside the prose that introduces it — and a step the host renders richer than
-// text (the save-certificate step) is replaced the same way, by its own text.
-function withSlots(
-  steps: string[],
-  command: string | null,
-  label: string,
-  slots: Partial<Record<string, ReactNode>>,
-): ReactNode[] {
-  return steps.map((step) => {
-    if (slots[step] !== undefined) return slots[step];
-    return step === command ? <CopyText value={step} label={label} /> : step;
+// The two screens that show a platform's instructions — setup and the quit
+// dialog — render its steps the same way, so a step fixed for one reads fixed
+// in the other (W11's S4).
+
+// A value is read inside the sentence that names it, because that sentence is
+// what says which field it goes in. A command is read somewhere else entirely,
+// so it leaves the sentence and takes a surface of its own.
+function Value({ value, label, wire }: { value: string; label: string; wire: string }) {
+  return (
+    <span data-wire={wire} className="font-mono">
+      <CopyText value={value} label={label} />
+    </span>
+  );
+}
+
+// A route opens a screen for the step it sits in, so it is a control in the
+// sentence, as the save is. The guide's first control is the one framed where
+// it is the next thing to do on the screen (W12's E1). A step with no control
+// to click frames its code: a phone's camera is the only way this machine
+// reaches it (W18's E1).
+export interface StepControls {
+  save?: ActionHandle;
+  open?: (route: RouteName) => void;
+  framed?: boolean;
+}
+
+export function StepParts({ step, save, open, framed = false }: { step: GuideStep } & StepControls) {
+  const said = step.filter((part) => !isCommand(part) && !isMedia(part) && !isHelp(part));
+  const help = step.find(isHelp);
+  const commands = step.filter(isCommand);
+  const scans = step.filter(isScan);
+  const media = step.filter(isMedia);
+  const frame = (control: boolean) => (framed && control ? {} : ({ frame: "bare", tone: "mute" } as const));
+  const firstControl = said.findIndex(
+    (part) => typeof part === "object" && ((isRoute(part) && !part.disabled) || isSave(part)),
+  );
+  const framesScan = framed && firstControl === -1;
+  const parts = said.map((part, i) => {
+    if (typeof part === "string") return <span key={i}>{part}</span>;
+    if ("copy" in part) return <Value key={i} value={part.copy} label={part.label} wire={part.wire} />;
+    if (isPath(part)) return <MenuPath key={i} path={part.path} />;
+    if (isRoute(part))
+      return open ? (
+        <Button key={i} {...frame(i === firstControl)} onClick={() => open(part.open)} disabled={part.disabled}>
+          {part.label}
+        </Button>
+      ) : null;
+    return save?.trigger ? (
+      <Button key={i} {...frame(i === firstControl)} onClick={save.trigger} disabled={save.state === "running"}>
+        save…
+      </Button>
+    ) : null;
   });
+  return (
+    <>
+      {said.length > 0 && (
+        <Explained help={help}>
+          <span data-testid="step-words" className="flex flex-wrap items-center gap-chrome-gap">
+            {parts}
+          </span>
+        </Explained>
+      )}
+      {scans.map((part, i) => (
+        <div key={i} data-testid="scan-code" className="pt-2">
+          {framesScan && i === 0 ? (
+            <div data-framed className="inline-block rounded-button border border-hairline p-control-x">
+              <QrCode value={part.copy} label={part.label} />
+            </div>
+          ) : (
+            <QrCode value={part.copy} label={part.label} />
+          )}
+        </div>
+      ))}
+      {commands.map((part, i) => (
+        <CommandBlock key={i} value={part.command} label={part.label} />
+      ))}
+      {media.map((part) => (
+        <StepMedia key={part.media} media={STEP_MEDIA[part.media]} alt={part.alt} shows={part.shows} />
+      ))}
+    </>
+  );
+}
+
+// What explains a step is drawn under it while notes are shown (DEC-66).
+export function Explained({ help, children }: { help?: HelpPart; children: ReactNode }) {
+  if (help === undefined) return <>{children}</>;
+  return (
+    <Help text={help.help}>
+      {children}
+    </Help>
+  );
+}
+
+// The save control produces the file the step names, so its outcome lands inside
+// that step rather than under the guide that contains it.
+export function GuideSteps({
+  steps,
+  save,
+  saveNote,
+  open,
+  framed = false,
+}: {
+  steps: GuideStep[];
+  saveNote?: (format: CaFormat) => ReactNode;
+} & StepControls) {
+  return (
+    <StepList
+      steps={steps.map((step, i) => {
+        const saves = step.find(isSave);
+        return (
+          <div key={i} className="flex min-w-0 flex-col gap-chrome-gap">
+            <StepParts step={step} save={save} open={open} framed={framed && i === 0} />
+            {saves && saveNote?.(saves.save)}
+          </div>
+        );
+      })}
+    />
+  );
 }
 
 export function TargetPicker({
@@ -37,29 +166,9 @@ export function TargetPicker({
   );
 }
 
-export function ManualSteps({
-  steps,
-  command = null,
-  commandLabel = "",
-  slots = {},
-  testId,
-}: {
-  steps: string[];
-  command?: string | null;
-  commandLabel?: string;
-  slots?: Partial<Record<string, ReactNode>>;
-  testId: string;
-}) {
-  return (
-    <div data-testid={testId}>
-      <StepList steps={withSlots(steps, command, commandLabel, slots)} />
-    </div>
-  );
-}
-
 // Fork D4: Disclosure always discloses, so the host owns the "collapsed or not at
-// all" branch. Both screens make the same choice — hide the manual route behind a
-// summary where an action leads, render it bare where none does.
+// all" branch — the manual route hides behind a summary where an action leads,
+// and renders bare where none does.
 export function ManualFallback({
   summary,
   collapsed,

@@ -77,6 +77,25 @@ test.each(["pem", "cer", "mobileconfig"] as const)(
   },
 );
 
+test("latestCapture asks for the one newest captured row and answers it, or null", async () => {
+  const row = { id: "f9", started_at: "2026-07-12T10:00:00Z", source: "captured" } as FlowSummary;
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ flows: [row], next_cursor: "f8" }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ flows: [], next_cursor: null }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  const api = createApi("http://127.0.0.1:9999/");
+  expect(await api.latestCapture()).toBe(row);
+  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/flows?source=captured&limit=1");
+  expect(await api.latestCapture()).toBeNull();
+});
+
+test("latestCapture throws ApiError on a non-ok response", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+  await expect(createApi("http://x").latestCapture()).rejects.toBeInstanceOf(ApiError);
+});
+
 test("listFlows throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
   await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);
@@ -113,6 +132,22 @@ test("stream routes a connection event to onConnection only, never onEvent", () 
 
   listeners["request"].forEach((fn) => fn(new Event("request")));
   expect(onEvent).toHaveBeenCalledOnce();
+});
+
+// D9: the tunnel's host is the one thing a CONNECT names, and the route of the
+// app's own request is read from it.
+test("a connection event hands over the authority its tunnel named", () => {
+  const listeners = stubEventSource();
+  const onConnection = vi.fn();
+  createApi("http://x").stream({ onEvent: vi.fn(), onConnection });
+
+  const fire = (data: string) =>
+    listeners["connection"].forEach((fn) => fn(new MessageEvent("connection", { data })));
+  fire(JSON.stringify({ authority: "example.com:443" }));
+  fire("not json");
+  fire(JSON.stringify({ authority: 7 }));
+
+  expect(onConnection.mock.calls).toEqual([["example.com:443"], [""], [""]]);
 });
 
 test("getBody asks for the rendered view or the source, and keeps the content type", async () => {
@@ -319,7 +354,7 @@ test("listFlows parses the provenance mark off a summary", async () => {
   expect((await createApi("http://x").listFlows({}))[0].source).toBe("imported");
 });
 
-const UNREACHABLE = { armed: false, proxy: null, api: null, ca_urls: null, interfaces: [] };
+const UNREACHABLE = { armed: false, proxy: null, api: null, ca_urls: null, wifi_page: null, interfaces: [] };
 
 test("reach reads the current state and the interfaces on offer", async () => {
   const state = {
@@ -347,6 +382,7 @@ test("armReach posts the chosen address and returns what actually bound", async 
       cer: "http://192.168.1.20:7421/ca.cer",
       mobileconfig: "http://192.168.1.20:7421/ca.mobileconfig",
     },
+    wifi_page: "http://192.168.1.20:7421/android-wifi",
     interfaces: [{ name: "en0", address: "192.168.1.20" }],
   };
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => armed });
@@ -360,6 +396,23 @@ test("armReach posts the chosen address and returns what actually bound", async 
     body: JSON.stringify({ address: "192.168.1.20" }),
   });
   expect(result.ca_urls?.mobileconfig).toBe("http://192.168.1.20:7421/ca.mobileconfig");
+  expect(result.wifi_page).toBe("http://192.168.1.20:7421/android-wifi");
+});
+
+test("a core older than the Wi-Fi page reads as serving none, never as undefined", async () => {
+  const { wifi_page: _, ...older } = {
+    ...UNREACHABLE,
+    armed: true,
+    proxy: "192.168.1.20:7420",
+    wifi_page: "unused",
+  };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => older }));
+
+  const api = createApi("http://x");
+
+  expect((await api.reach()).wifi_page).toBeNull();
+  expect((await api.armReach("192.168.1.20")).wifi_page).toBeNull();
+  expect((await api.disarmReach()).wifi_page).toBeNull();
 });
 
 test("a refused arm throws the server's own sentence, for the person who confirmed", async () => {

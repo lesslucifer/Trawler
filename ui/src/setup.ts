@@ -5,7 +5,9 @@
 // platform's OS is only ever an implementation detail of its instructions.
 // Pure data and pure functions; no I/O, no React.
 
-import type { CaFormat } from "./api";
+import type { CaFormat, ReachState } from "./api";
+import type { AndroidSdk } from "./verdicts";
+import { REQUEST_HOST } from "./ownRequest";
 import type { ProxyTarget } from "./proxyTargets";
 import { proxyOffSnippet, proxyOffSteps } from "./proxyTargets";
 
@@ -29,6 +31,15 @@ export function canAutoSetup(os: HostOs): boolean {
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");
   return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
+}
+
+// The address reach is armed on, where this machine no longer holds it (R1): a
+// network change leaves the listener bound to an address no device routes to,
+// and the core reports the two without comparing them.
+export function lostAddress(reach: ReachState): string | null {
+  if (!reach.armed || reach.proxy === null) return null;
+  const host = splitProxyAddr(reach.proxy).host.replace(/^\[(.*)\]$/, "$1");
+  return reach.interfaces.some((i) => i.address === host) ? null : host;
 }
 
 // One file per format a platform's installer opens, each under the name its
@@ -76,6 +87,8 @@ export interface CopyPart {
   copy: string;
   label: string;
   wire: string;
+  // A value a phone opens by scanning rather than typing (DEC-57).
+  scan?: boolean;
 }
 export interface CommandPart {
   command: string;
@@ -84,14 +97,76 @@ export interface CommandPart {
 export interface SavePart {
   save: CaFormat;
 }
-export type StepPart = string | CopyPart | CommandPart | SavePart;
+// Controls in another app, named in click order; the screen sets each name
+// apart from the sentence (W12's D2).
+export interface PathPart {
+  path: readonly string[];
+}
+// A screen the shell opens for the step, by name: the set is closed and the
+// shell builds what it opens (W12's I1-I3).
+export type RouteName =
+  | "proxy-settings"
+  | "keychain"
+  | "certificate"
+  | "browser"
+  | "simulator"
+  | "simulator-request"
+  | "emulator"
+  | "emulator-request"
+  | "emulator-certificate"
+  | "trusted-credentials";
+export interface RoutePart {
+  open: RouteName;
+  label: string;
+  // It acts on a device that is not running yet (W17's S1).
+  disabled?: boolean;
+}
+// A recording of a step no route finishes, named here and bundled by the
+// screen, so this module stays free of assets (W12's M1).
+export type MediaName =
+  | "macos-always-trust"
+  | "macos-proxies"
+  | "windows-install-cert"
+  | "windows-proxy"
+  | "linux-firefox-import"
+  | "linux-proxy"
+  | "ios-install-profile"
+  | "ios-full-trust"
+  | "android-install-ca"
+  | "android-wifi-proxy";
+export interface MediaPart {
+  media: MediaName;
+  alt: string;
+  shows: string;
+}
+// What explains a step and is nothing to do in it: drawn under the step while
+// the screen's notes are shown (DEC-66).
+export interface HelpPart {
+  help: string;
+}
+export type StepPart = string | CopyPart | CommandPart | SavePart | PathPart | RoutePart | MediaPart | HelpPart;
 export type GuideStep = readonly StepPart[];
 
 export const isCommand = (part: StepPart): part is CommandPart =>
   typeof part === "object" && "command" in part;
 
+export const isScan = (part: StepPart): part is CopyPart =>
+  typeof part === "object" && "copy" in part && part.scan === true;
+
 export const isSave = (part: StepPart): part is SavePart =>
   typeof part === "object" && "save" in part;
+
+export const isPath = (part: StepPart): part is PathPart =>
+  typeof part === "object" && "path" in part;
+
+export const isRoute = (part: StepPart): part is RoutePart =>
+  typeof part === "object" && "open" in part;
+
+export const isMedia = (part: StepPart): part is MediaPart =>
+  typeof part === "object" && "media" in part;
+
+export const isHelp = (part: StepPart): part is HelpPart =>
+  typeof part === "object" && "help" in part;
 
 // One platform's instructions for one task. `steps` is the route the reader
 // takes; everything else is what a numbered step must not be. A note is true of
@@ -104,6 +179,9 @@ export interface Guide {
   alternatives?: GuideStep[];
   undoTitle?: string;
   undo?: GuideStep[];
+  // Steps for stores no probe reads, still offered once the probed one reads
+  // done: Linux's browsers keep their own (W12's W6).
+  unprobed?: GuideStep[];
 }
 
 // One numbered task of a platform's setup: what the user does, why it is worth
@@ -125,12 +203,36 @@ export interface PlatformSetup {
   route: Task;
   try: Task;
   tryCommand?: string;
+  tryLead?: string;
+  tryRoutes?: RoutePart[];
+  // The route that has the device itself make its marked request.
+  deviceRoute?: RoutePart;
+  deviceRouteHelp?: HelpPart;
+  // What starts the device while none runs: above the tasks, where the one act
+  // stands once one does (W17's S1).
+  start?: RoutePart | GuideStep;
   // The un-probeable state, worded as the promise it is: nothing here can read
   // that device's stores, and the first request it makes is what settles it.
   confirmOn: string;
   // What a user who already did the certificate steps checks next when traffic
   // arrives and does not decrypt: the one thing this platform's users miss.
-  notDecrypting: string;
+  // None where a refusal is never this platform's certificate task's to say.
+  notDecrypting?: string;
+  // What a refusal after another device's proof most likely is, where this
+  // platform knows better than every platform's answer (DEC-63 rule 7).
+  refusedAfterProof?: string;
+  addressTest?: AddressTest;
+}
+
+// A platform whose own services refuse whatever its certificate does, so the
+// address its try task offers is the certificate's one test (W9's Q1): that
+// address refused, said by the certificate task where it is the device's and
+// by the try task where it may be anyone's, and every other refusal, which is
+// never the certificate's.
+export interface AddressTest {
+  refused: string;
+  maybeRefused: string;
+  elsewhereRefused: string;
 }
 
 // The addresses an off-machine platform's instructions are built from. Null
@@ -139,12 +241,23 @@ export interface PlatformSetup {
 export interface ReachAddresses {
   proxy: string;
   caUrls: Record<CaFormat, string>;
+  // Null where the core serves no Wi-Fi page.
+  wifiPage: string | null;
 }
+
+// Where this machine's save put each certificate file, by the path the save
+// returned. A file not saved yet is read from Downloads, where the save dialog
+// opens (W7's C1).
+export type SavedCa = Partial<Record<CaFormat, string>>;
 
 export interface SetupContext {
   os: HostOs;
   proxyAddr: string;
   reach: ReachAddresses | null;
+  saved?: SavedCa;
+  // Undefined while no Simulator reading has landed.
+  simulatorsRunning?: boolean;
+  emulator?: EmulatorContext;
 }
 
 interface PlatformFacts {
@@ -163,8 +276,22 @@ interface PlatformFacts {
   // one — borrowing an answer about the wrong store is worse than no answer.
   probesTrust: boolean;
   probesRoute: boolean;
+  // A store of its own that this machine can still read: each Simulator
+  // running keeps one (W7's Q1).
+  probesOwnStore: boolean;
+  // It sends through this machine's own system proxy, so this machine's
+  // traffic is on its wire for as long as it is routed: nothing unmarked is
+  // its own, ever, and only its marked request settles anything (DEC-63).
+  sharesHostWire: boolean;
+  // Its own stores and its own proxy are adb's to read, one reading per
+  // emulator running (W8's Q1, Q2); its traffic arrives on this machine's
+  // loopback, so only its mark, or what arrived while this machine's proxy did
+  // not point here, is its own (DEC-63).
+  readsOverAdb: boolean;
   // Do this platform's instructions need an address beyond loopback?
   needsReach: boolean;
+  // A device that cannot paste opens a value by scanning it (DEC-57).
+  scans: boolean;
   // The one host this platform runs beside, where it cannot run on every host.
   onlyBeside?: HostOs;
 }
@@ -176,7 +303,11 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: null,
     probesTrust: true,
     probesRoute: true,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: false,
+    scans: false,
   },
   mac: {
     label: "Another Mac",
@@ -184,7 +315,11 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on that Mac",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
+    scans: false,
   },
   windows: {
     label: "Another Windows PC",
@@ -192,7 +327,11 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on that PC",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
+    scans: false,
   },
   ubuntu: {
     label: "Another Ubuntu machine",
@@ -200,7 +339,11 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on that machine",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
+    scans: false,
   },
   "ios-sim": {
     label: "iOS Simulator",
@@ -208,7 +351,11 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "in the Simulator",
     probesTrust: false,
     probesRoute: true,
+    probesOwnStore: true,
+    sharesHostWire: true,
+    readsOverAdb: false,
     needsReach: false,
+    scans: false,
     onlyBeside: "macos",
   },
   "android-sim": {
@@ -217,15 +364,23 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "in the emulator",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: true,
     needsReach: false,
+    scans: false,
   },
   ios: {
     label: "iPhone or iPad",
-    device: "your iPhone",
-    openWhere: "on your iPhone",
+    device: "your iPhone or iPad",
+    openWhere: "on your iPhone or iPad",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
+    scans: true,
   },
   android: {
     label: "Android device",
@@ -233,11 +388,15 @@ const PLATFORMS: Record<PlatformId, PlatformFacts> = {
     openWhere: "on your Android device",
     probesTrust: false,
     probesRoute: false,
+    probesOwnStore: false,
+    sharesHostWire: false,
+    readsOverAdb: false,
     needsReach: true,
+    scans: true,
   },
 };
 
-// The host names itself, so "Set up this Mac" and "Open any website on this
+// The host names itself, so "set up this Mac" and "Make a request from this
 // Mac" say what the user is looking at rather than what the code calls it.
 const HOST_NOUN: Record<HostOs, string> = {
   macos: "this Mac",
@@ -250,6 +409,15 @@ export function deviceName(id: PlatformId, os: HostOs): string {
   return PLATFORMS[id].device ?? HOST_NOUN[os];
 }
 
+const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const lowered = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+// A command offered after a by-hand way to the same end is its other way.
+const orStep = ([lead, ...rest]: GuideStep): GuideStep => [
+  typeof lead === "string" ? `Or ${lowered(lead)}` : lead,
+  ...rest,
+];
+
 function openWhere(id: PlatformId, os: HostOs): string {
   return PLATFORMS[id].openWhere ?? `on ${HOST_NOUN[os]}`;
 }
@@ -258,13 +426,31 @@ function openWhere(id: PlatformId, os: HostOs): string {
 // words it will be settled by (F4). The screen never renders a verdict about a
 // machine it did not read.
 export function confirmOn(id: PlatformId, os: HostOs): string {
-  return `we'll confirm this on ${deviceName(id, os)}'s first request`;
+  return `${deviceName(id, os)}'s first request confirms it`;
 }
 
 // The certificate is settled by a request that could decrypt, and plain HTTP
 // never could, so its promise names the kind of request that will settle it.
 export function confirmHttpsOn(id: PlatformId, os: HostOs): string {
-  return `we'll confirm this on ${deviceName(id, os)}'s first HTTPS request`;
+  return `${deviceName(id, os)}'s first HTTPS request confirms it`;
+}
+
+// Another device's own request, for when its traffic cannot be told from this
+// machine's (DEC-63): an address carrying its mark, opened on that device. The
+// try task's title already says to open a website there, so this is the one.
+// Once proved, opening it again is the one re-read a device allows (W9's S3).
+export function checkStep(id: PlatformId, os: HostOs, url: string, again = false): GuideStep {
+  const lead = PLATFORMS[id].scans
+    ? again
+      ? "to check again, scan it or open"
+      : SCAN_OR_OPEN
+    : again
+      ? `to check again, open it ${openWhere(id, os)}`
+      : `${capitalised(openWhere(id, os))}, open`;
+  return [
+    lead,
+    { copy: url, label: "the address to open", wire: "check url", scan: PLATFORMS[id].scans },
+  ];
 }
 
 // The network task's title, needed before any instruction exists: it is the
@@ -297,9 +483,10 @@ export function platformChoices(os: HostOs): { id: PlatformId; label: string }[]
 
 // Whether this host has a reader for its own trust store and system proxy. A
 // platform that shares a store asks it; a host with no reader answers unknown,
-// and a re-read of nothing is not offered.
+// and a re-read of nothing is not offered. Linux reads its CA bundle and
+// GNOME's proxy (D8), and says unknown wherever either is not there.
 export function canProbe(os: HostOs): boolean {
-  return os === "macos" || os === "windows";
+  return os !== "other";
 }
 
 export function probesTrust(id: PlatformId): boolean {
@@ -310,8 +497,30 @@ export function probesRoute(id: PlatformId): boolean {
   return PLATFORMS[id].probesRoute;
 }
 
+export function probesOwnStore(id: PlatformId): boolean {
+  return PLATFORMS[id].probesOwnStore;
+}
+
+export function sharesHostWire(id: PlatformId): boolean {
+  return PLATFORMS[id].sharesHostWire;
+}
+
 export function needsReach(id: PlatformId): boolean {
   return PLATFORMS[id].needsReach;
+}
+
+export function scansCodes(id: PlatformId): boolean {
+  return PLATFORMS[id].scans;
+}
+
+export function readsOverAdb(id: PlatformId): boolean {
+  return PLATFORMS[id].readsOverAdb;
+}
+
+// Every platform but This machine is another device whose traffic this
+// machine's may be mixed with, so its own request carries a mark (DEC-63).
+export function marksItsOwn(id: PlatformId): boolean {
+  return needsReach(id) || sharesHostWire(id) || readsOverAdb(id);
 }
 
 // The three systems the screen can give commands for. An unknown host gets the
@@ -321,97 +530,475 @@ type OsTarget = "macos" | "windows" | "linux";
 
 const hostTarget = (os: HostOs): OsTarget => (os === "other" ? "linux" : os);
 
-const FIREFOX_NOTE = "Firefox keeps its own store — import it there too.";
+const NOT_DECRYPTING_SYSTEM_STORE =
+  "Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.";
+
+const NOT_DECRYPTING_LINUX =
+  "Already did? Firefox and Chrome each keep their own store — install it in the browser you opened the address in, then restart it. Apps that pin their own certificate never decrypt.";
+
+const REFUSED_AFTER_PROOF_LINUX =
+  "something else is connecting and not decrypting — one request already did, so it is a browser with a store of its own (Firefox, Chrome), an app that pins its certificate, or another device.";
+
+// Linux has three stores and the browsers read neither of the other two:
+// Firefox keeps its own, Chrome its own beside the NSS database, and curl and
+// the system's tools the system bundle. Each browser is a step walked in its
+// own settings, because the try task opens a browser (C1, W15's I1); Chrome's
+// command is the other way. Chromium moved the NSS database at M146 and keeps
+// an older one where it exists (C3); a Chrome never opened has made neither,
+// and certutil adds only to a database it was asked to create. certutil is not
+// on a stock Ubuntu (C2).
+const FIREFOX_AUTHORITIES = [
+  "Privacy and security",
+  "Connection and software security",
+  "Advanced settings",
+  "Manage certificates",
+  "Authorities",
+];
+const IN_FIREFOX = "In Firefox's Settings, click";
+const TRUST_WEBSITES = "Trust this CA to identify websites";
+const LINUX_OS_VERSION = "Ubuntu 26.04";
+const NSS_DB = '"sql:$([ -d ~/.pki/nssdb ] && echo ~/.pki/nssdb || echo ~/.local/share/pki/nssdb)"';
+const NSS_DB_MADE =
+  "{ [ -d ~/.pki/nssdb ] || [ -d ~/.local/share/pki/nssdb ] || { mkdir -p ~/.local/share/pki/nssdb && certutil -d sql:$HOME/.local/share/pki/nssdb -N --empty-password; }; }";
+const FOR_CHROME = "For Chrome, run:";
+const FOR_SYSTEM_TOOLS = "For curl and the system's tools, run:";
+const IN_CHROME = "In Chrome or Chromium's Settings, click";
+const CHROME_TRUSTED = [
+  "Privacy and security",
+  "Security",
+  "Manage certificates",
+  "Local certificates",
+  "Installed by you",
+  "Trusted Certificates",
+];
+
+const LINUX_BROWSER_STEPS: GuideStep[] = [
+  [
+    IN_FIREFOX,
+    { path: [...FIREFOX_AUTHORITIES, "Import…"] },
+    {
+      media: "linux-firefox-import",
+      alt: `Firefox: ${FIREFOX_AUTHORITIES.join(" → ")} → Import… → ${PEM_FILE} → ${TRUST_WEBSITES}`,
+      shows: `${LINUX_OS_VERSION}, Firefox 154`,
+    },
+  ],
+  [`Choose ${PEM_FILE}, tick`, { path: [TRUST_WEBSITES] }, "and click", { path: ["OK"] }],
+  [IN_CHROME, { path: [...CHROME_TRUSTED, "Import"] }, `and choose ${PEM_FILE}`],
+];
 
 interface OsTrust {
   install: GuideStep[];
-  notes: string[];
+  // The store This machine's probe reads: a step where the status reads it,
+  // another way where nothing does (W15's Q2).
+  probedStore?: GuideStep;
   alternatives?: GuideStep[];
   undoTitle: string;
   undo: GuideStep[];
+  notDecrypting: string;
+  refusedAfterProof?: string;
 }
 
-const OS_TRUST: Record<OsTarget, OsTrust> = {
-  macos: {
-    install: [
-      [
-        "Run it in a terminal:",
-        {
-          command:
-            `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${PEM_FILE}`,
-          label: "the trust command",
-        },
-      ],
-    ],
-    notes: [FIREFOX_NOTE],
-    alternatives: [["Or double-click the file and set the Trawler CA to Always Trust."]],
-    undoTitle: "to remove it later",
-    undo: [
-      [
-        "Run:",
-        {
-          command:
-            'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
-          label: "the removal command",
-        },
-      ],
-      ["Or delete the Trawler Proxy CA entry in Keychain Access → System."],
-    ],
+// A Mac's certificate by hand goes into the login keychain, where trusting it
+// asks for the user's password and no administrator's; opening the file asks
+// which keychain and offers iCloud, which holds no trust (W12's build). The
+// command adds to the System keychain, so the way back reaches both, whichever
+// way ran (W13's W6).
+const MACOS_OS_VERSION = "macOS 26";
+const IN_TERMINAL = "In Terminal, run:";
+const ALWAYS_TRUST = ["Trust", "When using this certificate", "Always Trust"];
+const CA_NAME = "Trawler Proxy CA";
+
+const ALWAYS_TRUST_STEP: GuideStep = [
+  "Search Trawler, double-click",
+  { path: [CA_NAME] },
+  "and set",
+  { path: ALWAYS_TRUST },
+  {
+    media: "macos-always-trust",
+    alt: `Keychain Access: ${CA_NAME} → ${ALWAYS_TRUST.join(" → ")}`,
+    shows: MACOS_OS_VERSION,
   },
-  windows: {
+];
+const CLOSE_AND_PASSWORD: GuideStep = ["Close the window and enter your password."];
+
+const macTrustCommand = (file: string): CommandPart => ({
+  command: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
+  label: "the trust command",
+});
+
+const MAC_KEYCHAIN_UNDO: GuideStep[] = [
+  ["In Keychain Access, search Trawler and delete", { path: [CA_NAME] }],
+  [
+    `Or ${lowered(IN_TERMINAL)}`,
+    {
+      command: `security delete-certificate -c "${CA_NAME}" login.keychain; sudo security delete-certificate -c "${CA_NAME}" /Library/Keychains/System.keychain`,
+      label: "the removal command",
+    },
+  ],
+];
+
+// Windows' commands are written for PowerShell, the shell Windows opens from
+// Start, Win+X and Terminal: 5.1 there rejects `&&` (C1).
+const POWERSHELL_ADMIN = "In PowerShell as administrator, run:";
+const IN_POWERSHELL = "In PowerShell, run:";
+const WINDOWS_OS_VERSION = "Windows 11";
+const TRUSTED_ROOT_STORE = [
+  "Place all certificates in the following store",
+  "Browse…",
+  "Trusted Root Certification Authorities",
+];
+
+// Windows' certificate dialog imports into the user's Trusted Root store,
+// which asks for no administrator; the command writes the same store (W14's
+// Q3). "Set up this PC" and older commands wrote every user's, so the way back
+// reaches both.
+const WINDOWS_IMPORT: GuideStep[] = [
+  [
+    "Click",
+    { path: ["Install Certificate…", "Next"] },
+    "and choose",
+    { path: TRUSTED_ROOT_STORE },
+    {
+      media: "windows-install-cert",
+      alt: `Certificate Import Wizard: ${TRUSTED_ROOT_STORE.join(" → ")}, then Finish and Yes`,
+      shows: WINDOWS_OS_VERSION,
+    },
+  ],
+  ["Click", { path: ["OK", "Next", "Finish"] }, "and", { path: ["Yes"] }, "on the warning"],
+];
+
+const windowsTrustCommand = (file: string): GuideStep => [
+  IN_POWERSHELL,
+  { command: `certutil -user -addstore -f ROOT ${file}`, label: "the trust command" },
+];
+
+const WINDOWS_CERT_UNDO: GuideStep[] = [
+  [
+    "Start, search",
+    { path: ["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", CA_NAME] },
+    "and delete it",
+  ],
+  [`Or ${lowered(IN_POWERSHELL)}`, { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
+  [
+    `If it was trusted for every user, ${lowered(POWERSHELL_ADMIN)}`,
+    { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the administrator's removal command" },
+  ],
+];
+
+// The trust command reads the certificate file at `file`, which is wherever
+// the step before it left it.
+const OS_TRUST: Record<OsTarget, (file: string) => OsTrust> = {
+  macos: (file) => ({
     install: [
-      [
-        "In an elevated terminal run:",
-        { command: `certutil -addstore -f ROOT ${PEM_FILE}`, label: "the trust command" },
-      ],
+      [`Open ${PEM_FILE} from Downloads, choose`, { path: ["login"] }, "and click", { path: ["Add"] }],
+      ALWAYS_TRUST_STEP,
+      CLOSE_AND_PASSWORD,
     ],
-    notes: [FIREFOX_NOTE],
+    alternatives: [[IN_TERMINAL, macTrustCommand(file)]],
     undoTitle: "to remove it later",
-    undo: [
-      [
-        "In an elevated terminal run:",
-        { command: 'certutil -delstore ROOT "Trawler Proxy CA"', label: "the removal command" },
-      ],
+    undo: MAC_KEYCHAIN_UNDO,
+    notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
+  }),
+  windows: (file) => ({
+    install: [[`Open ${CA_FILES.cer} from Downloads`], ...WINDOWS_IMPORT],
+    alternatives: [windowsTrustCommand(file)],
+    undoTitle: "to remove it later",
+    undo: WINDOWS_CERT_UNDO,
+    notDecrypting: NOT_DECRYPTING_SYSTEM_STORE,
+  }),
+  linux: (file) => ({
+    install: LINUX_BROWSER_STEPS,
+    probedStore: [
+      FOR_SYSTEM_TOOLS,
+      {
+        command: `sudo cp ${file} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
+        label: "the trust command",
+      },
     ],
-  },
-  linux: {
-    install: [
-      [
-        "Run it in a terminal:",
-        {
-          command:
-            `sudo cp ${PEM_FILE} /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates`,
-          label: "the trust command",
-        },
-      ],
-    ],
-    notes: [FIREFOX_NOTE],
     alternatives: [
       [
-        "Chrome reads the NSS store instead:",
+        FOR_CHROME,
         {
-          command: `certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i ${PEM_FILE}`,
-          label: "the NSS command",
+          command: `sudo apt install -y libnss3-tools && ${NSS_DB_MADE} && certutil -d ${NSS_DB} -A -t C,, -n trawler -i ${file}`,
+          label: "the Chrome command",
         },
       ],
     ],
     undoTitle: "to remove it later",
     undo: [
+      [IN_FIREFOX, { path: [...FIREFOX_AUTHORITIES, CA_NAME, "Delete or Distrust…"] }],
+      [IN_CHROME, { path: [...CHROME_TRUSTED, CA_NAME] }, "and delete it"],
       [
-        "Run:",
+        "If you ran the Chrome command, run:",
+        { command: `certutil -d ${NSS_DB} -D -n trawler`, label: "the Chrome removal command" },
+      ],
+      [
+        "If you ran the system command, run:",
         {
           command:
             "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
           label: "the removal command",
         },
       ],
-      [
-        "NSS store:",
-        { command: "certutil -d sql:$HOME/.pki/nssdb -D -n trawler", label: "the NSS removal" },
-      ],
     ],
-  },
+    notDecrypting: NOT_DECRYPTING_LINUX,
+    refusedAfterProof: REFUSED_AFTER_PROOF_LINUX,
+  }),
 };
+
+// This Mac's own routes (W12): the route opens Keychain Access on the login
+// keychain itself, and the proxy's own settings pane. Each command is the
+// other way.
+function thisMacTrust(file: string): Guide {
+  return {
+    steps: [
+      ["Add it to your login keychain", { open: "keychain", label: "open in Keychain Access" }],
+      ALWAYS_TRUST_STEP,
+      CLOSE_AND_PASSWORD,
+    ],
+    alternatives: [saveCaStep("pem"), [IN_TERMINAL, macTrustCommand(file)]],
+    undoTitle: "to remove it later",
+    undo: MAC_KEYCHAIN_UNDO,
+  };
+}
+
+const PROXIES_PATH = ["Wi-Fi", "Details…", "Proxies"];
+const ON_ETHERNET = "On Ethernet, click Ethernet in place of Wi-Fi, and change Wi-Fi to Ethernet in the command.";
+
+const PROXIES_STEP: GuideStep = [
+  "Click",
+  { path: PROXIES_PATH },
+  {
+    media: "macos-proxies",
+    alt: `System Settings: Network → ${PROXIES_PATH.join(" → ")}, both proxies on`,
+    shows: MACOS_OS_VERSION,
+  },
+];
+const BOTH_PROXIES: StepPart[] = ["Turn on", { path: ["Web proxy (HTTP)"] }, "and", { path: ["Secure web proxy (HTTPS)"] }];
+const CLICK_OK: GuideStep = ["Click", { path: ["OK"] }];
+const MAC_PROXY_OFF: GuideStep = [
+  "Turn off",
+  { path: ["Web proxy (HTTP)"] },
+  "and",
+  { path: ["Secure web proxy (HTTPS)"] },
+  "in",
+  { path: ["System Settings", "Network", ...PROXIES_PATH] },
+  "and click",
+  { path: ["OK"] },
+];
+
+function macRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
+  return {
+    steps: [first, PROXIES_STEP, [...BOTH_PROXIES, ...values], CLICK_OK],
+    notes: [ON_ETHERNET],
+    alternatives: [[IN_TERMINAL, { command: routeCommand("macos", addr)!, label: "the proxy command" }]],
+    undoTitle: "to turn it off later",
+    undo: proxyOffByHand(MAC_PROXY_OFF, "macos"),
+  };
+}
+
+function thisMacRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return macRoute(addr, ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }], [
+    "— each with server",
+    { copy: host, label: "the proxy server", wire: "proxy host" },
+    "and port",
+    { copy: String(port), label: "the proxy port", wire: "proxy port" },
+  ]);
+}
+
+// That Mac's route is walked by hand: nothing here opens a screen on it, and
+// the server and port are above the task (W13's I2).
+const thatMacRoute = (addr: string): Guide =>
+  macRoute(addr, ["On that Mac, open", { path: ["System Settings", "Network"] }], ["— each with the server and port above"]);
+
+// This PC's own routes (W12's Q5): the certificate opens in Windows' own
+// dialog and the proxy in its Settings page. Each command is the other way.
+function thisPcTrust(file: string): Guide {
+  return {
+    steps: [["Open it in Windows' certificate dialog", { open: "certificate", label: "open the certificate" }], ...WINDOWS_IMPORT],
+    alternatives: [saveCaStep("pem"), windowsTrustCommand(file)],
+    undoTitle: "to remove it later",
+    undo: WINDOWS_CERT_UNDO,
+  };
+}
+
+const PROXY_PAGE = ["Settings", "Network & internet", "Proxy"];
+const MANUAL_PROXY_SETUP = ["Manual proxy setup", "Use a proxy server", "Set up"];
+const PC_PROXY_OFF: GuideStep = [
+  "Turn off",
+  { path: ["Use a proxy server"] },
+  "in",
+  { path: [...PROXY_PAGE, "Manual proxy setup", "Edit"] },
+  "and click",
+  { path: ["Save"] },
+];
+
+// Detection and a setup script each outrank a manual proxy (W5's N2), and the
+// registry writes tell no running app, where Settings does (W5's N1).
+const NOTHING_ARRIVES: HelpPart = {
+  help: "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy.",
+};
+const APPS_ALREADY_OPEN: HelpPart = {
+  help: "Apps already open may keep their old setting until restarted.",
+};
+
+function pcRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
+  return {
+    steps: [
+      first,
+      [
+        "Click",
+        { path: MANUAL_PROXY_SETUP },
+        {
+          media: "windows-proxy",
+          alt: `Settings: ${PROXY_PAGE.slice(1).join(" → ")} → ${MANUAL_PROXY_SETUP.join(" → ")}, the proxy on`,
+          shows: WINDOWS_OS_VERSION,
+        },
+      ],
+      ["Turn on", { path: ["Use a proxy server"] }, ...values],
+      ["Click", { path: ["Save"] }, NOTHING_ARRIVES],
+    ],
+    alternatives: [[IN_POWERSHELL, { command: routeCommand("windows", addr)!, label: "the proxy command" }, APPS_ALREADY_OPEN]],
+    undoTitle: "to turn it off later",
+    undo: proxyOffByHand(PC_PROXY_OFF, "windows"),
+  };
+}
+
+function thisPcRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return pcRoute(addr, ["Open the proxy settings", { open: "proxy-settings", label: "open Proxy settings" }], [
+    "— with proxy IP address",
+    { copy: host, label: "the proxy server", wire: "proxy host" },
+    "and port",
+    { copy: String(port), label: "the proxy port", wire: "proxy port" },
+  ]);
+}
+
+// That PC's route is walked by hand, as that Mac's is (W14's I2).
+const thatPcRoute = (addr: string): Guide =>
+  pcRoute(addr, ["On that PC, open", { path: PROXY_PAGE }], ["— with the server and port above"]);
+
+// GNOME's Network panel, whose proxy page keeps its edits until Save; its
+// command is the other way. Only apps that read GNOME's proxy follow it (W6's
+// N2), and gsettings needs the desktop's session, which SSH has not (W6's N1).
+const GNOME_MANUAL_PROXY = ["Proxy", "Network Proxy", "Configuration", "Manual"];
+const LINUX_PROXY_OFF: GuideStep = [
+  "Turn off",
+  { path: ["Network Proxy"] },
+  "in",
+  { path: ["Settings", "Network", "Proxy"] },
+  "and click",
+  { path: ["Save"] },
+];
+const WHAT_FOLLOWS_IT: HelpPart = {
+  help: "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY.",
+};
+const ON_ITS_DESKTOP: HelpPart = {
+  help: "Run it on that machine's desktop — over SSH it sets nothing.",
+};
+
+function linuxRoute(
+  addr: string,
+  first: GuideStep,
+  values: StepPart[],
+  command: (cmd: CommandPart) => GuideStep,
+): Guide {
+  return {
+    steps: [
+      first,
+      [
+        "Click",
+        { path: GNOME_MANUAL_PROXY },
+        {
+          media: "linux-proxy",
+          alt: `Settings: Network → ${GNOME_MANUAL_PROXY.join(" → ")}, both proxies set`,
+          shows: LINUX_OS_VERSION,
+        },
+      ],
+      ["Set", { path: ["HTTP Proxy"] }, "and", { path: ["HTTPS Proxy"] }, ...values],
+      ["Click", { path: ["Save"] }, WHAT_FOLLOWS_IT],
+    ],
+    alternatives: [command({ command: routeCommand("linux", addr)!, label: "the proxy command" })],
+    undoTitle: "to turn it off later",
+    undo: proxyOffByHand(LINUX_PROXY_OFF, "linux"),
+  };
+}
+
+function thisLinuxRoute(addr: string): Guide {
+  const { host, port } = splitProxyAddr(addr);
+  return linuxRoute(
+    addr,
+    ["Open the network settings", { open: "proxy-settings", label: "open Network settings" }],
+    [
+      "— each with URL",
+      { copy: host, label: "the proxy server", wire: "proxy host" },
+      "and port",
+      { copy: String(port), label: "the proxy port", wire: "proxy port" },
+    ],
+    (cmd) => [IN_A_TERMINAL, cmd],
+  );
+}
+
+// That machine's route is walked by hand, as that Mac's is (W15's I2).
+const thatUbuntuRoute = (addr: string): Guide =>
+  linuxRoute(
+    addr,
+    ["On that machine, open", { path: ["Settings", "Network"] }],
+    ["— each with the server and port above"],
+    (cmd) => ["In a terminal on that machine, run:", cmd, ON_ITS_DESKTOP],
+  );
+
+// The route a host's own machine takes: its settings screen on macOS, Windows
+// and Linux, else the command a terminal answers to.
+function localRoute(os: HostOs, addr: string): Guide {
+  if (os === "macos") return thisMacRoute(addr);
+  if (os === "windows") return thisPcRoute(addr);
+  if (os === "linux") return thisLinuxRoute(addr);
+  return terminalRoute(addr);
+}
+
+const IN_A_TERMINAL = "In a terminal, run:";
+
+// Where a command runs, named as each host names its shell (W12's one name
+// per route).
+const IN_SHELL: Record<HostOs, string> = {
+  macos: "In Terminal",
+  windows: "In PowerShell",
+  linux: "In a terminal",
+  other: "In a terminal",
+};
+
+const RUN_IN: Record<HostOs, string> = {
+  macos: IN_TERMINAL,
+  windows: IN_POWERSHELL,
+  linux: IN_A_TERMINAL,
+  other: IN_A_TERMINAL,
+};
+
+// A browser on another computer saves the certificate to Downloads, and so
+// does this machine's save dialog until the user points it elsewhere; a
+// terminal opens elsewhere, so a command names the folder (C2, W7's C1).
+// Linux names that folder in the session's language, so it asks for it (C4).
+const DOWNLOADED: Record<OsTarget, (file: string) => string> = {
+  macos: (file) => `~/Downloads/${file}`,
+  windows: (file) => `"$HOME\\Downloads\\${file}"`,
+  linux: (file) => `"$(xdg-user-dir DOWNLOAD)/${file}"`,
+};
+
+// A path the user chose may hold a space or a quote, so it is quoted for the
+// shell its command runs in: PowerShell on Windows, a POSIX shell elsewhere.
+const posixQuoted = (path: string) => `'${path.replace(/'/g, "'\\''")}'`;
+const QUOTED: Record<OsTarget, (path: string) => string> = {
+  macos: posixQuoted,
+  windows: (path) => `'${path.replace(/'/g, "''")}'`,
+  linux: posixQuoted,
+};
+
+function savedFile(target: OsTarget, format: CaFormat, saved: SavedCa = {}): string {
+  const path = saved[format];
+  return path === undefined ? DOWNLOADED[target](CA_FILES[format]) : QUOTED[target](path);
+}
 
 function routeCommand(t: ProxyTarget, addr: string): string | null {
   const { host, port } = splitProxyAddr(addr);
@@ -419,7 +1006,7 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
     case "macos":
       return `networksetup -setwebproxy Wi-Fi ${host} ${port} && networksetup -setsecurewebproxy Wi-Fi ${host} ${port}`;
     case "windows":
-      return `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d ${addr} /f && reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f`;
+      return `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d ${addr} /f; reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f`;
     case "linux":
       return `gsettings set org.gnome.system.proxy mode 'manual' && gsettings set org.gnome.system.proxy.http host '${host}' && gsettings set org.gnome.system.proxy.http port ${port} && gsettings set org.gnome.system.proxy.https host '${host}' && gsettings set org.gnome.system.proxy.https port ${port}`;
     case "terminal":
@@ -429,29 +1016,35 @@ function routeCommand(t: ProxyTarget, addr: string): string | null {
   }
 }
 
-const ROUTE_LEAD: Record<OsTarget | "terminal", string> = {
-  macos: "Run — this sets the Wi-Fi service; change the name for Ethernet:",
-  windows: "Run:",
-  linux: "GNOME — run:",
-  terminal: "Export the proxy in your shell (curl, npm and most CLIs honour it):",
-};
 
 // proxyOffSteps owns the reversal's prose and splices its command in as a step;
 // the screen needs the same sentences with the command as a value to take, so
 // the command step is replaced in place rather than the prose being retyped.
 function reversal(t: OsTarget | "terminal"): GuideStep[] {
   const command = proxyOffSnippet(t);
-  const said = proxyOffSteps(t).map((step) =>
+  const said: StepPart[] = proxyOffSteps(t).map((step) =>
     step === command ? { command: step, label: "the proxy-off command" } : step,
   );
-  return [said];
+  return [t === "macos" ? [...said, { help: ON_ETHERNET }] : said];
 }
 
-function osRoute(t: OsTarget | "terminal", addr: string): Guide {
+// A desktop set up by hand undoes it there too, its command the other way
+// (W14's Q4); the quit dialog keeps the command alone, through routeUndo.
+function proxyOffByHand(byHand: GuideStep, t: OsTarget): GuideStep[] {
+  return [byHand, ...reversal(t).map(orStep)];
+}
+
+// A host with no desktop known routes its shell alone.
+function terminalRoute(addr: string): Guide {
   return {
-    steps: [[ROUTE_LEAD[t], { command: routeCommand(t, addr)!, label: "the proxy command" }]],
+    steps: [
+      [
+        "Export the proxy in your shell (curl, npm and most CLIs honour it):",
+        { command: routeCommand("terminal", addr)!, label: "the proxy command" },
+      ],
+    ],
     undoTitle: "to turn it off later",
-    undo: reversal(t),
+    undo: reversal("terminal"),
   };
 }
 
@@ -461,80 +1054,272 @@ const DEVICE_PROXY_UNDO = "to turn it off later";
 // why the emulator needs no reach: it is already inside this host's loopback.
 const EMULATOR_HOST = "10.0.2.2";
 
-const ANDROID_USER_CA =
-  "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
+const ANDROID_USER_CA: HelpPart = {
+  help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
+};
 
-const CA_NAME = "Trawler Proxy CA";
+// The task's title names the device, so a step on it starts at what to do,
+// and the code a phone scans leads its own sentence (W18's E1, W5).
+const SCAN_OR_OPEN = "Scan with the camera, or open";
 
-const IOS_UNVERIFIED = "iOS marks the profile Not Verified: it is yours, not signed by a company.";
+// iOS 26's own labels. After a download Settings lists the profile at its top,
+// so the install starts there and the long way is its fallback (W18's W2); the
+// row reads VPN, DNS, & Device Management on some devices (W9's N4).
+const IOS_OS_VERSION = "iOS 26.5";
+const IOS_INSTALL = ["Profile Downloaded", "Install", "Install", "Install", "Done"];
+const IOS_DEVICE_MANAGEMENT = ["General", "VPN & Device Management", CA_NAME];
+const IOS_TRUST = ["General", "About", "Certificate Trust Settings"];
+const IOS_WIFI_PROXY_LEAD: StepPart[] = [
+  "In Settings, tap",
+  { path: ["Wi-Fi"] },
+  "then",
+  { path: ["ⓘ"] },
+  "by the network it is on, then",
+];
+const IOS_DNS_VARIANT = "VPN, DNS, & Device Management on some devices";
+
+const IOS_INSTALL_STEP: GuideStep = [
+  "In Settings, tap",
+  { path: IOS_INSTALL },
+  {
+    media: "ios-install-profile",
+    alt: `Settings: ${IOS_INSTALL.join(" → ")}`,
+    shows: IOS_OS_VERSION,
+  },
+  {
+    help: `It asks for your passcode on the way. Not at the top of Settings? ${IOS_DEVICE_MANAGEMENT.join(" → ")} (${IOS_DNS_VARIANT}). iOS marks the profile Not Verified: it is yours, not signed by a company.`,
+  },
+];
+
+const IOS_TRUST_STEP: GuideStep = [
+  "Turn on full trust: in Settings, tap",
+  { path: IOS_TRUST },
+  "then turn on",
+  { path: [CA_NAME, "Continue"] },
+  {
+    media: "ios-full-trust",
+    alt: `Settings: ${[...IOS_TRUST, CA_NAME, "Continue"].join(" → ")}`,
+    shows: IOS_OS_VERSION,
+  },
+  {
+    help: "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private.",
+  },
+];
+
+const IOS_REMOVE_STEP: GuideStep = [
+  "In Settings, tap",
+  { path: [...IOS_DEVICE_MANAGEMENT, "Remove Profile"] },
+  { help: `The row reads ${IOS_DNS_VARIANT}.` },
+];
 
 const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
 
-const NOT_DECRYPTING_DESKTOP =
-  "Already did? A browser keeps the store it started with until it restarts, and Firefox keeps its own. Apps that pin their own certificate never decrypt.";
+// The profile and the trust switch refuse alike, and the switch is the step a
+// user who installed misses, so it leads (W9's S2).
+const IOS_TRUST_FIRST = `turn on full trust: ${IOS_TRUST_PATH}. Not listed there? The profile is not installed`;
 
-const NOT_DECRYPTING_IOS = `Installed the profile already? Trust is a separate switch: ${IOS_TRUST_PATH}. Apple's own services never decrypt; a website in Safari is the test.`;
+const IOS_ADDRESS_TEST: AddressTest = {
+  refused: `${REQUEST_HOST} did not decrypt ${PLATFORMS.ios.openWhere} — ${IOS_TRUST_FIRST} — the steps below install it.`,
+  maybeRefused: `${REQUEST_HOST} did not decrypt — if you opened it ${PLATFORMS.ios.openWhere}, ${IOS_TRUST_FIRST} — the certificate step installs it.`,
+  elsewhereRefused:
+    "something is connecting and none of it is decrypting — Apple's own services pin their certificates, so they never decrypt. The address below is the test.",
+};
 
-const NOT_DECRYPTING_SIMULATOR =
-  "Already did? Restart the Simulator — its apps keep the store they started with.";
+const REFUSED_AFTER_PROOF_IOS =
+  "something else is connecting and not decrypting — one request already did, so it is Apple's own services, which pin their certificates, an app that pins its certificate, or another device.";
 
-const NOT_DECRYPTING_ANDROID = `Already did? ${CA_NAME} should be under Settings → Security → Encryption & credentials → Trusted credentials → User. Most apps ignore a user certificate on Android 7+; a website in Chrome is the test.`;
+// A user certificate has no second switch, and the installer refuses the wrong
+// type outright, so the address refused in Chrome leaves one cause: the
+// certificate is not in the user store (W10's S2).
+const ANDROID_ADDRESS_TEST: AddressTest = {
+  refused: `${REQUEST_HOST} did not decrypt on your Android device — ${CA_NAME} is not in its user store. The steps below install it. Installed it already? Settings → search Trusted credentials → User lists it; if it does, open the address in Chrome.`,
+  maybeRefused: `${REQUEST_HOST} did not decrypt — if you opened it on your Android device, ${CA_NAME} is not in its user store: the certificate step installs it.`,
+  elsewhereRefused:
+    "something is connecting and none of it is decrypting — Android's own services ignore a user certificate, so they never decrypt. The address below is the test.",
+};
 
-const androidInstall = (format: CaFormat) =>
-  `Install it: Settings → Security → Encryption & credentials → Install a certificate → CA certificate → ${CA_FILES[format]}.`;
+// Android's own services ignore a user certificate by design, and an idle
+// emulator opens a few connections a second that never decrypt (W8's S2).
+const REFUSED_AFTER_PROOF_ANDROID =
+  "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.";
+
+// Android 15's own labels (W19's Q3). A maker moves the installer, and Settings'
+// own search still finds it; search's CA certificate opens Install a
+// certificate, where it is tapped again. Chrome renames the download after its
+// type, so the step names no file (W10's C1, C2; W19's W2).
+const ANDROID_OS_VERSION = "Android 15";
+const ANDROID_INSTALL = ["CA certificate", "CA certificate", "Install anyway"];
+
+// Chrome saves the file on a blank page or its Downloads list, and opening it
+// ends in an alert with only Close (W19's W6).
+const ANDROID_DOWNLOADED =
+  "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that.";
+
+const ANDROID_INSTALL_STEP: GuideStep = [
+  "In Settings, search CA certificate, then tap",
+  { path: ANDROID_INSTALL },
+  "then the trawler-ca file at the top of Recent.",
+  {
+    media: "android-install-ca",
+    alt: `Settings: search CA certificate → ${ANDROID_INSTALL.join(" → ")} → the trawler-ca file`,
+    shows: ANDROID_OS_VERSION,
+  },
+  ANDROID_USER_CA,
+];
+
+// Search's Trusted credentials opens Encryption & credentials, where it is
+// tapped again, as the installer's is (W19's N1).
+const ANDROID_REMOVE_STEP: GuideStep = [
+  "In Settings, search Trusted credentials, then tap",
+  { path: ["Trusted credentials", "Trusted credentials", "User", CA_NAME, "Uninstall", "OK"] },
+];
+
+// Search finds no proxy, so the route is the stock path (W10's C3), and the
+// core's page opens its first screen (DEC-65).
+const ANDROID_INTERNET = ["Network & internet", "Internet"];
+const androidProxy = (choice: string[]): StepPart[] => [
+  { path: ["⚙"] },
+  "by the network it is on, then",
+  { path: ["✎", "Advanced options", "Proxy", ...choice] },
+];
+
+const ANDROID_MAKERS: HelpPart = {
+  help: "This is stock Android's menu; makers move it. On another, open the Wi-Fi network it is on and look for Proxy, often under Advanced options.",
+};
+
+const ANDROID_WIFI_RECORDING: MediaPart = {
+  media: "android-wifi-proxy",
+  alt: "Chrome: Open Wi-Fi settings, then Settings: ⚙ → ✎ → Advanced options → Proxy → Manual → Save",
+  shows: ANDROID_OS_VERSION,
+};
+
+// The page leads where the core serves one (DEC-65); a core that predates it
+// leaves the Settings path to lead.
+function androidRoute(wifiPage: string | null): GuideStep[] {
+  const values: GuideStep = [
+    "Put the server and port above into",
+    { path: ["Proxy hostname"] },
+    "and",
+    { path: ["Proxy port"] },
+    "then tap",
+    { path: ["Save"] },
+  ];
+  return wifiPage === null
+    ? [
+        ["In Settings, tap", { path: ANDROID_INTERNET }, "then", ...androidProxy(["Manual"]), ANDROID_WIFI_RECORDING, ANDROID_MAKERS],
+        values,
+      ]
+    : [
+        [
+          SCAN_OR_OPEN,
+          { copy: wifiPage, label: "the Wi-Fi page", wire: "wifi page url", scan: true },
+          "and tap",
+          { path: ["Open Wi-Fi settings"] },
+          "then",
+          ...androidProxy(["Manual"]),
+          ANDROID_WIFI_RECORDING,
+          ANDROID_MAKERS,
+        ],
+        values,
+      ];
+}
 
 // Each platform gets the one format its installer opens: an iPhone installs a
 // configuration profile from Safari, Files and AirDrop alike, where a bare
 // certificate installs from none of them; Android's CA installer reads DER and
-// lists .cer; every desktop trust command and simctl read PEM.
+// lists .cer; Windows opens a .cer in its certificate dialog and has no handler
+// for .pem (W14's Q2); every other desktop trust command and simctl read PEM.
 export function caFormatFor(id: PlatformId): CaFormat {
   if (id === "ios") return "mobileconfig";
-  if (id === "android" || id === "android-sim") return "cer";
+  if (id === "android" || id === "android-sim" || id === "windows") return "cer";
   return "pem";
 }
 
-function downloadStep(where: string, reach: ReachAddresses, format: CaFormat, how = ""): GuideStep {
+// The download is the first thing the device does that must reach this
+// machine, so what to check when it cannot sits beside it (W4's N2).
+const unreachable = (device: string, os: HostOs, outcome?: string): HelpPart => {
+  const help = `Doesn't load? ${capitalised(device)} can't reach this one — check both are on the same network, and that ${HOST_NOUN[os]}'s firewall lets Trawler accept incoming connections.`;
+  return outcome === undefined
+    ? { help }
+    : { help: `${outcome} ${help}` };
+};
+
+function downloadStep(
+  id: PlatformId,
+  os: HostOs,
+  reach: ReachAddresses,
+  format: CaFormat,
+  {
+    how = "",
+    scan = false,
+    file = CA_FILES[format],
+    then,
+    outcome,
+  }: { how?: string; scan?: boolean; file?: string; then?: StepPart[]; outcome?: string } = {},
+): GuideStep {
+  const device = deviceName(id, os);
   return [
-    `${where}, open`,
-    { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url" },
-    `${how}— it downloads ${CA_FILES[format]}.`,
+    scan ? SCAN_OR_OPEN : `On ${device}, open`,
+    { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url", scan },
+    ...(then ?? [`${how}— it downloads ${file}.`]),
+    unreachable(device, os, outcome),
   ];
 }
 
-// Why each task is worth doing, said once: the reason never changes with the
-// platform, only the thing it is said about.
-const PROVES_IT = "the first decrypted request is what proves setup works";
-
+// The title names what every route in the task does — the address it offers
+// and any website alike (W12's Q2, W13's Q2); the lead already says why.
 function tryTask(id: PlatformId, os: HostOs): Task {
-  return { title: `Open any website ${openWhere(id, os)}`, why: PROVES_IT };
+  return { title: `Make a request from ${deviceName(id, os)}` };
 }
 
-function localSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+// This machine says each thing once: its lead says why the two tasks matter,
+// so the one why line left is the route's, which says what the lead does not
+// (W12's Q3).
+function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSetup {
   const target = hostTarget(os);
-  const trust = OS_TRUST[target];
+  const file = savedFile(target, caFormatFor("this"), saved);
+  const trust = OS_TRUST[target](file);
   const host = HOST_NOUN[os];
   return {
     trust: {
       title: "Trust Trawler's certificate",
-      why: `so ${host}'s HTTPS can be decrypted`,
-      guide: {
-        steps: [saveCaStep(caFormatFor("this")), ...trust.install],
-        notes: trust.notes,
-        alternatives: trust.alternatives,
-        undoTitle: trust.undoTitle,
-        undo: trust.undo,
-      },
+      guide:
+        os === "macos"
+          ? thisMacTrust(file)
+          : os === "windows"
+            ? thisPcTrust(file)
+            : {
+              steps: [
+                saveCaStep(caFormatFor("this")),
+                ...trust.install,
+                ...(trust.probedStore ? [trust.probedStore] : []),
+              ],
+              alternatives: trust.alternatives,
+              undoTitle: trust.undoTitle,
+              undo: trust.undo,
+              unprobed: trust.probedStore && [saveCaStep(caFormatFor("this")), ...trust.install],
+            },
     },
     route: {
       title: `Send ${host}'s traffic to Trawler`,
-      why: "its system proxy points at Trawler while Trawler runs",
-      guide: osRoute(os === "other" ? "terminal" : target, proxyAddr),
+      guide: localRoute(os, proxyAddr),
     },
-    try: tryTask("this", os),
+    try: { title: `Make a request from ${host}` },
     tryCommand: `curl -x http://${proxyAddr} https://example.com`,
+    tryLead: RUN_IN[os],
+    tryRoutes:
+      os === "other"
+        ? undefined
+        : [{ open: "browser", label: `open ${REQUEST_HOST} in your browser` }],
     confirmOn: confirmOn("this", os),
-    notDecrypting: NOT_DECRYPTING_DESKTOP,
+    notDecrypting: trust.notDecrypting,
   };
+}
+
+function anotherMachineRoute(target: OsTarget, addr: string): Guide {
+  if (target === "macos") return thatMacRoute(addr);
+  if (target === "windows") return thatPcRoute(addr);
+  return thatUbuntuRoute(addr);
 }
 
 function anotherMachineSetup(
@@ -543,30 +1328,30 @@ function anotherMachineSetup(
   target: OsTarget,
   reach: ReachAddresses | null,
 ): PlatformSetup {
-  const trust = OS_TRUST[target];
+  const format = caFormatFor(id);
+  const trust = OS_TRUST[target](DOWNLOADED[target](CA_FILES[format]));
   const device = deviceName(id, os);
   return {
     trust: {
       title: `On ${device}, install Trawler's certificate`,
-      why: `so ${device}'s HTTPS can be decrypted`,
       guide:
         reach === null
           ? undefined
           : {
-              steps: [downloadStep(`On ${device}`, reach, caFormatFor(id)), ...trust.install],
-              notes: trust.notes,
-              alternatives: trust.alternatives,
+              steps: [downloadStep(id, os, reach, format), ...trust.install],
+              alternatives: [...(trust.alternatives ?? []), ...(trust.probedStore ? [trust.probedStore] : [])],
               undoTitle: trust.undoTitle,
               undo: trust.undo,
             },
     },
     route: {
       title: `On ${device}, send its traffic to Trawler`,
-      guide: reach === null ? undefined : osRoute(target, reach.proxy),
+      guide: reach === null ? undefined : anotherMachineRoute(target, reach.proxy),
     },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
-    notDecrypting: NOT_DECRYPTING_DESKTOP,
+    notDecrypting: trust.notDecrypting,
+    refusedAfterProof: trust.refusedAfterProof,
   };
 }
 
@@ -583,17 +1368,24 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              downloadStep(`On ${device}`, reach, format, "in Safari "),
-              [
-                `Install it: Settings → General → VPN & Device Management → ${CA_NAME} → Install.`,
-              ],
-              [
-                `Then turn on full trust. Installing does not: ${IOS_TRUST_PATH}. Until it is on, Safari says This Connection Is Not Private.`,
-              ],
+              downloadStep(id, os, reach, format, {
+                scan: PLATFORMS[id].scans,
+                then: ["in Safari, then tap", { path: ["Allow"] }],
+              }),
+              IOS_INSTALL_STEP,
+              IOS_TRUST_STEP,
             ]
-          : [downloadStep(`On ${device}`, reach, format), [androidInstall(format)]],
-        notes: ios ? [IOS_UNVERIFIED] : [ANDROID_USER_CA],
+          : [
+              downloadStep(id, os, reach, format, {
+                scan: PLATFORMS[id].scans,
+                file: "Trawler's certificate",
+                outcome: ANDROID_DOWNLOADED,
+              }),
+              ANDROID_INSTALL_STEP,
+            ],
         alternatives: [carryOver],
+        undoTitle: "to remove it later",
+        undo: [ios ? IOS_REMOVE_STEP : ANDROID_REMOVE_STEP],
       };
   const route: Guide | undefined =
     reach === null
@@ -601,103 +1393,262 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
       : {
         steps: ios
           ? [
-              ["Settings → Wi-Fi → ⓘ on the network it is on → Configure Proxy → Manual."],
-              ["Put the server and port above into it, and save."],
+              [...IOS_WIFI_PROXY_LEAD, { path: ["Configure Proxy", "Manual"] }],
+              [
+                "Put the server and port above into",
+                { path: ["Server"] },
+                "and",
+                { path: ["Port"] },
+                "then tap",
+                { path: ["Save"] },
+              ],
             ]
-          : [
-              ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
-              ["Put the server and port above into it, and save."],
+          : androidRoute(reach.wifiPage),
+        ...(!ios &&
+          reach.wifiPage !== null && {
+            alternatives: [
+              ["No camera, or nothing opens? In Settings, tap", { path: ANDROID_INTERNET }, "and go on from", { path: ["⚙"] }],
             ],
+          }),
         undoTitle: DEVICE_PROXY_UNDO,
-        undo: ios
-          ? [["Settings → Wi-Fi → the network → Configure Proxy → Off."]]
-          : [["Wi-Fi → the network → Proxy → None."]],
+        undo: routeUndo(id, os),
       };
   return {
     trust: { title: `On ${device}, install the certificate`, guide: trust },
     route: { title: `On ${device}, set the Wi-Fi proxy`, guide: route },
     try: tryTask(id, os),
     confirmOn: confirmOn(id, os),
-    notDecrypting: ios ? NOT_DECRYPTING_IOS : NOT_DECRYPTING_ANDROID,
+    refusedAfterProof: ios ? REFUSED_AFTER_PROOF_IOS : REFUSED_AFTER_PROOF_ANDROID,
+    addressTest: ios ? IOS_ADDRESS_TEST : ANDROID_ADDRESS_TEST,
   };
 }
 
-function emulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+// adb reaches one device unless told which, and refuses with two of anything
+// attached: two emulators, or one and a phone on USB. So every command runs once
+// per emulator running, in the shell its sentence names (C2). A stock Android
+// Studio puts neither adb nor the emulator on the PATH, so a command names the
+// SDK the shell found, as the user's own shell writes it (W17's N1).
+const SDK_TOOL: Record<OsTarget, (sdk: string, dir: string, tool: string) => string> = {
+  macos: (sdk, dir, tool) => `${sdk}/${dir}/${tool}`,
+  linux: (sdk, dir, tool) => `${sdk}/${dir}/${tool}`,
+  windows: (sdk, dir, tool) => `${sdk}\\${dir}\\${tool}.exe`,
+};
+
+function eachEmulator(target: OsTarget, sdk: string | null, args: string): string {
+  if (target === "windows") {
+    const [set, adb] =
+      sdk === null ? ["", "adb"] : [`$adb = "${SDK_TOOL.windows(sdk, "platform-tools", "adb")}"; `, "& $adb"];
+    return `${set}${adb} devices | Select-String '^emulator-\\d+' | ForEach-Object { ${adb} -s $_.Matches[0].Value ${args} }`;
+  }
+  const [set, adb] =
+    sdk === null ? ["", "adb"] : [`adb="${SDK_TOOL[target](sdk, "platform-tools", "adb")}"; `, '"$adb"'];
+  return `${set}for d in $(${adb} devices | grep -Eo '^emulator-[0-9]+'); do ${adb} -s $d ${args}; done`;
+}
+
+function emulatorTool(target: OsTarget, sdk: string | null): string {
+  if (sdk === null) return "emulator";
+  const path = `"${SDK_TOOL[target](sdk, "emulator", "emulator")}"`;
+  return target === "windows" ? `& ${path}` : path;
+}
+
+const SDK_HOME: Record<OsTarget, string> = {
+  macos: "~/Library/Android/sdk",
+  linux: "~/Android/Sdk",
+  windows: "$env:LOCALAPPDATA\\Android\\Sdk",
+};
+
+const adbNotFound = (target: OsTarget): HelpPart => ({
+  help: `adb not found? Android Studio puts it in ${SDK_HOME[target]}${target === "windows" ? "\\" : "/"}platform-tools — set ANDROID_HOME if your SDK is elsewhere.`,
+});
+
+const withEmulatorRunning = (target: OsTarget) => `${IN_SHELL[target]}, with the emulator running, run:`;
+
+// Android 15's own paths: the emulator runs a stock image, so its menus are
+// the ones Google ships, where a phone's are its maker's (C5). Settings opens
+// More security & privacy from the shell, and the installer itself from
+// nowhere (W17's I5).
+const EMULATOR_SECURITY = ["Security & privacy", "More security & privacy"];
+const EMULATOR_INSTALLER = ["Encryption & credentials", "Install a certificate", "CA certificate", "Install anyway"];
+const EMULATOR_PICK_FILE = ["☰", "Downloads", CA_FILES.cer];
+
+// The dialog's own words on Android 15: Uninstall, then OK (W17's W2).
+const emulatorUninstall = (trustedCredentials: RoutePart): GuideStep => [
+  "Open",
+  trustedCredentials,
+  "and tap",
+  { path: [CA_NAME, "Uninstall", "OK"] },
+];
+
+const EMULATOR_WIFI_PROXY = ["AndroidWifi ⚙", "✎", "Advanced options", "Proxy"];
+
+// A new emulator's Chrome opens on its welcome, and the address after it (W17's I3).
+const CHROME_WELCOME: HelpPart = {
+  help: "A new emulator's Chrome shows Welcome to Chrome first: tap Use without an account, and the address opens.",
+};
+
+// The global proxy covers every network the emulator has. Its Wi-Fi is the
+// network a phone's steps name, but an emulator sends over its mobile one
+// wherever that is the default, and a Wi-Fi proxy then routes nothing (C4).
+const emulatorProxy = (value: string) => `shell settings put global http_proxy ${value}`;
+
+// What the shell read of the emulator, for its steps: undefined until a
+// reading lands.
+export interface EmulatorContext {
+  running?: boolean;
+  // su answers on every emulator running, so the shell writes its store; with
+  // none running, the AVD used last says whether it will (W17's S3).
+  rooted?: boolean;
+  sdk?: AndroidSdk;
+}
+
+// With none running, the AVD used last is opened from above the tasks (W17's I4, S1).
+function startEmulator(avd: AndroidSdk["avd"]): RoutePart | GuideStep {
+  return avd === null
+    ? ["In Android Studio, open", { path: ["Device Manager"] }, "and create an emulator."]
+    : { open: "emulator", label: `open ${avd.name}` };
+}
+
+function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined, emulator: EmulatorContext): PlatformSetup {
   const { port } = splitProxyAddr(proxyAddr);
   const format = caFormatFor("android-sim");
-  const trust: Guide = {
-    steps: [
-      saveCaStep(format),
-      [
-        "Push it to the emulator:",
-        { command: `adb push ${CA_FILES[format]} /sdcard/Download/`, label: "the push command" },
-      ],
-      [androidInstall(format)],
-    ],
-    notes: [ANDROID_USER_CA],
-    undoTitle: "to remove it later",
-    undo: [
-      [
-        "Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA.",
-      ],
-    ],
+  const target = hostTarget(os);
+  const sdk = emulator.sdk?.sdk ?? null;
+  const avd = emulator.sdk?.avd ?? null;
+  const missingAdb = sdk === null ? [adbNotFound(target)] : [];
+  const push: CommandPart = {
+    command: eachEmulator(target, sdk, `push ${savedFile(target, format, saved)} /sdcard/Download/`),
+    label: "the push command",
   };
+  const install: GuideStep = [
+    "In the emulator's Settings, tap",
+    { path: [...EMULATOR_SECURITY, ...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] },
+    ANDROID_USER_CA,
+  ];
+  // While none runs, the controls that act on one stand where they will, and
+  // wait for it (W17's S1).
+  const onEmulator = (part: RoutePart): RoutePart =>
+    emulator.running === false ? { ...part, disabled: true } : part;
+  const uninstall = emulatorUninstall(onEmulator({ open: "trusted-credentials", label: "open Trusted credentials" }));
+  const sends = emulator.rooted === false;
+  const trust: Guide = sends
+    ? {
+        steps: [
+          ["Send Trawler's certificate to the emulator", onEmulator({ open: "emulator-certificate", label: "send it to the emulator" })],
+          ["On the screen it opens, tap", { path: [...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] }, ANDROID_USER_CA],
+        ],
+        alternatives: [
+          [
+            `Or save Trawler's certificate as ${CA_FILES[format]}`,
+            { save: format },
+            `and push it: ${lowered(withEmulatorRunning(target))}`,
+            push,
+            ...missingAdb,
+          ],
+        ],
+        undoTitle: "to remove it later",
+        undo: [uninstall],
+      }
+    : {
+        steps: [
+          saveCaStep(format),
+          [withEmulatorRunning(target), push, ...missingAdb],
+          install,
+        ],
+        alternatives:
+          emulator.running === false && avd !== null
+            ? [[`Or ${lowered(RUN_IN[target])}`, { command: `${emulatorTool(target, sdk)} -avd ${avd.id}`, label: "the start command" }]]
+            : undefined,
+        undoTitle: "to remove it later",
+        undo: [uninstall],
+      };
   const route: Guide = {
     steps: [
-      ["Settings → Wi-Fi → the network it is on → Proxy → Manual."],
       [
-        "Server",
+        RUN_IN[target],
+        { command: eachEmulator(target, sdk, emulatorProxy(`${EMULATOR_HOST}:${port}`)), label: "the proxy command" },
+        ...missingAdb,
+      ],
+    ],
+    alternatives: [
+      [
+        "Or in the emulator's Settings, tap",
+        { path: ["Network & internet", "Internet"] },
+        "— turn off",
+        { path: ["Mobile data"] },
+        "— then tap",
+        { path: [...EMULATOR_WIFI_PROXY, "Manual"] },
+        "— server",
         { copy: EMULATOR_HOST, label: "the emulator's host", wire: "proxy host" },
         "port",
         { copy: String(port), label: "the proxy port", wire: "proxy port" },
       ],
-    ],
-    notes: [`${EMULATOR_HOST} is the alias every emulator resolves to the machine it runs on.`],
-    alternatives: [
       [
-        "Or start it with the proxy already set:",
+        `Or start it with the proxy already set — the emulator reads this address on ${HOST_NOUN[os]}:`,
         {
-          command: `emulator -avd <name> -http-proxy http://${EMULATOR_HOST}:${port}`,
+          command: `${emulatorTool(target, sdk)} -avd ${avd?.id ?? "<name>"} -http-proxy http://127.0.0.1:${port}`,
           label: "the emulator command",
         },
       ],
     ],
     undoTitle: DEVICE_PROXY_UNDO,
-    undo: [["Wi-Fi → the network → Proxy → None."]],
+    undo: routeUndo("android-sim", os, sdk),
   };
   return {
     trust: { title: "In the emulator, install the certificate", guide: trust },
-    route: { title: "In the emulator, set the Wi-Fi proxy", guide: route },
+    route: { title: "In the emulator, set the proxy", guide: route },
     try: tryTask("android-sim", os),
+    deviceRoute:
+      emulator.running === undefined ? undefined : onEmulator({ open: "emulator-request", label: "open it in the emulator" }),
+    deviceRouteHelp: emulator.running === undefined ? undefined : CHROME_WELCOME,
+    start: emulator.running === false ? startEmulator(avd) : undefined,
     confirmOn: confirmOn("android-sim", os),
-    notDecrypting: NOT_DECRYPTING_ANDROID,
+    refusedAfterProof: REFUSED_AFTER_PROOF_ANDROID,
   };
 }
 
 // Two stores, two answers. The Simulator follows this Mac's system proxy, so
 // the host's own routing guide is its routing guide; its trust store is its
-// own, and Apple's supported way in is simctl against the booted device.
-function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
+// own, and Apple's supported way in is simctl. `booted` names one Simulator,
+// the one booted last, so the command reaches every one running (C2); and
+// `keychain reset` leaves the root trusted, so the way back is the erase (C3).
+const simulatorTrustCommand = (file: string) =>
+  `for d in $(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}'); do xcrun simctl keychain $d add-root-cert ${file}; done`;
+
+// xcrun follows xcode-select, which may point at the Command Line Tools, and
+// those hold no simctl (W7's N1).
+const SIMCTL_NOT_FOUND: HelpPart = {
+  help: "simctl not found? Run sudo xcode-select -s /Applications/Xcode.app first.",
+};
+
+const OPEN_THE_SIMULATOR: GuideStep = ["Open the Simulator", { open: "simulator", label: "open the Simulator" }];
+
+// simctl adds a root and removes none, and a keychain reset leaves it, so the
+// erase is the only way back (W7's C3); its labels are Simulator's own menu.
+const SIMULATOR_ERASE: GuideStep = [
+  "In the Simulator's menu bar, click",
+  { path: ["Device", "Erase All Content and Settings"] },
+  {
+    help: "It wipes everything in that Simulator. Nothing removes Trawler's root alone.",
+  },
+];
+
+// Safari trusts a root simctl adds at once, so no restart is a step (W16's E4).
+// With none running, the steps start by opening one (I3).
+function simulatorSetup(os: HostOs, proxyAddr: string, saved?: SavedCa, running?: boolean): PlatformSetup {
   const host = HOST_NOUN[os];
+  const format = caFormatFor("ios-sim");
   const trust: Guide = {
     steps: [
-      saveCaStep(caFormatFor("ios-sim")),
+      ...(running === false ? [OPEN_THE_SIMULATOR] : []),
+      saveCaStep(format),
       [
-        "With the Simulator running, run:",
-        {
-          command: `xcrun simctl keychain booted add-root-cert ${PEM_FILE}`,
-          label: "the trust command",
-        },
+        "In Terminal, with the Simulator running, run:",
+        { command: simulatorTrustCommand(savedFile("macos", format, saved)), label: "the trust command" },
+        SIMCTL_NOT_FOUND,
       ],
-      ["Restart the Simulator so apps pick the new root up."],
     ],
     undoTitle: "to remove it later",
-    undo: [
-      [
-        "Reset that Simulator's keychain — this clears everything in it, not only Trawler's root:",
-        { command: "xcrun simctl keychain booted reset", label: "the keychain reset" },
-      ],
-    ],
+    undo: [SIMULATOR_ERASE],
   };
   return {
     trust: {
@@ -708,12 +1659,45 @@ function simulatorSetup(os: HostOs, proxyAddr: string): PlatformSetup {
     route: {
       title: `Send ${host}'s traffic to Trawler`,
       why: `the Simulator follows ${host}'s system proxy`,
-      guide: osRoute(os === "other" ? "terminal" : hostTarget(os), proxyAddr),
+      guide: localRoute(os, proxyAddr),
     },
     try: tryTask("ios-sim", os),
+    deviceRoute: running ? { open: "simulator-request", label: "open it in the Simulator" } : undefined,
     confirmOn: confirmOn("ios-sim", os),
-    notDecrypting: NOT_DECRYPTING_SIMULATOR,
   };
+}
+
+// Each platform's way to stop routing through Trawler, needing no address: the
+// quit dialog shows it whether or not that platform's tasks can be written yet
+// (W11's S4), and setup's "to turn it off later" is the same steps.
+export function routeUndo(id: PlatformId, os: HostOs, sdk: string | null = null): GuideStep[] {
+  const target = hostTarget(os);
+  switch (id) {
+    case "this":
+    case "ios-sim":
+      return reversal(os === "other" ? "terminal" : target);
+    case "mac":
+      return reversal("macos");
+    case "windows":
+      return reversal("windows");
+    case "ubuntu":
+      return reversal("linux");
+    case "android-sim":
+      return [
+        [RUN_IN[target], { command: eachEmulator(target, sdk, emulatorProxy(":0")), label: "the proxy-off command" }],
+        [
+          "Set in Settings? Tap",
+          { path: [...EMULATOR_WIFI_PROXY, "None"] },
+          "— and turn",
+          { path: ["Mobile data"] },
+          "back on.",
+        ],
+      ];
+    case "ios":
+      return [[...IOS_WIFI_PROXY_LEAD, { path: ["Configure Proxy", "Off", "Save"] }]];
+    case "android":
+      return [["In Settings, tap", { path: ANDROID_INTERNET }, "then", ...androidProxy(["None", "Save"])]];
+  }
 }
 
 // Every platform always has its tasks, because the shape of the whole job is
@@ -725,7 +1709,7 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
   const reach = needsReach(id) ? ctx.reach : null;
   switch (id) {
     case "this":
-      return localSetup(ctx.os, ctx.proxyAddr);
+      return localSetup(ctx.os, ctx.proxyAddr, ctx.saved);
     case "mac":
       return anotherMachineSetup(id, ctx.os, "macos", reach);
     case "windows":
@@ -733,9 +1717,9 @@ export function setupFor(id: PlatformId, ctx: SetupContext): PlatformSetup {
     case "ubuntu":
       return anotherMachineSetup(id, ctx.os, "linux", reach);
     case "ios-sim":
-      return simulatorSetup(ctx.os, ctx.proxyAddr);
+      return simulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved, ctx.simulatorsRunning);
     case "android-sim":
-      return emulatorSetup(ctx.os, ctx.proxyAddr);
+      return emulatorSetup(ctx.os, ctx.proxyAddr, ctx.saved, ctx.emulator ?? {});
     case "ios":
     case "android":
       return deviceSetup(id, ctx.os, reach);

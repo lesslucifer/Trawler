@@ -39,6 +39,7 @@ pub struct ReachView {
     proxy: Option<String>,
     api: Option<String>,
     ca_urls: Option<CaUrls>,
+    wifi_page: Option<String>,
     interfaces: Vec<Interface>,
 }
 
@@ -87,17 +88,16 @@ impl Front {
     fn reach_view(&self) -> ReachView {
         let script = self.script();
         let at = |port: u16| script.armed_on.map(|ip| SocketAddr::new(ip, port).to_string());
+        let armed = script.armed_on.map(|ip| Addresses {
+            proxy: SocketAddr::new(ip, self.proxy_port),
+            api: SocketAddr::new(ip, self.api_port),
+        });
         ReachView {
-            armed: script.armed_on.is_some(),
+            armed: armed.is_some(),
             proxy: at(self.proxy_port),
             api: at(self.api_port),
-            ca_urls: script.armed_on.map(|ip| {
-                Addresses {
-                    proxy: SocketAddr::new(ip, self.proxy_port),
-                    api: SocketAddr::new(ip, self.api_port),
-                }
-                .ca_urls()
-            }),
+            ca_urls: armed.map(|a| a.ca_urls()),
+            wifi_page: armed.map(|a| a.wifi_page()),
             interfaces: script.interfaces.clone(),
         }
     }
@@ -252,6 +252,7 @@ mod tests {
                 proxy: None,
                 api: None,
                 ca_urls: None,
+                wifi_page: None,
                 interfaces: vec![ethernet()]
             }
         );
@@ -268,6 +269,7 @@ mod tests {
             view.ca_urls.map(|urls| urls.mobileconfig).as_deref(),
             Some("http://192.168.1.23:7421/ca.mobileconfig")
         );
+        assert_eq!(view.wifi_page.as_deref(), Some("http://192.168.1.23:7421/android-wifi"));
         assert!(view.armed);
         assert!(!front.disarm().armed);
     }
@@ -282,7 +284,7 @@ mod tests {
     #[test]
     fn the_view_serialises_to_the_fields_the_app_reads() {
         let json = serde_json::to_value(front().reach_view()).unwrap();
-        for field in ["armed", "proxy", "api", "ca_urls", "interfaces"] {
+        for field in ["armed", "proxy", "api", "ca_urls", "wifi_page", "interfaces"] {
             assert!(json.get(field).is_some(), "missing {field}");
         }
     }

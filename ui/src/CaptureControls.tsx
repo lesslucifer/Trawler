@@ -12,6 +12,7 @@ export const CAPTURE_COPY = {
   importAct: "import…",
   importName: "import a curl command or a har file",
   newRequestAct: "new request",
+  setUpDeviceAct: "set up another device",
   clearAct: "clear",
   clearPreference: "don't show this again",
   exporting: "exporting…",
@@ -48,12 +49,14 @@ export function CaptureControls({
   count,
   onCleared,
   onNewRequest,
+  onSetUpDevice,
 }: {
   api: TrawlerApi;
   filter: Filter;
   count: number;
   onCleared: () => void;
   onNewRequest?: () => void;
+  onSetUpDevice?: () => void;
 }) {
   // Two flags rather than one slot naming the running transfer: export and
   // import start and finish independently, so a single slot lets whichever
@@ -128,6 +131,11 @@ export function CaptureControls({
     },
     ...(onNewRequest
       ? [{ id: "new-request", label: CAPTURE_COPY.newRequestAct, glyph: CAPTURE_GLYPH.sent, run: onNewRequest }]
+      : []),
+    // F26: the list's way into setup for a list that already has flows — the
+    // header dot is a 10px mark, and the empty list's own button is gone by then.
+    ...(onSetUpDevice
+      ? [{ id: "set-up-device", label: CAPTURE_COPY.setUpDeviceAct, run: onSetUpDevice }]
       : []),
   ];
 

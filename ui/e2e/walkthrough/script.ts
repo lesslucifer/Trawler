@@ -19,16 +19,32 @@ export type Platform =
   | "ios"
   | "android";
 
-export type TrustOs = "trusted" | "untrusted" | "unreadable";
-export type ProxyOs = "unset" | "unreadable" | { set: { host: string; port: number } };
+export type TrustOs = "trusted" | "installed" | "absent" | "unreadable";
+export type ProxyOs =
+  "unset" | "unreadable" | { set: { host: string; port: number } };
 export type Outcome = "ok" | { fails: { stderr: string } };
+
+export type EmulatorProxyOs = "ours" | "wifi-only" | "foreign" | "none" | "unreadable";
 
 export interface Patch {
   trust?: TrustOs;
+  simulators?: { name: string; trust: TrustOs }[];
+  emulators?: { name: string; trust: TrustOs; proxy: EmulatorProxyOs }[];
+  android?: {
+    adb: boolean;
+    sdk: string | null;
+    avd: { id: string; name: string; playStore?: boolean } | null;
+    starting?: boolean;
+  };
+  install_emulators?: Outcome;
+  route_emulators?: Outcome;
+  unroute_emulators?: Outcome;
   proxy?: ProxyOs;
   set_up?: Outcome;
   set_proxy?: Outcome;
   unset_proxy?: Outcome;
+  remove_ca?: Outcome;
+  trust_simulators?: Outcome;
   allow_reach?: boolean;
   allow_replace?: boolean;
   interface_names?: Record<string, string>;
@@ -51,6 +67,8 @@ export interface Walk {
   choose(label: string): Promise<void>;
   click(prefix: string): Promise<void>;
   closeGuide(task: number): Promise<void>;
+  openGuide(task: number): Promise<void>;
+  showNotes(): Promise<void>;
   dot(): Promise<void>;
   filter(text: string): Promise<void>;
   hit(opts?: { untrusted?: boolean }): Promise<void>;
@@ -93,8 +111,16 @@ export interface Reel {
   launches: Launch[];
 }
 
-const OS_NAME: Record<Host, string> = { macos: "macOS", windows: "Windows", linux: "Linux" };
-const DEVICE: Record<Host, string> = { macos: "this Mac", windows: "this PC", linux: "this machine" };
+const OS_NAME: Record<Host, string> = {
+  macos: "macOS",
+  windows: "Windows",
+  linux: "Linux",
+};
+const DEVICE: Record<Host, string> = {
+  macos: "this Mac",
+  windows: "this PC",
+  linux: "this machine",
+};
 
 const PLATFORM_LABEL: Record<Exclude<Platform, "this">, string> = {
   mac: "Another Mac",
@@ -123,8 +149,10 @@ const CANCELLED: Record<Host, string> = {
   linux: "User cancelled. (-128)",
 };
 const INSTALL_ERROR: Record<Host, string> = {
-  macos: "SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (1)",
-  windows: "CertUtil: -addstore command FAILED: 0x80070005 (WIN32: 5 ERROR_ACCESS_DENIED)",
+  macos:
+    "SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (1)",
+  windows:
+    "CertUtil: -addstore command FAILED: 0x80070005 (WIN32: 5 ERROR_ACCESS_DENIED)",
   linux: "update-ca-certificates: permission denied",
 };
 const PROXY_ERROR: Record<Host, string> = {
@@ -134,7 +162,8 @@ const PROXY_ERROR: Record<Host, string> = {
 };
 
 const task = (n: number) => `[data-testid="task-${n}"]`;
-const button = (prefix: string) => `//button[starts-with(normalize-space(.), "${prefix}")]`;
+const button = (prefix: string) =>
+  `//button[starts-with(normalize-space(.), "${prefix}")]`;
 const DECIDED = ['[data-testid="lead"]', '[data-testid="flow-row"]'];
 const LISTBOX = ['[role="listbox"]'];
 const BANNER = ['[data-testid="set-up-banner"]'];
@@ -165,7 +194,16 @@ function picker(host: Host): Chapter {
 
 function autoThis(host: Host): Chapter[] {
   const device = DEVICE[host];
-  const setUp = `Set up ${device}`;
+  const setUp = `set up ${device}`;
+  const trustRoute = {
+    macos: `"open in Keychain Access"`,
+    windows: `"open the certificate"`,
+    linux: `"save…"`,
+  }[host];
+  const trustBack =
+    host === "macos"
+      ? `"remove the certificate", bare, and "do it by hand"`
+      : `only "to remove it later"`;
   const reread = (patch: Patch) => async (w: Walk) => {
     await w.script(patch);
     await w.recheck();
@@ -178,44 +216,64 @@ function autoThis(host: Host): Chapter[] {
       title: "Nothing done yet",
       act: async (w) => {
         await w.closePicker();
-        await reread({ trust: "untrusted", proxy: "unset" })(w);
+        await reread({ trust: "absent", proxy: "unset" })(w);
       },
-      expect: `one "${setUp}" button under the tasks with "one password prompt"; its manual steps collapsed; task 3 waiting for the first request`,
-      findings: [],
+      expect: `"${setUp}", the one framed control, above the tasks with "it does tasks 1 and 2"; each task's "do it by hand" collapsed, with no way back inside it; task 3 "Make a request from ${device}" waiting, its request bare`,
+      findings: ["W12.E1", "W12.E4"],
       anchor: [button(setUp)],
     },
     {
       id: "cert-done",
       title: "The certificate trusted, the proxy off",
       act: reread({ trust: "trusted", proxy: "unset" }),
-      expect: `no "${setUp}" button and no certificate steps under task 2. Task 2 carries "Set the system proxy" and its own steps; task 1's steps are collapsed and keep their undo`,
-      findings: ["R12"],
+      expect: `no "${setUp}" button and no certificate steps under task 2. Task 2 carries "set the system proxy", the one framed control, and "do it by hand"; task 1 keeps ${trustBack}`,
+      findings: ["R12", "W12.E1"],
       anchor: [task(2)],
     },
     {
       id: "proxy-done",
       title: "The proxy ours, the certificate not trusted",
-      act: reread({ trust: "untrusted", proxy: OURS }),
-      expect: `no combined button; task 1's certificate steps are open; no proxy steps are offered as work. The reversal sits inside task 2 and names only the proxy, not a certificate that is not installed`,
-      findings: ["R12", "R14"],
+      act: reread({ trust: "absent", proxy: OURS }),
+      expect: `no combined button; task 1's certificate steps are open, ${trustRoute} the one framed control; no proxy steps are offered as work. Task 2 offers "stop routing through Trawler" with only "do it by hand" under it — no line about a certificate that is not installed`,
+      findings: ["R12", "R14", "W12.E3"],
       anchor: [task(2)],
     },
     {
       id: "both-done",
       title: "Both done",
       act: reread({ trust: "trusted", proxy: OURS }),
-      expect: `no action for either task and no install route offered as work under task 2 — only each task's undo, and "stop routing through Trawler" inside task 2`,
-      findings: ["R13"],
+      expect: `no install route offered as work: task 1 keeps ${trustBack}; task 2 "stop routing through Trawler", with nothing said of the certificate, and "do it by hand"; task 3's request is the one framed control, its browser and terminal under "other ways"`,
+      findings: ["R13", "W12.E2", "W12.E3"],
       anchor: [task(2)],
     },
+    ...(host === "macos"
+      ? [
+          {
+            id: "ca-removed",
+            title: "The certificate removed",
+            act: async (w: Walk) => {
+              await w.script({ remove_ca: "ok" });
+              await w.click("remove the certificate");
+              await w.recheck();
+            },
+            expect: `task 1 reads not done again, its certificate steps open with ${trustRoute} the one framed control; task 2 stays done, "stop routing through Trawler" with nothing said of the certificate`,
+            findings: [],
+            anchor: [task(1)],
+          },
+        ]
+      : []),
     {
       id: "prompt-cancelled",
       title: "The password prompt cancelled",
       act: async (w) => {
-        await reread({ trust: "untrusted", proxy: "unset", set_up: { fails: { stderr: CANCELLED[host] } } })(w);
+        await reread({
+          trust: "absent",
+          proxy: "unset",
+          set_up: { fails: { stderr: CANCELLED[host] } },
+        })(w);
         await w.click(setUp);
       },
-      expect: `"The password prompt was cancelled. Try again, or follow the manual steps."; nothing changed and "${setUp}" is still offered`,
+      expect: `"the password prompt was cancelled. Try again, or do it by hand."; nothing changed and "${setUp}" is still offered`,
       findings: [],
       anchor: ['[data-testid="set-up-status"]'],
     },
@@ -226,7 +284,7 @@ function autoThis(host: Host): Chapter[] {
         await w.script({ set_up: { fails: { stderr: INSTALL_ERROR[host] } } });
         await w.click(setUp);
       },
-      expect: `"setting up failed — the steps below do it by hand", and those manual steps are open`,
+      expect: `"setting up failed — do it by hand below", and task 1's steps under it are open`,
       findings: ["R16"],
       anchor: ['[data-testid="set-up-status"]'],
     },
@@ -257,10 +315,12 @@ function autoThis(host: Host): Chapter[] {
       id: "unset-failed",
       title: "Turning the proxy off fails",
       act: async (w) => {
-        await w.script({ unset_proxy: { fails: { stderr: PROXY_ERROR[host] } } });
+        await w.script({
+          unset_proxy: { fails: { stderr: PROXY_ERROR[host] } },
+        });
         await w.click("stop routing through Trawler");
       },
-      expect: `"couldn't turn the proxy off — the steps below do it by hand", and those steps are open`,
+      expect: `"couldn't turn the proxy off — do it by hand below", and task 2's "do it by hand" is open`,
       findings: ["R16"],
       anchor: ['[data-testid="unset-proxy-status"]'],
     },
@@ -268,7 +328,9 @@ function autoThis(host: Host): Chapter[] {
       id: "not-decrypting",
       title: "Arriving but not decrypting, the certificate green",
       act: async (w) => {
-        await reread({ trust: "trusted", proxy: "unset", unset_proxy: "ok" })(w);
+        await reread({ trust: "trusted", proxy: "unset", unset_proxy: "ok" })(
+          w,
+        );
         await w.hit({ untrusted: true });
         await w.pause(3_500);
       },
@@ -288,7 +350,7 @@ function autoThis(host: Host): Chapter[] {
       id: "another-device",
       title: "Set up another device",
       act: async (w) => {
-        await w.script({ trust: "untrusted", proxy: "unset" });
+        await w.script({ trust: "absent", proxy: "unset" });
         await w.click("set up another device");
       },
       expect: `the dot stays connected; "${thisLabel(host)}" is not preselected — the question reads "choose a device" and no task is drawn; no "You're set up" line before a new captured request`,
@@ -311,7 +373,7 @@ function autoThis(host: Host): Chapter[] {
       id: "filtered-reentry",
       title: "Re-entry with the list filtered",
       act: async (w) => {
-        await w.click("‹ back to flows");
+        await w.click("‹ show traffic");
         await w.filter("nomatch");
         await w.dot();
         await w.hit();
@@ -338,8 +400,8 @@ function linuxThis(): Chapter[] {
         await w.script({ trust: "unreadable", proxy: "unreadable" });
         await w.recheck();
       },
-      expect: `task 2 reads "we'll confirm this on this machine's first request", not "the system proxy is off"; no "check again" row, since nothing on this host can be re-read`,
-      findings: ["R19", "R20"],
+      expect: `a desktop gsettings does not answer for: task 2 reads "can't check here — the same request confirms it", not "the system proxy is off", and the request in task 3 is what settles it; no "check again" row, since the CA bundle and GNOME's proxy are re-read on their own`,
+      findings: ["R19", "W3.D6", "W3.D8"],
       anchor: [task(2)],
     },
     {
@@ -386,9 +448,9 @@ function iosSim(host: Host): Chapter[] {
       await w.closePicker();
       await w.choose("iOS Simulator");
     },
-    expect: `task 1 carries the Simulator's own certificate steps; task 2 offers "Set the system proxy", which the Simulator follows`,
-    findings: [],
-    anchor: [button("Set the system proxy")],
+    expect: `task 1 reads "not done — no Simulator running", its steps open and "open the Simulator" the one framed control; no "Restart" step; task 2's "set the system proxy" is bare below it`,
+    findings: ["W16.W4", "W16.I3", "W16.E2"],
+    anchor: [button("open the Simulator")],
   };
   if (host !== "macos")
     return [
@@ -396,7 +458,7 @@ function iosSim(host: Host): Chapter[] {
       picker(host),
       {
         ...chosen,
-        expect: `nothing to choose — were it offered, it would give xcrun simctl steps${host === "windows" ? ` and a "Set the system proxy" button that says the Simulator follows ${DEVICE[host]}'s proxy` : ""}, none of which can apply on ${OS_NAME[host]}`,
+        expect: `nothing to choose — were it offered, it would give xcrun simctl steps${host === "windows" ? ` and a "set the system proxy" button that says the Simulator follows ${DEVICE[host]}'s proxy` : ""}, none of which can apply on ${OS_NAME[host]}`,
         findings: ["R8"],
         anchor: [task(2)],
       },
@@ -410,9 +472,9 @@ function iosSim(host: Host): Chapter[] {
       title: "Setting the proxy fails",
       act: async (w) => {
         await w.script({ set_proxy: { fails: { stderr: PROXY_ERROR[host] } } });
-        await w.click("Set the system proxy");
+        await w.click("set the system proxy");
       },
-      expect: `"setting the proxy failed — the steps below do it by hand", and task 2's steps are open`,
+      expect: `"setting the proxy failed — do it by hand below", and task 2's steps are open`,
       findings: ["R16"],
       anchor: ['[data-testid="set-proxy-status"]'],
     },
@@ -421,10 +483,10 @@ function iosSim(host: Host): Chapter[] {
       title: "The host proxy ours",
       act: async (w) => {
         await w.script({ set_proxy: "ok" });
-        await w.click("Set the system proxy");
+        await w.click("set the system proxy");
         await w.recheck();
       },
-      expect: `task 2 reads done; no "Set the system proxy" button; the reversal sits inside task 2 and says it only turns the proxy off`,
+      expect: `task 2 reads done; no "set the system proxy" button; the reversal sits inside task 2 with only "do it by hand" under it`,
       findings: ["R15"],
       anchor: [button("stop routing through Trawler")],
     },
@@ -435,27 +497,115 @@ function iosSim(host: Host): Chapter[] {
         await w.click("stop routing through Trawler");
         await w.recheck();
       },
-      expect: `task 2 reads not done again and offers "Set the system proxy"`,
+      expect: `task 2 reads not done again and offers "set the system proxy"`,
       findings: [],
-      anchor: [button("Set the system proxy")],
+      anchor: [button("set the system proxy")],
+    },
+    {
+      id: "running",
+      title: "A Simulator running",
+      act: async (w) => {
+        await w.script({ simulators: [{ name: "iPhone 17 Pro", trust: "absent" }] });
+        await w.recheck();
+      },
+      expect: `"set up the Simulator", the one framed control, above the tasks; task 1 reads "not done — not in iPhone 17 Pro" with its save and command shut under "do it by hand"; task 2 has no button of its own`,
+      findings: ["W16.E1"],
+      anchor: [button("set up the Simulator")],
+    },
+    {
+      id: "trusted",
+      title: "The Simulator set up",
+      act: async (w) => {
+        await w.click("set up the Simulator");
+        await w.recheck();
+      },
+      expect: `task 1 reads "done — trusted in iPhone 17 Pro" and task 2 done; task 3's "open it in the Simulator" is the one framed control, the marked address beside it`,
+      findings: ["W16.I1", "W16.E3"],
+      anchor: [button("open it in the Simulator")],
     },
   ];
 }
 
+// The SDK where Android Studio puts it on each host, as its shell writes it.
+const ANDROID_SDK: Record<Host, string> = {
+  macos: "$HOME/Library/Android/sdk",
+  windows: "$env:LOCALAPPDATA\\Android\\Sdk",
+  linux: "$HOME/Android/Sdk",
+};
+const AVD = { id: "Pixel_7_API_35", name: "Pixel 7 API 35" };
+const EMULATOR = AVD.name;
+
 function androidSim(host: Host): Chapter[] {
+  const SDK = { adb: true, sdk: ANDROID_SDK[host], avd: AVD };
   const chapters: Chapter[] = [
     firstPaint(host),
     picker(host),
     {
       id: "chosen",
-      title: "The Android emulator chosen",
+      title: "The Android emulator chosen, none running",
       act: async (w) => {
+        await w.script({ android: SDK, emulators: [] });
         await w.closePicker();
         await w.choose("Android emulator");
       },
-      expect: `each task carries its own steps and the first guide is open. Nothing observes the emulator, so the guide does not advance by itself (the rule Q3 keeps). The certificate task saves trawler-ca.cer, pushes it with adb and picks trawler-ca.cer in the installer, and names no .pem`,
-      findings: ["R10", "R26", "R28"],
+      expect: `"open ${EMULATOR}" the one framed control above the tasks, where "set up the emulator" will stand; task 1 reads "not done — no emulator running" with its save, its push (the SDK's own adb, ${ANDROID_SDK[host]}) and its Settings path shut under "do it by hand", as task 2's steps are; task 3's "open it in the emulator" stands disabled`,
+      findings: ["R10", "R26", "R28", "W17.W4", "W17.I4", "W17.N1", "W17.S1"],
+      anchor: [button(`open ${EMULATOR}`)],
+    },
+    {
+      id: "starting",
+      title: "The emulator starting",
+      act: async (w) => {
+        await w.script({ android: { ...SDK, starting: true } });
+        await w.recheck();
+      },
+      expect: `"open ${EMULATOR}" disabled in its place; task 1 reads "not done — the emulator is starting", and nothing else changed`,
+      findings: ["W17.S2"],
       anchor: [task(1)],
+    },
+    {
+      id: "running",
+      title: "An emulator running",
+      act: async (w) => {
+        await w.script({ android: SDK, emulators: [{ name: EMULATOR, trust: "absent", proxy: "none" }] });
+        await w.recheck();
+      },
+      expect: `"set up the emulator", the one framed control, where "open ${EMULATOR}" stood; task 1 reads "not done — not in ${EMULATOR}", its steps still shut under "do it by hand"; task 3's "open it in the emulator" enabled; nothing else moved`,
+      findings: ["W17.E1", "W17.E2", "W17.S1"],
+      anchor: [button("set up the emulator")],
+    },
+    {
+      id: "set-up",
+      title: "The emulator set up",
+      act: async (w) => {
+        await w.click("set up the emulator");
+        await w.recheck();
+      },
+      expect: `task 1 reads "done — trusted in ${EMULATOR}" and task 2 "done — ${EMULATOR} routes through Trawler", with "stop routing the emulator" bare inside it; task 3's "open it in the emulator" is the one framed control, the marked address beside it`,
+      findings: ["W17.I1", "W17.I2", "W17.E3", "W17.I3", "W17.I6"],
+      anchor: [button("open it in the emulator")],
+    },
+    {
+      id: "play-chosen",
+      title: "A Google Play image used last, none running",
+      act: async (w) => {
+        await w.script({ android: { ...SDK, avd: { ...AVD, playStore: true } }, emulators: [] });
+        await w.recheck();
+      },
+      expect: `"open ${EMULATOR}" framed above the tasks, no one act to come; task 1's steps open on "send it to the emulator", disabled, then the path from Encryption & credentials; task 2's "route the emulator" and task 3's "open it in the emulator" disabled`,
+      findings: ["W17.S3"],
+      anchor: [button(`open ${EMULATOR}`)],
+    },
+    {
+      id: "no-su",
+      title: "An emulator whose image has no su",
+      act: async (w) => {
+        await w.script({ emulators: [{ name: EMULATOR, trust: "unreadable", proxy: "none" }] });
+        await w.recheck();
+      },
+      expect: `the layout before it ran, its buttons enabled and the opener gone: task 1's steps open on "send it to the emulator", the one framed control, then the path from Encryption & credentials, its note under trawler-ca.cer while notes are shown; task 2 offers "route the emulator", bare`,
+      findings: ["W17.I5", "W17.S3", "W17.D1"],
+      anchor: [button("send it to the emulator")],
     },
   ];
   if (host === "linux")
@@ -475,22 +625,34 @@ function androidSim(host: Host): Chapter[] {
 
 // What each off-machine certificate task has to name once armed: the one file
 // that platform's installer opens, from the URL that downloads it.
-const CA_SHOWN: Record<"mac" | "windows" | "ubuntu" | "ios" | "android", { says: string; findings: string[] }> = {
-  mac: { says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read", findings: ["R27"] },
-  windows: { says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read", findings: ["R27"] },
-  ubuntu: { says: "opens /ca.pem, which downloads the trawler-ca.pem its commands read", findings: ["R27"] },
+const CA_SHOWN: Record<
+  "mac" | "windows" | "ubuntu" | "ios" | "android",
+  { says: string; findings: string[] }
+> = {
+  mac: {
+    says: "opens /ca.pem, which downloads trawler-ca.pem; then trawler-ca.pem from Downloads into login, Trawler Proxy CA set to Always Trust with its recording, and the password — the System keychain command under other ways",
+    findings: ["R27", "W13.I1"],
+  },
+  windows: {
+    says: "opens /ca.cer, which downloads trawler-ca.cer; then trawler-ca.cer from Downloads, Install Certificate → Trusted Root Certification Authorities with its recording, Finish and Yes — the certutil -user command under other ways",
+    findings: ["R27", "W14.I1"],
+  },
+  ubuntu: {
+    says: "opens /ca.pem, which downloads trawler-ca.pem; then Firefox's Import… with its recording, choose, tick and OK, then Chrome or Chromium's Trusted Certificates → Import — the Chrome and system commands under other ways, no sudo on the path",
+    findings: ["R27", "W15.E1", "W15.E2"],
+  },
   ios: {
-    says: "opens /ca.mobileconfig in Safari, which downloads trawler-ca.mobileconfig, installs Trawler Proxy CA from VPN & Device Management, and says why iOS calls it Not Verified; its other way saves the same profile to AirDrop over, and no .pem is named",
-    findings: ["R23", "R24", "R27", "R28"],
+    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.mobileconfig in Safari, then tap Allow\"; then Profile Downloaded → Install → Install → Install → Done and General → About → Certificate Trust Settings, Trawler Proxy CA → Continue, each with its iOS 26.5 recording; its other way saves trawler-ca.mobileconfig to AirDrop over, \"to remove it later\" ends Remove Profile, and no .pem is named. Task 4 is dimmed, \"after task 3\", with no code",
+    findings: ["R23", "R24", "R27", "R28", "W18.E1", "W18.E2", "W18.W2", "W18.M1", "W18.N1"],
   },
   android: {
-    says: "opens /ca.cer, which downloads trawler-ca.cer, and the install step picks trawler-ca.cer; its other way saves the same file",
-    findings: ["R25", "R27", "R28"],
+    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.cer\", which downloads Trawler's certificate; then \"In Settings, search CA certificate, then tap\" CA certificate → CA certificate → Install anyway, \"then the trawler-ca file at the top of Recent.\", with its Android 15 recording, and no note while notes are hidden; its other way saves trawler-ca.cer. Task 4 is dimmed, \"after task 3\", with no code",
+    findings: ["R25", "R27", "R28", "W19.W2", "W19.M1"],
   },
 };
 
 function offMachine(host: Host, platform: Platform): Chapter[] {
-  const allow = "Allow devices on";
+  const allow = "allow devices on";
   const ca = CA_SHOWN[platform as keyof typeof CA_SHOWN];
   const chapters: Chapter[] = [
     firstPaint(host),
@@ -502,7 +664,7 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.closePicker();
         await w.choose(platformLabel(host, platform));
       },
-      expect: `task 1 names the one address it will arm, Ethernet · 192.168.1.23, and its button and copy name Ethernet, not Wi-Fi. Tasks 2 onward are dimmed, numbered, and say "after step 1"`,
+      expect: `task 1 names the one address it will arm, Ethernet · 192.168.1.23, and its button and copy name Ethernet, not Wi-Fi. Tasks 2 onward are dimmed, numbered, and say "after task 1"`,
       findings: ["R9", "R21"],
       anchor: [task(1)],
     },
@@ -513,8 +675,8 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.script({ allow_reach: false });
         await w.click(allow);
       },
-      expect: `"not allowed — Trawler still answers on this machine only"; nothing is armed`,
-      findings: [],
+      expect: `"not allowed" alone, under the state line that says Trawler answers on ${DEVICE[host]} only; nothing is armed`,
+      findings: ["W14.E3"],
       anchor: ['[data-testid="arm-reach-status"]'],
     },
     {
@@ -524,11 +686,105 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.script({ allow_reach: true });
         await w.click(allow);
       },
-      expect: `task 1 reads allowed, listening on 192.168.1.23; the tasks below are no longer dimmed, the certificate task's guide is open, and the device's server and port are shown. The certificate task ${ca.says}`,
-      findings: ["R10", ...ca.findings],
-      anchor: ['[data-testid="device-address"]', '[data-wire="certificate url"]'],
+      expect: `task 1 reads allowed, listening on 192.168.1.23; the tasks below are no longer dimmed, the certificate task's guide is open, and the device's server and port are shown. The certificate task ${ca.says}. No task has a why line; the last is a request from the device, its address at the weight of a step, with no "or"`,
+      findings: ["R10", "W13.E1", ...ca.findings],
+      anchor: [
+        '[data-testid="device-address"]',
+        '[data-wire="certificate url"]',
+      ],
     },
   ];
+  if (platform === "mac" || platform === "windows" || platform === "ubuntu")
+    chapters.push({
+      id: "download-help",
+      title: "What to check when the download fails",
+      act: (w) => w.showNotes(),
+      expect: `notes shown: under the certificate URL, "Doesn't load? ${{ mac: "That Mac", windows: "That PC", ubuntu: "That machine" }[platform]} can't reach this one — check both are on the same network, and that ${DEVICE[host]}'s firewall lets Trawler accept incoming connections."`,
+      findings: ["W13.R1"],
+      anchor: [task(2)],
+    });
+  if (platform === "windows")
+    chapters.push({
+      id: "route-open",
+      title: "That PC's proxy, by hand",
+      act: async (w) => {
+        await w.openGuide(3);
+        await w.showNotes();
+      },
+      expect: `task 3's four steps: Settings → Network & internet → Proxy on that PC, Manual proxy setup → Use a proxy server → Set up with its recording, Use a proxy server on with the server and port above, Save; under Save, its note "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy."; the reg command under other ways`,
+      findings: ["W14.I2", "W14.N2"],
+      anchor: [task(3)],
+    });
+  if (platform === "ubuntu")
+    chapters.push({
+      id: "route-open",
+      title: "That machine's proxy, by hand",
+      act: async (w) => {
+        await w.openGuide(3);
+        await w.showNotes();
+      },
+      expect: `task 3's four steps: Settings → Network on that machine, Proxy → Network Proxy → Configuration → Manual with its recording, HTTP and HTTPS Proxy with the server and port above, Save; under Save, its note "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY."; the gsettings command under other ways, and no GNOME anywhere`,
+      findings: ["W15.I2", "W15.N2"],
+      anchor: [task(3)],
+    });
+  if (platform === "mac")
+    chapters.push(
+      {
+        id: "route-open",
+        title: "That Mac's proxy, by hand",
+        act: async (w) => {
+          await w.openGuide(3);
+          await w.showNotes();
+        },
+        expect: `task 3's four steps: System Settings → Network on that Mac, Wi-Fi → Details… → Proxies with its recording, both proxies on with the server and port above, OK; the Ethernet note under the last step; the networksetup command under other ways`,
+        findings: ["W13.I2", "W13.R1"],
+        anchor: [task(3)],
+      },
+    );
+  if (platform === "ios")
+    chapters.push(
+      {
+        id: "certificate-help",
+        title: "What the certificate's steps explain, notes shown",
+        act: (w) => w.showNotes(),
+        expect: `task 2's notes: the download's "Doesn't load? …"; the install's "It asks for your passcode on the way. Not at the top of Settings? General → VPN & Device Management → Trawler Proxy CA (VPN, DNS, & Device Management on some devices). iOS marks the profile Not Verified: it is yours, not signed by a company."; the trust switch's "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private."`,
+        findings: ["W18.W3", "W18.W4", "W18.N4"],
+        anchor: [task(2)],
+      },
+      {
+        id: "route-open",
+        title: "The iPhone's proxy, by hand",
+        act: async (w) => {
+          await w.openGuide(3);
+          await w.showNotes();
+        },
+        expect: `task 3's two steps as path parts: In Settings, tap Wi-Fi then ⓘ by the network it is on, then Configure Proxy → Manual; Server and Port with the values above, then Save, with no note under it`,
+        findings: ["W18.W1", "W18.I1"],
+        anchor: [task(3)],
+      },
+    );
+  if (platform === "android")
+    chapters.push(
+      {
+        id: "certificate-help",
+        title: "What the certificate's steps explain, notes shown",
+        act: (w) => w.showNotes(),
+        expect: `task 2's notes: the download's "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that. Doesn't load? …"; the install's "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config."`,
+        findings: ["W19.W5", "W19.W6"],
+        anchor: [task(2)],
+      },
+      {
+        id: "route-open",
+        title: "The Android device's proxy, from the Wi-Fi page",
+        act: async (w) => {
+          await w.openGuide(3);
+          await w.showNotes();
+        },
+        expect: `task 3's two steps as path parts: "Scan with the camera, or open" the Wi-Fi page's /android-wifi URL, its code bare, "and tap" Open Wi-Fi settings, then ⚙ by the network it is on, then ✎ → Advanced options → Proxy → Manual, with its Android 15 recording and the makers' note; then Proxy hostname and Proxy port with the values above, then Save, with no note; the Settings path from Network & internet → Internet under other ways. Task 2's code stays the one framed control`,
+        findings: ["W19.W1", "W19.W3", "W19.W4", "W19.I1", "W19.M1"],
+        anchor: [task(3)],
+      },
+    );
   if (platform === "ios" || platform === "android")
     chapters.push({
       id: "not-decrypting",
@@ -537,12 +793,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         await w.hit({ untrusted: true });
         await w.pause(3_500);
       },
-      expect:
-        platform === "ios"
-          ? `task 2 reads "not done — nothing decrypted" and its steps are open; the remedy says the profile's trust is a separate switch, names Settings → General → About → Certificate Trust Settings → Trawler Proxy CA, and makes a website in Safari the test. Step 3 says installing does not trust`
-          : `task 2 reads "not done — nothing decrypted" and its steps are open; the remedy names where Trawler Proxy CA sits in the User store, that most apps ignore a user certificate, and makes a website in Chrome the test`,
-      findings: platform === "ios" ? ["R29", "R30"] : ["R30"],
-      anchor: ['[data-testid="traffic-remedy"]'],
+      expect: `task 2 still reads "can't check here — the address in task 4 confirms it" and task 3 reads done; task 4 is no longer dimmed: "not working — arriving but not decrypting", its note naming ${platform === "ios" ? "Apple's own services" : "Android's own services"} and the address as the test, and the address's code is now the one framed control`,
+      findings: platform === "ios" ? ["R29", "R30", "W18.E2"] : ["R30", "W18.E2"],
+      anchor: ['[data-testid="check-address"]'],
     });
   if (platform === "ios")
     chapters.push(
@@ -604,7 +857,7 @@ function launchesOfThis(): Launch[] {
           id: "down",
           title: "Launch, the core not answering",
           act: (w) => w.pause(3_000),
-          expect: `"no answer from …" — the core is not running — and no setup steps`,
+          expect: `"Trawler's capture service isn't answering" — the core is not running — and no setup steps`,
           findings: ["R2"],
           anchor: ["header"],
         },
@@ -693,6 +946,7 @@ export function findRun(id: string): { reel: Reel; launch: Launch } {
   const [reelId, launchId] = id.split("/");
   const reel = REELS.find((r) => r.id === reelId);
   const launch = reel?.launches.find((l) => l.id === launchId);
-  if (!reel || !launch) throw new Error(`no walkthrough run ${JSON.stringify(id)}`);
+  if (!reel || !launch)
+    throw new Error(`no walkthrough run ${JSON.stringify(id)}`);
   return { reel, launch };
 }

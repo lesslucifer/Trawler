@@ -22,8 +22,9 @@ use routes::AppState;
 /// command, under `?format=curl`), the two send doors (a replay of a flow, and
 /// a request from scratch), a connection tally
 /// (`/stats`), full-flow detail, raw or decoded bodies, a live SSE stream, the
-/// reach control (`/reach`), and the CA downloads: one per format a platform's
-/// installer opens.
+/// reach control (`/reach`), the CA downloads (one per format a platform's
+/// installer opens), and the page an Android device's Wi-Fi proxy step starts
+/// from.
 pub fn router(
     store: Arc<Store>,
     ca_cert_pem: Arc<String>,
@@ -65,6 +66,7 @@ pub fn router_from(state: AppState) -> Router {
         .route("/ca.pem", get(routes::ca_pem))
         .route("/ca.cer", get(routes::ca_cer))
         .route("/ca.mobileconfig", get(routes::ca_mobileconfig))
+        .route("/android-wifi", get(routes::android_wifi))
         .layer(middleware::from_fn(allow_cross_origin))
         .with_state(state)
 }

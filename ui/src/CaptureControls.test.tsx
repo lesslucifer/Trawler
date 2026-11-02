@@ -737,3 +737,24 @@ test("new request follows import… in the menu, wears ↗, and opens a draft", 
   fireEvent.click(items[2]);
   expect(onNewRequest).toHaveBeenCalledOnce();
 });
+
+// F26: a list that already has flows has no empty state to lead into setup.
+test("set up another device closes the menu and runs its handler", () => {
+  const onSetUpDevice = vi.fn();
+  render(<CaptureControls api={apiStub()} filter={{}} count={400} onCleared={() => {}} onSetUpDevice={onSetUpDevice} />);
+  fireEvent.click(trigger());
+
+  const items = screen.getAllByRole("menuitem");
+  const last = items[items.length - 1];
+  expect(last).toHaveAttribute("aria-label", CAPTURE_COPY.setUpDeviceAct);
+  fireEvent.click(last);
+  expect(onSetUpDevice).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("menu")).toBeNull();
+});
+
+test("without a way into setup, the menu offers none", () => {
+  render(<CaptureControls api={apiStub()} filter={{}} count={6} onCleared={() => {}} />);
+  fireEvent.click(trigger());
+
+  expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.setUpDeviceAct })).toBeNull();
+});

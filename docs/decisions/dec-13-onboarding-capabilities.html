@@ -46,6 +46,10 @@
     <ul>
       <li><strong>CA install</strong> — <code>security add-trusted-cert</code> (macOS) /
       <code>certutil -addstore</code> (Windows); guided text elsewhere.</li>
+      <li><strong>CA removal</strong> — <code>security delete-certificate</code> and
+      <code>remove-trusted-cert</code> (macOS), by the live certificate's hash, from each keychain that holds
+      it, with its trust. Amended 2026-10-31 (E-ONBRVP.W12, the owner's review): a trusted certificate had no
+      way back but typed commands.</li>
       <li><strong>Proxy set/unset</strong> — <code>networksetup</code> (macOS) / WinINET
       (Windows); symmetric revert on clean quit and crash-reconciliation at launch.</li>
       <li><strong>Read-only probes</strong> — "does this machine trust the CA / route its

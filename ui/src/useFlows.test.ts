@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
+import { TUNNEL_TIMES_MAX, tunnelHost, useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
 import { ApiError } from "./api";
 import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -13,19 +13,97 @@ function fakeApi() {
       return () => {};
     },
   });
-  return { api, fireConnection: () => handlers?.onConnection?.() };
+  return { api, fireConnection: (authority = "a.test:443") => handlers?.onConnection?.(authority) };
 }
 
 // Only a live event can say "now", which is what the setup screen's traffic
 // verdict reads.
-test("a live connection is stamped with its time", () => {
+test("every live connection is stamped with its time, oldest first", () => {
   const f = fakeApi();
   const { result } = renderHook(() => useFlows(f.api));
-  expect(result.current.lastConnectionAt).toBeNull();
+  expect(result.current.tunnelTimes).toEqual([]);
 
   const before = Date.now();
   act(() => f.fireConnection());
-  expect(result.current.lastConnectionAt).toBeGreaterThanOrEqual(before);
+  act(() => f.fireConnection());
+  const [first, second] = result.current.tunnelTimes;
+  expect(result.current.tunnelTimes).toHaveLength(2);
+  expect(first).toBeGreaterThanOrEqual(before);
+  expect(second).toBeGreaterThanOrEqual(first!);
+});
+
+test("the tunnel times keep the newest ones past their bound", () => {
+  const f = fakeApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  act(() => {
+    for (let n = 0; n <= TUNNEL_TIMES_MAX; n++) f.fireConnection();
+  });
+
+  expect(result.current.tunnelTimes).toHaveLength(TUNNEL_TIMES_MAX);
+});
+
+// D9: a caller waiting on one request's route asks after the tunnel to its host.
+test("each host's newest tunnel is kept, and no other host's answers for it", () => {
+  const f = fakeApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  expect(result.current.tunnelAt("example.com")).toBeNull();
+
+  const before = Date.now();
+  act(() => f.fireConnection("example.com:443"));
+  act(() => f.fireConnection("other.test:443"));
+
+  expect(result.current.tunnelAt("example.com")).toBeGreaterThanOrEqual(before);
+  expect(result.current.tunnelAt("third.test")).toBeNull();
+});
+
+test("a tunnel's host is its authority without the port, in lowercase", () => {
+  expect(tunnelHost("Example.com:443")).toBe("example.com");
+  expect(tunnelHost("[::1]:7420")).toBe("[::1]");
+  expect(tunnelHost("[::1]")).toBe("[::1]");
+  expect(tunnelHost("example.com")).toBe("example.com");
+  expect(tunnelHost("")).toBe("");
+});
+
+// DEC-61: the dot reads the newest capture, which neither a filter nor a clear lowers.
+describe("the newest capture this window has heard of", () => {
+  const at = (id: string, iso: string, uri = "http://example.com/") => ({ ...summary(id, uri), started_at: iso });
+
+  it("is undefined until the core answers, then null with nothing captured", async () => {
+    const { result } = renderHook(() => useFlows(apiStub()));
+    expect(result.current.lastCaptureAt).toBeUndefined();
+    await waitFor(() => expect(result.current.lastCaptureAt).toBeNull());
+  });
+
+  it("reads the rows a listing brings, http or https", async () => {
+    const api = apiStub({
+      listFlows: async () => [at("f1", "2026-07-12T10:00:00Z", "https://a.test/"), at("f2", "2026-07-12T10:00:05Z")],
+    });
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T10:00:05Z")));
+  });
+
+  it("reads the core's own newest row, which a filtered listing does not bring", async () => {
+    const api = apiStub({
+      listFlows: async () => [at("f1", "2026-07-12T10:00:00Z")],
+      latestCapture: async () => at("f9", "2026-07-12T11:00:00Z", "http://other.test/"),
+    });
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T11:00:00Z")));
+  });
+
+  it("is never lowered by a later answer with less in it", async () => {
+    let rows = [at("f1", "2026-07-12T10:00:05Z")];
+    const f = fakeApi();
+    const api = apiStub({ ...f.api, listFlows: async () => rows });
+    const { result } = renderHook(() => useFlows(api));
+    await waitFor(() => expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T10:00:05Z")));
+
+    rows = [];
+    await act(async () => {
+      await result.current.retry();
+    });
+    expect(result.current.lastCaptureAt).toBe(Date.parse("2026-07-12T10:00:05Z"));
+  });
 });
 
 // R7: the setup screen reads every captured row whatever the list is filtered

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { NotesShown } from "./Help";
 import { TaskStep } from "./TaskStep";
 
 describe("TaskStep", () => {
@@ -10,14 +11,18 @@ describe("TaskStep", () => {
     expect(screen.getByText("Send this Mac's traffic to Trawler")).toBeInTheDocument();
   });
 
-  it("carries a purpose line when one is given, and nothing where none is", () => {
-    const { rerender } = render(
-      <TaskStep n={1} title="Trust Trawler's certificate" why="so this Mac's HTTPS can be decrypted" />,
-    );
-    expect(screen.getByText("so this Mac's HTTPS can be decrypted")).toBeInTheDocument();
+  it("draws why the task matters under its title only while notes are shown", () => {
+    const why = "the Simulator follows this Mac's system proxy";
+    const { rerender } = render(<TaskStep n={2} title="Send this Mac's traffic to Trawler" help={why} />);
+    expect(screen.queryByText(why)).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
 
-    rerender(<TaskStep n={1} title="Trust Trawler's certificate" />);
-    expect(screen.queryByText("so this Mac's HTTPS can be decrypted")).toBeNull();
+    rerender(
+      <NotesShown.Provider value={true}>
+        <TaskStep n={2} title="Send this Mac's traffic to Trawler" help={why} />
+      </NotesShown.Provider>,
+    );
+    expect(screen.getByText(why)).toBeInTheDocument();
   });
 
   it("renders the state it is handed as a StatusLine, glyph and all", () => {
@@ -57,12 +62,12 @@ describe("TaskStep", () => {
   });
 
   it("dims a task whose precondition is not met, and keeps its number", () => {
-    render(<TaskStep n={2} title="On your iPhone, install the certificate" why="after step 1" dim />);
+    render(<TaskStep n={2} title="On your iPhone, install the certificate" waitsOn="after task 1" dim />);
 
     const task = screen.getByTestId("task-2");
     expect(task.className).toContain("opacity-disabled");
     expect(task).toHaveTextContent("2");
-    expect(task).toHaveTextContent("after step 1");
+    expect(task).toHaveTextContent("after task 1");
   });
 
   it("an undimmed task carries no dimming at all", () => {

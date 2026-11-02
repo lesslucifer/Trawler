@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { defaultProxyAddr, type FlowSource, type FlowSummary } from "./api";
+import type { FlowSource, FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { NotAnswering } from "./NotAnswering";
-import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
+import { Button, DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
 
 const ROW_HEIGHT = 30;
 
@@ -53,6 +53,7 @@ function Absence({
   refused,
   retrying,
   onRetry,
+  onSetUp,
 }: {
   filtered: boolean;
   cleared: boolean;
@@ -60,14 +61,16 @@ function Absence({
   refused: string | null;
   retrying: boolean;
   onRetry: () => void;
+  onSetUp?: () => void;
 }) {
-  const refill = `send traffic through the proxy — ${defaultProxyAddr()}`;
   return (
-    <div data-testid="empty" className="flex justify-center p-12">
+    <div data-testid="empty" className="flex flex-1 items-center justify-center p-12">
       {refused !== null ? (
         // A rejection, not a failure: the API answered and said no, so there is
         // no ⚠ and no retry — the correction is more typing.
-        <Notice detail="type a code (404) or a class (4xx)">{`${refused} is not a status`}</Notice>
+        <Notice layout="region" detail="Try a code like 404, or a range like 4xx.">
+          {`“${refused}” isn't a status code`}
+        </Notice>
       ) : silent ? (
         // The clause is a claim about why this region is empty, so it is made
         // only when it is this region's own truth. Neither a filter that
@@ -75,16 +78,29 @@ function Absence({
         // nothing has reached — in both the traffic arrived and something else
         // is why the region is bare.
         <NotAnswering
-          trailing={filtered || cleared ? undefined : "nothing has reached the window"}
+          trailing={filtered || cleared ? undefined : "Nothing has been captured yet. Requests show up here once it's back."}
+          region
           retrying={retrying}
           onRetry={onRetry}
         />
       ) : cleared ? (
-        <Notice detail={refill}>capture cleared</Notice>
+        <Notice layout="region" detail="New requests will show up here as they arrive.">
+          All cleared
+        </Notice>
       ) : filtered ? (
-        <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
+        <Notice layout="region" detail="Try a shorter search, or clear one of the fields above.">
+          Nothing matches your filter
+        </Notice>
       ) : (
-        <Notice detail={refill}>no flows yet</Notice>
+        // A window nothing has reached is the one empty whose remedy is setup,
+        // so it offers the way there beside the dot (P4).
+        <Notice
+          layout="region"
+          detail="Requests from your apps and devices show up here once they go through Trawler. Setup walks you through it, step by step."
+          action={onSetUp && <Button onClick={onSetUp}>set up capture</Button>}
+        >
+          Nothing captured yet
+        </Notice>
       )}
     </div>
   );
@@ -115,6 +131,7 @@ export function FlowList({
   refused = null,
   retrying = false,
   onRetry = () => {},
+  onSetUp,
 }: {
   flows: FlowSummary[];
   selectedId?: string | null;
@@ -125,6 +142,7 @@ export function FlowList({
   refused?: string | null;
   retrying?: boolean;
   onRetry?: () => void;
+  onSetUp?: () => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -180,6 +198,7 @@ export function FlowList({
           refused={refused}
           retrying={retrying}
           onRetry={onRetry}
+          onSetUp={onSetUp}
         />
       </div>
     );

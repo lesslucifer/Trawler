@@ -1,45 +1,12 @@
-// The proxy-client vocabulary: which clients a user can be told to point at
-// Trawler, and how each one is turned back off. It is keyed by client rather
-// than by platform because that is what the quit dialog asks — "a proxy is set
-// on this machine, which client do you need the steps for" — and the onboarding
-// screen's platform axis reads the reversals from here rather than restating
-// them. Pure data, no I/O, no React.
+// How each operating system's proxy, and a shell's, is turned back off. Setup's
+// "to turn it off later" reads it, and the quit dialog reads setup's, so a
+// reversal is written once (W11's S4). Pure data, no I/O, no React.
 
-import type { HostOs } from "./setup";
-
-export type ProxyTarget =
-  | "macos"
-  | "windows"
-  | "linux"
-  | "firefox"
-  | "terminal"
-  | "ios-sim"
-  | "android";
-
-export function defaultProxyTarget(os: HostOs): ProxyTarget {
-  return os === "other" ? "terminal" : os;
-}
-
-// Keyed by the union so tsc proves the list offers every target: a member added
-// to ProxyTarget without a label here fails to compile. A runtime check over the
-// list could only ever compare it with itself.
-const PROXY_TARGET_LABELS: Record<ProxyTarget, string> = {
-  macos: "macOS",
-  windows: "Windows",
-  linux: "Linux (GNOME)",
-  firefox: "Firefox",
-  terminal: "Terminal / CLI",
-  "ios-sim": "iOS Simulator",
-  android: "Android",
-};
-
-export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = (
-  Object.keys(PROXY_TARGET_LABELS) as ProxyTarget[]
-).map((id) => ({ id, label: PROXY_TARGET_LABELS[id] }));
+export type ProxyTarget = "macos" | "windows" | "linux" | "terminal";
 
 // The off-command where one exists, so a caller can render it as a copyable
 // payload without inferring which step is a command from its punctuation.
-export function proxyOffSnippet(t: ProxyTarget): string | null {
+export function proxyOffSnippet(t: ProxyTarget): string {
   switch (t) {
     case "macos":
       return "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
@@ -49,8 +16,6 @@ export function proxyOffSnippet(t: ProxyTarget): string | null {
       return "gsettings set org.gnome.system.proxy mode 'none'";
     case "terminal":
       return "unset HTTPS_PROXY HTTP_PROXY";
-    default:
-      return null;
   }
 }
 
@@ -58,18 +23,12 @@ export function proxyOffSteps(t: ProxyTarget): string[] {
   const snippet = proxyOffSnippet(t);
   switch (t) {
     case "macos":
-      return ["Turn it off per enabled service (keeps the saved address):", snippet!];
+      return ["In Terminal, run:", snippet];
     case "windows":
-      return ["Disable the WinINET proxy (keeps the saved address):", snippet!];
+      return ["In PowerShell, run:", snippet];
     case "linux":
-      return ["GNOME — back to no proxy:", snippet!];
-    case "firefox":
-      return ['Settings → Network Settings → Settings… → select "No proxy".'];
+      return ["In a terminal, run:", snippet];
     case "terminal":
-      return ["Clear the environment variables:", snippet!];
-    case "ios-sim":
-      return ["Turn the host Mac's proxy off (the macOS steps above), then restart the Simulator."];
-    case "android":
-      return ["Wi-Fi → your network → Proxy → None."];
+      return ["Clear the environment variables:", snippet];
   }
 }

@@ -130,6 +130,7 @@ fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{judge_run_tally, run};
+    use std::collections::BTreeSet;
     use std::path::Path;
 
     fn tally(specs: u64, passed: u64, failed: u64) -> String {
@@ -203,6 +204,211 @@ mod tests {
                 assert!(lines.is_empty(), "{} uses *= on lines {lines:?}", path.display());
             }
         }
+    }
+
+    // wry answers each WebKit scheme task inside objc2's exception catch, so a
+    // task WebKit already stopped throws and is dropped. Under panic = "abort"
+    // that catch cannot run, and the throw aborts the app instead.
+    fn release_aborts_on_panic(cargo_toml: &str) -> bool {
+        let mut in_release = false;
+        cargo_toml.lines().map(str::trim).any(|line| {
+            if line.starts_with('[') {
+                in_release = line == "[profile.release]";
+                return false;
+            }
+            in_release
+                && line.split_once('=').is_some_and(|(key, value)| {
+                    key.trim() == "panic" && value.trim() == "\"abort\""
+                })
+        })
+    }
+
+    #[test]
+    fn the_abort_detector_reads_only_the_release_profile() {
+        assert!(release_aborts_on_panic("[profile.release]\nlto = true\npanic = \"abort\"\n"));
+        assert!(!release_aborts_on_panic(
+            "[profile.dev]\npanic = \"abort\"\n[profile.release]\nlto = true\n"
+        ));
+        assert!(!release_aborts_on_panic("[profile.release]\npanic = \"unwind\"\n"));
+    }
+
+    #[test]
+    fn the_shell_unwinds_so_wry_can_catch_a_stopped_task() {
+        let manifest = crate::repo_root().expect("repo root").join("ui/src-tauri/Cargo.toml");
+        let source = std::fs::read_to_string(&manifest).expect("the shell's Cargo.toml");
+        assert!(!release_aborts_on_panic(&source), "{} sets panic = \"abort\"", manifest.display());
+    }
+
+    fn literal_after<'a>(source: &'a str, prefix: &str) -> &'a str {
+        let start = source.find(prefix).unwrap_or_else(|| panic!("no {prefix}")) + prefix.len();
+        let rest = &source[start..];
+        &rest[..rest.find('"').expect("a closing quote")]
+    }
+
+    fn handler_names(source: &str) -> BTreeSet<String> {
+        let start = source.find("generate_handler![").expect("a generate_handler!") + 18;
+        let list = &source[start..start + source[start..].find(']').expect("a closing ]")];
+        list.split(',')
+            .map(|path| path.trim().rsplit("::").next().unwrap_or_default().to_string())
+            .filter(|name| !name.is_empty())
+            .collect()
+    }
+
+    fn after_generics(text: &str) -> &str {
+        let Some(mut rest) = text.strip_prefix('<') else { return text };
+        let mut depth = 1;
+        while depth > 0 {
+            let at = rest.find(['<', '>']).expect("a closing >");
+            depth += if rest.as_bytes()[at] == b'<' { 1 } else { -1 };
+            rest = &rest[at + 1..];
+        }
+        rest
+    }
+
+    fn invoked_commands(source: &str) -> BTreeSet<String> {
+        let mut names = BTreeSet::new();
+        for callee in ["invoke", "call"] {
+            for (at, _) in source.match_indices(callee) {
+                let standalone = !source[..at]
+                    .ends_with(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+                let args = after_generics(&source[at + callee.len()..]);
+                if let Some(name) = args.strip_prefix("(\"").filter(|_| standalone) {
+                    let name = &name[..name.find('"').expect("a closing quote")];
+                    if name.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
+                        names.insert(name.to_string());
+                    }
+                }
+            }
+        }
+        names
+    }
+
+    fn app_sources(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("an app source dir") {
+            let path = entry.expect("app entry").path();
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            let script = path.extension().is_some_and(|ext| ext == "ts" || ext == "tsx");
+            if path.is_dir() {
+                app_sources(&path, found);
+            } else if script && !name.contains(".test.") {
+                found.push(path);
+            }
+        }
+    }
+
+    #[test]
+    fn the_command_detectors_read_paths_generics_and_callees() {
+        let handlers =
+            "x.invoke_handler(tauri::generate_handler![\n  a::set_proxy,\n  open_route\n]);";
+        assert_eq!(
+            handler_names(handlers),
+            BTreeSet::from(["set_proxy".into(), "open_route".into()])
+        );
+        let app = r#"invoke<Record<string, string>>("interface_names"); deps.invoke<{ a: 1 }>("proxy_status");
+            call<boolean>("notice_dismissed"); go({ t: "re-invoke" }); recall("not_one"); invoke("Title")"#;
+        assert_eq!(
+            invoked_commands(app),
+            BTreeSet::from([
+                "interface_names".into(),
+                "proxy_status".into(),
+                "notice_dismissed".into()
+            ])
+        );
+    }
+
+    // The e2e and the walkthrough run the scenario build's list and the app ships
+    // the real one, so a command missing from either fails only in the other.
+    #[test]
+    fn both_shell_builds_register_exactly_the_commands_the_app_invokes() {
+        let repo = crate::repo_root().expect("repo root");
+        let shell = |file: &str| {
+            let path = repo.join("ui/src-tauri/src").join(file);
+            handler_names(&std::fs::read_to_string(&path).expect("a shell source"))
+        };
+        let real = shell("lib.rs");
+        let mut scenario = shell("scenario.rs");
+        assert!(scenario.remove("scenario_script"), "the scenario build registers scenario_script");
+        assert_eq!(scenario, real, "the scenario build's commands differ from the real build's");
+
+        let mut sources = Vec::new();
+        app_sources(&repo.join("ui/src"), &mut sources);
+        let invoked: BTreeSet<String> = sources
+            .iter()
+            .flat_map(|path| invoked_commands(&std::fs::read_to_string(path).expect("app source")))
+            .collect();
+        assert_eq!(invoked, real, "the app invokes other commands than the shell registers");
+    }
+
+    // The shell opens the check request and the app finds its row by host and
+    // query key, so the two must name the same URL or the task never settles.
+    #[test]
+    fn the_check_url_the_shell_opens_is_the_one_the_app_reads() {
+        let repo = crate::repo_root().expect("repo root");
+        let read = |path: &str| std::fs::read_to_string(repo.join(path)).expect(path);
+        let route = read("ui/src-tauri/src/route.rs");
+        let app = read("ui/src/ownRequest.ts");
+        assert_eq!(
+            literal_after(&route, "const REQUEST_URL: &str = \""),
+            format!(
+                "https://{}/?{}=",
+                literal_after(&app, "export const REQUEST_HOST = \""),
+                literal_after(&app, "const MARK = \"")
+            )
+        );
+    }
+
+    fn block_after<'a>(source: &'a str, opener: &str, closer: &str) -> &'a str {
+        let start = source.find(opener).unwrap_or_else(|| panic!("no {opener}")) + opener.len();
+        let rest = &source[start..];
+        &rest[..rest.find(closer).unwrap_or_else(|| panic!("no {closer} after {opener}"))]
+    }
+
+    fn kebab(variant: &str) -> String {
+        variant.chars().enumerate().fold(String::new(), |mut out, (at, c)| {
+            if c.is_ascii_uppercase() && at > 0 {
+                out.push('-');
+            }
+            out.push(c.to_ascii_lowercase());
+            out
+        })
+    }
+
+    // A route or a mark the shell refuses opens nothing, and the step's button
+    // swallows the refusal, so a drift between the two sides is a dead click.
+    #[test]
+    fn the_shell_opens_every_route_the_app_names_with_the_marks_the_app_makes() {
+        let repo = crate::repo_root().expect("repo root");
+        let read = |path: &str| std::fs::read_to_string(repo.join(path)).expect(path);
+        let route = read("ui/src-tauri/src/route.rs");
+        let setup = read("ui/src/setup.ts");
+        let marks = read("ui/src/ownRequest.ts");
+
+        let shell_routes: BTreeSet<String> = block_after(&route, "pub enum Route {", "\n}")
+            .lines()
+            .filter_map(|line| line.trim().split([' ', ',', '{']).next())
+            .filter(|name| !name.is_empty())
+            .map(kebab)
+            .collect();
+        let app_routes: BTreeSet<String> = block_after(&setup, "export type RouteName =", ";")
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect();
+        assert_eq!(app_routes, shell_routes, "RouteName and the shell's Route differ");
+
+        assert!(
+            route.contains("c.is_ascii_lowercase() || c.is_ascii_digit()"),
+            "valid_mark no longer reads a lowercase base-36 window"
+        );
+        assert!(marks.contains("Math.random().toString(36)"), "the window mark is not base 36");
+        assert!(marks.contains("`${WINDOW_MARK}.${sent}`"), "the mark is not <window>.<n>");
+        let width: usize = block_after(&marks, ".toString(36).padStart(", ",")
+            .parse()
+            .expect("deviceMark's width");
+        let longest: usize =
+            block_after(&route, "(1..=", ")").parse().expect("valid_device_mark's longest");
+        assert!(width <= longest, "deviceMark makes {width} characters, the shell takes {longest}");
     }
 
     // pnpm 10+ ignores the `pnpm` field and says so only as an install warning,
@@ -279,26 +485,37 @@ mod tests {
         assert!(err.contains("usage:"));
     }
 
+    fn window_of(repo: &Path, config: &str) -> serde_yaml::Value {
+        let source = std::fs::read_to_string(repo.join("ui/src-tauri").join(config)).expect(config);
+        // JSON is a YAML subset, so the reader already in the tree parses it.
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&source).expect("valid json");
+        parsed["app"]["windows"][0].clone()
+    }
+
     // The flow list's header holds one line down to 846px once the capture acts
     // sit behind one trigger (E-EXPORT.W9, Tune T8), so a window the user can
-    // drag below that reaches a width where the header wraps to two lines. The
-    // e2e overlay adds no window block, so it inherits this one.
+    // drag below that reaches a width where the header wraps to two lines. A
+    // merged config replaces the windows array whole, so each overlay that
+    // declares the window must keep the minimum too.
     #[test]
     fn the_window_cannot_be_dragged_narrower_than_the_header_holds_one_line() {
         let repo = crate::repo_root().expect("repo root");
-        let config = std::fs::read_to_string(repo.join("ui/src-tauri/tauri.conf.json"))
-            .expect("tauri.conf.json");
-        // JSON is a YAML subset, so the reader already in the tree parses it.
-        let parsed: serde_yaml::Value = serde_yaml::from_str(&config).expect("valid json");
-        let min_width = parsed["app"]["windows"][0]["minWidth"].as_u64().expect("minWidth");
-        assert!(min_width >= 850, "minWidth is {min_width}, and the header wraps below 846");
+        for config in ["tauri.conf.json", "tauri.conf.e2e.json", "tauri.conf.walkthrough.json"] {
+            let min_width = window_of(&repo, config)["minWidth"].as_u64().expect("minWidth");
+            assert!(
+                min_width >= 850,
+                "{config}: minWidth is {min_width}, and the header wraps below 846"
+            );
+        }
+    }
 
-        let overlay = std::fs::read_to_string(repo.join("ui/src-tauri/tauri.conf.e2e.json"))
-            .expect("tauri.conf.e2e.json");
-        let overlay: serde_yaml::Value = serde_yaml::from_str(&overlay).expect("valid json");
-        assert!(
-            overlay["app"]["windows"].is_null(),
-            "the overlay declares its own windows, so it no longer inherits the minimum"
-        );
+    // The e2e asserts no picture, so its window stays off the screen. The
+    // walkthrough films what a user sees, and a hidden page loads no recording.
+    #[test]
+    fn the_e2e_window_is_hidden_and_the_walkthrough_window_is_shown() {
+        let repo = crate::repo_root().expect("repo root");
+        let visible = |config| window_of(&repo, config)["visible"].as_bool().unwrap_or(true);
+        assert!(!visible("tauri.conf.e2e.json"));
+        assert!(visible("tauri.conf.walkthrough.json"));
     }
 }

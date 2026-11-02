@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
+import { awaiting, NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../verdicts";
 import { StatusLine } from "./StatusLine";
 
-const CONFIRM_ON = "we'll confirm this on this Mac's first request";
+const CONFIRM_ON = "this Mac's first request confirms it";
 
 const glyphClass = (status: StepStatusView) => {
   const { container } = render(<StatusLine status={status} />);
@@ -57,7 +57,7 @@ describe("StatusLine", () => {
   });
 
   it("wraps the message rather than truncating it — a cut reason is a wrong reason", () => {
-    const short = "arriving but not decrypting";
+    const short = "not working — arriving but not decrypting";
     render(
       <StatusLine status={{ glyph: "⚠", tone: "warn", short }} />,
     );
@@ -84,12 +84,12 @@ describe("StatusLine", () => {
     const status = trafficStatus({ ...NO_TRAFFIC, lastPlainAt: 9_000 }, 10_000);
     render(<StatusLine status={status} />);
 
-    expect(screen.getByText("arriving — plain HTTP only")).toBeInTheDocument();
+    expect(screen.getByText("not done — only plain http so far")).toBeInTheDocument();
     expect(screen.queryByText(/starts with https/)).not.toBeInTheDocument();
   });
 
   it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
-    const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0 }, 10_000);
+    const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0, openTunnelAt: 0 }, 10_000);
     render(<StatusLine status={status} />);
 
     expect(status.remedy).toMatch(/does not trust Trawler's certificate yet/);
@@ -111,35 +111,35 @@ describe("StatusLine", () => {
   // T2. Driven through the real resolvers so a re-ranking in either place reds.
   describe("the resolved verdict it is handed", () => {
     it("shows an authoritative positive as the resolved verdict it is", () => {
-      render(<StatusLine status={trustStatus("trusted", null, CONFIRM_ON)} />);
+      render(<StatusLine status={trustStatus("trusted", null, awaiting(CONFIRM_ON))} />);
 
       expect(screen.getByText("✓")).toBeInTheDocument();
       expect(screen.getByText("done — installed and trusted")).toBeInTheDocument();
     });
 
     it("shows a running action over every settled verdict", () => {
-      render(<StatusLine status={trustStatus("trusted", "installing", CONFIRM_ON)} />);
+      render(<StatusLine status={trustStatus("trusted", "installing", awaiting(CONFIRM_ON))} />);
 
       expect(screen.getByTestId("status-line-spinner")).toBeInTheDocument();
-      expect(screen.getByText("setting up — approve the prompt…")).toBeInTheDocument();
+      expect(screen.getByText("setting up")).toBeInTheDocument();
     });
 
     it("shows a decrypted flow arriving now as the ok verdict of the traffic layer", () => {
       const status = trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: 9_000 }, 10_000);
       render(<StatusLine status={status} />);
 
-      expect(screen.getByText("capturing traffic")).toBeInTheDocument();
+      expect(screen.getByText("done — capturing traffic")).toBeInTheDocument();
       expect(glyphClass(status)).toContain("text-ok");
     });
 
     it("shows the can't-determine glyph where nothing read the state at all", () => {
       render(
         <StatusLine
-          status={proxyStatus("unknown", null, { device: "this Mac", confirmOn: CONFIRM_ON })}
+          status={proxyStatus("unknown", null, { device: "this Mac", unread: awaiting(CONFIRM_ON) })}
         />,
       );
 
-      expect(screen.getByText(CONFIRM_ON)).toBeInTheDocument();
+      expect(screen.getByText(`can't check here — ${CONFIRM_ON}`)).toBeInTheDocument();
       expect(screen.getByText("◐")).toBeInTheDocument();
     });
   });

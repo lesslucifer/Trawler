@@ -389,6 +389,14 @@ fn ca_download(content_type: &'static str, filename: &'static str, body: Vec<u8>
         .into_response()
 }
 
+/// Served on the reach listener like the certificate, so a phone opens it
+/// before any proxy is set (DEC-65).
+pub async fn android_wifi(State(state): State<AppState>) -> Response {
+    let proxy = state.reach.addresses().await.map(|armed| armed.proxy);
+    ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], view::android_wifi_page(proxy))
+        .into_response()
+}
+
 /// Can another device get here, and at which address? Answered whether or not
 /// anything is armed, because "nothing yet, and here is what you could pick" is
 /// the answer the setup screen needs before the user has decided.
@@ -801,6 +809,19 @@ mod tests {
         assert!(value["next_cursor"].is_string());
     }
 
+    // The app's header dot reads this one query (DEC-61): the newest row the
+    // proxy captured, past any newer row that was imported.
+    #[tokio::test]
+    async fn one_page_of_one_captured_row_is_the_newest_capture() {
+        let state = state_with(&["http://old/", "http://new/"]);
+        import(&state, &document(&entry("http://file/"))).await;
+
+        let (status, value) = list(&state, "source=captured&limit=1").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value["flows"].as_array().expect("flows").len(), 1);
+        assert_eq!(value["flows"][0]["uri"], "http://new/");
+    }
+
     #[tokio::test]
     async fn malformed_paging_parameters_are_refused_by_name() {
         let state = state_with(&["http://a/"]);
@@ -871,9 +892,26 @@ mod tests {
         assert_eq!(view.proxy, None, "an address nothing is listening on is the lie to avoid");
         assert_eq!(view.api, None);
         assert_eq!(view.ca_urls, None);
+        assert_eq!(view.wifi_page, None);
         for interface in &view.interfaces {
             assert!(!interface.address.is_loopback(), "loopback is not another device's address");
         }
+    }
+
+    #[tokio::test]
+    async fn the_wifi_page_opens_android_wifi_settings_and_names_no_proxy_while_unarmed() {
+        let response = super::android_wifi(State(state_with(&[]))).await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()["content-type"], "text/html; charset=utf-8");
+        let body = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        let html = std::str::from_utf8(&body).expect("utf8");
+        assert!(html.contains(
+            r#"<a href="intent:#Intent;action=android.settings.WIFI_SETTINGS;end">Open Wi-Fi settings</a>"#
+        ));
+        assert_eq!(html.matches("href=").count(), 1, "the page opens nothing else");
+        assert!(!html.contains("Proxy hostname</dt>"), "no proxy is armed to name");
+        assert!(!html.contains("{proxy}"));
     }
 
     #[tokio::test]

@@ -1,27 +1,35 @@
 import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
-import { afterEach, beforeAll, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import App, { LAUNCH_PATIENCE_MS } from "./App";
-import { ApiError, apiAddr, UNREACHABLE } from "./api";
-import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
+import App, { CA_READ_PATIENCE_MS, LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
+import { ApiError, UNREACHABLE } from "./api";
+import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 import { CAPTURE_COPY } from "./CaptureControls";
 import * as files from "./body";
-import type { OnbState } from "./onboardingMachine";
+import { QUIET_AFTER_MS, type OnbState } from "./onboardingMachine";
 import { CA_FILES } from "./setup";
 import { TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
-// App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
-// no-op here. The guard's own behavior is covered in closeConfirm.test.tsx.
+// App wires a quit-time close guard; the stub window keeps the handler it was
+// given, so a test can raise a close request the way ✕ and ⌘Q do.
+type CloseRequest = (e: { preventDefault: () => void }) => unknown;
+const quitWindow = vi.hoisted(() => ({ handler: null as CloseRequest | null }));
 vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: () => ({ onCloseRequested: async () => () => {}, destroy: async () => {} }),
+  getCurrentWindow: () => ({
+    onCloseRequested: async (h: CloseRequest) => {
+      quitWindow.handler = h;
+      return () => {};
+    },
+    destroy: async () => {},
+  }),
 }));
 
 // Capture is proven only by a live decrypted flow (W4); until then App shows
 // onboarding. These list/filter tests force the proven phase to reach the list.
 const PROVEN: OnbState = {
-  phase: "proven",
+  phase: "list",
   step: "verify",
   everProven: true,
   since: null,
@@ -90,7 +98,9 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 // narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
 function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
-  let onConnection = () => {};
+  let onConnection: (authority: string) => void = () => {};
+  let onDown = () => {};
+  let onUp = () => {};
   const api: TrawlerApi = apiStub({
     listFlows: vi.fn(async (filter: Filter) => {
       // Close enough to FlowFilter::matches (store.rs) for these tests: q really
@@ -129,13 +139,17 @@ function mockApi(store: () => FlowSummary[]) {
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onConnection = handlers.onConnection ?? (() => {});
+      onDown = handlers.onDown ?? (() => {});
+      onUp = handlers.onUp ?? (() => {});
       return () => {};
     }),
   });
   return {
     api,
     fire: () => act(() => onEvent()),
-    fireConnection: () => act(() => onConnection()),
+    fireConnection: (authority = "a.test:443") => act(() => onConnection(authority)),
+    fireDown: () => act(() => onDown()),
+    fireUp: () => act(() => onUp()),
   };
 }
 
@@ -175,7 +189,7 @@ test.each(["imported", "sent"] as const)(
     const { api } = mockApi(() => [flow({ uri: "https://example.com/", source, started_at: new Date().toISOString() })]);
     render(<App api={api} />);
     expect(await screen.findByText(QUESTION)).toBeInTheDocument();
-    expect(screen.getByTestId("task-3")).toHaveTextContent("waiting for the first request");
+    expect(screen.getByTestId("task-3")).toHaveTextContent("not done — waiting for the first request");
     expect(screen.queryByTestId("flow-row")).toBeNull();
   },
 );
@@ -190,7 +204,7 @@ test("a request Trawler sent, arriving on the setup screen, neither proves setup
   fire();
   await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(1));
   expect(screen.getByText(QUESTION)).toBeInTheDocument();
-  expect(screen.getByTestId("task-3")).toHaveTextContent("waiting for the first request");
+  expect(screen.getByTestId("task-3")).toHaveTextContent("not done — waiting for the first request");
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -200,7 +214,7 @@ test("a decrypted HTTPS flow arriving live flips Verify green and reveals the li
   render(<App api={api} />);
   await screen.findByText("which device's traffic do you want to see"); // fresh launch → onboarding
 
-  rows = [flow({ uri: "https://example.com/" })];
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
   fire();
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
@@ -238,8 +252,8 @@ test("tapping the status dot re-opens setup and stays there despite the captured
   fireEvent.click(screen.getByTestId("status-dot"));
   expect(await screen.findByText("which device's traffic do you want to see")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
-  expect(screen.getByRole("button", { name: /back to flows/ })).toBeInTheDocument(); // Back to flows, since ever proven
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  expect(screen.getByRole("button", { name: "show traffic" })).toBeInTheDocument(); // Back to flows, since ever proven
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
 });
 
@@ -253,7 +267,7 @@ test("Set up this Mac fetches the PEM and invokes the one combined command", asy
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("set_up_this_machine", {
@@ -262,10 +276,89 @@ test("Set up this Mac fetches the PEM and invokes the one combined command", asy
       port: 7999,
     }),
   );
-  expect(api.caCertPem).toHaveBeenCalledOnce();
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1);
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
   expect(screen.getByText("which device's traffic do you want to see")).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// W12's I1-I3: a by-hand step's route crosses to the shell as a name, with the
+// one thing the shell needs to build what it opens: the certificate the core
+// serves now, or this window's next mark - never a URL or a path.
+test.each([
+  ["open in Keychain Access", 1, { name: "keychain", pem: PEM }],
+  ["open Proxy settings", 2, { name: "proxy-settings" }],
+] as const)("%s asks the shell for its route by name", async (label, n, route) => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  const task = await screen.findByTestId(`task-${n}`);
+  fireEvent.click(within(task).getByText("do it by hand"));
+  fireEvent.click(within(task).getByRole("button", { name: label }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route }));
+});
+
+test("the browser route carries this window's own mark, so its request settles the tasks", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "open example.com in your browser" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", {
+      route: { name: "browser", mark: expect.stringMatching(/^[a-z0-9]+\.\d+$/) },
+    }),
+  );
+});
+
+// D1: a store holding an older certificate under the same name answers
+// nothing, so the probe is asked about the bytes the core serves now.
+test("the trust probe asks about the certificate the core serves now, and setup reads the proxy in use", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: PEM }));
+  expect(invoke).toHaveBeenCalledWith("proxy_in_use", { host: "127.0.0.1", port: 7999 });
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_status")).toHaveLength(0);
+});
+
+// W8's Q1: adb starts a server of its own where none runs, so the emulator is
+// read only once it is the platform chosen, and its readings reach its tasks.
+test("the emulator is read through adb only while it is the platform chosen", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "emulator_readings"
+      ? { adb: true, sdk: null, avd: null, emulators: [{ name: "Pixel 7 API 35", trust: "trusted", proxy: "ours" }] }
+      : undefined,
+  );
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: PEM }));
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "emulator_readings")).toHaveLength(0);
+
+  pickPlatform("Android emulator");
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("emulator_readings", { pem: PEM, port: 7999 }));
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — trusted in Pixel 7 API 35"));
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — Pixel 7 API 35 routes through Trawler");
+});
+
+test("a core that cannot serve its certificate leaves the trust probe unread, never trusted", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "ca_trusted" ? "trusted" : undefined));
+  const { api } = mockApi(() => []);
+  vi.mocked(api.caCertPem).mockRejectedValue(new Error("GET /ca.pem failed: 500"));
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  await readingLanded();
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "ca_trusted")).toHaveLength(0);
+  expect(screen.getByTestId("task-1")).not.toHaveTextContent("done — installed and trusted");
 });
 
 // The manual steps tell the user to run commands against a file by name. The
@@ -283,7 +376,7 @@ test("Save writes the PEM under the filename the manual steps tell the user to r
     });
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(within(await screen.findByTestId("task-1")).getByText("do it manually"));
+  fireEvent.click(within(await screen.findByTestId("task-1")).getByText("do it by hand"));
   fireEvent.click(screen.getByRole("button", { name: "save…" }));
   await screen.findByText(new RegExp(`saved as ${CA_FILES.pem}`));
 
@@ -319,9 +412,9 @@ test("a dismissed prompt crosses the boundary as a refusal, with the tool's text
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
-  await screen.findByText("The password prompt was cancelled. Try again, or follow the manual steps.");
+  await screen.findByText("the password prompt was cancelled. Try again, or do it by hand.");
   fireEvent.click(screen.getByText("details"));
   expect(screen.getByText("0:36: execution error: User cancelled. (-128)")).toBeInTheDocument();
   expect(screen.getByTestId("task-1")).not.toHaveTextContent(/done — installed/);
@@ -336,10 +429,10 @@ test("a real failure keeps the OS's own words and leaves the manual route open",
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
   await screen.findByText(/setting up failed/);
 
-  const route = within(screen.getByTestId("task-1")).getByText("do it manually").closest("details")!;
+  const route = within(screen.getByTestId("task-1")).getByText("do it by hand").closest("details")!;
   expect(route).toHaveAttribute("open");
   expect(route).toHaveTextContent(/security add-trusted-cert/);
   expect(screen.getByTestId("set-up-status")).toHaveTextContent("no network services to configure");
@@ -357,10 +450,218 @@ async function simulator(initial = ONBOARDING) {
   return api;
 }
 
+// W16: simctl writes a running Simulator's store and opens its Safari, so the
+// screen asks the shell for each by name, with the certificate the core
+// serves now or the Simulator's own mark - never a path or a URL.
+const RUNNING_SIMULATOR = [{ name: "iPhone 17 Pro", trust: "absent" }];
+
+function simulatorReads(trust: "absent" | "trusted", proxy: "none" | "ours", over: Record<string, () => unknown> = {}) {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name in over) return over[name]();
+    if (name === "simulator_trust") return [{ ...RUNNING_SIMULATOR[0], trust }];
+    if (name === "proxy_in_use") return { status: proxy, address: null };
+    return undefined;
+  });
+}
+
+test("Set up the Simulator trusts every running Simulator first, then sets this Mac's proxy", async () => {
+  simulatorReads("absent", "none");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the Simulator" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 }),
+  );
+  const names = vi.mocked(invoke).mock.calls.map(([n]) => n);
+  expect(names.indexOf("trust_simulators")).toBeLessThan(names.indexOf("set_proxy"));
+  expect(invoke).toHaveBeenCalledWith("trust_simulators", { pem: PEM });
+  expect(names).not.toContain("set_up_this_machine");
+});
+
+test("a Simulator that refused the trust leaves this Mac's proxy alone", async () => {
+  simulatorReads("absent", "none", {
+    trust_simulators: () => {
+      throw { refused: false, detail: "simctl: unable to find utility" };
+    },
+  });
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the Simulator" }));
+
+  await screen.findByText("setting up failed — do it by hand below.");
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_proxy")).toHaveLength(0);
+});
+
+test("trust in the Simulator asks the shell with the certificate the core serves now", async () => {
+  simulatorReads("absent", "ours");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "trust in the Simulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("trust_simulators", { pem: PEM }));
+});
+
+test("open it in the Simulator carries the mark the Simulator's address shows", async () => {
+  simulatorReads("trusted", "ours");
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open it in the Simulator" }));
+
+  const shown = screen.getByTestId("check-address").textContent!.match(/trawler-check=([a-z0-9]+)/)![1];
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator-request", mark: shown } }),
+  );
+});
+
+test("with none running, open the Simulator asks the shell for the Simulator by name", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "simulator_trust" ? [] : undefined));
+  await simulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open the Simulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "simulator" } }));
+});
+
+test("a Simulator read that failed never says none runs", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "simulator_trust") throw new Error("ipc down");
+    return undefined;
+  });
+  await simulator();
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("simulator_trust", { pem: PEM }));
+  expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the address in task 3 confirms it");
+  expect(screen.queryByText(/no Simulator running/)).toBeNull();
+});
+
+// W17: adb and su write a running emulator's store, set its proxy and open its
+// Chrome, so the screen asks the shell for each by name, with the certificate
+// the core serves now, this window's port or the emulator's own mark.
+async function emulator() {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Android emulator");
+  return api;
+}
+
+const EMULATOR_SDK = {
+  adb: true,
+  sdk: "$HOME/Library/Android/sdk",
+  avd: { id: "Pixel_7_API_35", name: "Pixel 7 API 35", playStore: false },
+};
+
+function emulatorReads(
+  trust: "absent" | "trusted" | "unknown",
+  proxy: "none" | "ours",
+  over: Record<string, () => unknown> = {},
+) {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name in over) return over[name]();
+    if (name === "emulator_readings")
+      return { ...EMULATOR_SDK, emulators: [{ name: "Pixel 7 API 35", trust, proxy }] };
+    return undefined;
+  });
+}
+
+test("Set up the emulator installs on every running emulator first, then routes each, and touches this Mac's proxy nowhere", async () => {
+  emulatorReads("absent", "none");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the emulator" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("route_emulators", { port: 7999 }));
+  const names = vi.mocked(invoke).mock.calls.map(([n]) => n);
+  expect(names.indexOf("install_on_emulators")).toBeLessThan(names.indexOf("route_emulators"));
+  expect(invoke).toHaveBeenCalledWith("install_on_emulators", { pem: PEM });
+  expect(names).not.toContain("set_proxy");
+});
+
+test("an emulator that refused the install is left unrouted", async () => {
+  emulatorReads("absent", "none", {
+    install_on_emulators: () => {
+      throw { refused: false, detail: "/system/bin/sh: su: inaccessible or not found" };
+    },
+  });
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up the emulator" }));
+
+  await screen.findByText("setting up failed — do it by hand below.");
+  expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "route_emulators")).toHaveLength(0);
+});
+
+test("route the emulator and its reversal ask the shell by name with this window's port", async () => {
+  emulatorReads("trusted", "none");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "route the emulator" }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("route_emulators", { port: 7999 }));
+
+  emulatorReads("trusted", "ours");
+  fireEvent.focus(window);
+  fireEvent.click(await screen.findByRole("button", { name: "stop routing the emulator" }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("unroute_emulators"));
+});
+
+test("open it in the emulator carries the mark the emulator's address shows", async () => {
+  emulatorReads("trusted", "ours");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open it in the emulator" }));
+
+  const shown = screen.getByTestId("check-address").textContent!.match(/trawler-check=([a-z0-9]+)/)![1];
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "emulator-request", mark: shown } }),
+  );
+});
+
+test("with no su, send it to the emulator hands the shell the certificate the core serves now", async () => {
+  emulatorReads("unknown", "none");
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "send it to the emulator" }));
+
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "emulator-certificate", pem: PEM } }),
+  );
+});
+
+test("with none running, opening the AVD used last asks the shell for the emulator by name", async () => {
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "emulator_readings" ? { ...EMULATOR_SDK, emulators: [] } : undefined,
+  );
+  await emulator();
+
+  fireEvent.click(await screen.findByRole("button", { name: "open Pixel 7 API 35" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_route", { route: { name: "emulator" } }));
+});
+
+// W17's W4: before a read lands, where it failed, and where adb did not answer,
+// there is no reading - and none of them says no emulator runs.
+test.each([
+  ["a read not landed", () => new Promise(() => {})],
+  ["a read that failed", () => Promise.reject(new Error("ipc down"))],
+  ["adb not found", () => ({ adb: false, sdk: null, avd: null, emulators: [] })],
+])("%s never says no emulator runs", async (_case, answer) => {
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "emulator_readings" ? answer() : undefined,
+  );
+  await emulator();
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("emulator_readings", { pem: PEM, port: 7999 }));
+  expect(screen.getByTestId("task-1")).toHaveTextContent(/can't check here|checking/);
+  expect(screen.queryByText(/no emulator running/)).toBeNull();
+});
+
 test("Set the system proxy invokes set_proxy with the configured address, and proves nothing", async () => {
   await simulator();
 
-  fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(screen.getByRole("button", { name: "set the system proxy" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 }),
@@ -373,20 +674,40 @@ test("a rejected set_proxy reports failed and keeps the manual route reachable",
   rejectCommand("set_proxy", { refused: false, detail: "no network services" } as never);
   await simulator();
 
-  fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(screen.getByRole("button", { name: "set the system proxy" }));
   await screen.findByText(/setting the proxy failed/);
 
-  fireEvent.click(within(screen.getByTestId("task-2")).getByText("do it manually"));
+  fireEvent.click(within(screen.getByTestId("task-2")).getByText("do it by hand"));
   expect(screen.getByTestId("task-2")).toHaveTextContent(/networksetup/);
 });
 
 test("Stop routing invokes unset_proxy after the proxy was set", async () => {
   await simulator();
 
-  fireEvent.click(screen.getByRole("button", { name: "Set the system proxy" }));
+  fireEvent.click(screen.getByRole("button", { name: "set the system proxy" }));
   fireEvent.click(await screen.findByRole("button", { name: "stop routing through Trawler" }));
 
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("unset_proxy"));
+});
+
+test("remove the certificate hands the shell the certificate the core serves, then reads this machine again", async () => {
+  onMacHost();
+  watchPaused();
+  let trust = "trusted";
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return trust;
+    if (name === "proxy_in_use") return { status: "none", address: null };
+    if (name === "remove_ca") trust = "absent";
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "remove the certificate" }));
+
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("remove_ca", { pem: PEM }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "remove the certificate" })).toBeNull());
+  expect(screen.getByTestId("task-1")).toHaveTextContent("not done");
 });
 
 // A tunnel is a live signal about traffic, so it settles the task the traffic
@@ -395,23 +716,26 @@ test("Stop routing invokes unset_proxy after the proxy was set", async () => {
 // tasks never hear about it: a tunnel says nothing about this machine's stores.
 test("a connection event settles the last task, and warns once no request answers it", async () => {
   onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "absent";
+    if (name === "proxy_in_use") return { status: "none", address: null };
+    return undefined;
+  });
   const { api, fireConnection } = mockApi(() => []); // no flows ever
   render(<App api={api} initialState={ONBOARDING} />);
-  await screen.findByTestId("task-3");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("not done — not installed"));
 
   fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
   await waitFor(() =>
     expect(screen.getByTestId("task-3")).toHaveTextContent("a connection just arrived"),
   );
-  expect(screen.getByTestId("task-2")).toHaveTextContent(
-    "we'll confirm this on this Mac's first request",
-  );
+  expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off");
 
   // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
   const realNow = Date.now;
   vi.spyOn(Date, "now").mockImplementation(() => realNow() + TUNNEL_GRACE_MS + 1_000);
   await waitFor(
-    () => expect(screen.getByTestId("task-3")).toHaveTextContent("arriving but not decrypting"),
+    () => expect(screen.getByTestId("task-3")).toHaveTextContent("not working — arriving but not decrypting"),
     { timeout: 3_000 },
   );
   // The refusal is the certificate task's to say, once its grace is spent.
@@ -433,7 +757,7 @@ test("replacing another proxy costs a confirm, and a refusal writes nothing", as
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
-    if (name === "proxy_status") return { status: "foreign", address: "10.1.1.1:8080" };
+    if (name === "proxy_in_use") return { status: "foreign", address: "10.1.1.1:8080" };
     if (name === "confirm_replace_proxy") return false;
     return undefined;
   });
@@ -445,7 +769,7 @@ test("replacing another proxy costs a confirm, and a refusal writes nothing", as
       "another proxy is set on this Mac: 10.1.1.1:8080",
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(screen.getByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("confirm_replace_proxy", { address: "10.1.1.1:8080" }),
@@ -457,14 +781,14 @@ test("an allowed replacement goes through, once", async () => {
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
-    if (name === "proxy_status") return { status: "foreign", address: "10.1.1.1:8080" };
+    if (name === "proxy_in_use") return { status: "foreign", address: "10.1.1.1:8080" };
     if (name === "confirm_replace_proxy") return true;
     return undefined;
   });
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1),
@@ -476,12 +800,12 @@ test("setting the proxy where none is set asks no second question", async () => 
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
   vi.mocked(invoke).mockImplementation(async (name: string) =>
-    name === "proxy_status" ? { status: "none", address: null } : undefined,
+    name === "proxy_in_use" ? { status: "none", address: null } : undefined,
   );
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Set up this Mac" }));
+  fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
 
   await waitFor(() =>
     expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "set_up_this_machine")).toHaveLength(1),
@@ -502,7 +826,7 @@ async function setupSucceeds() {
   render(<App api={api} initialState={ONBOARDING} />);
   await screen.findByText("which device's traffic do you want to see");
 
-  rows = [flow({ uri: "https://example.com/" })];
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
   fire();
   return api;
 }
@@ -547,7 +871,7 @@ test("re-entering setup retires the banner — leaving again is not a second suc
   fireEvent.click(screen.getByTestId("status-dot"));
   await screen.findByText("which device's traffic do you want to see");
 
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
 
   await screen.findByTestId("flow-row");
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
@@ -589,7 +913,7 @@ test("the dot opens setup on the last device chosen", async () => {
   fireEvent.click(within(banner).getByRole("button", { name: "set up another device" }));
   await screen.findByText(QUESTION);
   pickPlatform("Android emulator");
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   await screen.findByTestId("flow-row");
 
   fireEvent.click(screen.getByTestId("status-dot"));
@@ -627,7 +951,7 @@ test("re-entry is a new session: the first device's request opens nothing and pr
   rows = [...rows, flow({ id: "f2", uri: "https://second.test/", started_at: startedNow() })];
   fire();
   expect(await screen.findByTestId("proven")).toHaveTextContent("You're set up");
-  expect(screen.getByText("capturing traffic")).toBeInTheDocument();
+  expect(screen.getByText("done — capturing traffic")).toBeInTheDocument();
 });
 
 // P4 inverted (R7): the setup screen's reading obeyed the list's filter, so a
@@ -646,9 +970,9 @@ test("setup reads every captured row whatever the list is filtered to, and back 
   await screen.findByText(QUESTION);
   rows = [...rows, flow({ id: "f2", uri: "https://second.test/", started_at: startedNow() })];
   fire();
-  expect(await screen.findByText("capturing traffic")).toBeInTheDocument();
+  expect(await screen.findByText("done — capturing traffic")).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
   await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ q: "nomatch" }));
   expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.getByLabelText("filter")).toHaveValue("nomatch");
@@ -679,22 +1003,236 @@ test("a launch straight into the list says nothing — the moment it announces i
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
-// The probes are a snapshot of this machine. Two things re-take it without an
-// action: the control above the steps, and the window coming back into focus —
-// which is when the user has just been in System Settings.
-test("check again and window focus each re-read both probes, and the reading is stamped", async () => {
+// The probes are a snapshot of this machine, re-taken without anyone asking:
+// the window coming back into focus is when the user has just been in System
+// Settings, and nothing on the screen offers to re-take it by hand.
+test("window focus re-reads both probes, and no control asks to", async () => {
   onMacHost();
+  watchPaused();
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
-  await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent(/checked/));
-  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_status").length;
+  await readingLanded();
   expect(probes()).toBe(2);
-
-  fireEvent.click(screen.getByRole("button", { name: "check again" }));
-  await waitFor(() => expect(probes()).toBe(4));
+  expect(screen.queryByRole("button", { name: "check again" })).toBeNull();
 
   fireEvent(window, new Event("focus"));
-  await waitFor(() => expect(probes()).toBe(6));
+  await waitFor(() => expect(probes()).toBe(4));
+});
+
+const readingLanded = () =>
+  waitFor(() => expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking"));
+
+const probes = () =>
+  vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_in_use").length;
+
+// A reading vouches only for what started before it was sent (DEC-63 rule 3),
+// so a row that started this millisecond waits one more before it.
+const rereadOnFocus = async () => {
+  await act(() => new Promise((settle) => setTimeout(settle, 2)));
+  const before = probes();
+  fireEvent(window, new Event("focus"));
+  await waitFor(() => expect(probes()).toBe(before + 2));
+  await act(() => new Promise((settle) => setTimeout(settle, 0)));
+};
+
+// A hidden window runs no watch, so a test counting reads counts only the
+// trigger it is about, however slowly the suite runs.
+function watchPaused() {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+}
+
+afterEach(() => {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+});
+
+// ── When this machine is read again (U1–U4 · DEC-62) ────────────────────────
+
+describe("this machine is read again wherever its answer can change", () => {
+  beforeEach(watchPaused);
+
+  const answering = (over: Record<string, (args?: unknown) => unknown> = {}) =>
+    vi.mocked(invoke).mockImplementation(async (name: string, args?: unknown) => {
+      if (name in over) return over[name](args);
+      if (name === "ca_trusted") return "absent";
+      if (name === "proxy_in_use") return { status: "none", address: null };
+      return undefined;
+    });
+
+  const settled = async () => {
+    await readingLanded();
+    return probes();
+  };
+
+  // U1: a failure can leave the machine half changed (-60007 after the trust
+  // write; the store written and the proxy not), so it re-reads like a success.
+  it.each([
+    ["cancelled", { refused: true, unshowable: false, detail: "User cancelled. (-128)" }],
+    ["an approval macOS could not show", { refused: false, unshowable: true, detail: "(-60007)" }],
+    ["failed", { refused: false, unshowable: false, detail: "SecTrustSettingsSetTrustSettings: denied" }],
+  ])("after Set up this Mac %s", async (_outcome, failure) => {
+    onMacHost();
+    answering({
+      set_up_this_machine: () => {
+        throw failure;
+      },
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "failed"));
+    await waitFor(() => expect(probes()).toBe(before + 2));
+  });
+
+  it("after a replacement the user declined, which changed nothing but was still an act", async () => {
+    onMacHost();
+    answering({
+      proxy_in_use: () => ({ status: "foreign", address: "10.1.1.1:8080" }),
+      confirm_replace_proxy: () => false,
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "set up this Mac" }));
+
+    await waitFor(() => expect(screen.getByTestId("set-up-status")).toHaveAttribute("data-state", "nothing"));
+    await waitFor(() => expect(probes()).toBe(before + 2));
+  });
+
+  // U2: a core started again, from another folder, serves another certificate.
+  it("when the core comes back, asking about the certificate it serves now", async () => {
+    onMacHost();
+    answering();
+    const { api, fireDown, fireUp } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await settled();
+
+    fireDown();
+    await screen.findByText("Trawler's capture service isn't answering");
+    const renewed = "-----BEGIN CERTIFICATE-----\nnew\n-----END CERTIFICATE-----\n";
+    vi.mocked(api.caCertPem).mockResolvedValue(renewed);
+    fireUp();
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("ca_trusted", { pem: renewed }));
+  });
+
+  // U4: a read the user did not ask for moves only the time the reading carries.
+  it("on focus, quietly: nothing shows checking and no button is held", async () => {
+    onMacHost();
+    answering();
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await settled();
+    answering({ proxy_in_use: () => new Promise(() => {}) });
+
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "proxy_in_use").length).toBe(2));
+    expect(screen.getByTestId("task-1")).not.toHaveTextContent("checking");
+    expect(screen.getByTestId("task-2")).not.toHaveTextContent("checking");
+    expect(screen.getByRole("button", { name: "set up this Mac" })).toBeEnabled();
+  });
+
+  it("but never twice at once: a quiet read waits out the one in flight", async () => {
+    onMacHost();
+    answering();
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    const before = await settled();
+    answering({ proxy_in_use: () => new Promise(() => {}) });
+
+    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(probes()).toBe(before + 2));
+    expect(probes()).toBe(before + 2);
+  });
+});
+
+// U3: the watch - a setting changed in System Settings beside the window.
+describe("the watch", () => {
+  const visibility = (state: DocumentVisibilityState) => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  };
+
+  afterEach(() => vi.useRealTimers());
+
+  const opened = async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onMacHost();
+    let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "ca_trusted") return "trusted";
+      if (name === "proxy_in_use") return proxy;
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    render(<App api={api} initialState={ONBOARDING} />);
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — this Mac routes through Trawler"));
+    return { turnOff: () => (proxy = { status: "none", address: null }) };
+  };
+
+  const tick = () => act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+  it("reads a proxy turned off beside the window within one tick, without a click and without checking", async () => {
+    const { turnOff } = await opened();
+    turnOff();
+
+    await tick();
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
+    expect(screen.getByTestId("task-2")).not.toHaveTextContent("checking");
+  });
+
+  it("a certificate the core never serves holds no reading past its patience", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onMacHost();
+    let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+    vi.mocked(invoke).mockImplementation(async (name: string) => (name === "proxy_in_use" ? proxy : undefined));
+    const { api } = mockApi(() => []);
+    vi.mocked(api.caCertPem).mockImplementation(() => new Promise<string>(() => {}));
+    render(<App api={api} initialState={ONBOARDING} />);
+    await act(async () => vi.advanceTimersByTime(CA_READ_PATIENCE_MS));
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — this Mac routes through Trawler"));
+
+    proxy = { status: "none", address: null };
+    await act(async () => vi.advanceTimersByTime(WATCH_MS + CA_READ_PATIENCE_MS));
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
+  });
+
+  it("pauses while the window is hidden, and reads at once when it shows again", async () => {
+    await opened();
+    visibility("hidden");
+    const hidden = probes();
+
+    await tick();
+    await tick();
+    expect(probes()).toBe(hidden);
+
+    visibility("visible");
+    await waitFor(() => expect(probes()).toBe(hidden + 2));
+    await tick();
+    await waitFor(() => expect(probes()).toBe(hidden + 4));
+  });
+
+  it("stops once setup is left", async () => {
+    await opened();
+    fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+    await screen.findByText("Nothing captured yet");
+    const left = probes();
+
+    await tick();
+    await tick();
+
+    expect(probes()).toBe(left);
+  });
 });
 
 // --- the reach seam (E-ONBOARD.W3) -------------------------------------------
@@ -716,6 +1254,7 @@ const ARMED = {
     cer: "http://192.168.1.24:7421/ca.cer",
     mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
   },
+  wifi_page: "http://192.168.1.24:7421/android-wifi",
   interfaces: INTERFACES,
 };
 
@@ -740,7 +1279,7 @@ test("entering setup reads the reach state rather than assuming one", async () =
   expect(armReach).not.toHaveBeenCalled();
   await waitFor(() =>
     expect(screen.getByTestId("task-1")).toHaveTextContent(
-      "not done — Trawler answers on this machine only",
+      "not done — Trawler answers on this Mac only",
     ),
   );
 });
@@ -755,12 +1294,12 @@ test("with no address, check again reads the core's reach anew and offers what i
   await offMachine({ reach });
 
   const task1 = screen.getByTestId("task-1");
-  await waitFor(() => expect(task1).toHaveTextContent("Join the network your iPhone is on"));
+  await waitFor(() => expect(task1).toHaveTextContent("Join the network your iPhone or iPad is on"));
   fireEvent.click(within(task1).getByRole("button", { name: "check again" }));
 
   await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
   expect(
-    await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }),
+    await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }),
   ).toBeInTheDocument();
 });
 
@@ -773,21 +1312,19 @@ test("a refused confirm arms nothing — no POST, no address, no listening", asy
   const armReach = vi.fn(async () => ARMED);
   await offMachine({ reach: async () => UNARMED, armReach });
 
-  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+  fireEvent.click(await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }));
 
   await waitFor(() =>
     expect(invoke).toHaveBeenCalledWith("confirm_reach", { address: "192.168.1.24" }),
   );
   expect(armReach).not.toHaveBeenCalled();
   expect(screen.getByTestId("task-1")).toHaveTextContent(
-    "not done — Trawler answers on this machine only",
+    "not done — Trawler answers on this Mac only",
   );
   expect(screen.queryByTestId("device-address")).toBeNull();
   // F13: the refusal reaches the screen as a refusal. Without it the dialog
   // closes, the button comes back, and nothing distinguishes a no from a yes.
-  expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(
-    "not allowed — Trawler still answers on this machine only",
-  );
+  expect(await screen.findByTestId("arm-reach-status")).toHaveTextContent(/^not allowed$/);
 });
 
 test("an allowed confirm arms that address, and the screen renders what answered", async () => {
@@ -797,7 +1334,7 @@ test("an allowed confirm arms that address, and the screen renders what answered
   const armReach = vi.fn(async () => ARMED);
   await offMachine({ reach: async () => UNARMED, armReach });
 
-  fireEvent.click(await screen.findByRole("button", { name: "Allow devices on Wi-Fi to connect" }));
+  fireEvent.click(await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }));
 
   await waitFor(() => expect(armReach).toHaveBeenCalledWith("192.168.1.24"));
   expect(screen.queryByTestId("arm-reach-status")).toBeNull();
@@ -820,9 +1357,372 @@ test("stop listening takes the exposure away without asking again", async () => 
   expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "confirm_reach")).toHaveLength(0);
   await waitFor(() =>
     expect(screen.getByTestId("task-1")).toHaveTextContent(
-      "not done — Trawler answers on this machine only",
+      "not done — Trawler answers on this Mac only",
     ),
   );
+});
+
+// A2: nothing off this machine reaches Trawler before an address is allowed, so
+// what arrived before it is this machine's, whoever the screen is set up for.
+describe("another device's evidence starts when its address is allowed", () => {
+  const AGAIN: OnbState = { ...ONBOARDING, everProven: true };
+
+  const opened = async (rows: () => FlowSummary[]) => {
+    watchPaused();
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) =>
+      name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+    );
+    const { api, fire } = mockApi(rows);
+    api.reach = vi.fn(async () => ARMED);
+    render(<App api={api} initialState={AGAIN} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Another Mac");
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    return fire;
+  };
+
+  it("a request from before it settles nothing", async () => {
+    await opened(() => [flow({ uri: "https://example.com/" })]);
+
+    expect(screen.getByTestId("task-2")).toHaveTextContent(
+      "can't check here — that Mac's first HTTPS request confirms it",
+    );
+    expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — that Mac's first request confirms it");
+  });
+
+  it("one from after it does", async () => {
+    let rows: FlowSummary[] = [];
+    const fire = await opened(() => rows);
+
+    rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
+    fire();
+    await rereadOnFocus();
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted"));
+  });
+});
+
+// DEC-63: the address the try task shows is the one whose row settles that
+// Mac's tasks, while this Mac's own proxy cannot be ruled out.
+test("another device's marked request settles its tasks, where nothing else of the wire can", async () => {
+  onMacHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Another Mac");
+  const shown = await screen.findByRole("button", { name: /copy the address to open/i });
+  const address = shown.textContent!.match(/https:\/\/example\.com\/\?trawler-check=[0-9a-z]{4}/)![0];
+  const later = new Date(Date.now() + 1_000).toISOString();
+
+  rows = [flow({ uri: "https://example.com/", started_at: later })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("traffic-state")).toBeInTheDocument());
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
+
+  rows = [...rows, flow({ id: "f2", uri: address, started_at: later })];
+  fire();
+
+  await waitFor(() =>
+    expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at"),
+  );
+  expect(screen.getByTestId("task-3")).toHaveTextContent("done — that Mac's request came through at");
+});
+
+// DEC-63 rules 1 and 4: a proof lasts the session, and only an address allowed
+// anew starts the evidence again - a reach read that failed allowed nothing.
+describe("a reach read that fails takes back no proof", () => {
+  const AGAIN: OnbState = { ...ONBOARDING, everProven: true };
+
+  const proven = async () => {
+    watchPaused();
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) =>
+      name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+    );
+    let rows: FlowSummary[] = [];
+    const harness = mockApi(() => rows);
+    const reach = vi.fn<() => Promise<ReachState>>(async () => ARMED);
+    harness.api.reach = reach;
+    render(<App api={harness.api} initialState={AGAIN} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Another Mac");
+    const shown = await screen.findByRole("button", { name: /copy the address to open/i });
+    const address = shown.textContent!.match(/https:\/\/example\.com\/\?trawler-check=[0-9a-z]{4}/)![0];
+    rows = [flow({ uri: address, started_at: startedNow() })];
+    harness.fire();
+    await waitFor(() =>
+      expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at"),
+    );
+    return { ...harness, reach };
+  };
+
+  it("when nobody asked for it", async () => {
+    const { reach } = await proven();
+
+    reach.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(3));
+
+    expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at");
+  });
+
+  it("when the core's return asked for it", async () => {
+    const { reach, fireDown, fireUp } = await proven();
+
+    reach.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    fireDown();
+    await screen.findByText("Trawler's capture service isn't answering");
+    fireUp();
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(3));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at"),
+    );
+  });
+});
+
+// DEC-63 rule 3: what arrived while this Mac's proxy pointed here may be this
+// Mac's, and turning the proxy off does not make it another device's.
+test("requests from while this machine's proxy pointed here stay unplaced once it is turned off", async () => {
+  watchPaused();
+  onMacHost();
+  let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "proxy_in_use" ? proxy : undefined));
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Another Mac");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+  rows = [flow({ uri: "https://example.com/", started_at: startedNow() })];
+  fire();
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
+
+  proxy = { status: "none", address: null };
+  fireEvent(window, new Event("focus"));
+
+  await waitFor(() =>
+    expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it"),
+  );
+  rows = [...rows, flow({ id: "f2", uri: "https://example.org/", started_at: startedNow() })];
+  fire();
+  await rereadOnFocus();
+  await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
+});
+
+const anotherMacWith = async (proxy: () => unknown) => {
+  watchPaused();
+  onMacHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) => (name === "proxy_in_use" ? proxy() : undefined));
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+  await screen.findByText(QUESTION);
+  pickPlatform("Another Mac");
+  await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+  await waitFor(() => expect(probes()).toBeGreaterThan(0));
+  await act(() => new Promise((settle) => setTimeout(settle, 0)));
+  return (next: FlowSummary[]) => {
+    rows = next;
+    fire();
+  };
+};
+
+// DEC-63 rule 4: that Mac's marked request is its own whatever this Mac's proxy
+// reads after it, so turning the proxy off moves none of its tasks back.
+test("another device's marked request keeps its proof once this machine's proxy is turned off", async () => {
+  let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+  const show = await anotherMacWith(() => proxy);
+  const shown = await screen.findByRole("button", { name: /copy the address to open/i });
+  const address = shown.textContent!.match(/https:\/\/example\.com\/\?trawler-check=[0-9a-z]{4}/)![0];
+  show([flow({ uri: address, started_at: startedNow() })]);
+  await waitFor(() => expect(screen.getByTestId("task-4")).toHaveTextContent("done — decrypted at"));
+
+  proxy = { status: "none", address: null };
+  await rereadOnFocus();
+
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — that Mac's request decrypted at");
+  expect(screen.getByTestId("task-4")).toHaveTextContent(/done — (capturing traffic|decrypted at)/);
+  expect(screen.getByTestId("proven")).toHaveTextContent("You're set up — Trawler is capturing traffic from that Mac");
+});
+
+// DEC-63 rule 4: what arrived while this Mac's proxy read off was that device's
+// then, and a reading that failed since does not unmake it.
+test("a proof made while this machine's proxy read off outlasts a reading that failed", async () => {
+  let proxy: () => unknown = () => ({ status: "none", address: null });
+  const show = await anotherMacWith(() => proxy());
+  show([flow({ uri: "https://example.com/", started_at: startedNow() })]);
+  await rereadOnFocus();
+  await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
+
+  proxy = () => {
+    throw new Error("scutil failed");
+  };
+  await rereadOnFocus();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at");
+
+  proxy = () => ({ status: "none", address: null });
+  await rereadOnFocus();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at");
+  expect(screen.getByTestId("task-3")).toHaveTextContent("done — a request reached Trawler at");
+});
+
+// DEC-63 rule 3: a reading speaks for the moment it was read, so what arrives
+// after the last that read this machine's proxy off is no one's until another
+// reads it off too - and no one's for good if the next reads it pointing here.
+test("what arrives after the last reading of this machine's proxy as off is no one's until the next reads it off", async () => {
+  let proxy: { status: string; address: string | null } = { status: "none", address: null };
+  const show = await anotherMacWith(() => proxy);
+  proxy = { status: "ours", address: "127.0.0.1:7420" };
+  show([flow({ uri: "https://example.org/", started_at: startedNow() })]);
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it");
+  await rereadOnFocus();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — the address in task 4 confirms it");
+  expect(screen.getByTestId("task-3")).toHaveTextContent("can't check here — the same request confirms it");
+});
+
+// DEC-63 rule 3: the watch's own readings bracket what arrives between them, so
+// another device's unmarked request settles its tasks within a tick, without a
+// click, at whatever pace the watch keeps.
+test("another device's unmarked request settles its tasks within a tick of the watch", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) =>
+      name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+    );
+    let rows: FlowSummary[] = [];
+    const { api, fire } = mockApi(() => rows);
+    api.reach = vi.fn(async () => ARMED);
+    render(<App api={api} initialState={{ ...ONBOARDING, everProven: true }} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Another Mac");
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    await act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+    rows = [flow({ uri: "https://example.org/", started_at: startedNow() })];
+    fire();
+    await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+    expect(screen.getByTestId("task-2")).toHaveTextContent("can't check here — that Mac's first HTTPS request confirms it");
+    await act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — a request decrypted at"));
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// Only the newest answer lands: a read sent before an allow or a stop, and
+// answered after it, is older than that call's own answer.
+const held = () => {
+  let release: (answer: ReachState) => void = () => {};
+  const pending = new Promise<ReachState>((resolve) => {
+    release = resolve;
+  });
+  return { pending, release: (answer: ReachState) => act(async () => release(answer)) };
+};
+
+describe("a reach read in flight across an allow or a stop lands nothing", () => {
+  it("an allow", async () => {
+    watchPaused();
+    vi.mocked(invoke).mockImplementation(async (name: string) => (name === "confirm_reach" ? true : undefined));
+    const reach = vi.fn<() => Promise<ReachState>>(async () => UNARMED);
+    await offMachine({ reach, armReach: vi.fn(async () => ARMED) });
+    await waitFor(() => expect(reach).toHaveBeenCalledOnce());
+    const stale = held();
+    reach.mockReturnValueOnce(stale.pending);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(await screen.findByRole("button", { name: "allow devices on Wi-Fi to connect" }));
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    await stale.release(UNARMED);
+
+    expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24");
+  });
+
+  it("a stop", async () => {
+    watchPaused();
+    const reach = vi.fn<() => Promise<ReachState>>(async () => ARMED);
+    await offMachine({ reach, disarmReach: vi.fn(async () => UNARMED) });
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+    const stale = held();
+    reach.mockReturnValueOnce(stale.pending);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "stop listening" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this Mac only"),
+    );
+    await stale.release(ARMED);
+
+    expect(screen.getByTestId("task-1")).toHaveTextContent("not done — Trawler answers on this Mac only");
+  });
+});
+
+// R2: a network change beside the window is read like a setting changed there.
+describe("the allowed address is read again with this machine", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("on focus", async () => {
+    watchPaused();
+    const reach = vi.fn(async () => ARMED);
+    await offMachine({ reach });
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(1));
+
+    fireEvent(window, new Event("focus"));
+
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+  });
+
+  // A core slower to answer than the watch ticks would otherwise see every
+  // answer superseded before it lands.
+  it("once the read in flight has answered, which then lands", async () => {
+    watchPaused();
+    const reach = vi.fn<() => Promise<ReachState>>(async () => ARMED);
+    await offMachine({ reach });
+    await waitFor(() => expect(reach).toHaveBeenCalledOnce());
+    const slow = held();
+    reach.mockReturnValueOnce(slow.pending);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(reach).toHaveBeenCalledTimes(2));
+
+    fireEvent(window, new Event("focus"));
+    await act(() => new Promise((settle) => setTimeout(settle, 0)));
+    expect(reach).toHaveBeenCalledTimes(2);
+    await slow.release({ ...ARMED, interfaces: [{ name: "Wi-Fi", address: "10.0.4.9" }] });
+
+    expect(screen.getByTestId("task-1")).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24");
+  });
+
+  it("on the watch, so an address this machine left shows within one tick, without a click", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let answer: ReachState = ARMED;
+    await offMachine({ reach: vi.fn(async () => answer) });
+    await waitFor(() => expect(screen.getByTestId("task-1")).toHaveTextContent("done — listening on 192.168.1.24"));
+
+    answer = { ...ARMED, interfaces: [{ name: "Wi-Fi", address: "10.0.4.9" }] };
+    await act(async () => vi.advanceTimersByTime(WATCH_MS));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("task-1")).toHaveTextContent("not working — this Mac no longer holds 192.168.1.24"),
+    );
+    expect(screen.getByTestId("reach-chip")).toHaveTextContent("no longer reachable on 192.168.1.24");
+    expect(screen.getByTestId("reach-chip")).not.toHaveTextContent(/^reachable/);
+  });
 });
 
 // F20: choosing "this machine" hid the exposure entirely, and the flow list -
@@ -952,7 +1852,7 @@ test("a core that will not say leaves the screen saying Trawler answers here onl
 
   await waitFor(() =>
     expect(screen.getByTestId("task-1")).toHaveTextContent(
-      "not done — Trawler answers on this machine only",
+      "not done — Trawler answers on this Mac only",
     ),
   );
   expect(screen.queryByTestId("device-address")).toBeNull();
@@ -1038,8 +1938,8 @@ test("a host that matches nothing says the query excludes the traffic, not that 
 
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "no-such-path" } });
   await waitFor(() => expect(screen.queryByTestId("flow-row")).toBeNull());
-  expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
-  expect(screen.getByTestId("empty")).not.toHaveTextContent("no flows yet");
+  expect(screen.getByTestId("empty")).toHaveTextContent("Nothing matches your filter");
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("Nothing captured yet");
 });
 
 test("a proven launch with no traffic says nothing is captured, not that a filter excluded it", async () => {
@@ -1047,8 +1947,8 @@ test("a proven launch with no traffic says nothing is captured, not that a filte
   render(<App api={api} initialState={PROVEN} />);
 
   const empty = await screen.findByTestId("empty");
-  expect(empty).toHaveTextContent("no flows yet");
-  expect(empty).not.toHaveTextContent("no flows match this filter");
+  expect(empty).toHaveTextContent("Nothing captured yet");
+  expect(empty).not.toHaveTextContent("Nothing matches your filter");
 });
 
 test("the flow count reads as a value at a deliberately absent tone, not as a label", async () => {
@@ -1218,7 +2118,7 @@ test("clearing empties the list into an absence only a clear produces, and the c
   // response carries a count, not rows, so it could not refill it anyway.
   rows = [];
   fire();
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("All cleared"));
   expect(screen.getByTestId("capture-slot")).toHaveTextContent("0 flows");
 });
 
@@ -1233,7 +2133,7 @@ test("the cleared absence gives way as soon as rows come back", async () => {
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
   rows = [];
   fire();
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("All cleared"));
 
   rows = [flow({ id: "f2" })];
   fire();
@@ -1242,7 +2142,7 @@ test("the cleared absence gives way as soon as rows come back", async () => {
   rows = [];
   fire();
   // Emptied by eviction this time, not by a clear — so it is not that absence.
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("no flows yet"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("Nothing captured yet"));
 });
 
 test("narrowing after a clear reads as the filter's absence, not as the clear's", async () => {
@@ -1256,10 +2156,10 @@ test("narrowing after a clear reads as the filter's absence, not as the clear's"
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
   rows = [];
   fire();
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("All cleared"));
 
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "nothing" } });
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("Nothing matches your filter"));
 });
 
 test("a dismissed clear ask sends the live filter and refills from the bus without a dialog", async () => {
@@ -1278,7 +2178,7 @@ test("a dismissed clear ask sends the live filter and refills from the bus witho
 
   rows = [flow({ id: "f1", uri: "http://example.com/" })];
   fire();
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("capture cleared"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("All cleared"));
 });
 
 test("an imported file lands as marked rows the list gets from the bus", async () => {
@@ -1334,6 +2234,7 @@ function shellApi(answer: () => Promise<FlowSummary[]>) {
   const listFlows = vi.fn((_filter: Filter) => answer());
   const api: TrawlerApi = apiStub({
     listFlows,
+    latestCapture: () => answer().then(() => null),
     caCertPem: async () => PEM,
     getFlow: async (id: string): Promise<FlowView> => ({
       ...flow({ id }),
@@ -1380,9 +2281,9 @@ test("a core that stops answering states it above rows that do not move", async 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
 
-  await screen.findByText("trawler is not answering");
-  expect(screen.getByText(new RegExp(`no answer from ${apiAddr()}`))).toBeInTheDocument();
-  expect(screen.getByText(/the rows below are the last it sent/)).toBeInTheDocument();
+  await screen.findByText("Trawler's capture service isn't answering");
+  expect(screen.getByText(/The requests below are the last it sent/)).toBeInTheDocument();
+  expect(screen.getByText(/The requests below are the last it sent/)).toBeInTheDocument();
   // The rows were true when they arrived; the band qualifies them, it does not
   // delete them — and the count still counts what is on screen.
   expect(screen.getAllByTestId("flow-row")).toHaveLength(1);
@@ -1394,14 +2295,14 @@ test("with nothing captured the same sentence stands in the row region, and no b
   const { api } = shellApi(() => Promise.reject(new TypeError("Failed to fetch")));
   render(<App api={api} initialState={PROVEN} />);
 
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
   const region = screen.getByTestId("empty");
-  expect(region).toHaveTextContent("trawler is not answering");
-  expect(region).toHaveTextContent("nothing has reached the window");
+  expect(region).toHaveTextContent("Trawler's capture service isn't answering");
+  expect(region).toHaveTextContent("Nothing has been captured yet.");
   // Said once: the statement sits immediately above what it is about, and with
   // no rows there is nothing above to qualify.
-  expect(screen.getAllByText("trawler is not answering")).toHaveLength(1);
-  expect(screen.queryByText(/the rows below are the last it sent/)).toBeNull();
+  expect(screen.getAllByText("Trawler's capture service isn't answering")).toHaveLength(1);
+  expect(screen.queryByText(/The requests below are the last it sent/)).toBeNull();
 });
 
 test("a refused query is not a failed connection — the row region says so, the band stays away", async () => {
@@ -1414,9 +2315,9 @@ test("a refused query is not a failed connection — the row region says so, the
   fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
 
   const region = await screen.findByTestId("empty");
-  expect(region).toHaveTextContent("4xz is not a status");
-  expect(region).toHaveTextContent("type a code (404) or a class (4xx)");
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(region).toHaveTextContent("“4xz” isn't a status code");
+  expect(region).toHaveTextContent("Try a code like 404, or a range like 4xx.");
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
   // The field keeps the text — nothing is corrected for the user.
   expect(screen.getByLabelText("status")).toHaveValue("4xz");
   expect(screen.getByText("0 flows")).toBeInTheDocument();
@@ -1431,19 +2332,19 @@ test("retry disables its button and names what is awaited, then leaves with focu
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
 
   answer = () => new Promise<FlowSummary[]>((res) => (release = res));
-  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+  fireEvent.click(screen.getByRole("button", { name: "try again" }));
 
   // Fork D4: both halves or neither.
-  await waitFor(() => expect(screen.getByRole("button", { name: "retry" })).toBeDisabled());
-  expect(screen.getByText(`trying ${apiAddr()}…`)).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole("button", { name: "try again" })).toBeDisabled());
+  expect(screen.getByText("Trying again…")).toBeInTheDocument();
 
   await act(async () => {
     release([HTTPS]);
   });
-  await waitFor(() => expect(screen.queryByText("trawler is not answering")).toBeNull());
+  await waitFor(() => expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull());
   // A surface that removes itself may not leave focus on <body>.
   expect(document.activeElement).toBe(screen.getByRole("main"));
 });
@@ -1456,13 +2357,13 @@ test("a retry that fails again keeps the band and re-enables the way out", async
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
 
   await act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "try again" }));
   });
-  expect(screen.getByText("trawler is not answering")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "retry" })).toBeEnabled();
+  expect(screen.getByText("Trawler's capture service isn't answering")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "try again" })).toBeEnabled();
   expect(document.activeElement).not.toBe(screen.getByRole("main"));
 });
 
@@ -1474,6 +2375,7 @@ function streamApi(answer: () => Promise<FlowSummary[]>) {
   const handlers: { current: StreamHandlers | null } = { current: null };
   const api = apiStub({
     listFlows: () => answer(),
+    latestCapture: () => answer().then(() => null),
     stream: (h: StreamHandlers) => {
       handlers.current = h;
       return () => {};
@@ -1500,7 +2402,7 @@ test("while the launch read is in flight only the shell and the checking dot pai
 
   await act(() => new Promise((settle) => setTimeout(settle, 200)));
   expect(screen.queryByText(QUESTION)).toBeNull();
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 });
 
 // R2: a core that is not running is not answered with setup steps, and the
@@ -1511,13 +2413,13 @@ test("a launch the core does not answer says so, and its retry reads again", asy
   render(<App api={api} />);
 
   const region = await screen.findByTestId("empty");
-  expect(region).toHaveTextContent("trawler is not answering");
-  expect(region).toHaveTextContent(`no answer from ${apiAddr()}`);
+  expect(region).toHaveTextContent("Trawler's capture service isn't answering");
+  expect(region).toHaveTextContent("It usually comes back on its own in a moment.");
   expect(screen.queryByText(QUESTION)).toBeNull();
   expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
 
   answer = async () => [HTTPS];
-  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+  fireEvent.click(screen.getByRole("button", { name: "try again" }));
 
   expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
@@ -1529,7 +2431,7 @@ test("a launch the core does not answer says so, and its retry reads again", asy
 test("a launch read nobody answered is not asked again before anything answers", async () => {
   const { api, listFlows } = shellApi(FAILED);
   render(<App api={api} />);
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
   await act(() => new Promise((settle) => setTimeout(settle, 300)));
 
   // The launch read, and useFlows' own listing: nothing else was asked.
@@ -1540,12 +2442,12 @@ test("the listing that ends a silent launch decides it, with no read of its own"
   let answer: () => Promise<FlowSummary[]> = FAILED;
   const { api, listFlows } = shellApi(() => answer());
   render(<App api={api} />);
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
   await act(() => new Promise((settle) => setTimeout(settle, 300)));
   const asked = listFlows.mock.calls.length;
 
   answer = async () => [HTTPS];
-  fireEvent.click(screen.getByRole("button", { name: "retry" }));
+  fireEvent.click(screen.getByRole("button", { name: "try again" }));
 
   expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
   expect(listFlows).toHaveBeenCalledTimes(asked + 1);
@@ -1568,7 +2470,7 @@ test("a launch read that fails after a listing already answered is decided by th
   await act(async () => failLaunch(new TypeError("Failed to fetch")));
 
   expect(await screen.findByText(QUESTION)).toBeInTheDocument();
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 });
 
 // Review round 2 (correctness, important): a silent launch that recovered took
@@ -1580,7 +2482,7 @@ test("a silent launch's session starts when the launch asked, so what started af
   const { api, up, fire } = streamApi(() => answer());
   const launched = Date.now();
   render(<App api={api} />);
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
   await act(() => new Promise((settle) => setTimeout(settle, 300)));
 
   answer = async () => [];
@@ -1605,7 +2507,7 @@ test("a launch read that hangs is decided by a listing that answered after it wa
   render(<App api={apiStub({ listFlows })} />);
 
   expect(await screen.findByText(QUESTION)).toBeInTheDocument();
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 });
 
 // A core that takes connections and never answers them sends no failure and
@@ -1616,10 +2518,10 @@ test("a launch read nothing answers within its patience is said to be silent, an
     const { api } = shellApi(NEVER);
     render(<App api={api} />);
     await act(async () => vi.advanceTimersByTime(LAUNCH_PATIENCE_MS - 1));
-    expect(screen.queryByText("trawler is not answering")).toBeNull();
+    expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 
     await act(async () => vi.advanceTimersByTime(1));
-    expect(screen.getByText("trawler is not answering")).toBeInTheDocument();
+    expect(screen.getByText("Trawler's capture service isn't answering")).toBeInTheDocument();
     expect(screen.queryByText(QUESTION)).toBeNull();
     expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
   } finally {
@@ -1631,13 +2533,13 @@ test("the stream coming back ends a silent launch, and an empty core then opens 
   let answer: () => Promise<FlowSummary[]> = FAILED;
   const { api, up } = streamApi(() => answer());
   render(<App api={api} />);
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
 
   answer = async () => [];
   up();
 
   expect(await screen.findByText(QUESTION)).toBeInTheDocument();
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 });
 
 test("a stream that drops while the launch read hangs is the same silence", async () => {
@@ -1645,25 +2547,51 @@ test("a stream that drops while the launch read hangs is the same silence", asyn
   render(<App api={api} />);
   down();
 
-  expect(await screen.findByText("trawler is not answering")).toBeInTheDocument();
+  expect(await screen.findByText("Trawler's capture service isn't answering")).toBeInTheDocument();
   expect(screen.queryByText(QUESTION)).toBeNull();
 });
 
-test("the setup screen states a core that stops answering above its steps", async () => {
+// P5 · S1: every task reads this machine or the core, so a silent core leaves
+// setup nothing true to instruct. Written before the fix, against the steps
+// that stayed on screen under the band.
+test("a core that stops answering blocks setup: the statement and a retry in place of every step", async () => {
   const { api, down } = streamApi(async () => []);
   render(<App api={api} />);
   await screen.findByText(QUESTION);
-  expect(screen.queryByTestId("band")).toBeNull();
 
   down();
 
-  const band = await screen.findByTestId("band");
-  expect(band).toHaveTextContent("trawler is not answering");
-  expect(band).toHaveTextContent(`no answer from ${apiAddr()}`);
-  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  const blocked = await screen.findByTestId("empty");
+  expect(blocked).toHaveTextContent("Trawler's capture service isn't answering");
+  expect(blocked).toHaveTextContent("Setup can't check this computer or see your requests until it's back.");
+  expect(within(blocked).getByRole("button", { name: "try again" })).toBeEnabled();
+  expect(blocked.className).toContain("justify-center");
+  expect(blocked.querySelector("[data-layout]")).toHaveAttribute("data-layout", "region");
+  expect(within(blocked).getByRole("button", { name: "show traffic" })).toBeEnabled();
+  expect(screen.queryByText(QUESTION)).toBeNull();
+  expect(screen.queryByTestId("steps")).toBeNull();
+  expect(screen.queryByTestId("band")).toBeNull();
 });
 
-test("a captured row that started before setup opened reveals the list, and announces nothing", async () => {
+test("retry on a blocked setup brings the steps back once the core answers", async () => {
+  let answer: () => Promise<FlowSummary[]> = async () => [];
+  const { api, down } = streamApi(() => answer());
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+  answer = FAILED;
+  down();
+  await screen.findByTestId("empty");
+
+  answer = async () => [];
+  fireEvent.click(screen.getByRole("button", { name: "try again" }));
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
+});
+
+// DEC-61: the list is a click away, so a row from before this session moves no
+// one out of a setup they are in, and proves nothing about it (DEC-60).
+test("a captured row that started before setup opened keeps setup open, and announces nothing", async () => {
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} />);
@@ -1671,8 +2599,10 @@ test("a captured row that started before setup opened reveals the list, and anno
 
   rows = [flow({ uri: "https://example.com/", started_at: new Date(Date.now() - 60_000).toISOString() })];
   fire();
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
 
-  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
+  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.queryByTestId("set-up-banner")).toBeNull();
 });
 
@@ -1716,8 +2646,8 @@ test("a failed detail fetch does not speak for the list — a refused query keep
   fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
 
   const region = await screen.findByTestId("empty");
-  expect(region).toHaveTextContent("4xz is not a status");
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(region).toHaveTextContent("“4xz” isn't a status code");
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 });
 
 test("a pane failure never raises the connection band on a core that is answering", async () => {
@@ -1732,7 +2662,7 @@ test("a pane failure never raises the connection band on a core that is answerin
   // failing is a fact about that flow, and the band speaks only for the
   // connection — otherwise it claims an outage that is not happening.
   expect(screen.queryByTestId("band")).toBeNull();
-  expect(screen.queryByText("trawler is not answering")).toBeNull();
+  expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
   expect(screen.getAllByTestId("flow-row")).toHaveLength(1);
 });
 
@@ -1775,7 +2705,7 @@ test("a pane failure is stated even when the list is empty for its own reason", 
   await screen.findByTestId("empty");
 
   // The list says its own thing; the pane still says its own.
-  expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
+  expect(screen.getByTestId("empty")).toHaveTextContent("Nothing matches your filter");
   expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 });
 
@@ -1789,9 +2719,9 @@ test("a pane failure states itself without repeating the connection's alarm", as
     () => Promise.reject(new TypeError("Failed to fetch")),
   );
   render(<App api={api} initialState={PROVEN} />);
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
 
-  expect(screen.getAllByText("trawler is not answering")).toHaveLength(1);
+  expect(screen.getAllByText("Trawler's capture service isn't answering")).toHaveLength(1);
   expect(document.querySelectorAll('[data-tone="warn"]')).toHaveLength(1);
 });
 
@@ -1812,7 +2742,7 @@ test("a core going silent does not put the pane back on 'loading this flow…'",
 
   list = () => Promise.reject(new TypeError("Failed to fetch"));
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "example" } });
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
 
   expect(screen.queryByTestId("detail-loading")).toBeNull();
   expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
@@ -1824,14 +2754,14 @@ test("a connection that recovers on its own does not move focus", async () => {
   let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
   const { api } = shellApi(() => answer());
   render(<App api={api} initialState={PROVEN} />);
-  await screen.findByText("trawler is not answering");
+  await screen.findByText("Trawler's capture service isn't answering");
 
   const field = screen.getByLabelText("filter");
   field.focus();
   answer = async () => [HTTPS];
   fireEvent.change(field, { target: { value: "example" } });
 
-  await waitFor(() => expect(screen.queryByText("trawler is not answering")).toBeNull());
+  await waitFor(() => expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull());
   expect(document.activeElement).toBe(field);
 });
 
@@ -1846,17 +2776,17 @@ test("a core that goes silent after refusing a query states both, hiding neither
 
   list = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
   fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("4xz is not a status"));
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("“4xz” isn't a status code"));
 
   list = () => Promise.reject(new TypeError("Failed to fetch"));
   fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
 
   const band = await screen.findByTestId("band");
-  expect(band).toHaveTextContent("trawler is not answering");
+  expect(band).toHaveTextContent("Trawler's capture service isn't answering");
   // The refusal keeps its own region; the silence is stated above it.
-  expect(screen.getByTestId("empty")).toHaveTextContent("4xz is not a status");
+  expect(screen.getByTestId("empty")).toHaveTextContent("“4xz” isn't a status code");
   // And the band makes no claim about rows that are not there.
-  expect(band).not.toHaveTextContent("the rows below are the last it sent");});
+  expect(band).not.toHaveTextContent("The requests below are the last it sent.");});
 
 // E-REPLAY.W3 — the composer against the send doors, through the scripted client.
 // The stub answers the way the core does: a send lands a sent flow in the store
@@ -2051,4 +2981,493 @@ test("new request over an open replay draft opens a fresh composer, with focus i
   const url = await screen.findByRole("textbox", { name: "url" });
   await waitFor(() => expect(url).toHaveValue(""));
   expect(url).toHaveFocus();
+});
+
+// --- E-ONBRVP.W1: moving between the list and setup --------------------------
+// One test per row of UC-ONBOARD's moves table and per problem the plan took.
+// Each problem's test was first written against the old app and failed there.
+
+const LIST_UNPROVEN: OnbState = { ...PROVEN, everProven: false };
+
+test("the dot during the launch check opens the list, and the check then moves no one (P1 · Q5 · S1)", async () => {
+  let open = () => {};
+  const gate = new Promise<void>((resolve) => (open = resolve));
+  const { api } = shellApi(() => gate.then(() => []));
+  render(<App api={api} />);
+  expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "checking");
+  expect(screen.getByRole("button", { name: "Checking… — click to show traffic" })).toBeEnabled();
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await act(async () => open());
+
+  expect(await screen.findByText("Nothing captured yet")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "broken"));
+  expect(screen.queryByText(QUESTION)).toBeNull();
+});
+
+test("an empty list offers set up capture, which opens setup on the last device chosen (P4)", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={{ ...LIST_UNPROVEN, chosen: "ios" }} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "set up capture" }));
+
+  expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("iPhone or iPad");
+});
+
+test("the list before anything is captured has a red dot that opens setup", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={LIST_UNPROVEN} />);
+
+  await screen.findByText("Nothing captured yet");
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "broken"));
+  expect(screen.getByRole("button", { name: "Nothing captured yet — click to set up" })).toBeEnabled();
+});
+
+// S2: the dot in setup re-opened setup, restarting the session in place, so a
+// device that had just proved itself was no longer this session's news.
+test("the dot in setup opens the list: it never restarts the session it is in (S2)", async () => {
+  watchPaused();
+  onLinuxHost();
+  vi.mocked(invoke).mockImplementation(async (name: string) =>
+    name === "proxy_in_use" ? { status: "none", address: null } : undefined,
+  );
+  let rows = [flow({ uri: "https://example.com/" })];
+  const { api, fire } = mockApi(() => rows);
+  api.reach = vi.fn(async () => ARMED);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+  pickPlatform("iPhone or iPad");
+  rows = [...rows, flow({ id: "f2", uri: "https://phone.test/", started_at: startedNow() })];
+  fire();
+  await rereadOnFocus();
+  expect(await screen.findByTestId("proven")).toHaveTextContent("You're set up");
+
+  fireEvent.click(screen.getByRole("button", { name: "Capturing — click to show traffic" }));
+
+  expect(await screen.findAllByTestId("flow-row")).toHaveLength(2);
+  expect(screen.queryByText(QUESTION)).toBeNull();
+});
+
+test("show traffic from a setup nothing has proven opens the list (Q3)", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+
+  expect(await screen.findByText("Nothing captured yet")).toBeInTheDocument();
+});
+
+// P2 · Q1: a proxy turned off outside Trawler leaves only silence behind.
+test("the dot goes quiet 3 minutes after the newest capture, and green again on the next", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    let rows = [flow({ uri: "http://example.com/", started_at: new Date().toISOString() })];
+    const { api, fire } = mockApi(() => rows);
+    render(<App api={api} initialState={PROVEN} />);
+    await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+
+    await act(async () => vi.advanceTimersByTime(QUIET_AFTER_MS - 1_000));
+    expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected");
+    await act(async () => vi.advanceTimersByTime(1_000));
+    expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "quiet");
+    expect(screen.getByRole("button", { name: "Nothing captured in the last 3 minutes — click to set up" })).toBeEnabled();
+
+    rows = [...rows, flow({ id: "f2", uri: "http://example.com/2", started_at: new Date().toISOString() })];
+    fire();
+    await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+// Q4: http proves the proxy is in the path, and nothing about the certificate.
+test("plain http turns the dot green and leaves the certificate task and setup where they are", async () => {
+  onLinuxHost();
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await screen.findByText(QUESTION);
+
+  rows = [flow({ uri: "http://example.com/", started_at: startedNow() })];
+  fire();
+
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  expect(screen.queryByText(/a request decrypted/)).toBeNull();
+  expect(screen.queryByTestId("proven")).toBeNull();
+});
+
+test("a capture the list's filter excludes still keeps the dot green", async () => {
+  const old = flow({ uri: "http://api.test/", started_at: new Date(Date.now() - 10 * QUIET_AFTER_MS).toISOString() });
+  const { api } = mockApi(() => [old]);
+  api.latestCapture = vi.fn(async () => flow({ id: "f2", uri: "http://other.test/", started_at: startedNow() }));
+  render(<App api={api} initialState={PROVEN} />);
+  fireEvent.change(await screen.findByLabelText("filter"), { target: { value: "api.test" } });
+
+  await waitFor(() => expect(screen.getByTestId("status-dot")).toHaveAttribute("data-status", "connected"));
+  expect(screen.getAllByTestId("flow-row")).toHaveLength(1);
+});
+
+// S4: a core that restarted forgot the exposure, and the chip still claimed it.
+test("reach is read again when the core comes back: a restarted core's chip goes on its own (S4)", async () => {
+  let reachNow: ReachState = ARMED;
+  const reach = vi.fn(async () => reachNow);
+  const { api, down, up } = streamApi(async () => []);
+  api.reach = reach;
+  render(<App api={api} initialState={PROVEN} />);
+  expect(await screen.findByTestId("reach-chip")).toHaveTextContent("reachable on 192.168.1.24");
+
+  down();
+  reachNow = UNARMED;
+  up();
+
+  await waitFor(() => expect(screen.queryByTestId("reach-chip")).toBeNull());
+});
+
+// S3: a core that answered after the window read nothing for the network task.
+test("reach is read again each time setup opens (S3)", async () => {
+  const reach = vi.fn(async () => UNARMED);
+  const { api } = mockApi(() => []);
+  api.reach = reach;
+  render(<App api={api} initialState={LIST_UNPROVEN} />);
+  await screen.findByText("Nothing captured yet");
+  const before = reach.mock.calls.length;
+
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+
+  await waitFor(() => expect(reach.mock.calls.length).toBe(before + 1));
+});
+
+// S5: the memory that Trawler just set the proxy lived in the setup screen, so
+// a trip to the list lost the only way out of a proxy nothing could read back.
+test("the way out of a proxy Trawler set survives a trip to the list while nothing can read it (S5)", async () => {
+  onMacHost();
+  let proxySet = false;
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "trusted";
+    if (name === "set_proxy") {
+      proxySet = true;
+      return undefined;
+    }
+    if (name === "proxy_in_use") {
+      if (proxySet) throw new Error("cannot read the proxy");
+      return { status: "none", address: null };
+    }
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  fireEvent.click(await screen.findByRole("button", { name: "set the system proxy" }));
+  expect(await screen.findByRole("button", { name: "stop routing through Trawler" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+  await screen.findByText("Nothing captured yet");
+  fireEvent.click(screen.getByTestId("status-dot"));
+  await screen.findByText(QUESTION);
+
+  await waitFor(() => expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeEnabled());
+});
+
+// S6: setup re-entered on the last visit's reading with "stop routing" live,
+// though the user may have changed the setting since.
+test("setup opens in checking and holds its buttons until its own reading lands (S6)", async () => {
+  onMacHost();
+  let answerProxy: (r: unknown) => void = () => {};
+  let proxyNow: () => Promise<unknown> = async () => ({ status: "ours", address: "127.0.0.1:7420" });
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === "ca_trusted") return "trusted";
+    if (name === "proxy_in_use") return proxyNow();
+    return undefined;
+  });
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+  await screen.findByText("Nothing captured yet");
+
+  proxyNow = () => new Promise((resolve) => (answerProxy = resolve));
+  fireEvent.click(screen.getByTestId("status-dot"));
+
+  expect(screen.getByRole("button", { name: "stop routing through Trawler" })).toBeDisabled();
+  expect(screen.getByTestId("task-2")).toHaveTextContent("checking");
+
+  await act(async () => answerProxy({ status: "none", address: null }));
+  expect(await screen.findByRole("button", { name: "set the system proxy" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: "stop routing through Trawler" })).toBeNull();
+});
+
+// S7: a move left focus on a control that no longer existed.
+test("a move between the list and setup puts focus on the new screen's main area (S7)", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={LIST_UNPROVEN} />);
+  const dot = await screen.findByRole("button", { name: /click to set up/ });
+  dot.focus();
+
+  fireEvent.click(dot);
+  await screen.findByText(QUESTION);
+  expect(document.activeElement?.tagName).toBe("MAIN");
+
+  const back = screen.getByRole("button", { name: "show traffic" });
+  back.focus();
+  fireEvent.click(back);
+  await screen.findByText("Nothing captured yet");
+  expect(document.activeElement?.tagName).toBe("MAIN");
+});
+
+test("a launch that moves the screen claims no focus", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} />);
+  await screen.findByText(QUESTION);
+
+  expect(document.activeElement).toBe(document.body);
+});
+
+// F26 · UC-4: the ⋮ menu's way into setup is the banner's, after the banner is gone.
+test("the list's menu sets up another device the way the banner does", async () => {
+  await setupSucceeds();
+  const banner = await screen.findByTestId("set-up-banner");
+  fireEvent.click(within(banner).getByRole("button", { name: "dismiss" }));
+  await waitFor(() => expect(screen.queryByTestId("set-up-banner")).toBeNull());
+
+  fireEvent.click(screen.getByRole("button", { name: "capture actions" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "set up another device" }));
+
+  await screen.findByText(QUESTION);
+  expect(screen.getByRole("button", { name: QUESTION })).toHaveTextContent("choose a device");
+  expect(screen.queryByTestId("steps")).toBeNull();
+});
+
+// ── This machine's own request: the route the core saw (D6 · D9 · DEC-62) ──
+
+describe("This machine's own request", () => {
+  const ANOTHER: OnbState = { ...ONBOARDING, everProven: true };
+  const REQUEST = "make a request to example.com";
+  const note = () => screen.getByTestId("make-request-status");
+
+  // The window's fetch is the request; whatever the core then records of it is
+  // the test's to script, as the real proxy would.
+  function onLinuxWith(answer: (url: string) => Promise<Response>) {
+    onLinuxHost();
+    let rows: FlowSummary[] = [];
+    const mock = mockApi(() => rows);
+    const fetch = vi.fn(answer);
+    vi.stubGlobal("fetch", fetch);
+    render(<App api={mock.api} initialState={ANOTHER} />);
+    return {
+      ...mock,
+      capture: (url: string) => {
+        rows = [flow({ id: "own", uri: url, started_at: new Date().toISOString() })];
+        mock.fire();
+      },
+      url: () => String(fetch.mock.calls[0]?.[0]),
+    };
+  }
+
+  it("marks its request, and reads it through Trawler once its decrypted row arrives", async () => {
+    const own = onLinuxWith(async (url) => {
+      own.capture(url);
+      return new Response(null);
+    });
+    await screen.findByText(QUESTION);
+
+    fireEvent.click(await screen.findByRole("button", { name: REQUEST }));
+
+    await waitFor(() => expect(note()).toHaveTextContent("example.com answered through Trawler."));
+    expect(own.url()).toMatch(/^https:\/\/example\.com\/\?trawler-check=[a-z0-9]+\.\d+$/);
+    expect(screen.getByTestId("task-1")).toHaveTextContent(/done — task 3's request decrypted at \d\d:\d\d/);
+    expect(screen.getByTestId("task-2")).toHaveTextContent(/done — task 3's request came through at \d\d:\d\d/);
+  });
+
+  const afterGrace = async (answer: (url: string, own: ReturnType<typeof onLinuxWith>) => Promise<Response>) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const own: ReturnType<typeof onLinuxWith> = onLinuxWith((url) => answer(url, own));
+    await screen.findByText(QUESTION);
+    fireEvent.click(await screen.findByRole("button", { name: REQUEST }));
+    await waitFor(() => expect(note()).toHaveTextContent("waiting for example.com…"));
+    await act(async () => vi.advanceTimersByTime(TUNNEL_GRACE_MS));
+    return own;
+  };
+
+  it("reads a tunnel to its host and no decrypted row as reaching Trawler and not decrypting", async () => {
+    try {
+      await afterGrace(async (_url, own) => {
+        own.fireConnection("example.com:443");
+        throw new TypeError("Load failed");
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("the request reached Trawler and didn't decrypt."));
+      expect(screen.getByTestId("task-1")).toHaveTextContent("can't check here — the request in task 3 confirms it");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reads a page that got its answer with nothing seen as going around Trawler", async () => {
+    try {
+      await afterGrace(async (_url, own) => {
+        own.fireConnection("other.test:443");
+        return new Response(null);
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("example.com answered, but not through Trawler."));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("says a request that neither completed nor reached Trawler did not complete", async () => {
+    try {
+      await afterGrace(async () => {
+        throw new TypeError("Load failed");
+      });
+      await waitFor(() => expect(note()).toHaveTextContent("the request to example.com didn't complete."));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// E-ONBRVP.W11: a close request reads this machine's proxy and the capture
+// service at that moment, through App's own wiring, and opens what they rule.
+describe("quitting", () => {
+  const requestClose = async () => {
+    await waitFor(() => expect(quitWindow.handler).not.toBeNull());
+    const preventDefault = vi.fn();
+    await act(async () => {
+      await quitWindow.handler!({ preventDefault });
+    });
+    return preventDefault;
+  };
+  const proxyReads = (status: string) =>
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "proxy_status") return { status, address: null };
+      if (name === "notice_dismissed") return false;
+      return undefined;
+    });
+  const dialog = () => screen.queryByTestId("proxy-close-dialog");
+
+  test("this Mac routed here asks, with this machine's own addresses, and Esc, the backdrop and ✕ each cancel", async () => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={PROVEN} />);
+
+    for (const cancel of [
+      () => fireEvent.keyDown(dialog()!, { key: "Escape" }),
+      () => fireEvent.click(screen.getByTestId("proxy-close-backdrop")),
+      () => fireEvent.click(within(dialog()!).getByRole("button", { name: "cancel" })),
+    ]) {
+      expect(await requestClose()).toHaveBeenCalledOnce();
+      expect(dialog()).toHaveAttribute("aria-label", "stop routing through Trawler before quitting?");
+      cancel();
+      await waitFor(() => expect(dialog()).toBeNull());
+    }
+    expect(invoke).toHaveBeenCalledWith("proxy_status", {
+      host: "127.0.0.1",
+      port: 7420,
+      own: INTERFACES.map((i) => i.address),
+    });
+  });
+
+  test("someone else's proxy, with no device allowed, quits without asking", async () => {
+    onMacHost();
+    proxyReads("foreign");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={PROVEN} />);
+
+    expect(await requestClose()).not.toHaveBeenCalled();
+    expect(dialog()).toBeNull();
+  });
+
+  test("nothing routed here with devices allowed asks about them, on the device last set up", async () => {
+    onMacHost();
+    proxyReads("none");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => ARMED);
+    render(<App api={api} initialState={{ ...PROVEN, chosen: "android" }} />);
+
+    expect(await requestClose()).toHaveBeenCalledOnce();
+    expect(dialog()).toHaveAttribute("aria-label", "check your other devices before quitting");
+    expect(within(dialog()!).getByRole("button", { name: "steps for" })).toHaveTextContent("Android device");
+  });
+
+  // Review round 1: an emulator read that never settles may not hold the close.
+  test("an emulator read that hangs still lets the close settle, on this machine's reading", async () => {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "proxy_status") return { status: "ours", address: null };
+      if (name === "emulator_readings") return new Promise(() => {});
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={{ ...PROVEN, chosen: "android-sim" }} />);
+
+    expect(await requestClose()).toHaveBeenCalledOnce();
+    expect(dialog()).toHaveAttribute("aria-label", "stop routing through Trawler before quitting?");
+  });
+
+  // Review round 1: a Wi-Fi-only proxy on an emulator sending over mobile data routes nothing.
+  test("an emulator whose proxy is on a network it does not send over asks nothing", async () => {
+    onMacHost();
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "proxy_status") return { status: "none", address: null };
+      if (name === "emulator_readings")
+        return {
+          adb: true,
+          sdk: null,
+          avd: null,
+          emulators: [{ name: "Pixel_7_API_35", trust: "trusted", proxy: "wifi-only" }],
+        };
+      return undefined;
+    });
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    render(<App api={api} initialState={{ ...PROVEN, chosen: "android-sim" }} />);
+
+    expect(await requestClose()).not.toHaveBeenCalled();
+    expect(dialog()).toBeNull();
+  });
+
+  // Review round 1: with the capture service gone, this machine's own addresses
+  // are the ones it last reported, so a proxy at one of them still reads Trawler's.
+  test("with the capture service gone, the addresses it last reported still reach proxy_status", async () => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    let answers = true;
+    api.reach = vi.fn(async () => {
+      if (answers) return UNARMED;
+      throw new TypeError("Failed to fetch");
+    });
+    render(<App api={api} initialState={PROVEN} />);
+    await waitFor(() => expect(api.reach).toHaveBeenCalled());
+    await act(async () => {});
+    answers = false;
+
+    await requestClose();
+    expect(invoke).toHaveBeenCalledWith("proxy_status", {
+      host: "127.0.0.1",
+      port: 7420,
+      own: INTERFACES.map((i) => i.address),
+    });
+  });
+
+  test("with the capture service not answering, it says this Mac has no internet now", async () => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    render(<App api={api} initialState={PROVEN} />);
+
+    await requestClose();
+    expect(dialog()).toHaveTextContent("Trawler's capture service isn't answering, so this Mac has no internet");
+  });
 });

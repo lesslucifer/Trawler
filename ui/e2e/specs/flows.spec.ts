@@ -47,7 +47,7 @@ const lastCopied = () => browser.execute(() => (window as unknown as { __copied?
 // address in the environment and the shell injected it before the first script
 // ran, so a spec only waits for the screen it painted. Nothing here navigates —
 // a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
-// answers a stopped one with an Objective-C exception that aborts the app.
+// drops every answer still in flight.
 async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
@@ -122,8 +122,8 @@ describe("UC-4 — watch live traffic in the native app", () => {
     const empty = await $('[data-testid="empty"]');
     await empty.waitForExist({ timeout: 15_000 });
     const text = await empty.getText();
-    expect(text).toContain("no flows match this filter");
-    expect(text).not.toContain("no flows yet");
+    expect(text).toContain("Nothing matches your filter");
+    expect(text).not.toContain("Nothing captured yet");
   });
 
   it("clearing the filter brings the rows back", async () => {
@@ -202,9 +202,9 @@ describe("UC-4 — watch live traffic in the native app", () => {
     const empty = await $('[data-testid="empty"]');
     await empty.waitForExist({ timeout: 15_000 });
     const stated = await empty.getText();
-    expect(stated).toContain("4xz is not a status");
-    expect(stated).not.toContain("no flows match this filter");
-    expect(stated).not.toContain("trawler is not answering");
+    expect(stated).toContain("“4xz” isn't a status code");
+    expect(stated).not.toContain("Nothing matches your filter");
+    expect(stated).not.toContain("Trawler's capture service isn't answering");
 
     await $('[aria-label="status"]').clearValue();
     await browser.waitUntil(async () => (await rowCount()) >= 3, {
@@ -490,8 +490,8 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
     const empty = await $('[data-testid="empty"]');
     await empty.waitForExist({ timeout: 15_000 });
     const text = await empty.getText();
-    expect(text).toContain("no flows match this filter");
-    expect(text).not.toContain("trawler is not answering");
+    expect(text).toContain("Nothing matches your filter");
+    expect(text).not.toContain("Trawler's capture service isn't answering");
 
     await $('[aria-label="filter"]').clearValue();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
@@ -514,18 +514,18 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
     // band to SAY this, never merely to exist — existence is satisfied by the
     // banner and would read it instead.
     const band = await $('[data-testid="band"]');
-    await browser.waitUntil(async () => (await band.getText()).includes("trawler is not answering"), {
+    await browser.waitUntil(async () => (await band.getText()).includes("Trawler's capture service isn't answering"), {
       timeout: 30_000,
       timeoutMsg: "the band never stated that the core stopped answering",
     });
 
     const stated = await band.getText();
-    expect(stated).toContain("trawler is not answering");
-    expect(stated).toContain("no answer from");
-    expect(stated).toContain("the rows below are the last it sent");
+    expect(stated).toContain("Trawler's capture service isn't answering");
+    expect(stated).toContain("New ones will show up once it's back.");
+    expect(stated).toContain("The requests below are the last it sent.");
     // The rows were true when they arrived; the statement qualifies them.
     expect(await rowCount()).toBe(before);
-    expect(await band.$("button=retry").isExisting()).toBe(true);
+    expect(await band.$("button=try again").isExisting()).toBe(true);
   });
 
   // The in-flight window is too short to catch reliably against a dead socket —
@@ -533,11 +533,11 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
   // tests. What the real window proves is that the way out survives its own use.
   it("retry against a dead core leaves the statement standing and the button usable", async () => {
     const band = await $('[data-testid="band"]');
-    await band.$("button=retry").click();
-    await browser.waitUntil(async () => (await band.$("button=retry").isEnabled()) === true, {
+    await band.$("button=try again").click();
+    await browser.waitUntil(async () => (await band.$("button=try again").isEnabled()) === true, {
       timeout: 30_000,
       timeoutMsg: "retry never re-enabled after failing again",
     });
-    expect(await band.getText()).toContain("trawler is not answering");
+    expect(await band.getText()).toContain("Trawler's capture service isn't answering");
   });
 });

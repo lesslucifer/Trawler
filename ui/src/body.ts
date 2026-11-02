@@ -246,11 +246,31 @@ export function saveFilename(uri: string, leg: Leg, contentType: string | null):
 // cancelled. Both are load-bearing for the setup screen, which states an outcome:
 // a cancel resolves like a write, and `filename` is only the dialog's pre-filled
 // default, so neither "did it save" nor "under what name" is knowable without it.
-export async function saveBody(bytes: Uint8Array, filename: string): Promise<string | null> {
+// A dialog that opens in a folder the steps can name saves a file the steps
+// find without the user choosing anything (W7's C1); a folder that cannot be
+// read leaves the dialog where it opens by default.
+async function startingPath(filename: string, folder?: () => Promise<string>): Promise<string> {
+  if (folder === undefined) return filename;
+  const { join } = await import("@tauri-apps/api/path");
+  return folder().then(
+    (dir) => join(dir, filename),
+    () => filename,
+  );
+}
+
+// What the native save returns, as opposed to the bare name a browser's
+// download resolves to: a path a command can name.
+export const isFullPath = (path: string) => /^(\/|[A-Za-z]:[\\/]|\\\\)/.test(path);
+
+export async function saveBody(
+  bytes: Uint8Array,
+  filename: string,
+  folder?: () => Promise<string>,
+): Promise<string | null> {
   if ("__TAURI_INTERNALS__" in window) {
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { writeFile } = await import("@tauri-apps/plugin-fs");
-    const path = await save({ defaultPath: filename });
+    const path = await save({ defaultPath: await startingPath(filename, folder) });
     if (!path) return null;
     await writeFile(path, bytes);
     return path;

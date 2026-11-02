@@ -289,7 +289,9 @@
             was turned off kept every step green. Rejected: a recency window on the borrowed positive (a phone's
             flow still says nothing about this host), relative time on the verdict (DEC-22), re-probing on an
             interval, timestamping the tunnel tally in the core. Supersedes DEC-13's "proxy step goes green on any
-            tunnel" clause; the signal itself is unchanged</td>
+            tunnel" clause; the signal itself is unchanged. Amended by DEC-62: This machine's own marked request
+            where no probe answers, and a 3 s watch. Amended by DEC-63: another device reads only traffic from
+            after its address was allowed, and only its marked request where this machine's may be mixed in</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -692,8 +694,9 @@
             this host; no automatic run, because an app that reaches the network for being opened is doing
             what nobody asked. The two manual routes stay. Rejected: firing it automatically once the proxy
             is set, marking the task done on a 2xx, dropping the <code>curl</code> route, calling it
-            <em>Test</em>. Proposed by the PO review's F24, not built</td>
-          <td><span class="badge approval">proposed</span></td>
+            <em>Test</em>. Built by E-ONBRVP.W2 as <em>make a request to example.com</em>, This machine only,
+            through the app window's own fetch</td>
+          <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
           <td><a href="dec-57-a-device-that-cannot-paste.html"><code>dec-57-a-device-that-cannot-paste.html</code></a></td>
@@ -706,9 +709,9 @@
             a value that must travel, it is generated locally from a vendored dependency — never a hosted
             service, which would leak the user's own network address and break an offline setup — and it is
             a registry component with its own contract (DEC-16). Rejected: replacing the text with the
-            code, shortening the values, a hosted renderer, building it inline with no contract. Proposed
-            by the PO review's F28, not built</td>
-          <td><span class="badge approval">proposed</span></td>
+            code, shortening the values, a hosted renderer, building it inline with no contract. Built by
+            E-ONBRVP.W2 as <code>QrCode</code>, for the certificate URL on iPhone and Android device only</td>
+          <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
           <td><a href="dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html"><code>dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html</code></a></td>
@@ -743,7 +746,85 @@
             since it has no time. The dot stays connected once capture was proven. "Set up another device" opens on the
             last device chosen unless that was This machine, else on the question unanswered. The dot opens on the last
             choice. Rejected: attributing requests to a device, clearing the list's filter, keeping the tally,
-            preselecting a guess, restarting the session on a platform change</td>
+            preselecting a guess, restarting the session on a platform change. Rule 5 superseded by DEC-61</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-61-the-dot-is-a-switch-and-capture-proof-expires.html"><code>dec-61-the-dot-is-a-switch-and-capture-proof-expires.html</code></a></td>
+          <td><span class="badge id">DEC-61</span></td>
+          <td><strong>The header's dot switches screens in every phase, and reads the newest captured request:
+            red with none, green for 3 minutes after one, then quiet.</strong> http counts for the dot and never
+            for the certificate task. The newest capture ignores the list's filter. An empty list offers "set up
+            capture", and setup's way back is always shown. Only a decrypted https request from this session moves
+            setup to the list on its own. Replaces DEC-60 rule 5. Rejected: a dot green forever, red after quiet
+            minutes, https-only, a second button, blocking the list on a silent core</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html"><code>dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html</code></a></td>
+          <td><span class="badge id">DEC-62</span></td>
+          <td><strong>This machine's tasks read the live certificate and the proxy HTTPS goes through now, are read
+            again wherever their answer can change, and — where no probe answers — take the app's own marked
+            request as their reading — sent by the app or by the browser it opens (rule 5a).</strong> The certificate is matched on its bytes on macOS, Windows and Linux;
+            the proxy is the one in use, and localhost on Trawler's port is Trawler. Re-read after every
+            action whatever its outcome, when the core comes back, on focus, and every 3 s while setup shows; only a
+            read the user asked for shows checking. Another device's traffic never settles This machine. The
+            request's note reports its route, and This machine's try task keeps its proof once quiet. Amends
+            DEC-33. Rejected: any decrypted request as This machine's, a fingerprint in the core, one reader for
+            setup and quit, a 3-minute proof, no watch</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-63-another-device-reads-only-what-could-have-come-from-it.html"><code>dec-63-another-device-reads-only-what-could-have-come-from-it.html</code></a></td>
+          <td><span class="badge id">DEC-63</span></td>
+          <td><strong>Another device's tasks read only what could have come from it, and say when.</strong> Its
+            evidence starts when the address it uses was allowed. Its own request — an address marked with a code
+            only its try task shows, scannable on a phone — settles both tasks, named and timed; other traffic counts
+            only where it arrived between two readings of this machine's proxy as off or another proxy, and until something is that
+            device's each task names what will settle it and a refusal names no device. Every proof carries its time
+            and lasts the session, whatever that proxy reads after it, and the try
+            task keeps it once quiet and past anything after it that does not decrypt, a refusal a note under it (rule 7, E-ONBRVP.W5) that on another Ubuntu machine names a browser with a store of its own first (E-ONBRVP.W6).
+            The iOS Simulator, whose wire is this machine's, reads the store of each Simulator running and its own mark, nothing unmarked (rule 8, E-ONBRVP.W7).
+            The Android emulator reads its own store and proxy through adb, and otherwise as another device that needs no allow; a refusal is never its certificate task's (rule 9, E-ONBRVP.W8).
+            The iPhone's test is the address it is offered: only that address refused is its certificate's, newer than any proof, and Apple's own services' refusals are the try task's note (rule 10, E-ONBRVP.W9), and so is an Android device's, its sentence the user store's (E-ONBRVP.W10).
+            An allowed address this machine has left reads not working, and reach is read
+            again on focus and by the watch. Amends DEC-33, extends DEC-62's mark. Rejected: the mark only, no mark,
+            a listener tag in the core, a 3-minute proof, Another Mac alone, rule 7 for Windows alone, the Simulator's unmarked traffic, the emulator's whole-session traffic, the emulator's mark only, the iPhone's refusals by an Apple host list, none of the iPhone's refusals its certificate's, rule 7 unchanged for the iPhone, none of an Android device's refusals its certificate's, rule 7 unchanged for an Android device</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"><code>dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html</code></a></td>
+          <td><span class="badge id">DEC-64</span></td>
+          <td><strong>A quit asks only about what it leaves without internet.</strong> ⌘Q is Trawler's own Quit and
+            asks as ✕ does; the Dock's Quit and a logout cannot be held. It asks while this machine routes through
+            Trawler (its address, localhost or its own address on Trawler's port), while its proxy could not be read,
+            or while reach is armed or the chosen emulator routes here. A proxy that is not Trawler's asks nothing.
+            The stake is the capture service; the act is <em>stop routing through Trawler</em>, with the platform's own
+            steps. Rejected: a revert on terminate, ⌘Q unasked, a foreign proxy asked about, the remote notice on every
+            quit, the dialog's own client targets</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html"><code>dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html</code></a></td>
+          <td><span class="badge id">DEC-65</span></td>
+          <td><strong>A phone's Settings step may start from a page the core serves.</strong> <code>GET
+            /android-wifi</code>, on every API listener and so on reach's, names the armed proxy's hostname and port and
+            reflects nothing from the request; its one button is a constant <code>intent:</code> link to Android's
+            Wi-Fi settings. <code>/reach</code> names it as <code>wifi_page</code>, and the Android device's proxy step
+            leads with its code, keeping the Settings path as its other way and its undo. Extends DEC-57's coded values.
+            Rejected: a roadmap row, no page, one page for the certificate too, a link to the installer, a code for the
+            proxy address</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-66-notes-show-together-on-one-switch.html"><code>dec-66-notes-show-together-on-one-switch.html</code></a></td>
+          <td><span class="badge id">DEC-66</span></td>
+          <td><strong>Notes show together, on one switch.</strong> What explains a line on the setup screen is a note,
+            drawn under it while the screen's one switch (the circled <em>?</em> at the device row's end) is on, and absent
+            while it is off. The switch starts off, the shell remembers it, and the quit dialog follows it. No note is
+            exempt, and a note earns its place only if it changes what the user does or helps when something fails.
+            Replaces W13's R1 (a <em>?</em> per line). Rejected: a <em>?</em> per line, a checkbox, localStorage,
+            exemptions, notes shown at first</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

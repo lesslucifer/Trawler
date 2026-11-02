@@ -25,6 +25,13 @@ const SPECIMENS: Record<string, ReactElement> = {
       don't show this again
     </collection.Checkbox>
   ),
+  StepMedia: (
+    <collection.StepMedia
+      media={{ kind: "image", src: "/specimen.png" }}
+      alt="Keychain Access: Trawler Proxy CA"
+      shows="macOS 26"
+    />
+  ),
   CommandBlock: <collection.CommandBlock value="certutil -addstore -f ROOT trawler-ca.pem" label="the trust command" />,
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
@@ -33,12 +40,19 @@ const SPECIMENS: Record<string, ReactElement> = {
   DurationText: <collection.DurationText value={12} />,
   Field: <collection.Field value="" onChange={() => {}} aria-label="host" />,
   FormRenderer: <collection.FormRenderer text="a=1" />,
+  Help: (
+    <collection.Help text="On Ethernet, change Wi-Fi to Ethernet in the command.">
+      In Terminal, run:
+    </collection.Help>
+  ),
   HexRenderer: <collection.HexRenderer bytes={new Uint8Array([1])} />,
   IconButton: <collection.IconButton glyph="close" onClick={() => {}} />,
   ImageRenderer: <collection.ImageRenderer bytes={new Uint8Array([1])} contentType="image/png" />,
   JsonRenderer: <collection.JsonRenderer text='{"a":1}' />,
   KeyValueRow: <collection.KeyValueRow name="host" value="example.com" />,
   MethodLabel: <collection.MethodLabel method="GET" />,
+  MenuPath: <collection.MenuPath path={["Trust", "When using this certificate", "Always Trust"]} />,
+  QrCode: <collection.QrCode value="http://192.168.1.24:7421/ca.cer" label="the certificate URL" />,
   Notice: <collection.Notice>nothing captured yet</collection.Notice>,
   Section: <collection.Section title="request">body</collection.Section>,
   SegmentedControl: (
@@ -59,7 +73,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   ),
   SourceSurface: <collection.SourceSurface text='{"a":1}' language={json()} testId="surface" />,
   Spinner: <collection.Spinner />,
-  StatusDot: <collection.StatusDot status="connected" onClick={() => {}} />,
+  StatusDot: <collection.StatusDot status="connected" opens="setup" onClick={() => {}} />,
   StatusLine: (
     <collection.StatusLine
       status={{ glyph: "✓", tone: "ok", short: "trusted" }}
@@ -150,7 +164,7 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
         <collection.Button onClick={() => {}}>send</collection.Button>
         <collection.CopyButton value="v" label="copy curl" />
         <collection.IconButton glyph="close" onClick={() => {}} />
-        <collection.StatusDot status="broken" onClick={() => {}} />
+        <collection.StatusDot status="broken" opens="setup" onClick={() => {}} />
       </>,
     );
 

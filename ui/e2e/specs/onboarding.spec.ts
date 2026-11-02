@@ -20,7 +20,8 @@ const picker = () => $(`[aria-label="${QUESTION}"][aria-haspopup="listbox"]`);
 const dot = () => $('[data-testid="status-dot"]');
 const successLine = () => $('[data-testid="proven"]');
 const tryTask = () => $('[data-testid="task-3"]');
-const button = (prefix: string) => $(`//button[starts-with(normalize-space(.), "${prefix}")]`);
+const button = (prefix: string) =>
+  $(`//button[starts-with(normalize-space(.), "${prefix}")]`);
 
 // The platform axis is a Select, so an answer is two clicks: open the trigger,
 // then the option. Both are matched by aria-label — the component's own
@@ -29,19 +30,37 @@ const button = (prefix: string) => $(`//button[starts-with(normalize-space(.), "
 async function choosePlatform(label: string) {
   await picker().click();
   await $(`[role="option"][aria-label="${label}"]`).click();
-  await browser.waitUntil(async () => !(await $('[role="listbox"]').isExisting()), {
-    timeout: 5_000,
-    timeoutMsg: `the picker stayed open after choosing ${label}`,
-  });
+  await browser.waitUntil(
+    async () => !(await $('[role="listbox"]').isExisting()),
+    {
+      timeout: 5_000,
+      timeoutMsg: `the picker stayed open after choosing ${label}`,
+    },
+  );
 }
 
 // The window is already bound to this run's core: the launcher handed it the
 // address in the environment and the shell injected it before the first script
 // ran, so a spec only waits for the screen it painted. Nothing here navigates —
 // a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
-// answers a stopped one with an Objective-C exception that aborts the app.
+// drops every answer still in flight.
 async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
+}
+
+// The window runs hidden, and setup's watch reads this machine only while the
+// window is visible (U3), so nothing would read it again after a request. The
+// emulator counts an unmarked request only between two readings (DEC-63), and
+// a focus is the other thing that reads again, so the spec gives one until the
+// reading lands.
+async function readsTheRequest(timeoutMsg: string) {
+  await browser.waitUntil(
+    async () => {
+      await browser.execute(() => window.dispatchEvent(new Event("focus")));
+      return successLine().isExisting();
+    },
+    { timeout: 15_000, interval: 1_000, timeoutMsg },
+  );
 }
 
 // UC-ONBOARD end to end, on the axis E-ONBOARD rebuilt the screen around: the
@@ -60,10 +79,11 @@ async function shellIsUp() {
 // What journey 2 does NOT drive, and why. Arming reach is an authorization act
 // (DEC-55) and the shell asks before it binds — confirm_reach opens a native
 // message dialog, which WebDriver cannot reach from inside the WKWebView. Nor
-// can the arming be staged around it: App reads reach once on mount and re-reads
-// it only from the two calls that change it, so a POST /reach from here would
-// bind a listener this window never learns of, and the suite runs one core and
-// one window, so there is no second launch that could come up already armed.
+// is the arming staged around it: a POST /reach from here would bind a listener
+// on a real interface of the machine running the suite and expose the control
+// API on its network (DEC-55), which a hermetic suite never does, and the suite
+// runs one core and one window, so there is no second launch that could come up
+// already armed.
 // Stubbing the confirm under the e2e feature was refused: that feature adds the
 // wdio plugins and changes no behaviour, and an e2e that proved arming by
 // removing its authorization would be proving the wrong thing. So journey 2
@@ -103,8 +123,8 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     // Nothing here is waiting on a precondition, so nothing is dimmed.
     await expect($$('[data-dim="true"]')).toBeElementsArrayOfSize(0);
 
-    // The probes answer for this machine, so the row that dates them is here.
-    await expect($('[data-testid="probe"]')).toBeExisting();
+    // The probes re-read themselves, so nothing offers to re-read them.
+    await expect($("button=check again")).not.toBeExisting();
   });
 
   it("there is no wizard: no cursor, no prev/next pair, and no step that hides another", async () => {
@@ -131,12 +151,13 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     // that would fail — and they keep their numbers, because a number is a
     // reading order and not a claim about progress.
     for (const n of [2, 3, 4]) {
-      await expect($(`[data-testid="task-${n}"]`)).toHaveAttribute("data-dim", "true");
+      await expect($(`[data-testid="task-${n}"]`)).toHaveAttribute(
+        "data-dim",
+        "true",
+      );
     }
 
-    // Nothing here could read this phone, so nothing pretends to: no probe row,
-    // and no address to point a device at until reach is armed.
-    await expect($('[data-testid="probe"]')).not.toBeExisting();
+    // No address to point a device at until reach is armed.
     await expect($('[data-testid="device-address"]')).not.toBeExisting();
   });
 
@@ -145,7 +166,6 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
 
     await expect($('[data-dim="true"]')).not.toBeExisting();
     await expect($('[data-testid="task-4"]')).not.toBeExisting();
-    await expect($('[data-testid="probe"]')).toBeExisting();
   });
 
   // Journey 1's payoff. A probe-green task and a bare connection both refuse to
@@ -158,15 +178,21 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     });
 
     await expect($('[data-testid="lead"]')).not.toBeExisting();
-    await expect($('[data-testid="flow-row"]')).toHaveText(expect.stringContaining("localhost"));
+    await expect($('[data-testid="flow-row"]')).toHaveText(
+      expect.stringContaining("localhost"),
+    );
     // The seeded row was in the core all along: setup stood over it.
-    await expect($('[data-testid="flow-row"] [aria-label="sent"]')).toBeExisting();
+    await expect(
+      $('[data-testid="flow-row"] [aria-label="sent"]'),
+    ).toBeExisting();
 
     // The moment setup succeeds is the list's first paint, not the setup
     // screen's last — and it offers the next device rather than only closing.
     const banner = $('[data-testid="set-up-banner"]');
     await expect(banner).toBeExisting();
-    await expect(banner).toHaveText(expect.stringContaining("set up another device"));
+    await expect(banner).toHaveText(
+      expect.stringContaining("set up another device"),
+    );
   });
 
   // A second device is its own setup session: the first device's success is
@@ -184,18 +210,22 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await choosePlatform("Android emulator");
 
     await expect($('[data-testid="task-1"] details[open]')).toBeExisting();
-    await expect(tryTask()).toHaveText(expect.stringContaining("waiting for the first request"));
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("waiting for the first request"),
+    );
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({ timeout: 15_000, timeoutMsg: "no success line after the new request" });
-    await expect(tryTask()).toHaveText(expect.stringContaining("capturing traffic"));
+    await readsTheRequest("no success line after the new request");
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("capturing traffic"),
+    );
   });
 
   // Setup reads its own session unfiltered: a list filtered to nothing is the
   // list's view, never the setup screen's evidence.
   it("re-entry with the list filtered to nothing still reads the new request", async () => {
-    await button("‹ back to flows").click();
+    await button("‹ show traffic").click();
     await $('[aria-label="filter"]').setValue("no-such-path.test");
     await browser.waitUntil(async () => (await rowCount()) === 0, {
       timeout: 15_000,
@@ -203,31 +233,55 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     });
 
     await dot().click();
-    await expect(picker()).toHaveText(expect.stringContaining("Android emulator"));
-    await expect(tryTask()).toHaveText(expect.stringContaining("waiting for the first request"));
+    await expect(picker()).toHaveText(
+      expect.stringContaining("Android emulator"),
+    );
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("waiting for the first request"),
+    );
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({ timeout: 15_000, timeoutMsg: "the filtered re-entry never read the request" });
-    await expect(tryTask()).toHaveText(expect.stringContaining("capturing traffic"));
+    await readsTheRequest("the filtered re-entry never read the request");
+    await expect(tryTask()).toHaveText(
+      expect.stringContaining("capturing traffic"),
+    );
   });
 
   it("back from setup keeps the list's filter, and clearing it brings the rows back", async () => {
-    await button("‹ back to flows").click();
+    await button("‹ show traffic").click();
     await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
     expect(await rowCount()).toBe(0);
 
     await $('[aria-label="filter"]').clearValue();
-    await browser.waitUntil(async () => (await rowCount()) >= 1, { timeout: 15_000 });
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+    });
   });
 
-  // Lifecycle wiring is exercised here implicitly: this app boots through the Tauri
-  // setup hook (launch reconciliation) and quits through the RunEvent::ExitRequested
-  // net — a broken hook or capability would fail this launch/quit. The quit-time
-  // confirm (App.tsx onCloseRequested), the unset_proxy / proxy_is_set /
-  // clear_proxy_marker commands, the marker gate and native off-argvs are unit-tested
-  // in src-tauri + closeConfirm.test.tsx; the real proxy-off is elevation-gated and
-  // not hermetically runnable, so it is not driven from the UI here.
+  // F26: the ⋮ menu is the list's own route back, and it moves as the dot
+  // does — the last device chosen was not this machine, so it stays answered.
+  it("the ⋮ menu's set up another device opens setup on the last device chosen", async () => {
+    await $('button[aria-label="capture actions"]').click();
+    const item = $('[role="menuitem"][aria-label="set up another device"]');
+    await item.waitForDisplayed({ timeout: 15_000 });
+    await item.click();
+
+    await expect($('[data-testid="lead"]')).toBeExisting();
+    await expect(picker()).toHaveText(
+      expect.stringContaining("Android emulator"),
+    );
+    await expect(dot()).toHaveAttribute("data-status", "connected");
+
+    await button("‹ show traffic").click();
+    await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
+  });
+
+  // The quit-time confirm is not driven here: proxy_status reads the real system
+  // proxy in this build, so a routed state is not hermetic, and WebDriver cannot
+  // press the native menu's ⌘Q. Its rules are held by closeConfirm.test.tsx,
+  // ProxyCloseDialog.test.tsx and App.test.tsx's quitting block; the shell's
+  // reader, its classifier and the Quit item by src-tauri's unit tests.
 
   it("appends a second row on a new request without a manual refresh", async () => {
     const before = await rowCount();

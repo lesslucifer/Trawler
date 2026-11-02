@@ -21,7 +21,10 @@
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
       UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
-      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span></div>    </div>
+      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
+      UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
+      way into setup, by <span class="badge id">E-ONBRVP.W2</span> · This machine's status by
+      <span class="badge id">E-ONBRVP.W3</span></div>    </div>
   </header>
   <main>
 
@@ -184,6 +187,11 @@
         <td>The composer, in the detail pane, with a draft from scratch
         (<a href="#uc-8-composer">UC-8</a>). A kept draft from scratch reopens with its edits; a kept draft
         seeded from a flow is replaced.</td></tr>
+        <tr><td><strong>set up another device</strong></td>
+        <td>Setup, exactly as the success banner's link opens it (<a href="#uc-onboard-moves">the moves
+        table</a>): on the last other device chosen, else with the question unanswered. It is the list's way
+        into setup once the list has flows, beside the header's dot. It has no face of its own: none of the app's
+        existing marks means setup.</td></tr>
         <tr><td><strong>clear</strong></td>
         <td>The header's <code>⌫</code> shortcut is named for the live filtered count. By default it opens a
         modal ask titled with that count, whose initial focus is on the answer that does nothing — the act
@@ -371,7 +379,9 @@
       <strong>do the work for the user in the common case, tell the truth in every case, and prove success
       only by real capture.</strong></p>
       <p><strong>No promise narrowed in the rebuild.</strong> The probes still answer for this machine and
-      nothing else; a decrypted flow is still the only thing that reveals the list; the certificate save
+      nothing else; a decrypted flow is still the only thing that moves setup to the list on its own
+      (<a href="../decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html">DEC-61</a>: the user
+      can switch at any time); the certificate save
       still reports what actually happened; the quit dialog is untouched.
       <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>'s two layers and
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>'s one-confirm-per-host-change
@@ -386,20 +396,56 @@
       <table>
         <tr><th>Moment</th><th>The screen</th></tr>
         <tr><td>the launch read is in flight</td><td>the shell and the checking dot, with no instruction</td></tr>
-        <tr><td>the core does not answer</td><td>"no answer from &lt;address&gt;" and a retry, never setup
-          steps</td></tr>
+        <tr><td>the core does not answer</td><td>"Trawler's capture service isn't answering" and "try again", never setup steps. Where it is all a region holds (an empty list, setup), it is centred in the region,
+          and in setup it stands in place of every task, with the way back</td></tr>
         <tr><td>the core answers with no captured https row</td><td>setup, answered <em>this machine</em>.
           Imported and sent rows count for nothing</td></tr>
-        <tr><td>a captured https row arrives</td><td>the list, and "You're set up" only for a row that started
-          after setup opened: a launch that finds capture already working is not news</td></tr>
-        <tr><td>the dot, once capture is proven</td><td>a new session, opened on the last platform chosen. The
-          dot stays <em>connected</em></td></tr>
+        <tr><td>a captured https row is there at launch</td><td>the list, and no announcement: a launch that finds
+          capture already working is not news</td></tr>
+        <tr><td>a captured https row that started in this session arrives, before capture was ever proven</td><td>the
+          list, with "You're set up". A row from before the session moves no one</td></tr>
+        <tr><td>the dot, or "set up capture" on an empty list</td><td>a new session, opened on the last platform
+          chosen</td></tr>
         <tr><td>"set up another device"</td><td>a new session, opened on the last platform chosen if it was not
           this machine. Otherwise the question is unanswered and no task shows until one is chosen</td></tr>
       </table>
       <p>A session reads only captured rows and tunnels that started after it opened, unfiltered by whatever
       the list is filtered to. So the first device's success is never the second device's, and the list's
       view is never the screen's evidence.</p>
+    </div>
+
+    <h3 id="uc-onboard-moves">Moving between the list and setup</h3>
+    <div data-c="uc-onboard-moves">
+      <p><strong>The header's dot is a switch, in every phase</strong>
+      (<a href="../decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html">DEC-61</a>): the list opens
+      setup, and setup or the launch check opens the list. It reads the newest request the proxy captured.</p>
+      <table>
+        <tr><th>Dot</th><th>When</th></tr>
+        <tr><td>checking (grey)</td><td>the core has not answered yet</td></tr>
+        <tr><td>not set up (red)</td><td>nothing captured since the app started</td></tr>
+        <tr><td>quiet (a hollow green ring)</td><td>captured before, nothing in the last 3 minutes</td></tr>
+        <tr><td>capturing (green)</td><td>a request, http or https, captured in the last 3 minutes. http never
+          settles the certificate task</td></tr>
+      </table>
+      <table>
+        <tr><th>You…</th><th>You see</th><th>Kept</th><th>Checked again</th><th>Starts fresh</th></tr>
+        <tr><td>start the app</td><td>a grey dot until the core answers. The dot already switches, and a click
+          ends the launch check</td><td>—</td><td>captured requests, network addresses</td><td>—</td></tr>
+        <tr><td>click the dot, or "set up capture" on an empty list</td><td>setup, on the last device chosen</td>
+          <td>filter, selection, draft, the last proxy act while no reading answers it</td><td>network addresses,
+          and this machine's readings, with the tasks checking until they land</td><td>setup's messages and open
+          guides, and the session</td></tr>
+        <tr><td>click "set up another device"</td><td>as the dot, with the question unanswered if the last device
+          was this machine</td><td>as the dot</td><td>as the dot</td><td>as the dot</td></tr>
+        <tr><td>click the dot or "show traffic" in setup</td><td>the list as it was left</td><td>filter, selection,
+          draft, the device chosen</td><td>the list</td><td>setup's messages</td></tr>
+        <tr><td>lose the core</td><td>"not answering" on the list, in a band over its rows. In setup, the statement in place of
+          every task</td><td>everything else</td><td>—</td><td>—</td></tr>
+        <tr><td>get the core back</td><td>the statement goes, and the screen refreshes itself</td><td>everything
+          else</td><td>the list, network addresses, and in setup this machine's readings</td><td>—</td></tr>
+      </table>
+      <p>After a move the user made, focus lands on the new screen's main area. A move the app made (the launch,
+        a first success) claims no focus.</p>
     </div>
 
     <div data-c="uc-onboard-platforms">
@@ -409,23 +455,71 @@
       <table>
         <tr><th>Platform</th><th>Offered on</th><th>Probed?</th><th>Needs reach?</th><th>Certificate file</th><th>What it may promise</th></tr>
         <tr><td>This machine</td><td>every host</td><td>trust + proxy, where a probe can read (macOS,
-          Windows)</td><td>no</td><td><code>trawler-ca.pem</code></td>
-          <td>a read state for both tasks. The success line names <em>this machine</em> only when both probes
-            read done</td></tr>
-        <tr><td>iOS Simulator</td><td>macOS only</td><td>proxy only</td><td>no</td><td><code>trawler-ca.pem</code></td>
+          Windows, Linux with a CA bundle and GNOME)</td><td>no</td><td><code>trawler-ca.pem</code></td>
+          <td>a read state for both tasks — and where no probe answers, the request it makes of its own
+            settles both (<a href="../decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>);
+            another device's traffic never does. The success line names <em>this machine</em> only when both
+            probes read done</td></tr>
+        <tr><td>iOS Simulator</td><td>macOS only</td><td>this machine's proxy · its own trust store, in each Simulator running</td><td>no</td><td><code>trawler-ca.pem</code></td>
           <td>it routes through this machine's proxy, but keeps a trust store of its own — so the
-            certificate is installed with <code>simctl</code> and the trust half is never claimed from the
-            host's keychain</td></tr>
-        <tr><td>Android emulator</td><td>every host</td><td>neither</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
-          <td>its tasks read this session's traffic, since no probe can read it</td></tr>
-        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code></td>
-          <td>nothing about that machine. The tasks say what <em>will</em> settle them, in the words they
-            will be settled by</td></tr>
+            certificate is installed with <code>simctl</code> and read from that store, by the Simulator's name
+            (<em>done — trusted in iPhone 17 Pro</em>), never from the host's keychain. Its wire is this
+            machine's, so nothing unmarked is its own: where no store answers, its marked request settles its
+            certificate, and its try task and the end read that request alone
+            (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8).
+            With none running and nothing proved it reads <em>not done — no Simulator running</em>; a read that
+            failed or has not landed is no reading, and says what will confirm it instead</td></tr>
+        <tr><td>Android emulator</td><td>every host</td><td>its own user store and proxy, through adb, in each emulator running</td><td>no</td><td><code>trawler-ca.cer</code> (DER)</td>
+          <td>it reaches Trawler on this machine's loopback, through a proxy of its own: its store and proxy are
+            read through adb, by the name of its AVD (<em>done — trusted in Pixel 7 API 35</em>), and where adb reads
+            neither it is another device that needs no allow — its marked request, and other traffic only while this
+            machine's proxy does not point here. A refusal is never its certificate task's: its own services ignore a
+            user certificate. The end names it on its marked request only
+            (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 9).
+            With none running and nothing proved it reads <em>not done — no emulator running</em>; adb not found, or a
+            read not landed, is no reading, and says what will confirm it instead (E-ONBRVP.W17)</td></tr>
+        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code> · <code>trawler-ca.cer</code> (DER: Windows opens no <code>.pem</code>) · <code>trawler-ca.pem</code></td>
+          <td>nothing read off that machine — only what could have come from it, since its address was
+            allowed: its own marked request, named and timed, and other traffic only while this machine's
+            proxy does not point here (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>). Until then each task says what
+            <em>will</em> settle it, in the words it will be settled by. The end names the device only on its
+            marked request</td></tr>
         <tr><td>iPhone or iPad · Android device</td><td>every host</td><td>neither</td><td>yes</td>
           <td><code>trawler-ca.mobileconfig</code> (a configuration profile) · <code>trawler-ca.cer</code> (DER)</td>
-          <td>as above — and the traffic layer cannot say which device a decrypted request came from, so
-            the end of setup promises a confirmation rather than reporting one</td></tr>
+          <td>as above. Their certificate URL and their marked address each carry a code a phone's camera
+            opens, under the printed value
+            (<a href="../decisions/dec-57-a-device-that-cannot-paste.html">DEC-57</a>). The proxy host and port stay
+            typed. Each phone's marked address is also its certificate's test: only that address refused says
+            anything of its certificate (DEC-63 rule 10). An Android device's steps name no file a browser may
+            rename, and reach the CA installer by Settings' own search. Its Wi-Fi proxy starts from a page the core
+            serves, by a third code (<a href="../decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html">DEC-65</a>),
+            with the stock Settings path its other way</td></tr>
       </table>
+      <p><strong>Each command runs as written</strong>, in the shell its sentence names, on the file the step
+      before it left: Windows' are PowerShell's, which on Windows 10 and 11 rejects <code>&amp;&amp;</code>;
+      another computer's trust command reads the certificate from Downloads, where its browser saved it, and
+      This machine's and the Simulator's read it from Downloads, where the save dialog opens, until a save returns
+      another path, which the command prints quoted for its shell. A command installs a tool the system does not ship before
+      using it, and finds a folder or database wherever this version and this language put it. The Simulator's
+      reaches every Simulator running — <code>booted</code> names only the one booted last — and asks for no restart,
+      since Safari trusts the root at once. Its way back is Simulator's own <em>Device → Erase All Content and
+      Settings</em>, because <code>keychain reset</code> leaves the root trusted and nothing removes it alone. The emulator's push reads the saved file
+      the same way, and each of its adb commands runs once per emulator running — a bare <code>adb</code> refuses with
+      two of anything attached. A stock Android Studio puts neither <code>adb</code> nor <code>emulator</code> on the
+      PATH, so each command names the SDK the shell found, as the host's own shell writes it
+      (<code>"$HOME/Library/Android/sdk/platform-tools/adb"</code>); where none is found, its <em>?</em> says where
+      Android Studio puts it. Its route is the global proxy (<code>settings put global http_proxy 10.0.2.2:&lt;port&gt;</code>),
+      which covers its mobile network too: a Wi-Fi proxy routes nothing where that is the default, so the Settings
+      route turns mobile data off first, and the start-up flag, read on this machine, names <code>127.0.0.1</code>.
+      Its menu paths are Android 15's, set apart as paths, and its way back is <em>Trusted credentials</em>, opened
+      from a button, then the dialog's own <em>Uninstall</em> → <em>OK</em>.</p>
+      <p><strong>Linux's certificate task installs into every store a browser reads</strong>, a step each: Firefox's
+      own (its Authorities import, recorded), Chrome's NSS database (made first where no Chrome has opened one), then the system bundle for curl and the system's tools —
+      the browsers first, because the try task opens one; none is a note or another way. Its advice when nothing
+      decrypts says the system command reaches no browser. The probe reads the system bundle only, so a trusted
+      reading says <em>done — trusted by the system's tools</em>, and the done task keeps Firefox's and Chrome's
+      steps beside its way back: only a browser's own request settles them (E-ONBRVP.W12). On macOS and Windows
+      Firefox reads the system's store, and no guide names it.</p>
     </div>
 
     <div class="callout" data-c="uc-onboard-reach">
@@ -437,7 +531,11 @@
       that need it, this is task 1, and until it is done the tasks that depend on it are dimmed rather than
       given steps that cannot work. The task names the address it will arm before it is armed, even when
       there is only one, and its button and warning name that address's interface. With no reachable
-      address, it says to join the network the device is on and offers a re-read. The CORS grant does not widen with the bind; the opt-in is this
+      address, it says to join the network the device is on and offers a re-read. An armed address this
+      machine no longer holds — a network change — reads <em>not working — this Mac no longer holds
+      192.168.1.24</em>, offers the address it holds now, and dims the tasks that would print the old one, and the
+      header's chip says <em>no longer reachable on 192.168.1.24</em>; reach is read again on focus and every 3 s
+      while setup shows (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>). The CORS grant does not widen with the bind; the opt-in is this
       contract's whole authorization boundary.</p>
     </div>
 
@@ -447,44 +545,221 @@
       A task's number is a reading order; its state is a reading something took.</p>
       <table>
         <tr><th>Layer</th><th>Answers for</th><th>Readings</th></tr>
-        <tr><td><strong>The probes</strong> — a dated snapshot, re-taken on demand</td>
-          <td>this machine only: does it trust the CA, does its system proxy point at Trawler</td>
-          <td>trusted / not trusted / <code>unknown</code>. A probe that cannot read answers
+        <tr><td><strong>The probes</strong> — a dated snapshot, re-taken wherever its answer can change</td>
+          <td>this machine: does it trust the certificate the core serves now, does the proxy HTTPS goes
+            through now point at Trawler — and each running Simulator's own trust store, by its name, and each
+            running emulator's own user store and proxy, through adb, only while the emulator is the platform chosen</td>
+          <td>trusted / installed, not trusted / not installed / <code>unknown</code>, matched on the live
+            certificate's bytes — never on a name another run's certificate shares: held in a keychain and verified on macOS, its
+            thumbprint in the machine or user root store on Windows, in the CA bundle on Linux. The proxy is
+            macOS's resolved one, Windows's <code>https=</code> entry or single address, GNOME's HTTPS proxy;
+            localhost on Trawler's port is Trawler, no other loopback address is. A probe that cannot read answers
             <code>unknown</code>, never "off", on every host. Traffic, however much of it, never turns them
             green</td></tr>
         <tr><td><strong>The traffic layer</strong> — judged against a clock, from timestamps</td>
           <td>the wire, now</td>
           <td>a decrypted flow inside the window reads <em>capturing</em>; a tunnel no flow answered reads
             <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
-            certificate; plain HTTP only is its own reading; traffic seen earlier but nothing recent reads
-            <em>idle</em>. An old flow can only ever produce idle</td></tr>
+            certificate; plain HTTP only reads not done, with the remedy asking for an https site; traffic seen
+            earlier but nothing recent reads <em>idle</em>. An old flow can only ever produce idle — except on
+            This machine and another device, whose try task keeps a decrypted proof once quiet: <em>done —
+            decrypted at 14:02, nothing since</em>. Another device's keeps it past anything after it that does not
+            decrypt, too: a refusal is a muted note under it that sends no one back to the certificate (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 7), and on another Ubuntu machine names a browser with a store of its own first</td></tr>
       </table>
-      <p><strong>Each task has one reading:</strong> a probe that concludes, else this session's traffic.
-      A decrypted request settles the certificate task, and any request that reached Trawler settles the
-      route task. This machine's route is the exception: its try-it command names the proxy itself, so only
-      its probe may settle it. Where a probe can't conclude, the wording says so and points at the traffic
-      task — never a false "not set up". The dated row and its re-read show only on a host where a probe can
-      answer. A phone that trusts the certificate and points here reads as two true facts side by side: not
-      trusted on this machine, and capturing traffic.</p>
+      <p><strong>Each task has one reading:</strong> a probe that concludes, else — on This machine — the
+      request it makes of its own, else — on another device — what could have come from it, else this
+      session's traffic. A decrypted request settles the certificate task, and any request that reached
+      Trawler settles the route task. This machine is the exception: its
+      try-it command names the proxy itself, and any other device's request says nothing about it, so only a
+      probe or its own request — marked <code>?trawler-check=…</code>, captured decrypted this session — may
+      settle its tasks. Where nothing has, the line says what will — <em>the request in task 3 confirms it</em>
+      — never a false "not set up", and a refusal nothing can place is the try task's to word. A phone that trusts the certificate and points here
+      reads as two true facts side by side: not trusted on this machine, and capturing traffic.</p>
+      <p><strong>Another device reads only what could have come from it</strong>
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>): traffic that started after its address was allowed. Its try
+      task offers an address to open there — <code>https://example.com/?trawler-check=k3m9</code>, marked anew
+      for each session and device, with a code to scan on a phone — and that row settles both of its tasks: <em>done —
+      that Mac's request decrypted at 14:02</em> · <em>came through at 14:02</em>. Other traffic counts only where
+      it arrived between two readings of this machine's proxy as off or another proxy, taken by the watch — so within one 3 s
+      tick of arriving, and nothing that arrived while the window was hidden — with its time — <em>done — a request
+      decrypted at 14:02</em>. Where it points here or cannot be read and nothing is that device's yet, the tasks
+      read <em>can't check here — the address in task 4 confirms it</em>, a refusal is the try task's and names no
+      device, and no success line shows. Every proof lasts the session, whatever this machine's proxy reads after
+      it; a reach read that failed takes none back. Its try task's proof outlasts whatever follows it that does not
+      decrypt: a refusal is a note under <em>done — decrypted at 14:02</em>, never <em>not working</em>.</p>
+      <p><strong>The iOS Simulator's wire is this machine's</strong>: it sends through this machine's proxy, so
+      this machine's traffic is on its wire whenever it is routed, and nothing unmarked is its own. Its
+      certificate reads its own store; its try task offers the marked address — <em>or open this one in the
+      Simulator</em> — and reads <em>can't check here — the address below confirms it</em> until that request
+      decrypts; a refusal is the try task's, naming no device, or the Simulator's store where that reads trusted;
+      and <em>You're set up — Trawler is capturing traffic from the Simulator</em> shows on its marked request alone
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 8).</p>
+      <p><strong>The iPhone's test is the address it is offered</strong>: its own services pin their certificates
+      and refuse from the moment its proxy points here, so a refusal is its certificate task's only where it is
+      <code>example.com</code>'s, in a clear span and newer than every proof — <em>not working — example.com did not
+      decrypt</em>, its steps open and the trust switch named before the profile, since the two refuse alike. After a
+      proof it reads <em>… did not decrypt at 15:10, after decrypting at 14:02</em>: the profile removed, or full trust
+      turned off; the try task keeps its proof and offers the address <em>to check again</em>. Any other refusal is the
+      try task's note, naming Apple's own services, and leaves the certificate task at <em>can't check here — the
+      address in task 4 confirms it</em>; where the address's refusal may be this machine's, the note says what to do
+      if it was the iPhone's
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 10).</p>
+      <p><strong>The Android device's test is its address too</strong>: Android's own services ignore a user
+      certificate and refuse from the moment its proxy points here, so it reads as the iPhone does — only
+      <code>example.com</code> refused, in a clear span and newer than every proof, is its certificate task's. A user
+      certificate has no second switch, so that sentence says <em>Trawler Proxy CA is not in its user store</em> and
+      how to see that it is; after a proof it is the certificate uninstalled. Any other refusal is the try task's note,
+      naming Android's own services
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 10).</p>
+      <p><strong>The Android emulator is another device that needs no allow</strong>: its evidence starts with the
+      setup session, its marked request settles its tasks, and unmarked traffic counts only while this machine's
+      proxy reads off or another. Before those, adb reads its own store and proxy: <em>not done — not in Pixel 7 API
+      35</em> · <em>not done — Pixel 7 API 35 sends over mobile data, not Wi-Fi</em>; no proxy read is never <em>not
+      done</em>, since a proxy set at its start lives on this machine. A refusal is the try task's, and says Android's
+      own services never decrypt — <em>a website in Chrome is the test</em> — naming the store that trusts it where one
+      does; its proof outlasts them, and <em>You're set up — Trawler is capturing traffic from the emulator</em> shows
+      on its marked request alone
+      (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 9).</p>
+      <p><strong>This machine is read again wherever its answer can change</strong>: as setup opens, after
+      every action whatever its outcome, on focus, when the core comes back, and
+      every 3 s while setup is on screen, its core answering and the window visible. Only a read the user
+      caused shows <em>checking</em> and holds the buttons; the others are silent. Nothing offers to re-read
+      by hand.</p>
+    </div>
+
+    <div data-c="uc-onboard-states">
+      <p><strong>A state is read from its first word</strong> (F5, <span class="badge id">E-ONBRVP.W2</span>).
+      Every task's state line opens with one of six words, and each glyph owns one meaning. The reason after the
+      dash is the task's own.</p>
+      <table>
+        <tr><th>Glyph</th><th>Word</th><th>Means</th><th>Example</th></tr>
+        <tr><td>✓</td><td>done</td><td>something read it done</td><td>done — installed and trusted</td></tr>
+        <tr><td>○</td><td>not done</td><td>read, not done yet, nothing failed</td><td>not done — only plain http so far</td></tr>
+        <tr><td>⚠</td><td>not working</td><td>tried, and failed</td><td>not working — nothing decrypted</td></tr>
+        <tr><td>◐</td><td>can't check here</td><td>nothing here can read it; the line names the request that settles it, and that request does</td><td>can't check here — your iPhone or iPad's first request confirms it</td></tr>
+        <tr><td>⟳</td><td>checking · setting up</td><td>a reading or a write is running</td><td>checking — the proxy settings</td></tr>
+      </table>
+      <p><strong>Each fact is said once</strong> (F19). While a write runs, the state lines of the tasks it
+      covers read <em>setting up</em>, and only the note under its button says what the user must do. An
+      action's note carries only what no state line reports.</p>
     </div>
 
     <div data-c="uc-onboard-acts">
-      <p><strong>One act on this machine, one password prompt.</strong> Where the host can do the work
+      <p><strong>One act on this machine, one prompt.</strong> Where the host can do the work
       (macOS, Windows), installing the certificate and setting the system proxy are a single elevated
-      action — one prompt, not two — and the two single commands survive as the manual route beneath it.
-      <strong>An action follows its task's reading.</strong> The one act is offered only while both halves
-      read undone. Once either reads done, each task carries its own: "Set the system proxy" with its steps,
-      or the certificate's steps. There is no install-only button and no command behind one. A task read done
-      offers no action and keeps only its undo. A refused authorization is the user's own outcome, worded as
+      action — one prompt, not two — and each task keeps its own by-hand route. Each host names its own
+      prompt: macOS a password prompt, Windows an approval. Windows asks nothing before the proxy changes, so
+      its proxy notes name no prompt (E-ONBRVP.W12). It does both tasks, so it
+      sits above them and says so: <em>it does tasks 1 and 2</em>. A task is named a task wherever a line
+      points at one, never a step (E-ONBRVP.W16). <strong>An action follows its task's
+      reading.</strong> The one act is offered only while both halves read undone. Once either reads done,
+      each task carries its own: <em>set the system proxy</em> with its steps, or the certificate's steps.
+      There is no install-only button and no command behind one. A task read done offers no action and keeps
+      one way back; a task not done offers no way back.
+      <strong>The next thing to do leads (E-ONBRVP.W12).</strong> One control on the screen is framed, and it
+      is the next thing to do: the one act, else the certificate task's own control while it reads undone — its
+      button, else its open guide's first — else the proxy's action or its open guide's first, else the try task's
+      request once both halves read done. Every other control is bare. A by-hand route is
+      <em>do it by hand</em> wherever a button leads, a step count where none does. It opens the right screen
+      first where one can be opened, shows the control no route reaches in a recording under the step, and
+      keeps the command as <em>other ways</em>. Once a request decrypted, the try task folds its request
+      under <em>make another request</em>.
+      <strong>Another Mac is walked by hand (E-ONBRVP.W13)</strong>: nothing here opens a screen on it, so its
+      steps name what to click there, with This Mac's recordings — the certificate from Downloads into
+      <em>login</em>, <em>Always Trust</em>, the password; the proxy through System Settings → Network — and each
+      command is <em>other ways</em>. Its way back removes the certificate from both keychains, whichever way
+      installed it.
+      <strong>Another Windows PC is walked the same way (E-ONBRVP.W14)</strong>: it downloads
+      <span class="font-mono">trawler-ca.cer</span>, the one file Windows opens in its certificate dialog, then takes
+      This PC's import steps and recording; the proxy goes through Settings → Network &amp; internet → Proxy with
+      This PC's recording. Its certificate command writes the user's store with no administrator. Both Windows
+      guides share one certificate way back, which reaches the user's store and every user's. Every desktop's
+      proxy way back is by hand first, with its command as <em>Or</em>. The quit dialog keeps the command alone, led
+      by the shell it runs in. A declined <em>allow</em> reads <em>not allowed</em>, because the state line above
+      already says where Trawler answers.
+      <strong>Another Ubuntu machine is walked the same way (E-ONBRVP.W15)</strong>: each browser imports
+      the certificate in its own settings — Firefox's <em>Authorities → Import…</em> with its recording, then Chrome or
+      Chromium's <em>Installed by you → Trusted Certificates → Import</em> — and its proxy goes through This machine's
+      GNOME page with its recording. Chrome's command and the system store's go under <em>other ways</em>, so no step on
+      that machine needs <code>sudo</code>. This machine on Linux keeps the system store as its last step, since its
+      probe reads that store. Both Linux guides undo by hand first, then each command that may have run. No lead names
+      the desktop: commands run <em>in a terminal</em>, on that machine's desktop, since over SSH
+      <code>gsettings</code> sets nothing.
+      <strong>The iOS Simulator leads with buttons (E-ONBRVP.W16)</strong>: <code>simctl</code> writes its store and
+      opens its Safari with no password, so <em>set up the Simulator</em> sits above the tasks while both read undone —
+      it trusts every running Simulator first, then sets this Mac's proxy, and asks nothing more than the proxy's own
+      prompt. Once either half reads done, the certificate task leads with <em>trust in the Simulator</em>, what it
+      does behind its <em>?</em>; with none running, its steps open on <em>open the Simulator</em>. The save and the
+      command are its <em>do it by hand</em>, the command <em>in Terminal</em>, with what to do when
+      <code>simctl</code> is not found behind its <em>?</em>; the shell itself runs <code>simctl</code> under the
+      Xcode that holds Simulator.app wherever <code>xcode-select</code> points elsewhere. Its try task offers
+      <em>open it in the Simulator</em>, which opens the marked address in each running Simulator's Safari; the
+      address stays beside it. Every Simulator status still comes from its store or its marked request, never
+      a click.
+      <strong>The Android emulator leads with buttons too (E-ONBRVP.W17)</strong>: adb sets its proxy as the shell
+      user, and on an image whose <code>su</code> answers — a Google APIs image — writes its user store as root, where
+      Android's installer would, and announces the change so an open Chrome trusts it at once. So <em>set up the
+      emulator</em> sits above the tasks while both read undone and every emulator running answers <code>su</code>; it
+      installs first, then routes, and asks nothing. Once either half reads done, the certificate task leads with
+      <em>install in the emulator</em> and the proxy task with <em>route the emulator</em>, and <em>stop routing the
+      emulator</em> stands in the proxy task once adb reads it routed. With none running, the screen keeps the
+      layout one running will show: <em>open</em> the AVD used last — the one whose launch file is newest, by the
+      name Device Manager shows — stands where the one act will, and every control that acts on an emulator stands
+      in place, disabled, so starting one swaps that button and moves nothing else. An emulator counts as running once
+      it has booted; while one boots, task 1 reads <em>not done — the emulator is starting</em> and the button waits. Where <code>su</code>
+      does not answer — a Google Play image, which the AVD used last says before it runs — there is no one act: <em>send it to the emulator</em>
+      pushes the file and opens <em>More security &amp; privacy</em>, the steps go on from <em>Encryption &amp;
+      credentials</em>, and the push by hand is the other way. Its try task offers <em>open it in the emulator</em>,
+      which opens the marked address in each running emulator's Chrome, Chrome's welcome behind its <em>?</em>.
+      Every emulator status still comes from adb's reading or its marked request, never a click.
+      <strong>A phone's codes lead in turn (E-ONBRVP.W18)</strong>: nothing here reaches a phone but its camera, so
+      the code of the next task is the one framed control — the certificate's under <em>Scan with the camera, or
+      open</em> while its steps are next, then the request's. The request's address waits, dimmed <em>after task
+      3</em>, until something that may be the phone's reaches Trawler; while this machine's traffic may be arriving
+      too, it stays, as the test the tasks name, and leads once anything arrives. On both phones. The iPhone's steps
+      are iOS 26's own: Safari's <em>Allow</em>, then <em>Profile Downloaded → Install → Install → Install →
+      Done</em> from the top of Settings, then <em>General → About → Certificate Trust Settings</em>, <em>Trawler Proxy
+      CA → Continue</em>, each with its recording; the long way, the passcode, <em>Not Verified</em> and why a second
+      switch sit behind each step's <em>?</em>. Its certificate's way back ends <em>Remove Profile</em>, its proxy's
+      <em>Configure Proxy → Off → Save</em>, and on a Mac a <em>?</em> by the values offers Universal Clipboard. It is
+      <em>your iPhone or iPad</em> in every title and status line.
+      <strong>The Android device's steps are Android 15's own (E-ONBRVP.W19)</strong>: <em>In Settings, search CA
+      certificate, then tap</em> <em>CA certificate → CA certificate → Install anyway</em>, then the trawler-ca file at
+      the top of Recent, with its recording. Its Wi-Fi proxy leads with the code of the core's Wi-Fi page, whose one
+      button, <em>Open Wi-Fi settings</em>, opens Android's <em>Internet</em> screen; then <em>⚙</em> by the network,
+      <em>✎ → Advanced options → Proxy → Manual</em>, with its recording, and <em>Proxy hostname</em>, <em>Proxy
+      port</em>, <em>Save</em>. The page names both values to copy there and paste. The Settings path from
+      <em>Network &amp; internet → Internet</em> is the other way, and leads where the core serves no page; the way
+      back ends <em>None → Save</em>, in the quit dialog too. A blank download and the file's dead-end alert, which apps trust a user certificate, and the
+      makers' menus each sit behind their step's <em>?</em>; nothing is a note. Its certificate's way back is
+      <em>Trusted credentials → Trusted credentials → User → Trawler Proxy CA → Uninstall → OK</em>. A step's code sits
+      under its sentence, before its recording.
+      A step's <em>?</em> follows its last word wherever the line wraps, on every platform (E-ONBRVP.W17).
+      Every platform titles its last task <em>Make a request from</em> the device, and every one but This
+      machine sets the address it offers at the weight of a step. A refused authorization is the user's own outcome, worded as
       one, with the tool's text under a disclosure; a real failure keeps the OS's words and opens the manual
-      route.</p>
+      route. An approval the OS could not show (macOS's -60007) is neither. The user answered the password
+      prompt, and the trust write asked for a second approval that never reached them. It reads <em>macOS
+      couldn't show the prompt to approve this, so it isn't done</em> and opens the manual route. The one act
+      goes on to set the proxy once the certificate verifies as trusted, whatever the trust write's own
+      exit.</p>
       <table>
         <tr><th>Act</th><th>What it costs</th><th>What it says afterwards</th></tr>
-        <tr><td>Set up this machine — offered only while neither half reads done</td><td>one confirm (the OS
+        <tr><td>Set up this machine — above the tasks, offered only while neither half reads done</td><td>one confirm (the OS
           elevation prompt)</td>
           <td>the probes say whether it is done — the click never does</td></tr>
         <tr><td>Set the system proxy — the proxy half, once the certificate reads done</td><td>one confirm</td>
           <td>the same: the proxy probe says whether it is done</td></tr>
+        <tr><td>Set up the Simulator — above the tasks while both read undone and one runs; trust in the
+          Simulator — the certificate half alone (E-ONBRVP.W16)</td><td>none for the store, which <code>simctl</code>
+          writes in every running Simulator; the proxy's own confirm for the one act</td>
+          <td>each Simulator's store says whether it is done, by name — the click never does. A failure says so and
+            opens the steps by hand</td></tr>
+        <tr><td>Set up the emulator — above the tasks while both read undone and <code>su</code> answers in every one
+          running; install in the emulator, route the emulator — each half alone; stop routing the emulator — once adb
+          reads it routed (E-ONBRVP.W17)</td><td>none: adb and <code>su</code> ask for nothing in a test device</td>
+          <td>adb's reading of each emulator says whether it is done, by name — the click never does. A failure says
+            so and opens the steps by hand</td></tr>
         <tr><td>Replace a proxy this machine already has</td>
           <td>a second confirm naming the proxy it is about to replace</td>
           <td>the ask states the old proxy does not come back. A refusal writes nothing and says which
@@ -493,11 +768,33 @@
           captured traffic becomes readable and that the exposure ends when Trawler quits</td>
           <td>the task reads <em>listening on &lt;host&gt; until Trawler quits</em>, and a chip in the
             header holds it for as long as it holds</td></tr>
+        <tr><td>Make a request to example.com — This machine's try task only (<em>Make a request from this
+          Mac</em>), its browser and the curl command under <em>other ways</em>
+          (<a href="../decisions/dec-56-the-app-may-prove-capture-itself.html">DEC-56</a>)</td>
+          <td>none — one request changes nothing on this host. It runs on a click only, never on its own</td>
+          <td>which way it went, as the core saw it: <em>through Trawler</em>, <em>reached Trawler and didn't
+            decrypt</em>, or <em>answered, but not through Trawler</em> — or that it did not complete. The note
+            never moves a task; where no probe answers, the marked row it produced, captured decrypted, is This
+            machine's reading (DEC-62) — a click alone never makes a task done</td></tr>
         <tr><td>Stop routing through Trawler — inside the proxy task</td><td>none — reversing is not a new
           exposure</td>
           <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
-            say so and point at the certificate task's steps to remove it. Nothing claims to untrust a
-            store</td></tr>
+            say <em>the certificate stays trusted</em>. Its own steps are under <em>do it by hand</em></td></tr>
+        <tr><td>Remove the certificate — inside the certificate task once it reads trusted, macOS
+          (E-ONBRVP.W12, the owner's review)</td><td>none of its own; a System keychain copy or an admin trust
+          asks for an administrator's password, the login copy's trust for the user's</td>
+          <td>it names the half it performs: the live certificate leaves every keychain that holds it, with the
+            trust written for it, so the same bytes added back are not trusted unasked. Only when the proxy is
+            set does it say <em>the proxy stays set</em>. Its own steps are under <em>do it by hand</em></td></tr>
+        <tr><td>Open a by-hand step's screen — macOS: <em>open in Keychain Access</em>, <em>open Proxy
+          settings</em>, <em>open example.com in your browser</em>; Windows: <em>open the certificate</em>,
+          <em>open Proxy settings</em>, <em>open example.com in your browser</em>; Linux (GNOME): <em>open Network
+          settings</em>, <em>open example.com in your browser</em> (E-ONBRVP.W12)</td>
+          <td>none of its own. Keychain Access adds the certificate to the login keychain; trusting it there
+            asks for the user's password. Windows' certificate dialog imports into the user's Trusted Root store
+            behind its own Yes, with no administrator</td>
+          <td>nothing: the step's own reading moves. The shell opens a closed set of names and builds what it
+            opens; the browser's request carries this window's mark (DEC-62)</td></tr>
       </table>
     </div>
 
@@ -506,6 +803,15 @@
       purpose, a question in their own words, and numbered tasks with one obvious button.</p>
       <table>
         <tr><th>Rule</th><th>Why</th></tr>
+        <tr><td>What explains a line is a note, drawn under that line while the screen's one notes switch is on:
+          a task's why, a guide's note, a button's caption, a risk warning, a remedy's <em>Already did?</em> advice,
+          what to check when a download fails. The switch is the circled <em>?</em> at the device row's end; it starts
+          off, the shell remembers it, and the quit dialog follows it. No note is exempt, and no line carries a control
+          of its own for one. On screen stay the title, the state, the next action, the values and commands it needs,
+          and an action's own outcome (E-ONBRVP.W13, W21)</td><td>the owner, 2026-10-31: the one thing to do should not
+          compete with small text about it; 2026-11-02: one switch, not a <em>?</em> on every line
+          (<a href="../decisions/dec-66-notes-show-together-on-one-switch.html">DEC-66</a>). A rule for every screen;
+          the other screens follow in their own epic, and the rulebook takes it once none breaks it</td></tr>
         <tr><td>At most one guide open — the first whose task is not done, and none once a request has
           decrypted</td><td>four disclosures three levels deep is what the rebuild replaced</td></tr>
         <tr><td>A sentence that says "the steps below" has them open: a failed act's, and the certificate
@@ -536,10 +842,11 @@ flowchart TD
   Q -- "another computer · a phone" --> R{"reach armed?"}
   R -- "no" --> D["task 1 asks for it once;
 the rest are dimmed, not given steps that fail"]
-  R -- "yes" --> A["a host, a port and a certificate URL to type"]
+  R -- "yes" --> A["a host and a port to type,
+a certificate URL to type or scan"]
   H --> PR["probe this machine: CA trusted? proxy set?"]
-  PR --> ST["the probed tasks' states, stamped 'checked at'"]
-  ST -. "check again · window focus" .-> PR
+  PR --> ST["the probed tasks' states"]
+  ST -. "every action · focus · the core's return · every 3 s" .-> PR
   H --> W["watch traffic: flow timestamps + live connection events"]
   A --> W
   D --> W
@@ -548,11 +855,11 @@ the rest are dimmed, not given steps that fail"]
 which says so and offers the next device"]
   C -- "a tunnel no flow answered" --> TR["arriving but not decrypting —
 the client lacks the certificate"]
-  C -- "plain http only" --> PL["arriving — plain HTTP only"]
+  C -- "plain http only" --> PL["not done — only plain http so far"]
   C -- "nothing recent" --> ID["idle, or waiting for the first request"]
       </pre>
       <div class="caption">The platform answer governs everything below it. The probes answer for this
-        machine and are re-read on demand; the traffic reading answers for the wire, against a clock, over
+        machine and are re-read wherever their answer can change; the traffic reading answers for the wire, against a clock, over
         this session's captured rows only. Neither borrows from the other, and only a captured https row ends
         setup. Once capture is proven, a new session shows its success line in place and does not reveal the
         list again.</div>
@@ -562,7 +869,7 @@ the client lacks the certificate"]
       <p><strong>What the rebuild kept, unchanged.</strong></p>
       <table>
         <tr><th>Guarantee</th><th>Still true because</th></tr>
-        <tr><td>Only a captured flow reveals the list</td><td>a probe-green task and a bare connection
+        <tr><td>Only a captured flow ends setup on its own</td><td>a probe-green task and a bare connection
           both refuse to end setup. The payoff fires solely on an <code>https://</code> row with
           <code>source: "captured"</code>: an imported or sent row never reveals the list or feeds the
           traffic reading. Capture latches once proven</td></tr>
@@ -573,16 +880,23 @@ the client lacks the certificate"]
           confirmed under the name that landed with the mismatch named outright. Where trust is a separate act
           from installing, as on an iPhone, the step says so. Traffic that arrives and doesn't decrypt gets
           the check that platform's users most often miss</td></tr>
-        <tr><td>A probe reading is a dated snapshot, re-taken on demand</td><td>nothing pushes when the user
-          changes a setting outside Trawler, so one row above the tasks dates the reading and re-runs both
-          probes; so does the window regaining focus. While a re-read runs the control is disabled and both
-          probed tasks show the in-flight state</td></tr>
+        <tr><td>A probe reading is a dated snapshot</td><td>nothing pushes when the user changes a setting
+          outside Trawler, so setup reads it again wherever its answer can change (above, E-ONBRVP.W3); while a
+          read the user caused runs, the buttons are held and both probed tasks show <em>checking</em></td></tr>
         <tr><td>A copied command says whether it copied</td><td>the copy affordance confirms at the value,
           and a clipboard write the browser refuses says so rather than doing nothing visible</td></tr>
-        <tr><td>Quitting with a proxy still set asks first, and can fix it</td><td>unchanged by this epic:
-          the dialog offers to turn it off, a failed attempt says so and opens the manual steps, a remote
-          device that may still route here is a notice with a durable dismissal, and Esc, the backdrop and
-          ✕ all cancel the quit</td></tr>
+        <tr><td>Quitting asks first while something still routes through Trawler, and only then</td><td>E-ONBRVP.W11
+          (<a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>): the
+          window's ✕ and ⌘Q (Trawler's own Quit) ask; the Dock's Quit and a logout cannot be held and do not. It asks
+          while this machine routes through Trawler — its address, localhost or this machine's own address on
+          Trawler's port — and offers <em>stop routing through Trawler</em> on macOS and Windows, the command inline
+          elsewhere; while this machine's proxy could not be read, saying so; and while reach is armed or the
+          emulator chosen in setup routes here, about other devices. Those last two carry a durable dismissal;
+          the one that stops a proxy routed here has none. A proxy that is not
+          Trawler's asks nothing. The stake is the capture service: no internet once it stops, or now while it does
+          not answer. A failed stop says so and opens the steps, which are each platform's own way back; once it
+          worked, the button gives way to its outcome. One frame for every case; Esc, the backdrop and ✕ cancel the
+          quit</td></tr>
       </table>
     </div>
 
@@ -590,7 +904,9 @@ the client lacks the certificate"]
       <p>API surface consumed by setup, usable by any client: the <code>connection</code> SSE event
       (<code>{ authority }</code>) on the existing <code>/stream</code>; <code>GET/POST/DELETE /reach</code>,
       which reports the interfaces a second device could use, arms or disarms one, and names the three
-      certificate URLs; and the one CA as <code>/ca.pem</code>, <code>/ca.cer</code> (DER) and
+      certificate URLs and the Wi-Fi page's; <code>GET /android-wifi</code>, the page an Android device's proxy step
+      starts from (<a href="../decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html">DEC-65</a>);
+      and the one CA as <code>/ca.pem</code>, <code>/ca.cer</code> (DER) and
       <code>/ca.mobileconfig</code> (an unsigned configuration profile). <code>/ca.crt</code> keeps its PEM
       body for every existing client. <code>GET /stats</code> → <code>{ connections }</code> stays for any
       client, but setup no longer reads it: the tally carries no time, so no session can hold it. The tally
@@ -607,20 +923,35 @@ the client lacks the certificate"]
       <p><strong>Pinned by</strong>
       <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed handshake
       bumps <code>/stats</code> + emits <code>connection</code>, records no flow); the reach seam's
-      integration tests over ephemeral ports; the state-derivation and probe-parser unit tests; and the
+      integration tests over ephemeral ports; the state-derivation and probe-parser unit tests — This
+      machine's detectors from recorded tool output in <code>ui/src-tauri/src/setup.rs</code>, their
+      triggers and the watch in <code>App.test.tsx</code>; and the
       UC-ONBOARD e2e spine (<code>ui/e2e/specs/onboarding.spec.ts</code>): a launch over a core holding only a
       sent row, which still shows setup; <em>an off-machine platform</em>, which asserts that an unmet
       precondition is stated once and dims what depends on it; <em>this machine</em> through to a decrypted
       flow and the list's first paint; a second device's session, which keeps the dot connected and shows no
-      success line until its own request; and a re-entry with the list filtered to nothing, which still reads
-      the new request. Arming reach is driven at integration rather than e2e: it opens a native dialog no
+      success line until its own request; a re-entry with the list filtered to nothing, which still reads
+      the new request; and the ⋮ menu's <em>set up another device</em>, which opens setup on the last device
+      chosen — with <code>capture.spec.ts</code>'s empty capture, whose <em>set up capture</em> opens setup. The
+      e2e window runs hidden, where setup's watch does not read, so a journey that waits on another device's
+      reading asks for it by a focus. Another device's evidence — the cut at its allowed address, its marked request, this
+      machine's proxy deciding what else counts, the proof outlasting what follows it, the lost address and its re-reads — is pinned in
+      <code>verdicts.test.ts</code>, <code>ownRequest.test.ts</code>, <code>Onboarding.test.tsx</code>,
+      <code>App.test.tsx</code> and the matrix's marked sweep. Arming reach is driven at integration rather than e2e: it opens a native dialog no
       WebDriver can reach, and stubbing that confirm would prove the act by removing the authorization DEC-55
       requires. Three more are pinned below e2e for the same kind of reason: the launch's checking paint
       (<code>App.test.tsx</code>: WebDriver cannot see a paint shorter than its poll), the one act's four
       probe readings (<code>Onboarding.test.tsx</code> and <code>onboardingMatrix.test.tsx</code>: the real
       trust store and proxy cannot be set hermetically), and each certificate format's bytes
       (<code>tests/</code>), with the owner's installs on a real iPhone and Android device as their
-      evidence.</p>
+      evidence. Four stay out of e2e by E-ONBRVP's rulings: This machine's request button, which opens the
+      system browser on the public network; a marked request of any platform, which settles only on an
+      <code>example.com</code> row a hermetic proxy cannot reach (<code>ownRequest.test.ts</code>,
+      <code>Onboarding.test.tsx</code>, <code>route.rs</code>); the quit dialog, since a close with nothing
+      routed ends the session (<code>closeConfirm.test.tsx</code>, <code>ProxyCloseDialog.test.tsx</code>,
+      <code>App.test.tsx</code>); and the dot's <em>quiet</em>, three minutes after the newest capture
+      (<code>App.test.tsx</code>). The checks only real hardware can make are a
+      <a href="../backlog/roadmap.html">roadmap</a> row.</p>
     </div>
 
     <h2 id="uc-6">UC-6 — Take the capture out as a HAR file, and bring one back</h2>

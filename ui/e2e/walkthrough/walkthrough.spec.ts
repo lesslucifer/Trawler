@@ -2,7 +2,13 @@ import { browser, $ } from "@wdio/globals";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { findRun, type Chapter, type Patch, type Walk } from "./script.ts";
-import { frontQuery, OUT_VAR, PORTS_FILE, RUN_VAR, type Ports } from "./walkthrough.conf.ts";
+import {
+  frontQuery,
+  OUT_VAR,
+  PORTS_FILE,
+  RUN_VAR,
+  type Ports,
+} from "./walkthrough.conf.ts";
 
 const { reel, launch } = findRun(process.env[RUN_VAR] ?? "");
 const out = join(process.env[OUT_VAR] ?? "", reel.id);
@@ -24,7 +30,11 @@ function record(entry: Filmed) {
   filmed.push(entry);
   writeFileSync(
     join(out, `${launch.id}.json`),
-    JSON.stringify({ reel: reel.id, launch: launch.id, chapters: filmed }, null, 2),
+    JSON.stringify(
+      { reel: reel.id, launch: launch.id, chapters: filmed },
+      null,
+      2,
+    ),
   );
 }
 
@@ -39,20 +49,28 @@ const buttonStarting = (prefix: string) =>
 const QUESTION = "which device's traffic do you want to see";
 const picker = () => $(`[aria-label="${QUESTION}"][aria-haspopup="listbox"]`);
 
-async function probeSettled() {
-  const probe = $('[data-testid="probe"]');
-  await browser.waitUntil(
-    async () => !(await probe.isExisting()) || !(await probe.getText()).includes("checking this machine"),
-    { timeout: 10_000, timeoutMsg: "the probe row never finished reading" },
-  );
+// The window re-reads this machine when it regains focus, and a read already in
+// flight may have started before the patch it is meant to show, so the second
+// focus starts one that cannot have.
+async function rereadOnFocus() {
+  for (let i = 0; i < 2; i++) {
+    await browser.execute(() => window.dispatchEvent(new Event("focus")));
+    await browser.pause(400);
+  }
 }
 
 const walk: Walk = {
   async script(patch: Patch) {
     const failure = await browser.executeAsync(
       (p: Patch, done: (e: string | null) => void) => {
-        (window as unknown as { __TAURI__: { core: { invoke: (c: string, a: unknown) => Promise<unknown> } } })
-          .__TAURI__.core.invoke("scenario_script", { patch: p })
+        (
+          window as unknown as {
+            __TAURI__: {
+              core: { invoke: (c: string, a: unknown) => Promise<unknown> };
+            };
+          }
+        ).__TAURI__.core
+          .invoke("scenario_script", { patch: p })
           .then(
             () => done(null),
             (e: unknown) => done(String(e)),
@@ -60,15 +78,13 @@ const walk: Walk = {
       },
       patch,
     );
-    if (failure) throw new Error(`scenario_script refused ${JSON.stringify(patch)}: ${failure}`);
+    if (failure)
+      throw new Error(
+        `scenario_script refused ${JSON.stringify(patch)}: ${failure}`,
+      );
   },
   async recheck() {
-    const again = $("button=check again");
-    if (await again.isExisting()) {
-      await probeSettled();
-      await again.click();
-    }
-    await probeSettled();
+    await rereadOnFocus();
   },
   async openPicker() {
     if (await $('[role="listbox"]').isExisting()) return;
@@ -78,27 +94,43 @@ const walk: Walk = {
   async closePicker() {
     if (!(await $('[role="listbox"]').isExisting())) return;
     await browser.keys("Escape");
-    await browser.waitUntil(async () => !(await $('[role="listbox"]').isExisting()), {
-      timeout: 5_000,
-      timeoutMsg: "the picker stayed open after Escape",
-    });
+    await browser.waitUntil(
+      async () => !(await $('[role="listbox"]').isExisting()),
+      {
+        timeout: 5_000,
+        timeoutMsg: "the picker stayed open after Escape",
+      },
+    );
   },
   async choose(label: string) {
     await walk.openPicker();
     await $(`[role="option"][aria-label="${label}"]`).click();
-    await browser.waitUntil(async () => !(await $('[role="listbox"]').isExisting()), {
-      timeout: 5_000,
-      timeoutMsg: `the picker stayed open after choosing ${label}`,
-    });
+    await browser.waitUntil(
+      async () => !(await $('[role="listbox"]').isExisting()),
+      {
+        timeout: 5_000,
+        timeoutMsg: `the picker stayed open after choosing ${label}`,
+      },
+    );
   },
   async click(prefix: string) {
     const target = buttonStarting(prefix);
-    await target.waitForExist({ timeout: 10_000, timeoutMsg: `no button starting "${prefix}"` });
+    await target.waitForExist({
+      timeout: 10_000,
+      timeoutMsg: `no button starting "${prefix}"`,
+    });
     await target.waitForEnabled({ timeout: 10_000 });
     await target.click();
   },
   async closeGuide(n: number) {
     await $(`[data-testid="task-${n}"] details[open] > summary`).click();
+  },
+  async openGuide(n: number) {
+    await $(`[data-testid="task-${n}"] details:not([open]) > summary`).click();
+  },
+  async showNotes() {
+    const show = $('button[aria-label="show notes"]');
+    if (await show.isExisting()) await show.click();
   },
   async dot() {
     await $('[data-testid="status-dot"]').click();
@@ -106,8 +138,14 @@ const walk: Walk = {
   async filter(text: string) {
     await $('[aria-label="filter"]').setValue(text);
   },
+  // Another device's unmarked request counts only between two readings of this
+  // machine (DEC-63), and the watch that takes them stops while the window is
+  // covered (U3). A focus reads too, so one before the request opens the span
+  // and one after closes it over the request, covered or not.
   async hit(opts = {}) {
+    await rereadOnFocus();
     await control(opts.untrusted ? "/hit?untrusted=1" : "/hit");
+    await rereadOnFocus();
   },
   async front(mode) {
     await control(`/front?${frontQuery(mode)}`);
@@ -167,7 +205,11 @@ describe(`walkthrough ${reel.id} · ${launch.id}`, () => {
 
   launch.chapters.forEach((chapter, index) => {
     it(chapter.id, async () => {
-      if (endedBecause === null && chapter.offeredAs && !(await offered(chapter.offeredAs)))
+      if (
+        endedBecause === null &&
+        chapter.offeredAs &&
+        !(await offered(chapter.offeredAs))
+      )
         endedBecause = `"${chapter.offeredAs}" is not offered on ${reel.host}`;
       if (endedBecause !== null) {
         record({ id: chapter.id, skipped: endedBecause });

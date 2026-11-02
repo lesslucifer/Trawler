@@ -2,6 +2,7 @@ import {
   bodyText,
   hostOf,
   isDecryptedHttps,
+  lastCaptureAt,
   latestFlowTimes,
   sessionTraffic,
   statusTone,
@@ -79,34 +80,54 @@ describe("sessionTraffic reads only what started once the session opened", () =>
   const at = Date.parse(flow.started_at);
 
   it("counts a captured row that started at the session's start, and none before it", () => {
-    expect(sessionTraffic([flow, https], at, null)).toEqual({
+    expect(sessionTraffic([flow, https], at, [])).toEqual({
       lastDecryptedAt: at,
       lastPlainAt: at,
       lastTunnelAt: null,
+      openTunnelAt: null,
     });
-    expect(sessionTraffic([flow, https], at + 1, null)).toEqual({
+    expect(sessionTraffic([flow, https], at + 1, [])).toEqual({
       lastDecryptedAt: null,
       lastPlainAt: null,
       lastTunnelAt: null,
+      openTunnelAt: null,
     });
   });
 
   it("ignores imported and sent rows inside the session", () => {
     const rows = [{ ...https, source: "imported" as const }, { ...flow, source: "sent" as const }];
-    expect(sessionTraffic(rows, at, null)).toMatchObject({ lastDecryptedAt: null, lastPlainAt: null });
+    expect(sessionTraffic(rows, at, [])).toMatchObject({ lastDecryptedAt: null, lastPlainAt: null });
   });
 
   it("keeps a tunnel from the session's start on, and drops an earlier one", () => {
-    expect(sessionTraffic([], at, at).lastTunnelAt).toBe(at);
-    expect(sessionTraffic([], at, at - 1).lastTunnelAt).toBeNull();
+    expect(sessionTraffic([], at, [at])).toMatchObject({ lastTunnelAt: at, openTunnelAt: at });
+    expect(sessionTraffic([], at, [at - 1])).toMatchObject({ lastTunnelAt: null, openTunnelAt: null });
   });
 
   it("bounds nothing before a session has opened", () => {
-    expect(sessionTraffic([https], null, at - 5)).toEqual({
+    expect(sessionTraffic([https], null, [at - 5])).toEqual({
       lastDecryptedAt: at,
       lastPlainAt: null,
       lastTunnelAt: at - 5,
+      openTunnelAt: null,
     });
+  });
+
+  it("holds open the oldest tunnel no decrypted request started after", () => {
+    const tunnels = [at - 10, at + 5, at + 10, at + 15];
+    expect(sessionTraffic([https], at - 20, tunnels)).toMatchObject({ lastTunnelAt: at + 15, openTunnelAt: at + 5 });
+    expect(sessionTraffic([https], at - 20, [at - 10, at])).toMatchObject({ lastTunnelAt: at, openTunnelAt: null });
+    expect(sessionTraffic([flow], at - 20, tunnels)).toMatchObject({ openTunnelAt: at - 10 });
+  });
+
+  it("answers a tunnel with a decrypted request on the wire, where only some of its rows are read", () => {
+    expect(sessionTraffic([], at - 20, [at - 10], [https])).toEqual({
+      lastDecryptedAt: null,
+      lastPlainAt: null,
+      lastTunnelAt: at - 10,
+      openTunnelAt: null,
+    });
+    expect(sessionTraffic([], at - 20, [at + 5], [https])).toMatchObject({ openTunnelAt: at + 5 });
   });
 });
 
@@ -197,6 +218,24 @@ test("latestFlowTimes reads captured rows only, of either scheme", () => {
       at("sent", "http://d.test/"),
     ]),
   ).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
+});
+
+// Q4: plain http counts for the dot, which asks only whether the proxy is in the path.
+test("lastCaptureAt is the newest captured row of either scheme, and null with none", () => {
+  const at = (iso: string, uri: string, source: FlowSummary["source"] = "captured"): FlowSummary => ({
+    ...flow,
+    started_at: iso,
+    uri,
+    source,
+  });
+
+  expect(lastCaptureAt([at("2026-07-12T10:00:00Z", "https://a.test/"), at("2026-07-12T10:00:05Z", "http://b.test/")])).toBe(
+    Date.parse("2026-07-12T10:00:05Z"),
+  );
+  expect(lastCaptureAt([at("2026-07-12T10:00:00Z", "http://a.test/")])).toBe(Date.parse("2026-07-12T10:00:00Z"));
+  expect(lastCaptureAt([at("2026-07-12T10:00:09Z", "https://a.test/")])).toBe(Date.parse("2026-07-12T10:00:09Z"));
+  expect(lastCaptureAt([at("2026-07-12T10:00:09Z", "https://a.test/", "sent")])).toBeNull();
+  expect(lastCaptureAt([])).toBeNull();
 });
 
 // hostOf answers from a memo keyed on the URI's authority, so what matters is

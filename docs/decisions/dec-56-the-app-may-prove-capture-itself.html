@@ -13,11 +13,12 @@
         or run a <code>curl</code> command. A user who does neither has no way forward — so the app may
         fire one request through the system proxy itself, and that is a capability decision, not a
         button.</p>
-      <div class="meta">v1 · 2026-09-21 · Trawler · T2 decision · minted by
+      <div class="meta">v3 · 2026-09-30 · Trawler · T2 decision · minted by
         <strong>E-ONBOARD.W6</strong> from the PO review's <strong>F24</strong> ·
         relates to <a href="dec-13-onboarding-capabilities.html">DEC-13</a>,
         <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> ·
-        UC-ONBOARD · <strong>proposed — not built</strong></div>
+        UC-ONBOARD · <strong>built</strong> by E-ONBRVP.W2 · its request marked and its note re-worded by
+        E-ONBRVP.W3 (<a href="dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html">DEC-62</a>)</div>
     </div>
   </header>
   <main>
@@ -75,6 +76,28 @@
       <tr><td>Whether an off-machine platform gets one too</td><td>nothing here can prove a phone's
         setup from this machine — a request this app makes travels through this host. The button is the
         host platforms', and the record says so rather than leaving it to be discovered</td></tr>
+    </table>
+
+    <h2 id="built">How the build settled it</h2>
+    <table data-c="built">
+      <tr><th>Left to the build</th><th>Settled as</th><th>Why</th></tr>
+      <tr><td>destination</td><td><code>https://example.com/</code>, fixed, named in the button's label:
+        <em>make a request to example.com</em></td><td>rule 2, and the try-it command already names it</td></tr>
+      <tr><td>who makes it</td><td>neither the core nor the shell: the app window's own <code>fetch</code>, no-cors
+        and uncached (owner, E-ONBRVP.W2 Q1)</td><td>it takes the system proxy and trust store a browser on this
+        machine takes, and adds no HTTP client to the shell. It can tell only whether the request completed,
+        and rule 1 needs no more</td></tr>
+      <tr><td>which platforms</td><td>This machine only. The Simulator shares the proxy but keeps its own
+        keychain, so a request from here proves nothing about it</td><td>this record's own scope row</td></tr>
+      <tr><td>its words</td><td><em>waiting for example.com…</em> · then the route the core saw within a tunnel's
+        grace (E-ONBRVP.W3): <em>example.com answered through Trawler.</em> · <em>the request reached Trawler and
+        didn't decrypt.</em> · <em>example.com answered, but not through Trawler.</em> · <em>the request to
+        example.com didn't complete.</em> <em>answered.</em> alone read as success for a request that went around
+        Trawler</td><td>rules 1 and 4</td></tr>
+      <tr><td>its mark</td><td><code>?trawler-check=&lt;window&gt;.&lt;n&gt;</code>, visible in the list
+        (E-ONBRVP.W3). Where no probe answers, the marked row decrypted this session is This machine's reading
+        (DEC-62) — the captured flow, never the click</td><td>rule 1 holds: the evidence is what Trawler
+        captured</td></tr>
     </table>
 
     <h2 id="alternatives">Rejected</h2>

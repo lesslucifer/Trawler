@@ -5,13 +5,27 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Trawler",
+        "width": 1440,
+        "height": 800,
+        "minWidth": 850,
+        "minHeight": 600,
+        "visible": false
+      }
+    ],
     "security": {
       "capabilities": [
         "default",
         {
           "identifier": "wdio",
-          "windows": ["main"],
-          "permissions": ["wdio:default"]
+          "windows": [
+            "main"
+          ],
+          "permissions": [
+            "wdio:default"
+          ]
         }
       ]
     }

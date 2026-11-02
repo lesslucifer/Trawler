@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab9e7259f34851f0dfad6ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-61: the dot is a switch, and capture proof expires</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-61 — the dot is a switch, and capture proof expires</h1>
+      <p>The header's dot moves between the list and setup in every state, and it reads the newest captured
+        request, not whether capture was ever proven.</p>
+      <div class="meta">v1 · 2026-09-28 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W1</strong> from
+        the owner's proposals P1, P2 and P4 · amends <a href="dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a>
+        rule 5 · relates to <a href="dec-33-two-layers-and-a-clock.html">DEC-33</a> · UC-ONBOARD · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What went wrong</th><th>Finding</th></tr>
+      <tr><td>the dot always opened setup, from setup too</td><td>a click in setup restarted its session, so the
+        device that had just worked stopped being this session's news</td><td>S2</td></tr>
+      <tr><td>with the core silent, the dot opened setup steps</td><td>the steps blamed the user's settings for a
+        core that was not running</td><td>S1</td></tr>
+      <tr><td>the list opened only after a decrypted request</td><td>a user halfway through setup could not look at a
+        request without finishing it</td><td>P1</td></tr>
+      <tr><td>once proven, the dot stayed green all day</td><td>a proxy turned off in System Settings left only
+        silence behind, and the dot kept saying Trawler was capturing</td><td>P2</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The dot switches screens in every phase: the list opens setup, and setup or the
+        launch check opens the list. It reads the newest request the proxy captured, http or https: red with none,
+        green for 3 minutes after one, then quiet. Setup reaches the list on its own only on its session's first
+        decrypted https request, and its way back is always shown.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The dot's click is a switch: the list opens setup (a new session, DEC-60), and setup or the
+        launch check opens the list. A click during the launch check ends the check: the app does not then move
+        the user to setup</td><td>the user chose the list, and an empty list offers the way in (rule 5)</td></tr>
+      <tr><td>2</td><td>The dot reads the newest captured request: checking until the core answers, red with none,
+        green for 3 minutes after one, quiet after that. Imported and sent rows count for nothing</td><td>a capture
+        proves the proxy worked then. Nothing pushes when a setting changes outside Trawler, so recency is the
+        only honest reading</td></tr>
+      <tr><td>3</td><td>Plain http turns the dot green. It never settles the certificate task, and never ends
+        setup</td><td>http proves the proxy is in the path, and nothing about the certificate</td></tr>
+      <tr><td>4</td><td>The newest capture is read from every listing and from the core's own newest captured row,
+        so neither a filter nor a clear lowers it</td><td>the dot answers for the proxy, not for the list's
+        query</td></tr>
+      <tr><td>5</td><td>An empty list nothing has reached offers "set up capture". The way back from setup is
+        shown on every setup screen</td><td>the list is a screen to switch to, not a reward for finishing</td></tr>
+      <tr><td>6</td><td>Only a decrypted https request that started in this session moves setup to the list on
+        its own, and only before capture was first proven. A row from before the session moves no one</td><td>the
+        list is a click away, and an older row is another session's evidence (DEC-60)</td></tr>
+    </table>
+    <p class="caption">Rule 2 replaces DEC-60 rule 5, "once capture has been proven, the dot reads connected in
+      setup too". Setting up a second device still does not turn the dot red: it reads the traffic, which the
+      first device keeps sending.</p>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Keep the dot green forever once proven</td><td>it says Trawler is capturing when nothing is</td></tr>
+      <tr><td>Turn the dot red after 3 quiet minutes</td><td>red says nothing was ever set up. A setup that worked
+        and has gone quiet is a different fact, so it gets its own look</td></tr>
+      <tr><td>Count only decrypted https for the dot</td><td>a user browsing plain http through Trawler is
+        capturing, and the dot would call that not set up</td></tr>
+      <tr><td>A separate button for the list, beside the dot</td><td>two controls for one switch, and the dot
+        was already the only control on screen in every phase</td></tr>
+      <tr><td>Block the list too while the core is silent</td><td>the rows already on screen are still true and
+        still worth reading. Setup blocks because its tasks cannot work without the core</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -157,8 +157,16 @@ export interface ReachState {
   proxy: string | null;
   api: string | null;
   ca_urls: Record<CaFormat, string> | null;
+  wifi_page: string | null;
   interfaces: ReachInterface[];
 }
+
+// A core older than the Wi-Fi page (DEC-65) leaves the field out, and the
+// screen reads that as no page rather than as a value.
+const reachState = (state: Omit<ReachState, "wifi_page"> & { wifi_page?: string | null }): ReachState => ({
+  ...state,
+  wifi_page: state.wifi_page ?? null,
+});
 
 // Nothing armed, nothing promised: the state a fresh core reports and the state
 // a screen assumes until one answers.
@@ -167,6 +175,7 @@ export const UNREACHABLE: ReachState = {
   proxy: null,
   api: null,
   ca_urls: null,
+  wifi_page: null,
   interfaces: [],
 };
 
@@ -174,7 +183,8 @@ export interface StreamHandlers {
   onEvent: () => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
   // Onboarding stamps its arrival and judges it by recency; the flow list ignores it.
-  onConnection?: () => void;
+  // The authority is the tunnel's host:port, the one thing a CONNECT names.
+  onConnection?: (authority: string) => void;
   // The stream itself went down or came back. This is the only signal that
   // arrives without the user doing anything, so it is what lets the shell state
   // a core that died under an open window rather than waiting for the next
@@ -185,6 +195,9 @@ export interface StreamHandlers {
 
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
+  // The newest row the proxy captured, whatever the list is filtered to: the
+  // header's dot reads it (DEC-61), and a filter must not quieten it.
+  latestCapture(): Promise<FlowSummary | null>;
   exportHar(filter: Filter): Promise<HarExport>;
   importHar(bytes: Uint8Array): Promise<number>;
   importCurl(command: string): Promise<number>;
@@ -212,6 +225,11 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/flows?${filterParams(filter)}`);
       if (!res.ok) throw new ApiError(res.status, `GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
+    },
+    async latestCapture() {
+      const res = await fetch(`${base()}/flows?source=captured&limit=1`);
+      if (!res.ok) throw new ApiError(res.status, `GET /flows failed: ${res.status}`);
+      return ((await res.json()) as { flows: FlowSummary[] }).flows[0] ?? null;
     },
     async exportHar(filter) {
       const res = await fetch(`${base()}/flows/export?${filterParams(filter)}`);
@@ -279,7 +297,7 @@ export function createApi(baseUrl?: string): TrawlerApi {
     async reach() {
       const res = await fetch(`${base()}/reach`);
       if (!res.ok) throw new ApiError(res.status, `GET /reach failed: ${res.status}`);
-      return (await res.json()) as ReachState;
+      return reachState(await res.json());
     },
     async armReach(address) {
       const res = await fetch(`${base()}/reach`, {
@@ -290,12 +308,12 @@ export function createApi(baseUrl?: string): TrawlerApi {
       // A refusal here is read by the person who just confirmed, so it carries
       // the server's own sentence — which address, and why it could not listen.
       if (!res.ok) throw new Error(await refusal(res));
-      return (await res.json()) as ReachState;
+      return reachState(await res.json());
     },
     async disarmReach() {
       const res = await fetch(`${base()}/reach`, { method: "DELETE" });
       if (!res.ok) throw new Error(await refusal(res));
-      return (await res.json()) as ReachState;
+      return reachState(await res.json());
     },
     async replay(id, fields) {
       return sent(await fetch(`${base()}/flows/${encodeURIComponent(id)}/replay`, jsonPost(fields)));
@@ -310,7 +328,8 @@ export function createApi(baseUrl?: string): TrawlerApi {
       for (const name of ["request", "response", "evicted", "lagged", "cleared"]) {
         source.addEventListener(name, onEvent);
       }
-      if (onConnection) source.addEventListener("connection", onConnection);
+      if (onConnection)
+        source.addEventListener("connection", (event) => onConnection(authorityOf(event)));
       // EventSource reconnects on its own, so `error` is "the stream is not up
       // right now" rather than "give up"; `open` is the recovery it pairs with.
       if (onDown) source.addEventListener("error", onDown);
@@ -318,6 +337,15 @@ export function createApi(baseUrl?: string): TrawlerApi {
       return () => source.close();
     },
   };
+}
+
+function authorityOf(event: Event): string {
+  try {
+    const { authority } = JSON.parse((event as MessageEvent<string>).data) as { authority?: unknown };
+    return typeof authority === "string" ? authority : "";
+  } catch {
+    return "";
+  }
 }
 
 // The server writes its refusals as one lowercase sentence naming what it did

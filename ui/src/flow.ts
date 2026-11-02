@@ -52,18 +52,35 @@ export function latestFlowTimes(flows: FlowSummary[], since?: number): FlowTimes
   return times;
 }
 
-// The setup screen reads one setup session: what was captured, and the newest
-// tunnel, from the moment that session opened. Traffic from before it is some
-// earlier session's evidence (DEC-60). A null `since` bounds nothing.
+// The newest captured request of either scheme: http proves the proxy is in
+// the path as surely as https does, and the dot asks nothing more (DEC-61).
+export function lastCaptureAt(flows: FlowSummary[]): number | null {
+  const { lastDecryptedAt, lastPlainAt } = latestFlowTimes(flows);
+  if (lastDecryptedAt === null) return lastPlainAt;
+  return lastPlainAt === null ? lastDecryptedAt : Math.max(lastDecryptedAt, lastPlainAt);
+}
+
+// The setup screen reads one setup session: what was captured, and the
+// tunnels, from the moment that session opened. Traffic from before it is some
+// earlier session's evidence (DEC-60). A null `since` bounds nothing. A tunnel
+// is open until a decrypted request on the wire starts after it - `wire`,
+// where only some of its rows are read, since a tunnel and the request it
+// carries are one connection that a reading may place apart.
 export function sessionTraffic(
   flows: FlowSummary[],
   since: number | null,
-  lastTunnelAt: number | null,
+  tunnels: readonly number[],
+  wire: FlowSummary[] = flows,
 ): Traffic {
   const from = since ?? undefined;
+  const times = latestFlowTimes(flows, from);
+  const answeredAt = wire === flows ? times.lastDecryptedAt : latestFlowTimes(wire, from).lastDecryptedAt;
+  const inSession = tunnels.filter((at) => from === undefined || at >= from);
+  const open = inSession.filter((at) => answeredAt === null || at > answeredAt);
   return {
-    ...latestFlowTimes(flows, from),
-    lastTunnelAt: lastTunnelAt !== null && (from === undefined || lastTunnelAt >= from) ? lastTunnelAt : null,
+    ...times,
+    lastTunnelAt: inSession.length === 0 ? null : Math.max(...inSession),
+    openTunnelAt: open.length === 0 ? null : Math.min(...open),
   };
 }
 

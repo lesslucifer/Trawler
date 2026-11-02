@@ -1,202 +1,205 @@
 import { useRef, useState } from "react";
-import type { HostOs } from "./setup";
 import {
-  defaultProxyTarget,
-  proxyOffSnippet,
-  proxyOffSteps,
-  PROXY_TARGETS,
-  type ProxyTarget,
-} from "./proxyTargets";
-import type { CloseMode } from "./closeConfirm";
-import { Button, Checkbox, Notice } from "./components/index";
+  canAutoSetup,
+  deviceName,
+  platformChoices,
+  routeUndo,
+  type HostOs,
+  type PlatformId,
+} from "./setup";
+import type { QuitPrompt } from "./closeConfirm";
+import { Button, Checkbox, Notice, NotesShown } from "./components/index";
 import { ModalShell } from "./ModalShell";
-import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
+import { GuideSteps, ManualFallback, TargetPicker } from "./manualSteps";
 
-// The quit-time proxy dialog, three modes driven by the live proxy status
-// (see closeConfirm.ts):
-//   "ours" / "foreign" — a proxy on THIS machine is set. `unset_proxy` turns the
-//       OS proxy state off whoever set it, so both are actionable and differ only
-//       in wording. Quitting silently would strand the machine with no internet.
-//   "remote" — nothing is set here, but a device pointed at Trawler may still
-//       route through it. Info-only, and the one mode that may offer to stop
-//       asking; there is nothing local to fix.
-// Dismissing (Esc / backdrop / ✕) cancels the quit in every mode.
+// The quit-time dialog, built from its design run (E-ONBRVP.W11): one frame for
+// every prompt (closeConfirm.ts). The stake leads; the steps are the platform's
+// own (setup.ts's routeUndo); the button, where the shell can act, gives way to
+// its outcome; an opt-out only where nothing here is verified to act on.
+// Dismissing (Esc / backdrop / ✕) cancels the quit in every prompt.
+
+const capitalized = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// The platforms whose traffic could still be routing here once this machine's
+// own proxy is clean: those reach lets in, and the emulator, already inside
+// this machine's loopback.
+const DEVICES: readonly PlatformId[] = ["mac", "windows", "ubuntu", "android-sim", "ios", "android"];
 
 export const CLOSE_COPY = {
-  ours: {
-    title: "turn the proxy off before quitting?",
-    body: "A proxy on this machine routes through Trawler. Leave it on after quitting and your internet may stop working until you turn it off.",
+  title: {
+    ours: "stop routing through Trawler before quitting?",
+    unread: (host: string) => `check ${host}'s proxy before quitting`,
+    devices: "check your other devices before quitting",
   },
-  foreign: {
-    title: "turn the proxy off before quitting?",
-    body: "A proxy is set on this machine. It isn't Trawler's, but if it points here it will stop working once Trawler closes.",
+  stake: {
+    ours: (host: string) =>
+      `${capitalized(host)} sends its web traffic through Trawler. Once Trawler's capture service stops, ${host} has no internet until you stop routing through Trawler.`,
+    stale: (host: string) =>
+      `Trawler's capture service isn't answering, so ${host} has no internet while it routes through Trawler.`,
+    unread: (host: string) =>
+      `Trawler couldn't read ${host}'s proxy. If it points at Trawler, ${host} has no internet once Trawler's capture service stops.`,
+    devices:
+      "Devices on your network can use Trawler now. Any still set to it have no internet once Trawler's capture service stops.",
+    emulator: (name: string) =>
+      `${name} sends its traffic through Trawler, and has no internet once Trawler's capture service stops.`,
   },
-  remote: {
-    title: "check your other devices before quitting",
-    body: "No proxy is set on this machine, but a device you pointed at Trawler may still route through it — and lose internet once Trawler closes.",
-    dontShowAgain: "don't show this again",
-  },
+  byHand: "do it by hand",
+  dontShowAgain: "don't show this again",
   quit: "quit",
-  turnOff: "turn it off",
+  stop: "stop routing through Trawler",
   tryAgain: "try again",
-  turningOff: "turning the proxy off — approve the prompt if asked…",
-  done: "the proxy is off. you can quit safely.",
-  failed: "couldn't turn the proxy off — try the steps below.",
+  stopping: (os: HostOs) => (os === "macos" ? "stopping — approve the prompt if asked…" : "stopping…"),
+  stopped: (host: string) => `${capitalized(host)} no longer routes through Trawler.`,
+  failed: "couldn't stop routing through Trawler — the steps below do it by hand.",
 } as const;
 
-// Shared by every mode: pick the target, read the steps, copy the command. It is
-// the whole content in "remote" (nothing to act on) and the fallback beneath the
-// action in "ours"/"foreign".
-function ProxyOffSteps({
-  os,
-  collapsed,
-  defaultOpen,
-}: {
-  os: HostOs;
-  collapsed: boolean;
-  defaultOpen?: boolean;
-}) {
-  const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
+function stakeOf(prompt: QuitPrompt, host: string): string {
+  switch (prompt.mode) {
+    case "ours":
+      return prompt.answering ? CLOSE_COPY.stake.ours(host) : CLOSE_COPY.stake.stale(host);
+    case "unread":
+      return CLOSE_COPY.stake.unread(host);
+    case "devices":
+      return prompt.emulator === null ? CLOSE_COPY.stake.devices : CLOSE_COPY.stake.emulator(prompt.emulator);
+  }
+}
 
-  const body = (
-    <>
-      <TargetPicker
-        options={PROXY_TARGETS}
-        value={target}
-        onChange={(id) => setTarget(id as ProxyTarget)}
-        label="proxy target"
-      />
-      <ManualSteps
-        steps={proxyOffSteps(target)}
-        command={proxyOffSnippet(target)}
-        commandLabel="proxy-off command"
-        testId="proxy-close-steps"
-      />
-    </>
-  );
+function titleOf(prompt: QuitPrompt, host: string): string {
+  return prompt.mode === "unread" ? CLOSE_COPY.title.unread(host) : CLOSE_COPY.title[prompt.mode];
+}
 
+// A device's steps open on the emulator the reading found, else on the device
+// the user last set up, else on the commonest phone.
+export function deviceShown(prompt: QuitPrompt, chosen: PlatformId): PlatformId {
+  if (prompt.mode === "devices" && prompt.emulator !== null) return "android-sim";
+  return DEVICES.includes(chosen) ? chosen : "ios";
+}
+
+function DeviceSteps({ os, initial }: { os: HostOs; initial: PlatformId }) {
+  const [device, setDevice] = useState<PlatformId>(initial);
+  const options = platformChoices(os).filter(({ id }) => DEVICES.includes(id));
   return (
-    <ManualFallback
-      summary="do it manually instead"
-      collapsed={collapsed}
-      defaultOpen={defaultOpen}
-      testId="proxy-close-manual"
-      className="mb-3"
-    >
-      {body}
-    </ManualFallback>
+    <div data-testid="proxy-close-steps">
+      <TargetPicker
+        options={options}
+        value={device}
+        onChange={(id) => setDevice(id as PlatformId)}
+        label="steps for"
+      />
+      <GuideSteps steps={routeUndo(device, os)} />
+    </div>
   );
 }
 
 export function ProxyCloseDialog({
-  mode,
+  prompt,
   os,
-  onRemove,
-  onKeep,
-  onAcknowledge,
+  chosen,
+  onStop,
+  onQuit,
   onCancel,
+  notesShown = false,
 }: {
-  mode: CloseMode;
+  prompt: QuitPrompt;
   os: HostOs;
-  onRemove: () => Promise<void> | void;
-  onKeep: () => void;
-  onAcknowledge: (dontShowAgain: boolean) => void;
+  chosen: PlatformId;
+  onStop: () => Promise<void> | void;
+  onQuit: (dontShowAgain: boolean) => void;
   onCancel: () => void;
+  notesShown?: boolean;
 }) {
-  const actions = useRef<HTMLDivElement>(null);
+  const answers = useRef<HTMLDivElement>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const [remedyState, setRemedyState] = useState<"idle" | "running" | "done" | "failed">("idle");
-  const failed = remedyState === "failed";
-  const running = remedyState === "running";
-  const done = remedyState === "done";
-  const copy = CLOSE_COPY[mode];
+  const [stopState, setStopState] = useState<"idle" | "running" | "done" | "failed">("idle");
+  const host = deviceName("this", os);
+  const routedHere = prompt.mode === "ours";
+  const canStop = routedHere && canAutoSetup(os);
+  const optOut = prompt.mode !== "ours";
 
-  if (mode === "remote") {
-    return (
-      <ModalShell
-        title={copy.title}
-        onCancel={onCancel}
-        testId="proxy-close"
-        mode={mode}
-      >
-        <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
-        <ProxyOffSteps os={os} collapsed={false} />
-        <div className="mb-3">
-          <Checkbox checked={dontShowAgain} onChange={setDontShowAgain}>
-            {CLOSE_COPY.remote.dontShowAgain}
-          </Checkbox>
-        </div>
-        <div className="flex justify-end">
-          <span data-opener="true">
-            <Button onClick={() => onAcknowledge(dontShowAgain)} frame="bare" tone="mute">
-              {CLOSE_COPY.quit}
-            </Button>
-          </span>
-        </div>
-      </ModalShell>
-    );
-  }
-
-  // onRemove runs synchronously on the click; only its rejection is awaited, so
+  // onStop runs synchronously on the click; only its rejection is awaited, so
   // a handler that throws outright is caught the same as one that rejects. The
-  // button is disabled for the whole in-flight window with a progress line beside
-  // it (fork D4), since unset_proxy is elevation-gated and slow enough to invite
-  // a second click that would fire a second elevation prompt.
-  const attemptRemove = () => {
-    // The remedy is about to be disabled; a browser blurs a focused control when
+  // button is disabled for the whole in-flight window with a progress line above
+  // it (fork D4), since unset_proxy is elevation-gated on macOS and slow enough
+  // to invite a second click that would fire a second prompt.
+  const attemptStop = () => {
+    // The button is about to be disabled; a browser blurs a focused control when
     // that happens, dropping focus outside the panel where Tab escapes the modal.
-    // Hand focus to the exit before it goes.
-    const row = actions.current;
+    // Hand focus to quit before it goes.
+    const row = answers.current;
     if (row?.contains(document.activeElement)) {
       row.querySelector<HTMLElement>('[data-exit="true"] button')?.focus();
     }
-    setRemedyState("running");
+    setStopState("running");
     try {
-      Promise.resolve(onRemove()).then(
-        () => setRemedyState("done"),
-        () => setRemedyState("failed"),
+      Promise.resolve(onStop()).then(
+        () => setStopState("done"),
+        () => setStopState("failed"),
       );
     } catch {
-      setRemedyState("failed");
+      setStopState("failed");
     }
   };
 
-  return (
-    <ModalShell
-      title={copy.title}
-      onCancel={onCancel}
-      testId="proxy-close"
-      mode={mode}
+  const steps = routedHere || prompt.mode === "unread" ? (
+    <ManualFallback
+      summary={CLOSE_COPY.byHand}
+      collapsed={canStop}
+      defaultOpen={stopState === "failed"}
+      testId="proxy-close-manual"
+      className="mb-3"
     >
-      <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
-      {running && (
+      <div data-testid="proxy-close-steps">
+        <GuideSteps steps={routeUndo("this", os)} />
+      </div>
+    </ManualFallback>
+  ) : (
+    <div className="mb-3">
+      <DeviceSteps os={os} initial={deviceShown(prompt, chosen)} />
+    </div>
+  );
+
+  return (
+    <NotesShown.Provider value={notesShown}>
+    <ModalShell title={titleOf(prompt, host)} onCancel={onCancel} testId="proxy-close" mode={prompt.mode}>
+      <p className="mb-3 font-ui text-body text-ink-mute">{stakeOf(prompt, host)}</p>
+      {stopState === "running" && (
         <div className="mb-2" data-testid="proxy-close-running">
-          <Notice>{CLOSE_COPY.turningOff}</Notice>
+          <Notice tone="pending">{CLOSE_COPY.stopping(os)}</Notice>
         </div>
       )}
-      {done && (
+      {stopState === "done" && (
         <div className="mb-2" data-testid="proxy-close-done">
-          <Notice tone="ok">{CLOSE_COPY.done}</Notice>
+          <Notice tone="ok">{CLOSE_COPY.stopped(host)}</Notice>
         </div>
       )}
-      {failed && (
+      {stopState === "failed" && (
         <div className="mb-2" data-testid="proxy-close-failed">
           <Notice tone="warn">{CLOSE_COPY.failed}</Notice>
         </div>
       )}
-      <ProxyOffSteps os={os} collapsed defaultOpen={failed} />
-      <div ref={actions} className="flex justify-end gap-chrome-gap">
-        <span data-exit="true">
-          <Button onClick={onKeep} frame="bare" tone="mute">
+      {steps}
+      {optOut && (
+        <div className="mb-3">
+          <Checkbox checked={dontShowAgain} onChange={setDontShowAgain}>
+            {CLOSE_COPY.dontShowAgain}
+          </Checkbox>
+        </div>
+      )}
+      <div ref={answers} className="flex justify-end gap-chrome-gap">
+        <span data-exit="true" data-opener={canStop && stopState !== "done" ? undefined : "true"}>
+          <Button onClick={() => onQuit(optOut && dontShowAgain)} frame="bare" tone="mute">
             {CLOSE_COPY.quit}
           </Button>
         </span>
-        <span data-opener="true">
-          <Button onClick={attemptRemove} disabled={running || done}>
-            {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
-          </Button>
-        </span>
+        {canStop && stopState !== "done" && (
+          <span data-opener="true">
+            <Button onClick={attemptStop} disabled={stopState === "running"}>
+              {stopState === "failed" ? CLOSE_COPY.tryAgain : CLOSE_COPY.stop}
+            </Button>
+          </span>
+        )}
       </div>
     </ModalShell>
+    </NotesShown.Provider>
   );
 }

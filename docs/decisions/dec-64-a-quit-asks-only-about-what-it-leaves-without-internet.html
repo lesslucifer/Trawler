@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6adf51369f34851f0dfadd1c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-64: a quit asks only about what it leaves without internet</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-64 — a quit asks only about what it leaves without internet</h1>
+      <p>Every quit Trawler can catch asks first while something still routes through it, and only then. The
+        dialog says what it read, and stops routing only through Trawler.</p>
+      <div class="meta">v1 · 2026-10-26 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W11</strong> from the
+        owner's rulings Q1–Q5 · relates to <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a> ·
+        UC-ONBOARD · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What went wrong</th><th>Finding</th></tr>
+      <tr><td>⌘Q quit through the default menu's <code>terminate:</code></td><td>the dialog never ran on a Mac
+        user's usual quit, and the machine was left routed through a proxy about to stop</td><td>D1</td></tr>
+      <tr><td>an unread proxy took the remote path</td><td>Linux always heard "No proxy is set on this machine",
+        even with GNOME's proxy pointing at Trawler</td><td>D2</td></tr>
+      <tr><td>any other proxy was "foreign" and fixable</td><td>a work proxy stopped every quit, and the dialog
+        offered to turn it off, which can take the machine's internet away</td><td>D3</td></tr>
+      <tr><td>with nothing set here, the remote notice showed until dismissed for good</td><td>it showed when no
+        device could reach Trawler at all, and taught its opt-out</td><td>D4</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> A quit asks while this machine routes through Trawler, while its proxy could
+        not be read, or while a device could route here: reach is armed, or a running emulator's proxy points
+        here. Any other quit goes through. ⌘Q is Trawler's own Quit and asks as ✕ does.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The app menu's Quit, on ⌘Q, asks the window to close, so it runs the window's check. The
+        Dock's Quit and a logout terminate unasked</td><td>tao implements no <code>applicationShouldTerminate</code>,
+        so a terminate cannot be held; a revert on terminate was removed by E-UISETUP.W6 for its surprise password
+        prompt</td></tr>
+      <tr><td>2</td><td>This machine routes through Trawler when its proxy is Trawler's address,
+        <code>localhost</code> on Trawler's port, or one of this machine's own addresses on Trawler's port — as the
+        capture service reports them, or last reported them once it stops answering. Read at the close, on every
+        service on macOS, WinINET on Windows and GNOME's proxy on Linux</td><td>each of those reaches the same
+        listener</td></tr>
+      <tr><td>3</td><td>A proxy that is not Trawler's asks nothing of its own</td><td>a quit changes nothing for
+        it, and turning it off can take the internet it provides</td></tr>
+      <tr><td>4</td><td>A proxy nothing here could read asks, says it could not be read, and offers the steps with
+        no button. It has its own opt-out</td><td>"no proxy is set" would be a reading nobody took; a desktop
+        whose proxy is never readable would otherwise ask on every quit</td></tr>
+      <tr><td>5</td><td>With nothing routing here, the dialog asks about other devices only while reach is armed
+        (DEC-55), or an emulator's own proxy reads Trawler's — asked through adb only while the emulator is the
+        platform chosen; a Wi-Fi-only proxy on an emulator sending over mobile data routes nothing. It keeps its
+        opt-out</td><td>only then can a device lose anything when Trawler stops;
+        adb starts a server of its own (E-ONBRVP.W8's Q1)</td></tr>
+      <tr><td>5a</td><td>Every read a close waits on is bounded at 1.5 s — the capture service and the emulator,
+        run together, then this machine's proxy (read off the shell's main thread) and the opt-out. A read that
+        does not answer in time claims nothing: an unanswered proxy reads as unread</td><td>a close held by a read
+        that never settles is a window that cannot be quit (E-ONBRVP.W11's review, rounds 1 and 2)</td></tr>
+      <tr><td>6</td><td>The stake is the capture service, not the window: the routed machine has no internet once
+        it stops, or now while it does not answer</td><td>the core is its own process, and quitting the window does
+        not stop it</td></tr>
+      <tr><td>7</td><td>The act is <em>stop routing through Trawler</em>, offered only where the shell can perform
+        it (macOS, Windows). Its steps are the platform's own <em>to turn it off later</em></td><td>one act, one
+        name, one copy of each reversal</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Turn an <em>ours</em> proxy off on any terminate, unasked</td><td>brings back the password prompt
+        E-UISETUP.W6 removed, on a quit the user meant</td></tr>
+      <tr><td>Leave ⌘Q unasked, and say so</td><td>keeps the hole UC-ONBOARD already promised was closed</td></tr>
+      <tr><td>Ask about a foreign proxy, with no button</td><td>interrupts every quit to say nothing will change</td></tr>
+      <tr><td>Keep the other-devices notice on every quit with nothing set here</td><td>nearly always irrelevant,
+        so its opt-out silences it on the day it matters</td></tr>
+      <tr><td>Keep the dialog's seven client targets, fixed</td><td>two copies of each reversal, already drifted
+        once</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
