@@ -180,6 +180,7 @@ async fn a_fresh_core_answers_only_this_machine() {
     assert!(state["proxy"].is_null(), "an unarmed core has no address to give");
     assert!(state["api"].is_null());
     assert!(state["ca_urls"].is_null());
+    assert!(state["wifi_page"].is_null());
     assert!(state["interfaces"].is_array(), "the choices are listed before anything is armed");
 
     h.shutdown().await;
@@ -222,6 +223,29 @@ async fn arming_adds_a_proxy_and_an_api_that_answer_at_the_reported_address() {
         assert_eq!(certificate.status(), reqwest::StatusCode::OK, "{format}");
         assert!(!certificate.bytes().await.unwrap().is_empty(), "reachable but no {format}");
     }
+
+    h.shutdown().await;
+}
+
+#[tokio::test]
+async fn the_wifi_page_answers_on_the_reach_api_and_names_the_reach_proxy() {
+    let h = Harness::local().await;
+    let (_, body) = h.arm(LOOPBACK).await;
+    let armed: Value = serde_json::from_str(&body).unwrap();
+    let reach_api = socket(&armed["api"]);
+    let reach_proxy = socket(&armed["proxy"]);
+    assert_eq!(armed["wifi_page"], format!("http://{reach_api}/android-wifi"));
+
+    let page = h.client.get(armed["wifi_page"].as_str().unwrap()).send().await.unwrap();
+    assert_eq!(page.status(), reqwest::StatusCode::OK);
+    assert_eq!(page.headers()["content-type"], "text/html; charset=utf-8");
+    let html = page.text().await.unwrap();
+    assert!(html.contains(&format!(
+        "<dt>Proxy hostname</dt><dd>{}</dd><dt>Proxy port</dt><dd>{}</dd>",
+        reach_proxy.ip(),
+        reach_proxy.port()
+    )));
+    assert!(html.contains("intent:#Intent;action=android.settings.WIFI_SETTINGS;end"));
 
     h.shutdown().await;
 }

@@ -58,6 +58,11 @@ impl Addresses {
         let at = |file: &str| format!("http://{}/{file}", self.api);
         CaUrls { pem: at("ca.pem"), cer: at("ca.cer"), mobileconfig: at("ca.mobileconfig") }
     }
+
+    /// The page an Android device's Wi-Fi proxy step starts from (DEC-65).
+    pub fn wifi_page(&self) -> String {
+        format!("http://{}/android-wifi", self.api)
+    }
 }
 
 #[derive(Debug)]
@@ -412,6 +417,16 @@ mod tests {
             api: "[2001:db8::1]:7421".parse().unwrap(),
         };
         assert_eq!(addresses.ca_urls().mobileconfig, "http://[2001:db8::1]:7421/ca.mobileconfig");
+        assert_eq!(addresses.wifi_page(), "http://[2001:db8::1]:7421/android-wifi");
+    }
+
+    #[test]
+    fn the_wifi_page_names_the_api_port_that_answers() {
+        let addresses = Addresses {
+            proxy: "192.168.1.20:7420".parse().unwrap(),
+            api: "192.168.1.20:7421".parse().unwrap(),
+        };
+        assert_eq!(addresses.wifi_page(), "http://192.168.1.20:7421/android-wifi");
     }
 
     // The refusal matters because the PEMs are held since boot: a controller
