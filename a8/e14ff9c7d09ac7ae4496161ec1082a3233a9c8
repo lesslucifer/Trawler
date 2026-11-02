@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU E-ONBRVP.W22 ca-fetch-bound -> epic/onboard-revamp. The code is 1fea8b85, the first close's round 5 fix (setup's certificate fetch bounded at CA_READ_PATIENCE_MS), given the Working Unit it should have had; a8e14ff9 adds its plan and result and changes no code path."
+epic: E-ONBRVP
+wu: E-ONBRVP.W22
+branch: wu/onboard-revamp/ca-fetch-bound
+base: 27a0ca8ee10b47d151ae3b51c2eab33c36d9d232
+head: a8e14ff9c7d09ac7ae4496161ec1082a3233a9c8
+diff_sha256: 67e108c838fc4c76db88fe182d21f1d58d93b9bd38d7f710742fe86bc0c7aa64
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    gate0: 114
+    total: 119
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 1, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+nits:
+  - finding: "bounded() leaves the timed-out caCertPem request open, so a core that never answers gathers one pending request per watch tick while setup shows"
+    waived: "Only a core that accepts and never answers holds them, and before the bound the whole read waited on that core for ever; the requests end when the core's connection does. An abort belongs to the API client, not this WU."
+  - finding: "A core slower than CA_READ_PATIENCE_MS (5 s) to serve the certificate makes the trust readings unknown for that tick where they used to wait"
+    waived: "The bound is the fix: the next watch tick reads again 3 s later (DEC-62), and a local core serving a one-kilobyte certificate in more than 5 s is not healthy; unknown is the honest word meanwhile."
+  - finding: "The new test asserts only the proxy reading, not that the certificate half reads unknown"
+    waived: "The certificate half takes the refused-fetch path, which 'a core that cannot serve its certificate leaves the trust probe unread, never trusted' already pins; the test note's wording was corrected to claim only what the new test holds."
+verdict: PASS
+date: 2026-11-02
