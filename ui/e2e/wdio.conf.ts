@@ -2,7 +2,8 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { readFileSync, writeFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +38,36 @@ const NOTICE_MARKERS = [
 
 function clearNoticeMarkers() {
   for (const marker of NOTICE_MARKERS) rmSync(marker, { force: true });
+}
+
+// The shell reads the Android emulator through the first SDK that holds adb,
+// ANDROID_HOME before Android Studio's, so a run reads this SDK and never the
+// host's: one booted emulator, its user store readable and empty, no proxy set.
+// Whether this host runs an emulator no longer decides the onboarding journey.
+const FAKE_ADB = `#!/bin/sh
+[ "$1" = "-s" ] && shift 2
+case "$*" in
+  devices) printf 'List of devices attached\\nemulator-5554\\tdevice\\n\\n' ;;
+  "shell getprop sys.boot_completed") echo 1 ;;
+  "shell getprop ro.boot.qemu.avd_name") echo Trawler_E2E ;;
+  "shell settings get global http_proxy") echo null ;;
+  "shell dumpsys connectivity") printf 'Active default network: 100\\n  NetworkAgentInfo{network{100} handle{1} ni{WIFI CONNECTED}}\\n' ;;
+  "shell su 0 sh -c"*) echo trawler-su ;;
+  *) exit 1 ;;
+esac
+`;
+
+let fakeSdk: string | undefined;
+
+function useFakeSdk() {
+  fakeSdk = mkdtempSync(resolve(tmpdir(), "trawler-e2e-sdk-"));
+  const tools = resolve(fakeSdk, "platform-tools");
+  mkdirSync(tools);
+  mkdirSync(resolve(fakeSdk, "avd"));
+  writeFileSync(resolve(tools, "adb"), FAKE_ADB);
+  chmodSync(resolve(tools, "adb"), 0o755);
+  process.env.ANDROID_HOME = fakeSdk;
+  process.env.ANDROID_AVD_HOME = resolve(fakeSdk, "avd");
 }
 
 // One core for the whole run, specs sequential (maxInstances 1) — so a captured
@@ -114,6 +145,7 @@ export const config: WebdriverIO.Config = {
 
   onPrepare: async () => {
     clearNoticeMarkers();
+    useFakeSdk();
     await startCore();
     await seedSentFlow();
   },
@@ -135,6 +167,7 @@ export const config: WebdriverIO.Config = {
     }
     harness?.kill();
     rmSync(PORTS_FILE, { force: true });
+    if (fakeSdk) rmSync(fakeSdk, { recursive: true, force: true });
     clearNoticeMarkers();
   },
 };
