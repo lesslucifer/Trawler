@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "Epic E-ONBRVP -> main, round 4, after 91651fe7 fixed round 3's two importants (one Trawler match for the quit's reader and classify; the live-certificate verify bounded). The whole epic's code as one range, the shell (ui/src-tauri/) included by the caller's choice."
+epic: E-ONBRVP
+branch: epic/onboard-revamp
+base: 78d519cc6da634e738655c2082210f53caa83507
+head: 91651fe7f90cc383ccbd3c9f0419fbd8ac6f604e
+diff_sha256: 63533ae2f878778f3f7005bd95448bb3d4c8d38dc1e22467e8a1e06415fc9eff
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 5
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 4
+  stage_seconds:
+    gate0: 40
+    finders: 177
+    verifiers: 40
+    total: 260
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency:  { found: 3, verified: 0 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 10, verified: 1, waived: 0 }
+verified:
+  - finding: "With this machine's proxy unread and its notice dismissed, the quit (closeConfirm.ts promptFor and its caller) returned before looking at the devices, so armed reach or an emulator routed here lost its internet with no ask; DEC-64 and UC-ONBOARD state the three asks apart, each opt-out its own."
+    severity: important
+nits:
+  - finding: "ran_within's child.wait() after the output drains is unbounded, so a tool that closes its stdout and keeps running holds the reader"
+    waived: "Narrower than the bound states, and no worse than main's Command::output(); no reader the window uses detaches its stdout."
+  - finding: "About 160 lines of per-host action notes live in Onboarding.tsx beside the guide copy that is data in setup.ts"
+    waived: "Copy split across files, nothing drifts; a later wording WU may move it."
+  - finding: "The route and mark tie in xtask/src/ui.rs pins source text rather than behaviour"
+    waived: "Accepted: the two sides are different languages and only text reaches both; a rewrite turns it red, which is the direction wanted."
+  - finding: "Every recording ships as mp4 and webm, so about half the bundled video bytes go unused in each webview"
+    waived: "Deliberate, so every webview plays one; a size cost with no runtime effect."
+refuted: "FIVE CANDIDATES REFUTED. (1) altitude, important: the shell's wire strings (ours/foreign/none/unknown, wifi-only) and the CA name re-spelled in the app; the verifier found all but wifi-only crossing as literals on main, and wifi-only typed by a union with tests on the app side. (2) altitude, important: setup.rs as one 3,415-line module; about 1,630 lines are tests, nothing drifts or depends wrongly - a nit, recorded in earlier rounds. (3) efficiency, important: the quit's macOS reader spawns 1+2N; main did the same with nothing set, measured 0.24 s for six services against the 1.5 s bound, a timeout falls back to the unread ask. (4) efficiency, important: Windows dumps both ROOT stores each tick; both stores are a correctness choice (absent only once both answered), the 3 s cadence is DEC-62's. (5) correctness, important: the emulator read can still take 40 s per wedged emulator; the boot probe drops an unreachable emulator after one bounded call, the read now lands, and the screen says nothing false meanwhile."
+verdict: FAIL
+date: 2026-11-02
