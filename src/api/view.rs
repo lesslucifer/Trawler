@@ -291,6 +291,15 @@ mod tests {
     }
 
     #[test]
+    fn the_wifi_page_leaves_the_settings_path_to_the_guide() {
+        let html = super::android_wifi_page(Some("192.168.1.20:50484".parse().unwrap()));
+
+        for step in ["⚙", "✎", "Advanced options", "Manual"] {
+            assert!(!html.contains(step), "the setup guide owns {step}");
+        }
+    }
+
+    #[test]
     fn an_ipv6_proxy_hostname_drops_the_brackets_only_a_url_needs() {
         let html = super::android_wifi_page(Some("[2001:db8::1]:50484".parse().unwrap()));
 
