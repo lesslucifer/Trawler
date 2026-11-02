@@ -357,6 +357,60 @@ mod tests {
         );
     }
 
+    fn block_after<'a>(source: &'a str, opener: &str, closer: &str) -> &'a str {
+        let start = source.find(opener).unwrap_or_else(|| panic!("no {opener}")) + opener.len();
+        let rest = &source[start..];
+        &rest[..rest.find(closer).unwrap_or_else(|| panic!("no {closer} after {opener}"))]
+    }
+
+    fn kebab(variant: &str) -> String {
+        variant.chars().enumerate().fold(String::new(), |mut out, (at, c)| {
+            if c.is_ascii_uppercase() && at > 0 {
+                out.push('-');
+            }
+            out.push(c.to_ascii_lowercase());
+            out
+        })
+    }
+
+    // A route or a mark the shell refuses opens nothing, and the step's button
+    // swallows the refusal, so a drift between the two sides is a dead click.
+    #[test]
+    fn the_shell_opens_every_route_the_app_names_with_the_marks_the_app_makes() {
+        let repo = crate::repo_root().expect("repo root");
+        let read = |path: &str| std::fs::read_to_string(repo.join(path)).expect(path);
+        let route = read("ui/src-tauri/src/route.rs");
+        let setup = read("ui/src/setup.ts");
+        let marks = read("ui/src/ownRequest.ts");
+
+        let shell_routes: BTreeSet<String> = block_after(&route, "pub enum Route {", "\n}")
+            .lines()
+            .filter_map(|line| line.trim().split([' ', ',', '{']).next())
+            .filter(|name| !name.is_empty())
+            .map(kebab)
+            .collect();
+        let app_routes: BTreeSet<String> = block_after(&setup, "export type RouteName =", ";")
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect();
+        assert_eq!(app_routes, shell_routes, "RouteName and the shell's Route differ");
+
+        assert!(
+            route.contains("c.is_ascii_lowercase() || c.is_ascii_digit()"),
+            "valid_mark no longer reads a lowercase base-36 window"
+        );
+        assert!(marks.contains("Math.random().toString(36)"), "the window mark is not base 36");
+        assert!(marks.contains("`${WINDOW_MARK}.${sent}`"), "the mark is not <window>.<n>");
+        let width: usize = block_after(&marks, ".toString(36).padStart(", ",")
+            .parse()
+            .expect("deviceMark's width");
+        let longest: usize =
+            block_after(&route, "(1..=", ")").parse().expect("valid_device_mark's longest");
+        assert!(width <= longest, "deviceMark makes {width} characters, the shell takes {longest}");
+    }
+
     // pnpm 10+ ignores the `pnpm` field and says so only as an install warning,
     // so a pin placed there stops applying without turning anything red.
     fn carries_a_pnpm_field(package_json: &str) -> bool {

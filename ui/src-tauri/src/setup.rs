@@ -1393,12 +1393,41 @@ struct Ran {
     stdout: String,
 }
 
+// Every reader runs through here, and the window waits on each one before it
+// reads again, so a tool that never answers (an emulator adb lists but cannot
+// reach) is stopped and reads as nothing rather than freezing every reading
+// after it. Its output drains apart from the wait: a tool blocked on a full
+// pipe would otherwise look hung.
+const READ_PATIENCE: std::time::Duration = std::time::Duration::from_secs(10);
+
 fn ran(program: &str, args: &[&str]) -> Option<Ran> {
-    let out = Command::new(program).args(args).output().ok()?;
-    Some(Ran {
-        ok: out.status.success(),
-        stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
-    })
+    ran_within(program, args, READ_PATIENCE)
+}
+
+fn ran_within(program: &str, args: &[&str], patience: std::time::Duration) -> Option<Ran> {
+    let mut child = Command::new(program)
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+    let mut stdout = child.stdout.take()?;
+    let (drained, output) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let _ = drained.send(std::io::Read::read_to_end(&mut stdout, &mut bytes).map(|_| bytes));
+    });
+    if let Ok(Ok(bytes)) = output.recv_timeout(patience) {
+        let status = child.wait().ok()?;
+        return Some(Ran {
+            ok: status.success(),
+            stdout: String::from_utf8_lossy(&bytes).into_owned(),
+        });
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+    None
 }
 
 // `networksetup -get{,secure}webproxy <svc>` prints `Enabled: Yes/No`, `Server: …`,
@@ -1450,13 +1479,15 @@ fn classify(read: &ProxyRead, host: &str, port: u16, own: &[String]) -> ProxySta
     }
 }
 
-// Quit's reader, and deliberately wider than setup's: any service, HTTPS then
+// Quit's reader, and deliberately wider than setup's: every service, HTTPS then
 // HTTP. A service not in use now that still points at Trawler strands the
-// machine the day it becomes the one in use, so quit may not miss it. A read
-// that failed means the services that did answer cannot vouch for a clean
-// system.
+// machine the day it becomes the one in use, so quit may not miss it, and a
+// foreign proxy on another service asks nothing (DEC-64), so it may not hide
+// it either. A read that failed means the services that did answer cannot
+// vouch for a clean system.
 fn macos_proxy(
     listing: Option<&Ran>,
+    ours: impl Fn(&str, u16) -> bool,
     mut read: impl FnMut(&str, &str) -> Option<Ran>,
 ) -> ProxyRead {
     let services = match listing {
@@ -1467,22 +1498,26 @@ fn macos_proxy(
         return ProxyRead::Unreadable;
     }
     let mut unreadable = false;
+    let mut foreign = None;
     for svc in &services {
         for flag in ["-getsecurewebproxy", "-getwebproxy"] {
             match read(flag, svc) {
                 Some(out) if out.ok => {
                     if let Some((host, port)) = parse_active_proxy(&out.stdout) {
-                        return ProxyRead::Set(host, port);
+                        if ours(&host, port) {
+                            return ProxyRead::Set(host, port);
+                        }
+                        foreign.get_or_insert(ProxyRead::Set(host, port));
                     }
                 }
                 _ => unreadable = true,
             }
         }
     }
-    if unreadable {
-        ProxyRead::Unreadable
-    } else {
-        ProxyRead::Off
+    match foreign {
+        _ if unreadable => ProxyRead::Unreadable,
+        Some(set) => set,
+        None => ProxyRead::Off,
     }
 }
 
@@ -1621,7 +1656,7 @@ fn gnome_proxy(desktop: Option<&str>, mut get: impl FnMut(&str, &str) -> Option<
 fn proxy_in_use_now(os: &str) -> ProxyRead {
     match os {
         "macos" => scutil_proxy(ran("scutil", &["--proxy"]).as_ref()),
-        "windows" => active_system_proxy(os),
+        "windows" => active_system_proxy(os, |_, _| false),
         "linux" => gnome_proxy_now(),
         _ => ProxyRead::Unreadable,
     }
@@ -1633,13 +1668,13 @@ fn gnome_proxy_now() -> ProxyRead {
     })
 }
 
-fn active_system_proxy(os: &str) -> ProxyRead {
+fn active_system_proxy(os: &str, ours: impl Fn(&str, u16) -> bool) -> ProxyRead {
     match os {
-        "macos" => {
-            macos_proxy(ran("networksetup", &["-listallnetworkservices"]).as_ref(), |flag, svc| {
-                ran("networksetup", &[flag, svc])
-            })
-        }
+        "macos" => macos_proxy(
+            ran("networksetup", &["-listallnetworkservices"]).as_ref(),
+            ours,
+            |flag, svc| ran("networksetup", &[flag, svc]),
+        ),
         "windows" => {
             windows_proxy(ran("reg", &["query", WININET_KEY, "/v", "ProxyEnable"]).as_ref(), || {
                 ran("reg", &["query", WININET_KEY, "/v", "ProxyServer"])
@@ -1683,7 +1718,8 @@ pub(crate) fn read_proxy_among(
 // would freeze the window it is deciding about.
 #[cfg_attr(not(feature = "scenario"), tauri::command(async))]
 pub fn proxy_status(host: String, port: u16, own: Vec<String>) -> ProxyReading {
-    read_proxy_among(&active_system_proxy(std::env::consts::OS), &host, port, &own)
+    let ours = |set: &str, at: u16| at == port && names_trawler(set, &host, &own);
+    read_proxy_among(&active_system_proxy(std::env::consts::OS, ours), &host, port, &own)
 }
 
 // Run off the main thread: the window re-reads it every few seconds.
@@ -2082,9 +2118,66 @@ mod tests {
     const MAC_ON: &str = "Enabled: Yes\nServer: 127.0.0.1\nPort: 7420\n";
     const MAC_OFF: &str = "Enabled: No\nServer: \nPort: 0\n";
 
+    #[cfg(unix)]
+    #[test]
+    fn a_read_that_never_answers_is_stopped_and_reads_as_nothing() {
+        let patience = std::time::Duration::from_millis(200);
+        let started = std::time::Instant::now();
+        assert!(ran_within("sleep", &["30"], patience).is_none());
+        assert!(started.elapsed() < std::time::Duration::from_secs(5));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_read_keeps_its_whole_output_and_its_exit() {
+        let patience = std::time::Duration::from_secs(10);
+        let big = ran_within("sh", &["-c", "head -c 300000 /dev/zero | tr '\\0' a"], patience)
+            .expect("an answer");
+        assert!(big.ok);
+        assert_eq!(big.stdout.len(), 300_000);
+        let failed =
+            ran_within("sh", &["-c", "echo partial; exit 3"], patience).expect("an answer");
+        assert!(!failed.ok);
+        assert_eq!(failed.stdout, "partial\n");
+    }
+
+    fn trawler(host: &str, port: u16) -> bool {
+        host == "127.0.0.1" && port == 7420
+    }
+
+    const MAC_WORK: &str = "Enabled: Yes\nServer: proxy.corp\nPort: 8080\n";
+
+    #[test]
+    fn macos_finds_trawler_behind_a_foreign_proxy_on_an_earlier_service() {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, svc| {
+            answered(if svc == "Wi-Fi" { MAC_WORK } else { MAC_ON })
+        });
+        assert_eq!(read, ProxyRead::Set("127.0.0.1".into(), 7420));
+    }
+
+    #[test]
+    fn macos_reads_a_foreign_proxy_only_when_no_service_names_trawler() {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, svc| {
+            answered(if svc == "Wi-Fi" { MAC_WORK } else { MAC_OFF })
+        });
+        assert_eq!(read, ProxyRead::Set("proxy.corp".into(), 8080));
+    }
+
+    #[test]
+    fn macos_cannot_vouch_for_a_foreign_proxy_beside_a_service_that_failed_to_answer() {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, svc| {
+            if svc == "Wi-Fi" {
+                answered(MAC_WORK)
+            } else {
+                None
+            }
+        });
+        assert_eq!(read, ProxyRead::Unreadable);
+    }
+
     #[test]
     fn macos_reads_the_first_enabled_proxy_of_any_service() {
-        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |flag, svc| {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |flag, svc| {
             if svc == "Thunderbolt Bridge" && flag == "-getwebproxy" {
                 answered(MAC_ON)
             } else {
@@ -2097,7 +2190,7 @@ mod tests {
     #[test]
     fn macos_is_off_only_when_every_service_answered_off() {
         assert_eq!(
-            macos_proxy(answered(MAC_SERVICES).as_ref(), |_, _| answered(MAC_OFF)),
+            macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, _| answered(MAC_OFF)),
             ProxyRead::Off
         );
     }
@@ -2105,14 +2198,17 @@ mod tests {
     #[test]
     fn macos_cannot_read_without_its_service_list() {
         let never = |_: &str, _: &str| -> Option<Ran> { unreachable!("no service to read") };
-        assert_eq!(macos_proxy(None, never), ProxyRead::Unreadable);
-        assert_eq!(macos_proxy(exited_non_zero("").as_ref(), never), ProxyRead::Unreadable);
-        assert_eq!(macos_proxy(answered("").as_ref(), never), ProxyRead::Unreadable);
+        assert_eq!(macos_proxy(None, trawler, never), ProxyRead::Unreadable);
+        assert_eq!(
+            macos_proxy(exited_non_zero("").as_ref(), trawler, never),
+            ProxyRead::Unreadable
+        );
+        assert_eq!(macos_proxy(answered("").as_ref(), trawler, never), ProxyRead::Unreadable);
     }
 
     #[test]
     fn macos_cannot_vouch_for_off_when_a_service_failed_to_answer() {
-        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |_, svc| {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, svc| {
             if svc == "Wi-Fi" {
                 None
             } else {
@@ -2120,7 +2216,7 @@ mod tests {
             }
         });
         assert_eq!(read, ProxyRead::Unreadable);
-        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |_, svc| {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, svc| {
             if svc == "Wi-Fi" {
                 exited_non_zero("** Error")
             } else {
@@ -2132,7 +2228,7 @@ mod tests {
 
     #[test]
     fn macos_reads_a_proxy_one_service_reports_beside_one_that_failed() {
-        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), |_, svc| {
+        let read = macos_proxy(answered(MAC_SERVICES).as_ref(), trawler, |_, svc| {
             if svc == "Wi-Fi" {
                 None
             } else {
@@ -2232,8 +2328,8 @@ mod tests {
 
     #[test]
     fn a_host_with_no_reader_cannot_read_its_proxy() {
-        assert_eq!(active_system_proxy("linux"), ProxyRead::Unreadable);
-        assert_eq!(active_system_proxy("freebsd"), ProxyRead::Unreadable);
+        assert_eq!(active_system_proxy("linux", trawler), ProxyRead::Unreadable);
+        assert_eq!(active_system_proxy("freebsd", trawler), ProxyRead::Unreadable);
     }
 
     #[test]
@@ -3313,6 +3409,6 @@ NecwLoyuObd5tf9Qwxdkolo=
 
     #[test]
     fn quit_reads_gnomes_proxy_on_linux_as_setup_does() {
-        assert_eq!(active_system_proxy("linux"), proxy_in_use_now("linux"));
+        assert_eq!(active_system_proxy("linux", trawler), proxy_in_use_now("linux"));
     }
 }
