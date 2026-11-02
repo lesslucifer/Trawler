@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU android-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W19
+branch: wu/onboard-revamp/android-wording
+base: ef9fa6c4ee37eeb3d8e98b376a9656616d6dfcee
+head: 30c85d81bffc47fbbc7d606434468ee0fa5ffd16
+diff_sha256: f050fbf2187758f713af2c29f49d3ac857e7912e4ea839e71813f5043c8996d9
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 42
+    total: 78
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "android_wifi_page prints proxy.ip(), which would drop an IPv6 link-local scope id"
+    waived: "reach never offers or arms a link-local address (routable() in src/reach.rs excludes fe80::/10 and 169.254/16), so the page never names one"
+  - finding: "each GET /android-wifi allocates a fresh String from the template"
+    waived: "a cold route a person opens once per setup; the allocation is not measurable"
+  - finding: "the path /android-wifi is written in both Addresses::wifi_page and the route registration"
+    waived: "the same shape ca_urls already has, and tests/reach.rs fetches the advertised URL, so a drift fails the suite"
+  - finding: "android_wifi_page renders HTML inside api/view.rs beside the JSON wire views"
+    waived: "DEC-65 puts the page in the core; its markup is its own file and view.rs fills only a SocketAddr - refuted as file placement in round 1"
+verdict: PASS
+date: 2026-11-02
