@@ -45,6 +45,12 @@
       <tr><td><code>onboardingMatrix.test.tsx</code>: one framed control and no text outside a help host</td><td>no new rule</td><td>W18's rule already compares the framed codes exactly, so a framed Wi-Fi code fails it, and the R1 sweep reads every Android state with the new guide</td></tr>
       <tr><td>—</td><td>the e2e harness's fake core names <code>wifi_page</code> too</td><td>without it, the screen reads reach as not allowed and every off-machine reel would stop at task 1</td></tr>
       <tr><td>the Wi-Fi page: one line under the button names the taps left</td><td>the page holds the values and the button only</td><td>review round 1 found the line repeated the Settings path the guide owns, a second copy of Android 15's labels with nothing tying them; a test now holds the page to no path. Fixed in its own commit</td></tr>
+      <tr><td>—</td><td>against a core older than the Wi-Fi page, the Settings path leads task 3</td><td>the owner's run
+        found the window blank on choosing Android device: the running core, built before this branch, answers
+        <code>/reach</code> without <code>wifi_page</code>, and the code drew <code>undefined</code>, which the QR
+        library throws on. The API boundary now reads a missing field as no page, and the guide falls back
+        (<code>4612c197</code>); DEC-65's rule 4 says so. Regression tests in <code>api.test.ts</code>,
+        <code>setup.test.ts</code> and <code>Onboarding.test.tsx</code></td></tr>
       <tr><td>—</td><td>UC-ONBOARD's snapshot was refused (413)</td><td>the htmldoc server's body limit, noted since W5. git holds the diff</td></tr>
     </table>
 
