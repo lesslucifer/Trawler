@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "Epic E-ONBRVP -> main, round 5, after 27a0ca8e fixed round 4's important (an unread proxy's opt-out silencing the devices ask). The whole epic's code as one range, the shell (ui/src-tauri/) included by the caller's choice."
+epic: E-ONBRVP
+branch: epic/onboard-revamp
+base: 78d519cc6da634e738655c2082210f53caa83507
+head: 27a0ca8ee10b47d151ae3b51c2eab33c36d9d232
+diff_sha256: 7ae6399d3295f5e516ceb4d45a6956024c39da3870f367e7030413cc62ca53b7
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 4
+  stage_seconds:
+    gate0: 43
+    finders: 267
+    verifiers: 30
+    total: 300
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 3, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 6, verified: 1, waived: 0 }
+verified:
+  - finding: "readMachine (App.tsx) lands only once every part has, and three parts waited on client.caCertPem() with no bound, so a core that took the request and never answered held this machine's proxy and trust readings and the probing spinner; main read the store without asking the core."
+    severity: important
+nits:
+  - finding: "Every refresh in useFlows sends latestCapture beside listFlows, two requests per debounced event"
+    waived: "One limit=1 read the core answers from its newest row; needed whenever a filter hides the newest capture."
+  - finding: "deviceTraffic and its siblings re-scan the flow list on every refresh while setup shows"
+    waived: "Linear, memoized per refresh, bounded by the ring and the setup screen."
+  - finding: "Which hosts show an approval prompt before a proxy write is spelled os === 'macos' in Onboarding.tsx and ProxyCloseDialog.tsx apart from the shell's elevation choice"
+    waived: "Copy that follows the shell's elevation per host; a host gaining elevation is a WU that rewrites both."
+  - finding: "The route and mark tie in xtask/src/ui.rs pins source text rather than behaviour"
+    waived: "Accepted, as round 4 recorded: only text reaches both languages, and a rewrite turns it red."
+refuted: "ONE CANDIDATE REFUTED. efficiency proposed as important that about five adb processes per emulator run every 3 s while the emulator is chosen; the verifier found the cadence DEC-62's and the reads DEC-63 rule 9's (a removed certificate reads not done again), gated to the emulator chosen, setup and the window visible, async and single-flight: a bounded constant, not a cost that grows with data."
+verdict: FAIL
+date: 2026-11-02
