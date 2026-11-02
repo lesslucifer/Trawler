@@ -48,6 +48,7 @@ const UNARMED: ReachState = {
   proxy: null,
   api: null,
   ca_urls: null,
+  wifi_page: null,
   interfaces: INTERFACES,
 };
 
@@ -60,6 +61,7 @@ const ARMED: ReachState = {
     cer: "http://192.168.1.24:7421/ca.cer",
     mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
   },
+  wifi_page: "http://192.168.1.24:7421/android-wifi",
   interfaces: INTERFACES,
 };
 
@@ -2350,6 +2352,29 @@ describe("another device, where this machine's own traffic may be arriving too",
     expect(task(3)).toHaveTextContent("On that PC, open");
   });
 
+  it("walks the Android device's install and proxy with recordings, and offers the certificate's way back (W19's M1, N1)", () => {
+    draw({ reach: ARMED, deviceMark: MARK });
+    pick("Android device");
+
+    expect(within(task(2)).getByTestId("step-media")).toBeInTheDocument();
+    expect(within(task(3)).getByTestId("step-media")).toBeInTheDocument();
+    expect(within(task(3)).getByText("other ways").closest("details")).not.toHaveAttribute("open");
+    expect(screen.queryByRole("button", { name: "help: a note on these steps", hidden: true })).toBeNull();
+  });
+
+  it("folds the Android device's certificate to its way back once its request decrypted (W19's N1)", () => {
+    draw({
+      reach: ARMED,
+      traffic: capturing,
+      device: { provedAt: ago(20_000), mixed: false, wire: capturing },
+      deviceMark: MARK,
+    });
+    pick("Android device");
+
+    expect(within(task(2)).getByText("to remove it later").closest("details")).not.toHaveAttribute("open");
+    expect(task(2)).toHaveTextContent("Trusted credentials");
+  });
+
   it("gives a phone the address as a code to scan as well (DEC-57)", () => {
     draw({ reach: ARMED, traffic: arriving, deviceMark: MARK });
     pick("iPhone or iPad");
@@ -3519,9 +3544,21 @@ describe("the certificate URL's scannable code", () => {
           name: "copy the certificate URL",
         }),
       ).toBeInTheDocument();
-      expect(screen.getAllByTestId("scan-code")).toHaveLength(1);
+      expect(within(task(2)).getAllByTestId("scan-code")).toHaveLength(1);
     },
   );
+
+  it("on Android device, a second code opens the Wi-Fi page from task 3, bare while the certificate's leads (DEC-65, W18's E1)", () => {
+    draw({ reach: ARMED });
+    pick("Android device");
+
+    const page = within(task(3)).getByRole("img", { name: "the Wi-Fi page, as a code to scan", hidden: true });
+    expect(page).toHaveAttribute("data-value", ARMED.wifi_page);
+    expect(page.closest("[data-framed]")).toBeNull();
+    const certificate = within(task(2)).getByRole("img", { name: "the certificate URL, as a code to scan" });
+    expect(certificate.closest("[data-framed]")).not.toBeNull();
+    expect(screen.getByTestId("steps").querySelectorAll("[data-framed]")).toHaveLength(1);
+  });
 
   it("is drawn for no value a scan cannot use — the proxy host and port stay typed", () => {
     draw({ reach: ARMED });

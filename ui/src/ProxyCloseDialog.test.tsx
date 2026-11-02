@@ -208,6 +208,19 @@ describe("nothing here routes through Trawler, but a device could (D4)", () => {
     );
   });
 
+  it("prints the Android device's proxy-off line as Android's own path parts (W19's N4)", () => {
+    mount(DEVICES);
+
+    fireEvent.click(screen.getByRole("button", { name: "steps for" }));
+    fireEvent.click(screen.getByRole("option", { name: "Android device" }));
+    const steps = screen.getByTestId("proxy-close-steps");
+    expect(within(steps).getAllByTestId("menu-path").map((path) => path.textContent)).toEqual([
+      "Network & internet → Internet",
+      "⚙",
+      "✎ → Advanced options → Proxy → None → Save",
+    ]);
+  });
+
   it("carries the opt-out's value to the quit, and quits without it when left alone", () => {
     const ticked = mount(DEVICES);
     fireEvent.click(screen.getByRole("checkbox", { name: CLOSE_COPY.dontShowAgain }));

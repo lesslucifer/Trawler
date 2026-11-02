@@ -50,6 +50,7 @@ const REACH = {
     cer: "http://192.168.1.24:7421/ca.cer",
     mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
   },
+  wifiPage: "http://192.168.1.24:7421/android-wifi",
 };
 const ctx = (over: Partial<Parameters<typeof setupFor>[1]> = {}) => ({
   os: "macos" as const,
@@ -182,6 +183,7 @@ describe("an armed address this machine no longer holds is lost", () => {
     proxy,
     api: null,
     ca_urls: null,
+    wifi_page: null,
     interfaces: addresses.map((address) => ({ name: "Wi-Fi", address })),
   });
 
@@ -321,7 +323,7 @@ describe("every platform's instructions are its own", () => {
   it.each(PLATFORM_IDS)("%s names no address it was not given", (id) => {
     const text = everything(setup(id));
     expect(text).not.toMatch(/7420/);
-    const withoutCa = Object.values(REACH.caUrls).reduce((t, url) => t.split(url).join(""), text);
+    const withoutCa = [...Object.values(REACH.caUrls), REACH.wifiPage].reduce((t, url) => t.split(url).join(""), text);
     expect(withoutCa).not.toMatch(/7421/);
   });
 });
@@ -359,9 +361,10 @@ describe("the Android emulator and the Android device stop sharing one answer", 
     expect(text).not.toMatch(/9999|7420/);
   });
 
-  it("both state the Android 7+ user-CA caveat, because it is true of both", () => {
-    expect(helps(guides(emulator())).join("\n")).toMatch(/network security config/);
-    expect(prose(device())).toMatch(/network security config/);
+  it("both explain the user-CA caveat behind a ?, in the same words, because it is true of both (W19's W5)", () => {
+    const caveat = helps(guides(emulator())).find((help) => /network security config/.test(help));
+    expect(caveat).toBeDefined();
+    expect(helps(guides(device()))).toContain(caveat);
   });
 });
 
@@ -582,11 +585,8 @@ describe("a guide's steps are the route, and everything else says what it is", (
     for (const note of notes(s)) expect(said).not.toContain(note);
   });
 
-  it("the browser caveats are notes — a reader cannot perform 'apps ignore user CAs'", () => {
-    expect(notes(setup("android"))).toContain(
-      "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
-    );
-    // W17's W5: the emulator explains its steps behind their ?, and has no notes.
+  it("neither Android keeps a note: each explains its steps behind their ? (W17's W5, W19's W5)", () => {
+    expect(notes(setup("android"))).toEqual([]);
     expect(notes(setup("android-sim"))).toEqual([]);
   });
 
@@ -753,7 +753,7 @@ describe("each platform names the one certificate file its installer opens", () 
 
   it("names the file to pick in each phone installer", () => {
     expect(paths(numbered(setup("ios")))).toContainEqual(["Profile Downloaded", "Install", "Install", "Install", "Done"]);
-    expect(prose(setup("android"))).toMatch(/CA certificate → Install anyway → the trawler-ca file it downloaded\./);
+    expect(numbered(setup("android"))[1]).toContain("then the trawler-ca file at the top of Recent.");
     expect(paths(guides(setup("android-sim")))).toContainEqual(
       expect.arrayContaining(["CA certificate", "Install anyway", "☰", "Downloads", "trawler-ca.cer"]),
     );
@@ -1239,17 +1239,27 @@ describe("the Android device's steps name what a stock Android shows", () => {
     expect(said.join("\n")).not.toMatch(/trawler-ca\.cer\b/);
   });
 
-  it("reaches the installer by Settings' search, past its warning", () => {
-    expect(device().trust.guide!.steps[1]).toEqual([
-      "Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.",
+  it("reaches the installer by Settings' search, past its warning, tapping CA certificate twice (W19's W2)", () => {
+    const [lead, path, file] = device().trust.guide!.steps[1];
+    expect([lead, path, file]).toEqual([
+      "In Settings, search CA certificate, then tap",
+      { path: ["CA certificate", "CA certificate", "Install anyway"] },
+      "then the trawler-ca file at the top of Recent.",
     ]);
     expect(prose(device())).not.toMatch(/Settings → Security →/);
   });
 
-  it("routes by the stock path, led by the maker's difference, and turns it off by the same", () => {
-    const path = "Settings → Network & internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy";
-    expect(device().route.guide!.steps[0]).toEqual([`Menus differ by maker; on stock Android: ${path} → Manual.`]);
-    expect(device().route.guide!.undo).toEqual([[`${path} → None.`]]);
+  it("routes by the stock path from the Wi-Fi page, and turns it off by the Settings path (W19's W1, N4)", () => {
+    expect(paths(device().route.guide!.steps.slice(0, 1))).toEqual([
+      ["Open Wi-Fi settings"],
+      ["⚙"],
+      ["✎", "Advanced options", "Proxy", "Manual"],
+    ]);
+    expect(paths(device().route.guide!.undo!)).toEqual([
+      ["Network & internet", "Internet"],
+      ["⚙"],
+      ["✎", "Advanced options", "Proxy", "None", "Save"],
+    ]);
     expect(prose(device())).not.toMatch(/Settings → Wi-Fi/);
   });
 });
@@ -1659,7 +1669,7 @@ describe("a Mac's proxy way back is by hand first", () => {
 // W4's N2, here: the download is the first thing a device does that must reach
 // this machine, so what to check when it cannot waits behind a ? beside it.
 describe("every download step says what to check when it does not load", () => {
-  it.each(["mac", "windows", "ubuntu", "ios", "android"] as const)("%s", (id) => {
+  it.each(["mac", "windows", "ubuntu", "ios"] as const)("%s", (id) => {
     const help = setup(id).trust.guide!.steps[0].find(isHelp);
 
     expect(help?.topic).toBe("if it doesn't load");
@@ -1670,6 +1680,15 @@ describe("every download step says what to check when it does not load", () => {
 
   it("names the host as the host does", () => {
     expect(setup("mac", { os: "windows" }).trust.guide!.steps[0].find(isHelp)?.help).toContain("this PC's firewall");
+  });
+
+  it("android says first what a download that worked looks like (W19's W6)", () => {
+    const help = setup("android").trust.guide!.steps[0].find(isHelp);
+
+    expect(help?.topic).toBe("if it seems stuck");
+    expect(help?.help).toBe(
+      "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that. Doesn't load? Your Android device can't reach this one — check both are on the same network, and that this Mac's firewall lets Trawler accept incoming connections.",
+    );
   });
 });
 
@@ -1760,3 +1779,95 @@ describe("the iPhone's guide is the next thing, in iOS's own words", () => {
     }
   });
 });
+
+// W19: the Android device's guide, in Android 15's own labels, its Wi-Fi proxy
+// starting from the core's page (Q2 B, DEC-65).
+describe("the Android device's guide is the next thing, in Android's own words", () => {
+  const android = (over = {}) => setup("android", over);
+
+  it("every Settings route is path parts, never arrow text (W1)", () => {
+    expect(prose(android())).not.toMatch(/→/);
+    expect(paths(numbered(android()))).toEqual([
+      ["CA certificate", "CA certificate", "Install anyway"],
+      ["Open Wi-Fi settings"],
+      ["⚙"],
+      ["✎", "Advanced options", "Proxy", "Manual"],
+      ["Proxy hostname"],
+      ["Proxy port"],
+      ["Save"],
+    ]);
+  });
+
+  it("the proxy step leads with the Wi-Fi page's code, which encodes exactly its URL (I1, DEC-65)", () => {
+    const [lead, page] = numbered(android())[2];
+    expect(lead).toBe("Scan with the camera, or open");
+    expect(page).toEqual({ copy: REACH.wifiPage, label: "the Wi-Fi page", wire: "wifi page url", scan: true });
+  });
+
+  it("the Settings path is the proxy's other way, for no camera or no page (I1)", () => {
+    const alternatives = android().route.guide!.alternatives!;
+    expect(paths(alternatives)).toEqual([["Network & internet", "Internet"], ["⚙"]]);
+    expect(alternatives[0][0]).toBe("No camera, or nothing opens? In Settings, tap");
+  });
+
+  it("each step's explanation waits behind its own ? (W3, W5, W6)", () => {
+    const [download, install, proxy, values] = numbered(android());
+    expect(download.find(isHelp)?.topic).toBe("if it seems stuck");
+    expect(install.find(isHelp)).toEqual({
+      help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
+      topic: "which apps trust it",
+    });
+    expect(proxy.find(isHelp)).toEqual({
+      help: "This is stock Android's menu; makers move it. On another, open the Wi-Fi network it is on and look for Proxy, often under Advanced options.",
+      topic: "if the menu differs",
+    });
+    expect(values.find(isHelp)).toEqual({
+      help: "The Wi-Fi page shows both: copy each there and paste it here.",
+      topic: "copying the values",
+    });
+  });
+
+  it("names the proxy's fields as Android labels them (W4)", () => {
+    expect(numbered(android())[3].filter((p) => !isHelp(p))).toEqual([
+      "Put the server and port above into",
+      { path: ["Proxy hostname"] },
+      "and",
+      { path: ["Proxy port"] },
+      "then tap",
+      { path: ["Save"] },
+    ]);
+  });
+
+  it("the certificate has its way back, ending Uninstall, then OK (N1)", () => {
+    const trust = android().trust.guide!;
+    expect(trust.undoTitle).toBe("to remove it later");
+    expect(trust.undo).toEqual([
+      [
+        "In Settings, search Trusted credentials, then tap",
+        { path: ["Trusted credentials", "Trusted credentials", "User", "Trawler Proxy CA", "Uninstall", "OK"] },
+      ],
+    ]);
+  });
+
+  it("each Settings step no code finishes carries its recording, naming its path and Android version (M1)", () => {
+    expect(numbered(android()).flatMap((step) => step.filter(isMedia))).toEqual([
+      {
+        media: "android-install-ca",
+        alt: "Settings: search CA certificate → CA certificate → CA certificate → Install anyway → the trawler-ca file",
+        shows: "Android 15",
+      },
+      {
+        media: "android-wifi-proxy",
+        alt: "Chrome: Open Wi-Fi settings, then Settings: ⚙ → ✎ → Advanced options → Proxy → Manual → Save",
+        shows: "Android 15",
+      },
+    ]);
+  });
+
+  it("no step repeats the place its task's title names", () => {
+    for (const step of numbered(android())) {
+      expect(step.filter((p) => typeof p === "string").join(" ")).not.toMatch(/Android device/);
+    }
+  });
+});
+

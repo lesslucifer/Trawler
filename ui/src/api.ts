@@ -157,6 +157,7 @@ export interface ReachState {
   proxy: string | null;
   api: string | null;
   ca_urls: Record<CaFormat, string> | null;
+  wifi_page: string | null;
   interfaces: ReachInterface[];
 }
 
@@ -167,6 +168,7 @@ export const UNREACHABLE: ReachState = {
   proxy: null,
   api: null,
   ca_urls: null,
+  wifi_page: null,
   interfaces: [],
 };
 

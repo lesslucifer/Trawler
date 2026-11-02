@@ -131,7 +131,9 @@ export type MediaName =
   | "linux-firefox-import"
   | "linux-proxy"
   | "ios-install-profile"
-  | "ios-full-trust";
+  | "ios-full-trust"
+  | "android-install-ca"
+  | "android-wifi-proxy";
 export interface MediaPart {
   media: MediaName;
   alt: string;
@@ -240,6 +242,7 @@ export interface AddressTest {
 export interface ReachAddresses {
   proxy: string;
   caUrls: Record<CaFormat, string>;
+  wifiPage: string;
 }
 
 // Where this machine's save put each certificate file, by the path the save
@@ -1055,8 +1058,10 @@ const DEVICE_PROXY_UNDO = "to turn it off later";
 // why the emulator needs no reach: it is already inside this host's loopback.
 const EMULATOR_HOST = "10.0.2.2";
 
-const ANDROID_USER_CA =
-  "Apps targeting Android 7+ only trust user CAs when their network security config opts in.";
+const ANDROID_USER_CA: HelpPart = {
+  help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
+  topic: "which apps trust it",
+};
 
 // The task's title names the device, so a step on it starts at what to do,
 // and the code a phone scans leads its own sentence (W18's E1, W5).
@@ -1151,13 +1156,55 @@ const ANDROID_ADDRESS_TEST: AddressTest = {
 const REFUSED_AFTER_PROOF_ANDROID =
   "something else is connecting and not decrypting — one request already did, so it is Android's own services, which ignore a user certificate, an app that pins its certificate, or another device.";
 
-// A maker moves the installer, and Settings' own search still finds it; Chrome
-// renames the download after its type, so the step names no file (W10's C1, C2).
-const ANDROID_INSTALL =
-  "Install it: in Settings, search CA certificate → CA certificate → Install anyway → the trawler-ca file it downloaded.";
+// Android 15's own labels (W19's Q3). A maker moves the installer, and Settings'
+// own search still finds it; search's CA certificate opens Install a
+// certificate, where it is tapped again. Chrome renames the download after its
+// type, so the step names no file (W10's C1, C2; W19's W2).
+const ANDROID_OS_VERSION = "Android 15";
+const ANDROID_INSTALL = ["CA certificate", "CA certificate", "Install anyway"];
 
-// Search finds no proxy, so the route is the stock path (W10's C3).
-const ANDROID_WIFI_PROXY = "Settings → Network & internet → Internet → ⚙ by the network it is on → ✎ → Advanced options → Proxy";
+// Chrome saves the file on a blank page or its Downloads list, and opening it
+// ends in an alert with only Close (W19's W6).
+const ANDROID_DOWNLOADED =
+  "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that.";
+
+const ANDROID_INSTALL_STEP: GuideStep = [
+  "In Settings, search CA certificate, then tap",
+  { path: ANDROID_INSTALL },
+  "then the trawler-ca file at the top of Recent.",
+  {
+    media: "android-install-ca",
+    alt: `Settings: search CA certificate → ${ANDROID_INSTALL.join(" → ")} → the trawler-ca file`,
+    shows: ANDROID_OS_VERSION,
+  },
+  ANDROID_USER_CA,
+];
+
+// Search's Trusted credentials opens Encryption & credentials, where it is
+// tapped again, as the installer's is (W19's N1).
+const ANDROID_REMOVE_STEP: GuideStep = [
+  "In Settings, search Trusted credentials, then tap",
+  { path: ["Trusted credentials", "Trusted credentials", "User", CA_NAME, "Uninstall", "OK"] },
+];
+
+// Search finds no proxy, so the route is the stock path (W10's C3), and the
+// core's page opens its first screen (DEC-65).
+const ANDROID_INTERNET = ["Network & internet", "Internet"];
+const androidProxy = (choice: string[]): StepPart[] => [
+  { path: ["⚙"] },
+  "by the network it is on, then",
+  { path: ["✎", "Advanced options", "Proxy", ...choice] },
+];
+
+const ANDROID_MAKERS: HelpPart = {
+  help: "This is stock Android's menu; makers move it. On another, open the Wi-Fi network it is on and look for Proxy, often under Advanced options.",
+  topic: "if the menu differs",
+};
+
+const ANDROID_COPY_VALUES: HelpPart = {
+  help: "The Wi-Fi page shows both: copy each there and paste it here.",
+  topic: "copying the values",
+};
 
 // Each platform gets the one format its installer opens: an iPhone installs a
 // configuration profile from Safari, Files and AirDrop alike, where a bare
@@ -1172,10 +1219,12 @@ export function caFormatFor(id: PlatformId): CaFormat {
 
 // The download is the first thing the device does that must reach this
 // machine, so what to check when it cannot sits beside it (W4's N2).
-const unreachable = (device: string, os: HostOs): HelpPart => ({
-  help: `Doesn't load? ${capitalised(device)} can't reach this one — check both are on the same network, and that ${HOST_NOUN[os]}'s firewall lets Trawler accept incoming connections.`,
-  topic: "if it doesn't load",
-});
+const unreachable = (device: string, os: HostOs, outcome?: string): HelpPart => {
+  const help = `Doesn't load? ${capitalised(device)} can't reach this one — check both are on the same network, and that ${HOST_NOUN[os]}'s firewall lets Trawler accept incoming connections.`;
+  return outcome === undefined
+    ? { help, topic: "if it doesn't load" }
+    : { help: `${outcome} ${help}`, topic: "if it seems stuck" };
+};
 
 function downloadStep(
   id: PlatformId,
@@ -1187,14 +1236,15 @@ function downloadStep(
     scan = false,
     file = CA_FILES[format],
     then,
-  }: { how?: string; scan?: boolean; file?: string; then?: StepPart[] } = {},
+    outcome,
+  }: { how?: string; scan?: boolean; file?: string; then?: StepPart[]; outcome?: string } = {},
 ): GuideStep {
   const device = deviceName(id, os);
   return [
     scan ? SCAN_OR_OPEN : `On ${device}, open`,
     { copy: reach.caUrls[format], label: "the certificate URL", wire: "certificate url", scan },
     ...(then ?? [`${how}— it downloads ${file}.`]),
-    unreachable(device, os),
+    unreachable(device, os, outcome),
   ];
 }
 
@@ -1309,12 +1359,16 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               IOS_TRUST_STEP,
             ]
           : [
-              downloadStep(id, os, reach, format, { scan: PLATFORMS[id].scans, file: "Trawler's certificate" }),
-              [ANDROID_INSTALL],
+              downloadStep(id, os, reach, format, {
+                scan: PLATFORMS[id].scans,
+                file: "Trawler's certificate",
+                outcome: ANDROID_DOWNLOADED,
+              }),
+              ANDROID_INSTALL_STEP,
             ],
-        notes: ios ? undefined : [ANDROID_USER_CA],
         alternatives: [carryOver],
-        ...(ios && { undoTitle: "to remove it later", undo: [IOS_REMOVE_STEP] }),
+        undoTitle: "to remove it later",
+        undo: [ios ? IOS_REMOVE_STEP : ANDROID_REMOVE_STEP],
       };
   const route: Guide | undefined =
     reach === null
@@ -1334,9 +1388,35 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
               ],
             ]
           : [
-              [`Menus differ by maker; on stock Android: ${ANDROID_WIFI_PROXY} → Manual.`],
-              ["Put the server and port above into it, and save."],
+              [
+                SCAN_OR_OPEN,
+                { copy: reach.wifiPage, label: "the Wi-Fi page", wire: "wifi page url", scan: PLATFORMS[id].scans },
+                "and tap",
+                { path: ["Open Wi-Fi settings"] },
+                "then",
+                ...androidProxy(["Manual"]),
+                {
+                  media: "android-wifi-proxy",
+                  alt: "Chrome: Open Wi-Fi settings, then Settings: ⚙ → ✎ → Advanced options → Proxy → Manual → Save",
+                  shows: ANDROID_OS_VERSION,
+                },
+                ANDROID_MAKERS,
+              ],
+              [
+                "Put the server and port above into",
+                { path: ["Proxy hostname"] },
+                "and",
+                { path: ["Proxy port"] },
+                "then tap",
+                { path: ["Save"] },
+                ANDROID_COPY_VALUES,
+              ],
             ],
+        ...(!ios && {
+          alternatives: [
+            ["No camera, or nothing opens? In Settings, tap", { path: ANDROID_INTERNET }, "and go on from", { path: ["⚙"] }],
+          ],
+        }),
         undoTitle: DEVICE_PROXY_UNDO,
         undo: routeUndo(id, os),
       };
@@ -1399,11 +1479,6 @@ const EMULATOR_SECURITY = ["Security & privacy", "More security & privacy"];
 const EMULATOR_INSTALLER = ["Encryption & credentials", "Install a certificate", "CA certificate", "Install anyway"];
 const EMULATOR_PICK_FILE = ["☰", "Downloads", CA_FILES.cer];
 
-const EMULATOR_USER_CA: HelpPart = {
-  help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
-  topic: "which apps trust it",
-};
-
 const EMULATOR_HOST_HELP: HelpPart = {
   help: `${EMULATOR_HOST} is the address every emulator reaches the machine it runs on by.`,
   topic: `what ${EMULATOR_HOST} is`,
@@ -1461,7 +1536,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
   const install: GuideStep = [
     "In the emulator's Settings, tap",
     { path: [...EMULATOR_SECURITY, ...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] },
-    EMULATOR_USER_CA,
+    ANDROID_USER_CA,
   ];
   // While none runs, the controls that act on one stand where they will, and
   // wait for it (W17's S1).
@@ -1473,7 +1548,7 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
     ? {
         steps: [
           ["Send Trawler's certificate to the emulator", onEmulator({ open: "emulator-certificate", label: "send it to the emulator" })],
-          ["On the screen it opens, tap", { path: [...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] }, EMULATOR_USER_CA],
+          ["On the screen it opens, tap", { path: [...EMULATOR_INSTALLER, ...EMULATOR_PICK_FILE] }, ANDROID_USER_CA],
         ],
         alternatives: [
           [
@@ -1638,7 +1713,7 @@ export function routeUndo(id: PlatformId, os: HostOs, sdk: string | null = null)
     case "ios":
       return [[...IOS_WIFI_PROXY_LEAD, { path: ["Configure Proxy", "Off", "Save"] }]];
     case "android":
-      return [[`${ANDROID_WIFI_PROXY} → None.`]];
+      return [["In Settings, tap", { path: ANDROID_INTERNET }, "then", ...androidProxy(["None", "Save"])]];
   }
 }
 
