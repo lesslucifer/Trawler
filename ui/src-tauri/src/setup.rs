@@ -1771,6 +1771,25 @@ fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     tauri::Manager::path(app).app_config_dir().map_err(|e| e.to_string())
 }
 
+fn notes_shown_path(config_dir: &Path) -> std::path::PathBuf {
+    config_dir.join("notes-shown")
+}
+
+fn notes_are_shown(config_dir: &Path) -> bool {
+    notes_shown_path(config_dir).exists()
+}
+
+fn remember_notes_shown(config_dir: &Path, shown: bool) -> std::io::Result<()> {
+    if shown {
+        std::fs::create_dir_all(config_dir)?;
+        return std::fs::write(notes_shown_path(config_dir), []);
+    }
+    match std::fs::remove_file(notes_shown_path(config_dir)) {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error),
+        _ => Ok(()),
+    }
+}
+
 #[tauri::command]
 pub fn notice_dismissed(app: tauri::AppHandle, key: String) -> Result<bool, String> {
     let key = NoticeKey::try_from(key.as_str())?;
@@ -1782,6 +1801,17 @@ pub fn dismiss_notice(app: tauri::AppHandle, key: String) -> Result<(), String> 
     let key = NoticeKey::try_from(key.as_str())?;
     let dir = config_dir(&app)?;
     mark_notice_dismissed(&dir, key).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn notes_shown(app: tauri::AppHandle) -> bool {
+    config_dir(&app).is_ok_and(|dir| notes_are_shown(&dir))
+}
+
+#[tauri::command]
+pub fn show_notes(app: tauri::AppHandle, shown: bool) -> Result<(), String> {
+    let dir = config_dir(&app)?;
+    remember_notes_shown(&dir, shown).map_err(|error| error.to_string())
 }
 
 #[cfg(test)]
@@ -2412,6 +2442,25 @@ mod tests {
         mark_notice_dismissed(&dir, NoticeKey::UnreadNotice).unwrap();
         assert!(dir.join("unread-notice-dismissed").exists());
         assert!(NoticeKey::try_from("other").is_err());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn notes_start_hidden_and_remember_each_choice() {
+        let dir =
+            std::env::temp_dir().join(format!("trawler-test-notes-cfg-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert!(!notes_are_shown(&dir));
+        remember_notes_shown(&dir, false).unwrap();
+        assert!(!notes_are_shown(&dir));
+        remember_notes_shown(&dir, true).unwrap();
+        assert!(notes_are_shown(&dir));
+        remember_notes_shown(&dir, true).unwrap();
+        assert!(notes_are_shown(&dir));
+        remember_notes_shown(&dir, false).unwrap();
+        assert!(!notes_are_shown(&dir));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

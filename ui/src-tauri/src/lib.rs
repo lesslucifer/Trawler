@@ -36,6 +36,8 @@ pub fn run() {
         setup::interface_names,
         setup::notice_dismissed,
         setup::dismiss_notice,
+        setup::notes_shown,
+        setup::show_notes,
         route::open_route,
         reach::confirm_reach,
         reach::confirm_replace_proxy

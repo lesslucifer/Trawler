@@ -40,6 +40,7 @@ import {
   type TrustProbe,
 } from "./verdicts";
 import { isFullPath, saveBody } from "./body";
+import { useNotesShown } from "./noticePreference";
 import { newestRead } from "./newestRead";
 import { isDecryptedHttps, sessionTraffic } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
@@ -812,6 +813,7 @@ export default function App({
     };
   }, [client, proxyAddr]);
   const close = useProxyCloseConfirm(proxyAddr, readQuitFacts);
+  const [notesShown, setNotesShown] = useNotesShown();
   const closeDialog = close.prompt && (
     <ProxyCloseDialog
       prompt={close.prompt}
@@ -820,6 +822,7 @@ export default function App({
       onStop={close.stop}
       onQuit={close.quit}
       onCancel={close.cancel}
+      notesShown={notesShown}
     />
   );
 
@@ -1022,6 +1025,8 @@ export default function App({
         <Onboarding
           state={state}
           dispatch={go}
+          notesShown={notesShown}
+          onShowNotes={setNotesShown}
           os={hostOs()}
           proxyAddr={proxyAddr}
           trustProbe={trustProbe}

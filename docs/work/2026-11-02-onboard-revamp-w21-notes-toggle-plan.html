@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae820129f34851f0dfadf31" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W21 plan: notes on one switch</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W21 — notes on one switch</h1>
+      <p>The setup screen carries a <em>?</em> at the end of every line something explains: 33 of them across the
+      platforms. Seven explain nothing worth a click, and the rest crowd the lines they sit on. This WU drops the eight
+      that do not earn their place and puts every note that stays behind one switch on the device row.</p>
+      <div class="meta">v2 · 2026-11-02 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W21</span> · branch <code>wu/onboard-revamp/notes-toggle</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1–W20 (all merged)</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> (the owner, 2026-11-02: "1. Use the current ? button as current, but use circle
+      ? icon instead 2. yes, app config 3. yes — no need mock up just build it"). The eight drops below. One switch
+      replaces every <em>?</em>: the screen's existing <em>?</em> button, drawn as a <em>?</em> in a circle, at the device
+      row's right end. Notes start hidden, and the shell remembers the choice. No note is exempt, the network-access
+      warning included. No mockup: built directly.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      The setup screen shows one <em>?</em>, in a circle, at the right end of the device row: a switch that shows or hides every note
+      the screen carries, each under the line it explains. The choice holds across platforms, screens and launches, and
+      starts hidden. The quit dialog's notes follow the same choice. The eight notes ruled out below are gone from every
+      platform.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONBRVP · UC-ONBOARD's reading rule <em>What explains a line waits behind a ?</em> (the owner, 2026-10-31,
+      E-ONBRVP.W13), which this WU replaces · the roadmap row <em>Help on request, on every screen beyond setup</em>, whose
+      pattern it changes · the <code>Help</code> component (T1).
+    </p>
+
+    <h2 id="shape">How it works</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  P[("notes-shown<br/>preference<br/>(shell config dir)")]
+  S["device row ⓘ<br/>show notes ⇄ hide notes"]
+  N["every note on setup<br/>(task, button, refusal, step)"]
+  D["quit dialog's notes"]
+  S -- "writes" --> P
+  P -- "read on open" --> S
+  S -- "shown / hidden" --> N
+  P -- "read on open" --> D
+      </pre>
+      <div class="caption">One preference, one switch. Each note keeps its place under the line it explains; only whether
+        it is drawn changes. The dialog has no switch of its own and reads the same preference.</div>
+    </div>
+
+    <h2 id="inventory">The 33 notes, ruled</h2>
+    <p data-c="inventory-lead">The test each note was judged by: it changes what the user does, or saves them when
+      something fails, and it does not repeat what the screen already says.</p>
+    <table data-c="inventory">
+      <tr><th>#</th><th>Where</th><th>Note</th><th>Ruling</th></tr>
+      <tr><td colspan="4"><strong>A task's why</strong> (<code>TaskStep</code>)</td></tr>
+      <tr><td>1</td><td>This machine · <em>Send ‹host›'s traffic to Trawler</em></td><td>its system proxy points at Trawler while Trawler runs</td><td><span class="badge approval">drop</span> repeats the title</td></tr>
+      <tr><td>2</td><td>Simulator · trust task</td><td>the Simulator keeps its own certificate store — ‹host›'s does not cover it</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>3</td><td>Simulator · route task</td><td>the Simulator follows ‹host›'s system proxy</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td colspan="4"><strong>A button's caption</strong> (<code>Action</code>)</td></tr>
+      <tr><td>4</td><td><em>allow devices on ‹network› to connect</em></td><td>other devices on ‹network› will be able to use this proxy and see captured traffic until Trawler quits</td><td><span class="badge auto">keep</span> under the switch like every note (no exception)</td></tr>
+      <tr><td>5</td><td><em>set up</em> (macOS, Windows)</td><td>one password prompt / one Windows approval — it does tasks 1 and 2</td><td><span class="badge auto">keep</span> warns of the prompt before the click</td></tr>
+      <tr><td>6</td><td><em>set up the emulator</em></td><td>no prompt — it does tasks 1 and 2 in every emulator running</td><td><span class="badge approval">drop</span> a prompt that does not come is no news</td></tr>
+      <tr><td>7</td><td><em>open ‹emulator›</em></td><td>It starts the emulator you used last. Once it runs, setting it up takes this place.</td><td><span class="badge approval">drop</span> the label names the emulator; the rest narrates the screen</td></tr>
+      <tr><td>8</td><td><em>trust in the Simulator</em></td><td>every Simulator running now; one created or erased later needs this again</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>9</td><td><em>install in the emulator</em></td><td>every emulator running now; one created or wiped later needs this again</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>10</td><td><em>stop routing through Trawler</em></td><td>the certificate stays trusted</td><td><span class="badge approval">drop</span> the label already says what it does</td></tr>
+      <tr><td>11</td><td><em>remove the certificate</em></td><td>the proxy stays set</td><td><span class="badge approval">drop</span> as 10</td></tr>
+      <tr><td colspan="4"><strong>A refusal's advice</strong> (<code>notDecrypting</code>)</td></tr>
+      <tr><td>12</td><td>macOS, Windows</td><td>Already did? A browser reads the system's store when it starts — restart it. Apps that pin their own certificate never decrypt.</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>13</td><td>Linux</td><td>Already did? Firefox and Chrome each keep their own store …</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td colspan="4"><strong>A step's note</strong> (<code>HelpPart</code> in <code>setup.ts</code>)</td></tr>
+      <tr><td>14</td><td>Windows · Save</td><td>Nothing arrives? … detection and a setup script outrank this proxy</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>15</td><td>Windows · PowerShell route</td><td>Apps already open may keep their old setting until restarted.</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>16</td><td>Linux · Save</td><td>Firefox and Chrome follow this proxy; curl and apt read HTTPS_PROXY</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>17</td><td>Another Ubuntu · terminal</td><td>Run it on that machine's desktop — over SSH it sets nothing.</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>18</td><td>macOS · the route's last step</td><td>On Ethernet, click Ethernet in place of Wi-Fi …</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>19</td><td>macOS · turning the proxy off (setup's undo, the quit dialog)</td><td>the same Ethernet note</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>20</td><td>Android phone, emulator · install (3 places)</td><td>Chrome trusts it; an app only if it opts in to user certificates</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>21</td><td>iPhone · install the profile</td><td>passcode on the way; where the profile hides; Not Verified is expected</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>22</td><td>iPhone · full trust</td><td>Installing does not trust it …</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>23</td><td>iPhone · remove the profile</td><td>The row reads VPN, DNS, &amp; Device Management on some devices.</td><td><span class="badge auto">keep</span> who removes it later may not have seen the install's note</td></tr>
+      <tr><td>24</td><td>iPhone · proxy values, on a Mac</td><td>Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad.</td><td><span class="badge approval">drop</span> an Apple tip, not Trawler's</td></tr>
+      <tr><td>25</td><td>Android · Wi-Fi proxy</td><td>makers move the menu; look under the network's Advanced options</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>26</td><td>Android · proxy values via the Wi-Fi page</td><td>The Wi-Fi page shows both: copy each there and paste it here.</td><td><span class="badge approval">drop</span> an instruction posing as a note; <em>here</em> is unclear</td></tr>
+      <tr><td>27</td><td>every device · certificate download</td><td>Doesn't load? same network, and the firewall lets Trawler accept connections</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>28</td><td>Android phone · certificate download</td><td>a blank page or Downloads means it downloaded; close Android's alert — plus 27</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>29</td><td>Emulator · no SDK found</td><td>adb not found? where Android Studio puts it; ANDROID_HOME</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>30</td><td>Emulator · manual proxy route</td><td>10.0.2.2 is the address every emulator reaches the machine it runs on by.</td><td><span class="badge approval">drop</span> trivia: the value is pasted, not understood</td></tr>
+      <tr><td>31</td><td>Emulator · <em>open it in the emulator</em></td><td>A new emulator's Chrome shows Welcome to Chrome first …</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>32</td><td>Simulator · trust command</td><td>simctl not found? sudo xcode-select …</td><td><span class="badge auto">keep</span></td></tr>
+      <tr><td>33</td><td>Simulator · erase (the way back)</td><td>It wipes everything in that Simulator …</td><td><span class="badge auto">keep</span></td></tr>
+    </table>
+    <p data-c="inventory-sum">25 kept, 8 dropped (1, 6, 7, 10, 11, 24, 26, 30). Each note's <em>topic</em> (<em>if nothing
+      arrives</em>, <em>a note on these steps</em> …) named its <em>?</em> to a screen reader and goes with it.</p>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Proposed</th><th>Ruling</th></tr>
+      <tr><td>Q1</td>
+        <td><strong>What is the switch?</strong><br>
+        <strong>A</strong> a bare text button reading <em>show notes</em>, then <em>hide notes</em>, pressed state
+        announced · <strong>B</strong> a <code>Checkbox</code> labelled <em>notes</em> · <strong>C</strong> a
+        <code>SegmentedControl</code>: <em>notes off · on</em></td>
+        <td>A. It sits in the device row beside a select, where a bare button is the row's quietest control, and it
+        needs no new component</td><td>the current <em>?</em> button (<code>IconButton</code>,
+        <code>glyph="help"</code>), its glyph drawn as a <em>?</em> in a circle</td></tr>
+      <tr><td>Q2</td>
+        <td><strong>Where is the choice remembered?</strong><br>
+        <strong>A</strong> the shell's config directory, beside the notices already dismissed there: a flag file, read
+        and written by two new shell commands · <strong>B</strong> the window's <code>localStorage</code>, which nothing
+        in the app uses yet</td>
+        <td>A. One home for the app's remembered choices, and the shell's command list is already tied to the app's by
+        a test</td><td>A</td></tr>
+      <tr><td>Q3</td>
+        <td><strong>Is the change recorded as a decision?</strong> It replaces the owner's rule of 2026-10-31 and sets
+        the pattern the other screens' epic (the roadmap row) will follow.<br>
+        <strong>A</strong> yes: DEC-66, <em>notes show together, on one switch</em>; UC-ONBOARD's row and the roadmap row
+        point to it · <strong>B</strong> no: UC-ONBOARD's row and the roadmap row are rewritten in place</td>
+        <td>A. A reversed owner rule with no record is the next reader's open question</td><td>A</td></tr>
+    </table>
+
+    <h2 id="design">Design</h2>
+    <p data-c="design">No design run: the owner ruled it out (2026-11-02, "no need mock up just build it"). The rendered
+      files the build touches are declared <code>undesigned</code> on the design note, each with that ruling and what the
+      edit did: <code>Help.tsx</code> becomes the drawn-or-not note, <code>IconButton.tsx</code>'s help glyph is drawn in a
+      circle, <code>TaskStep.tsx</code> and <code>manualSteps.tsx</code> draw their notes under the line, and
+      <code>Onboarding.tsx</code> and <code>ProxyCloseDialog.tsx</code> carry the switch and the choice.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>A reader checks…</th><th>…and sees</th></tr>
+      <tr><td>setup, any platform, first launch</td><td>no note, and one circled <em>?</em>, <em>show notes</em>, at the device row's right end</td></tr>
+      <tr><td><em>show notes</em></td><td>every kept note for that platform, each under its line; the button reads <em>hide notes</em></td></tr>
+      <tr><td>another platform, or a relaunch</td><td>the notes as last left</td></tr>
+      <tr><td>the quit dialog's manual steps on macOS, notes shown</td><td>the Ethernet note under its step; hidden otherwise</td></tr>
+      <tr><td>notes 1, 6, 7, 10, 11, 24, 26, 30</td><td>on no platform, in either state</td></tr>
+      <tr><td>UC-ONBOARD's reading rule</td><td>the switch, not the <em>?</em></td></tr>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="tests">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>e2e</td><td><code>ui/e2e/walkthrough/walkthrough.spec.ts</code></td><td>it opens the notes with the switch
+        instead of clicking each <em>?</em>. The onboarding e2e drives no note and stays as it is</td></tr>
+      <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>first open: no note and no <em>?</em>; the
+        switch shows every note and hides them again; it writes the preference, and a remount reads it back; switching
+        platform keeps it</td></tr>
+      <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>across every platform and state,
+        with notes shown: the kept notes present, the eight dropped ones absent; with notes hidden: none present</td></tr>
+      <tr><td>integration</td><td><code>ui/src/ProxyCloseDialog.test.tsx</code></td><td>the Ethernet note follows the
+        preference</td></tr>
+      <tr><td>unit</td><td><code>ui/src/components/Help.test.tsx</code> · <code>TaskStep.test.tsx</code> ·
+        <code>manualSteps.test.tsx</code></td><td>a note draws under its line when notes are shown and is absent
+        otherwise; no button</td></tr>
+      <tr><td>unit</td><td><code>ui/src/setup.test.ts</code></td><td>the dropped step notes absent from every guide;
+        the kept ones unchanged</td></tr>
+      <tr><td>unit</td><td>the preference module's test · <code>ui/src-tauri/src/setup.rs</code></td><td>read and
+        written through the shell; an unanswered read is <em>hidden</em>; the flag file set and cleared</td></tr>
+      <tr><td>unit</td><td><code>xtask/src/ui.rs</code></td><td>unchanged: its test already ties the shell's commands to
+        the app's, and fails if either side misses the two new ones</td></tr>
+    </table>
+
+    <h2 id="where">Where the changes land</h2>
+    <table data-c="where">
+      <tr><th>Where</th><th>Change</th></tr>
+      <tr><td><code>ui/src/components/Help.tsx</code> · <code>TaskStep.tsx</code> · <code>IconButton.tsx</code></td><td>the
+        note drawn or not by one shared flag; the <code>help</code> glyph retired if nothing else uses it</td></tr>
+      <tr><td><code>ui/src/Onboarding.tsx</code> · <code>manualSteps.tsx</code> · <code>ProxyCloseDialog.tsx</code></td><td>the
+        switch, the flag handed down, captions 6, 7, 10 and 11 removed</td></tr>
+      <tr><td><code>ui/src/setup.ts</code> · <code>verdicts.ts</code></td><td>notes 1, 24, 26 and 30 removed</td></tr>
+      <tr><td><code>ui/src/noticePreference.ts</code> · <code>ui/src-tauri/src/setup.rs</code> ·
+        <code>main.rs</code></td><td>the remembered choice (Q2)</td></tr>
+      <tr><td><code>docs/use-cases/web-ui.html</code> · <code>docs/backlog/roadmap.html</code> ·
+        <code>docs/decisions/</code></td><td>the reading rule, the roadmap row, DEC-66 (Q3)</td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan reopened with W21</td></tr>
+      <tr><td>2</td><td>the plan with your rulings</td></tr>
+      <tr><td>3</td><td>the remembered choice, the switch and the notes behind it, the eight drops, and their tests</td></tr>
+      <tr><td>4</td><td>UC-ONBOARD, the roadmap row, DEC-66</td></tr>
+      <tr><td>5</td><td>the result report</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

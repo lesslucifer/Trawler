@@ -12,7 +12,7 @@ export type { DurationUnit } from "./DurationText";
 export { Field } from "./Field";
 export type { FieldProps } from "./Field";
 export { FormRenderer } from "./FormRenderer";
-export { Help } from "./Help";
+export { Help, NotesShown } from "./Help";
 export { HexRenderer } from "./HexRenderer";
 export { IconButton } from "./IconButton";
 export type { GlyphName } from "./IconButton";

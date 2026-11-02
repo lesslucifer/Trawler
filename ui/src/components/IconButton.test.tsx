@@ -61,11 +61,12 @@ describe("IconButton", () => {
     expect(button.className).toContain("disabled:opacity-disabled");
   });
 
-  it("help is a ? that forwards whether its region is shown", () => {
-    render(<IconButton glyph="help" label="help: on Ethernet" expanded controls="note" onClick={() => {}} />);
+  it("help is a ? in a circle that forwards whether its region is shown", () => {
+    render(<IconButton glyph="help" label="hide notes" expanded controls="note" onClick={() => {}} />);
 
-    const button = screen.getByRole("button", { name: "help: on Ethernet" });
+    const button = screen.getByRole("button", { name: "hide notes" });
     expect(button).toHaveTextContent("?");
+    expect(button.querySelector("svg[data-glyph='help'] circle")).not.toBeNull();
     expect(button).toHaveAttribute("aria-expanded", "true");
     expect(button).toHaveAttribute("aria-controls", "note");
   });

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae823c69f34851f0dfadf42">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-66: notes show together, on one switch</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-66 — notes show together, on one switch</h1>
+      <p>What explains a line on the setup screen is a note, drawn under that line while the screen's one switch is on,
+        and absent while it is off. No line carries a control of its own for it. The switch starts off, and the shell
+        remembers the choice.</p>
+      <div class="meta">v1 · 2026-11-02 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W21</strong> from the
+        owner's rulings of 2026-11-02 · replaces the owner's rule of 2026-10-31 (E-ONBRVP.W13's R1: a <em>?</em> at the end of
+        each line) · UC-ONBOARD · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What went wrong</th><th>Finding</th></tr>
+      <tr><td>a <em>?</em> at the end of every line that something explained, 33 across the platforms</td><td>the
+        controls crowded the lines they sat on, and a reader who wanted the notes clicked each one</td><td>the owner,
+        2026-11-02</td></tr>
+      <tr><td>a <em>?</em> was cheap to add</td><td>eight notes explained nothing worth a click: a task's why that
+        repeats its title, a button's caption that repeats its label, trivia about a value the user only pastes</td><td>W21's
+        inventory</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The setup screen has one notes switch, the help glyph (a <em>?</em> in a circle) at the
+        right end of the device row. It reads <em>show notes</em>, then <em>hide notes</em>, and announces whether the
+        notes are shown. While it is on, every note on the screen is drawn under the line it explains. While it is off,
+        none is on the page. The choice starts off, holds across platforms, screens and launches, and the quit dialog's
+        notes follow it.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>A note is what explains a line and is not itself something to do: a task's why, a button's
+        caption, a refusal's <em>Already did?</em> advice, a step's note. What the user acts on stays on screen</td><td>the
+        owner's rule of 2026-10-31 on what recedes still stands; only how it comes back changes</td></tr>
+      <tr><td>2</td><td>No note is exempt from the switch, the warning that other devices can see captured traffic
+        included</td><td>the owner, 2026-11-02: one rule a reader can predict</td></tr>
+      <tr><td>3</td><td>The shell keeps the choice in its config directory, as it keeps dismissed notices; a choice the
+        shell cannot read is <em>off</em>, and one it cannot write still changes the screen</td><td>one home for the
+        app's remembered choices; the switch never fails the user's click</td></tr>
+      <tr><td>4</td><td>A note earns its place only if it changes what the user does, or helps when something fails,
+        and does not repeat what the screen says</td><td>a switch that reveals noise teaches the reader to leave it
+        off</td></tr>
+      <tr><td>5</td><td>The quit dialog has no switch: it draws its notes as setup's switch last left them</td><td>a modal
+        that asks one question carries no control unrelated to it</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>A <em>?</em> per line (W13's R1)</td><td>what this record replaces</td></tr>
+      <tr><td>A checkbox or an on/off segmented control</td><td>the owner kept the <em>?</em> button the screen already
+        had, drawn in a circle</td></tr>
+      <tr><td>The window's <code>localStorage</code></td><td>nothing in the app uses it; the shell already remembers
+        choices</td></tr>
+      <tr><td>Exempting the network-access warning or failure advice</td><td>the owner ruled no exceptions</td></tr>
+      <tr><td>Notes shown at first</td><td>the owner ruled hidden, as the screen's reading rule wants</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

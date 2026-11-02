@@ -540,6 +540,8 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             open_route,
             crate::setup::notice_dismissed,
             crate::setup::dismiss_notice,
+            crate::setup::notes_shown,
+            crate::setup::show_notes,
             confirm_reach,
             confirm_replace_proxy
         ],

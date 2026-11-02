@@ -8,7 +8,7 @@ import {
   type PlatformId,
 } from "./setup";
 import type { QuitPrompt } from "./closeConfirm";
-import { Button, Checkbox, Notice } from "./components/index";
+import { Button, Checkbox, Notice, NotesShown } from "./components/index";
 import { ModalShell } from "./ModalShell";
 import { GuideSteps, ManualFallback, TargetPicker } from "./manualSteps";
 
@@ -98,6 +98,7 @@ export function ProxyCloseDialog({
   onStop,
   onQuit,
   onCancel,
+  notesShown = false,
 }: {
   prompt: QuitPrompt;
   os: HostOs;
@@ -105,6 +106,7 @@ export function ProxyCloseDialog({
   onStop: () => Promise<void> | void;
   onQuit: (dontShowAgain: boolean) => void;
   onCancel: () => void;
+  notesShown?: boolean;
 }) {
   const answers = useRef<HTMLDivElement>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -157,6 +159,7 @@ export function ProxyCloseDialog({
   );
 
   return (
+    <NotesShown.Provider value={notesShown}>
     <ModalShell title={titleOf(prompt, host)} onCancel={onCancel} testId="proxy-close" mode={prompt.mode}>
       <p className="mb-3 font-ui text-body text-ink-mute">{stakeOf(prompt, host)}</p>
       {stopState === "running" && (
@@ -197,5 +200,6 @@ export function ProxyCloseDialog({
         )}
       </div>
     </ModalShell>
+    </NotesShown.Provider>
   );
 }

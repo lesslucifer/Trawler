@@ -24,7 +24,9 @@ import {
   CopyText,
   Disclosure,
   Help,
+  IconButton,
   Notice,
+  NotesShown,
   Select,
   StatusLine,
   TaskStep,
@@ -86,8 +88,6 @@ import {
   setUpOn,
   storesTrusted,
   simulatorTrustStatus,
-  removeCaNote,
-  stopRoutingNote,
   trafficReading,
   trafficStatus,
   trustedEmulators,
@@ -213,10 +213,6 @@ const OPEN_EMULATOR_NOTE: ActionNotes = {
   },
 };
 
-const OPEN_EMULATOR_CAPTION = "It starts the emulator you used last.";
-const OPEN_EMULATOR_THEN_SET_UP =
-  `${OPEN_EMULATOR_CAPTION} Once it runs, setting it up takes this place.`;
-
 // adb and su ask for nothing, so no note names a prompt (W17's Q3).
 const SET_UP_EMULATOR_NOTE: ActionNotes = {
   running: { tone: "pending", text: "setting up the emulator…" },
@@ -319,9 +315,6 @@ const ONE_ACT_CAPTION: Record<"macos" | "windows", string> = {
   macos: "one password prompt — it does tasks 1 and 2",
   windows: "one Windows approval — it does tasks 1 and 2",
 };
-
-const EMULATOR_ONE_ACT_CAPTION =
-  "no prompt — it does tasks 1 and 2 in every emulator running";
 
 const noAddress = (here: string, device: string) =>
   `${here} holds no network address a second device could reach it at. Join the network ${device} is on, then check again.`;
@@ -440,7 +433,7 @@ function ActionNote({
 
 // Fork D4: disabled in flight AND a progress line beside it — both halves or
 // neither, so a dead control is never the only signal. The caption says what
-// the button does, so it waits behind the button's ? (W13's R1).
+// the button does, so it is a note under the button (DEC-66).
 function Action({
   testId,
   label,
@@ -475,7 +468,7 @@ function Action({
       {caption === undefined ? (
         button
       ) : (
-        <Help topic="what this does" text={caption}>
+        <Help text={caption}>
           {button}
         </Help>
       )}
@@ -563,13 +556,13 @@ function GuideView({
   );
 }
 
-// A note is true of the steps and nothing to do, so it waits behind a ? at the
-// end of the last one (W13's R1).
+// A note is true of the steps and nothing to do, so it is drawn under the last
+// one while notes are shown (DEC-66).
 function withNotes(steps: GuideStep[], notes?: string[]): GuideStep[] {
   if (!notes?.length || steps.length === 0) return steps;
   return [
     ...steps.slice(0, -1),
-    [...steps[steps.length - 1], { help: notes.join(" "), topic: "a note on these steps" }],
+    [...steps[steps.length - 1], { help: notes.join(" ") }],
   ];
 }
 
@@ -1042,8 +1035,15 @@ export function useRouteMemory(
 export function Onboarding({
   state,
   dispatch,
+  notesShown = false,
+  onShowNotes = () => undefined,
   ...setup
-}: SetupProps & { state: OnbState; dispatch: (e: OnbEvent) => void }) {
+}: SetupProps & {
+  state: OnbState;
+  dispatch: (e: OnbEvent) => void;
+  notesShown?: boolean;
+  onShowNotes?: (shown: boolean) => void;
+}) {
   const [platform, setPlatform] = useState(() => opensOn(state));
   const choose = (id: PlatformId) => {
     setPlatform(id);
@@ -1051,6 +1051,7 @@ export function Onboarding({
   };
 
   return (
+    <NotesShown.Provider value={notesShown}>
     <div className="flex h-full flex-col overflow-auto">
       <div className="mx-auto flex w-full max-w-reading flex-col gap-6 py-8">
         <div data-testid="lead" className="px-4">
@@ -1072,6 +1073,13 @@ export function Onboarding({
             searchable={false}
             className="w-picker"
           />
+          <IconButton
+            glyph="help"
+            label={notesShown ? "hide notes" : "show notes"}
+            expanded={notesShown}
+            onClick={() => onShowNotes(!notesShown)}
+            className="ml-auto"
+          />
         </div>
 
         {platform === null ? (
@@ -1083,6 +1091,7 @@ export function Onboarding({
         <BackToFlows onBack={() => dispatch({ t: "exit" })} />
       </div>
     </div>
+    </NotesShown.Provider>
   );
 }
 
@@ -1424,7 +1433,7 @@ function PlatformSetup({
     ) : setup.notDecrypting === undefined ? (
       notDecryptingHere(deviceName(platform, os))
     ) : (
-      <Help topic="if you already did" text={setup.notDecrypting}>
+      <Help text={setup.notDecrypting}>
         {notDecryptingHere(deviceName(platform, os))}
       </Help>
     );
@@ -1569,9 +1578,6 @@ function PlatformSetup({
         <Action
           testId="open-emulator"
           label={start.label}
-          caption={
-            setUpLeads ? OPEN_EMULATOR_THEN_SET_UP : OPEN_EMULATOR_CAPTION
-          }
           action={openEmulator}
           note={OPEN_EMULATOR_NOTE}
           onClick={openEmulator.trigger ?? (() => undefined)}
@@ -1589,9 +1595,7 @@ function PlatformSetup({
         testId="set-up"
         label={`set up ${ownStore || adb ? deviceName(platform, os) : here}`}
         caption={
-          adb
-            ? EMULATOR_ONE_ACT_CAPTION
-            : ONE_ACT_CAPTION[os === "windows" ? "windows" : "macos"]
+          adb ? undefined : ONE_ACT_CAPTION[os === "windows" ? "windows" : "macos"]
         }
         action={setUp}
         note={adb ? SET_UP_EMULATOR_NOTE : setupNote(os)}
@@ -1648,7 +1652,6 @@ function PlatformSetup({
           <Action
             testId="unset-proxy"
             label="stop routing through Trawler"
-            caption={stopRoutingNote(trustDone)}
             action={unsetProxyAction}
             note={unsetProxyNote(os)}
             onClick={unsetProxyAction.trigger}
@@ -1723,7 +1726,6 @@ function PlatformSetup({
               <Action
                 testId="remove-ca"
                 label="remove the certificate"
-                caption={removeCaNote(routeDone)}
                 action={removeCa}
                 note={REMOVE_CA_NOTE}
                 onClick={removeHere}

@@ -68,7 +68,7 @@ export interface Walk {
   click(prefix: string): Promise<void>;
   closeGuide(task: number): Promise<void>;
   openGuide(task: number): Promise<void>;
-  openHelp(task: number): Promise<void>;
+  showNotes(): Promise<void>;
   dot(): Promise<void>;
   filter(text: string): Promise<void>;
   hit(opts?: { untrusted?: boolean }): Promise<void>;
@@ -242,7 +242,7 @@ function autoThis(host: Host): Chapter[] {
       id: "both-done",
       title: "Both done",
       act: reread({ trust: "trusted", proxy: OURS }),
-      expect: `no install route offered as work: task 1 keeps ${trustBack}${host === "macos" ? `, with "the proxy stays set" behind its ?` : ""}; task 2 "stop routing through Trawler", "the certificate stays trusted" behind its ?, and "do it by hand"; task 3's request is the one framed control, its browser and terminal under "other ways"`,
+      expect: `no install route offered as work: task 1 keeps ${trustBack}; task 2 "stop routing through Trawler", with nothing said of the certificate, and "do it by hand"; task 3's request is the one framed control, its browser and terminal under "other ways"`,
       findings: ["R13", "W12.E2", "W12.E3"],
       anchor: [task(2)],
     },
@@ -256,7 +256,7 @@ function autoThis(host: Host): Chapter[] {
               await w.click("remove the certificate");
               await w.recheck();
             },
-            expect: `task 1 reads not done again, its certificate steps open with ${trustRoute} the one framed control; task 2 stays done, "stop routing through Trawler" with no ? saying "the certificate stays trusted"`,
+            expect: `task 1 reads not done again, its certificate steps open with ${trustRoute} the one framed control; task 2 stays done, "stop routing through Trawler" with nothing said of the certificate`,
             findings: [],
             anchor: [task(1)],
           },
@@ -603,7 +603,7 @@ function androidSim(host: Host): Chapter[] {
         await w.script({ emulators: [{ name: EMULATOR, trust: "unreadable", proxy: "none" }] });
         await w.recheck();
       },
-      expect: `the layout before it ran, its buttons enabled and the opener gone: task 1's steps open on "send it to the emulator", the one framed control, then the path from Encryption & credentials, its ? after trawler-ca.cer; task 2 offers "route the emulator", bare`,
+      expect: `the layout before it ran, its buttons enabled and the opener gone: task 1's steps open on "send it to the emulator", the one framed control, then the path from Encryption & credentials, its note under trawler-ca.cer while notes are shown; task 2 offers "route the emulator", bare`,
       findings: ["W17.I5", "W17.S3", "W17.D1"],
       anchor: [button("send it to the emulator")],
     },
@@ -646,7 +646,7 @@ const CA_SHOWN: Record<
     findings: ["R23", "R24", "R27", "R28", "W18.E1", "W18.E2", "W18.W2", "W18.M1", "W18.N1"],
   },
   android: {
-    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.cer\", which downloads Trawler's certificate; then \"In Settings, search CA certificate, then tap\" CA certificate → CA certificate → Install anyway, \"then the trawler-ca file at the top of Recent.\", with its Android 15 recording, and no note outside a ?; its other way saves trawler-ca.cer. Task 4 is dimmed, \"after task 3\", with no code",
+    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.cer\", which downloads Trawler's certificate; then \"In Settings, search CA certificate, then tap\" CA certificate → CA certificate → Install anyway, \"then the trawler-ca file at the top of Recent.\", with its Android 15 recording, and no note while notes are hidden; its other way saves trawler-ca.cer. Task 4 is dimmed, \"after task 3\", with no code",
     findings: ["R25", "R27", "R28", "W19.W2", "W19.M1"],
   },
 };
@@ -698,8 +698,8 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
     chapters.push({
       id: "download-help",
       title: "What to check when the download fails",
-      act: (w) => w.openHelp(2),
-      expect: `under the certificate URL, its ? open: "Doesn't load? ${{ mac: "That Mac", windows: "That PC", ubuntu: "That machine" }[platform]} can't reach this one — check both are on the same network, and that ${DEVICE[host]}'s firewall lets Trawler accept incoming connections."`,
+      act: (w) => w.showNotes(),
+      expect: `notes shown: under the certificate URL, "Doesn't load? ${{ mac: "That Mac", windows: "That PC", ubuntu: "That machine" }[platform]} can't reach this one — check both are on the same network, and that ${DEVICE[host]}'s firewall lets Trawler accept incoming connections."`,
       findings: ["W13.R1"],
       anchor: [task(2)],
     });
@@ -709,9 +709,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       title: "That PC's proxy, by hand",
       act: async (w) => {
         await w.openGuide(3);
-        await w.openHelp(3);
+        await w.showNotes();
       },
-      expect: `task 3's four steps: Settings → Network & internet → Proxy on that PC, Manual proxy setup → Use a proxy server → Set up with its recording, Use a proxy server on with the server and port above, Save; under Save's ? "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy."; the reg command under other ways`,
+      expect: `task 3's four steps: Settings → Network & internet → Proxy on that PC, Manual proxy setup → Use a proxy server → Set up with its recording, Use a proxy server on with the server and port above, Save; under Save, its note "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy."; the reg command under other ways`,
       findings: ["W14.I2", "W14.N2"],
       anchor: [task(3)],
     });
@@ -721,9 +721,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
       title: "That machine's proxy, by hand",
       act: async (w) => {
         await w.openGuide(3);
-        await w.openHelp(3);
+        await w.showNotes();
       },
-      expect: `task 3's four steps: Settings → Network on that machine, Proxy → Network Proxy → Configuration → Manual with its recording, HTTP and HTTPS Proxy with the server and port above, Save; under Save's ? "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY."; the gsettings command under other ways, and no GNOME anywhere`,
+      expect: `task 3's four steps: Settings → Network on that machine, Proxy → Network Proxy → Configuration → Manual with its recording, HTTP and HTTPS Proxy with the server and port above, Save; under Save, its note "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY."; the gsettings command under other ways, and no GNOME anywhere`,
       findings: ["W15.I2", "W15.N2"],
       anchor: [task(3)],
     });
@@ -734,9 +734,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         title: "That Mac's proxy, by hand",
         act: async (w) => {
           await w.openGuide(3);
-          await w.openHelp(3);
+          await w.showNotes();
         },
-        expect: `task 3's four steps: System Settings → Network on that Mac, Wi-Fi → Details… → Proxies with its recording, both proxies on with the server and port above, OK; the Ethernet hint under its ?; the networksetup command under other ways`,
+        expect: `task 3's four steps: System Settings → Network on that Mac, Wi-Fi → Details… → Proxies with its recording, both proxies on with the server and port above, OK; the Ethernet note under the last step; the networksetup command under other ways`,
         findings: ["W13.I2", "W13.R1"],
         anchor: [task(3)],
       },
@@ -745,9 +745,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
     chapters.push(
       {
         id: "certificate-help",
-        title: "What the certificate's steps explain on request",
-        act: (w) => w.openHelp(2),
-        expect: `task 2's ? open: the download's "Doesn't load? …"; the install's "It asks for your passcode on the way. Not at the top of Settings? General → VPN & Device Management → Trawler Proxy CA (VPN, DNS, & Device Management on some devices). iOS marks the profile Not Verified: it is yours, not signed by a company."; the trust switch's "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private."`,
+        title: "What the certificate's steps explain, notes shown",
+        act: (w) => w.showNotes(),
+        expect: `task 2's notes: the download's "Doesn't load? …"; the install's "It asks for your passcode on the way. Not at the top of Settings? General → VPN & Device Management → Trawler Proxy CA (VPN, DNS, & Device Management on some devices). iOS marks the profile Not Verified: it is yours, not signed by a company."; the trust switch's "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private."`,
         findings: ["W18.W3", "W18.W4", "W18.N4"],
         anchor: [task(2)],
       },
@@ -756,9 +756,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         title: "The iPhone's proxy, by hand",
         act: async (w) => {
           await w.openGuide(3);
-          await w.openHelp(3);
+          await w.showNotes();
         },
-        expect: `task 3's two steps as path parts: In Settings, tap Wi-Fi then ⓘ by the network it is on, then Configure Proxy → Manual; Server and Port with the values above, then Save${host === "macos" ? `; under its ? "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad."` : ", with no ?"}`,
+        expect: `task 3's two steps as path parts: In Settings, tap Wi-Fi then ⓘ by the network it is on, then Configure Proxy → Manual; Server and Port with the values above, then Save, with no note under it`,
         findings: ["W18.W1", "W18.I1"],
         anchor: [task(3)],
       },
@@ -767,9 +767,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
     chapters.push(
       {
         id: "certificate-help",
-        title: "What the certificate's steps explain on request",
-        act: (w) => w.openHelp(2),
-        expect: `task 2's ? open: the download's "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that. Doesn't load? …"; the install's "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config."`,
+        title: "What the certificate's steps explain, notes shown",
+        act: (w) => w.showNotes(),
+        expect: `task 2's notes: the download's "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that. Doesn't load? …"; the install's "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config."`,
         findings: ["W19.W5", "W19.W6"],
         anchor: [task(2)],
       },
@@ -778,9 +778,9 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         title: "The Android device's proxy, from the Wi-Fi page",
         act: async (w) => {
           await w.openGuide(3);
-          await w.openHelp(3);
+          await w.showNotes();
         },
-        expect: `task 3's two steps as path parts: "Scan with the camera, or open" the Wi-Fi page's /android-wifi URL, its code bare, "and tap" Open Wi-Fi settings, then ⚙ by the network it is on, then ✎ → Advanced options → Proxy → Manual, with its Android 15 recording and the makers' ?; then Proxy hostname and Proxy port with the values above, then Save, its ? "The Wi-Fi page shows both: copy each there and paste it here."; the Settings path from Network & internet → Internet under other ways. Task 2's code stays the one framed control`,
+        expect: `task 3's two steps as path parts: "Scan with the camera, or open" the Wi-Fi page's /android-wifi URL, its code bare, "and tap" Open Wi-Fi settings, then ⚙ by the network it is on, then ✎ → Advanced options → Proxy → Manual, with its Android 15 recording and the makers' note; then Proxy hostname and Proxy port with the values above, then Save, with no note; the Settings path from Network & internet → Internet under other ways. Task 2's code stays the one framed control`,
         findings: ["W19.W1", "W19.W3", "W19.W4", "W19.I1", "W19.M1"],
         anchor: [task(3)],
       },

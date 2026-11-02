@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import { NotesShown } from "./Help";
 import { TaskStep } from "./TaskStep";
 
 describe("TaskStep", () => {
@@ -10,17 +11,18 @@ describe("TaskStep", () => {
     expect(screen.getByText("Send this Mac's traffic to Trawler")).toBeInTheDocument();
   });
 
-  it("keeps why the task matters behind a ? on its title, shown only when asked", () => {
-    const { rerender } = render(
-      <TaskStep n={2} title="Send this Mac's traffic to Trawler" help="its system proxy points at Trawler while Trawler runs" />,
+  it("draws why the task matters under its title only while notes are shown", () => {
+    const why = "the Simulator follows this Mac's system proxy";
+    const { rerender } = render(<TaskStep n={2} title="Send this Mac's traffic to Trawler" help={why} />);
+    expect(screen.queryByText(why)).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+
+    rerender(
+      <NotesShown.Provider value={true}>
+        <TaskStep n={2} title="Send this Mac's traffic to Trawler" help={why} />
+      </NotesShown.Provider>,
     );
-    expect(screen.queryByText("its system proxy points at Trawler while Trawler runs")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "help: why this step" }));
-    expect(screen.getByText("its system proxy points at Trawler while Trawler runs")).toBeInTheDocument();
-
-    rerender(<TaskStep n={2} title="Send this Mac's traffic to Trawler" />);
-    expect(screen.queryByRole("button", { name: "help: why this step" })).toBeNull();
+    expect(screen.getByText(why)).toBeInTheDocument();
   });
 
   it("renders the state it is handed as a StatusLine, glyph and all", () => {

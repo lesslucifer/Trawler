@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import { Onboarding, useRouteMemory } from "./Onboarding";
+import { useNotesShown } from "./noticePreference";
 import { COPY, type OnbState } from "./onboardingMachine";
 import * as setup from "./setup";
 import { PLATFORM_IDS, type PlatformId } from "./setup";
@@ -77,15 +78,20 @@ const arriving: Traffic = {
 
 type Props = Partial<Parameters<typeof Onboarding>[0]>;
 
+const remembered = vi.fn(async () => false) as never;
+
 // App holds what the shell last did to the proxy (S5); the host holds it the same way.
 function Host(props: Props) {
   const [routeAct, onRouteAct] = useRouteMemory(
     props.proxy?.status ?? "unknown",
   );
+  const [notesShown, onShowNotes] = useNotesShown(remembered);
   return (
     <Onboarding
       state={onboarding}
       dispatch={vi.fn()}
+      notesShown={notesShown}
+      onShowNotes={onShowNotes}
       os="macos"
       proxyAddr={ADDR}
       onRemoveCa={vi.fn(async () => {})}
@@ -114,12 +120,12 @@ const MANUAL = "do it by hand";
 const zone = (id: string) => screen.queryByTestId(id);
 const task = (n: number) => screen.getByTestId(`task-${n}`);
 
-// What explains a line waits behind its ? (W13's R1); a test that reads it
-// asks for it first, as the reader does.
-const openHelp = (scope: HTMLElement = document.body) =>
-  scope
-    .querySelectorAll<HTMLButtonElement>('button[aria-label^="help:"][aria-expanded="false"]')
-    .forEach((button) => fireEvent.click(button));
+// What explains a line is drawn while the notes are shown (DEC-66); a test that
+// reads it shows them first, as the reader does.
+const showNotes = () => {
+  const show = screen.queryByRole("button", { name: "show notes" });
+  if (show) fireEvent.click(show);
+};
 const helpText = (scope: HTMLElement = document.body) =>
   [...scope.querySelectorAll("[data-help]")].map((panel) => panel.textContent);
 const picker = () => screen.getByRole("button", { name: QUESTION });
@@ -395,7 +401,7 @@ describe("this machine — three tasks, and one button that does two of them", (
       screen.getByRole("button", { name: "set up this Mac" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("one password prompt — it does tasks 1 and 2")).toBeNull();
-    openHelp(screen.getByTestId("one-act"));
+    showNotes();
     expect(
       screen.getByText("one password prompt — it does tasks 1 and 2"),
     ).toBeInTheDocument();
@@ -488,13 +494,11 @@ describe("this machine — three tasks, and one button that does two of them", (
     ).toBeDisabled();
   });
 
-  it("says only what the reversal leaves behind, and keeps the steps for that in step 1 (W12's E3)", () => {
+  it("says nothing the reversal leaves behind, and keeps the steps for that in step 1 (W12's E3, W21)", () => {
     draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
-    openHelp(task(2));
+    showNotes();
 
-    expect(
-      within(task(2)).getByText("the certificate stays trusted"),
-    ).toBeInTheDocument();
+    expect(task(2)).not.toHaveTextContent("the certificate stays trusted");
     fireEvent.click(within(task(1)).getByText("do it by hand"));
     expect(
       within(task(1))
@@ -659,13 +663,11 @@ describe("a trusted certificate is removed by its own button", () => {
     expect(guideOpen(1, "do it by hand")).toBe(false);
   });
 
-  it("says only what the removal leaves behind", () => {
+  it("says nothing the removal leaves behind (W21)", () => {
     draw({ trustProbe: "trusted", proxy: { status: "ours", address: null } });
-    openHelp(task(1));
+    showNotes();
 
-    expect(
-      within(task(1)).getByText("the proxy stays set"),
-    ).toBeInTheDocument();
+    expect(task(1)).not.toHaveTextContent("the proxy stays set");
   });
 
   it.each(["absent", "installed", "unknown"] as const)(
@@ -805,8 +807,7 @@ describe("each task holds its own route, under the one button", () => {
     fireEvent.click(within(task(1)).getByText(MANUAL));
 
     fireEvent.click(within(task(2)).getByText(MANUAL));
-    openHelp(task(1));
-    openHelp(task(2));
+    showNotes();
 
     expect(helpText(task(1))).toEqual([]);
     expect(
@@ -838,7 +839,7 @@ describe("each task holds its own route, under the one button", () => {
     expect(
       chrome.compareDocumentPosition(system) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    openHelp(task(1));
+    showNotes();
     expect(helpText(task(1))).toEqual([]);
     expect(within(task(1)).getByText("other ways")).toBeInTheDocument();
     expect(within(task(1)).getAllByText("For Chrome, run:")[0]).toBeInTheDocument();
@@ -855,7 +856,7 @@ describe("each task holds its own route, under the one button", () => {
     expect(
       within(oneAct).getByRole("button", { name: "set up this Mac" }),
     ).toBeInTheDocument();
-    openHelp(oneAct);
+    showNotes();
     expect(oneAct).toHaveTextContent(
       "one password prompt — it does tasks 1 and 2",
     );
@@ -1000,7 +1001,7 @@ describe("a failed action opens the route its note points at (R16)", () => {
     const note = await screen.findByText(
       "setting up failed — do it by hand below.",
     );
-    openHelp(screen.getByTestId("one-act"));
+    showNotes();
     const line = screen.getByText(
       "one password prompt — it does tasks 1 and 2",
     );
@@ -1431,7 +1432,7 @@ describe("the iOS Simulator leads with what the shell can do (W16)", () => {
     });
 
     expect(framed()).toEqual(["trust in the Simulator"]);
-    openHelp(task(1));
+    showNotes();
     expect(helpText(task(1))).toContain(
       "It trusts Trawler's certificate in every Simulator running now. Each keeps its own store: one you create or erase later needs this again.",
     );
@@ -1784,7 +1785,7 @@ describe("a phone, before the network is allowed", () => {
   it("states one consequence behind the button's ?, and leaves the rest to the confirm dialog", () => {
     phone();
     expect(task(1)).not.toHaveTextContent("other devices on Wi-Fi");
-    openHelp(task(1));
+    showNotes();
 
     expect(task(1)).toHaveTextContent(
       "other devices on Wi-Fi will be able to use this proxy and see captured traffic until Trawler quits",
@@ -1901,7 +1902,7 @@ describe("a phone, once it may connect", () => {
 
     expect(screen.queryByText("do it by hand")).toBeNull();
     expect(task(2)).toHaveTextContent(
-      /In Settings, tap Profile Downloaded/,
+      /In Settings, tap\s*Profile Downloaded/,
     );
   });
 
@@ -2325,8 +2326,9 @@ describe("another device, where this machine's own traffic may be arriving too",
     draw({ reach: ARMED, deviceMark: MARK });
     pick("Another Mac");
 
+    showNotes();
     for (const n of [1, 2, 3, 4])
-      expect(within(task(n)).queryByRole("button", { name: "help: why this step" })).toBeNull();
+      expect(task(n).querySelector(':scope > div > p:first-child [data-testid="help"]')).toBeNull();
     expect(task(4)).toHaveTextContent("Make a request from that Mac");
   });
 
@@ -2359,7 +2361,8 @@ describe("another device, where this machine's own traffic may be arriving too",
     expect(within(task(2)).getByTestId("step-media")).toBeInTheDocument();
     expect(within(task(3)).getByTestId("step-media")).toBeInTheDocument();
     expect(within(task(3)).getByText("other ways").closest("details")).not.toHaveAttribute("open");
-    expect(screen.queryByRole("button", { name: "help: a note on these steps", hidden: true })).toBeNull();
+    showNotes();
+    expect(helpText()).not.toContainEqual(expect.stringMatching(/^On Ethernet/));
   });
 
   it("sets up an Android device on a core that predates the Wi-Fi page, by the Settings path", () => {
@@ -2367,7 +2370,7 @@ describe("another device, where this machine's own traffic may be arriving too",
     pick("Android device");
 
     expect(within(task(3)).queryByRole("img", { name: "the Wi-Fi page, as a code to scan", hidden: true })).toBeNull();
-    expect(task(3)).toHaveTextContent("In Settings, tap Network & internet → Internet");
+    expect(task(3)).toHaveTextContent(/In Settings, tap\s*Network & internet → Internet/);
     expect(within(task(2)).getByRole("img", { name: "the certificate URL, as a code to scan" })).toBeInTheDocument();
   });
 
@@ -2640,7 +2643,7 @@ describe("the address is an offer, not a menu", () => {
         name: "allow devices on Ethernet to connect",
       }),
     ).toBeInTheDocument();
-    openHelp(task(1));
+    showNotes();
     expect(task(1)).toHaveTextContent(
       "other devices on Ethernet will be able to use this proxy",
     );
@@ -2750,7 +2753,7 @@ describe("the end", () => {
       "something reached Trawler and did not decrypt — this Mac does not trust Trawler's certificate yet. The steps below install it.",
     );
     expect(within(task(1)).getByTestId("traffic-remedy")).not.toHaveTextContent("Already did?");
-    openHelp(within(task(1)).getByTestId("traffic-remedy"));
+    showNotes();
     expect(within(task(1)).getByTestId("traffic-remedy")).toHaveTextContent(
       "Already did? A browser reads the system's store when it starts — restart it.",
     );
@@ -2959,7 +2962,7 @@ describe("another Ubuntu machine", () => {
 
     expect(task(2)).toHaveTextContent("not working — nothing decrypted");
     const remedy = within(task(2)).getByTestId("traffic-remedy");
-    openHelp(remedy);
+    showNotes();
     expect(remedy).toHaveTextContent(
       "Already did? Firefox and Chrome each keep their own store — install it in the browser you opened the address in, then restart it.",
     );
@@ -3133,7 +3136,7 @@ describe("a command is a block, not a phrase inside a sentence", () => {
     expect(steps.map((step) => step.textContent).join(" ")).not.toContain(
       "An app trusts it",
     );
-    openHelp(task(1));
+    showNotes();
     expect(helpText(task(1))).toContain(android);
   });
 
@@ -3996,8 +3999,8 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     expect(task(1)).toHaveTextContent("not done — no emulator running");
     expect(framed()).toEqual(["open Pixel 7 API 35"]);
     expect(within(zone("one-act")!).getByRole("button", { name: "open Pixel 7 API 35" })).toBeEnabled();
-    openHelp(zone("one-act")!);
-    expect(helpText(zone("one-act")!).join(" ")).toMatch(/Once it runs, setting it up takes this place/);
+    showNotes();
+    expect(helpText(zone("one-act")!)).toEqual([]);
     for (const name of ["set up the emulator", "install in the emulator", "route the emulator"])
       expect(screen.queryByRole("button", { name })).toBeNull();
     expect(guideOpen(1, MANUAL)).toBe(false);
@@ -4039,7 +4042,7 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     emulator({ emulators: [], androidSdk: { ...SDK, avd: { ...SDK.avd, playStore: true } } });
 
     expect(framed()).toEqual(["open Pixel 7 API 35"]);
-    openHelp(zone("one-act")!);
+    showNotes();
     expect(helpText(zone("one-act")!).join(" ")).not.toMatch(/setting it up/);
     expect(screen.queryByRole("button", { name: "set up the emulator" })).toBeNull();
     expect(screen.getByRole("button", { name: "send it to the emulator" })).toBeDisabled();
@@ -4054,7 +4057,7 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     expect(task(1)).not.toHaveTextContent("no emulator running");
     for (const name of ["set up the emulator", "install in the emulator", "route the emulator"])
       expect(screen.queryByRole("button", { name })).toBeNull();
-    openHelp(task(1));
+    showNotes();
     expect(helpText(task(1)).join(" ")).toMatch(/adb not found\?/);
   });
 
@@ -4067,8 +4070,8 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
 
     expect(framed()).toEqual(["set up the emulator"]);
     expect(within(zone("one-act")!).getByRole("button", { name: "set up the emulator" })).toBeInTheDocument();
-    openHelp(zone("one-act")!);
-    expect(helpText(zone("one-act")!)).toContain("no prompt — it does tasks 1 and 2 in every emulator running");
+    showNotes();
+    expect(helpText(zone("one-act")!)).toEqual([]);
     expect(guideOpen(1, MANUAL)).toBe(false);
     expect(guideOpen(2, MANUAL)).toBe(false);
 
@@ -4087,7 +4090,7 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
     expect(framed()).toEqual(["install in the emulator"]);
     expect(screen.queryByRole("button", { name: "route the emulator" })).toBeNull();
     expect(within(task(2)).getByRole("button", { name: "stop routing the emulator" })).toBeInTheDocument();
-    openHelp(task(1));
+    showNotes();
     expect(helpText(task(1))).toContain(
       "It installs Trawler's certificate in every emulator running now. Each keeps its own store: one you create or wipe later needs this again.",
     );
@@ -4186,7 +4189,7 @@ describe("the Android emulator leads with what the shell can do (W17)", () => {
 
     expect(framed()).toEqual(["open it in the emulator"]);
     expect(zone("check-address")).toHaveTextContent("https://example.com/?trawler-check=b6qv");
-    openHelp(zone("open-on-device")!);
+    showNotes();
     expect(helpText(zone("open-on-device")!).join(" ")).toMatch(/Use without an account/);
 
     fireEvent.click(screen.getByRole("button", { name: "open it in the emulator" }));
@@ -4268,16 +4271,81 @@ describe("a phone's codes lead in turn", () => {
     expect(within(task(4)).getByTestId("scan-code")).toBeInTheDocument();
   });
 
-  it.each([
-    ["macos", true],
-    ["windows", false],
-    ["linux", false],
-  ] as const)("on %s, Universal Clipboard is offered by the values: %s (I1)", (os, offered) => {
+  it.each(["macos", "windows", "linux"] as const)("on %s, the values carry no Universal Clipboard note (W21)", (os) => {
     draw({ os, reach: ARMED });
     pick("iPhone or iPad");
+    showNotes();
 
-    expect(
-      within(task(3)).queryByRole("button", { name: "help: copying the values" }) !== null,
-    ).toBe(offered);
+    expect(task(3)).not.toHaveTextContent("Same Apple ID");
+  });
+});
+
+// W21 (DEC-66): one switch on the device row draws every note or none, and the
+// shell remembers which.
+describe("the notes switch", () => {
+  const ETHERNET = /^On Ethernet, click Ethernet/;
+  const shell = (remembered: boolean) =>
+    vi.fn(async (command: string) => (command === "notes_shown" ? remembered : undefined));
+
+  function Remembering({ call }: { call: ReturnType<typeof shell> }) {
+    const [notesShown, onShowNotes] = useNotesShown(call as never);
+    return <Host notesShown={notesShown} onShowNotes={onShowNotes} />;
+  }
+
+  const openRoute = () => fireEvent.click(within(task(2)).getByText(MANUAL));
+
+  it("starts hidden, as the one ? on the screen, at the device row's end", () => {
+    draw();
+    openRoute();
+
+    const toggle = screen.getByRole("button", { name: "show notes" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(zone("platform")!.lastElementChild).toContainElement(toggle);
+    expect(document.querySelectorAll('svg[data-glyph="help"]')).toHaveLength(1);
+    expect(helpText()).toEqual([]);
+  });
+
+  it("draws every note under its line, and takes them all away again", () => {
+    draw();
+    openRoute();
+
+    fireEvent.click(screen.getByRole("button", { name: "show notes" }));
+    expect(helpText(task(2))).toContainEqual(expect.stringMatching(ETHERNET));
+    expect(screen.getByRole("button", { name: "hide notes" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "hide notes" }));
+    expect(helpText()).toEqual([]);
+  });
+
+  it("keeps the choice across platforms", () => {
+    draw();
+    fireEvent.click(screen.getByRole("button", { name: "show notes" }));
+    pick("iOS Simulator");
+
+    expect(screen.getByRole("button", { name: "hide notes" })).toBeInTheDocument();
+    expect(helpText()).toContainEqual(expect.stringMatching(/keeps its own certificate store/));
+  });
+
+  it("tells the shell each choice", async () => {
+    const call = shell(false);
+    render(<Remembering call={call} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "show notes" }));
+    fireEvent.click(screen.getByRole("button", { name: "hide notes" }));
+
+    await waitFor(() =>
+      expect(call.mock.calls.filter(([command]) => command === "show_notes")).toEqual([
+        ["show_notes", { shown: true }],
+        ["show_notes", { shown: false }],
+      ]),
+    );
+  });
+
+  it("opens on the choice the shell remembers", async () => {
+    render(<Remembering call={shell(true)} />);
+    openRoute();
+
+    await waitFor(() => expect(helpText(task(2))).toContainEqual(expect.stringMatching(ETHERNET)));
+    expect(screen.getByRole("button", { name: "hide notes" })).toBeInTheDocument();
   });
 });
