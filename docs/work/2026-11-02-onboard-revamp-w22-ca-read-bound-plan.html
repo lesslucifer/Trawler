@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae852ec9f34851f0dfadf56" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W22 plan: setup's certificate read bounded</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W22 — setup's certificate read bounded</h1>
+      <p>The epic review's round 5 fix, given the Working Unit it should have had. It renders <code>App.tsx</code>, and UI
+      work lands through a WU, never as a standalone commit.</p>
+      <div class="meta">v1 · 2026-11-02 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W22</span> · branch <code>wu/onboard-revamp/ca-fetch-bound</code> · <a href="../.archive/2026-09-27-onboard-revamp-plan.html">epic plan</a> · base <code>27a0ca8e</code> · built as <code>1fea8b85</code></div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="why-a-wu">
+      <strong>Why this is a WU, after the fact.</strong> The fix landed at the first close as the standalone commit
+      <code>1fea8b85</code>. The push check refuses a standalone commit that renders a screen file, whatever it carries.
+      The owner ruled to rebuild the history (2026-11-02). The commit keeps its hash and becomes this WU's code. W21,
+      which was built on top of it, merges after it unchanged.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      A core that accepts the request for its certificate and never answers holds none of this machine's readings: past
+      <code>CA_READ_PATIENCE_MS</code>, the parts that needed the certificate read nothing, as a refused fetch already
+      does, and the proxy reading and the rest land.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONBRVP · UC-ONBOARD's This machine status rows · DEC-62 (this machine is read again whenever its answer can
+      change) · the epic review's round 5 important, verified on <code>27a0ca8e</code>.
+    </p>
+
+    <h2 id="shape">What changes</h2>
+    <table data-c="shape">
+      <tr><th></th><th>Before</th><th>After</th></tr>
+      <tr><td>setup's machine read</td><td>waits for <code>/ca.pem</code> with no bound, so a core that never answers
+        holds the proxy and trust readings, and the spinner stays</td><td>the fetch is bounded at
+        <code>CA_READ_PATIENCE_MS</code>, and past it the parts that need the certificate read nothing</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>State</th><th>Expected</th></tr>
+      <tr><td>the core never answers <code>/ca.pem</code></td><td>past the patience, this machine's proxy reads as the
+        shell reports it, and the certificate task stops checking</td></tr>
+      <tr><td>the core answers in time</td><td>unchanged</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>integration</td><td><code>App.test.tsx</code> <em>a certificate the core never serves holds no reading past
+        its patience</em>, red before the change</td></tr>
+      <tr><td>unit</td><td>the same test is the only one: the change is App's wiring, with no unit of its own</td></tr>
+      <tr><td>e2e</td><td>waived: a core that holds a request open is not something the e2e's real core does</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

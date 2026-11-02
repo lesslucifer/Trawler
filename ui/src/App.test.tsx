@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import App, { LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
+import App, { CA_READ_PATIENCE_MS, LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
 import { ApiError, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
@@ -1188,6 +1188,23 @@ describe("the watch", () => {
 
     await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
     expect(screen.getByTestId("task-2")).not.toHaveTextContent("checking");
+  });
+
+  it("a certificate the core never serves holds no reading past its patience", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onMacHost();
+    let proxy: { status: string; address: string | null } = { status: "ours", address: "127.0.0.1:7420" };
+    vi.mocked(invoke).mockImplementation(async (name: string) => (name === "proxy_in_use" ? proxy : undefined));
+    const { api } = mockApi(() => []);
+    vi.mocked(api.caCertPem).mockImplementation(() => new Promise<string>(() => {}));
+    render(<App api={api} initialState={ONBOARDING} />);
+    await act(async () => vi.advanceTimersByTime(CA_READ_PATIENCE_MS));
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("done — this Mac routes through Trawler"));
+
+    proxy = { status: "none", address: null };
+    await act(async () => vi.advanceTimersByTime(WATCH_MS + CA_READ_PATIENCE_MS));
+
+    await waitFor(() => expect(screen.getByTestId("task-2")).toHaveTextContent("not done — the system proxy is off"));
   });
 
   it("pauses while the window is hidden, and reads at once when it shows again", async () => {
