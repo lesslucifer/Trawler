@@ -1,0 +1,7 @@
+schema: doc/v1
+branch: 929fe46b
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "The row W21 opened, the e2e's emulator journey reading whether this host runs an emulator, closed: the launcher gives the run an SDK of its own."
