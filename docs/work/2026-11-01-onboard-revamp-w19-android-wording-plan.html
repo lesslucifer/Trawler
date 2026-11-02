@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6ae74c009f34851f0dfadeef" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6ae74c009f34851f0dfadeef" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,21 +12,27 @@
       <p>W12's pattern and W13's help rule on the Android device. W18 already made its codes lead in turn, so what is
       left is its words. Each Settings step becomes path parts in Android 15's own labels, including the installer's
       second tap. What explains moves behind the <em>?</em> of the step it explains, the certificate gains its way back,
-      and the steps that a code cannot reach get recordings.</p>
-      <div class="meta">v1 · 2026-11-01 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W19</span> · branch <code>wu/onboard-revamp/android-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W10</div>
+      and the steps that a code cannot reach get recordings. The Wi-Fi proxy starts from a page the core serves, whose
+      button opens Android's Wi-Fi settings (Q2 B).</p>
+      <div class="meta">v2 · 2026-11-02 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W19</span> · branch <code>wu/onboard-revamp/android-wording</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W12 · E-ONBRVP.W10</div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Waiting for your rulings</strong> on every finding, the four hand-ins and Q1–Q4. I found the findings by
-      reading the <code>macos-</code>, <code>windows-</code> and <code>linux-android</code> reels, filmed again at the
-      epic tip (<code>ef9fa6c4</code>), and the source of the Android device's guide. I also tried each step on a
-      throwaway Android 15 emulator (Google APIs image, API 35). It ran against a throwaway CA built with the same
-      subject as <code>src/ca.rs</code>'s, served as <code>application/x-x509-ca-cert</code> from spare ports, and a local
-      HTTPS server signed by that CA. The emulator, its AVD, the CA and the servers are all deleted. Your
-      <code>Pixel_7_API_35</code> AVD and your running Trawler were not touched. No phone is attached to this Mac, so
-      nothing below was tried on a device.
+      <strong>Every point is ruled</strong> (the owner, 2026-11-02: "1. A 2. B 3. A 4. none — let's build it"). Q1 and Q3
+      are A, Q4 is none, and every finding, C1, M1 and the four hand-ins are taken as proposed. Q2 is <strong>B</strong>:
+      the core serves a page whose button opens the Wi-Fi settings, built here against the epic's core non-goal, with
+      <a href="../decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html">DEC-65</a> (see
+      <a href="#wifi-page">The Wi-Fi page</a>). One change to a ruled point: W6's alert line moves to step 1's
+      <em>?</em>, because a step holds one <em>?</em> and step 2's is the emulator's shared words (W5). There is no design
+      run, so each rendered file under <code>ui/src/</code> the build touches is declared <code>undesigned</code> on the
+      design note, with that ruling as its reason. I found the findings by reading the <code>macos-</code>,
+      <code>windows-</code> and <code>linux-android</code> reels, filmed again at the epic tip (<code>ef9fa6c4</code>), and
+      the source of the Android device's guide, and I tried each step on a throwaway Android 15 emulator (Google APIs
+      image, API 35) against a throwaway CA and local servers on spare ports, all deleted. Your <code>Pixel_7_API_35</code>
+      AVD and your running Trawler were not touched. No phone is attached to this Mac, so nothing below was tried on a
+      device.
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -34,7 +40,9 @@
       On the Android device, every Settings step is path parts in Android 15's own labels, naming each tap the screen
       asks for, and the steps no code can reach carry a recording. The certificate task has its way back. What explains
       shows only on request, behind the <em>?</em> of the step it explains (W13's R1). W18's rule still holds: the next
-      code is the one framed control. A test holds each rule.
+      code is the one framed control. The Wi-Fi proxy starts from a page the core serves at the reach address, reached
+      by a code: it names the proxy's hostname and port, and its button opens Android's Wi-Fi settings. A test holds each
+      rule.
     </p>
 
     <h2 id="mapping">Mapping</h2>
@@ -42,7 +50,8 @@
       E-ONBRVP · epic W19 block · UC-ONBOARD: Android's guides · the emphasis rule W12 set (one framed control) · help on
       request (W13's R1) · path parts for another app's controls (W12's D2) · W2's scannable code (F28, DEC-57), led in
       turn by W18 (its Q1 A) · W10's N1, W17's user-CA note and W18's arrow-text follow-up, handed here · the epic's Q11
-      (interactive first, media as the fallback) · no core change.
+      (interactive first, media as the fallback) · one core change, the Wi-Fi page, by the owner's Q2 B against the
+      epic's core non-goal (DEC-65, under DEC-55's reach).
     </p>
 
     <h2 id="today">What the Android device shows today</h2>
@@ -138,32 +147,32 @@ flowchart TB
         <td>Each becomes path parts in Android 15's labels. The Wi-Fi route is <em>In Settings, tap</em>
         <code>Network &amp; internet</code> → <code>Internet</code>, then <code>⚙</code> by the network it is on, then
         <code>✎</code> → <code>Advanced options</code> → <code>Proxy</code> → <code>Manual</code>. The undo ends
-        <code>Proxy</code> → <code>None</code> → <code>Save</code>.</td><td></td></tr>
+        <code>Proxy</code> → <code>None</code> → <code>Save</code>.</td><td>take. The Wi-Fi route starts from the page (Q2 B); the Settings path is its other way and the undo</td></tr>
       <tr><td>W2</td>
         <td><strong>The install names one tap where Android asks for two.</strong> Search's <em>CA certificate</em> opens
         <em>Install a certificate</em>, where <em>CA certificate</em> is tapped again.</td>
         <td><em>In Settings, search CA certificate, then tap</em> <code>CA certificate</code> → <code>CA certificate</code>
         → <code>Install anyway</code><em>, then the trawler-ca file at the top of Recent.</em> The file stays unnamed, as
-        W10 ruled.</td><td></td></tr>
+        W10 ruled.</td><td>take</td></tr>
       <tr><td>W3</td>
         <td><strong>The proxy step opens on its caveat</strong>: <em>Menus differ by maker; on stock Android:</em>.</td>
         <td>The step opens on W1's path. Its <em>?</em>: <em>This is stock Android's menu; makers move it. On another, open
-        the Wi-Fi network it is on and look for Proxy, often under Advanced options.</em></td><td></td></tr>
+        the Wi-Fi network it is on and look for Proxy, often under Advanced options.</em></td><td>take</td></tr>
       <tr><td>W4</td>
         <td><strong>Step 2 names no field</strong>: <em>Put the server and port above into it, and save.</em></td>
         <td><em>Put the server and port above into</em> <code>Proxy hostname</code> <em>and</em> <code>Proxy port</code><em>,
-        then tap</em> <code>Save</code>.</td><td></td></tr>
+        then tap</em> <code>Save</code>.</td><td>take</td></tr>
       <tr><td>W5</td>
         <td><strong>The user-CA note is jargon behind a generic help</strong>: <em>Apps targeting Android 7+ only trust user
         CAs…</em> under <em>a note on these steps</em>.</td>
         <td>The install step's <em>?</em> uses the emulator's words, shared: <em>Chrome trusts it. An app trusts it only if
         it opts in to user certificates — yours can, in its network security config.</em> The topic is <em>which apps
-        trust it</em>. The guide keeps no notes.</td><td></td></tr>
+        trust it</em>. The guide keeps no notes.</td><td>take</td></tr>
       <tr><td>W6</td>
         <td><strong>The download ends in silence or in a dead end.</strong> The page stays blank, and the file opened from
         Downloads ends in an alert with only <em>Close</em>.</td>
         <td>Step 1's <em>?</em> adds <em>A blank page means it downloaded.</em> Step 2's <em>?</em> adds <em>Opened the
-        file and Android said Install CA certificates in Settings? Close it — this step is that.</em></td><td></td></tr>
+        file and Android said Install CA certificates in Settings? Close it — this step is that.</em></td><td>take, the alert line on step 1's <em>?</em> with the blank page: a step holds one <em>?</em></td></tr>
     </table>
 
     <h2 id="routes">Part 3 — routes and media (the epic's Q11)</h2>
@@ -171,17 +180,17 @@ flowchart TB
       <tr><th>#</th><th>The step today</th><th>Proposed route</th><th>Ruling</th></tr>
       <tr><td>C1</td>
         <td>Download, and task 4's request: a code each, built by W2 and led in turn by W18.</td>
-        <td>Kept as they are.</td><td></td></tr>
+        <td>Kept as they are.</td><td>take</td></tr>
       <tr><td>I1</td>
         <td>The Wi-Fi screen: reached by hand.</td>
         <td>A page could open it. Chrome opens <code>android.settings.WIFI_SETTINGS</code> from an <code>intent:</code>
         link, so a code could lead to a page whose button opens <em>Internet</em>. The core serves no such page, so
-        building one is a core change, which this epic's Q8 rules out. Q2.</td><td></td></tr>
+        building one is a core change, which this epic's Q8 rules out. Q2.</td><td>build (Q2 B): <a href="#wifi-page">The Wi-Fi page</a></td></tr>
       <tr><td>M1</td>
         <td>Install and Wi-Fi: text only.</td>
         <td>A recording beside each one, as W12's <code>StepMedia</code> does: the install from search to the picked file,
         and the proxy from <em>Internet</em> to <em>Save</em> (Q1). Unlike the iOS Simulator, the emulator has a Wi-Fi
-        screen, so both can be recorded.</td><td></td></tr>
+        screen, so both can be recorded.</td><td>take (Q1 A)</td></tr>
     </table>
 
     <h2 id="handed">Handed in</h2>
@@ -191,17 +200,17 @@ flowchart TB
         <td><strong>The certificate task has no way back</strong> (W10's N1). Every other platform's has one.</td>
         <td><em>to remove it later</em>: <em>In Settings, search Trusted credentials, then tap</em> <code>Trusted
         credentials</code> → <code>User</code> → <code>Trawler Proxy CA</code> → <code>Uninstall</code> →
-        <code>OK</code>.</td><td></td></tr>
+        <code>OK</code>.</td><td>take</td></tr>
       <tr><td>N2</td>
         <td><strong>The Android device's Settings steps are still arrow text</strong> (W18's follow-up).</td>
-        <td>W1–W4.</td><td></td></tr>
+        <td>W1–W4.</td><td>take</td></tr>
       <tr><td>N3</td>
         <td><strong>The Android device's user-CA caveat is still a note</strong> (W17's follow-up).</td>
-        <td>W5.</td><td></td></tr>
+        <td>W5.</td><td>take</td></tr>
       <tr><td>N4</td>
         <td><strong>The close dialog's Android proxy-off line</strong> (W10's follow-up to W11) prints
         <code>routeUndo("android")</code>'s arrow string.</td>
-        <td>It takes W1's path parts with the rest of <code>routeUndo</code>, as the iPhone's line did in W18.</td><td></td></tr>
+        <td>It takes W1's path parts with the rest of <code>routeUndo</code>, as the iPhone's line did in W18.</td><td>take</td></tr>
     </table>
 
     <h2 id="questions">Questions</h2>
@@ -214,7 +223,7 @@ flowchart TB
         stock Settings, and check them frame by frame. Each one's alt text names its path and Android 15 ·
         <strong>B</strong> I write a shot list, and you record both on a real phone ·
         <strong>C</strong> no media: path parts only</td>
-        <td>A. It is stock Android and needs no device. B can replace either one later.</td><td></td></tr>
+        <td>A. It is stock Android and needs no device. B can replace either one later.</td><td>A</td></tr>
       <tr><td>Q2</td>
         <td><strong>What happens to I1, a page that opens the Wi-Fi screen?</strong><br>
         <strong>A</strong> a roadmap row: the core serves a page at the reach address with a button that opens the Wi-Fi
@@ -222,7 +231,7 @@ flowchart TB
         <strong>B</strong> build it here as a core change, against the epic's Q8 and with a new DEC ·
         <strong>C</strong> refute: a second page between the code and the step is one more screen</td>
         <td>A. It is the first interactive route found for a phone's Settings step, but it needs the core, and it saves
-        only the first taps of the proxy step.</td><td></td></tr>
+        only the first taps of the proxy step.</td><td>B</td></tr>
       <tr><td>Q3</td>
         <td><strong>Which Android's labels?</strong> Current phones ship releases newer than 15. The only image on this
         Mac is Android 15.<br>
@@ -230,17 +239,58 @@ flowchart TB
         W20 ·
         <strong>B</strong> I download the newest Google APIs image, and read and record there</td>
         <td>A. It is the release W10's and W17's paths were read from, and each recording says which release it shows. A
-        maker's menus differ whichever release is read, so W20's phone is the check either way.</td><td></td></tr>
+        maker's menus differ whichever release is read, so W20's phone is the check either way.</td><td>A</td></tr>
       <tr><td>Q4</td>
         <td><strong>A design run for this WU?</strong><br>
         <strong>A</strong> none, as you ruled for W16–W18: the build uses the parts W12, W13 and W2 designed, and every
         rendered file it touches is declared <code>undesigned</code> with your ruling as the reason ·
         <strong>B</strong> a round of the setup screen's design run, reviewed before the build</td>
-        <td>A. No component or screen is added.</td><td></td></tr>
+        <td>A. No component or screen is added.</td><td>A (none)</td></tr>
+    </table>
+
+    <h2 id="wifi-page">The Wi-Fi page (Q2 B)</h2>
+    <div class="diagram" data-c="wifi-page-diagram">
+      <pre class="mermaid">
+flowchart LR
+  S["Setup, task 3 step 1<br/>code: http://&lt;reach api&gt;/android-wifi"] -- "phone's camera / Chrome" --> P["GET /android-wifi<br/>on the armed API listener"]
+  P --> H["Page: Proxy hostname · Proxy port<br/>button Open Wi-Fi settings"]
+  H -- "intent:#Intent;action=android.settings.WIFI_SETTINGS;end" --> I["Android: Internet"]
+  I --> R["⚙ → ✎ → Advanced options → Proxy → Manual → Save"]
+      </pre>
+      <div class="caption">The page is reached the way the certificate is: the armed reach listener serves the same router
+        (DEC-55), so a phone that can fetch <code>/ca.cer</code> can fetch the page, before any proxy is set.</div>
+    </div>
+    <table data-c="wifi-page">
+      <tr><th>Part</th><th>What it is</th></tr>
+      <tr><td>Core route</td><td><code>GET /android-wifi</code>, on every API listener: an HTML page sized for a phone. It
+        names the armed proxy's <em>Proxy hostname</em> and <em>Proxy port</em> (none while unarmed), and its one button,
+        <em>Open Wi-Fi settings</em>, is the link
+        <code>intent:#Intent;action=android.settings.WIFI_SETTINGS;end</code>. One line under it names the taps left. It
+        reflects nothing from the request</td></tr>
+      <tr><td><code>/reach</code></td><td>gains <code>wifi_page</code>, the page's URL on the armed API socket, built as
+        <code>ca_urls</code> is; null while unarmed</td></tr>
+      <tr><td>Task 3, step 1</td><td><em>Scan with the camera, or open</em> [the page's code] <em>and tap</em>
+        <code>Open Wi-Fi settings</code><em>, then</em> <code>⚙</code> <em>by the network it is on, then</em>
+        <code>✎</code> → <code>Advanced options</code> → <code>Proxy</code> → <code>Manual</code>, with its recording and the
+        makers' <em>?</em> (W3). The code is bare: W18's rule frames the next code, and task 3's guide opens only once
+        it is next</td></tr>
+      <tr><td>Task 3, step 2</td><td>W4's fields; its <em>?</em>, topic <em>copying the values</em>: the page shows both,
+        to copy there and paste into the fields</td></tr>
+      <tr><td>other ways · the undo</td><td><em>In Settings, tap</em> <code>Network &amp; internet</code> →
+        <code>Internet</code>, then the same from <code>⚙</code> (no camera, or a browser that opens no
+        <code>intent:</code>). The undo is the Settings path ending <code>None</code> → <code>Save</code>, as the close
+        dialog prints it (N4)</td></tr>
+      <tr><td>Exposure</td><td>none new: the address it names is what <code>/reach</code> already answers on the same
+        listener, and the link is a constant. DEC-65 records it under DEC-55</td></tr>
+      <tr><td>T1</td><td><code>docs/core-technical-design.html</code>'s API table gains the route. T1 is rule-bearing, so the
+        row lands with W20's distillation through your <code>mr commit</code>, as E-ONBREV.W6 landed the CA routes</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
-    <p data-c="design">Set by Q4.</p>
+    <p data-c="design">None, by the owner's ruling of 2026-11-02 (Q4 A). The build uses the parts W12, W13 and W2 designed:
+      path parts, <code>StepMedia</code>, <code>QrCode</code> and <code>Help</code>. Every rendered file under
+      <code>ui/src/</code> the diff touches is declared <code>undesigned</code>, with that ruling as its reason. The Wi-Fi
+      page is the core's, outside <code>ui/src/</code>: plain HTML, the system font, one button.</p>
 
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
@@ -251,9 +301,15 @@ flowchart TB
       <tr><td>task 2's <em>?</em></td><td>step 1: <em>Doesn't load? …</em> and the blank page; step 2: which apps trust it,
         and the <em>Install CA certificates in Settings</em> alert. No note outside a <em>?</em></td></tr>
       <tr><td>task 2's ways</td><td><em>to remove it later</em> ending <code>Uninstall</code> → <code>OK</code></td></tr>
-      <tr><td>task 3's steps</td><td>path parts from <code>Network &amp; internet</code> to <code>Manual</code>, with its
-        recording and the makers' <em>?</em>; then <code>Proxy hostname</code>, <code>Proxy port</code>,
-        <code>Save</code>. The undo ends <code>None</code> → <code>Save</code></td></tr>
+      <tr><td>task 3's steps</td><td>step 1: the Wi-Fi page's code, then <code>Open Wi-Fi settings</code>,
+        <code>⚙</code>, <code>✎</code> → <code>Advanced options</code> → <code>Proxy</code> → <code>Manual</code>, with its
+        recording and the makers' <em>?</em>; step 2: <code>Proxy hostname</code>, <code>Proxy port</code>,
+        <code>Save</code>. Other ways: the Settings path from <code>Network &amp; internet</code>. The undo ends
+        <code>None</code> → <code>Save</code></td></tr>
+      <tr><td>open the Wi-Fi page in Chrome on Android</td><td>the proxy's hostname and port, and <code>Open Wi-Fi
+        settings</code> opens <em>Internet</em></td></tr>
+      <tr><td><code>curl http://127.0.0.1:7421/reach</code> while armed</td><td><code>wifi_page</code> on the armed API
+        socket; null while unarmed</td></tr>
       <tr><td>quit with an Android device set up</td><td>the dialog's proxy-off line as the same path parts</td></tr>
       <tr><td>the Android reels</td><td>green on all three hosts, gaining <code>certificate-help</code> and
         <code>route-open</code> chapters</td></tr>
@@ -266,7 +322,17 @@ flowchart TB
         15's labels for the install with both <em>CA certificate</em> taps, the Wi-Fi route, its fields and both ways back
         (W1, W2, W4, N1); the makers' caveat, the user-CA help shared with the emulator, the blank page and the alert, each
         behind its own step's <em>?</em> (W3, W5, W6); no notes left; each recording with alt text naming its path and
-        Android 15 (M1)</td></tr>
+        Android 15 (M1); task 3's first step leads with the Wi-Fi page's code and keeps the Settings path as its other
+        way (Q2 B)</td></tr>
+      <tr><td>unit</td><td><code>src/reach.rs</code></td><td><code>wifi_page</code> names the bound API socket, IPv6
+        bracketed</td></tr>
+      <tr><td>unit</td><td><code>src/api/routes.rs</code></td><td>the page: HTML, the one <code>intent:</code> link; armed,
+        the armed proxy's hostname (no brackets) and port; unarmed, no address; <code>/reach</code>'s
+        <code>wifi_page</code> null while unarmed</td></tr>
+      <tr><td>unit</td><td><code>ui/src/api.test.ts</code></td><td><code>wifi_page</code> read from <code>/reach</code></td></tr>
+      <tr><td>integration</td><td><code>tests/reach.rs</code></td><td>armed: <code>/reach</code>'s <code>wifi_page</code>
+        names the API socket that answers, and fetching it returns the page naming the reach proxy's hostname and port;
+        unarmed: null</td></tr>
       <tr><td>unit</td><td><code>ui/src/ProxyCloseDialog.test.tsx</code></td><td>the Android device's proxy-off line as path
         parts (N4)</td></tr>
       <tr><td>integration</td><td><code>ui/src/Onboarding.test.tsx</code></td><td>the Android device's certificate task
@@ -275,7 +341,8 @@ flowchart TB
       <tr><td>integration</td><td><code>ui/src/onboardingMatrix.test.tsx</code></td><td>across every Android device reading
         and traffic state: one framed control, and no explanatory text outside a help host (R1)</td></tr>
       <tr><td>e2e</td><td>—</td><td>waived at the WU: a real phone is neither hermetic nor in CI, as W10 waived it.
-        Emphasis is judged by your reading of the reels. A real phone's menus and a scanned code stay with W20</td></tr>
+        Emphasis is judged by your reading of the reels. The page and its button are tried on a throwaway Android 15
+        emulator against a real core. A real phone's menus and a scanned code stay with W20</td></tr>
     </table>
 
     <h2 id="where">Where the changes land</h2>
@@ -286,19 +353,24 @@ flowchart TB
       <tr><td><code>ui/src/stepMedia.ts</code> · <code>ui/src/assets/setup/</code>: the recordings</td><td>M1</td></tr>
       <tr><td><code>ui/e2e/walkthrough/script.ts</code> · <code>xtask/src/walkthrough.rs</code></td><td>new chapters,
         W19's findings listed</td></tr>
-      <tr><td>UC-ONBOARD's Android guides · the roadmap (Q2)</td><td>all · I1</td></tr>
+      <tr><td><code>src/api/routes.rs</code> · <code>src/api/mod.rs</code> · <code>src/api/android_wifi.html</code> ·
+        <code>src/api/view.rs</code> · <code>src/reach.rs</code> · <code>tests/reach.rs</code></td><td>I1 (Q2 B)</td></tr>
+      <tr><td><code>ui/src/api.ts</code> · <code>ui/src/Onboarding.tsx</code>: <code>wifi_page</code> into the
+        guide</td><td>I1</td></tr>
+      <tr><td>DEC-65 and the decisions index · UC-ONBOARD's Android guides and API surface</td><td>all · I1</td></tr>
     </table>
 
     <h2 id="commits">Commits</h2>
     <table data-c="commits">
       <tr><th>#</th><th>Commit</th></tr>
       <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
-      <tr><td>2</td><td>the plan with your rulings</td></tr>
-      <tr><td>3</td><td>the words, the paths, the way back, the <em>?</em> and the recordings (W1–W6, N1, N4, M1); one
-        commit, since the words name each recording, as in W18</td></tr>
-      <tr><td>4</td><td>the walkthrough's chapters</td></tr>
-      <tr><td>5</td><td>UC-ONBOARD's Android guides, and the roadmap row (Q2)</td></tr>
-      <tr><td>6</td><td>the result report</td></tr>
+      <tr><td>2</td><td>the plan with your rulings, and the epic's non-goal naming the exception</td></tr>
+      <tr><td>3</td><td>the core's Wi-Fi page and <code>/reach</code>'s <code>wifi_page</code>, with DEC-65</td></tr>
+      <tr><td>4</td><td>the words, the paths, the way back, the <em>?</em>, the page's code and the recordings (W1–W6, N1,
+        N4, M1, I1); one commit, since the words name each recording, as in W18</td></tr>
+      <tr><td>5</td><td>the walkthrough's chapters</td></tr>
+      <tr><td>6</td><td>UC-ONBOARD's Android guides and API surface</td></tr>
+      <tr><td>7</td><td>the result report</td></tr>
     </table>
 
   </main>

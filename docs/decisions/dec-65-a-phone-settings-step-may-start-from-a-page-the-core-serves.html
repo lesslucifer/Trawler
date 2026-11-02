@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae7d58c9f34851f0dfadefd">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-65: a phone's Settings step may start from a page the core serves</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-65 — a phone's Settings step may start from a page the core serves</h1>
+      <p>The Android device's Wi-Fi proxy step starts from a page on the reach listener. The page names the proxy's
+        hostname and port, and its one button opens Android's Wi-Fi settings. The Settings path stays as the other
+        way.</p>
+      <div class="meta">v1 · 2026-11-02 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W19</strong> from the
+        owner's ruling Q2 B · relates to <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a> · extends
+        <a href="dec-57-a-device-that-cannot-paste.html">DEC-57</a> · UC-ONBOARD · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What went wrong</th><th>Finding</th></tr>
+      <tr><td>the proxy step started at Settings' home</td><td>three taps by hand, from Settings to
+        <em>Internet</em>, before the network's own ⚙, on a path each maker moves</td><td>W19's I1</td></tr>
+      <tr><td>the proxy's address was read off this machine's screen</td><td>typed on the phone: Android has no clipboard
+        shared with this machine, and DEC-57 left the address without a code, since a scan cannot fill in Wi-Fi
+        settings</td><td>W19's Q2</td></tr>
+      <tr><td>the core served no page, only files</td><td>no route reached any Settings screen, so the step had text and a
+        recording only. The epic's non-goal kept the core out until the owner ruled Q2 B</td><td>E-ONBRVP's Q11</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The core serves <code>GET /android-wifi</code>, a page for a phone's browser. It names
+        the armed proxy's hostname and port, and its one button, <em>Open Wi-Fi settings</em>, is an
+        <code>intent:</code> link to <code>android.settings.WIFI_SETTINGS</code>. <code>/reach</code> names its URL as
+        <code>wifi_page</code>. The Android device's proxy step leads with that URL's code, and keeps the Settings path as
+        its other way.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>Every API listener serves the page, so the armed reach listener does, as it serves
+        <code>/ca.cer</code></td><td>a phone that can fetch the certificate can open the page before any proxy is set;
+        one router, so the two listeners cannot drift (DEC-55)</td></tr>
+      <tr><td>2</td><td>The page reflects nothing from the request. It names only the armed proxy's address, and no
+        address while nothing is armed</td><td>that address is what <code>/reach</code> already answers on the same
+        listener, so the page adds no exposure the bind does not already imply (DEC-55)</td></tr>
+      <tr><td>3</td><td>Its one link is a constant: <code>intent:#Intent;action=android.settings.WIFI_SETTINGS;end</code>.
+        The page opens nothing else</td><td>on Android 15, Chrome opens the Wi-Fi, security and network-preferences
+        screens from a page, and no certificate installer or trusted-credentials screen (W19's sweep). The certificate's
+        install stays by hand, with a recording</td></tr>
+      <tr><td>4</td><td>The page is a shortcut, never the only way: the guide keeps the Settings path as its other way, and
+        in its undo</td><td>a phone with no camera, a browser that opens no <code>intent:</code> link, and a maker's
+        Settings each still have a route</td></tr>
+      <tr><td>5</td><td><code>wifi_page</code> is built from the bound API socket, as <code>ca_urls</code> are, and is null
+        while unarmed</td><td>no URL names a port nothing listens on</td></tr>
+      <tr><td>6</td><td>The page's URL gets a code on the Android device, beside the URL itself</td><td>it is a value that
+        must cross to the phone, and the code encodes exactly it (DEC-57's rules 2 and 5). This extends DEC-57's settled
+        list of values, which was the certificate URL only</td></tr>
+      <tr><td>7</td><td>The page is the Android device's alone</td><td>E-ONBRVP.W18 found no route from a page into an
+        iPhone's Settings, so its steps keep path parts and recordings</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>A roadmap row for a later epic (Q2 A)</td><td>the owner ruled to build it here</td></tr>
+      <tr><td>No page (Q2 C)</td><td>leaves the step with no route, and the address typed by hand</td></tr>
+      <tr><td>One page for the certificate and the proxy</td><td>the certificate URL is a download Chrome saves without a
+        page; a page in front of it adds a tap to the install W10 verified</td></tr>
+      <tr><td>A link to the certificate installer</td><td>nothing on Android 15 opens it from Chrome</td></tr>
+      <tr><td>A code that encodes the proxy address</td><td>a scan cannot fill in Wi-Fi settings (DEC-57), and the page
+        shows the address where it can be copied</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
