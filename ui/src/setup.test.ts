@@ -1804,6 +1804,21 @@ describe("the Android device's guide is the next thing, in Android's own words",
     expect(page).toEqual({ copy: REACH.wifiPage, label: "the Wi-Fi page", wire: "wifi page url", scan: true });
   });
 
+  it("a core that serves no Wi-Fi page leaves the Settings path to lead, with nothing pointing at a page", () => {
+    const route = android({ reach: { ...REACH, wifiPage: null } }).route.guide!;
+    expect(paths(route.steps)).toEqual([
+      ["Network & internet", "Internet"],
+      ["⚙"],
+      ["✎", "Advanced options", "Proxy", "Manual"],
+      ["Proxy hostname"],
+      ["Proxy port"],
+      ["Save"],
+    ]);
+    expect(route.steps.flat().some((p) => typeof p === "object" && "copy" in p)).toBe(false);
+    expect(helps(route.steps).join(" ")).not.toMatch(/Wi-Fi page/);
+    expect(route.alternatives).toBeUndefined();
+  });
+
   it("the Settings path is the proxy's other way, for no camera or no page (I1)", () => {
     const alternatives = android().route.guide!.alternatives!;
     expect(paths(alternatives)).toEqual([["Network & internet", "Internet"], ["⚙"]]);

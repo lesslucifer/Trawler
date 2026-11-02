@@ -2362,6 +2362,15 @@ describe("another device, where this machine's own traffic may be arriving too",
     expect(screen.queryByRole("button", { name: "help: a note on these steps", hidden: true })).toBeNull();
   });
 
+  it("sets up an Android device on a core that predates the Wi-Fi page, by the Settings path", () => {
+    draw({ reach: { ...ARMED, wifi_page: null }, deviceMark: MARK });
+    pick("Android device");
+
+    expect(within(task(3)).queryByRole("img", { name: "the Wi-Fi page, as a code to scan", hidden: true })).toBeNull();
+    expect(task(3)).toHaveTextContent("In Settings, tap Network & internet → Internet");
+    expect(within(task(2)).getByRole("img", { name: "the certificate URL, as a code to scan" })).toBeInTheDocument();
+  });
+
   it("folds the Android device's certificate to its way back once its request decrypted (W19's N1)", () => {
     draw({
       reach: ARMED,

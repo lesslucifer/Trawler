@@ -1212,12 +1212,11 @@ function PlatformSetup({
     reach.armed &&
     reach.proxy !== null &&
     reach.ca_urls !== null &&
-    reach.wifi_page !== null &&
     lost === null;
   const setup = setupFor(platform, {
     os,
     proxyAddr,
-    reach: allowed ? { proxy: reach.proxy!, caUrls: reach.ca_urls!, wifiPage: reach.wifi_page! } : null,
+    reach: allowed ? { proxy: reach.proxy!, caUrls: reach.ca_urls!, wifiPage: reach.wifi_page } : null,
     saved: savedCa,
     simulatorsRunning: simulators === null ? undefined : simulatorsRunning,
     emulator: {

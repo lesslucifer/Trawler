@@ -242,7 +242,8 @@ export interface AddressTest {
 export interface ReachAddresses {
   proxy: string;
   caUrls: Record<CaFormat, string>;
-  wifiPage: string;
+  // Null where the core serves no Wi-Fi page.
+  wifiPage: string | null;
 }
 
 // Where this machine's save put each certificate file, by the path the save
@@ -1206,6 +1207,43 @@ const ANDROID_COPY_VALUES: HelpPart = {
   topic: "copying the values",
 };
 
+const ANDROID_WIFI_RECORDING: MediaPart = {
+  media: "android-wifi-proxy",
+  alt: "Chrome: Open Wi-Fi settings, then Settings: ⚙ → ✎ → Advanced options → Proxy → Manual → Save",
+  shows: ANDROID_OS_VERSION,
+};
+
+// The page leads where the core serves one (DEC-65); a core that predates it
+// leaves the Settings path to lead.
+function androidRoute(wifiPage: string | null): GuideStep[] {
+  const values: GuideStep = [
+    "Put the server and port above into",
+    { path: ["Proxy hostname"] },
+    "and",
+    { path: ["Proxy port"] },
+    "then tap",
+    { path: ["Save"] },
+  ];
+  return wifiPage === null
+    ? [
+        ["In Settings, tap", { path: ANDROID_INTERNET }, "then", ...androidProxy(["Manual"]), ANDROID_WIFI_RECORDING, ANDROID_MAKERS],
+        values,
+      ]
+    : [
+        [
+          SCAN_OR_OPEN,
+          { copy: wifiPage, label: "the Wi-Fi page", wire: "wifi page url", scan: true },
+          "and tap",
+          { path: ["Open Wi-Fi settings"] },
+          "then",
+          ...androidProxy(["Manual"]),
+          ANDROID_WIFI_RECORDING,
+          ANDROID_MAKERS,
+        ],
+        [...values, ANDROID_COPY_VALUES],
+      ];
+}
+
 // Each platform gets the one format its installer opens: an iPhone installs a
 // configuration profile from Safari, Files and AirDrop alike, where a bare
 // certificate installs from none of them; Android's CA installer reads DER and
@@ -1387,36 +1425,13 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
                 ...(os === "macos" ? [UNIVERSAL_CLIPBOARD] : []),
               ],
             ]
-          : [
-              [
-                SCAN_OR_OPEN,
-                { copy: reach.wifiPage, label: "the Wi-Fi page", wire: "wifi page url", scan: PLATFORMS[id].scans },
-                "and tap",
-                { path: ["Open Wi-Fi settings"] },
-                "then",
-                ...androidProxy(["Manual"]),
-                {
-                  media: "android-wifi-proxy",
-                  alt: "Chrome: Open Wi-Fi settings, then Settings: ⚙ → ✎ → Advanced options → Proxy → Manual → Save",
-                  shows: ANDROID_OS_VERSION,
-                },
-                ANDROID_MAKERS,
-              ],
-              [
-                "Put the server and port above into",
-                { path: ["Proxy hostname"] },
-                "and",
-                { path: ["Proxy port"] },
-                "then tap",
-                { path: ["Save"] },
-                ANDROID_COPY_VALUES,
-              ],
+          : androidRoute(reach.wifiPage),
+        ...(!ios &&
+          reach.wifiPage !== null && {
+            alternatives: [
+              ["No camera, or nothing opens? In Settings, tap", { path: ANDROID_INTERNET }, "and go on from", { path: ["⚙"] }],
             ],
-        ...(!ios && {
-          alternatives: [
-            ["No camera, or nothing opens? In Settings, tap", { path: ANDROID_INTERNET }, "and go on from", { path: ["⚙"] }],
-          ],
-        }),
+          }),
         undoTitle: DEVICE_PROXY_UNDO,
         undo: routeUndo(id, os),
       };

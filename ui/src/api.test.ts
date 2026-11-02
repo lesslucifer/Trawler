@@ -399,6 +399,22 @@ test("armReach posts the chosen address and returns what actually bound", async 
   expect(result.wifi_page).toBe("http://192.168.1.20:7421/android-wifi");
 });
 
+test("a core older than the Wi-Fi page reads as serving none, never as undefined", async () => {
+  const { wifi_page: _, ...older } = {
+    ...UNREACHABLE,
+    armed: true,
+    proxy: "192.168.1.20:7420",
+    wifi_page: "unused",
+  };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => older }));
+
+  const api = createApi("http://x");
+
+  expect((await api.reach()).wifi_page).toBeNull();
+  expect((await api.armReach("192.168.1.20")).wifi_page).toBeNull();
+  expect((await api.disarmReach()).wifi_page).toBeNull();
+});
+
 test("a refused arm throws the server's own sentence, for the person who confirmed", async () => {
   vi.stubGlobal(
     "fetch",
