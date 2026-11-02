@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W22
+base: 27a0ca8ee10b47d151ae3b51c2eab33c36d9d232
+design_sha256: 9505169ba1a8159247c1c8f03b7189916ae4bdf41480ce2c5572562e5af54ebb
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "Wiring only: setup's machine read races the core's /ca.pem against CA_READ_PATIENCE_MS, and past it the parts that need the certificate read nothing, as a refused fetch already did; nothing App draws changes."
+date: 2026-11-02
