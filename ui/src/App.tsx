@@ -100,6 +100,10 @@ export const LAUNCH_PATIENCE_MS = 5_000;
 // How often setup re-reads this machine while it is on screen (U3 · DEC-62):
 // a setting changed in System Settings beside the window shows within it.
 export const WATCH_MS = 3_000;
+// The certificate each machine read asks about comes from the core, and the read
+// lands only once every part has: a core that took the request and never
+// answers may not hold the readings of this machine's own settings with it.
+export const CA_READ_PATIENCE_MS = 5_000;
 // Two readings of this machine's proxy further apart than this had a hidden
 // window or a closed setup between them, and vouch for nothing in that gap
 // (DEC-63 rule 3); a quiet read that waited out three ticks in flight still
@@ -332,10 +336,16 @@ export default function App({
       // The certificate the core serves now is the one asked about: a store
       // holding an older one under the same name answers nothing (D1). Each
       // running Simulator's own store is asked about it too (W7's Q1).
-      const pem = client.caCertPem();
+      const pem = bounded<string | null>(
+        client.caCertPem(),
+        null,
+        CA_READ_PATIENCE_MS,
+      );
       const trust = pem
         .then((live) =>
-          invoke<TrustProbe | undefined>("ca_trusted", { pem: live }),
+          live === null
+            ? undefined
+            : invoke<TrustProbe | undefined>("ca_trusted", { pem: live }),
         )
         .then(
           (p): TrustProbe => p ?? "unknown",
@@ -343,9 +353,11 @@ export default function App({
         );
       const running = pem
         .then((live) =>
-          invoke<SimulatorTrust[] | undefined>("simulator_trust", {
-            pem: live,
-          }),
+          live === null
+            ? undefined
+            : invoke<SimulatorTrust[] | undefined>("simulator_trust", {
+                pem: live,
+              }),
         )
         .then(
           (read): readonly SimulatorTrust[] | null => read ?? null,
@@ -354,10 +366,12 @@ export default function App({
       const adb = readsEmulators.current
         ? pem
             .then((live) =>
-              invoke<EmulatorRead | undefined>("emulator_readings", {
-                pem: live,
-                port,
-              }),
+              live === null
+                ? undefined
+                : invoke<EmulatorRead | undefined>("emulator_readings", {
+                    pem: live,
+                    port,
+                  }),
             )
             .then(
               (read): EmulatorRead | null => read ?? null,
