@@ -43,9 +43,24 @@ async function choosePlatform(label: string) {
 // address in the environment and the shell injected it before the first script
 // ran, so a spec only waits for the screen it painted. Nothing here navigates —
 // a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
-// answers a stopped one with an Objective-C exception that aborts the app.
+// drops every answer still in flight.
 async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
+}
+
+// The window runs hidden, and setup's watch reads this machine only while the
+// window is visible (U3), so nothing would read it again after a request. The
+// emulator counts an unmarked request only between two readings (DEC-63), and
+// a focus is the other thing that reads again, so the spec gives one until the
+// reading lands.
+async function readsTheRequest(timeoutMsg: string) {
+  await browser.waitUntil(
+    async () => {
+      await browser.execute(() => window.dispatchEvent(new Event("focus")));
+      return successLine().isExisting();
+    },
+    { timeout: 15_000, interval: 1_000, timeoutMsg },
+  );
 }
 
 // UC-ONBOARD end to end, on the axis E-ONBOARD rebuilt the screen around: the
@@ -201,10 +216,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({
-      timeout: 15_000,
-      timeoutMsg: "no success line after the new request",
-    });
+    await readsTheRequest("no success line after the new request");
     await expect(tryTask()).toHaveText(
       expect.stringContaining("capturing traffic"),
     );
@@ -230,10 +242,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({
-      timeout: 15_000,
-      timeoutMsg: "the filtered re-entry never read the request",
-    });
+    await readsTheRequest("the filtered re-entry never read the request");
     await expect(tryTask()).toHaveText(
       expect.stringContaining("capturing traffic"),
     );
@@ -248,6 +257,24 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
     });
+  });
+
+  // F26: the ⋮ menu is the list's own route back, and it moves as the dot
+  // does — the last device chosen was not this machine, so it stays answered.
+  it("the ⋮ menu's set up another device opens setup on the last device chosen", async () => {
+    await $('button[aria-label="capture actions"]').click();
+    const item = $('[role="menuitem"][aria-label="set up another device"]');
+    await item.waitForDisplayed({ timeout: 15_000 });
+    await item.click();
+
+    await expect($('[data-testid="lead"]')).toBeExisting();
+    await expect(picker()).toHaveText(
+      expect.stringContaining("Android emulator"),
+    );
+    await expect(dot()).toHaveAttribute("data-status", "connected");
+
+    await button("‹ show traffic").click();
+    await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
   });
 
   // The quit-time confirm is not driven here: proxy_status reads the real system

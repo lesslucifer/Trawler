@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae7f0919f34851f0dfadf13" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W20 plan: e2e and distillation</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W20 — e2e and distillation</h1>
+      <p>The epic's last WU. The journeys the epic's e2e plan names run in the real window, the walkthrough is filmed
+      again for the <em>after</em>, and UC-ONBOARD, the roadmap and the core's API table are brought to what W1–W19
+      shipped. First, the two instruments the gate leans on are made trustworthy again: roadmap row 97 found both red on
+      this host.</p>
+      <div class="meta">v2 · 2026-11-02 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W20</span> · branch <code>wu/onboard-revamp/e2e-distill</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1–W19 (all merged)</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="status">
+      <strong>Every point is ruled</strong> (the owner, 2026-11-02: "1. no need 2. no need 3. no need 4. no need 5. yes, no
+      need real device 6. yes"). Q1 is <strong>C</strong>: the e2e window stays on the core, so the reach platforms'
+      journeys and the core-loss move stay waived. Q2 is <strong>A</strong>: no marked request in e2e. Q3 is
+      <strong>B</strong>: the quit is waived at e2e and at the walkthrough, held by its unit and integration tests, and no
+      <code>request_quit</code> is added. Q4 is <strong>C</strong>: no new chapters. Q5 is <strong>A</strong>, with no real
+      device checked: the checks only hardware can make go to one roadmap row, and the epic does not wait. Q6: H1–H9 as
+      proposed. What is left to build: G1, G2, J1's ⋮ and empty-list moves, and the distillation. I found the findings by
+      running <code>cargo xtask ui e2e</code> and <code>cargo xtask ui walkthrough</code> at the epic tip
+      (<code>6a205f25</code>), reading <code>onboarding.spec.ts</code>, the harness, the walkthrough script and the
+      follow-ups of all nineteen WU results. Your running Trawler and your AVD were not touched.
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      At the epic tip, <code>cargo xtask ui e2e</code> and <code>cargo xtask ui walkthrough</code> run green on this
+      host, the e2e adds the list's two routes into setup it does not drive (the ⋮ menu's and the empty list's) and names a
+      waiver for every other journey in the epic's e2e plan, and the walkthrough films the <em>after</em> beside the <em>before</em> at
+      <code>target/walkthrough-before-onbrvp/</code>. UC-ONBOARD states the transition table, the status rows, the dialog
+      row and the emphasis rule as the code ships them, and each follow-up W1–W19 left open has a home: a roadmap row or a
+      recorded drop.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONBRVP · the epic plan's W20 block · its e2e plan (five journeys, its waivers) · its distillation plan
+      (UC-ONBOARD, UC-4, DEC-56/57, the roadmap, design rules, T1) · its expected result's last two rows (every WU's
+      findings ruled; the <em>after</em> reels beside the <em>before</em>) · roadmap row 97 (the e2e and walkthrough red
+      on this host) · the follow-ups W1–W19 handed to W20.
+    </p>
+
+    <h2 id="today">The epic's e2e plan, against the tip</h2>
+    <div class="diagram" data-c="today-diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph plan["epic e2e plan"]
+    P1["list ⇄ setup round trips<br/>incl. ⋮ (F26)"]
+    P2["request button (F24)"]
+    P3["one traffic journey<br/>per platform"]
+    P4["quit with the proxy ours"]
+    P5["walkthrough re-run"]
+  end
+  P1 --> T1["partly driven:<br/>launch · banner · dot · back"]
+  P2 --> T2["not driven"]
+  P3 --> T3["2 of 8: This machine,<br/>Android emulator"]
+  P4 --> T4["not driven"]
+  P5 --> T5["red on this host<br/>(row 97)"]
+      </pre>
+      <div class="caption">What <code>onboarding.spec.ts</code> and the walkthrough cover at <code>6a205f25</code>. The rows below say what W20 adds to each, or why it cannot.</div>
+    </div>
+
+    <h2 id="checked">What I checked</h2>
+    <table data-c="checked">
+      <tr><th>Tried</th><th>Result</th><th>Used by</th></tr>
+      <tr><td><code>cargo xtask ui e2e</code> at <code>6a205f25</code>, the system proxy off</td>
+        <td><strong>Green</strong>: 4 of 4 spec files, 46 of 46 tests (onboarding 11, capture 3, replay 6, flows 26).
+        The two emulator journeys row 97 found red pass</td><td>G1</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code> at <code>6a205f25</code>, <code>RUST_BACKTRACE=1</code></td>
+        <td data-c="walkthrough-result"><strong>Red</strong>: 23 of 24 reels filmed. <code>windows-ios/walk</code> stopped
+        before chapter 5 (<code>armed</code>), 4 of 10 filmed: the app went away, and every WebDriver call after it was
+        refused. The other reach reels passed their own <code>armed</code>. No panic text reached the log and no crash
+        report was written, since the harness does not keep the app's stderr</td><td>G2</td></tr>
+      <tr><td>The newest crash report, <code>trawler-ui-2026-11-01-212408.ips</code></td>
+        <td><code>SIGABRT</code> on a <code>tokio-rt-worker</code>, in frames of a stripped <code>trawler-ui</code>: a
+        Rust panic under <code>panic = "abort"</code>, with no message</td><td>G2</td></tr>
+      <tr><td>How the emulator counts an unmarked request (<code>deviceTraffic</code>, <code>nextClearReadings</code>,
+        <code>newestRead</code>)</td>
+        <td>Only inside a <em>clear span</em>: from one reading of this machine's proxy that lands off or pointing elsewhere,
+        to the next one's send. Each reading waits for every probe, adb's <code>emulator_readings</code> among them, and
+        a quiet read is skipped while one is in flight. So a slow adb, or a proxy reading other than off or another, keeps
+        the request from counting</td><td>G1</td></tr>
+      <tr><td>The e2e launcher (<code>wdio.conf.ts</code>) and the harness's front (<code>front.rs</code>)</td>
+        <td>The e2e window talks to the core directly. The walkthrough's window talks to the front, which forwards
+        everything and answers <code>/reach</code> itself, arming an address without binding it. So with the window on
+        the front, a spec can arm an address with no native dialog and no LAN listener, which is the reason the spec
+        gives for not driving the reach platforms</td><td>J3 · Q1</td></tr>
+      <tr><td>A marked request: <code>markOf</code>, <code>REQUEST_URL</code> in <code>route.rs</code>,
+        <code>Config</code></td>
+        <td>A mark counts only on a captured <code>https://example.com/?trawler-check=…</code> row. Through the proxy the
+        core resolves <code>example.com</code> itself, and <code>Config</code> has no resolver override, so a hermetic
+        marked request needs a core change. The request button opens the system browser to that URL</td><td>J2 · Q2</td></tr>
+      <tr><td>How a quit asks (<code>useProxyCloseConfirm</code>, <code>menu.rs</code>)</td>
+        <td>The window's close request opens the dialog when this machine's proxy reads ours. The e2e build reads the
+        real proxy, so a close there reads not routed and ends the app, and the session with it. The walkthrough's scenario
+        build answers every reading from a script</td><td>J4 · Q3</td></tr>
+      <tr><td>The walkthrough's chapters (<code>script.ts</code>)</td>
+        <td>No chapter films the quit dialog, another device's traffic mixed with this machine's, or an address lost.
+        W4–W11 each recorded that "the walkthrough films none of the new states"</td><td>W1 · Q4</td></tr>
+      <tr><td>The two design runs, <code>cargo xtask design-scope main HEAD</code></td>
+        <td>Both closed (<code>data-status="archived"</code>). They leave <code>docs/work/</code> with the other T3 docs at
+        the epic close, not here</td><td>D6</td></tr>
+      <tr><td>DEC-56, 57, 60–65 and the core's API table</td>
+        <td>DEC-56 and 57 read <em>built by E-ONBRVP.W2</em>, DEC-60–65 active. The API table in
+        <code>core-technical-design.html</code> has no <code>/android-wifi</code> and no <code>wifi_page</code></td><td>D2 · D4</td></tr>
+    </table>
+
+    <h2 id="gate">Part 1 — the gate's two instruments (row 97)</h2>
+    <table data-c="gate">
+      <tr><th>#</th><th>Found</th><th>Proposed</th></tr>
+      <tr><td>G1</td>
+        <td>The e2e is green today, so row 97's e2e half does not reproduce. Its two red journeys both choose the Android
+        emulator, the one platform whose readings wait on a tool on this host (adb, found through the SDK at
+        <code>~/Library/Android/sdk</code>)</td>
+        <td>Run the e2e five times at the tip. All green: row 97's e2e half is closed as not reproduced, with the clear-span
+        dependence recorded. Any red: find the cause in this WU and fix it, shell-side if it is the shell (the epic's Q8)</td></tr>
+      <tr><td>G2</td>
+        <td data-c="g2-found">The walkthrough's app still dies mid-run, here once in 24 reels (row 97 saw 13 or 14 reels
+        unfinished, at varying chapters). Its crash reports from 2026-11-01 show a Rust panic on a
+        <code>tokio-rt-worker</code> under <code>panic = "abort"</code>, in a stripped binary, and the run's log carries no
+        message</td>
+        <td>Keep the app's stderr in the walkthrough's output, so a death names its panic. Fix its cause, and film all 24
+        reels green. A fix is held by a unit test where it
+        lands</td></tr>
+    </table>
+
+    <h2 id="journeys">Part 2 — the journeys</h2>
+    <table data-c="journeys">
+      <tr><th>#</th><th>Epic e2e plan</th><th>At the tip</th><th>Proposed</th></tr>
+      <tr><td>J1</td><td>list ⇄ setup round trips, from W1's table, incl. the ⋮ route back (F26)</td>
+        <td>launch over a sent row · the banner's <em>set up another device</em> · the dot from a filtered list ·
+        <em>show traffic</em> keeping the filter</td>
+        <td>Add: the ⋮ menu's <em>set up another device</em> (F26). The empty list's <em>set up capture</em>, in
+        <code>capture.spec.ts</code> right after its clear. The core lost in setup is waived (Q1 C): only the front could
+        drop it without killing it, and the list's loss is driven in <code>flows.spec.ts</code></td></tr>
+      <tr><td>J2</td><td>the request button on this machine (F24)</td><td>not driven</td>
+        <td>Waived: the button opens the system browser to <code>example.com</code>, which is the public network. A
+        captured marked row settling the task is waived too (Q2 A), held by <code>ownRequest.test.ts</code>,
+        <code>Onboarding.test.tsx</code> and <code>route.rs</code>'s unit tests</td></tr>
+      <tr><td>J3</td><td>one traffic journey per platform whose status reads traffic</td>
+        <td>This machine, Android emulator</td>
+        <td>Waived (Q1 C): a reach platform needs an armed address, which only the native dialog or a LAN listener gives
+        this window, and the Simulator's proof needs a mark (Q2 A). Held by <code>onboardingMatrix.test.tsx</code> and
+        <code>App.test.tsx</code> per platform</td></tr>
+      <tr><td>J4</td><td>quit with the proxy ours: confirm, then cancel by Esc, the backdrop and ✕</td><td>not driven</td>
+        <td>Waived at e2e (a close with nothing routed ends the session) and not filmed (Q3 B): held by
+        <code>closeConfirm.test.tsx</code>, <code>ProxyCloseDialog.test.tsx</code> and <code>App.test.tsx</code></td></tr>
+      <tr><td>J5</td><td>the walkthrough, re-run at close</td><td>red on this host</td><td>G2, then Part 3</td></tr>
+    </table>
+
+    <h2 id="walkthrough">Part 3 — the <em>after</em> walkthrough</h2>
+    <table data-c="walkthrough">
+      <tr><th>#</th><th>Proposed</th></tr>
+      <tr><td>W1</td><td>No new chapters (Q4 C). The 24 reels are filmed as they stand, once G2 is fixed</td></tr>
+      <tr><td>W2</td><td>The full run lands in <code>target/walkthrough/</code> beside the <em>before</em> in
+        <code>target/walkthrough-before-onbrvp/</code>. You tick every chapter at the epic's sign-off, per the epic plan</td></tr>
+    </table>
+
+    <h2 id="distill">Part 4 — distillation</h2>
+    <table data-c="distill">
+      <tr><th>#</th><th>Doc</th><th>Change</th></tr>
+      <tr><td>D1</td><td>UC-ONBOARD (<code>web-ui.html</code>)</td><td>Read whole against the code. Each WU distilled its
+        own rows, so this pass looks for drift between them: the transition table (W1), the status rows (W3–W10), the
+        dialog row (W11), the emphasis rule (W12–W19). Its <em>Pinned by</em> names the new journeys and every e2e waiver</td></tr>
+      <tr><td>D2</td><td><code>core-technical-design.html</code> (T1)</td><td>The API table gains
+        <code>/android-wifi</code> and <code>/reach</code>'s <code>wifi_page</code> (W19's follow-up). A rule-bearing
+        doc, so I stage it and print the <code>mr commit</code> for you</td></tr>
+      <tr><td>D3</td><td>the roadmap</td><td>Row 97 closed or restated by G1 and G2. The new rows of Part 5, and one row for the device
+        checks (H10, Q5). The epic's
+        own row, if one stands, says what it closed</td></tr>
+      <tr><td>D4</td><td>decisions</td><td>None new expected: DEC-56/57 are built, DEC-60–65 active. A fix to G1 or G2
+        that changes a rule would get its own DEC</td></tr>
+      <tr><td>D5</td><td>design rules</td><td>None. Help on request enters the rulebook when row 98's epic lands, since
+        the rulebook records no rule a screen still breaks</td></tr>
+      <tr><td>D6</td><td>T3</td><td>The epic plan's status line. Archiving the plans, results and both closed design runs
+        is the epic close's step, after W20 merges</td></tr>
+    </table>
+
+    <h2 id="handed">Part 5 — what W1–W19 left open</h2>
+    <p>Each follow-up a WU left without a home, and where it goes (Q6).</p>
+    <table data-c="handed">
+      <tr><th>#</th><th>From</th><th>Left open</th><th>Proposed home</th></tr>
+      <tr><td>H1</td><td>W3, W7</td><td>The review's code paths leave out <code>ui/src-tauri/</code>, so
+        <code>cr/v5</code> binds none of the shell</td><td>roadmap row (process)</td></tr>
+      <tr><td>H2</td><td>W3</td><td>On Linux, a CA trusted only in a browser's NSS store reads "not installed". Counting
+        it would be a new decision</td><td>roadmap row</td></tr>
+      <tr><td>H3</td><td>W4</td><td><code>GET /reach</code> could report whether the armed address is still held, so
+        an address the core never offers (<code>::1</code>) stops reading "no longer holds"</td><td>roadmap row (core)</td></tr>
+      <tr><td>H4</td><td>W16</td><td>With several Simulators the first refusal stops the rest. With two Xcodes and none
+        selected, Spotlight's order picks the one <code>simctl</code> runs under</td><td>roadmap row (shell)</td></tr>
+      <tr><td>H5</td><td>W17</td><td>S4: the iOS Simulator has the same shift an emulator starting had, left for you to
+        rule</td><td>roadmap row</td></tr>
+      <tr><td>H6</td><td>W17</td><td>The quit dialog's emulator command names a bare <code>adb</code>, since the dialog
+        holds no SDK reading</td><td>roadmap row (shell)</td></tr>
+      <tr><td>H7</td><td>W1</td><td>The header's "reachable on …" chip still names an address in words the setup
+        rewrite did not touch</td><td>folded into row 98 (the other screens' sweep)</td></tr>
+      <tr><td>H8</td><td>W12</td><td>Firefox ESR still shows the old <em>View Certificates</em>; the guide names
+        Firefox 154's label</td><td>dropped, recorded: ESR catches up</td></tr>
+      <tr><td>H9</td><td>W5–W7</td><td>The htmldoc server's body limit blocks design-run snapshots</td>
+        <td>dropped here, recorded: it belongs to the htmldoc server, not Trawler</td></tr>
+      <tr><td>H10</td><td>W2–W19</td><td>Checks only real hardware can make: each phone scanning its codes, a second
+        Mac, a Windows PC, a stock Ubuntu, real Simulators and emulators (two running), a maker's Settings, the owed
+        recordings (<code>linux-chrome-import</code>, the iPhone's proxy step), and that the window's fetch takes the
+        system proxy</td><td>one roadmap row, grouped by device: none is run for this epic (Q5)</td></tr>
+    </table>
+
+    <h2 id="questions">Questions</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Proposed</th><th>Ruling</th></tr>
+      <tr><td>Q1</td>
+        <td><strong>Does the e2e window move onto the harness's front?</strong> It is what lets a spec arm an address
+        without the native dialog or a LAN listener, and drop the core without killing it.<br>
+        <strong>A</strong> yes: J3 for all five reach platforms and the Simulator's refusal, and J1's core-loss move ·
+        <strong>B</strong> yes, but J3 for Another Mac only, since the five share one evidence path and differ in words ·
+        <strong>C</strong> no: the reach platforms and the core loss stay waived</td>
+        <td>A. Same mechanism, and five journeys hold the words each platform's WU ruled. Every other spec sees an
+        unarmed front, which forwards everything else</td><td>C</td></tr>
+      <tr><td>Q2</td>
+        <td><strong>Marked requests in e2e?</strong> F24's button, the Simulator's proof and each device's marked address
+        settle only on an <code>example.com</code> row.<br>
+        <strong>A</strong> waive at e2e: held by <code>ownRequest.test.ts</code>, <code>Onboarding.test.tsx</code> and
+        <code>route.rs</code>'s unit tests · <strong>B</strong> add a test-only resolver to <code>Config</code>
+        (behind <code>test-utils</code>), against the epic's core non-goal</td>
+        <td>A. The rule is in the reading, which the unit and integration tests hold, and B is a second core exception
+        for a test</td><td>A</td></tr>
+      <tr><td>Q3</td>
+        <td><strong>Where is the quit journey proven?</strong><br>
+        <strong>A</strong> waived at e2e, filmed in the walkthrough through a scenario-only <code>request_quit</code> ·
+        <strong>B</strong> waived at both: <code>closeConfirm.test.tsx</code>, <code>ProxyCloseDialog.test.tsx</code> and
+        <code>App.test.tsx</code> hold it</td>
+        <td>A. The dialog was rebuilt in W11 and nobody has watched it in the window</td><td>B</td></tr>
+      <tr><td>Q4</td>
+        <td><strong>Which new walkthrough chapters?</strong><br>
+        <strong>A</strong> the dialog's outcomes and the device states W4–W11 handed on (W1) ·
+        <strong>B</strong> the dialog only · <strong>C</strong> none</td>
+        <td>A</td><td>C</td></tr>
+      <tr><td>Q5</td>
+        <td><strong>Does the epic's sign-off wait for the device checks (H10)?</strong><br>
+        <strong>A</strong> no: W20 writes the checklist, you run what your hardware allows before signing, and each check
+        not run becomes one roadmap row · <strong>B</strong> yes: the epic waits for every one</td>
+        <td>A. No phone is attached to this Mac, and nineteen WUs' checks would hold the epic on hardware</td><td>A, no real device checked</td></tr>
+      <tr><td>Q6</td>
+        <td><strong>H1–H9 as proposed?</strong></td><td>yes</td><td>yes</td></tr>
+    </table>
+
+    <h2 id="design">Design</h2>
+    <p data-c="design">No design run. The diff touches no file under <code>ui/src/</code> unless G1 or G2 finds its cause
+      there; any such file is declared <code>undesigned</code> on the design note, with the fix as its reason.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>A reader checks…</th><th>…and sees</th></tr>
+      <tr><td><code>cargo xtask ui e2e</code> at the W20 tip, five runs</td><td>every spec file green each time, with the
+        new journeys passing</td></tr>
+      <tr><td>the ⋮ menu's <em>set up another device</em></td><td>setup, the question unanswered after this machine</td></tr>
+      <tr><td>the empty list after a clear</td><td><em>set up capture</em>, which opens setup on the last device chosen</td></tr>
+      <tr><td><code>cargo xtask ui walkthrough</code> at the W20 tip</td><td>all 24 reels filmed, beside <code>target/walkthrough-before-onbrvp/</code></td></tr>
+      <tr><td>UC-ONBOARD</td><td>no sentence the code contradicts. <em>Pinned by</em> names each journey and each waiver</td></tr>
+      <tr><td>the core's API table</td><td><code>/android-wifi</code> and <code>wifi_page</code></td></tr>
+      <tr><td>the roadmap</td><td>row 97 closed or restated, a row for each of H1–H6, and one for the device checks</td></tr>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="tests">
+      <tr><th>Level</th><th>File</th><th>Checks</th></tr>
+      <tr><td>e2e</td><td><code>ui/e2e/specs/onboarding.spec.ts</code></td><td>J1's ⋮ route; the existing eleven
+        unchanged</td></tr>
+      <tr><td>e2e</td><td><code>ui/e2e/specs/capture.spec.ts</code></td><td>the empty list's <em>set up capture</em>
+        opens setup</td></tr>
+      <tr><td>e2e</td><td><code>ui/e2e/walkthrough/walkthrough.spec.ts</code></td><td>re-run, unchanged: each chapter's
+        element exists before its frame. You tick the captions</td></tr>
+      <tr><td>e2e — waived</td><td>—</td><td>The request button's click: it opens the system browser to the public network
+        (J2). Marked rows (Q2 A). The reach platforms and the core lost in setup (Q1 C). The quit (Q3 B). The dot's <em>quiet</em> state: it needs three minutes
+        without capture, held by the unit suite. Real stores and phones, as the epic plan waives them</td></tr>
+      <tr><td>integration — waived</td><td>—</td><td>W20 changes no product contract. Every contract its journeys cross is
+        held at integration by W1–W19 (<code>App.test.tsx</code>, <code>Onboarding.test.tsx</code>,
+        <code>onboardingMatrix.test.tsx</code>). If G1 or G2 finds a product bug, its fix carries its own test at the level
+        it lands</td></tr>
+      <tr><td>unit</td><td>wherever G2's cause is</td><td>the G2 fix, where it lands</td></tr>
+    </table>
+
+    <h2 id="where">Where the changes land</h2>
+    <table data-c="where">
+      <tr><th>Where</th><th>Change</th></tr>
+      <tr><td><code>ui/e2e/specs/onboarding.spec.ts</code> · <code>capture.spec.ts</code></td><td>J1</td></tr>
+      <tr><td><code>xtask/src/walkthrough.rs</code> or <code>ui/e2e/walkthrough/</code></td><td>the app's stderr kept (G2)</td></tr>
+      <tr><td>wherever G2's cause is</td><td>its fix</td></tr>
+      <tr><td><code>docs/use-cases/web-ui.html</code> · <code>docs/backlog/roadmap.html</code></td><td>D1, D3, Part 5</td></tr>
+      <tr><td><code>docs/core-technical-design.html</code></td><td>D2, by <code>mr commit</code></td></tr>
+    </table>
+
+    <h2 id="commits">Commits</h2>
+    <table data-c="commits">
+      <tr><th>#</th><th>Commit</th></tr>
+      <tr><td>1</td><td>this plan, and the epic plan's status line</td></tr>
+      <tr><td>2</td><td>the plan with your rulings</td></tr>
+      <tr><td>3</td><td>G2: the app's stderr kept, and the walkthrough's abort fixed; any e2e cause G1 finds</td></tr>
+      <tr><td>4</td><td>J1: the ⋮ route and the empty list's route into setup</td></tr>
+      <tr><td>5</td><td>UC-ONBOARD and the roadmap</td></tr>
+      <tr><td>6</td><td>T1: the core's API table (<code>mr commit</code>, by you)</td></tr>
+      <tr><td>7</td><td>the result report, after five e2e runs and the walkthrough</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

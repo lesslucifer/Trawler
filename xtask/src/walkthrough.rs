@@ -565,6 +565,8 @@ pub fn run(ui: &Path, repo: &Path) -> Result<(i32, String), String> {
         "--no-bundle",
         "--config",
         "src-tauri/tauri.conf.e2e.json",
+        "--config",
+        "src-tauri/tauri.conf.walkthrough.json",
         "--features",
         "scenario",
     ];

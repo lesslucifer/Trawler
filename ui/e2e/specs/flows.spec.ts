@@ -47,7 +47,7 @@ const lastCopied = () => browser.execute(() => (window as unknown as { __copied?
 // address in the environment and the shell injected it before the first script
 // ran, so a spec only waits for the screen it painted. Nothing here navigates —
 // a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
-// answers a stopped one with an Objective-C exception that aborts the app.
+// drops every answer still in flight.
 async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
 }

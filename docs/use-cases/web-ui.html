@@ -442,7 +442,7 @@
         <tr><td>lose the core</td><td>"not answering" on the list, in a band over its rows. In setup, the statement in place of
           every task</td><td>everything else</td><td>—</td><td>—</td></tr>
         <tr><td>get the core back</td><td>the statement goes, and the screen refreshes itself</td><td>everything
-          else</td><td>the list, network addresses</td><td>—</td></tr>
+          else</td><td>the list, network addresses, and in setup this machine's readings</td><td>—</td></tr>
       </table>
       <p>After a move the user made, focus lands on the new screen's main area. A move the app made (the launch,
         a first success) claims no focus.</p>
@@ -478,7 +478,7 @@
             (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a> rule 9).
             With none running and nothing proved it reads <em>not done — no emulator running</em>; adb not found, or a
             read not landed, is no reading, and says what will confirm it instead (E-ONBRVP.W17)</td></tr>
-        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code></td>
+        <tr><td>Another Mac · Windows PC · Ubuntu machine</td><td>every host</td><td>neither</td><td>yes</td><td><code>trawler-ca.pem</code> · <code>trawler-ca.cer</code> (DER: Windows opens no <code>.pem</code>) · <code>trawler-ca.pem</code></td>
           <td>nothing read off that machine — only what could have come from it, since its address was
             allowed: its own marked request, named and timed, and other traffic only while this machine's
             proxy does not point here (<a href="../decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html">DEC-63</a>). Until then each task says what
@@ -735,8 +735,8 @@
       <em>Trusted credentials → Trusted credentials → User → Trawler Proxy CA → Uninstall → OK</em>. A step's code sits
       under its sentence, before its recording.
       A step's <em>?</em> follows its last word wherever the line wraps, on every platform (E-ONBRVP.W17).
-      Every platform but This machine titles its last task <em>Make a request from</em> the device,
-      and sets the address it offers at the weight of a step. A refused authorization is the user's own outcome, worded as
+      Every platform titles its last task <em>Make a request from</em> the device, and every one but This
+      machine sets the address it offers at the weight of a step. A refused authorization is the user's own outcome, worded as
       one, with the tool's text under a disclosure; a real failure keeps the OS's words and opens the manual
       route. An approval the OS could not show (macOS's -60007) is neither. The user answered the password
       prompt, and the trust write asked for a second approval that never reached them. It reads <em>macOS
@@ -878,9 +878,8 @@ the client lacks the certificate"]
           from installing, as on an iPhone, the step says so. Traffic that arrives and doesn't decrypt gets
           the check that platform's users most often miss</td></tr>
         <tr><td>A probe reading is a dated snapshot</td><td>nothing pushes when the user changes a setting
-          outside Trawler, so one row above the tasks dates the reading and re-runs both probes. E-ONBRVP.W3
-          widened when it re-runs (above); while a re-read the user asked for runs, the control is disabled and
-          both probed tasks show the in-flight state</td></tr>
+          outside Trawler, so setup reads it again wherever its answer can change (above, E-ONBRVP.W3); while a
+          read the user caused runs, the buttons are held and both probed tasks show <em>checking</em></td></tr>
         <tr><td>A copied command says whether it copied</td><td>the copy affordance confirms at the value,
           and a clipboard write the browser refuses says so rather than doing nothing visible</td></tr>
         <tr><td>Quitting asks first while something still routes through Trawler, and only then</td><td>E-ONBRVP.W11
@@ -889,7 +888,8 @@ the client lacks the certificate"]
           while this machine routes through Trawler — its address, localhost or this machine's own address on
           Trawler's port — and offers <em>stop routing through Trawler</em> on macOS and Windows, the command inline
           elsewhere; while this machine's proxy could not be read, saying so; and while reach is armed or the
-          emulator chosen in setup routes here, about other devices, with a durable dismissal. A proxy that is not
+          emulator chosen in setup routes here, about other devices. Those last two carry a durable dismissal;
+          the one that stops a proxy routed here has none. A proxy that is not
           Trawler's asks nothing. The stake is the capture service: no internet once it stops, or now while it does
           not answer. A failed stop says so and opens the steps, which are each platform's own way back; once it
           worked, the button gives way to its outcome. One frame for every case; Esc, the backdrop and ✕ cancel the
@@ -927,8 +927,11 @@ the client lacks the certificate"]
       sent row, which still shows setup; <em>an off-machine platform</em>, which asserts that an unmet
       precondition is stated once and dims what depends on it; <em>this machine</em> through to a decrypted
       flow and the list's first paint; a second device's session, which keeps the dot connected and shows no
-      success line until its own request; and a re-entry with the list filtered to nothing, which still reads
-      the new request. Another device's evidence — the cut at its allowed address, its marked request, this
+      success line until its own request; a re-entry with the list filtered to nothing, which still reads
+      the new request; and the ⋮ menu's <em>set up another device</em>, which opens setup on the last device
+      chosen — with <code>capture.spec.ts</code>'s empty capture, whose <em>set up capture</em> opens setup. The
+      e2e window runs hidden, where setup's watch does not read, so a journey that waits on another device's
+      reading asks for it by a focus. Another device's evidence — the cut at its allowed address, its marked request, this
       machine's proxy deciding what else counts, the proof outlasting what follows it, the lost address and its re-reads — is pinned in
       <code>verdicts.test.ts</code>, <code>ownRequest.test.ts</code>, <code>Onboarding.test.tsx</code>,
       <code>App.test.tsx</code> and the matrix's marked sweep. Arming reach is driven at integration rather than e2e: it opens a native dialog no
@@ -938,7 +941,14 @@ the client lacks the certificate"]
       probe readings (<code>Onboarding.test.tsx</code> and <code>onboardingMatrix.test.tsx</code>: the real
       trust store and proxy cannot be set hermetically), and each certificate format's bytes
       (<code>tests/</code>), with the owner's installs on a real iPhone and Android device as their
-      evidence.</p>
+      evidence. Four stay out of e2e by E-ONBRVP's rulings: This machine's request button, which opens the
+      system browser on the public network; a marked request of any platform, which settles only on an
+      <code>example.com</code> row a hermetic proxy cannot reach (<code>ownRequest.test.ts</code>,
+      <code>Onboarding.test.tsx</code>, <code>route.rs</code>); the quit dialog, since a close with nothing
+      routed ends the session (<code>closeConfirm.test.tsx</code>, <code>ProxyCloseDialog.test.tsx</code>,
+      <code>App.test.tsx</code>); and the dot's <em>quiet</em>, three minutes after the newest capture
+      (<code>App.test.tsx</code>). The checks only real hardware can make are a
+      <a href="../backlog/roadmap.html">roadmap</a> row.</p>
     </div>
 
     <h2 id="uc-6">UC-6 — Take the capture out as a HAR file, and bring one back</h2>
