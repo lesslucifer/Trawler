@@ -95,12 +95,6 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
             {parts}
           </span>
         ))}
-      {commands.map((part, i) => (
-        <CommandBlock key={i} value={part.command} label={part.label} />
-      ))}
-      {media.map((part) => (
-        <StepMedia key={part.media} media={STEP_MEDIA[part.media]} alt={part.alt} shows={part.shows} />
-      ))}
       {scans.map((part, i) => (
         <div key={i} data-testid="scan-code" className="pt-2">
           {framesScan && i === 0 ? (
@@ -111,6 +105,12 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
             <QrCode value={part.copy} label={part.label} />
           )}
         </div>
+      ))}
+      {commands.map((part, i) => (
+        <CommandBlock key={i} value={part.command} label={part.label} />
+      ))}
+      {media.map((part) => (
+        <StepMedia key={part.media} media={STEP_MEDIA[part.media]} alt={part.alt} shows={part.shows} />
       ))}
     </>
   );
