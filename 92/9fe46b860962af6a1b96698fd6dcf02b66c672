@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+branch: 929fe46b
+tests:
+  unit: { waived: "The change is the e2e launcher's fixture (ui/e2e/wdio.conf.ts), which has no unit of its own; the e2e it serves is its test." }
+  e2e: { count: 12, covers: "The onboarding journey 'the device chosen opens its first guide, and only its own request says set up' reads the launcher's own SDK, whose adb answers for one booted emulator with an empty user store and no proxy: cargo xtask ui e2e 4 of 4 spec files, 48 of 48 tests, twice, with no emulator on the host; red before the change (47 of 48, the journey failing with none running)." }
