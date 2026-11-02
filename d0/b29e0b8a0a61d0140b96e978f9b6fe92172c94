@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU android-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W19
+branch: wu/onboard-revamp/android-wording
+base: ef9fa6c4ee37eeb3d8e98b376a9656616d6dfcee
+head: d0b29e0b8a0a61d0140b96e978f9b6fe92172c94
+diff_sha256: 022e3f233dc3887ff45ea205daf5221efc679319ccdee5ba27a2d9cf59495228
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  stage_seconds:
+    gate0: 102
+    total: 131
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 2, verified: 0, waived: 2 }
+waivers: []
+nits:
+  - finding: "android_wifi_page's HTML templating and Android field labels sit in src/api/view.rs beside the serde wire shapes"
+    waived: "DEC-65 puts the page in the core; its markup is its own file (src/api/android_wifi.html) and view.rs only fills the armed proxy from a SocketAddr - round 1's verifier refuted the same claim as file placement with no boundary crossed"
+  - finding: "StepParts now renders a step's code before its commands and media for every platform, a rule only the Android guide needed"
+    waived: "a code belongs under the sentence that asks the camera to scan it, on any platform; no other step carries a code with a command or a recording, so nothing else moves, and manualSteps.test.tsx pins the rule"
+verdict: PASS
+date: 2026-11-02
