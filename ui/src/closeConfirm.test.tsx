@@ -126,6 +126,18 @@ test("unknown: its own prompt, unless its own opt-out was taken", async () => {
   expect(silent.result.current.prompt).toBeNull();
 });
 
+test("unknown with its opt-out taken still asks about a device that routes here", async () => {
+  const f = fakeDeps("unknown", ["unread-notice"]);
+  const { result } = confirmFor(f, { reachArmed: true });
+  await closeAndWait(f);
+  await waitFor(() => expect(result.current.prompt).toEqual({ mode: "devices", emulator: null }));
+
+  const both = fakeDeps("unknown", ["unread-notice", "remote-notice"]);
+  const silent = confirmFor(both, { emulator: "Pixel_7_API_35" });
+  expect(await closeAndWait(both)).not.toHaveBeenCalled();
+  expect(silent.result.current.prompt).toBeNull();
+});
+
 test("devices + its opt-out already taken: quits without asking", async () => {
   const f = fakeDeps("none", ["remote-notice"]);
   const { result } = confirmFor(f, { reachArmed: true });

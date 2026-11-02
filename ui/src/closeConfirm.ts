@@ -56,10 +56,28 @@ export function bounded<T>(read: Promise<T>, fallback: T, ms = QUIT_READ_MS): Pr
 const dismissKey = (prompt: QuitPrompt): NoticeKey | null =>
   prompt.mode === "unread" ? NOTICE_KEY.unread : prompt.mode === "devices" ? NOTICE_KEY.remote : null;
 
+// Each stake in the order a quit asks about it. An opt-out silences its own
+// stake only: a device that routes here is asked about even where this
+// machine's unread proxy no longer is (DEC-64 rules 4 and 5).
+function promptsFor(status: string, facts: QuitFacts): QuitPrompt[] {
+  if (status === "ours") return [{ mode: "ours", answering: facts.answering }];
+  const devices: QuitPrompt[] =
+    facts.reachArmed || facts.emulator !== null ? [{ mode: "devices", emulator: facts.emulator }] : [];
+  return status === "unknown" ? [{ mode: "unread" }, ...devices] : devices;
+}
+
 export function promptFor(status: string, facts: QuitFacts): QuitPrompt | null {
-  if (status === "ours") return { mode: "ours", answering: facts.answering };
-  if (status === "unknown") return { mode: "unread" };
-  if (facts.reachArmed || facts.emulator !== null) return { mode: "devices", emulator: facts.emulator };
+  return promptsFor(status, facts)[0] ?? null;
+}
+
+async function firstAsked(
+  prompts: QuitPrompt[],
+  dismissed: (key: NoticeKey) => Promise<boolean>,
+): Promise<QuitPrompt | null> {
+  for (const prompt of prompts) {
+    const key = dismissKey(prompt);
+    if (key === null || !(await dismissed(key))) return prompt;
+  }
   return null;
 }
 
@@ -86,9 +104,10 @@ export function useProxyCloseConfirm(
             .then((reading) => reading?.status ?? "unknown"),
           "unknown",
         );
-        const asked = promptFor(status, facts);
-        const key = asked && dismissKey(asked);
-        if (asked === null || (key !== null && (await bounded(noticeDismissed(key, deps.invoke), false)))) return;
+        const asked = await firstAsked(promptsFor(status, facts), (key) =>
+          bounded(noticeDismissed(key, deps.invoke), false),
+        );
+        if (asked === null) return;
         e.preventDefault();
         setPrompt(asked);
       })
