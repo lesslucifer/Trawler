@@ -32,7 +32,7 @@ verified:
     severity: important
 nits:
   - finding: "hardware_ports (interface_names) runs networksetup through a bare Command::output()"
-    fixed: "Routed through ran in the fix for the verified reader, beside macos_live_verifies."
+    waived: "Outside the in-flight guard; routed through ran in round 3's fix commit, beside the verified reader."
   - finding: "On Windows ca_trust dumps both ROOT stores on every machine read, even when the first already lists the thumbprint"
     waived: "Two certutil reads per 3 s tick while setup shows on Windows, bounded and single-flight; a by-hash query is a later Windows WU's to weigh."
   - finding: "ui/src-tauri/src/setup.rs holds every platform's trust, proxy, emulator and notice logic in one module"
