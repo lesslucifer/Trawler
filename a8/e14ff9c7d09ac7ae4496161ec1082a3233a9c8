@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONBRVP
+wu: E-ONBRVP.W22
+branch: a8e14ff9
+tests:
+  unit: { waived: "The change is App's wiring - the certificate fetch raced against CA_READ_PATIENCE_MS inside setup's machine read - with no unit of its own; the integration test below drives it through the rendered App, red before the change." }
+  integration: { count: 169, covers: "App.test.tsx 'a certificate the core never serves holds no reading past its patience': with a core whose /ca.pem never answers, past CA_READ_PATIENCE_MS this machine's proxy reading lands and the certificate task stops checking, as a refused fetch already did; red before 1fea8b85. Every other App test green beside it (the full vitest suite at 1fea8b85: 60,755 tests in 66 files)." }
+  e2e: { waived: "A core that accepts the certificate request and never answers is not something the e2e's real core does; the bound is held at integration, through the rendered App." }
