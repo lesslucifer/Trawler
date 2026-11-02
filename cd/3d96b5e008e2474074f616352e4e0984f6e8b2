@@ -1,0 +1,52 @@
+schema: cr/v5
+scope: "Epic E-ONBRVP -> main, round 8, the second close. The whole epic's code as one range, by the caller's choice with the shell (ui/src-tauri/), which the five code paths leave out. Round 6 passed the epic at 1fea8b85, which the owner signed; W21 (notes on one switch, DEC-66) landed after it. Round 7 failed 37cb6ee0 on one important - the onboarding e2e journey read whether the host ran an Android emulator - fixed at the tip by cd3d96b5 (the e2e launcher's own SDK, its adb answering for one booted emulator), 48 of 48 twice with no emulator on the host, red (47 of 48) before it. This round judges the tip."
+epic: E-ONBRVP
+branch: epic/onboard-revamp
+base: 78d519cc6da634e738655c2082210f53caa83507
+head: cd3d96b5e008e2474074f616352e4e0984f6e8b2
+diff_sha256: af8871b1bb5de19c8880b997b9561e8c1f3aa6f032bcc475d4a0d5994f949d02
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 6
+  stage_seconds:
+    gate0: 125
+    finders: 86
+    verifiers: 40
+    total: 132
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 7, verified: 0, waived: 0 }
+nits:
+  - finding: "Every tunnel event copies the up-to-1024 tunnel times and re-renders useFlows' consumers, unthrottled, while the flow refresh is debounced"
+    waived: "One event per CONNECT, not per request; a 1024-element copy is microseconds; the refusal clock (DEC-33, DEC-62) needs each tunnel's own time. Revisit if a tunnel burst shows in a profile."
+  - finding: "Every refresh sends latestCapture beside listFlows, even unfiltered"
+    waived: "Waived at round 6 and unchanged: a limit=1 read the core answers from its newest row, needed whenever a filter hides the newest capture (DEC-61)."
+  - finding: "The fake Android SDK lives inside wdio.conf.ts rather than a fixture module of its own"
+    waived: "wdio.conf.ts is where the launcher sets what the app inherits (the core's address, the notice markers); one fixture of thirty lines does not yet earn a module."
+  - finding: "The fake adb is a POSIX shell script, so the fixture does not cover a host that looks for adb.exe"
+    waived: "The e2e is macOS-primary on the embedded WebDriver provider (wdio.conf.ts, xtask ui e2e); no Windows e2e run exists for it to fail on."
+  - finding: "The temp SDK is removed only in onComplete, so a run aborted before it leaves a trawler-e2e-sdk-* directory in the OS temp dir"
+    waived: "A few hundred bytes in the OS temp dir, which the OS clears; the notice markers follow the same onComplete cleanup."
+  - finding: "The run is hermetic for the Android emulator's reads only; the same build still runs the host's simctl, security and networksetup"
+    waived: "Those host reads are waived at e2e and pinned below it, as UC-ONBOARD's Pinned by lists (real trust stores, system proxies, Simulators); no journey asserts on them. The commit claims only the emulator journey."
+refuted: "ONE CANDIDATE REFUTED. altitude, important: the fake adb copies the shell's adb argv with no test tying them - drift in the reads the journey depends on (devices, sys.boot_completed) turns it red loudly, as round 7 observed; drift in the others (name, store, proxy) changes nothing the journey asserts; round 6 waived untied test-side literals of this kind as nits. The correctness finder traced every read the e2e build makes against the fixture and found each answered as the shell parses it."
+walk_waivers:
+  - seam: 529113e7da1b44f9b623569acb7edf8e5021464e
+    why: "The walk re-hashes this seam's review and design bindings and gets other bytes from the same base and tip: git diff's index lines abbreviate object names to a length git scales with the object count, 7 characters when the WU landed and 8 at this walk. With core.abbrev=7 the seam's diff hashes to its dod/v1 receipt again (W1: c98382a2, the receipt's value); the code is untouched. W4 onward were bound at 8 and still match. A gate change (--full-index) is the follow-up."
+  - seam: 384669d927ac878346f7d2ba1c1adbaf42c6a892
+    why: "The walk re-hashes this seam's review and design bindings and gets other bytes from the same base and tip: git diff's index lines abbreviate object names to a length git scales with the object count, 7 characters when the WU landed and 8 at this walk. With core.abbrev=7 the seam's diff hashes to its dod/v1 receipt again (W1: c98382a2, the receipt's value); the code is untouched. W4 onward were bound at 8 and still match. A gate change (--full-index) is the follow-up."
+  - seam: 1815021e7045898674320b536844e6e0b250262c
+    why: "The walk re-hashes this seam's review and design bindings and gets other bytes from the same base and tip: git diff's index lines abbreviate object names to a length git scales with the object count, 7 characters when the WU landed and 8 at this walk. With core.abbrev=7 the seam's diff hashes to its dod/v1 receipt again (W1: c98382a2, the receipt's value); the code is untouched. W4 onward were bound at 8 and still match. A gate change (--full-index) is the follow-up."
+  - seam: 1fea8b8551458130c63408c0632e9f929d2d78fc
+    why: "The epic's tip at its first close, which the owner signed (mr/v1 epic): its test/v2, doc/v1, cr/v5 (round 6 PASS) and design/v1 notes are epic-level, so the walk, seeing a standalone commit below the tip once W21 re-opened the epic, reads a manifest level, a rendered App.tsx and doc entries that belong to the whole epic. Its code - setup's certificate fetch bounded - was judged by round 6 and again inside rounds 7 and 8's whole range; its App.tsx edit is wiring the epic's design/v1 cites."
+verdict: PASS
+date: 2026-11-02
