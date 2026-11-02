@@ -130,6 +130,7 @@ fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{judge_run_tally, run};
+    use std::collections::BTreeSet;
     use std::path::Path;
 
     fn tally(specs: u64, passed: u64, failed: u64) -> String {
@@ -236,6 +237,124 @@ mod tests {
         let manifest = crate::repo_root().expect("repo root").join("ui/src-tauri/Cargo.toml");
         let source = std::fs::read_to_string(&manifest).expect("the shell's Cargo.toml");
         assert!(!release_aborts_on_panic(&source), "{} sets panic = \"abort\"", manifest.display());
+    }
+
+    fn literal_after<'a>(source: &'a str, prefix: &str) -> &'a str {
+        let start = source.find(prefix).unwrap_or_else(|| panic!("no {prefix}")) + prefix.len();
+        let rest = &source[start..];
+        &rest[..rest.find('"').expect("a closing quote")]
+    }
+
+    fn handler_names(source: &str) -> BTreeSet<String> {
+        let start = source.find("generate_handler![").expect("a generate_handler!") + 18;
+        let list = &source[start..start + source[start..].find(']').expect("a closing ]")];
+        list.split(',')
+            .map(|path| path.trim().rsplit("::").next().unwrap_or_default().to_string())
+            .filter(|name| !name.is_empty())
+            .collect()
+    }
+
+    fn after_generics(text: &str) -> &str {
+        let Some(mut rest) = text.strip_prefix('<') else { return text };
+        let mut depth = 1;
+        while depth > 0 {
+            let at = rest.find(['<', '>']).expect("a closing >");
+            depth += if rest.as_bytes()[at] == b'<' { 1 } else { -1 };
+            rest = &rest[at + 1..];
+        }
+        rest
+    }
+
+    fn invoked_commands(source: &str) -> BTreeSet<String> {
+        let mut names = BTreeSet::new();
+        for callee in ["invoke", "call"] {
+            for (at, _) in source.match_indices(callee) {
+                let standalone = !source[..at]
+                    .ends_with(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+                let args = after_generics(&source[at + callee.len()..]);
+                if let Some(name) = args.strip_prefix("(\"").filter(|_| standalone) {
+                    let name = &name[..name.find('"').expect("a closing quote")];
+                    if name.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
+                        names.insert(name.to_string());
+                    }
+                }
+            }
+        }
+        names
+    }
+
+    fn app_sources(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("an app source dir") {
+            let path = entry.expect("app entry").path();
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            let script = path.extension().is_some_and(|ext| ext == "ts" || ext == "tsx");
+            if path.is_dir() {
+                app_sources(&path, found);
+            } else if script && !name.contains(".test.") {
+                found.push(path);
+            }
+        }
+    }
+
+    #[test]
+    fn the_command_detectors_read_paths_generics_and_callees() {
+        let handlers =
+            "x.invoke_handler(tauri::generate_handler![\n  a::set_proxy,\n  open_route\n]);";
+        assert_eq!(
+            handler_names(handlers),
+            BTreeSet::from(["set_proxy".into(), "open_route".into()])
+        );
+        let app = r#"invoke<Record<string, string>>("interface_names"); deps.invoke<{ a: 1 }>("proxy_status");
+            call<boolean>("notice_dismissed"); go({ t: "re-invoke" }); recall("not_one"); invoke("Title")"#;
+        assert_eq!(
+            invoked_commands(app),
+            BTreeSet::from([
+                "interface_names".into(),
+                "proxy_status".into(),
+                "notice_dismissed".into()
+            ])
+        );
+    }
+
+    // The e2e and the walkthrough run the scenario build's list and the app ships
+    // the real one, so a command missing from either fails only in the other.
+    #[test]
+    fn both_shell_builds_register_exactly_the_commands_the_app_invokes() {
+        let repo = crate::repo_root().expect("repo root");
+        let shell = |file: &str| {
+            let path = repo.join("ui/src-tauri/src").join(file);
+            handler_names(&std::fs::read_to_string(&path).expect("a shell source"))
+        };
+        let real = shell("lib.rs");
+        let mut scenario = shell("scenario.rs");
+        assert!(scenario.remove("scenario_script"), "the scenario build registers scenario_script");
+        assert_eq!(scenario, real, "the scenario build's commands differ from the real build's");
+
+        let mut sources = Vec::new();
+        app_sources(&repo.join("ui/src"), &mut sources);
+        let invoked: BTreeSet<String> = sources
+            .iter()
+            .flat_map(|path| invoked_commands(&std::fs::read_to_string(path).expect("app source")))
+            .collect();
+        assert_eq!(invoked, real, "the app invokes other commands than the shell registers");
+    }
+
+    // The shell opens the check request and the app finds its row by host and
+    // query key, so the two must name the same URL or the task never settles.
+    #[test]
+    fn the_check_url_the_shell_opens_is_the_one_the_app_reads() {
+        let repo = crate::repo_root().expect("repo root");
+        let read = |path: &str| std::fs::read_to_string(repo.join(path)).expect(path);
+        let route = read("ui/src-tauri/src/route.rs");
+        let app = read("ui/src/ownRequest.ts");
+        assert_eq!(
+            literal_after(&route, "const REQUEST_URL: &str = \""),
+            format!(
+                "https://{}/?{}=",
+                literal_after(&app, "export const REQUEST_HOST = \""),
+                literal_after(&app, "const MARK = \"")
+            )
+        );
     }
 
     // pnpm 10+ ignores the `pnpm` field and says so only as an install warning,
