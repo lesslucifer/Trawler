@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6ae820129f34851f0dfadf31" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6ae820129f34851f0dfadf31" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,21 +12,22 @@
       <p>The setup screen carries a <em>?</em> at the end of every line something explains: 33 of them across the
       platforms. Seven explain nothing worth a click, and the rest crowd the lines they sit on. This WU drops the eight
       that do not earn their place and puts every note that stays behind one switch on the device row.</p>
-      <div class="meta">v1 · 2026-11-02 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W21</span> · branch <code>wu/onboard-revamp/notes-toggle</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1–W20 (all merged)</div>
+      <div class="meta">v2 · 2026-11-02 · Trawler · T3 WU plan · <span class="badge id">E-ONBRVP.W21</span> · branch <code>wu/onboard-revamp/notes-toggle</code> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · depends on E-ONBRVP.W1–W20 (all merged)</div>
     </div>
   </header>
   <main>
 
     <div class="callout" data-c="status">
-      <strong>Draft: the plan waits for your ruling on Q1–Q3.</strong> Already ruled by the owner (2026-11-02): the eight
-      drops below. One switch replaces every <em>?</em>. It sits at the device row's right end. Notes start hidden, and the
-      choice is remembered across launches. No note is exempt from it, the network-access warning included. The
-      design run (the mockup) follows the ruling, and the build follows your review of the mockup.
+      <strong>Every point is ruled</strong> (the owner, 2026-11-02: "1. Use the current ? button as current, but use circle
+      ? icon instead 2. yes, app config 3. yes — no need mock up just build it"). The eight drops below. One switch
+      replaces every <em>?</em>: the screen's existing <em>?</em> button, drawn as a <em>?</em> in a circle, at the device
+      row's right end. Notes start hidden, and the shell remembers the choice. No note is exempt, the network-access
+      warning included. No mockup: built directly.
     </div>
 
     <h2 id="requirement">Requirement</h2>
     <p class="callout" data-item="requirement" data-c="requirement">
-      The setup screen shows no <em>?</em>. One switch at the right end of the device row shows or hides every note
+      The setup screen shows one <em>?</em>, in a circle, at the right end of the device row: a switch that shows or hides every note
       the screen carries, each under the line it explains. The choice holds across platforms, screens and launches, and
       starts hidden. The quit dialog's notes follow the same choice. The eight notes ruled out below are gone from every
       platform.
@@ -44,7 +45,7 @@
       <pre class="mermaid">
 flowchart LR
   P[("notes-shown<br/>preference<br/>(shell config dir)")]
-  S["device row<br/>show notes ⇄ hide notes"]
+  S["device row ⓘ<br/>show notes ⇄ hide notes"]
   N["every note on setup<br/>(task, button, refusal, step)"]
   D["quit dialog's notes"]
   S -- "writes" --> P
@@ -59,7 +60,7 @@ flowchart LR
     <h2 id="inventory">The 33 notes, ruled</h2>
     <p data-c="inventory-lead">The test each note was judged by: it changes what the user does, or saves them when
       something fails, and it does not repeat what the screen already says.</p>
-    <table data-item="inventory" data-c="inventory">
+    <table data-c="inventory">
       <tr><th>#</th><th>Where</th><th>Note</th><th>Ruling</th></tr>
       <tr><td colspan="4"><strong>A task's why</strong> (<code>TaskStep</code>)</td></tr>
       <tr><td>1</td><td>This machine · <em>Send ‹host›'s traffic to Trawler</em></td><td>its system proxy points at Trawler while Trawler runs</td><td><span class="badge approval">drop</span> repeats the title</td></tr>
@@ -111,35 +112,34 @@ flowchart LR
         announced · <strong>B</strong> a <code>Checkbox</code> labelled <em>notes</em> · <strong>C</strong> a
         <code>SegmentedControl</code>: <em>notes off · on</em></td>
         <td>A. It sits in the device row beside a select, where a bare button is the row's quietest control, and it
-        needs no new component. The mockup shows it</td><td></td></tr>
+        needs no new component</td><td>the current <em>?</em> button (<code>IconButton</code>,
+        <code>glyph="help"</code>), its glyph drawn as a <em>?</em> in a circle</td></tr>
       <tr><td>Q2</td>
         <td><strong>Where is the choice remembered?</strong><br>
         <strong>A</strong> the shell's config directory, beside the notices already dismissed there: a flag file, read
         and written by two new shell commands · <strong>B</strong> the window's <code>localStorage</code>, which nothing
         in the app uses yet</td>
         <td>A. One home for the app's remembered choices, and the shell's command list is already tied to the app's by
-        a test</td><td></td></tr>
+        a test</td><td>A</td></tr>
       <tr><td>Q3</td>
         <td><strong>Is the change recorded as a decision?</strong> It replaces the owner's rule of 2026-10-31 and sets
         the pattern the other screens' epic (the roadmap row) will follow.<br>
         <strong>A</strong> yes: DEC-66, <em>notes show together, on one switch</em>; UC-ONBOARD's row and the roadmap row
         point to it · <strong>B</strong> no: UC-ONBOARD's row and the roadmap row are rewritten in place</td>
-        <td>A. A reversed owner rule with no record is the next reader's open question</td><td></td></tr>
+        <td>A. A reversed owner rule with no record is the next reader's open question</td><td>A</td></tr>
     </table>
 
     <h2 id="design">Design</h2>
-    <p data-c="design">The setup screen's design run, re-opened as the epic plan's Q9 rules: its last state
-      (<code>docs/.archive/2026-09-17-onboarding-design-run-round-23.html</code>) back at
-      <code>docs/work/2026-09-17-onboarding-design-run.html</code>, amended, closed and cited in this WU. The mockup gains
-      the switch on the device row and the notes drawn under their lines, both states, on This machine (the most notes on
-      one screen) and on iPhone (step notes inside open guides). You review the mockup; the build starts after.
-      <code>Help</code> stops being a button and becomes the drawn-or-not note, so the run covers <code>Help.tsx</code>,
-      <code>TaskStep.tsx</code>, <code>manualSteps.tsx</code> and <code>Onboarding.tsx</code>.</p>
+    <p data-c="design">No design run: the owner ruled it out (2026-11-02, "no need mock up just build it"). The rendered
+      files the build touches are declared <code>undesigned</code> on the design note, each with that ruling and what the
+      edit did: <code>Help.tsx</code> becomes the drawn-or-not note, <code>IconButton.tsx</code>'s help glyph is drawn in a
+      circle, <code>TaskStep.tsx</code> and <code>manualSteps.tsx</code> draw their notes under the line, and
+      <code>Onboarding.tsx</code> and <code>ProxyCloseDialog.tsx</code> carry the switch and the choice.</p>
 
     <h2 id="expected">Expected result</h2>
     <table data-item="expected" data-c="expected">
       <tr><th>A reader checks…</th><th>…and sees</th></tr>
-      <tr><td>setup, any platform, first launch</td><td>no <em>?</em>, no note, and <em>show notes</em> at the device row's right end</td></tr>
+      <tr><td>setup, any platform, first launch</td><td>no note, and one circled <em>?</em>, <em>show notes</em>, at the device row's right end</td></tr>
       <tr><td><em>show notes</em></td><td>every kept note for that platform, each under its line; the button reads <em>hide notes</em></td></tr>
       <tr><td>another platform, or a relaunch</td><td>the notes as last left</td></tr>
       <tr><td>the quit dialog's manual steps on macOS, notes shown</td><td>the Ethernet note under its step; hidden otherwise</td></tr>
@@ -189,11 +189,9 @@ flowchart LR
       <tr><th>#</th><th>Commit</th></tr>
       <tr><td>1</td><td>this plan, and the epic plan reopened with W21</td></tr>
       <tr><td>2</td><td>the plan with your rulings</td></tr>
-      <tr><td>3</td><td>the design run, closed after your review of the mockup</td></tr>
-      <tr><td>4</td><td>the remembered choice: shell commands and the app's reader</td></tr>
-      <tr><td>5</td><td>the switch and the notes behind it; the eight drops</td></tr>
-      <tr><td>6</td><td>UC-ONBOARD, the roadmap row, DEC-66</td></tr>
-      <tr><td>7</td><td>the result report</td></tr>
+      <tr><td>3</td><td>the remembered choice, the switch and the notes behind it, the eight drops, and their tests</td></tr>
+      <tr><td>4</td><td>UC-ONBOARD, the roadmap row, DEC-66</td></tr>
+      <tr><td>5</td><td>the result report</td></tr>
     </table>
 
   </main>
