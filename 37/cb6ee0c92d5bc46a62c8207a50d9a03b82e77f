@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "Epic E-ONBRVP -> main, round 7, the second close. The whole epic's code as one range, by the caller's choice with the shell (ui/src-tauri/), which the five code paths leave out. Round 6 passed the epic at 1fea8b85, which the owner signed; W21 (notes on one switch, DEC-66) landed after it and 37cb6ee0 archives the work docs again, changing no code path. This round judges the tip, the seams between W21 and the rest of the epic first."
+epic: E-ONBRVP
+branch: epic/onboard-revamp
+base: 78d519cc6da634e738655c2082210f53caa83507
+head: 37cb6ee0c92d5bc46a62c8207a50d9a03b82e77f
+diff_sha256: b50017ca67d78c2f422dd69bea4805c71d25ec46a36e99dabd83f473d8171e22
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  stage_seconds:
+    gate0: 130
+    finders: 107
+    total: 421
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 7, verified: 1, waived: 0 }
+verified:
+  - finding: "onboarding.spec.ts 'the device chosen opens its first guide' passes only while an Android emulator runs on the host: the e2e build reads the real adb (setup.rs's emulator probe, no scenario feature), so with none running setup leads with 'open <avd>' and keeps task 1's guide shut, and the journey fails - a host-dependent e2e against the rule that tests are deterministic and hermetic"
+    severity: important
+    evidence: "xtask/src/ui.rs builds the e2e app with --features e2e only; ui/src-tauri/src/setup.rs runs adb devices and booted_emulators; the spec picks Android emulator and asserts task-1 details[open]. Predates the epic (E-ONBREV.W6), but the epic's e2e evidence rests on it. Owner's ruling: fix it now."
+nits:
+  - finding: "The notes switch renders while no platform is chosen, with no note on screen to show"
+    waived: "The choice holds across platforms and launches (DEC-66), so setting it before choosing a device is meaningful; the switch sits on the device row, which is always there."
+  - finding: "The switch flips both its label (show notes / hide notes) and aria-expanded, so assistive tech hears the state twice"
+    waived: "DEC-66's decision names both: it reads show notes, then hide notes, and announces whether the notes are shown - the owner's ruling."
+refuted: "FOUR CANDIDATES REFUTED. (1) correctness, important: failure advice (unreachable(), NOTHING_ARRIVES) hidden behind the default-off switch - DEC-66 rule 2 and its Rejected table: the owner ruled no note exempt, failure advice named; at 1fea8b85 the same texts sat behind a per-line ? the user had to click, so nothing regressed. (2) correctness, nit: two quick toggles could reach the shell out of order - show_notes is a sync Tauri command, run on the main thread in arrival order. (3) correctness, nit: notes_shown reads a missing config dir as off while show_notes returns its error - DEC-66 rule 3, as the notice commands do. (4) altitude, nit: the quit dialog carries no switch and its prop defaults off - DEC-66 rule 5."
+verdict: FAIL
+date: 2026-11-02
