@@ -21,6 +21,7 @@ import {
   isScan,
   type CaFormat,
   type GuideStep,
+  type HelpPart,
   type RouteName,
 } from "./setup";
 import { STEP_MEDIA } from "./stepMedia";
@@ -81,20 +82,13 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
   });
   return (
     <>
-      {said.length > 0 &&
-        (help ? (
-          // Words flowing as text, so the ? follows the last of them wherever it
-          // wraps; a flex row that wraps takes the full width and strands it (W17's D1).
-          <Explained help={help}>
-            <span data-testid="step-words">
-              {parts.filter((part) => part !== null).flatMap((part, i) => (i === 0 ? [part] : [" ", part]))}
-            </span>
-          </Explained>
-        ) : (
+      {said.length > 0 && (
+        <Explained help={help}>
           <span data-testid="step-words" className="flex flex-wrap items-center gap-chrome-gap">
             {parts}
           </span>
-        ))}
+        </Explained>
+      )}
       {scans.map((part, i) => (
         <div key={i} data-testid="scan-code" className="pt-2">
           {framesScan && i === 0 ? (
@@ -116,11 +110,11 @@ export function StepParts({ step, save, open, framed = false }: { step: GuideSte
   );
 }
 
-// What explains a step waits behind a ? at its end (W13's R1).
-export function Explained({ help, children }: { help?: { help: string; topic: string }; children: ReactNode }) {
+// What explains a step is drawn under it while notes are shown (DEC-66).
+export function Explained({ help, children }: { help?: HelpPart; children: ReactNode }) {
   if (help === undefined) return <>{children}</>;
   return (
-    <Help topic={help.topic} text={help.help}>
+    <Help text={help.help}>
       {children}
     </Help>
   );

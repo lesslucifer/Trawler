@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest";
+import { useState } from "react";
 import {
   act,
   cleanup,
@@ -307,6 +308,7 @@ const through = async () => "through" as const;
 // that is the marked request alone.
 function Host({ s, handlers }: { s: State; handlers: Handlers }) {
   const [routeAct, onRouteAct] = useRouteMemory(s.proxy);
+  const [notesShown, onShowNotes] = useState(false);
   const { traffic, markedAt } = wireOf(s);
   const mixed =
     s.platform === "ios-sim" ||
@@ -325,6 +327,8 @@ function Host({ s, handlers }: { s: State; handlers: Handlers }) {
     <Onboarding
       state={onboarding}
       dispatch={nothing}
+      notesShown={notesShown}
+      onShowNotes={onShowNotes}
       os={s.os}
       proxyAddr="127.0.0.1:9999"
       trustProbe={s.trust}
@@ -451,7 +455,7 @@ function outline(): Outline {
           .map((b) => b.textContent?.trim() ?? "")
           .filter((label) => ACTION_LABEL.test(label)),
         commands: [
-          ...el.querySelectorAll('button[aria-label]:not([aria-label^="help:"])'),
+          ...el.querySelectorAll("button[aria-label]"),
         ].map(
           (b) => b.getAttribute("aria-label") ?? "",
         ),
@@ -1049,15 +1053,14 @@ const RULES: Record<string, Rule> = {
         : `reversal in tasks [${found}], expected [${expected}]`;
     },
 
-  "truth: the reversal names the certificate only where it reads trusted": (
+  "truth: the reversal names nothing it leaves behind (W21)": (
     o,
     s,
   ) => {
     const m = model(s);
     const route = o.tasks.find((t) => t.n === m.routeN);
     if (route === undefined || !route.text.includes(REVERSAL)) return null;
-    const names = /the certificate stays trusted/.test(route.text);
-    return names === m.trustDone ? null : `reversal line: ${route.text}`;
+    return /the certificate stays trusted/.test(route.text) ? `reversal line: ${route.text}` : null;
   },
 
   "truth: the end names this machine only where both probes read done": (
@@ -1214,16 +1217,16 @@ const RULES: Record<string, Rule> = {
   },
 };
 
-// What explains a line is never on screen until asked for (W13's R1): with
-// every ? shut, no caption paragraph stands outside a help panel but the step
-// a dimmed task waits on. Then every ? opens, so each rule reads every word.
+// What explains a line is never on screen until the notes are shown (DEC-66):
+// with them hidden, no caption paragraph stands outside a note but the step a
+// dimmed task waits on. Then the notes are shown, so each rule reads every word.
 function explainedOnRequest(): string[] {
   const steps = screen.getByTestId("steps");
   const loud = [...steps.querySelectorAll("p.text-chrome.text-ink-mute:not(.font-mono):not(.uppercase)")]
     .filter((p) => p.closest("[data-help], [data-dim]") === null)
-    .map((p) => `R1: on screen without a ? — ${p.textContent}`);
-  for (const help of steps.querySelectorAll('button[aria-label^="help:"][aria-expanded="false"]'))
-    fireEvent.click(help);
+    .map((p) => `R1: on screen while notes are hidden — ${p.textContent}`);
+  const show = screen.queryByRole("button", { name: "show notes" });
+  if (show) fireEvent.click(show);
   return loud;
 }
 

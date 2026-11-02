@@ -372,3 +372,22 @@ describe("the modal shell — three routes out, one outcome", () => {
     expect(forward.defaultPrevented).toBe(false);
   });
 });
+
+// W21 (DEC-66): the dialog has no switch of its own; it draws its notes as the
+// setup screen's switch last left them.
+describe("its notes", () => {
+  const ethernet = () => screen.queryByText(/^On Ethernet, click Ethernet/);
+
+  it("are hidden while setup's notes are", () => {
+    mount(OURS, { os: "macos" });
+
+    expect(ethernet()).toBeNull();
+  });
+
+  it("are drawn under their steps while setup's notes are shown", () => {
+    mount(OURS, { os: "macos", notesShown: true });
+
+    expect(ethernet()).toHaveAttribute("data-help");
+    expect(screen.queryByRole("button", { name: /^help:/ })).toBeNull();
+  });
+});

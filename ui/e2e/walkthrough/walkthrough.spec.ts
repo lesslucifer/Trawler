@@ -128,11 +128,9 @@ const walk: Walk = {
   async openGuide(n: number) {
     await $(`[data-testid="task-${n}"] details:not([open]) > summary`).click();
   },
-  async openHelp(n: number) {
-    for (const help of await $$(
-      `[data-testid="task-${n}"] button[aria-label^="help:"][aria-expanded="false"]`,
-    ))
-      if (await help.isDisplayed()) await help.click();
+  async showNotes() {
+    const show = $('button[aria-label="show notes"]');
+    if (await show.isExisting()) await show.click();
   },
   async dot() {
     await $('[data-testid="status-dot"]').click();

@@ -794,15 +794,3 @@ export function provenDevice(
   return trust === "trusted" && proxy === "ours" ? device : null;
 }
 
-// The reversal turns the proxy off and nothing else; where the certificate
-// reads trusted, the one thing worth saying is that it stays (W12's E3).
-export function stopRoutingNote(
-  certificateTrusted: boolean,
-): string | undefined {
-  return certificateTrusted ? "the certificate stays trusted" : undefined;
-}
-
-// And the other way round: removing the certificate leaves the proxy as it is.
-export function removeCaNote(proxySet: boolean): string | undefined {
-  return proxySet ? "the proxy stays set" : undefined;
-}

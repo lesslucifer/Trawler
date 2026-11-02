@@ -303,13 +303,13 @@ describe("every platform's instructions are its own", () => {
     expect(setup(id).try.why).toBeUndefined();
   });
 
-  it("this names what its request does, and keeps only the why its lead does not say (W12's Q2, Q3)", () => {
+  it("this names what its request does, and keeps no why its title already says (W12's Q2, Q3; W21)", () => {
     for (const os of ["macos", "windows", "linux"] as const) {
       const s = setup("this", { os });
       expect(s.try.title).toBe(`Make a request from ${deviceName("this", os)}`);
       expect(s.try.why).toBeUndefined();
       expect(s.trust.why).toBeUndefined();
-      expect(s.route.why).toBe("its system proxy points at Trawler while Trawler runs");
+      expect(s.route.why).toBeUndefined();
     }
   });
 
@@ -492,7 +492,6 @@ describe("the Simulator is trusted through its own keychain and routed through t
         { path: ["Device", "Erase All Content and Settings"] },
         {
           help: "It wipes everything in that Simulator. Nothing removes Trawler's root alone.",
-          topic: "what it wipes",
         },
       ],
     ]);
@@ -500,14 +499,13 @@ describe("the Simulator is trusted through its own keychain and routed through t
   });
 
   // W16's W1, N1: the command names where it runs, and what to do when xcrun
-  // finds no simctl waits behind its ?.
+  // finds no simctl is its note.
   it("runs its command in Terminal, with the fix for a missing simctl on request", () => {
     const step = setup("ios-sim").trust.guide!.steps.find((s) => s.some(isCommand))!;
     expect(step[0]).toBe("In Terminal, with the Simulator running, run:");
     expect(step.filter(isHelp)).toEqual([
       {
         help: "simctl not found? Run sudo xcode-select -s /Applications/Xcode.app first.",
-        topic: "if simctl is not found",
       },
     ]);
   });
@@ -1102,7 +1100,7 @@ describe("the emulator's commands reach every emulator running, and route it on 
     ]);
     expect(settings.find((p) => typeof p === "string" && /turn off/.test(p))).toBeDefined();
     expect(values([settings])).toEqual(["10.0.2.2", "8123"]);
-    expect(helps([settings])).toEqual(["10.0.2.2 is the address every emulator reaches the machine it runs on by."]);
+    expect(helps([settings])).toEqual([]);
     // C3: the flag is read by the emulator process on this machine, where 10.0.2.2 is nothing.
     expect(commands([flag])).toEqual(["emulator -avd <name> -http-proxy http://127.0.0.1:8123"]);
     expect(everything(emulator())).not.toMatch(/-http-proxy http:\/\/10\.0\.2\.2/);
@@ -1511,10 +1509,10 @@ describe("Another Mac, walked by hand (W13)", () => {
     expect(commands(route.alternatives!)[0]).toContain("networksetup -setwebproxy Wi-Fi 192.168.1.24 9999");
   });
 
-  it("keeps Ethernet behind a ?, on the route and on its way back (W5, Q4)", () => {
+  it("keeps Ethernet as a note, on the route and on its way back (W5, Q4)", () => {
     const ethernet = /^On Ethernet, click Ethernet in place of Wi-Fi/;
     expect(route.notes).toEqual([expect.stringMatching(ethernet)]);
-    expect(route.undo![1].find(isHelp)).toMatchObject({ topic: "on Ethernet", help: expect.stringMatching(ethernet) });
+    expect(route.undo![1].find(isHelp)).toMatchObject({ help: expect.stringMatching(ethernet) });
   });
 
   it("asks no why its lead already says (E2)", () => {
@@ -1581,13 +1579,14 @@ describe("Another Windows PC, walked by hand (W14)", () => {
     expect(everything(pc)).not.toMatch(/WinINET/);
   });
 
-  it("says what outranks the proxy, and what the command leaves open apps, behind a ? (N1, N2)", () => {
+  it("says what outranks the proxy, and what the command leaves open apps, as notes (N1, N2)", () => {
     for (const guide of [route, setup("this", { os: "windows" }).route.guide!]) {
       expect(guide.steps[3].find(isHelp)).toMatchObject({
-        topic: "if nothing arrives",
         help: expect.stringContaining("Automatically detect settings and Use setup script"),
       });
-      expect(guide.alternatives![0].find(isHelp)).toMatchObject({ topic: "apps already open" });
+      expect(guide.alternatives![0].find(isHelp)).toMatchObject({
+        help: "Apps already open may keep their old setting until restarted.",
+      });
       expect(guide.notes).toBeUndefined();
     }
   });
@@ -1612,20 +1611,18 @@ describe("Another Ubuntu machine, walked by hand (W15)", () => {
     expect(commands(route.steps)).toEqual([]);
   });
 
-  it("keeps the command as the other way, led by where it runs, with why behind a ? (W1, N1)", () => {
+  it("keeps the command as the other way, led by where it runs, with why as a note (W1, N1)", () => {
     expect(route.alternatives!.map((step) => step[0])).toEqual(["In a terminal on that machine, run:"]);
     expect(route.alternatives![0].find(isHelp)).toEqual({
       help: "Run it on that machine's desktop — over SSH it sets nothing.",
-      topic: "where to run it",
     });
     expect(thisLinux.alternatives![0].find(isHelp)).toBeUndefined();
   });
 
-  it("says which apps follow the proxy behind Save's ?, on both Linux guides (N2)", () => {
+  it("says which apps follow the proxy in Save's note, on both Linux guides (N2)", () => {
     for (const guide of [route, thisLinux]) {
       expect(sentence(guide.steps[3])).toBe("Click");
       expect(guide.steps[3].find(isHelp)).toMatchObject({
-        topic: "what follows it",
         help: expect.stringContaining("Firefox and Chrome follow this proxy"),
       });
       expect(guide.notes).toBeUndefined();
@@ -1662,17 +1659,16 @@ describe("a Mac's proxy way back is by hand first", () => {
       ["OK"],
     ]);
     expect(undo[1][0]).toBe("Or in Terminal, run:");
-    expect(undo[1].find(isHelp)?.topic).toBe("on Ethernet");
+    expect(undo[1].find(isHelp)?.help).toMatch(/^On Ethernet/);
   });
 });
 
 // W4's N2, here: the download is the first thing a device does that must reach
-// this machine, so what to check when it cannot waits behind a ? beside it.
+// this machine, so what to check when it cannot is the note beside it.
 describe("every download step says what to check when it does not load", () => {
   it.each(["mac", "windows", "ubuntu", "ios"] as const)("%s", (id) => {
     const help = setup(id).trust.guide!.steps[0].find(isHelp);
 
-    expect(help?.topic).toBe("if it doesn't load");
     expect(help?.help).toBe(
       `Doesn't load? ${deviceName(id, "macos").replace(/^./, (c) => c.toUpperCase())} can't reach this one — check both are on the same network, and that this Mac's firewall lets Trawler accept incoming connections.`,
     );
@@ -1685,7 +1681,6 @@ describe("every download step says what to check when it does not load", () => {
   it("android says first what a download that worked looks like (W19's W6)", () => {
     const help = setup("android").trust.guide!.steps[0].find(isHelp);
 
-    expect(help?.topic).toBe("if it seems stuck");
     expect(help?.help).toBe(
       "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that. Doesn't load? Your Android device can't reach this one — check both are on the same network, and that this Mac's firewall lets Trawler accept incoming connections.",
     );
@@ -1762,11 +1757,9 @@ describe("the iPhone's guide is the next thing, in iOS's own words", () => {
     ]);
   });
 
-  it("a Mac offers Universal Clipboard by the values, and no other host does (I1)", () => {
+  it("the values step carries no note on any host (W21 dropped I1's Universal Clipboard)", () => {
     const valuesStep = (os: HostOs) => numbered(setup("ios", { os }))[4];
-    expect(helps([valuesStep("macos")])).toEqual([
-      "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad.",
-    ]);
+    expect(helps([valuesStep("macos")])).toEqual([]);
     expect(helps([valuesStep("windows")])).toEqual([]);
     expect(helps([valuesStep("linux")])).toEqual([]);
   });
@@ -1825,21 +1818,16 @@ describe("the Android device's guide is the next thing, in Android's own words",
     expect(alternatives[0][0]).toBe("No camera, or nothing opens? In Settings, tap");
   });
 
-  it("each step's explanation waits behind its own ? (W3, W5, W6)", () => {
+  it("each step's explanation is its own note, and the values step has none (W3, W5, W6; W21)", () => {
     const [download, install, proxy, values] = numbered(android());
-    expect(download.find(isHelp)?.topic).toBe("if it seems stuck");
+    expect(download.find(isHelp)?.help).toMatch(/^A blank page or Chrome's Downloads means it downloaded/);
     expect(install.find(isHelp)).toEqual({
       help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
-      topic: "which apps trust it",
     });
     expect(proxy.find(isHelp)).toEqual({
       help: "This is stock Android's menu; makers move it. On another, open the Wi-Fi network it is on and look for Proxy, often under Advanced options.",
-      topic: "if the menu differs",
     });
-    expect(values.find(isHelp)).toEqual({
-      help: "The Wi-Fi page shows both: copy each there and paste it here.",
-      topic: "copying the values",
-    });
+    expect(values.find(isHelp)).toBeUndefined();
   });
 
   it("names the proxy's fields as Android labels them (W4)", () => {

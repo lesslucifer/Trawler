@@ -139,11 +139,10 @@ export interface MediaPart {
   alt: string;
   shows: string;
 }
-// What explains a step and is nothing to do in it: behind a ? at the step's
-// end, shown when asked (W13's R1).
+// What explains a step and is nothing to do in it: drawn under the step while
+// the screen's notes are shown (DEC-66).
 export interface HelpPart {
   help: string;
-  topic: string;
 }
 export type StepPart = string | CopyPart | CommandPart | SavePart | PathPart | RoutePart | MediaPart | HelpPart;
 export type GuideStep = readonly StepPart[];
@@ -839,11 +838,9 @@ const PC_PROXY_OFF: GuideStep = [
 // registry writes tell no running app, where Settings does (W5's N1).
 const NOTHING_ARRIVES: HelpPart = {
   help: "Nothing arrives? On the same page, turn off Automatically detect settings and Use setup script — either one outranks this proxy.",
-  topic: "if nothing arrives",
 };
 const APPS_ALREADY_OPEN: HelpPart = {
   help: "Apps already open may keep their old setting until restarted.",
-  topic: "apps already open",
 };
 
 function pcRoute(addr: string, first: GuideStep, values: StepPart[]): Guide {
@@ -896,11 +893,9 @@ const LINUX_PROXY_OFF: GuideStep = [
 ];
 const WHAT_FOLLOWS_IT: HelpPart = {
   help: "Firefox and Chrome follow this proxy. Terminal tools such as curl and apt do not — they read HTTPS_PROXY.",
-  topic: "what follows it",
 };
 const ON_ITS_DESKTOP: HelpPart = {
   help: "Run it on that machine's desktop — over SSH it sets nothing.",
-  topic: "where to run it",
 };
 
 function linuxRoute(
@@ -1030,7 +1025,7 @@ function reversal(t: OsTarget | "terminal"): GuideStep[] {
   const said: StepPart[] = proxyOffSteps(t).map((step) =>
     step === command ? { command: step, label: "the proxy-off command" } : step,
   );
-  return [t === "macos" ? [...said, { help: ON_ETHERNET, topic: "on Ethernet" }] : said];
+  return [t === "macos" ? [...said, { help: ON_ETHERNET }] : said];
 }
 
 // A desktop set up by hand undoes it there too, its command the other way
@@ -1061,7 +1056,6 @@ const EMULATOR_HOST = "10.0.2.2";
 
 const ANDROID_USER_CA: HelpPart = {
   help: "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config.",
-  topic: "which apps trust it",
 };
 
 // The task's title names the device, so a step on it starts at what to do,
@@ -1094,7 +1088,6 @@ const IOS_INSTALL_STEP: GuideStep = [
   },
   {
     help: `It asks for your passcode on the way. Not at the top of Settings? ${IOS_DEVICE_MANAGEMENT.join(" → ")} (${IOS_DNS_VARIANT}). iOS marks the profile Not Verified: it is yours, not signed by a company.`,
-    topic: "if it is not there",
   },
 ];
 
@@ -1110,26 +1103,19 @@ const IOS_TRUST_STEP: GuideStep = [
   },
   {
     help: "Installing does not trust it. Until this is on, Safari says This Connection Is Not Private.",
-    topic: "why a second switch",
   },
 ];
 
 const IOS_REMOVE_STEP: GuideStep = [
   "In Settings, tap",
   { path: [...IOS_DEVICE_MANAGEMENT, "Remove Profile"] },
-  { help: `The row reads ${IOS_DNS_VARIANT}.`, topic: "if the row reads differently" },
+  { help: `The row reads ${IOS_DNS_VARIANT}.` },
 ];
 
 const IOS_TRUST_PATH = `Settings → General → About → Certificate Trust Settings → ${CA_NAME}`;
 
 // The profile and the trust switch refuse alike, and the switch is the step a
 // user who installed misses, so it leads (W9's S2).
-// A Mac signed in to the same Apple ID pastes onto the phone (W18's I1).
-const UNIVERSAL_CLIPBOARD: HelpPart = {
-  help: "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad.",
-  topic: "copying the values",
-};
-
 const IOS_TRUST_FIRST = `turn on full trust: ${IOS_TRUST_PATH}. Not listed there? The profile is not installed`;
 
 const IOS_ADDRESS_TEST: AddressTest = {
@@ -1199,12 +1185,6 @@ const androidProxy = (choice: string[]): StepPart[] => [
 
 const ANDROID_MAKERS: HelpPart = {
   help: "This is stock Android's menu; makers move it. On another, open the Wi-Fi network it is on and look for Proxy, often under Advanced options.",
-  topic: "if the menu differs",
-};
-
-const ANDROID_COPY_VALUES: HelpPart = {
-  help: "The Wi-Fi page shows both: copy each there and paste it here.",
-  topic: "copying the values",
 };
 
 const ANDROID_WIFI_RECORDING: MediaPart = {
@@ -1240,7 +1220,7 @@ function androidRoute(wifiPage: string | null): GuideStep[] {
           ANDROID_WIFI_RECORDING,
           ANDROID_MAKERS,
         ],
-        [...values, ANDROID_COPY_VALUES],
+        values,
       ];
 }
 
@@ -1260,8 +1240,8 @@ export function caFormatFor(id: PlatformId): CaFormat {
 const unreachable = (device: string, os: HostOs, outcome?: string): HelpPart => {
   const help = `Doesn't load? ${capitalised(device)} can't reach this one — check both are on the same network, and that ${HOST_NOUN[os]}'s firewall lets Trawler accept incoming connections.`;
   return outcome === undefined
-    ? { help, topic: "if it doesn't load" }
-    : { help: `${outcome} ${help}`, topic: "if it seems stuck" };
+    ? { help }
+    : { help: `${outcome} ${help}` };
 };
 
 function downloadStep(
@@ -1322,7 +1302,6 @@ function localSetup(os: HostOs, proxyAddr: string, saved?: SavedCa): PlatformSet
     },
     route: {
       title: `Send ${host}'s traffic to Trawler`,
-      why: "its system proxy points at Trawler while Trawler runs",
       guide: localRoute(os, proxyAddr),
     },
     try: { title: `Make a request from ${host}` },
@@ -1422,7 +1401,6 @@ function deviceSetup(id: "ios" | "android", os: HostOs, reach: ReachAddresses | 
                 { path: ["Port"] },
                 "then tap",
                 { path: ["Save"] },
-                ...(os === "macos" ? [UNIVERSAL_CLIPBOARD] : []),
               ],
             ]
           : androidRoute(reach.wifiPage),
@@ -1481,7 +1459,6 @@ const SDK_HOME: Record<OsTarget, string> = {
 
 const adbNotFound = (target: OsTarget): HelpPart => ({
   help: `adb not found? Android Studio puts it in ${SDK_HOME[target]}${target === "windows" ? "\\" : "/"}platform-tools — set ANDROID_HOME if your SDK is elsewhere.`,
-  topic: "if adb is not found",
 });
 
 const withEmulatorRunning = (target: OsTarget) => `${IN_SHELL[target]}, with the emulator running, run:`;
@@ -1493,11 +1470,6 @@ const withEmulatorRunning = (target: OsTarget) => `${IN_SHELL[target]}, with the
 const EMULATOR_SECURITY = ["Security & privacy", "More security & privacy"];
 const EMULATOR_INSTALLER = ["Encryption & credentials", "Install a certificate", "CA certificate", "Install anyway"];
 const EMULATOR_PICK_FILE = ["☰", "Downloads", CA_FILES.cer];
-
-const EMULATOR_HOST_HELP: HelpPart = {
-  help: `${EMULATOR_HOST} is the address every emulator reaches the machine it runs on by.`,
-  topic: `what ${EMULATOR_HOST} is`,
-};
 
 // The dialog's own words on Android 15: Uninstall, then OK (W17's W2).
 const emulatorUninstall = (trustedCredentials: RoutePart): GuideStep => [
@@ -1512,7 +1484,6 @@ const EMULATOR_WIFI_PROXY = ["AndroidWifi ⚙", "✎", "Advanced options", "Prox
 // A new emulator's Chrome opens on its welcome, and the address after it (W17's I3).
 const CHROME_WELCOME: HelpPart = {
   help: "A new emulator's Chrome shows Welcome to Chrome first: tap Use without an account, and the address opens.",
-  topic: "if Chrome shows its welcome",
 };
 
 // The global proxy covers every network the emulator has. Its Wi-Fi is the
@@ -1610,7 +1581,6 @@ function emulatorSetup(os: HostOs, proxyAddr: string, saved: SavedCa | undefined
         { copy: EMULATOR_HOST, label: "the emulator's host", wire: "proxy host" },
         "port",
         { copy: String(port), label: "the proxy port", wire: "proxy port" },
-        EMULATOR_HOST_HELP,
       ],
       [
         `Or start it with the proxy already set — the emulator reads this address on ${HOST_NOUN[os]}:`,
@@ -1648,7 +1618,6 @@ const simulatorTrustCommand = (file: string) =>
 // those hold no simctl (W7's N1).
 const SIMCTL_NOT_FOUND: HelpPart = {
   help: "simctl not found? Run sudo xcode-select -s /Applications/Xcode.app first.",
-  topic: "if simctl is not found",
 };
 
 const OPEN_THE_SIMULATOR: GuideStep = ["Open the Simulator", { open: "simulator", label: "open the Simulator" }];
@@ -1660,7 +1629,6 @@ const SIMULATOR_ERASE: GuideStep = [
   { path: ["Device", "Erase All Content and Settings"] },
   {
     help: "It wipes everything in that Simulator. Nothing removes Trawler's root alone.",
-    topic: "what it wipes",
   },
 ];
 

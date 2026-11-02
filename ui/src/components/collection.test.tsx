@@ -41,7 +41,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   Field: <collection.Field value="" onChange={() => {}} aria-label="host" />,
   FormRenderer: <collection.FormRenderer text="a=1" />,
   Help: (
-    <collection.Help topic="on Ethernet" text="On Ethernet, change Wi-Fi to Ethernet in the command.">
+    <collection.Help text="On Ethernet, change Wi-Fi to Ethernet in the command.">
       In Terminal, run:
     </collection.Help>
   ),
