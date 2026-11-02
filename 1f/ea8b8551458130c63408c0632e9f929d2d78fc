@@ -39,5 +39,12 @@ nits:
   - finding: "Every recording ships as mp4 and webm, half the bytes unused in any one webview"
     waived: "Deliberate, so every webview plays one, as StepMedia's TSDoc records; a size cost with no runtime effect."
 refuted: "THREE CANDIDATES REFUTED, by two verifiers. (1) altitude, important: the emulator host alias written twice - a platform constant, a nit. (2) altitude, important: the notice keys written twice - pre-existing on main for two of three, typed on both sides, a nit. (3) altitude, important: the quit's 1.5 s bound against the shell's 10 s per command - measured 0.25 s for six services, the same 1+2N main spawned, and DEC-64 rule 5a's deliberate bound whose timeout is the safe unread ask; refuted a third time across rounds. The correctness finder raised nothing over the seams it traced and the five fix commits."
+walk_waivers:
+  - seam: 529113e7da1b44f9b623569acb7edf8e5021464e
+    why: "The walk re-hashes this seam's review and design bindings and gets other bytes from the same base and tip: git diff's index lines abbreviate object names to a length git scales with the object count, 7 characters when the WU landed and 8 at this walk. With core.abbrev=7 the seam's diff hashes to its dod/v1 receipt again (W1: c98382a2, the receipt's value); the code is untouched. W4 onward were bound at 8 and still match. A gate change (--full-index) is the follow-up."
+  - seam: 384669d927ac878346f7d2ba1c1adbaf42c6a892
+    why: "The walk re-hashes this seam's review and design bindings and gets other bytes from the same base and tip: git diff's index lines abbreviate object names to a length git scales with the object count, 7 characters when the WU landed and 8 at this walk. With core.abbrev=7 the seam's diff hashes to its dod/v1 receipt again (W1: c98382a2, the receipt's value); the code is untouched. W4 onward were bound at 8 and still match. A gate change (--full-index) is the follow-up."
+  - seam: 1815021e7045898674320b536844e6e0b250262c
+    why: "The walk re-hashes this seam's review and design bindings and gets other bytes from the same base and tip: git diff's index lines abbreviate object names to a length git scales with the object count, 7 characters when the WU landed and 8 at this walk. With core.abbrev=7 the seam's diff hashes to its dod/v1 receipt again (W1: c98382a2, the receipt's value); the code is untouched. W4 onward were bound at 8 and still match. A gate change (--full-index) is the follow-up."
 verdict: PASS
 date: 2026-11-02
