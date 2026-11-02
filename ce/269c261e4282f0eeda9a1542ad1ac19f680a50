@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W19
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html"
+    tier: T2
+    action: added
+    distills: "DEC-65: the core serves GET /android-wifi on every API listener, naming only the armed proxy and reflecting nothing from the request; its one link is a constant intent: to Android's Wi-Fi settings; /reach names it as wifi_page; the Android device's proxy step leads with its code and keeps the Settings path; extends DEC-57's coded values"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the index lists DEC-65"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: the Android device's steps are Android 15's own with recordings and a way back ending Uninstall -> OK, its Wi-Fi proxy starting from a page the core serves (DEC-65)"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD: the Android device's steps in Android 15's own words with recordings; its Wi-Fi proxy from the core's page by a third code, the Settings path its other way and None -> Save its way back; what explains behind each step's ?; the certificate's way back ending Uninstall -> OK; a step's code before its recording; the API surface names GET /android-wifi and /reach's wifi_page"
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "the epic plan's status line names W19, ruled, built and waiting for review; its core non-goal names the one exception, the Wi-Fi page (DEC-65)"
+  - path: "docs/work/2026-11-01-onboard-revamp-w19-android-wording-plan.html"
+    tier: T3
+    action: added
+    distills: "W19's plan: findings from the reels, the source and a throwaway Android 15 emulator, four hand-ins, and the owner's rulings (Q1 A, Q2 B - the core's Wi-Fi page, Q3 A, Q4 none)"
+  - path: "docs/work/2026-11-02-onboard-revamp-w19-android-wording-result.html"
+    tier: T3
+    action: added
+    distills: "W19's result: what shipped, the deviations (the uninstall's second Trusted credentials tap, Chrome's Downloads, the code before the recording, no new matrix rule), the evidence, and W20's follow-ups including the T1 route row"
