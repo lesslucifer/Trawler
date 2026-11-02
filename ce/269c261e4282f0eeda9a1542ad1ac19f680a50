@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU android-wording -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W19
+branch: wu/onboard-revamp/android-wording
+base: ef9fa6c4ee37eeb3d8e98b376a9656616d6dfcee
+head: ce269c261e4282f0eeda9a1542ad1ac19f680a50
+diff_sha256: 8dc5714b8c36286628fb87d19724bcd30a945ba151dd6db132848e589083fb87
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 1
+  stage_seconds:
+    gate0: 179
+    total: 244
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 1 }
+findings: { found: 2, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-02
