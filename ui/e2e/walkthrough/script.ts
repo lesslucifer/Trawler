@@ -646,8 +646,8 @@ const CA_SHOWN: Record<
     findings: ["R23", "R24", "R27", "R28", "W18.E1", "W18.E2", "W18.W2", "W18.M1", "W18.N1"],
   },
   android: {
-    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.cer\", which downloads Trawler's certificate, and the install step reaches the CA installer by Settings' search and picks the trawler-ca file it downloaded; its other way saves trawler-ca.cer. Task 4 is dimmed, \"after task 3\", with no code",
-    findings: ["R25", "R27", "R28"],
+    says: "leads with its code, framed, under \"Scan with the camera, or open /ca.cer\", which downloads Trawler's certificate; then \"In Settings, search CA certificate, then tap\" CA certificate → CA certificate → Install anyway, \"then the trawler-ca file at the top of Recent.\", with its Android 15 recording, and no note outside a ?; its other way saves trawler-ca.cer. Task 4 is dimmed, \"after task 3\", with no code",
+    findings: ["R25", "R27", "R28", "W19.W2", "W19.M1"],
   },
 };
 
@@ -760,6 +760,28 @@ function offMachine(host: Host, platform: Platform): Chapter[] {
         },
         expect: `task 3's two steps as path parts: In Settings, tap Wi-Fi then ⓘ by the network it is on, then Configure Proxy → Manual; Server and Port with the values above, then Save${host === "macos" ? `; under its ? "Same Apple ID on both? Copy a value here and paste it on your iPhone or iPad."` : ", with no ?"}`,
         findings: ["W18.W1", "W18.I1"],
+        anchor: [task(3)],
+      },
+    );
+  if (platform === "android")
+    chapters.push(
+      {
+        id: "certificate-help",
+        title: "What the certificate's steps explain on request",
+        act: (w) => w.openHelp(2),
+        expect: `task 2's ? open: the download's "A blank page or Chrome's Downloads means it downloaded. Opened the file and Android said Install CA certificates in Settings? Close it — the next step is that. Doesn't load? …"; the install's "Chrome trusts it. An app trusts it only if it opts in to user certificates — yours can, in its network security config."`,
+        findings: ["W19.W5", "W19.W6"],
+        anchor: [task(2)],
+      },
+      {
+        id: "route-open",
+        title: "The Android device's proxy, from the Wi-Fi page",
+        act: async (w) => {
+          await w.openGuide(3);
+          await w.openHelp(3);
+        },
+        expect: `task 3's two steps as path parts: "Scan with the camera, or open" the Wi-Fi page's /android-wifi URL, its code bare, "and tap" Open Wi-Fi settings, then ⚙ by the network it is on, then ✎ → Advanced options → Proxy → Manual, with its Android 15 recording and the makers' ?; then Proxy hostname and Proxy port with the values above, then Save, its ? "The Wi-Fi page shows both: copy each there and paste it here."; the Settings path from Network & internet → Internet under other ways. Task 2's code stays the one framed control`,
+        findings: ["W19.W1", "W19.W3", "W19.W4", "W19.I1", "W19.M1"],
         anchor: [task(3)],
       },
     );
