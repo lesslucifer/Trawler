@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { readFileSync, writeFileSync, rmSync } from "node:fs";
 import { findRun, type FrontMode, type Prelaunch } from "./script.ts";
@@ -107,7 +107,9 @@ export const config: WebdriverIO.Config = {
   specs: [resolve(here, "walkthrough.spec.ts")],
   maxInstances: 1,
 
-  services: [["@wdio/tauri-service", { driverProvider: "embedded" }]],
+  // The app's own output is kept, so a reel the app died in names its panic.
+  services: [["@wdio/tauri-service", { driverProvider: "embedded", captureBackendLogs: true }]],
+  outputDir: join(process.env[OUT_VAR] ?? "", "logs", `${run.reel.id}-${run.launch.id}`),
   capabilities: [
     {
       browserName: "tauri",

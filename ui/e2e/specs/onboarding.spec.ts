@@ -43,9 +43,24 @@ async function choosePlatform(label: string) {
 // address in the environment and the shell injected it before the first script
 // ran, so a spec only waits for the screen it painted. Nothing here navigates —
 // a reload stops the WKWebView scheme tasks the Tauri IPC rides on, and wry
-// answers a stopped one with an Objective-C exception that aborts the app.
+// drops every answer still in flight.
 async function shellIsUp() {
   await $("header").waitForExist({ timeout: 15_000 });
+}
+
+// The window runs hidden, and setup's watch reads this machine only while the
+// window is visible (U3), so nothing would read it again after a request. The
+// emulator counts an unmarked request only between two readings (DEC-63), and
+// a focus is the other thing that reads again, so the spec gives one until the
+// reading lands.
+async function readsTheRequest(timeoutMsg: string) {
+  await browser.waitUntil(
+    async () => {
+      await browser.execute(() => window.dispatchEvent(new Event("focus")));
+      return successLine().isExisting();
+    },
+    { timeout: 15_000, interval: 1_000, timeoutMsg },
+  );
 }
 
 // UC-ONBOARD end to end, on the axis E-ONBOARD rebuilt the screen around: the
@@ -201,10 +216,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({
-      timeout: 15_000,
-      timeoutMsg: "no success line after the new request",
-    });
+    await readsTheRequest("no success line after the new request");
     await expect(tryTask()).toHaveText(
       expect.stringContaining("capturing traffic"),
     );
@@ -230,10 +242,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await expect(successLine()).not.toBeExisting();
 
     await hit();
-    await successLine().waitForExist({
-      timeout: 15_000,
-      timeoutMsg: "the filtered re-entry never read the request",
-    });
+    await readsTheRequest("the filtered re-entry never read the request");
     await expect(tryTask()).toHaveText(
       expect.stringContaining("capturing traffic"),
     );

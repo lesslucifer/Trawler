@@ -205,6 +205,39 @@ mod tests {
         }
     }
 
+    // wry answers each WebKit scheme task inside objc2's exception catch, so a
+    // task WebKit already stopped throws and is dropped. Under panic = "abort"
+    // that catch cannot run, and the throw aborts the app instead.
+    fn release_aborts_on_panic(cargo_toml: &str) -> bool {
+        let mut in_release = false;
+        cargo_toml.lines().map(str::trim).any(|line| {
+            if line.starts_with('[') {
+                in_release = line == "[profile.release]";
+                return false;
+            }
+            in_release
+                && line.split_once('=').is_some_and(|(key, value)| {
+                    key.trim() == "panic" && value.trim() == "\"abort\""
+                })
+        })
+    }
+
+    #[test]
+    fn the_abort_detector_reads_only_the_release_profile() {
+        assert!(release_aborts_on_panic("[profile.release]\nlto = true\npanic = \"abort\"\n"));
+        assert!(!release_aborts_on_panic(
+            "[profile.dev]\npanic = \"abort\"\n[profile.release]\nlto = true\n"
+        ));
+        assert!(!release_aborts_on_panic("[profile.release]\npanic = \"unwind\"\n"));
+    }
+
+    #[test]
+    fn the_shell_unwinds_so_wry_can_catch_a_stopped_task() {
+        let manifest = crate::repo_root().expect("repo root").join("ui/src-tauri/Cargo.toml");
+        let source = std::fs::read_to_string(&manifest).expect("the shell's Cargo.toml");
+        assert!(!release_aborts_on_panic(&source), "{} sets panic = \"abort\"", manifest.display());
+    }
+
     // pnpm 10+ ignores the `pnpm` field and says so only as an install warning,
     // so a pin placed there stops applying without turning anything red.
     fn carries_a_pnpm_field(package_json: &str) -> bool {
@@ -279,26 +312,37 @@ mod tests {
         assert!(err.contains("usage:"));
     }
 
+    fn window_of(repo: &Path, config: &str) -> serde_yaml::Value {
+        let source = std::fs::read_to_string(repo.join("ui/src-tauri").join(config)).expect(config);
+        // JSON is a YAML subset, so the reader already in the tree parses it.
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&source).expect("valid json");
+        parsed["app"]["windows"][0].clone()
+    }
+
     // The flow list's header holds one line down to 846px once the capture acts
     // sit behind one trigger (E-EXPORT.W9, Tune T8), so a window the user can
-    // drag below that reaches a width where the header wraps to two lines. The
-    // e2e overlay adds no window block, so it inherits this one.
+    // drag below that reaches a width where the header wraps to two lines. A
+    // merged config replaces the windows array whole, so each overlay that
+    // declares the window must keep the minimum too.
     #[test]
     fn the_window_cannot_be_dragged_narrower_than_the_header_holds_one_line() {
         let repo = crate::repo_root().expect("repo root");
-        let config = std::fs::read_to_string(repo.join("ui/src-tauri/tauri.conf.json"))
-            .expect("tauri.conf.json");
-        // JSON is a YAML subset, so the reader already in the tree parses it.
-        let parsed: serde_yaml::Value = serde_yaml::from_str(&config).expect("valid json");
-        let min_width = parsed["app"]["windows"][0]["minWidth"].as_u64().expect("minWidth");
-        assert!(min_width >= 850, "minWidth is {min_width}, and the header wraps below 846");
+        for config in ["tauri.conf.json", "tauri.conf.e2e.json", "tauri.conf.walkthrough.json"] {
+            let min_width = window_of(&repo, config)["minWidth"].as_u64().expect("minWidth");
+            assert!(
+                min_width >= 850,
+                "{config}: minWidth is {min_width}, and the header wraps below 846"
+            );
+        }
+    }
 
-        let overlay = std::fs::read_to_string(repo.join("ui/src-tauri/tauri.conf.e2e.json"))
-            .expect("tauri.conf.e2e.json");
-        let overlay: serde_yaml::Value = serde_yaml::from_str(&overlay).expect("valid json");
-        assert!(
-            overlay["app"]["windows"].is_null(),
-            "the overlay declares its own windows, so it no longer inherits the minimum"
-        );
+    // The e2e asserts no picture, so its window stays off the screen. The
+    // walkthrough films what a user sees, and a hidden page loads no recording.
+    #[test]
+    fn the_e2e_window_is_hidden_and_the_walkthrough_window_is_shown() {
+        let repo = crate::repo_root().expect("repo root");
+        let visible = |config| window_of(&repo, config)["visible"].as_bool().unwrap_or(true);
+        assert!(!visible("tauri.conf.e2e.json"));
+        assert!(visible("tauri.conf.walkthrough.json"));
     }
 }

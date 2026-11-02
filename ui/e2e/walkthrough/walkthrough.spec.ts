@@ -140,8 +140,14 @@ const walk: Walk = {
   async filter(text: string) {
     await $('[aria-label="filter"]').setValue(text);
   },
+  // Another device's unmarked request counts only between two readings of this
+  // machine (DEC-63), and the watch that takes them stops while the window is
+  // covered (U3). A focus reads too, so one before the request opens the span
+  // and one after closes it over the request, covered or not.
   async hit(opts = {}) {
+    await rereadOnFocus();
     await control(opts.untrusted ? "/hit?untrusted=1" : "/hit");
+    await rereadOnFocus();
   },
   async front(mode) {
     await control(`/front?${frontQuery(mode)}`);
