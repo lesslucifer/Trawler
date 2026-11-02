@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ab9275b9f34851f0dfad5ec" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP — epic plan</h1>
+      <p>Review the setup screen and the close dialog in detail, and revamp what the review finds. The
+        slices: switching between the list and setup, the parked roadmap rows, each platform's status, the
+        close dialog, and each platform's wording and display.</p>
+      <div class="meta">v7 · 2026-11-02 · re-opened for W21 · Trawler · T3 (docs/work/) · branch
+        <code>epic/onboard-revamp</code> · off <code>main</code> at <code>78d519c</code></div>
+    </div>
+  </header>
+  <main>
+    <div class="callout" data-c="status">
+      <strong>Re-opened for W21.</strong> W1–W20 have landed on the epic, and the epic was closed and waiting for the
+      owner's sign-off (2026-11-02, tip <code>1fea8b85</code>) when the owner asked for one more slice: the setup screen's
+      <em>?</em> controls replaced by one switch for every note, and the notes that explain nothing dropped. That reverses
+      the owner's rule of 2026-10-31 (what explains sits behind a help control) on setup. W21 is on
+      <code>wu/onboard-revamp/notes-toggle</code>: its <a href="2026-11-02-onboard-revamp-w21-notes-toggle-plan.html">WU
+      plan</a> waits for its rulings. The epic result and the epic review are redone once it merges; the sign-off
+      command printed for <code>1fea8b85</code> is void.
+    </div>
+
+    <div class="diagram" data-c="wu-graph">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 · list ⇄ setup<br/>what shows, what reloads"]
+  W2["W2 · roadmap rows<br/>the eight parked problems"]
+  S["W3–W10 · status<br/>one platform each"]
+  W11["W11 · close dialog"]
+  W12["W12 · wording + display<br/>This machine"]
+  T["W13–W19 · wording + display<br/>one platform each"]
+  W20["W20 · e2e + distillation"]
+  W21["W21 · notes on one switch"]
+  W1 --> W2 --> S
+  W1 --> W11
+  S --> W12 --> T
+  S -. "same platform" .-> T
+  S --> W20
+  W11 --> W20
+  T --> W20
+  W20 --> W21
+      </pre>
+      <div class="caption">W2 comes right after W1 and sets the status vocabulary (F5, F19) that W3–W10 reuse. W12 sets the emphasis and step-help pattern that W13–W19 reuse. A platform's wording WU waits for that platform's status WU.</div>
+    </div>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">E-ONBREV made setup appear, open its guide and say "set up" at the moments
+      UC-ONBOARD names, and it left content, copy and layout alone. Users still meet four problems. What
+      shows and what reloads when they move between the list and setup depends on state nobody has walked
+      through. Each platform's tasks report a status that is honest but not always the most accurate or
+      useful reading available. The instructions are dense, neutral text, so a user cannot tell what to act on or
+      what to skip. They are also text only: the user must copy values by hand and find each settings screen
+      alone. And eight
+      known problems sit parked on the roadmap, including a close dialog that was never redesigned. The
+      user-visible change: moving between screens keeps or reloads exactly what the state calls for. Each
+      platform shows the most accurate status it can verify. Each guide makes the one thing to do next stand
+      out. Each step offers the easiest route there is: an interactive one where it can (a QR code, a link
+      that opens the right screen), otherwise an image or video of the step. The close dialog behaves and reads to the same
+      standard. It comes now because E-ONBREV's timing rules are settled, so these reviews no longer mix with
+      timing defects.</p>
+
+    <h2 id="platforms">The platforms (one status WU and one wording WU each)</h2>
+    <table data-c="platforms">
+      <thead><tr><th>Id</th><th>Label</th><th>Offered on</th><th>Status WU</th><th>Wording WU</th></tr></thead>
+      <tbody>
+        <tr><td><code>this</code></td><td>This machine</td><td>macOS · Windows · Linux (each host reviewed)</td><td>W3</td><td>W12</td></tr>
+        <tr><td><code>mac</code></td><td>Another Mac</td><td>every host</td><td>W4</td><td>W13</td></tr>
+        <tr><td><code>windows</code></td><td>Another Windows PC</td><td>every host</td><td>W5</td><td>W14</td></tr>
+        <tr><td><code>ubuntu</code></td><td>Another Ubuntu machine</td><td>every host</td><td>W6</td><td>W15</td></tr>
+        <tr><td><code>ios-sim</code></td><td>iOS Simulator</td><td>macOS only</td><td>W7</td><td>W16</td></tr>
+        <tr><td><code>android-sim</code></td><td>Android emulator</td><td>every host</td><td>W8</td><td>W17</td></tr>
+        <tr><td><code>ios</code></td><td>iPhone or iPad</td><td>every host</td><td>W9</td><td>W18</td></tr>
+        <tr><td><code>android</code></td><td>Android device</td><td>every host</td><td>W10</td><td>W19</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review-shape">What every review WU does</h2>
+    <div class="diagram" data-c="wu-shape">
+      <pre class="mermaid">
+flowchart LR
+  A["sweep its slice<br/>walkthrough + state matrix"] --> F["findings<br/>in the WU plan"]
+  F --> O["owner rules<br/>take · defer · refute"]
+  O --> D["design<br/>amend the design run,<br/>or a component design"]
+  D --> B["build + tests<br/>cites the closed design"]
+      </pre>
+      <div class="caption">Review, design and build in one WU (Q6, Q9). A WU whose findings change nothing that renders skips the design step. The instruments already exist: <code>cargo xtask ui walkthrough</code> for the reels and <a href="../../ui/src/onboardingMatrix.test.tsx">onboardingMatrix.test.tsx</a> for the state sweep.</div>
+    </div>
+
+    <h3 id="residue">The carried-in roadmap rows: known onboarding problems already waiting</h3>
+    <p>Earlier epics found these problems and parked them on the <a href="../backlog/roadmap.html">roadmap</a>
+      for "whoever next opens the setup screen". The F-numbers come from E-ONBOARD's product-owner review of
+      the shipped screen, which left six findings untaken. The rest were each found by one WU. None of them
+      is a screen saying something false. W2 takes them together (Q3) and re-checks each at the tip first.</p>
+    <table data-c="residue">
+      <thead><tr><th>Row</th><th>What the user meets today</th><th>Taken by</th></tr></thead>
+      <tbody>
+        <tr><td>F23</td><td>The header dot can read red, "Not capturing yet", above a screen that says Trawler is capturing. The dot follows the setup phase, not the traffic. E-ONBREV.W3 fixed part of this.</td><td>W1, moved from W2 by the owner's 2026-09-28 proposals: the dot becomes a switch with a "quiet" state</td></tr>
+        <tr><td>F26</td><td>The only way from the flow list back to setup is a small dot with a tooltip, or the success banner's "set up another device". The list's ⋮ menu offers no route back.</td><td>W2</td></tr>
+        <tr><td>F5</td><td>Task status is shown by five glyphs (○ ◐ ✓ ⚠ ⟳) with no words and no legend. Nobody can guess that ◐ means "can't be checked from here".</td><td>W2, reused by W3–W10</td></tr>
+        <tr><td>F19</td><td>After an action, its note and the task's status line both confirm the same thing, so the user reads it twice.</td><td>W2, reused by W3–W10</td></tr>
+        <tr><td>F24</td><td>The last task asks the user to open a website or run <code>curl</code>. A user who does neither is stuck. <a href="../decisions/dec-56-the-app-may-prove-capture-itself.html">DEC-56</a> allows a "send a test request" button, on this machine only. It is proposed and not built.</td><td>W2</td></tr>
+        <tr><td>-60007</td><td>"Set up this Mac" sometimes fails with "no user interaction was possible", because macOS could not show its trust prompt. Nobody knows why yet. The manual steps open, so the user is not stuck.</td><td>W2</td></tr>
+        <tr><td>latch</td><td>On the iOS Simulator, the "stop routing through Trawler" control stayed visible after the proxy was already off. The old code is gone from the source, so W2 first checks whether this still happens.</td><td>W2</td></tr>
+        <tr><td>F28</td><td>Setting up a phone means reading a host, a port and a certificate URL off this screen and typing them by hand, because a phone cannot paste from this machine. <a href="../decisions/dec-57-a-device-that-cannot-paste.html">DEC-57</a> allows a scannable code beside each value. It is proposed and not built, and needs a component design and a code-rendering dependency.</td><td>W2</td></tr>
+        <tr><td>quit dialog</td><td>The close dialog was never redesigned. It has a disabled remedy button and a duplicated body. Its proxy-off wording may not match the setup screen's "stop routing through Trawler".</td><td>W11, whose whole subject it is</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step-media">Step help: interactive first, media as the fallback</h3>
+    <div class="diagram" data-c="step-media-loop">
+      <pre class="mermaid">
+flowchart LR
+  S["a step"] --> Q{"an interactive route?<br/>QR code · opens the screen"}
+  Q -- yes --> I["build it<br/>test it pins the value"]
+  Q -- no --> L["I write the shot list<br/>device · OS version · start and end frame<br/>the control it must show"]
+  L --> R["the owner records<br/>image or short video"]
+  R --> V{"I verify against the shot list<br/>frames read, control visible,<br/>version right, no personal data"}
+  V -- fails --> L
+  V -- holds --> A["shipped as a static asset<br/>alt text = the step's path"]
+      </pre>
+      <div class="caption">Q11. The step's text stays complete without its media. Each media item records the OS version it shows, so a later OS update shows which ones are stale. Video frames are pulled with ffmpeg for the check.</div>
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <table data-item="use-cases" data-c="uc-table">
+      <thead><tr><th>UC</th><th>Change</th><th>By</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>A "moving between the list and setup" section. For each state, it says what shows and what is kept, reloaded or reset.</td><td>W1</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>Status glyphs carry words. One fact is stated once. A test-request button on this machine (DEC-56). A scannable code beside each value a phone must type (DEC-57).</td><td>W2</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>For each platform, which status each task shows, what verifies it, and what the screen says when nothing can.</td><td>W3–W10</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>The quit dialog row, restated where the review changes it.</td><td>W11</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>An emphasis rule: in each guide the next action leads, the optional recedes, and the explanatory shows only on request, behind a help control (the owner, 2026-10-31; W13). Each step offers an interactive route where one exists, and otherwise an image or video of the step.</td><td>W12–W19</td></tr>
+        <tr><td><span class="badge id">UC-4</span></td><td>The list's ⋮ menu offers the route back to setup (F26).</td><td>W2</td></tr>
+      </tbody>
+    </table>
+    <p>Rows are written contract-level from each WU's findings. <a href="../use-cases/web-ui.html">web-ui.html</a></p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected-table">
+      <thead><tr><th>A reader who wasn't there checks…</th><th>…and sees</th></tr></thead>
+      <tbody>
+        <tr><td>every move between the list and setup, in every state W1 names</td><td>what UC-ONBOARD's new section says shows, is kept and is reloaded, held by a test for each transition</td></tr>
+        <tr><td>the eight roadmap rows</td><td>each closed by W2 or W11, or restated on the roadmap with the reason it stays</td></tr>
+        <tr><td>each platform's tasks, in each probe and traffic state</td><td>the status that platform's WU ruled most accurate, and never a status the screen cannot verify presented as verified</td></tr>
+        <tr><td>the close dialog, on every outcome</td><td>no disabled remedy, no duplicated body, and a proxy-off action with the wording W11 settles, built from a closed design</td></tr>
+        <tr><td>each platform's guide, at a glance</td><td>the next action visibly leads its task, optional or explanatory text is visibly secondary, and each step has an interactive route or, failing that, verified media</td></tr>
+        <tr><td>every WU plan</td><td>its findings, each taken, deferred or refuted by the owner, with every taken one held by a named test</td></tr>
+        <tr><td><code>cargo xtask ui walkthrough</code> at the epic tip</td><td>"after" reels beside the "before" reels taken at W1, with the owner ticking every chapter</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="expiring-proof">
+      <strong>Carried into W3–W10 (the owner, 2026-09-28):</strong> a captured flow is not permanent proof
+      that a setup step works. A step turned green by traffic expires after a while, and each status WU
+      decides, for its platform, how the step reads once its proof is old. Example: an iPhone's certificate
+      step is green from a request an hour ago, and the profile has since been deleted.
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li>Re-opening E-ONBREV's timing rules: captured-only proof, the launch gate, the setup session
+        (<a href="../decisions/dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a>). One changes
+        only if a finding shows it is wrong, and then as a new DEC. The owner's 2026-09-28 proposals change
+        two of them in W1, as DEC-61: the dot opens the list before anything is captured, and capture proof
+        expires.</li>
+      <li>Core changes: the failed-handshake reason (R31) and device attribution each stay their own roadmap
+        epic. A status WU may name the gap they would close, but does not close it. One exception, by the owner's
+        ruling of 2026-11-02 (W19's Q2 B): the core serves the Android device's Wi-Fi page
+        (<a href="../decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html">DEC-65</a>).</li>
+      <li>New probes, such as a Linux trust probe, unless a status WU's owner ruling asks for one (Q8).</li>
+      <li>New platforms.</li>
+    </ul>
+
+    <h2 id="wus">Working units</h2>
+    <div data-item="wu-summaries" data-c="wu-summaries">
+      <div class="card" data-wu="E-ONBRVP.W1">
+        <h3 id="w1">E-ONBRVP.W1 — list ⇄ setup: what shows, what reloads</h3>
+        <p data-item="wu-summary">Walk every way between the flow list and setup (launch, the dot, "set up
+          another device", success, back, the core dropping and returning) against every state. Rule, per
+          transition, what renders and what is kept, reloaded or reset: the chosen platform, open guides,
+          probe readings, action outcomes, the list's filter and selection. Takes the "before" walkthrough
+          for the whole epic. By the owner's 2026-09-28 proposals, the dot also becomes a switch between the
+          list and setup, usable at any time, with a "quiet" state when nothing was captured recently (F23,
+          DEC-61).
+          <a href="../.archive/2026-09-28-onboard-revamp-w1-switching-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the moving-between section · F23</p>
+        <p data-item="wu-expected">A transition table in UC-ONBOARD, with a test for each row. No transition shows stale state or needlessly throws away state. The dot switches screens and reads red, quiet or green from recent capture. An empty list offers a way into setup, and a core that does not answer blocks setup with a retry.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W2">
+        <h3 id="w2">E-ONBRVP.W2 — the carried-in roadmap rows</h3>
+        <p data-item="wu-summary">Re-check and fix the eight parked rows in <a href="#residue">the table above</a>,
+          except the quit dialog: words beside every glyph (F5), one statement per fact (F19), the test-request button (F24, DEC-56), the list's route back (F26), the scannable
+          code (F28, DEC-57, with its component design), the -60007 failure, and the Simulator's lingering
+          control. F5 and F19 set the status vocabulary W3–W10 reuse.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD · UC-4 · F5 · F19 · F24 · F26 · F28 · -60007 · the latch</p>
+        <p data-item="wu-expected">Each row closed on the roadmap or restated with a reason. The status vocabulary is documented on its component.</p>
+        <p data-item="wu-deps">E-ONBRVP.W1 (the route back is a transition it rules)</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W3">
+        <h3 id="w3">E-ONBRVP.W3 — status: This machine</h3>
+        <p data-item="wu-summary">For each section and task on each host (macOS, Windows, Linux): what status
+          it shows, what verifies it (probe, action outcome, captured traffic), and the most accurate and
+          useful way to show it.
+          <a href="../.archive/2026-09-29-onboard-revamp-w3-this-machine-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: This machine's status rows</p>
+        <p data-item="wu-expected">Every task's status traces to a named source, and is shown in W2's vocabulary.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W4">
+        <h3 id="w4">E-ONBRVP.W4 — status: Another Mac</h3>
+        <p data-item="wu-summary">The same review for a remote Mac. There is no probe on that machine, so the status rests on reach and captured traffic.
+          <a href="../.archive/2026-10-23-onboard-revamp-w4-another-mac-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Another Mac's status rows</p>
+        <p data-item="wu-expected">Each task shows the most accurate reading available, and says plainly what it cannot verify.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W5">
+        <h3 id="w5">E-ONBRVP.W5 — status: Another Windows PC</h3>
+        <p data-item="wu-summary">The same review for a remote Windows PC.
+          <a href="../.archive/2026-10-24-onboard-revamp-w5-another-windows-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Another Windows PC's status rows</p>
+        <p data-item="wu-expected">As W4, for Windows.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W6">
+        <h3 id="w6">E-ONBRVP.W6 — status: Another Ubuntu machine</h3>
+        <p data-item="wu-summary">The same review for a remote Ubuntu machine, including the NSS store that browsers read apart from the system store.
+          <a href="../.archive/2026-10-24-onboard-revamp-w6-another-ubuntu-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Another Ubuntu machine's status rows</p>
+        <p data-item="wu-expected">As W4, for Ubuntu.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W7">
+        <h3 id="w7">E-ONBRVP.W7 — status: iOS Simulator</h3>
+        <p data-item="wu-summary">The same review for the Simulator, which shares the host's proxy but keeps its own keychain.
+          <a href="../.archive/2026-10-24-onboard-revamp-w7-ios-simulator-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the Simulator's status rows</p>
+        <p data-item="wu-expected">As W4, for the Simulator.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W8">
+        <h3 id="w8">E-ONBRVP.W8 — status: Android emulator</h3>
+        <p data-item="wu-summary">The same review for the emulator (<code>adb</code> push, the emulator's host alias, its proxy flag).
+          <a href="../.archive/2026-10-24-onboard-revamp-w8-android-emulator-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the emulator's status rows</p>
+        <p data-item="wu-expected">As W4, for the emulator.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W9">
+        <h3 id="w9">E-ONBRVP.W9 — status: iPhone or iPad</h3>
+        <p data-item="wu-summary">The same review for a real iPhone: the profile installed, full trust on or off, the network proxy, arriving but not decrypting.
+          <a href="../.archive/2026-10-25-onboard-revamp-w9-iphone-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: iPhone's status rows</p>
+        <p data-item="wu-expected">As W4. The install and the trust switch read as separate states wherever traffic can tell them apart.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W10">
+        <h3 id="w10">E-ONBRVP.W10 — status: Android device</h3>
+        <p data-item="wu-summary">The same review for a real Android phone: the CA certificate installed, user CAs that apps ignore, the Wi-Fi proxy.
+          <a href="../.archive/2026-10-26-onboard-revamp-w10-android-status-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Android's status rows</p>
+        <p data-item="wu-expected">As W4, for Android.</p>
+        <p data-item="wu-deps">E-ONBRVP.W2</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W11">
+        <h3 id="w11">E-ONBRVP.W11 — the close dialog</h3>
+        <p data-item="wu-summary">Review <a href="../../ui/src/ProxyCloseDialog.tsx">ProxyCloseDialog</a> and
+          <a href="../../ui/src/closeConfirm.ts">closeConfirm</a> across every outcome: when it shows, proxy
+          off succeeding or failing, a remote device that may still route here, Esc, the backdrop and ✕. Its
+          own design run starts from the parked input on <code>wu/redesign-finish/onboarding-design</code> at
+          <code>7c6e144</code>. It fixes the two shape defects and settles the proxy-off wording against the
+          setup screen's reversal.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the quit dialog row · roadmap: the quit dialog</p>
+        <p data-item="wu-expected">A dialog built from a closed design, with no disabled remedy and no duplicated body. Every outcome is held by a test, and the roadmap row is closed.</p>
+        <p data-item="wu-deps">E-ONBRVP.W1 (quitting is one of the transitions it rules)</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W12">
+        <h3 id="w12">E-ONBRVP.W12 — wording and display: This machine</h3>
+        <p data-item="wu-summary">Rewrite This machine's guides so the one thing to do next stands out, and
+          optional or explanatory text recedes or goes. Give each step the easiest route there is (Q11): an
+          interactive one first, such as a button that opens the right settings screen, and otherwise media I
+          describe, the owner records and I verify. Sets the pattern W13–W19 reuse: hierarchy, length, what
+          collapses, and where a step's route or media sits. Designed through the design run, plus a component
+          design for the step's media slot.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the emphasis rule · This machine's guides</p>
+        <p data-item="wu-expected">Each task leads with its action, and each step has an interactive route or verified media. The owner reads the reels and ticks that the focus is clear.</p>
+        <p data-item="wu-deps">E-ONBRVP.W3</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W13">
+        <h3 id="w13">E-ONBRVP.W13 — wording and display: Another Mac</h3>
+        <p data-item="wu-summary">W12's pattern applied to Another Mac's guides, with its interactive routes, or media where none exists.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Another Mac's guides</p>
+        <p data-item="wu-expected">As W12, for Another Mac.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W4</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W14">
+        <h3 id="w14">E-ONBRVP.W14 — wording and display: Another Windows PC</h3>
+        <p data-item="wu-summary">W12's pattern applied to Another Windows PC's guides, with its interactive routes, or media where none exists.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Another Windows PC's guides</p>
+        <p data-item="wu-expected">As W12, for Windows.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W5</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W15">
+        <h3 id="w15">E-ONBRVP.W15 — wording and display: Another Ubuntu machine</h3>
+        <p data-item="wu-summary">W12's pattern applied to Another Ubuntu machine's guides, with its interactive routes, or media where none exists.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Another Ubuntu machine's guides</p>
+        <p data-item="wu-expected">As W12, for Ubuntu.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W6</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W16">
+        <h3 id="w16">E-ONBRVP.W16 — wording and display: iOS Simulator</h3>
+        <p data-item="wu-summary">W12's pattern applied to the Simulator's guides, with its interactive routes, or media where none exists.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the Simulator's guides</p>
+        <p data-item="wu-expected">As W12, for the Simulator.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W7</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W17">
+        <h3 id="w17">E-ONBRVP.W17 — wording and display: Android emulator</h3>
+        <p data-item="wu-summary">W12's pattern applied to the emulator's guides, with its interactive routes, or media where none exists.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the emulator's guides</p>
+        <p data-item="wu-expected">As W12, for the emulator.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W8</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W18">
+        <h3 id="w18">E-ONBRVP.W18 — wording and display: iPhone or iPad</h3>
+        <p data-item="wu-summary">W12's pattern applied to iPhone's guides. A QR code opens the profile URL in the phone's camera (W2's component), and the Settings steps get media.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: iPhone's guides</p>
+        <p data-item="wu-expected">As W12, for iPhone.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W9</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W19">
+        <h3 id="w19">E-ONBRVP.W19 — wording and display: Android device</h3>
+        <p data-item="wu-summary">W12's pattern applied to Android's guides. A QR code opens the certificate URL (W2's component), and the Settings steps get media.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: Android's guides</p>
+        <p data-item="wu-expected">As W12, for Android.</p>
+        <p data-item="wu-deps">E-ONBRVP.W12 · E-ONBRVP.W10</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W20">
+        <h3 id="w20">E-ONBRVP.W20 — e2e and distillation</h3>
+        <p data-item="wu-summary">The epic's journeys in the real window, the "after" walkthrough, and
+          UC-ONBOARD, the roadmap and any new DEC brought to the shipped truth.
+          <a href="../.archive/2026-11-02-onboard-revamp-w20-e2e-distill-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">the whole epic</p>
+        <p data-item="wu-expected">e2e green. T2 states the transition table, the status rows, the dialog row and the emphasis rule.</p>
+        <p data-item="wu-deps">E-ONBRVP.W1–W19</p>
+      </div>
+      <div class="card" data-wu="E-ONBRVP.W21">
+        <h3 id="w21">E-ONBRVP.W21 — notes on one switch</h3>
+        <p data-item="wu-summary">Every <em>?</em> on the setup screen goes. One switch on the device row shows or hides
+          every note, remembered across launches and hidden at first, and the quit dialog follows it. The eight notes that
+          explain nothing are dropped. <a href="2026-11-02-onboard-revamp-w21-notes-toggle-plan.html">WU plan</a>.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD: the reading rule · roadmap: help on request beyond setup</p>
+        <p data-item="wu-expected">No <em>?</em> on setup; the switch shows each kept note under its line; the dropped
+          notes are gone from every platform.</p>
+        <p data-item="wu-deps">E-ONBRVP.W20</p>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <table data-c="e2e">
+        <thead><tr><th>Journey (in <a href="../../ui/e2e/specs/onboarding.spec.ts">onboarding.spec.ts</a>, ephemeral <code>run(Config)</code> core)</th><th>Asserts</th></tr></thead>
+        <tbody>
+          <tr><td>list ⇄ setup round trips from W1's transition table, including the ⋮ route back (F26)</td><td>each move keeps or reloads what the table says</td></tr>
+          <tr><td>the test-request button on this machine (F24), against a local server</td><td>it produces a captured flow, and the task's status comes from that flow, not from the click</td></tr>
+          <tr><td>one captured-traffic journey per platform whose status reads traffic</td><td>the status moves as that platform's WU ruled</td></tr>
+          <tr><td>quit with the proxy ours: confirm, and then cancel by Esc, the backdrop and ✕</td><td>the dialog's outcomes as W11 rules them</td></tr>
+          <tr><td>the walkthrough, re-run at close</td><td>each step's expected element is present before its frame is taken</td></tr>
+        </tbody>
+      </table>
+      <p>Waived at e2e, pinned at the Onboarding and matrix level: states that turn on the real trust store,
+        the real system proxy or a real phone, as E-ONBREV did for R12. Emphasis and step help (W12–W19) are judged
+        by the owner's reading of the reels. Their tests pin structure, not taste: the action leads its task, a
+        QR code encodes exactly the value printed beside it, and every media item has its alt text. A QR code
+        scanned on a real phone is waived at e2e and done by the owner, as E-ONBREV.W7's installs were.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <ul data-item="distillation-plan">
+      <li>T2 use case: UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> gains the transition
+        table (W1), the roadmap rows' behavior (W2), the status rows per platform (W3–W10), the dialog row
+        (W11) and the emphasis rule (W12–W19). Each WU distills its own rows. W20 re-reads the whole.</li>
+      <li>T2 use case: UC-4 gains the ⋮ route back (W2).</li>
+      <li>T2 decisions: DEC-56 and DEC-57 move from proposed to built (W2). A new DEC only where a finding
+        changes a rule rather than an implementation.</li>
+      <li>T2 backlog: <a href="../backlog/roadmap.html">roadmap</a>. Each carried-in row is closed or restated.</li>
+      <li>T2 design rules: the emphasis and step-help pattern, if W12 finds it applies beyond onboarding
+        (<a href="../design-rules/design-rules-index.html">design-rules index</a>).</li>
+      <li>Design artifacts: each amended design run is closed and archived. Each component design is retired
+        into its component's TSDoc once built (DEC-16).</li>
+      <li>T1: none expected.</li>
+    </ul>
+
+    <h2 id="open-questions">Open questions</h2>
+    <table data-item="open-questions" data-c="questions">
+      <thead><tr><th>#</th><th>Question</th><th>Proposed default</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>Are copy and layout in scope?<br/><strong>Copy</strong> = every word the screen shows:
+          task titles ("On your iPhone, install the certificate"), step sentences, status lines, button labels,
+          notes ("The password prompt was cancelled. Try again, or follow the manual steps."), and the labels of
+          the collapsible sections ("details", "other ways", "to undo it later").<br/><strong>Layout</strong> =
+          how that is arranged: the order of tasks and steps, what is open and what is collapsed, what is a
+          button and what is text, what stands out and what recedes, and how much sits on screen at once.</td>
+          <td>Ruled 2026-09-27: yes, as W12–W19. Steps also gain interactive routes or media (Q11).</td></tr>
+        <tr><td>Q2</td><td>Is the close dialog in scope?</td><td>Ruled 2026-09-27: yes, as W11.</td></tr>
+        <tr><td>Q3</td><td>Are the carried-in roadmap rows in scope? These are the nine rows in
+          <a href="#residue">the carried-in rows table</a>.</td><td>Ruled 2026-09-27: yes, as one WU right after W1 (W2).
+          The quit dialog row goes to W11, since it is that WU's whole subject.</td></tr>
+        <tr><td>Q4</td><td>Is the review a WU, or pre-plan work?</td><td>Ruled 2026-09-27: each review is its own WU.</td></tr>
+        <tr><td>Q5</td><td>Slug and id</td><td>Ruled 2026-09-28: <code>onboard-revamp</code> · <code>E-ONBRVP</code></td></tr>
+        <tr><td>Q6</td><td>Does a review WU also ship its fixes, or only findings?</td><td>Ruled 2026-09-28: both. Review, then the owner's ruling, then design and fix, in one WU. Findings-only WUs would double the count and split each finding from its test.</td></tr>
+        <tr><td>Q7</td><td>"This machine" differs per host. Is it one WU, or one per host?</td><td>Ruled 2026-09-28: one WU (W3, W12) covering all three hosts, since the platform is one id.</td></tr>
+        <tr><td>Q8</td><td>May a status WU add a probe if the owner rules the status needs one?</td><td>Ruled 2026-09-28: yes, inside that WU, shell-side only. Core changes stay out.</td></tr>
+        <tr><td>Q9</td><td>Is a redesign allowed, and how is it carried?</td><td>Ruled 2026-09-27: redesign accepted. Each WU
+          that changes what renders re-opens the setup screen's design run, amends it, closes it and cites it in
+          the same WU. A new component gets its own component design. W11 runs its own design for the dialog.</td></tr>
+        <tr><td>Q10</td><td>What happens to a finding that needs a new component, such as F28's scannable code?</td>
+          <td>Answered by Q9: it gets a component design in its WU (F28 in W2).</td></tr>
+        <tr><td>Q11</td><td>Step help: what does each step offer, and where does it come from?</td><td>Ruled 2026-09-27:
+          an interactive route first, whatever is easiest for the user: a QR code for a value or URL that must reach
+          a phone, a button or link that opens the right screen. Where none exists, an image or video of the step,
+          produced as in <a href="#step-media">the step-media loop</a>.</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
