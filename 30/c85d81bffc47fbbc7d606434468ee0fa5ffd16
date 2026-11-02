@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 30c85d81bffc47fbbc7d606434468ee0fa5ffd16
+base: ef9fa6c4ee37eeb3d8e98b376a9656616d6dfcee
+tier: key
+signer: vuluu
+report: docs/work/2026-11-02-onboard-revamp-w19-android-wording-result.html
+report_sha256: 1b267c84c2121667dbcfcd35fb31439ca1a35c84b0a96468971d82d07d44a625
+date: 2026-11-02
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECqooqrz3Qx5mOnCN3ZeD8H0sWjOYCtWCNl/HsOk3MNUEi5eiTBjwQ0NA
+  xO/2s+CZX9KQ/129WGCpZApKrdm6EN
+  -----END SSH SIGNATURE-----
