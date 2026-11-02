@@ -1,0 +1,72 @@
+schema: doc/v1
+epic: E-ONBRVP
+branch: db8fbf6e
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "All eight carried-in rows closed: the quit dialog (W11), the six untaken P2 findings (F23 by W1, F5 F19 F24 F26 F28 by W2), the Simulator's latch (gone before W2 re-checked it), -60007 (W2, the second prompt under root). Sixteen rows added for what the WUs and the epic review found or left: origin-form requests recorded twice, the control API's profile unrecorded, the Dock's Quit and a logout, Chrome's .cer.crt, the replay flake, help on request beyond setup (row 98), a certificate download proving reach, the review binding none of the shell, NSS-only trust on Linux, /reach's armed address, two Simulator edge cases, the Simulator's shift, the dialog's bare adb, the walkthrough and e2e red on this host (row 97, closed at W20 with both causes), the device checks grouped by device, and the reversal turning off a foreign proxy on another macOS service (the epic review, older than the epic). At W21 and its close: row 98 restated as notes on one switch on every screen beyond setup (DEC-66), the e2e's emulator journey reading whether this host runs an emulator, and the gate's diff hashes moving as git's abbreviation length grows (--full-index); the emulator journey's row closed by the review's fix 929fe46b."
+  - path: "docs/core-technical-design.html"
+    tier: T1
+    action: updated
+    distills: "The epic's one T1 edit, committed by the owner through mr commit at 1fbf2a99: the API table gains GET /android-wifi, the page /reach names as wifi_page (DEC-65). No other shape change."
+  - path: "docs/decisions/dec-13-onboarding-capabilities.html"
+    tier: T2
+    action: updated
+    distills: "Amended at W12: CA removal by the live certificate's hash from each keychain that holds it, with its trust, so a trusted certificate has a way back besides typed commands."
+  - path: "docs/decisions/dec-33-two-layers-and-a-clock.html"
+    tier: T2
+    action: updated
+    distills: "Amended by DEC-62 and DEC-63: the traffic layer's timestamps include the oldest live tunnel no decrypted flow has followed, and a refusal's 3 s grace is timed from it (W3)."
+  - path: "docs/decisions/dec-56-the-app-may-prove-capture-itself.html"
+    tier: T2
+    action: updated
+    distills: "Proposed to built (W2): the request button on this machine, its fixed destination named in its label; its request marked and its note re-worded at W3 (DEC-62)."
+  - path: "docs/decisions/dec-57-a-device-that-cannot-paste.html"
+    tier: T2
+    action: updated
+    distills: "Proposed to built (W2) as QrCode: uqr bundled, the code drawn as one SVG path in the app's tokens, beside each value a phone must type."
+  - path: "docs/decisions/dec-60-a-setup-session-starts-when-setup-opens.html"
+    tier: T2
+    action: updated
+    distills: "Rule 5 superseded by DEC-61: the dot reads from recent capture, not from whether capture was ever proven."
+  - path: "docs/decisions/dec-61-the-dot-is-a-switch-and-capture-proof-expires.html"
+    tier: T2
+    action: added
+    distills: "W1: the dot switches between the list and setup at any time, reads red, quiet or green from the newest capture, and a step's proof by traffic expires."
+  - path: "docs/decisions/dec-62-this-machine-is-read-again-whenever-its-answer-can-change.html"
+    tier: T2
+    action: added
+    distills: "W3: This machine's certificate reads done only when the live certificate verifies as trusted, its proxy from the proxy HTTPS goes through now, each read again whenever its answer can change, and its own marked request settles both where no probe answers."
+  - path: "docs/decisions/dec-63-another-device-reads-only-what-could-have-come-from-it.html"
+    tier: T2
+    action: added
+    distills: "W4, widened by W5-W10 as rules 7-10: another device reads traffic since its address was allowed, its own marked request, and other traffic only while this machine's proxy cannot send its own; a proof carries its time and outlives a later refusal; the Simulator and the emulator read their own stores; a phone's test is the address its try task offers."
+  - path: "docs/decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"
+    tier: T2
+    action: added
+    distills: "W11: cmd-Q asks as the close does, and only while this machine, a proxy it could not read, or a device could still route here."
+  - path: "docs/decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html"
+    tier: T2
+    action: added
+    distills: "W19, the owner's Q2 B: the core serves a page on the reach address naming the proxy's hostname and port, with a button that opens Android's Wi-Fi settings - the epic's one exception to its core non-goal."
+  - path: "docs/decisions/dec-66-notes-show-together-on-one-switch.html"
+    tier: T2
+    action: added
+    distills: "W21, the owner's rulings of 2026-11-02: setup's notes are drawn under their lines while one switch, the circled ? at the device row's end, is on; it starts off, the shell remembers it, no note is exempt, the quit dialog follows it, and a note earns its place only if it changes what the user does. Replaces W13's ? per line."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-61 to DEC-66 routed with their rules; DEC-56 and DEC-57 marked built; DEC-60's rule 5 superseded."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "The ok tone gains a ring with no fill for a connection proven earlier and quiet now (DEC-61, StatusDot); the lexicon calls the core the capture service and keeps addresses and process names off screen."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's row: a captured https row ends setup on its own, rather than revealing the list, since the dot switches screens at any time."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD at the shipped truth, re-read whole at W20: the moves between the list and setup with what each keeps, reloads or resets (W1); the state words and one statement per fact, the request button, the codes, the ⋮ route back in UC-4 (W2); each platform's status rows and what verifies them (W3-W10); the quit dialog row (W11); the emphasis rule - the next action leads, the optional recedes, what explains is a note under its line, all of them on one switch (DEC-66, W21) - and each platform's guides with their routes, recordings and codes (W12-W19); Pinned by naming every journey and every e2e waiver."
