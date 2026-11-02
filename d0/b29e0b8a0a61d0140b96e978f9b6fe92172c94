@@ -23,7 +23,7 @@ fleet:
     correctness: { found: 0, verified: 0 }
     efficiency: { found: 0, verified: 0 }
     altitude: { found: 2, verified: 0 }
-findings: { found: 2, verified: 0, waived: 2 }
+findings: { found: 2, verified: 0, waived: 0 }
 waivers: []
 nits:
   - finding: "android_wifi_page's HTML templating and Android field labels sit in src/api/view.rs beside the serde wire shapes"
