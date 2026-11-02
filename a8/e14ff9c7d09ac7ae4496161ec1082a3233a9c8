@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W22
+branch: a8e14ff9
+changes:
+  - path: "docs/work/2026-11-02-onboard-revamp-w22-ca-read-bound-plan.html"
+    tier: T3
+    action: added
+    distills: "W22's requirement, mapping, expected result and test plan: the first close's round 5 fix (1fea8b85) given the Working Unit it should have had, since it renders App.tsx."
+  - path: "docs/work/2026-11-02-onboard-revamp-w22-ca-read-bound-result.html"
+    tier: T3
+    action: added
+    distills: "W22's outcome, the deviations (code before plan; merged before W21 so W21's reviewed diff and sign-off hold) and the evidence."
+t2_waived: "No rule changed: DEC-62 already has this machine read again whenever its answer can change, and a certificate fetch that never answers now reads as nothing, as a refused one already did."
