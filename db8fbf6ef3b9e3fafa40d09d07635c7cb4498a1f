@@ -1,0 +1,27 @@
+schema: design/v1
+epic: E-ONBRVP
+base: 78d519cc6da634e738655c2082210f53caa83507
+design_sha256: e75ebdba525a4272567846fccefda3539599e8d25239f5b253118a13817fb3de
+verdict: PASS
+artifacts: [docs/work/components/help.html, docs/work/components/menu-path.html, docs/work/components/step-media.html]
+implements:
+  - path: docs/work/components/help.html
+    blob: 802ddfe59cc9a872d012f37fa4590b7e5fa20923
+    built: [ui/src/components/Help.tsx, ui/src/components/Button.tsx, ui/src/components/IconButton.tsx, ui/src/components/TaskStep.tsx]
+  - path: docs/work/components/menu-path.html
+    blob: 957e4e2a78f0ea23b1716d06c56b9ef93313e739
+    built: [ui/src/components/MenuPath.tsx]
+  - path: docs/work/components/step-media.html
+    blob: fb4ff0d9e36ac1243263c2bdb3e226e9417b680b
+    built: [ui/src/components/StepMedia.tsx]
+  - path: docs/work/2026-09-17-onboarding-design-run.html
+    blob: a2a9395b72e8d512baf3c5477376949334ebcb9c
+    built: [ui/src/components/QrCode.tsx, ui/src/Onboarding.tsx, ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/NotAnswering.tsx, ui/src/CaptureControls.tsx, ui/src/components/Notice.tsx, ui/src/components/StatusDot.tsx, ui/src/components/TimestampText.tsx, ui/src/manualSteps.tsx]
+  - path: docs/work/2026-10-26-close-dialog-design-run.html
+    blob: 005518d0a7a22b3355ce06a6e22a10ead854c7eb
+    built: [ui/src/ProxyCloseDialog.tsx]
+undesigned:
+  - path: ui/src/components/CommandBlock.tsx
+    why: "One class across the epic (W16): a command wraps at spaces instead of at any character, as its TSDoc anatomy line says. Layout, surface and copy affordance unchanged."
+accounting: "THE EPIC'S HAND-OFF, END TO END. design-scope lists three artifacts at this tip, the component designs W12 and W13 wrote and retired inside their WUs at bytes main never held (DEC-29); each is cited at its last state, the blob its WU cited: help.html at 4f3a3c4c (802ddfe5, W13), menu-path.html and step-media.html at 4367f999 (957e4e2a and fb4ff0d9, W12). Their designs now live in the TSDoc of Help, MenuPath and StepMedia (DEC-16). The two design runs leave the tree at adfcb739 and are cited at their last state reachable from the tip (DEC-28), each data-status archived there: the setup screen's run at a2a9395b (round 23, the last of rounds 10-23 opened and closed inside W1-W15, each judged on its own seam), and the close dialog's at 005518d0 (W11, closed on the owner's LGTM). The four new surfaces are cited: Help, MenuPath and StepMedia to their component designs, QrCode to the setup run (round 11, W2; its forks are DEC-57's). Every other rendered file is built from one of the two runs, except CommandBlock, declared above. W16-W19 changed these files without a round, by the owner's word ('I don't need the design run, just build it'), and their own notes declared each edit undesigned with its reason (copy and render conditions inside the layout of record, StepMedia's height token at W18, MenuPath's spaced arrows at W17); at the epic those files still render the layout the run closed on, so they are cited to it. The epic review's standalone fixes (37a09ba2 to 27a0ca8e, and 929fe46b) touch no rendered file. W22 is the first close's review fix 1fea8b85 given its Working Unit: it touches App.tsx only to bound the certificate fetch, wiring its own design/v1 note declares undesigned. W21, after the first close, changed seven of these files with no design run by the owner's ruling ('no need mock up just build it', 2026-11-02), and its own design/v1 note declared each edit undesigned with its reason: the ? and its open flag left Help, whose note keeps help.html's anatomy (Inter 11px ink-mute under its line) and is drawn while one switch is on (DEC-66); the help glyph in IconButton became a ? in a circle; the existing IconButton sits at the device row's end in Onboarding as that switch; a step with a note in manualSteps keeps the one-row layout every other step has; ProxyCloseDialog and TaskStep only route their notes through the switch; App only hands the remembered choice down. At the epic each file still renders the layout its citation closed on, with the notes DEC-66 records, so the citations stand. No file is claimed twice, and no surface is left out."
+date: 2026-11-02
