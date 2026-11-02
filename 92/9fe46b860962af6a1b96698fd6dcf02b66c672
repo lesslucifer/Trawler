@@ -1,0 +1,21 @@
+schema: cr/v5
+scope: "Standalone commit 929fe46b on epic/onboard-revamp: the epic review's round 7 fix, the e2e launcher's own Android SDK so the onboarding journey reads the same on every host (DEC-51: code owes a review where it lands). Re-applied from cd3d96b5 in the rebuild that gave 1fea8b85 its Working Unit (W22); the code bytes are the same."
+base: e7503e58a53c6012716c354f5cb8ba084d96b72f
+head: 929fe46b860962af6a1b96698fd6dcf02b66c672
+diff_sha256: f4732bc3b52ddbe01741224af099f5b31edde37767fc756602b80984be819800
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+verdict: PASS
+date: 2026-11-02
