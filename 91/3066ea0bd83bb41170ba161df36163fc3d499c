@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "Epic E-ONBRVP -> main, round 3, after 913066ea fixed round 2's blocker (the quit's macOS reader) and two importants (the unbounded reader, routes and marks). The whole epic's code as one range, the shell (ui/src-tauri/) included by the caller's choice."
+epic: E-ONBRVP
+branch: epic/onboard-revamp
+base: 78d519cc6da634e738655c2082210f53caa83507
+head: 913066ea0bd83bb41170ba161df36163fc3d499c
+diff_sha256: 63533ae2f878778f3f7005bd95448bb3d4c8d38dc1e22467e8a1e06415fc9eff
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 4
+    nit: 3
+  stage_seconds:
+    gate0: 102
+    finders: 65
+    verifiers: 30
+    total: 160
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency:  { found: 3, verified: 1 }
+    altitude:    { found: 3, verified: 2 }
+findings: { found: 7, verified: 2, waived: 0 }
+verified:
+  - finding: "proxy_status's ours closure restates classify's Trawler match (port and names_trawler) with nothing tying the two, so a change to one lets the reader pick a proxy classify then calls foreign - round 2's blocker again."
+    severity: important
+  - finding: "macos_live_verifies runs security verify-cert through a bare Command::output(), outside ran_within's 10 s bound, so a stalled verify keeps setup's machine read in flight - the failure 913066ea bounded for every other reader."
+    severity: important
+nits:
+  - finding: "hardware_ports (interface_names) runs networksetup through a bare Command::output()"
+    fixed: "Routed through ran in the fix for the verified reader, beside macos_live_verifies."
+  - finding: "On Windows ca_trust dumps both ROOT stores on every machine read, even when the first already lists the thumbprint"
+    waived: "Two certutil reads per 3 s tick while setup shows on Windows, bounded and single-flight; a by-hash query is a later Windows WU's to weigh."
+  - finding: "ui/src-tauri/src/setup.rs holds every platform's trust, proxy, emulator and notice logic in one module"
+    waived: "Nothing observable changes; a split waits for the module's next growth."
+refuted: "THREE CANDIDATES REFUTED. (1) correctness proposed as a blocker that the quit's stop turns off the proxy on every macOS service, a foreign one included; the verifier found unset_proxy_commands identical to main's and the defined reversal of setup's every-service write, main's dialog running the same unset for ours and for foreign, and this range narrowing exposure (a foreign-only machine is no longer offered the act). A selective unset goes to the roadmap. (2) correctness proposed as important that reading every service can pass the quit's 1.5 s bound; the verifier measured 0.3 s for six services, the same 2N spawns main made when nothing was set, and a timeout falling back to the unread ask (DEC-64 rule 4). (3) hardware_ports' unbounded read, raised with the verified reader, is a mount-time label lookup outside the in-flight guard: a nit, fixed. The efficiency finder's important was the verified reader, counted once."
+verdict: FAIL
+date: 2026-11-02
