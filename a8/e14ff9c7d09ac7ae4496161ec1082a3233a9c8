@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: a8e14ff9c7d09ac7ae4496161ec1082a3233a9c8
+base: 27a0ca8ee10b47d151ae3b51c2eab33c36d9d232
+tier: key
+signer: vuluu
+report: docs/work/2026-11-02-onboard-revamp-w22-ca-read-bound-result.html
+report_sha256: fd25acb03167b1c03a9ef2fccb1f57763fce82f2b54e11de978d86d7c51c6cc6
+date: 2026-11-02
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDliTjDUvLHTMUvUo/wyXtzmHmtRDGq4JS80xDV7IFlE6qOAd/QYhH6eR
+  I5o88fpy251Sc0GvbJT/LgpEqNYXME
+  -----END SSH SIGNATURE-----
