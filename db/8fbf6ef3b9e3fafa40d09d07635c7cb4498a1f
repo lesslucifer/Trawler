@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: db8fbf6ef3b9e3fafa40d09d07635c7cb4498a1f
+base: 78d519cc6da634e738655c2082210f53caa83507
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-02-onboard-revamp-epic-result.html
+report_sha256: 2d13fa1a50f4919ae5d4a786820faf1a340768e2b3f30a1560c739515fbebfe5
+date: 2026-11-02
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBH3PlxtEZfFIRhgPMi+xf3ElL/e7v1R+7OvuWc51wJrZlrAGy+1ZJcwI
+  6LUdK9T/VdRVYeG+meON5papwi/kMN
+  -----END SSH SIGNATURE-----
