@@ -1237,6 +1237,7 @@ const ARMED = {
     cer: "http://192.168.1.24:7421/ca.cer",
     mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
   },
+  wifi_page: "http://192.168.1.24:7421/android-wifi",
   interfaces: INTERFACES,
 };
 

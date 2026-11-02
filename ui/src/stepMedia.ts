@@ -16,6 +16,10 @@ import iosInstallProfileMp4 from "./assets/setup/ios-install-profile.mp4";
 import iosInstallProfileWebm from "./assets/setup/ios-install-profile.webm";
 import iosFullTrustMp4 from "./assets/setup/ios-full-trust.mp4";
 import iosFullTrustWebm from "./assets/setup/ios-full-trust.webm";
+import androidInstallCaMp4 from "./assets/setup/android-install-ca.mp4";
+import androidInstallCaWebm from "./assets/setup/android-install-ca.webm";
+import androidWifiProxyMp4 from "./assets/setup/android-wifi-proxy.mp4";
+import androidWifiProxyWebm from "./assets/setup/android-wifi-proxy.webm";
 
 // Each recording a step names, as the bundler fingerprints it: shipped with the
 // app, never fetched (W12's M1).
@@ -28,4 +32,6 @@ export const STEP_MEDIA: Record<MediaName, StepMediaSource> = {
   "linux-proxy": { kind: "video", src: { mp4: linuxProxyMp4, webm: linuxProxyWebm } },
   "ios-install-profile": { kind: "video", src: { mp4: iosInstallProfileMp4, webm: iosInstallProfileWebm } },
   "ios-full-trust": { kind: "video", src: { mp4: iosFullTrustMp4, webm: iosFullTrustWebm } },
+  "android-install-ca": { kind: "video", src: { mp4: androidInstallCaMp4, webm: androidInstallCaWebm } },
+  "android-wifi-proxy": { kind: "video", src: { mp4: androidWifiProxyMp4, webm: androidWifiProxyWebm } },
 };

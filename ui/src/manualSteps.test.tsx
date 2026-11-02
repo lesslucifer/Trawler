@@ -56,3 +56,23 @@ describe("a route that waits for its device", () => {
     expect(send.className).not.toContain("border-hairline");
   });
 });
+
+// W19: a code is what the step's sentence asks the camera to scan, so it sits
+// under that sentence, and the recording of what follows comes after it.
+describe("a step with a code and a recording", () => {
+  it("draws the code before the recording", () => {
+    render(
+      <StepParts
+        step={[
+          "Scan with the camera, or open",
+          { copy: "http://192.168.1.24:7421/android-wifi", label: "the Wi-Fi page", wire: "wifi page url", scan: true },
+          { media: "android-wifi-proxy", alt: "Settings: Proxy", shows: "Android 15" },
+        ]}
+      />,
+    );
+
+    const code = screen.getByTestId("scan-code");
+    const media = screen.getByTestId("step-media");
+    expect(code.compareDocumentPosition(media) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

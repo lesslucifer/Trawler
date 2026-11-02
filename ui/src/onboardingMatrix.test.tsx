@@ -152,6 +152,7 @@ const ANY_REACH: ReachAddresses = {
     cer: "http://192.168.1.24:7421/ca.cer",
     mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
   },
+  wifiPage: "http://192.168.1.24:7421/android-wifi",
 };
 
 const OFF_MACHINE = new Set<PlatformId>([
@@ -197,6 +198,7 @@ const ARMED: ReachState = {
     cer: "http://192.168.1.24:7421/ca.cer",
     mobileconfig: "http://192.168.1.24:7421/ca.mobileconfig",
   },
+  wifi_page: "http://192.168.1.24:7421/android-wifi",
   interfaces: [{ name: "Wi-Fi", address: "192.168.1.24" }],
 };
 const UNARMED: ReachState = {
@@ -205,6 +207,7 @@ const UNARMED: ReachState = {
   proxy: null,
   api: null,
   ca_urls: null,
+  wifi_page: null,
 };
 
 type Outcome =

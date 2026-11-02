@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae7e59b9f34851f0dfadf08" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONBRVP.W19 result: the Android device's wording and display</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONBRVP.W19 — result: the Android device's wording and display</h1>
+      <p>The Android device's steps use Android 15's own words, as path parts, with recordings of the install and the Wi-Fi proxy. The Wi-Fi proxy starts from a page the core serves, whose button opens Android's Wi-Fi settings and which names the proxy's hostname and port. What explains sits behind each step's <em>?</em>, and the certificate has a way back.</p>
+      <div class="meta">v1 · 2026-11-02 · Trawler · T3 WU result · <span class="badge id">E-ONBRVP.W19</span> · branch <code>wu/onboard-revamp/android-wording</code> · <a href="2026-11-01-onboard-revamp-w19-android-wording-plan.html">WU plan</a> · <a href="2026-09-27-onboard-revamp-plan.html">epic plan</a> · <a href="../decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html">DEC-65</a> · no design run (the owner, 2026-11-02)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Expected (the plan's rows)</th><th>Shipped</th><th></th></tr>
+      <tr><td>choose Android device and allow it → task 2's code framed, task 4 dimmed under <em>after task 3</em>; step 2 <em>In Settings, search CA certificate, then tap</em> <code>CA certificate</code> → <code>CA certificate</code> → <code>Install anyway</code>, with its recording</td>
+        <td>as expected, then <em>the trawler-ca file at the top of Recent</em>. The recording is 432×960, mp4 and webm, Android 15. Filmed in <code>walk-05-armed</code> on all three hosts (W2, M1)</td><td>delivered</td></tr>
+      <tr><td>task 2's <em>?</em> → the blank page and <em>Doesn't load?</em>; which apps trust it, and the alert; no note outside a <em>?</em></td>
+        <td>as the plan's v2 placed them: step 1's <em>?</em> holds the download's outcome, the alert and <em>Doesn't load?</em>. Step 2's holds the emulator's user-CA words. The guide keeps no notes. Filmed in <code>walk-06-certificate-help</code> (W5, W6)</td><td>delivered</td></tr>
+      <tr><td>task 2's ways → <em>to remove it later</em> ending <code>Uninstall</code> → <code>OK</code></td>
+        <td>delivered, with a second <code>Trusted credentials</code> tap (see deviations). It shows once the certificate reads done, as every way back does (N1)</td><td>delivered</td></tr>
+      <tr><td>task 3's steps → the Wi-Fi page's code, <code>Open Wi-Fi settings</code>, <code>⚙</code>, <code>✎ → Advanced options → Proxy → Manual</code>, with its recording and the makers' <em>?</em>; the fields; the Settings path under other ways; the undo ending <code>None → Save</code></td>
+        <td>as expected. The code is bare while the certificate's leads, and sits under its sentence, above the recording. Step 2's <em>?</em> says the page shows both values to copy. Filmed in <code>walk-07-route-open</code> (W1, W3, W4, I1, M1)</td><td>delivered</td></tr>
+      <tr><td>the Wi-Fi page in Chrome on Android → the proxy's hostname and port; <code>Open Wi-Fi settings</code> opens <em>Internet</em></td>
+        <td>as expected, against a real core on a throwaway Android 15 emulator: the page named <em>192.168.0.101</em> and <em>48720</em>, the button opened <em>Internet</em>, a long-press selected the whole hostname, and it pasted into <em>Proxy hostname</em></td><td>delivered</td></tr>
+      <tr><td><code>/reach</code> while armed → <code>wifi_page</code> on the armed API socket; null while unarmed</td>
+        <td>as expected</td><td>delivered</td></tr>
+      <tr><td>quit with an Android device set up → the proxy-off line as path parts</td>
+        <td>as expected (N4)</td><td>delivered</td></tr>
+      <tr><td>the Android reels → green on all three hosts, gaining <code>certificate-help</code> and <code>route-open</code></td>
+        <td>3 reels, 24 chapters, all filmed</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>The plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>N1: <code>Trusted credentials</code> → <code>User</code> → …</td><td><code>Trusted credentials</code> → <code>Trusted credentials</code> → <code>User</code> → <code>Trawler Proxy CA</code> → <code>Uninstall</code> → <code>OK</code></td><td>uninstalling on the emulator, search's result opened <em>Encryption &amp; credentials</em>, where <em>Trusted credentials</em> is tapped again, as the installer's is. The sweep's note had folded the two taps into one</td></tr>
+      <tr><td>W6: <em>A blank page means it downloaded.</em></td><td><em>A blank page or Chrome's Downloads means it downloaded.</em></td><td>opened from an intent, Chrome showed its Downloads list instead of the blank page the sweep saw</td></tr>
+      <tr><td>commit 4: the words, the paths, the way back, the <em>?</em>, the code and the recordings</td><td>that commit (<code>33739624</code>), then one more: a step's code before its recording (<code>abcac80f</code>)</td><td>the walkthrough's frame drew the Wi-Fi page's code under the recording, far from <em>Scan with the camera</em>. No step had carried both before. The order change is declared <code>undesigned</code> under the owner's Q4 ruling</td></tr>
+      <tr><td><code>onboardingMatrix.test.tsx</code>: one framed control and no text outside a help host</td><td>no new rule</td><td>W18's rule already compares the framed codes exactly, so a framed Wi-Fi code fails it, and the R1 sweep reads every Android state with the new guide</td></tr>
+      <tr><td>—</td><td>the e2e harness's fake core names <code>wifi_page</code> too</td><td>without it, the screen reads reach as not allowed and every off-machine reel would stop at task 1</td></tr>
+      <tr><td>the Wi-Fi page: one line under the button names the taps left</td><td>the page holds the values and the button only</td><td>review round 1 found the line repeated the Settings path the guide owns, a second copy of Android 15's labels with nothing tying them; a test now holds the page to no path. Fixed in its own commit</td></tr>
+      <tr><td>—</td><td>against a core older than the Wi-Fi page, the Settings path leads task 3</td><td>the owner's run
+        found the window blank on choosing Android device: the running core, built before this branch, answers
+        <code>/reach</code> without <code>wifi_page</code>, and the code drew <code>undefined</code>, which the QR
+        library throws on. The API boundary now reads a missing field as no page, and the guide falls back
+        (<code>4612c197</code>); DEC-65's rule 4 says so. Regression tests in <code>api.test.ts</code>,
+        <code>setup.test.ts</code> and <code>Onboarding.test.tsx</code></td></tr>
+      <tr><td>—</td><td>UC-ONBOARD's snapshot was refused (413)</td><td>the htmldoc server's body limit, noted since W5. git holds the diff</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>src/reach.rs</code>: <code>wifi_page</code> on the bound API socket, IPv6 bracketed. <code>src/api/view.rs</code>: the page names the proxy as Android labels its fields, an IPv6 hostname without brackets. <code>src/api/routes.rs</code>: the page is HTML with one link, the <code>intent:</code>, and no proxy while unarmed; <code>/reach</code>'s <code>wifi_page</code> null while unarmed. <code>ui/src/setup.test.ts</code>: every Android Settings route as path parts in Android 15's labels, the Wi-Fi page's code leading the proxy step, the Settings path its other way, each <em>?</em>, the fields, both ways back, no notes, each recording's alt text and version. <code>ui/src/manualSteps.test.tsx</code>: a code before a recording. <code>ui/src/ProxyCloseDialog.test.tsx</code>: the proxy-off line as path parts. <code>ui/src/api.test.ts</code>: <code>wifi_page</code> read. <code>ui/e2e/harness/front.rs</code>: the fake core's <code>wifi_page</code></td></tr>
+      <tr><td>integration</td><td><code>tests/reach.rs</code>: armed, <code>wifi_page</code> names the API socket that answers, and fetching it returns the page naming the reach proxy's hostname and port; unarmed, null. <code>ui/src/Onboarding.test.tsx</code>: the Wi-Fi page's code in task 3, bare, while the certificate's is the one framed control; both recordings render; the certificate folds to its way back once done. <code>ui/src/onboardingMatrix.test.tsx</code>: green over every state with the new guide</td></tr>
+      <tr><td>e2e</td><td>waived at the WU, as planned: a real phone is neither hermetic nor in CI. A real phone's menus and a scanned code stay with W20</td></tr>
+      <tr><td>manual, on this Mac</td><td>a throwaway Android 15 emulator (Google APIs, API 35) against a real core built from this branch, on spare ports with a throwaway CA, armed on this Mac's LAN address. The Wi-Fi page and its button, the copy and paste, the install from search, the way back to an empty store, and both recordings, checked frame by frame. A page loaded through the saved proxy reached that core. The emulator, its AVD, the CA and the core are deleted; your <code>Pixel_7_API_35</code> and your running Trawler were not touched</td></tr>
+      <tr><td>suites</td><td>UI 66 files, 60,750 tests green · <code>tsc</code> and <code>eslint</code> green · core green, clippy clean · xtask 476 green · the three Android reels green</td></tr>
+      <tr><td>design</td><td>none, by the owner's ruling; no component or screen added. The Wi-Fi page is the core's, outside <code>ui/src/</code></td></tr>
+      <tr><td>commits</td><td>plan <code>dd7e2cc1</code> · rulings and DEC-65 <code>2cb6a65a</code> · core page <code>7ccbed15</code> · words and recordings <code>33739624</code> · code before recording <code>abcac80f</code> · walkthrough <code>31b344dd</code> · T2 <code>d4fd2a19</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: DEC-65 records the core's Wi-Fi page, and the decisions index lists it. UC-ONBOARD in <a href="../use-cases/web-ui.html">web-ui.html</a> says the Android device's steps are Android 15's own, with recordings; its Wi-Fi proxy starts from the core's page by a third code, with the Settings path as its other way; what explains sits behind each step's <em>?</em>; the certificate's way back ends <em>Uninstall → OK</em>; and a step's code sits before its recording. Its API surface names <code>GET /android-wifi</code> and <code>/reach</code>'s <code>wifi_page</code>, and the index row follows. The epic plan's core non-goal names this one exception. T1: <code>docs/core-technical-design.html</code>'s API table does not yet list <code>/android-wifi</code>. T1 is rule-bearing, so the row is W20's, through the owner's <code>mr commit</code>.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">W20, on a real phone: scanning both Android codes; the Wi-Fi page's button in Chrome and in a maker's browser; a maker's Settings, such as Samsung's search and proxy path; a screen-lock prompt during the install; the copy and paste of the page's values; and W10's device checks. W20 also adds <code>/android-wifi</code> to <code>docs/core-technical-design.html</code>'s API table.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

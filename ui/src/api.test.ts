@@ -354,7 +354,7 @@ test("listFlows parses the provenance mark off a summary", async () => {
   expect((await createApi("http://x").listFlows({}))[0].source).toBe("imported");
 });
 
-const UNREACHABLE = { armed: false, proxy: null, api: null, ca_urls: null, interfaces: [] };
+const UNREACHABLE = { armed: false, proxy: null, api: null, ca_urls: null, wifi_page: null, interfaces: [] };
 
 test("reach reads the current state and the interfaces on offer", async () => {
   const state = {
@@ -382,6 +382,7 @@ test("armReach posts the chosen address and returns what actually bound", async 
       cer: "http://192.168.1.20:7421/ca.cer",
       mobileconfig: "http://192.168.1.20:7421/ca.mobileconfig",
     },
+    wifi_page: "http://192.168.1.20:7421/android-wifi",
     interfaces: [{ name: "en0", address: "192.168.1.20" }],
   };
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => armed });
@@ -395,6 +396,23 @@ test("armReach posts the chosen address and returns what actually bound", async 
     body: JSON.stringify({ address: "192.168.1.20" }),
   });
   expect(result.ca_urls?.mobileconfig).toBe("http://192.168.1.20:7421/ca.mobileconfig");
+  expect(result.wifi_page).toBe("http://192.168.1.20:7421/android-wifi");
+});
+
+test("a core older than the Wi-Fi page reads as serving none, never as undefined", async () => {
+  const { wifi_page: _, ...older } = {
+    ...UNREACHABLE,
+    armed: true,
+    proxy: "192.168.1.20:7420",
+    wifi_page: "unused",
+  };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => older }));
+
+  const api = createApi("http://x");
+
+  expect((await api.reach()).wifi_page).toBeNull();
+  expect((await api.armReach("192.168.1.20")).wifi_page).toBeNull();
+  expect((await api.disarmReach()).wifi_page).toBeNull();
 });
 
 test("a refused arm throws the server's own sentence, for the person who confirmed", async () => {

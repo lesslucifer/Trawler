@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::time::SystemTime;
 
 use base64::engine::general_purpose::STANDARD;
@@ -183,8 +184,8 @@ impl From<&FlowPage> for FlowPageView {
 }
 
 /// What `/reach` reports: whether another device can get here, the two
-/// addresses it would use, the certificate URLs that work over them, and the
-/// interfaces on offer. The addresses are null when nothing is armed — there is
+/// addresses it would use, the certificate URLs and the Wi-Fi page that work
+/// over them, and the interfaces on offer. The addresses are null when nothing is armed — there is
 /// no address to give, and inventing a plausible one is what this whole WU
 /// exists to stop the screen doing.
 #[derive(Serialize)]
@@ -193,6 +194,7 @@ pub struct ReachView {
     pub proxy: Option<String>,
     pub api: Option<String>,
     pub ca_urls: Option<CaUrls>,
+    pub wifi_page: Option<String>,
     pub interfaces: Vec<Interface>,
 }
 
@@ -203,9 +205,24 @@ impl ReachView {
             proxy: armed.map(|a| a.proxy.to_string()),
             api: armed.map(|a| a.api.to_string()),
             ca_urls: armed.map(|a| a.ca_urls()),
+            wifi_page: armed.map(|a| a.wifi_page()),
             interfaces,
         }
     }
+}
+
+/// The Wi-Fi page (DEC-65), naming the armed proxy as Android's proxy screen
+/// labels its fields. Built from a socket address alone, so nothing a request
+/// carries can reach the markup.
+pub fn android_wifi_page(proxy: Option<SocketAddr>) -> String {
+    let fields = proxy.map_or_else(String::new, |proxy| {
+        format!(
+            "<dl><dt>Proxy hostname</dt><dd>{}</dd><dt>Proxy port</dt><dd>{}</dd></dl>",
+            proxy.ip(),
+            proxy.port()
+        )
+    });
+    include_str!("android_wifi.html").replace("{proxy}", &fields)
 }
 
 /// Compact live payload for the SSE stream: a lifecycle notification, not a full
@@ -261,6 +278,33 @@ mod tests {
 
     fn body_view(body: &BodyRec) -> serde_json::Value {
         serde_json::to_value(BodyView::from(body)).unwrap()
+    }
+
+    #[test]
+    fn the_wifi_page_names_the_armed_proxy_as_android_labels_its_fields() {
+        let html = super::android_wifi_page(Some("192.168.1.20:50484".parse().unwrap()));
+
+        assert!(html.contains(
+            "<dt>Proxy hostname</dt><dd>192.168.1.20</dd><dt>Proxy port</dt><dd>50484</dd>"
+        ));
+        assert!(html.contains("action=android.settings.WIFI_SETTINGS"));
+    }
+
+    #[test]
+    fn the_wifi_page_leaves_the_settings_path_to_the_guide() {
+        let html = super::android_wifi_page(Some("192.168.1.20:50484".parse().unwrap()));
+
+        for step in ["⚙", "✎", "Advanced options", "Manual"] {
+            assert!(!html.contains(step), "the setup guide owns {step}");
+        }
+    }
+
+    #[test]
+    fn an_ipv6_proxy_hostname_drops_the_brackets_only_a_url_needs() {
+        let html = super::android_wifi_page(Some("[2001:db8::1]:50484".parse().unwrap()));
+
+        assert!(html.contains("<dd>2001:db8::1</dd>"));
+        assert!(html.contains("<dd>50484</dd>"));
     }
 
     #[test]

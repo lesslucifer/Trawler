@@ -13,13 +13,14 @@ use serde::Deserialize;
 
 pub const FINDINGS: std::ops::RangeInclusive<u32> = 1..=30;
 pub const SUPERSEDED: [(&str, &str); 1] = [("R20", "W3.D8")];
-pub const REVAMP_FINDINGS: [&str; 49] = [
+pub const REVAMP_FINDINGS: [&str; 57] = [
     "W3.D6", "W3.D8", "W12.E1", "W12.E2", "W12.E3", "W12.E4", "W13.E1", "W13.I1", "W13.I2",
     "W13.R1", "W14.E3", "W14.I1", "W14.I2", "W14.N2", "W15.E1", "W15.E2", "W15.I2", "W15.N2",
     "W16.E1", "W16.E2", "W16.E3", "W16.I1", "W16.I3", "W16.W4", "W17.D1", "W17.E1", "W17.E2",
     "W17.E3", "W17.I1", "W17.I2", "W17.I3", "W17.I4", "W17.I5", "W17.N1", "W17.W4", "W17.I6",
     "W17.S1", "W17.S2", "W17.S3", "W18.E1", "W18.E2", "W18.W1", "W18.W2", "W18.W3", "W18.W4",
-    "W18.I1", "W18.M1", "W18.N1", "W18.N4",
+    "W18.I1", "W18.M1", "W18.N1", "W18.N4", "W19.W1", "W19.W2", "W19.W3", "W19.W4", "W19.W5",
+    "W19.W6", "W19.I1", "W19.M1",
 ];
 pub const HOSTS: [&str; 3] = ["macos", "windows", "linux"];
 pub const PLATFORMS: [&str; 8] =

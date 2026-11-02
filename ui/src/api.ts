@@ -157,8 +157,16 @@ export interface ReachState {
   proxy: string | null;
   api: string | null;
   ca_urls: Record<CaFormat, string> | null;
+  wifi_page: string | null;
   interfaces: ReachInterface[];
 }
+
+// A core older than the Wi-Fi page (DEC-65) leaves the field out, and the
+// screen reads that as no page rather than as a value.
+const reachState = (state: Omit<ReachState, "wifi_page"> & { wifi_page?: string | null }): ReachState => ({
+  ...state,
+  wifi_page: state.wifi_page ?? null,
+});
 
 // Nothing armed, nothing promised: the state a fresh core reports and the state
 // a screen assumes until one answers.
@@ -167,6 +175,7 @@ export const UNREACHABLE: ReachState = {
   proxy: null,
   api: null,
   ca_urls: null,
+  wifi_page: null,
   interfaces: [],
 };
 
@@ -288,7 +297,7 @@ export function createApi(baseUrl?: string): TrawlerApi {
     async reach() {
       const res = await fetch(`${base()}/reach`);
       if (!res.ok) throw new ApiError(res.status, `GET /reach failed: ${res.status}`);
-      return (await res.json()) as ReachState;
+      return reachState(await res.json());
     },
     async armReach(address) {
       const res = await fetch(`${base()}/reach`, {
@@ -299,12 +308,12 @@ export function createApi(baseUrl?: string): TrawlerApi {
       // A refusal here is read by the person who just confirmed, so it carries
       // the server's own sentence — which address, and why it could not listen.
       if (!res.ok) throw new Error(await refusal(res));
-      return (await res.json()) as ReachState;
+      return reachState(await res.json());
     },
     async disarmReach() {
       const res = await fetch(`${base()}/reach`, { method: "DELETE" });
       if (!res.ok) throw new Error(await refusal(res));
-      return (await res.json()) as ReachState;
+      return reachState(await res.json());
     },
     async replay(id, fields) {
       return sent(await fetch(`${base()}/flows/${encodeURIComponent(id)}/replay`, jsonPost(fields)));
