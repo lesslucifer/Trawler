@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU e2e-distill -> epic/onboard-revamp"
+epic: E-ONBRVP
+wu: E-ONBRVP.W20
+branch: wu/onboard-revamp/e2e-distill
+base: 6a205f2549d73d652dd10f7d40983d67eef1024d
+head: 1fbf2a9917a6ec62ad47f5f81d17b52507f600c9
+diff_sha256: 1bca3f6131c0a9afe2a90e24f3fc9f74469cb016268029e9a6e86b08fde9ace7
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 135
+    finders: 26
+    verifiers: 13
+    total: 183
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-02
