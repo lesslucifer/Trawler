@@ -157,6 +157,7 @@ sequenceDiagram
         <tr><td><code>GET /stream</code></td><td>SSE of live <code>FlowEvent</code>s</td></tr>
         <tr><td><code>GET /ca.crt</code></td><td>The root CA as PEM, for UC-1's download, <code>curl --cacert</code> and every existing client</td></tr>
         <tr><td><code>GET /ca.pem</code> · <code>/ca.cer</code> · <code>/ca.mobileconfig</code></td><td>The same CA per installer: PEM for desktops and <code>simctl</code>, DER for Android, an unsigned configuration profile for iOS. <code>/reach</code> names their URLs</td></tr>
+        <tr><td><code>GET /android-wifi</code></td><td>A page on the reach address that names the armed proxy's hostname and port, with a button that opens Android's Wi-Fi settings (<a href="decisions/dec-65-a-phone-settings-step-may-start-from-a-page-the-core-serves.html">DEC-65</a>). <code>/reach</code> names it as <code>wifi_page</code></td></tr>
       </tbody>
     </table>
 
