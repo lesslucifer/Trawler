@@ -1,0 +1,44 @@
+schema: cr/v5
+scope: "Epic E-ONBRVP -> main, round 1. The whole epic's code as one range: the moves between the list and setup, the state words, each platform's readings and guides, the close dialog, the routes and recordings in the app (ui/src/), the core's /android-wifi page and wifi_page (src/api/, src/reach.rs), the e2e and walkthrough tools (ui/e2e/, xtask/src/ui.rs, walkthrough.rs), and by the caller's choice the shell (ui/src-tauri/), which the five code paths leave out. Each of the twenty WUs was reviewed on its own diff as it landed, all PASS; this round judges the seams between them. The closing commit adfcb739 changes no code path."
+epic: E-ONBRVP
+branch: epic/onboard-revamp
+base: 78d519cc6da634e738655c2082210f53caa83507
+head: adfcb7390a9d63ff56ae18ad91c65c8b06502a06
+diff_sha256: 92489fed2f0341a6207bf047ac991c3fb09360108e9dacc0cf506ced5a916a84
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 4
+  stage_seconds:
+    gate0: 99
+    finders: 134
+    verifiers: 29
+    total: 178
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 7, verified: 2 }
+findings: { found: 8, verified: 2, waived: 0 }
+verified:
+  - finding: "The marked check URL and the mark's shape are kept twice with nothing tying them: ownRequest.ts (REQUEST_HOST, MARK, nextMark, deviceMark) builds and reads them, route.rs (REQUEST_URL, valid_mark, valid_device_mark) builds the URL the shell opens and refuses other marks; each side's tests pin its own literal, so a change to one leaves a task that never settles and nothing errors. route.rs is new in this range."
+    severity: important
+  - finding: "The shell's command list is written twice by hand, generate_handler! in lib.rs (real build) and in scenario.rs (the scenario build the e2e and walkthrough run), and nothing checks the two agree with each other or with the names the app invokes; this range grew them from 10/11 to 19/20, so a command registered only in the scenario build passes e2e and fails in the shipped app."
+    severity: important
+nits:
+  - finding: "ProxyCloseDialog's DEVICES is a hand-written id list rather than derived from PLATFORMS' needsReach or readsOverAdb"
+    waived: "Recorded for the fix round to weigh; a platform added to PLATFORMS is caught by the dialog's own tests per platform. Dispositioned in round 2's note."
+  - finding: "caFormatFor picks each platform's certificate format by an id if-chain outside the PLATFORMS table"
+    waived: "Recorded for the fix round to weigh; setup.test.ts's sweep pins every platform's file. Dispositioned in round 2's note."
+  - finding: "The emulator's host alias and its adb proxy command are written in setup.ts (shown) and setup.rs (run)"
+    waived: "Inherent to showing the user the command the button runs; both sides are pinned by their own tests. Dispositioned in round 2's note."
+  - finding: "ui/src-tauri/src/setup.rs holds every platform's trust, proxy, emulator and notice logic in one 3,318-line module"
+    waived: "Nothing observable changes; a split along trust, emulator, proxy and notices waits for the module's next growth."
+refuted: "TWO CANDIDATES REFUTED, one verifier each. (1) correctness proposed as important that newestRead's in-flight drop plus no timeout on the shell's readers lets one hung adb or security freeze every quiet re-read; the verifier found a shown read always starts and supersedes the hung one (newestRead.ts:15, entering setup, choosing the emulator, every action through thenRead, supersede), the spinner stays visible, no wrong reading is shown, the drop is DEC-62's deliberate guard against stacking shell reads, and ran had no timeout on main either: a hypothetical hang with a recovery path, below important. (2) altitude proposed as important that the app sequences trust_simulators then set_proxy and install_on_emulators then route_emulators and picks open_route's payload by name; the verifier found the order deliberate and safe (trust first, so nothing routes to a store without the CA; a failure leaves a harmless, retryable state), set_up_this_machine atomic only for its single elevation prompt (F27), and the shell's tagged Route enum and mark validators fail closed on a wrong payload. The efficiency finder raised nothing: the 3 s watch is visibility-gated and single-flight, scans are memoized per refresh, the recordings load on demand."
+verdict: FAIL
+date: 2026-11-02
