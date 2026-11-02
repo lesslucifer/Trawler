@@ -1,0 +1,13 @@
+schema: design/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W19
+base: ef9fa6c4ee37eeb3d8e98b376a9656616d6dfcee
+design_sha256: b50387f63a5647670e3fa75a49c1763cf6cbfef50d1ae1b43cd2155718c55066
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/Onboarding.tsx
+    why: "passes /reach's wifi_page into the setup guide beside the certificate URLs and gates the armed address on it; nothing new renders - the Wi-Fi page's code takes QrCode and the step parts W2 and W12's design run gave this screen. The owner waived a design run for W19 (2026-11-02: '4. none')"
+  - path: ui/src/manualSteps.tsx
+    why: "a step's code now renders under its sentence, before the step's command or recording, instead of after them; the parts are unchanged (QrCode, CommandBlock, StepMedia) and only the Wi-Fi page's step carries both a code and a recording. Under the owner's Q4 waiver"
+date: 2026-11-02
