@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-ONBRVP
+wu: E-ONBRVP.W20
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "Row 97 closed with both causes (the covered window's stopped watch; panic = abort defeating wry's catch). Rows for the shell's absence from the code review, Linux NSS-only trust, /reach's held address, two Simulator edge cases, the Simulator's starting shift, the quit dialog's bare adb, and the device checks owed by the owner's Q5. Row 98 takes the header chip."
+  - path: "docs/core-technical-design.html"
+    tier: T1
+    action: updated
+    distills: "The API table lists GET /android-wifi and /reach's wifi_page (DEC-65), committed through mr commit."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD at the epic's close: another Windows PC's .cer, This machine's Make a request from title, no dated re-read row, the core's return reading this machine in setup, both quit-dialog dismissals; Pinned by names the two routes into setup, the hidden window and the four e2e waivers."
+  - path: "docs/work/2026-09-27-onboard-revamp-plan.html"
+    tier: T3
+    action: updated
+    distills: "The epic plan's status line: W20 ruled and built."
+  - path: "docs/work/2026-11-02-onboard-revamp-w20-e2e-distill-plan.html"
+    tier: T3
+    action: added
+    distills: "W20's findings, the owner's rulings Q1-Q6, its test plan."
+  - path: "docs/work/2026-11-02-onboard-revamp-w20-e2e-distill-result.html"
+    tier: T3
+    action: added
+    distills: "W20's outcome, deviations and evidence."
