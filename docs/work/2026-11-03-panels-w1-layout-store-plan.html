@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae99caa9f34851f0dfae01a" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W1 plan: the decision and the layout store</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W1 — the decision and the layout store</h1>
+      <p>The record that lets the user size the layout, and the shell file that remembers the sizes. Nothing on screen
+        changes yet: W3 and W4 read and write this store.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU plan · <span class="badge id">E-PANELS.W1</span> · branch
+        <code>wu/panels/layout-store</code> · <a href="2026-11-03-panels-plan.html">epic plan</a> · base <code>2c3178d5</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      The shell keeps one saved layout (pane width, headers share, five column widths) in <code>layout.json</code> in
+      its config directory: <code>layout_write</code> replaces it whole, and <code>layout_read</code> returns it only
+      when the file parses into exactly that shape, and nothing otherwise.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-PANELS · UC-4 / UC-5 persistence rows · the epic's expected results 4 (sizes survive a relaunch), 5 (a broken save
+      gives the defaults) and 8 (no layout state in the core) · rulings Q2, Q3, Q4 · mints DEC-67, superseding DEC-36's
+      rejection of a draggable split.
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  APP["app · layoutStore.ts\nreadLayout() · writeLayout()"] -- "invoke layout_read" --> R["layout_read\n→ layout | null"]
+  APP -- "invoke layout_write { layout }" --> W["layout_write\nstaged file, then rename"]
+  R --> F[("app config dir\nlayout.json")]
+  W --> F
+      </pre>
+      <div class="caption">Two shell commands, one file, one TypeScript bridge. The core never sees any of it (DEC-12).</div>
+    </div>
+    <table data-c="parts">
+      <tr><th>Part</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>wire shape</td><td><code>ui/src/layoutWire.json</code></td><td><code>{ pane, headersShare, columns: { time,
+        method, host, status, size } }</code>: integers in px, the share a number; one fixture both languages read</td></tr>
+      <tr><td>store</td><td><code>ui/src-tauri/src/layout.rs</code></td><td>read: a missing file, a missing dir, bytes that
+        are not JSON, a missing / extra / mistyped field all read as <em>no saved layout</em>. Write: creates the dir and
+        replaces the file through a staged sibling and a rename, so a crash leaves the old file or the new one</td></tr>
+      <tr><td>commands</td><td><code>lib.rs</code> and <code>scenario.rs</code></td><td>both builds register
+        <code>layout_read</code> and <code>layout_write</code></td></tr>
+      <tr><td>bridge</td><td><code>ui/src/layoutStore.ts</code></td><td><code>readLayout()</code> answers
+        <code>null</code> when the shell cannot; <code>writeLayout()</code> passes the error on</td></tr>
+      <tr><td>decision</td><td><code>docs/decisions/dec-67-…</code> + index; DEC-36 status</td><td>the epic plan's DEC-36
+        table, the persistence contract, the rejected alternatives</td></tr>
+    </table>
+    <p data-c="bounds">The store checks shape, never bounds: what range a width may hold is W2's tokens, and W3 clamps a
+      restored value to the live bounds.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>State</th><th>Expected</th></tr>
+      <tr><td>a layout written, then read</td><td>the same layout, field for field</td></tr>
+      <tr><td>no file, no dir, not JSON, wrong shape</td><td><code>layout_read</code> gives <code>null</code>; nothing
+        errors</td></tr>
+      <tr><td>a write into a config dir that does not exist yet</td><td>the dir is made, the file lands, no staged file
+        remains</td></tr>
+      <tr><td><code>cargo xtask</code>'s registry test</td><td>green: both builds register the pair and the app invokes
+        both</td></tr>
+      <tr><td>the screen</td><td>unchanged: no UI-rendering file touched</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/layout.rs</code>: round-trip, missing file, missing dir, corrupt bytes,
+        missing / extra / mistyped field, write replaces and leaves no staged file. <code>ui/src/layoutStore.test.ts</code>:
+        the bridge names both commands with the right arguments, a refused read is <code>null</code>, a refused write
+        rejects</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/layout_store.rs</code>: the wire fixture, deserialised as the
+        IPC would deliver <code>layout_write</code>'s argument, written into a temp config dir and read back, serialises
+        to the same JSON (the snapshot lock on the wire). <code>layoutStore.test.ts</code> reads the same fixture.
+        <code>xtask</code>'s <code>both_shell_builds_register_exactly_the_commands_the_app_invokes</code> stays green</td></tr>
+      <tr><td>e2e</td><td>waived: no journey reads the store until W3; W6's relaunch spec covers it through the real
+        window</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
