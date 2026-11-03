@@ -1,0 +1,18 @@
+schema: design/v1
+epic: E-PANELS
+wu: E-PANELS.W3
+base: cf09e4be260f75f58256f38f5241c0b39fc7201e
+design_sha256: 26cac3f4d370846ea8871f315bb166f819727c1ce56335f63dcb3fa06cfeb38b
+verdict: PASS
+artifacts: [docs/work/2026-11-03-panels-splitters-design-run.html]
+implements:
+  - path: docs/work/components/splitter.html
+    blob: d9534ad9c181f306a727ec3cf863036ba97833ec
+    built: [ui/src/components/Splitter.tsx]
+  - path: docs/work/2026-11-03-panels-splitters-design-run.html
+    blob: 1477d3b80cc45ad171be4581f01ba91f1aab3b80
+    built: [ui/src/Layout.tsx, ui/src/FlowDetail.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+undesigned:
+  - path: ui/src/BodyViewer.tsx
+    why: "wrapped in memo so a splitter drag does not re-decode the body; nothing it renders changes"
+date: 2026-11-04
