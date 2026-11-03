@@ -10,7 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 // The macOS-primary target has no WKWebView WebDriver for raw tauri-driver, so
 // the e2e drives the real window through @wdio/tauri-service's embedded provider.
 // The app is built with the `e2e` cargo feature so the wdio plugins are present.
-const APP_BINARY = resolve(here, "../src-tauri/target/release/trawler-ui");
+const APP_BINARY = resolve(here, "../../target/release/trawler-ui");
 
 // The launcher (this config) and the test worker are separate processes, so the
 // core's ports cross to the spec via this file — never a shared variable.

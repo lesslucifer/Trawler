@@ -1,3 +1,9 @@
+// A #[tauri::command] receives every argument by value, and a scenario command
+// keeps the signature of the real command it stands in for.
+#![allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
+
+#[cfg(test)]
+mod bundle;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -11,6 +17,19 @@ mod e2e_core_address;
 
 #[cfg(feature = "scenario")]
 mod scenario;
+
+pub const CORE_FLAG: &str = "--core";
+
+/// The app binary is also its own core: launched with `--core` first, the rest
+/// of its arguments go to the same entry as `cargo run -p trawler`.
+pub fn core_args(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Option<impl Iterator<Item = std::ffi::OsString>> {
+    match args.next() {
+        Some(first) if first == CORE_FLAG => Some(args),
+        _ => None,
+    }
+}
 
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -54,4 +73,31 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while running trawler-ui")
         .run(|_, _| {});
+}
+
+#[cfg(test)]
+mod tests {
+    use super::core_args;
+    use std::ffi::OsString;
+
+    fn os(args: &[&str]) -> std::vec::IntoIter<OsString> {
+        args.iter().map(OsString::from).collect::<Vec<_>>().into_iter()
+    }
+
+    #[test]
+    fn core_first_hands_the_rest_to_the_core_entry() {
+        let rest: Vec<OsString> =
+            core_args(os(&["--core", "--api-port", "0", "--lifeline"])).unwrap().collect();
+        assert_eq!(rest, os(&["--api-port", "0", "--lifeline"]).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn no_arguments_open_the_window() {
+        assert!(core_args(os(&[])).is_none());
+    }
+
+    #[test]
+    fn core_anywhere_but_first_opens_the_window() {
+        assert!(core_args(os(&["--lifeline", "--core"])).is_none());
+    }
 }

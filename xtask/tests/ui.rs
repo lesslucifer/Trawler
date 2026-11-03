@@ -7,26 +7,50 @@ fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..").canonicalize().unwrap()
 }
 
-// The core workspace must never pull in the GUI crate: a headless
-// `cargo build`/`cargo test` of the proxy stays free of the Tauri toolchain.
-#[test]
-fn core_workspace_excludes_the_ui_crate() {
-    let repo = repo_root();
+fn normal_dependencies_of(package: &str) -> Vec<String> {
     let out = Command::new(env!("CARGO"))
-        .args(["metadata", "--no-deps", "--format-version", "1"])
-        .current_dir(&repo)
+        .args(["tree", "-p", package, "-e", "normal,build", "--prefix", "none", "--format", "{p}"])
+        .current_dir(repo_root())
         .output()
         .unwrap();
-    assert!(
-        out.status.success(),
-        "cargo metadata failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
-    let metadata = String::from_utf8(out.stdout).unwrap();
-    assert!(
-        !metadata.contains("\"trawler-ui\""),
-        "core workspace unexpectedly includes the ui/src-tauri crate"
-    );
+    assert!(out.status.success(), "cargo tree failed: {}", String::from_utf8_lossy(&out.stderr));
+    String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .map(str::to_string)
+        .collect()
+}
+
+fn gui_crates(dependencies: &[String]) -> Vec<&String> {
+    dependencies
+        .iter()
+        .filter(|name| {
+            name.as_str() == "wry" || name.as_str() == "tao" || name.starts_with("tauri")
+        })
+        .collect()
+}
+
+#[test]
+fn the_gui_detector_names_tauri_wry_and_tao() {
+    let tree = ["tokio", "tauri-runtime-wry", "wry", "tao", "hudsucker"].map(String::from);
+    assert_eq!(gui_crates(&tree), ["tauri-runtime-wry", "wry", "tao"]);
+}
+
+// The app links the core, never the reverse: whatever builds the trawler
+// package alone stays free of the GUI toolchain.
+#[test]
+fn the_core_package_links_no_gui() {
+    let core = normal_dependencies_of("trawler");
+    assert!(core.iter().any(|name| name == "hudsucker"), "the tree read is the core's: {core:?}");
+    assert_eq!(gui_crates(&core), Vec::<&String>::new());
+}
+
+#[test]
+fn the_app_package_links_the_core() {
+    let app = normal_dependencies_of("trawler-ui");
+    assert!(app.iter().any(|name| name == "trawler"), "trawler-ui does not depend on trawler");
+    assert!(app.iter().any(|name| name == "wry"), "the tree read is the app's: {app:?}");
 }
 
 // The WU seam: `cargo xtask ui build` runs the real pnpm pipeline end to end

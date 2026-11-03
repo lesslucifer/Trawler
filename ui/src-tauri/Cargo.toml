@@ -6,6 +6,7 @@ edition = "2021"
 rust-version = "1.77"
 license = "MIT"
 repository = "https://github.com/lesslucifer/Trawler"
+default-run = "trawler-ui"
 
 [lib]
 name = "trawler_ui_lib"
@@ -15,6 +16,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.0", features = [] }
 
 [features]
+# The window loads the bundle embedded from ui/dist. `cargo xtask ui dev` turns
+# it off so the window loads the Vite dev server instead.
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
 # WebDriver e2e build only — pulls the wdio plugins so the embedded WebDriver
 # and execute API exist. Release builds omit this, keeping the shell thin.
 e2e = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
@@ -23,6 +28,7 @@ e2e = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
 scenario = ["e2e"]
 
 [dependencies]
+trawler = { path = "../.." }
 tauri = { version = "2.1", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
@@ -34,8 +40,8 @@ md-5 = "0.10"
 tauri-plugin-wdio = { version = "1", optional = true }
 tauri-plugin-wdio-webdriver = { version = "1", optional = true }
 
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = 3
-strip = true
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

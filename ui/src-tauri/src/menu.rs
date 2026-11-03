@@ -25,6 +25,7 @@ pub fn action_for(id: &str) -> MenuAction {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     if action_for(id) != MenuAction::CloseMainWindow {
         return;
