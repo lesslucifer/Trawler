@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-PANELS
+wu: E-PANELS.W1
+base: 2c3178d57524c46b9b544ac31aef67eea14611a5
+tip: f228e646be94e7ce51eb0cceea83ea88a4209ce5
+diff_sha256: d006db0ece267e2270e693b66a9ae8485fa9cf83522490ea6b3c91dc25fbd639
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-03
