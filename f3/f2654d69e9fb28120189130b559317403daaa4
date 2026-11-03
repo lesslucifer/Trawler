@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU supervised-core -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W2
+branch: wu/one-app/supervised-core
+base: 58a4726591fb8b9b5413b10efd23a79dc185269b
+head: f3f2654d69e9fb28120189130b559317403daaa4
+diff_sha256: a08cec1fd419bb4ad5263b127e8284d8c95a861331f3902f5f543274213847d2
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 164
+    total: 201
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 1 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "ui/src/coreService.ts declares its own Invoke seam type, identical to noticePreference.ts's and closeConfirm.ts's inlined one"
+    waived: "each front-end module owns its injected seam type today (noticePreference, closeConfirm); hoisting one shared type edits modules this WU does not touch, and the signature is tauri's invoke, which none of them can drift from without failing tsc"
+verdict: PASS
+date: 2026-11-04
