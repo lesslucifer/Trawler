@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: f3f2654d69e9fb28120189130b559317403daaa4
+base: 58a4726591fb8b9b5413b10efd23a79dc185269b
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-one-app-w2-supervised-core-result.html
+report_sha256: 2759f9c0bbd0706f60a8e7a698d98a2f608add18adc7869e1f9a807acd79ce79
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAeJESKK1TjM+KMhvYgpl8j2So7XmUFS9t/dZhEfvGlRqvDuizY8tizvs
+  Cy9zcgK6gzs/JG1WViXnUoqJOGRucJ
+  -----END SSH SIGNATURE-----
