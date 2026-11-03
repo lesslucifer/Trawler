@@ -28,7 +28,7 @@
       <div class="meta">Design run · round 1 on 2026-11-03, closed (archived) · Trawler · T3 (docs/work/) ·
         <strong>E-PANELS.W2</strong> · branch <code>wu/panels/splitters-design</code> · epic
         <a href="2026-11-03-panels-plan.html">E-PANELS</a> · <a href="2026-11-03-panels-w2-splitters-design-plan.html">WU plan</a> ·
-        component: <a href="components/splitter.html">Splitter</a> · within DEC-67</div>
+        component: Splitter (design retired into <a href="../../ui/src/components/Splitter.tsx">its TSDoc</a>, DEC-16) · within DEC-67</div>
     </div>
   </header>
   <main data-artifact="design-run" data-status="archived">
@@ -522,7 +522,7 @@
       <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
       <tr><td>component (T1)</td><td><code>Splitter</code>: a focusable separator over a 1 px line. It drags, takes keys, resets on a
         double-click, and clamps to <code>min</code> / <code>max</code>. Value and handler come from the caller.
-        Design: <a href="components/splitter.html">components/splitter.html</a></td><td>nothing in the collection is draggable
+        Design: components/splitter.html, retired into <a href="../../ui/src/components/Splitter.tsx">its TSDoc</a> (DEC-16)</td><td>nothing in the collection is draggable
         or carries <code>role="separator"</code>; Button's <code>@avoid</code> rules out a target with no word or glyph</td><td>W3</td></tr>
       <tr><td>tokens</td><td><code>pane-min</code> 384 · <code>pane-max</code> 960 · <code>path-min</code> 128 · <code>zone-min</code> 15 % ·
         <code>zone-max</code> 60 % (<code>pane</code> and <code>zone-cap</code> stay as the defaults)</td><td>DEC-67: every bound is a token</td><td>W3</td></tr>
