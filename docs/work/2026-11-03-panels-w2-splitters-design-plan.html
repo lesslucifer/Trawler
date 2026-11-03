@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9a7a79f34851f0dfae07e" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W2 plan: the splitters' design run</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W2: the splitters' design run</h1>
+      <p>One closed design run that draws both splitters and the five column handles, plus one component design
+        for <code>Splitter</code>. W3 and W4 build from these by blob. Nothing under <code>ui/src/</code> changes.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU plan · <span class="badge id">E-PANELS.W2</span> · branch
+        <code>wu/panels/splitters-design</code> · <a href="2026-11-03-panels-plan.html">epic plan</a> · base
+        <code>2df4ed07</code> · depends on W1 (DEC-67)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      W2 delivers one design run at <code>docs/work/2026-11-03-panels-splitters-design-run.html</code> and one component
+      design at <code>docs/work/components/splitter.html</code>. The run mounts the real shell's components around a live
+      list/pane splitter, a headers/body splitter and five column handles. It states every bound as a token, every key
+      path as a keyboard row, and both the <em>Reset layout</em> placement and Q8 as owner calls. The owner reviews it;
+      it is closed in three steps (review · green · <code>data-status="archived"</code>), and a <code>design/v1</code>
+      note on the tip names both artifacts.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-PANELS · the epic plan's W2 summary block · UC-4 / UC-5 layout rows · expected results 1, 2, 2a, 3, 6, 7 ·
+      rulings Q6 (double-click resets one, an act resets all), Q7 (no collapse), Q8 (labels scroll with the rows) ·
+      DEC-67 (the user sizes the layout; bounds are tokens) · DEC-17 (closed vocabulary) · DEC-32 (body stays primary) ·
+      DEC-36 identity, generalised · DEC-53 (six items, three-step close).
+    </p>
+
+    <h2 id="what">What the run must decide</h2>
+    <table data-c="decides">
+      <tr><th>#</th><th>Decision</th><th>Where it lands</th></tr>
+      <tr><td>1</td><td>the handle: hit band, line at rest / hover / focus / drag, cursor</td><td>run mockup · <code>Splitter</code> design</td></tr>
+      <tr><td>2</td><td>bounds as tokens: <code>pane-min</code>, <code>pane-max</code>, <code>path-min</code>, the headers-share pair, each track's min / max; <code>list-min</code> derived</td><td>run · proposals (tokens)</td></tr>
+      <tr><td>3</td><td>what gives way when the window cannot hold both minimums</td><td>run · mockup's narrow-window state</td></tr>
+      <tr><td>4</td><td>the headers share: a cap or a height</td><td>run · owner call</td></tr>
+      <tr><td>5</td><td>keyboard: step, large step, bounds, reset key</td><td>run keyboard item · rulebook vocabulary proposal</td></tr>
+      <tr><td>6</td><td>where <em>Reset layout</em> lives</td><td>run · owner call</td></tr>
+      <tr><td>7</td><td>Q8 applied: the label row inside the rows' horizontal scroll</td><td>run mockup</td></tr>
+      <tr><td>8</td><td>W1's wire names the fifth track <code>size</code>; the screen calls it Duration</td><td>run blocked-on / review · W4</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>Observable at this WU's tip</th><th>Checked by</th></tr>
+      <tr><td>1</td><td>the run doc carries <code>data-artifact="design-run"</code>, is archived, has a newly minted htmldoc id, and loads the bootstrap</td><td>htmldoc·id · 6·run-closed</td></tr>
+      <tr><td>2</td><td>the mockup mounts the shell's real components (list cells, the detail header, flow line, headers, body) from <code>window.Trawler</code>. Splitter A, splitter B and the column handles are live: they drag, step from the keyboard and clamp. State toggles cover hover, focus, drag at a bound, the narrow window, a short headers leg and no selection</td><td>assets·specimen · mockup·state · the owner</td></tr>
+      <tr><td>3</td><td>every bound is a named token with its value, and the DEC-36 identity is checked at 850, 1132 and 1440</td><td>the run · the owner</td></tr>
+      <tr><td>4</td><td>a key path for each pointer act; new keys are on proposals as rulebook vocabulary</td><td>keyboard-parity·path</td></tr>
+      <tr><td>5</td><td>proposals carry <code>Splitter</code> (T1), the tokens and the cursor members; the component design is on file</td><td>the doc · the owner</td></tr>
+      <tr><td>6</td><td>the review item records the owner's round</td><td>review·recorded</td></tr>
+      <tr><td>7</td><td><code>design/v1</code> on the tip names the run and the component design, with an empty built set</td><td>9·design · design-scope</td></tr>
+    </table>
+
+    <h2 id="not-here">Not here</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>any file under <code>ui/src/</code>, the tokens in <code>tailwind.config.js</code></td><td>W3 (Splitter, useLayout, tokens), W4 (columns)</td></tr>
+      <tr><td>window geometry</td><td>W5: no UI-rendering file</td></tr>
+      <tr><td>the rulebook's keyboard rows, UC-4 / UC-5</td><td>proposed here, written at W6's distillation</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p data-c="test-why">No code path changes. A design run is still a design-bearing diff, so it is not exempt; each
+      layer is waived with its reason.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>What asserts what</th></tr>
+      <tr><td>unit</td><td>waived: "the WU adds no executable code; its artifacts are a design run and a component design,
+        and every predicate over them is a verify-doc rule with its own tests in xtask"</td></tr>
+      <tr><td>integration</td><td>waived: "the contract is a green, closed, citable run; verify-doc asserts green,
+        6·run-closed asserts closed at this merge, design-scope and 9·design assert W3 and W4 can cite it"</td></tr>
+      <tr><td>e2e</td><td>waived: "a design doc renders no surface a driver can touch; W6's layout.spec.ts drives the
+        built splitters"</td></tr>
+      <tr><td>before the merge</td><td><code>cargo xtask verify-doc</code> on the run, the component design, this plan
+        and the result · headless render of each mockup state · <code>cargo xtask design-scope epic/panels HEAD</code> ·
+        <code>cargo xtask verify-dod wu HEAD --target epic/panels</code></td></tr>
+    </table>
+
+    <h2 id="order">Order of work</h2>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart TD
+  A["substrate: registry + rulebook, frozen"] --> B["run: Given · live mockup · keyboard · proposals · blocked-on"]
+  B --> C["component design: Splitter"]
+  C --> V{"verify-doc + headless render"}
+  V -- red --> B
+  V -- green --> H["owner's round"]
+  H -- a call --> R["review row · re-draw"] --> V
+  H -- held --> CL["close: review · green · archived"]
+  CL --> N["notes write · design step → design/v1"]
+  N --> RES["result report"] --> MR["mr confirm (the owner)"] --> M["merge --no-ff into epic/panels"]
+      </pre>
+      <div class="caption">The owner's round is the only loop. No code review: the diff changes no code path (DEC-46).</div>
+    </div>
+
+    <h2 id="docs">Docs this WU touches</h2>
+    <table data-c="docs">
+      <tr><th>Path</th><th>Tier</th><th>Why</th></tr>
+      <tr><td><code>docs/work/2026-11-03-panels-splitters-design-run.html</code></td><td>T3</td><td>the run</td></tr>
+      <tr><td><code>docs/work/components/splitter.html</code></td><td>T3</td><td>the component design W3 builds</td></tr>
+      <tr><td>this plan · its result</td><td>T3</td><td>the WU's own docs</td></tr>
+    </table>
+    <p data-c="t2">No T2 synthesis: a design reaches UC-4 / UC-5 and the rulebook after it is built (W6), so
+      <code>doc/v1</code> carries <code>t2_waived</code> with that reason.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
