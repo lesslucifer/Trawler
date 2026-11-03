@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9fb229f34851f0dfae109" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP.W2 plan: the app supervises its core</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP.W2 — the app supervises its core</h1>
+      <p>The app spawns its own binary as <code>--core</code> before any window exists, tells every webview where it
+        listens, keeps its state and log, restarts it on request, and stops it on every quit.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU plan · <span class="badge id">E-ONEAPP.W2</span> · branch
+        <code>wu/one-app/supervised-core</code> · <a href="2026-11-03-one-app-plan.html">epic plan</a> · depends on
+        <a href="2026-11-03-one-app-w1-one-workspace-plan.html">W1</a> · realizes
+        <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a> rule 8</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      Launched with no <code>TRAWLER_API</code>, the app spawns <code>current_exe() --core --lifeline</code> on
+      <code>7420</code>/<code>7421</code> with its CA in the app data directory. It shows a window only after the
+      ready line, with the bound API address injected into every webview before first paint. If a port is taken, a
+      native dialog names it and the app quits without a window. The app exposes the core's state and log tail as
+      Tauri commands and events, restarts it on the same ports on request, and on every quit closes its stdin, waits,
+      then kills it. A second launch focuses the first window. With <code>TRAWLER_API</code> set, the app attaches to
+      that core and spawns none.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-ONEAPP · UC-4 (one launch) · expected #1, #2, #4, #5, #7, #8 · owner rulings Q4–Q9, Q11, Q12 · DEC-68 rules 3
+      and 8. W3 renders the state, log and Restart this WU exposes. W4 rewrites the quit copy. W5 adds the
+      ephemeral-port e2e build.
+    </p>
+
+    <h2 id="launch">Launch sequence</h2>
+    <div class="diagram" data-c="launch">
+      <pre class="mermaid">
+sequenceDiagram
+  participant M as main()
+  participant B as tauri Builder::build
+  participant S as setup hook
+  participant C as core child
+  participant W as main window
+  M->>B: plugins: single-instance first
+  Note over B: a second launch hands its args<br/>to the first, which focuses its window,<br/>and exits here, before any spawn
+  B->>S: run → setup (config windows have create: false)
+  alt TRAWLER_API set
+    S->>S: Attached(address)
+  else owned
+    S->>C: spawn trawler-ui --core --lifeline --ca-dir … --proxy-port 7420 --api-port 7421
+    C-->>S: stdout ready line {proxy, api}
+    alt exits before ready
+      S->>S: probe requested ports → Conflict(port) | Failed(code)
+      S->>S: native dialog names it → app.exit(1)
+    end
+  end
+  S->>S: register core-address plugin (js_init_script)
+  S->>W: WebviewWindowBuilder::from_config(windows[0])
+  W-->>C: HTTP/SSE at the injected address
+      </pre>
+      <div class="caption">The core is spawned in setup, not in <code>main</code>, so single-instance sends a second
+        launch away before it could hit a port conflict. Config windows are built before the setup hook
+        (<code>tauri::app::setup</code>), so each config declares <code>"create": false</code> and the hook builds the
+        window once the address is known.</div>
+    </div>
+
+    <h2 id="shape">The change</h2>
+    <table data-c="shape">
+      <tr><th>Seam</th><th>Before</th><th>After</th></tr>
+      <tr><td><code>src/supervisor.rs</code> (app crate, new, Tauri-free)</td><td>—</td><td><code>Supervisor::start(Launch,
+        observer)</code> → ready or <code>StartError::{Conflict{port}, Failed{code}, NoReady}</code>.
+        <code>snapshot()</code> · <code>log()</code> · <code>restart()</code> (stops, respawns on the ports of the
+        last ready line) · <code>stop(grace)</code> (drop stdin → wait → kill). A generation counter stops an old
+        child's exit from overwriting a restarted child's state. A bounded ring holds stderr lines across restarts</td></tr>
+      <tr><td><code>CoreState</code></td><td>—</td><td><code>starting</code> · <code>running{pid, proxy, api,
+        started_at_ms}</code> · <code>exited{code, signal}</code> · <code>attached{api}</code>, serialized with a
+        <code>state</code> tag for W3</td></tr>
+      <tr><td><code>src/core.rs</code> (new, Tauri glue)</td><td>—</td><td>mode from <code>TRAWLER_API</code>; CA dir =
+        <code>app_data_dir()/ca</code>, adopting <code>./ca</code> (pem + key) when the data dir has none; the conflict
+        sentence; commands <code>core_status</code>, <code>core_log</code>, <code>restart_core</code>; events
+        <code>core://state</code>, <code>core://log</code>; <code>RunEvent::Exit</code> → <code>stop</code></td></tr>
+      <tr><td><code>e2e_core_address.rs</code></td><td>e2e builds only, reads <code>TRAWLER_E2E_API</code></td>
+        <td><code>core_address.rs</code> in every build, fed the attached or the bound address; same
+        JSON-escaped <code>window.__TRAWLER_API__</code> script, now on every webview the app opens</td></tr>
+      <tr><td>tauri configs (3)</td><td>window created by Tauri</td><td><code>"create": false</code>; built in setup</td></tr>
+      <tr><td>e2e + walkthrough harness</td><td><code>TRAWLER_E2E_API</code></td><td><code>TRAWLER_API</code> (attach
+        mode, Q9). The ephemeral owned-core e2e build is W5</td></tr>
+      <tr><td>deps</td><td>—</td><td><code>tauri-plugin-single-instance = "2"</code></td></tr>
+    </table>
+
+    <h2 id="stop">Stop</h2>
+    <div class="diagram" data-c="stop">
+      <pre class="mermaid">
+flowchart LR
+  Q["✕ · ⌘Q · Dock Quit · logout<br/>→ RunEvent::Exit"] --> D["drop child stdin"]
+  R["restart_core"] --> D
+  D --> G{"exited within grace?"}
+  G -- yes --> F["ports free"]
+  G -- no --> K["kill → wait"] --> F
+  X["app SIGKILLed"] --> E["kernel closes the pipe → core reads EOF (W1 lifeline)"] --> F
+      </pre>
+      <div class="caption">Every route ends in the same stop. The lifeline covers the routes the app never sees.</div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Check</th><th>Observable</th></tr>
+      <tr><td><code>cargo run</code>, nothing else running</td><td>the window opens on a live list; <code>curl -x
+        :7420 http://example.com/</code> appears; <code>curl :7421/flows</code> answers</td></tr>
+      <tr><td>quit by ✕ / ⌘Q / Dock; <code>kill -9</code> the app</td><td>no trawler process remains, and
+        7420/7421 bind again</td></tr>
+      <tr><td><code>nc -l 7420</code>, then <code>cargo run</code></td><td>a native dialog names port 7420 and the app
+        exits with no window</td></tr>
+      <tr><td>launch twice</td><td>the first window comes forward; one core</td></tr>
+      <tr><td><code>TRAWLER_API=http://127.0.0.1:&lt;p&gt; cargo run</code></td><td>the window drives that core;
+        no child is spawned; <code>core_status</code> says <code>attached</code></td></tr>
+      <tr><td>first launch with an existing <code>./ca</code></td><td>the same CA is copied to
+        <code>~/Library/Application Support/dev.trawler.app/ca</code>, so trusted devices stay trusted</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/supervisor.rs</code> ·
+        <code>a_supervised_core_survives_a_kill_restarts_on_its_ports_and_leaves_on_stop</code></td><td>the real
+        <code>trawler-ui --core</code> on port 0: running with a pid and answering <code>/flows</code> → SIGKILL that
+        pid → <code>exited{signal: 9}</code> observed → <code>restart</code> → running on the same ports → stop → both
+        ports bind again and the pid is gone. Log lines reached the ring and the observer</td></tr>
+      <tr><td>integration</td><td>same file · <code>a_core_outlives_no_supervisor_that_was_killed</code></td><td>the
+        test binary re-executes itself in an ignored supervisor role, which starts a core and reports its pid. The test
+        SIGKILLs the supervisor, then the core pid disappears and its ports bind again</td></tr>
+      <tr><td>integration</td><td>same file · <code>a_taken_port_is_named_before_any_window</code></td><td>a held
+        listener's port as <code>proxy_port</code> → <code>StartError::Conflict{port}</code> naming that port, and no
+        child remains</td></tr>
+      <tr><td>unit</td><td><code>supervisor.rs</code></td><td>the log ring keeps its newest N lines in order; the core's
+        argument list; the state serialization the commands emit; a stale generation's exit does not overwrite the
+        state</td></tr>
+      <tr><td>unit</td><td><code>core.rs</code></td><td>attach selection (set, blank, absent); the conflict sentence names
+        the port; CA dir resolution; adoption copies pem + key once, never overwrites, and ignores a half CA</td></tr>
+      <tr><td>unit</td><td><code>core_address.rs</code></td><td>the three existing escaping tests, kept</td></tr>
+      <tr><td>unit</td><td><code>xtask/tests/ui.rs</code></td><td>every tauri config sets <code>"create": false</code>
+        on its window</td></tr>
+      <tr><td>e2e</td><td><code>waived: "the owned-core journeys J1–J3 land in W5 (one-app.spec.ts); the existing
+        specs keep running, now attached through TRAWLER_API (J4)"</code></td><td>—</td></tr>
+    </table>
+    <p class="callout warn" data-c="native">Single-instance focus, the conflict dialog and <code>RunEvent::Exit</code>
+      are native glue with no headless driver. Their logic (mode, sentence, stop) is tested beneath them, and the epic
+      plan accepts integration level for them.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
