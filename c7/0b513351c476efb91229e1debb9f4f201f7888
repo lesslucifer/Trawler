@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PANELS
+wu: E-PANELS.W3
+branch: HEAD
+tests:
+  unit: { count: 101, covers: "Splitter's ARIA, keyboard steps per axis and dir, Home/End, inert Enter, double-click reset, start-relative clamped drag with one commit, the document-wide drag cursor, a lowered bound shown without a change; the token-read bounds, listMin and splitter A's range against the run's identity table; useLayout's restore, stale clamp, debounced single write, reset one and all, unmount flush; the reset-event bridge; FlowDetail's share ceiling and splitter B starting from where a short leg puts it, even below zone-min, saving no share below it; a split change not decoding the body again; a fractional dragged pane saved as whole pixels; FlowList's label row and rows laying out the saved widths with the chrome listMin counts; the menu's reset action and View placement." }
+  integration: { count: 22, covers: "Layout and FlowDetail under one useLayout through a stubbed Tauri bridge serving layoutWire.json: the saved sizes restore, a key step on each splitter and a whole drag each end in one layout_write of the whole layout, the reset event restores the defaults, a narrower window clamps the shown pane without a write and a wider one shows the saved width again; the collection mounts Splitter." }
+  e2e: { waived: "The real-window journeys (drag, keyboard, relaunch, broken save, Reset Layout) are W6's layout.spec.ts, which needs W4's handles and W5's geometry to run once." }
