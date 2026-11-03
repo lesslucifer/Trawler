@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-PANELS
+wu: E-PANELS.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-36-the-pane-and-the-window.html"
+    tier: T2
+    action: updated
+    distills: "Its header and the rejected draggable-split row name DEC-67 as superseding that rejection; 520/1440 stay as defaults and the identity generalises to path = window − pane − Σ(tracks)."
+  - path: "docs/decisions/dec-67-the-user-sizes-the-layout.html"
+    tier: T2
+    action: added
+    distills: "The user sizes the layout within designed bounds, restored at launch; the persistence contract (shell-owned layout.json, splits and columns once per app, geometry per window label, no version field, shape checked by the store and bounds by the app, staged writes) and the rejected alternatives."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-67's row; DEC-36's row and status name the supersession."
+  - path: "docs/work/2026-11-03-panels-plan.html"
+    tier: T3
+    action: updated
+    distills: "The W1 summary drops 'schema-versioned', which contradicted ruling Q4."
+  - path: "docs/work/2026-11-03-panels-w1-layout-store-plan.html"
+    tier: T3
+    action: added
+    distills: "W1's requirement, mapping, expected result and test plan."
+  - path: "docs/work/2026-11-03-panels-w1-layout-store-result.html"
+    tier: T3
+    action: added
+    distills: "W1's outcome, deviations, evidence, distillation and follow-ups."
