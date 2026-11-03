@@ -509,6 +509,33 @@ mod tests {
         }
     }
 
+    // A config that lists capabilities enables only those, so a capability the
+    // app ships and the e2e config omits leaves its windows unable to invoke.
+    #[test]
+    fn the_e2e_build_enables_every_capability_the_app_ships() {
+        let shell = crate::repo_root().expect("repo root").join("ui/src-tauri");
+        let config =
+            std::fs::read_to_string(shell.join("tauri.conf.e2e.json")).expect("e2e config");
+        let config: serde_yaml::Value = serde_yaml::from_str(&config).expect("valid json");
+        let enabled: BTreeSet<String> = config["app"]["security"]["capabilities"]
+            .as_sequence()
+            .expect("the e2e config lists its capabilities")
+            .iter()
+            .filter_map(|entry| entry.as_str().map(str::to_string))
+            .collect();
+        for entry in std::fs::read_dir(shell.join("capabilities")).expect("capabilities dir") {
+            let path = entry.expect("capability entry").path();
+            let source = std::fs::read_to_string(&path).expect("a capability");
+            let capability: serde_yaml::Value = serde_yaml::from_str(&source).expect("valid json");
+            let identifier = capability["identifier"].as_str().expect("an identifier");
+            assert!(
+                enabled.contains(identifier),
+                "{} is not enabled in the e2e config",
+                path.display()
+            );
+        }
+    }
+
     // The e2e asserts no picture, so its window stays off the screen. The
     // walkthrough films what a user sees, and a hidden page loads no recording.
     #[test]
