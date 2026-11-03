@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU panels/splitter -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W3
+branch: wu/panels/splitter
+base: cf09e4be260f75f58256f38f5241c0b39fc7201e
+head: 9a70ff36a7e8e9f6e00d9373405acfc3b1d8d23a
+diff_sha256: a77f63411a718133623e51cd6ce685259298aca6462ad81022296db20facf768
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 3
+    nit: 3
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency: { found: 2, verified: 1 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 6, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "useInnerWidth sets state on every resize event without coalescing"
+    waived: "a resize re-renders Layout over a virtualized list; React batches within a frame, and nothing per event grows with the data"
+  - finding: "layoutBounds.ts reads token values from tailwind.config.js at runtime"
+    waived: "deliberate single source for the bounds (DEC-17: every bound is a token); the config is a plain object module"
+  - finding: "a NaN or malformed value from layout_read is never rejected by restorable"
+    waived: "JSON has no NaN, and the shell's layout_read refuses any file not exactly the shape with integer widths and a numeric share (DEC-67 rule 3)"
+verdict: FAIL
+date: 2026-11-04
