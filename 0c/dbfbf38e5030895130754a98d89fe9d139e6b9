@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU one-workspace -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W1
+branch: wu/one-app/one-workspace
+base: deb45e3aa1985dbfe073de7d6b69a2eaad0a0892
+head: 0cdbfbf38e5030895130754a98d89fe9d139e6b9
+diff_sha256: 4b593ee4d4b4fd4fe3b838c38e58489bacc2e3421640962536a2e0970396186f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 1
+    total: 82
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 1 }
+findings: { found: 3, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "src/lib.rs announce is pub while its only caller is cli::serve_until in the same crate"
+    waived: "it sits beside serve and RunningServer, the lib's pub embedding surface, as their log pair; the app crate (W2) is a second embedder of that surface"
+  - finding: "src/cli.rs serve_until returns via ? on a failed ready-line write, skipping server.shutdown()"
+    waived: "that path exits the process with code 1 at once, so the OS releases both listeners; a supervisor whose stdout pipe closed is already gone and needs no graceful drain"
+verdict: PASS
+date: 2026-11-03
