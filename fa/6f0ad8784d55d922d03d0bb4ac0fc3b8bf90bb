@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-PANELS
+wu: E-PANELS.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-03-panels-splitters-design-run.html"
+    tier: T3
+    action: added
+    distills: "The archived design run: a live mockup of splitter A, splitter B and five column handles over the shell's components, bounds as tokens, the DEC-36 identity at five widths, the keyboard paths, proposals, the Reset Layout blocker and the owner's round (C1-C4, C6, C7 held; C5 dropped the reset key)."
+  - path: "docs/work/2026-11-03-panels-w2-splitters-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement, mapping, expected result and test plan."
+  - path: "docs/work/2026-11-03-panels-w2-splitters-design-result.html"
+    tier: T3
+    action: added
+    distills: "W2's outcome, deviations, evidence, distillation and follow-ups for W3, W4 and W6."
+  - path: "docs/work/components/splitter.html"
+    tier: T3
+    action: added
+    distills: "The confirmed Splitter component design: identity, anatomy, behavior, states, forks, API with TSDoc, tokens and a live specimen; W3 builds it."
+t2_waived: "A design reaches UC-4 / UC-5 and the rulebook after it is built; W6 distills the built splitters, the keyboard vocabulary and the reset-layout lexicon entry."
