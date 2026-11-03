@@ -25,18 +25,17 @@
       <h1>Design run: the splitters and the column handles</h1>
       <p>The flow list and the detail pane, with the list/pane split, the headers/body split and the five fixed
         columns each sized by the user between two tokens.</p>
-      <div class="meta">Design run · round 1 on 2026-11-03, open for the owner · Trawler · T3 (docs/work/) ·
+      <div class="meta">Design run · round 1 on 2026-11-03, closed (archived) · Trawler · T3 (docs/work/) ·
         <strong>E-PANELS.W2</strong> · branch <code>wu/panels/splitters-design</code> · epic
         <a href="2026-11-03-panels-plan.html">E-PANELS</a> · <a href="2026-11-03-panels-w2-splitters-design-plan.html">WU plan</a> ·
         component: <a href="components/splitter.html">Splitter</a> · within DEC-67</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="ready">
+  <main data-artifact="design-run" data-status="archived">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Live: drag the line between list and pane, the line under the headers, or a tick between two
-      column labels. Each one also takes Tab, then the arrows (Shift for a larger step), Home / End, and Enter or a
-      double-click to restore its default. The frame is the real window size, scaled to fit. The buttons below the
+      column labels. Each one also takes Tab, then the arrows (Shift for a larger step), Home / End; a double-click restores its default. The frame is the real window size, scaled to fit. The buttons below the
       frame force one state at a time.</p>
     <div data-item="mockup">
       <div class="app">
@@ -173,7 +172,6 @@
             else if (e.key === back) set(value - dir * step);
             else if (e.key === "Home") set(min);
             else if (e.key === "End") set(max);
-            else if (e.key === "Enter") onReset();
             else return;
             e.preventDefault();
           };
@@ -484,7 +482,7 @@
       <tr><td>C2</td><td>the headers share is a <strong>ceiling</strong>, as <code>zone-cap</code> is today: a leg with two headers keeps its own height, and splitter B sits under its last row</td><td>a fixed height: the zone keeps its share even when empty below</td></tr>
       <tr><td>C3</td><td>below the window that holds both minimums, <code>pane-min</code> wins and the list scrolls sideways with its labels. The coupling runs both ways: widening a column lowers splitter A's live maximum, so host at 480 holds the pane at 384 even at 1440</td><td>the pane shrinks below <code>pane-min</code>, and the identity bar wraps. Or decouple them: the pane keeps the user's width and the list scrolls sideways sooner</td></tr>
       <tr><td>C4</td><td>column handles show a hairline tick in the label row at rest. The rows draw no lines</td><td>invisible until hovered: nothing tells a reader the columns move</td></tr>
-      <tr><td>C5</td><td>Enter restores the default, as a double-click does: the separator's one act</td><td>no key reset: double-click would have no key path</td></tr>
+      <tr><td>C5</td><td>Enter restores the default, as a double-click does: the separator's one act</td><td>no key reset: double-click would have no key path. <strong>Owner: no key reset</strong></td></tr>
       <tr><td>C6</td><td>W1's wire key <code>columns.size</code> names the Duration column. W4 renames it <code>duration</code>; an old file reads as the defaults (DEC-67 rule 3)</td><td>keep <code>size</code>, a name the screen never shows</td></tr>
       <tr><td>C7</td><td>the bound values in the table above</td><td>any of them, by the owner's eye</td></tr>
     </table>
@@ -510,11 +508,11 @@
     <table data-item="keyboard" data-c="keyboard-table">
       <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
       <tr><td>drag splitter A</td><td>list/pane splitter</td><td>Tab to it · ←/→ moves the line 8 px, with Shift 48 px · Home / End to the pane's min / live max. proposed: resize a split</td></tr>
-      <tr><td>double-click splitter A</td><td>list/pane splitter</td><td>Enter. proposed: restore a split's default</td></tr>
+      <tr><td>double-click splitter A</td><td>list/pane splitter</td><td>no key of its own (C5, the owner: the keyboard does not reset one split). The arrows and Home / End reach any value, the default included; View ▸ Reset Layout restores every split</td></tr>
       <tr><td>drag splitter B</td><td>headers/body splitter</td><td>Tab to it · ↑/↓ 8 px, with Shift 48 px · Home / End to <code>zone-min</code> / <code>zone-max</code>. proposed: resize a split</td></tr>
-      <tr><td>double-click splitter B</td><td>headers/body splitter</td><td>Enter. proposed: restore a split's default</td></tr>
+      <tr><td>double-click splitter B</td><td>headers/body splitter</td><td>no key of its own (C5, the owner: the keyboard does not reset one split). The arrows and Home / End reach any value, the default included; View ▸ Reset Layout restores every split</td></tr>
       <tr><td>drag a column handle</td><td>flow list, label row</td><td>Tab to it (one stop per handle, before the rows) · ←/→ moves the boundary, with Shift 48 px · Home / End to the track's min / max. proposed: resize a split</td></tr>
-      <tr><td>double-click a column handle</td><td>flow list, label row</td><td>Enter. proposed: restore a split's default</td></tr>
+      <tr><td>double-click a column handle</td><td>flow list, label row</td><td>no key of its own (C5, the owner: the keyboard does not reset one split). The arrows and Home / End reach any value, the default included; View ▸ Reset Layout restores every split</td></tr>
       <tr><td>choose View ▸ Reset Layout</td><td>— (the native menu bar)</td><td>the platform's own menu-bar keys (Ctrl+F2 on macOS, Alt then V elsewhere). No shortcut of its own</td></tr>
       <tr><td>scroll the list sideways</td><td>flow list</td><td>focus the rows · ←/→ scroll natively; the list intercepts only ↑/↓, Enter and Space</td></tr>
     </table>
@@ -523,7 +521,7 @@
     <table data-item="proposals" data-c="proposals-table">
       <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
       <tr><td>component (T1)</td><td><code>Splitter</code>: a focusable separator over a 1 px line. It drags, takes keys, resets on a
-        double-click or Enter, and clamps to <code>min</code> / <code>max</code>. Value and handler come from the caller.
+        double-click, and clamps to <code>min</code> / <code>max</code>. Value and handler come from the caller.
         Design: <a href="components/splitter.html">components/splitter.html</a></td><td>nothing in the collection is draggable
         or carries <code>role="separator"</code>; Button's <code>@avoid</code> rules out a target with no word or glyph</td><td>W3</td></tr>
       <tr><td>tokens</td><td><code>pane-min</code> 384 · <code>pane-max</code> 960 · <code>path-min</code> 128 · <code>zone-min</code> 15 % ·
@@ -536,7 +534,7 @@
       <tr><td>cursor scale</td><td><code>col-resize</code> · <code>row-resize</code>. The mockup sets them in its own CSS</td><td>the scale is closed at
         <code>default</code> / <code>pointer</code> / <code>text</code></td><td>W3</td></tr>
       <tr><td>keyboard vocabulary</td><td><em>resize a split</em>: the arrows along the split's axis by 8 px, with Shift 48 px; Home / End to
-        its bounds · <em>restore a split's default</em>: Enter, as a double-click does</td><td>the conventions have no pattern for a
+        its bounds. No reset key (C5)</td><td>the conventions have no pattern for a
         value set by position</td><td>W6 distills it into the rulebook</td></tr>
       <tr><td>lexicon</td><td><em>reset layout</em>: put every size back to its default. Never <em>restore defaults</em> or <em>reset view</em></td><td>a new act</td><td>W6</td></tr>
       <tr><td>wire rename</td><td><code>columns.size</code> → <code>columns.duration</code> (C6)</td><td>the screen's column is Duration</td><td>W4</td></tr>
@@ -555,6 +553,13 @@
       <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
       <tbody>
         <tr><td>Start: the epic plan's W2 block and rulings Q6 (double-click resets one, an act resets all), Q7 (no collapse) and Q8 (labels scroll with the rows)</td><td>capabilities · mockup · keyboard · proposals: two splitters and five handles, bounds only, a sticky label row inside the rows' scroll</td><td><code>DEC-67</code></td></tr>
+        <tr><td>Owner, round 1: C1 held (Reset Layout in the native View menu)</td><td>nothing: drawn as held</td><td>blocked-on · W3's <code>menu.rs</code> item</td></tr>
+        <tr><td>Owner, round 1: C2 held (the headers share is a ceiling)</td><td>nothing: drawn as held</td><td><code>zone-min</code> / <code>zone-max</code> tokens</td></tr>
+        <tr><td>Owner, round 1: C3 held (pane-min wins; the list scrolls sideways; a wide column lowers splitter A's live max)</td><td>nothing: drawn as held</td><td><code>DEC-36</code> identity · <code>pane-min</code> · <code>path-min</code></td></tr>
+        <tr><td>Owner, round 1: C4 held (column ticks visible at rest)</td><td>nothing: drawn as held</td><td><code>Splitter</code> anatomy</td></tr>
+        <tr><td>Owner, round 1: C5 changed, "no need keyboard involved" for the reset</td><td>mockup: Enter no longer resets · keyboard: the three double-click rows name no reset key · proposals: the vocabulary drops <em>restore a split's default</em> · the component design: Enter has no act</td><td><code>keyboard-parity</code> · <code>Splitter</code> API</td></tr>
+        <tr><td>Owner, round 1: C6 held (rename <code>columns.size</code> to <code>duration</code>)</td><td>nothing: a W4 proposal</td><td><code>layoutWire.json</code> (W1)</td></tr>
+        <tr><td>Owner, round 1: C7 held, the run's bounds as proposed</td><td>nothing: the bounds table stands</td><td><code>DEC-67</code> tokens</td></tr>
       </tbody>
     </table>
 

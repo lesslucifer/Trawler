@@ -19,7 +19,7 @@
     <div class="inner">
       <h1>Splitter <span class="badge id">T1</span></h1>
       <p>A line between two zones that the user drags, or steps from the keyboard, to size one of them between two bounds.</p>
-      <div class="meta">Component design · 2026-11-03 · Trawler · status: draft, awaiting confirmation · proposed by the
+      <div class="meta">Component design · 2026-11-03 · Trawler · status: <strong>confirmed</strong> 2026-11-03 (round 1; C5 dropped the reset key) · proposed by the
         <a href="../2026-11-03-panels-splitters-design-run.html">splitters' design run</a> (E-PANELS.W2) · built by
         E-PANELS.W3 · retires into the TSDoc on build (DEC-16)</div>
     </div>
@@ -43,10 +43,10 @@
       <tr><th>Driver</th><th>Design consequence</th></tr>
       <tr><td>DEC-67: the user sizes the layout within designed bounds</td><td><code>min</code> / <code>max</code> are required props, and every
         value is clamped before it reaches the caller</td></tr>
-      <tr><td>keyboard-parity</td><td>focusable; the arrows, Shift, Home, End and Enter each have a defined act</td></tr>
+      <tr><td>keyboard-parity</td><td>focusable; the arrows, Shift, Home and End each have a defined act; Enter has none (owner, C5)</td></tr>
       <tr><td>zero-accent</td><td>the line lifts from <code>hairline</code> to <code>ink-mute</code>, and no colour is added</td></tr>
       <tr><td>a 1 px line is not a target</td><td>a hit band reaches <code>grip-reach</code> past the line on each side</td></tr>
-      <tr><td>Q6: double-click restores one default</td><td><code>onReset</code>; Enter is its key path</td></tr>
+      <tr><td>Q6: double-click restores one default</td><td><code>onReset</code> on double-click only; no reset key (owner, C5): the keys reach the default by value, View ▸ Reset Layout resets all</td></tr>
     </table>
 
     <h2 id="anatomy">Anatomy</h2>
@@ -66,8 +66,8 @@
       <tr><td>drag</td><td>pane 520 → drag 40 px left → 560</td><td>pointer capture on press. value = start + dir × Δpx × perPx, clamped. The
         whole document shows the resize cursor and selects no text until release</td><td>start-relative, so a pointer that overshoots a bound and comes back picks up where it crossed</td></tr>
       <tr><td>direction</td><td>splitter A: right = narrower pane</td><td><code>dir</code>: +1 when moving along the axis grows the value, −1 when it shrinks it</td><td>the value is the caller's zone size, whichever side the zone sits on</td></tr>
-      <tr><td>keys</td><td>← on splitter A → pane +8</td><td>the arrows along the axis move the line 8 px, with Shift 48 px. Home goes to <code>min</code>, End to <code>max</code>, Enter calls <code>onReset</code></td><td>the arrows are spatial (the line goes where the arrow points); Home and End follow the value, as ARIA's separator does</td></tr>
-      <tr><td>reset</td><td>double-click → 520</td><td>double-click or Enter calls <code>onReset</code>. The caller supplies the default</td><td>Q6</td></tr>
+      <tr><td>keys</td><td>← on splitter A → pane +8</td><td>the arrows along the axis move the line 8 px, with Shift 48 px. Home goes to <code>min</code>, End to <code>max</code></td><td>the arrows are spatial (the line goes where the arrow points); Home and End follow the value, as ARIA's separator does</td></tr>
+      <tr><td>reset</td><td>double-click → 520</td><td>double-click calls <code>onReset</code>. The caller supplies the default</td><td>Q6</td></tr>
       <tr><td>commit</td><td>a drag of 300 moves → 1 write</td><td><code>onChange</code> on every move; <code>onCommit</code> once on release, a key step or a reset</td><td>the caller saves on commit only, never mid-drag</td></tr>
       <tr><td>bounds move</td><td>window shrinks under a pane at max</td><td>a <code>max</code> below <code>value</code> renders at <code>max</code> and does not call <code>onChange</code></td><td>the clamp changes what is shown, never what is saved (E-PANELS expected result 6)</td></tr>
     </table>
@@ -88,7 +88,7 @@
     <table data-c="forks">
       <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
       <tr><td>hit area</td><td><span class="badge auto">settled</span> a 9 px band over the 1 px line</td><td><span class="badge approval">rejected</span> a visible 8 px gutter with a grip glyph: it adds chrome to every split for an affordance the cursor already gives</td></tr>
-      <tr><td>reset key</td><td><span class="badge auto">settled</span> Enter</td><td><span class="badge approval">rejected</span> Enter to collapse, as in ARIA's window splitter example: nothing collapses here (Q7)</td></tr>
+      <tr><td>reset key</td><td><span class="badge auto">settled</span> none (owner, C5)</td><td><span class="badge approval">rejected</span> Enter to reset · Enter to collapse, as in ARIA's window splitter example: nothing collapses here (Q7)</td></tr>
       <tr><td>value unit</td><td><span class="badge auto">settled</span> the caller's unit, with <code>perPx</code> converting pixels (1 for px, 1 / height for a share)</td><td><span class="badge approval">rejected</span> always px: the headers split is a share of the pane, so it would convert twice</td></tr>
     </table>
 
@@ -133,7 +133,7 @@
 
     <h2 id="specimen">Live specimen</h2>
     <p class="kd">A stand-in drawn here because the component does not exist yet (a proposed part). Drag the line,
-      or Tab to it and use the arrows, Home, End and Enter. Bounds 96 … 320, default 192.</p>
+      or Tab to it and use the arrows, Home and End. Bounds 96 … 320, default 192.</p>
     <div class="app" data-c="specimen"><div id="spec-live"></div></div>
 
   </main>
@@ -169,7 +169,6 @@
         else if (e.key === "ArrowLeft") set(w - step);
         else if (e.key === "Home") set(96);
         else if (e.key === "End") set(320);
-        else if (e.key === "Enter") set(192);
         else return;
         e.preventDefault();
       };

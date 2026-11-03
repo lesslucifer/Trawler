@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9fb439f34851f0dfae10b" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W2 result: the splitters' design run</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W2 — result</h1>
+      <p>One closed design run for both splitters and the five column handles, and a confirmed <code>Splitter</code>
+        design; W3 and W4 build from them.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU result · <span class="badge id">E-PANELS.W2</span> · branch
+        <code>wu/panels/splitters-design</code> · <a href="2026-11-03-panels-w2-splitters-design-plan.html">WU plan</a> ·
+        <a href="2026-11-03-panels-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Shipped</th><th></th></tr>
+      <tr><td>a design run with a live mockup of splitter A, splitter B and five column handles over the shell's real
+        components</td><td><a href="2026-11-03-panels-splitters-design-run.html">the run</a>, archived; state toggles
+        for focus, a bound, 850 / 1280 windows, a short headers leg, no selection</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>every bound a named token; the DEC-36 identity checked</td><td>bounds table · identity at 1440 / 1311 /
+        1280 / 1132 / 850</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a key path per pointer act</td><td>keyboard item, 8 rows; the double-click reset has no key of its own
+        (owner, C5)</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td><code>Splitter</code> component design</td><td><a href="components/splitter.html">components/splitter.html</a>,
+        confirmed 2026-11-03</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>the owner's round recorded</td><td>review item: C1–C4, C6, C7 held; C5 changed</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>no file under <code>ui/src/</code></td><td>none in the diff</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>What</th><th>Why</th></tr>
+      <tr><td>Enter does not reset a split; the drafted keyboard vocabulary loses <em>restore a split's default</em></td>
+        <td>owner, C5: the reset stays a pointer act; the arrows and Home / End reach any value, View ▸ Reset Layout
+        resets all</td></tr>
+      <tr><td>W1's wire key <code>columns.size</code> is to be renamed <code>duration</code></td><td>owner, C6: the
+        column on screen is Duration</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Layer</th><th>Where</th><th>Result</th></tr>
+      <tr><td>unit</td><td>waived: no executable code; every predicate is a verify-doc rule tested in xtask</td><td>—</td></tr>
+      <tr><td>integration</td><td>waived: <code>verify-doc</code> green, 6·run-closed, <code>design-scope</code></td><td>green</td></tr>
+      <tr><td>e2e</td><td>waived: a design doc renders no driveable surface; W6's <code>layout.spec.ts</code></td><td>—</td></tr>
+      <tr><td>render</td><td>headless Chrome over each mockup state</td><td>checked</td></tr>
+      <tr><td>commits</td><td><code>ddb927e5</code> plan · <code>cf22c583</code> run, open · the round's close and this result</td><td></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: none yet, waived: a design reaches UC-4 / UC-5 and the rulebook (keyboard vocabulary <em>resize a split</em>,
+      lexicon <em>reset layout</em>) after it is built, at W6. T1: nothing.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>What</th><th>Who</th></tr>
+      <tr><td>build <code>Splitter</code> from the confirmed design; tokens <code>pane-min</code>, <code>pane-max</code>,
+        <code>path-min</code>, <code>zone-min</code>, <code>zone-max</code>, <code>grip-reach</code>; cursors
+        <code>col-resize</code> / <code>row-resize</code></td><td>W3</td></tr>
+      <tr><td>View ▸ Reset Layout in <code>menu.rs</code> plus the webview event, both shell builds</td><td>W3</td></tr>
+      <tr><td>per-track <code>col-*</code> tokens with min / max; the column handles; rename <code>columns.size</code> →
+        <code>duration</code></td><td>W4</td></tr>
+      <tr><td>keyboard vocabulary and lexicon into the rulebook; UC-4 / UC-5</td><td>W6</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
