@@ -46,6 +46,9 @@
       <tr><td>keyboard vocabulary</td><td><em>resize a split</em>: arrows along the axis by 8&nbsp;px, Shift 48&nbsp;px,
         Home / End to the bounds; no reset key</td></tr>
       <tr><td>saving</td><td>a drag saves once, on release; a key step and a reset each save; nothing saves mid-drag</td></tr>
+      <tr><td>a short leg</td><td>the headers share is a ceiling, so a leg shorter than it puts the line under its last
+        row: a drag or a step starts there, even below <code>zone-min</code>, and the share saved is where the line is
+        dropped, never below <code>zone-min</code></td></tr>
       <tr><td>a lowered bound</td><td>a value outside the live bounds is shown at the bound and not reported: the clamp
         changes what is shown, never what is saved</td></tr>
     </table>

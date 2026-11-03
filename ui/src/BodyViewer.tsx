@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { BodyFetch, BodyView, FlowView, Leg, TrawlerApi } from "./api";
 import {
   bodyKind,
@@ -53,7 +53,9 @@ function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
   }
 }
 
-export function BodyViewer({
+// Memoized because its parent re-renders on every move of a splitter drag, and
+// a re-render here decodes the whole body again.
+export const BodyViewer = memo(function BodyViewer({
   api,
   flow,
   leg,
@@ -137,4 +139,4 @@ export function BodyViewer({
       )}
     </div>
   );
-}
+});

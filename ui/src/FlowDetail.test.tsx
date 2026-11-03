@@ -408,3 +408,50 @@ test("splitter B starts from where a short leg puts it, not from the ceiling abo
     heights.mockRestore();
   }
 });
+
+test("a leg shorter than zone-min keeps its line where it sits, and the share saved never drops below zone-min", () => {
+  const setHeadersShare = vi.fn();
+  const heights = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      return { height: this.dataset.testid === "headers-zone" ? 32 : 400 } as DOMRect;
+    });
+  try {
+    render(<FlowDetail split={{ ...still, setHeadersShare }} api={stubApi()} flow={view()} onClose={() => {}} />);
+    const splitter = screen.getByRole("separator", { name: "headers height" });
+    expect(splitter).toHaveAttribute("aria-valuenow", "0.08");
+    expect(splitter).toHaveAttribute("aria-valuemin", "0.08");
+    fireEvent.keyDown(splitter, { key: "ArrowDown" });
+    expect(setHeadersShare).toHaveBeenLastCalledWith(0.15);
+    fireEvent.pointerDown(splitter, { button: 0, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(splitter, { clientY: 180, pointerId: 1 });
+    expect(setHeadersShare.mock.lastCall?.[0]).toBeCloseTo(0.28);
+  } finally {
+    heights.mockRestore();
+  }
+});
+
+test("resizing the headers does not decode the body again", async () => {
+  const api = apiStub({
+    getBody: vi.fn(async () => ({ bytes: new TextEncoder().encode('{"a":1}'), contentType: "application/json" })),
+  });
+  const flow = view({ request_body: { state: "captured", size: 7, data_base64: "" } });
+  const { rerender } = render(<FlowDetail split={still} api={api} flow={flow} onClose={() => {}} />);
+  await screen.findByTestId("body-pane");
+  const decode = vi.spyOn(TextDecoder.prototype, "decode");
+  try {
+    for (const headersShare of [0.4, 0.45, 0.5]) {
+      rerender(
+        <FlowDetail
+          split={{ ...still, layout: { ...DEFAULT_LAYOUT, headersShare } }}
+          api={api}
+          flow={flow}
+          onClose={() => {}}
+        />,
+      );
+    }
+    expect(decode).not.toHaveBeenCalled();
+  } finally {
+    decode.mockRestore();
+  }
+});

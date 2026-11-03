@@ -16,7 +16,7 @@ import {
   StatusPill,
 } from "./components/index";
 import { BodyViewer } from "./BodyViewer";
-import { HEADERS_SHARE } from "./layoutBounds";
+import { HEADERS_SHARE, clamp } from "./layoutBounds";
 import type { LayoutControls } from "./useLayout";
 
 const LEGS = [
@@ -164,7 +164,9 @@ export function FlowDetail({
           panel and scrolls inside itself, the body fills the rest and scrolls
           inside itself, and the panel as a whole never scrolls. The share is a
           ceiling, so a short leg keeps its own height and the splitter sits
-          under its last row — which is where a drag or a step starts from. */}
+          under its last row — which is where a drag or a step starts from, even
+          below zone-min; the share saved is where the line is dropped, never
+          below zone-min. */}
       <div
         ref={measureHeaders}
         data-testid="headers-zone"
@@ -183,9 +185,9 @@ export function FlowDetail({
           dir={1}
           perPx={1 / Math.max(height, 1)}
           value={headersAt}
-          min={HEADERS_SHARE.min}
+          min={Math.min(HEADERS_SHARE.min, headersAt)}
           max={HEADERS_SHARE.max}
-          onChange={split.setHeadersShare}
+          onChange={(share) => split.setHeadersShare(clamp(share, HEADERS_SHARE))}
           onCommit={split.commit}
           onReset={split.resetHeadersShare}
           label="headers height"
