@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU payload-handoff -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W1
+branch: wu/inspect-window/payload-handoff
+base: 6ba95b4e385c6e2644088121da53b5b5da4330bd
+head: 672453e952dbd2399d12626c3c1677710218a7d5
+diff_sha256: 362e9b24bc5bfa9c90c8cb17120c26b8c3dde2fdeaef5dc59718bf1596826376
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    total: 45
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "MAIN_WINDOW is owned by data_window.rs and imported by menu.rs rather than living in a neutral module"
+    waived: "one definition is what round 1 asked for; the close-with-main rule is its other reader, and moving it changes nothing observable"
+  - finding: "dataWindow.ts's DATA_WINDOW_PREFIX and hex naming duplicate the shell's label_for with no cross-language test"
+    waived: "the TS names serve only the browser fallback's window.name and registry, self-consistent within TS; round 1's verifier found no cross-language contract, and the shell alone mints Tauri labels"
+  - finding: "two racing opens on one key where the winner's window build fails leave the loser with Ok and no window"
+    waived: "opens come from a user's click; the winner surfaces the build failure and its payload is taken back, so the next click opens the window"
+  - finding: "reopening a key whose window is mid-close focuses the closing window and opens nothing"
+    waived: "a destroy completes within the event turn that started it; the next click finds no window and opens a fresh one, and DEC-68 makes edits scratch to the window's life"
+verdict: PASS
+date: 2026-11-03
