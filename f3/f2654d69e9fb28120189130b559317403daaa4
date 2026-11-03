@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONEAPP
+wu: E-ONEAPP.W2
+branch: HEAD
+tests:
+  unit: { count: 48, covers: "the core's launch arguments (lifeline, ca-dir, both ports); the log ring's bound and order; each CoreState's tagged serialization; a replaced generation cannot publish; the held port is the one named; attach selection from TRAWLER_API (set, blank, absent); the refusal sentences; the CA's home in the app data dir and adoption (whole CA once, never over an existing one, never half); the address script's escaping; every tauri config sets create:false; the front-end client's commands, its no-app fallback, a refused restart and both event payloads" }
+  integration: { count: 4, covers: "the real trawler-ui --core under the Supervisor on port 0: running and answering /flows with its CA in --ca-dir, SIGKILL observed as exited(signal 9) with the window-side state intact, restart on the same ports, stop frees both ports and the pid, state events in order and log lines in ring and observer; a SIGKILLed supervising process (the test binary re-executed) leaves no core and frees its port; a held port is StartError::Conflict naming it" }
+  e2e: { waived: "the owned-core journeys J1-J3 are W5's (one-app.spec.ts). The existing suite ran attached through TRAWLER_API with windows built in the setup hook: cargo xtask ui e2e, 4 of 4 spec files passed" }
