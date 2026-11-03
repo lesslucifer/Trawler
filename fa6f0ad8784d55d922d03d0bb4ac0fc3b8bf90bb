@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-PANELS
+wu: E-PANELS.W2
+base: 2df4ed0755f384d878b848b3423859ce269cc108
+design_sha256: a9241db21241a1a5fb2c3463e6b4849b1f5a42c2f86c8b195d7bcea19fbdca37
+verdict: PASS
+artifacts: [docs/work/2026-11-03-panels-splitters-design-run.html, docs/work/components/splitter.html]
+date: 2026-11-03
