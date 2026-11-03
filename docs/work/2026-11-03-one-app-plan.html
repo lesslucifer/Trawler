@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae962d89f34851f0dfadf6a" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP — epic plan</h1>
+      <p>One launch, one app: the window starts the capture service as a supervised child process, shows its
+        health, and stops it when it quits. <code>cargo run</code> builds and opens the whole app.</p>
+      <div class="meta">v3 · opened 2026-11-03 · owner rulings on Q1–Q14 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/one-app</code>
+        · WU branches <code>wu/one-app/&lt;slug&gt;</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">To a user Trawler is one program, but today it runs as two. The core
+      (<code>cargo run</code>: proxy <code>:7420</code> + control API <code>:7421</code>) and the native window
+      (<code>cargo xtask ui dev</code>, a pure API client per <a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a>)
+      are started separately, and the window cannot start, stop or locate the core it depends on. This epic makes
+      the app <strong>own and supervise</strong> its core. The core runs as a child process of the app, so a core
+      crash never takes the window down. The app exposes the core's status, a restart, and its live log. The
+      repo becomes one workspace, so <code>cargo run</code> builds and opens the whole app. The core's API-first
+      contract is unchanged: the webview still talks to it over loopback HTTP, and <code>curl</code> still
+      reaches the same API.</p>
+
+    <h2 id="topology">Topology — before / after</h2>
+    <div class="diagram" data-c="topology-diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph before["Today — two launches"]
+    direction TB
+    u1(["user"]) -->|"cargo run"| core1["trawler bin<br/>proxy :7420 · API :7421"]
+    u1 -->|"cargo xtask ui dev"| shell1["trawler-ui window"]
+    shell1 -. "HTTP/SSE, address assumed :7421" .-> core1
+  end
+  subgraph after["After — one launch, two processes"]
+    direction TB
+    u2(["user"]) -->|"cargo run · open Trawler.app"| app["app process (Tauri)<br/>window · menus · supervisor"]
+    app -->|"spawns itself: trawler --core<br/>stdin pipe = lifeline"| core2["core process<br/>serve(Config) → proxy · API"]
+    core2 -->|"stdout: ready line {proxy, api}<br/>stderr: log lines"| app
+    app -. "API address injected before first paint" .-> web["webview"]
+    web -. "HTTP/SSE (unchanged)" .-> core2
+    curl(["curl"]) -. ":7421" .-> core2
+  end
+      </pre>
+      <div class="caption">The API boundary does not move. A process boundary appears between the app and a core it now
+        owns, and the webview is still only an HTTP client of the core.</div>
+    </div>
+
+    <h2 id="workspace">Workspace — before / after</h2>
+    <div data-c="workspace-table">
+      <table>
+        <tr><th>Command at the root</th><th>Today</th><th>After</th></tr>
+        <tr><td><code>cargo run</code></td><td>headless core</td><td>the app (window + supervised core), via the app crate's <code>default-run</code></td></tr>
+        <tr><td><code>cargo run -p trawler</code></td><td>headless core</td><td>headless core, unchanged (servers, CI, Ctrl-C)</td></tr>
+        <tr><td><code>cargo build</code> · <code>cargo test</code> · <code>cargo clippy</code></td><td>core + xtask only</td>
+          <td>core <em>and</em> the app (<code>default-members = [".", "ui/src-tauri"]</code>)</td></tr>
+        <tr><td><code>ui/src-tauri</code></td><td>excluded, own <code>Cargo.lock</code>, own lints</td>
+          <td>workspace member, one lockfile, shared <code>[workspace.lints]</code></td></tr>
+        <tr><td>the <code>trawler</code> lib</td><td>GUI-free</td><td>still GUI-free: the app depends on it, never the reverse</td></tr>
+      </table>
+      <div class="caption">Checked in a scratch workspace: a member's <code>default-run</code> makes a bare
+        <code>cargo run</code> unambiguous across <code>default-members</code>, and <code>cargo test</code> runs
+        both packages. The core stays the root package, so <code>src/</code> and <code>tests/</code> do not move.</div>
+    </div>
+
+    <h2 id="lifecycle">Supervised lifecycle</h2>
+    <div class="diagram" data-c="lifecycle-diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Attached: TRAWLER_API set
+  [*] --> Starting: spawn trawler --core
+  Starting --> Running: ready line (proxy, api)
+  Starting --> Conflict: exit, port in use
+  Conflict --> [*]: native dialog names the port → quit
+  Running --> Exited: child exits / crashes
+  Exited --> Starting: Restart (Settings or Not-answering)
+  Running --> Starting: Restart (Settings)
+  Running --> Stopping: quit (✕ · ⌘Q · Dock · logout)
+  Exited --> [*]: quit
+  Stopping --> [*]: stdin closed → graceful exit, kill after timeout
+  Attached --> [*]: quit, attached core untouched
+      </pre>
+      <div class="caption">The ready line carries the bound addresses, so fixed ports (production) and ephemeral ports
+        (e2e) use one path. The stdin pipe is the lifeline: if the app dies by any route, including SIGKILL, the
+        child reads EOF and exits, so no orphan holds the ports.</div>
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <table>
+        <tr><th>UC</th><th>Change</th><th>Contract after this epic</th></tr>
+        <tr><td><span class="badge id">UC-4</span></td><td>changed</td>
+          <td>The native app starts its own core as a child process at launch and stops it on every quit. One
+            launch gives a working list with nothing else running. If the core cannot start (port taken), a
+            native dialog names the port before any window shows. If the core dies mid-session, the window
+            survives and shows the existing "core not answering" state with a Restart.</td></tr>
+        <tr><td><span class="badge id">UC-SVC</span></td><td>new</td>
+          <td>The <strong>Capture service</strong> settings page shows the core's state (starting · running · exited
+            with its code · attached), pid, uptime and bound ports, offers <strong>Restart</strong>, and streams the
+            core's live log. In attach mode the page shows the address and that the core is not managed.</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>changed (quit)</td>
+          <td><a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>
+            rule 6 says "the core is its own process, and quitting the window does not stop it". That becomes:
+            <em>quitting the app stops the capture service</em>. Rules 1–5 and 7 are unchanged, and the dialog's
+            copy now says that the quit itself stops capture.</td></tr>
+        <tr><td><span class="badge id">UC-3</span></td><td>unchanged</td>
+          <td>The core still serves the web shell at <code>GET /</code>, and it stays reachable while the app runs.</td></tr>
+        <tr><td><span class="badge id">UC-1 · UC-2 · UC-5–8</span></td><td>unchanged</td>
+          <td>Capture, inspection, export and replay behave as before. The only change is who starts the core.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <tr><th>#</th><th>A reader who wasn't there checks…</th><th>…and sees</th></tr>
+        <tr><td>1</td><td><code>cargo run</code> at the repo root on a fresh clone, nothing else running</td>
+          <td>The Trawler window opens on a live list. <code>curl -x http://127.0.0.1:7420 http://example.com/</code>
+            appears in it, and <code>curl http://127.0.0.1:7421/flows</code> answers.</td></tr>
+        <tr><td>2</td><td>quit by ✕, ⌘Q, the Dock's Quit; then <code>kill -9</code> the app on a second launch</td>
+          <td>Ports <code>7420</code>/<code>7421</code> are free afterwards and no trawler process remains, in both cases.</td></tr>
+        <tr><td>3</td><td><code>cargo run -p trawler</code> · <code>cargo build</code> / <code>cargo test</code> at the root</td>
+          <td>The headless core is unchanged (logs, Ctrl-C). The root build and test cover the core and the app.
+            <code>cargo tree -p trawler</code> lists no <code>tauri</code>/<code>wry</code>.</td></tr>
+        <tr><td>4</td><td>launch while <code>:7420</code> is held by another program</td>
+          <td>A native dialog names the port and the app quits. No window opens over a core that isn't there.</td></tr>
+        <tr><td>5</td><td>launch a second time while the first runs</td>
+          <td>The first window comes forward. No second core starts.</td></tr>
+        <tr><td>6</td><td>edit a file under <code>ui/src/</code>, then <code>cargo run</code></td>
+          <td>The window shows the edit. The bundle is rebuilt when stale, with no separate <code>pnpm</code> step.
+            <code>cargo xtask ui dev</code> still gives HMR, now over an owned core.</td></tr>
+        <tr><td>7</td><td>the bundled app (<code>cargo xtask ui build</code> → <code>.app</code>) opened from Finder</td>
+          <td>Same as #1, with one bundled binary and no extra sidecar file. The CA lives in the app's data
+            directory, not in the launch cwd.</td></tr>
+        <tr><td>8</td><td><code>TRAWLER_API=http://127.0.0.1:&lt;p&gt; cargo run</code></td>
+          <td>Attach mode: the window drives that core and starts none of its own. Settings shows "attached".</td></tr>
+        <tr><td>9</td><td>quit while this machine routes through Trawler</td>
+          <td>DEC-64's dialog still asks. Its sentence says that quitting stops the capture service.</td></tr>
+        <tr><td>10</td><td>Settings → Capture service; kill the core's pid from a terminal; press Restart</td>
+          <td>Running, with pid, ports and a live log. After the kill the state is "exited (signal)" and the window
+            is still up. Restart brings the API back on the same ports.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <table>
+        <tr><th>Out of scope</th><th>Why / where it goes</th></tr>
+        <tr><td>Background service, tray / menu-bar icon, core running with no window</td><td>A later epic (owner, Q7). Here, closing the last window quits the app.</td></tr>
+        <tr><td>Launch at login, a launchd / system service</td><td>Belongs to that same background-service epic</td></tr>
+        <tr><td>Packaging the whole app: signing, notarization, installers, auto-update</td><td>A future packaging epic (owner, Q3). This epic only makes that packaging possible.</td></tr>
+        <tr><td>Any API, route or port change</td><td>The API boundary is the invariant this epic keeps</td></tr>
+        <tr><td>Retiring the web shell (UC-3)</td><td>DEC-12's parity question, unchanged</td></tr>
+        <tr><td>Persistent log files, log search or export</td><td>The log viewer shows a bounded in-memory tail of the current core</td></tr>
+        <tr><td>Automatic restart of a crashed core</td><td>See Q12. A crash is shown, never hidden.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="wu-summaries">Working units</h2>
+    <div class="diagram" data-c="wu-graph">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 · one workspace"] --> W2["W2 · supervised core"]
+  W2 --> W3["W3 · Capture service page"]
+  W2 --> W4["W4 · quit truth"]
+  W3 --> W5["W5 · e2e + distill"]
+  W4 --> W5
+      </pre>
+    </div>
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-ONEAPP.W1">
+        <h3 id="w1">E-ONEAPP.W1 — the repo is one workspace, and <code>cargo run</code> is the app</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The decision record <strong>DEC-next (E-ONEAPP: the
+            app supervises its core)</strong>. It supersedes DEC-12's out-of-process and GUI-free-root-build clauses,
+            and keeps its API-first clause. <code>ui/src-tauri</code> joins the workspace as a default member, with
+            one lockfile and lints shared through <code>[workspace.lints]</code>. The app crate gets
+            <code>default-run</code> and the <code>trawler</code> lib as a path dependency. The app embeds the
+            front-end bundle (Tauri <code>custom-protocol</code>), and its build script rebuilds <code>ui/dist</code>
+            when <code>ui/src</code> is newer (Q13). The core's entry gains the flags the supervisor needs:
+            <code>--ca-dir</code>, <code>--proxy-port</code>/<code>--api-port</code>, a ready line on stdout and
+            exit-on-stdin-EOF. These flags are shared by <code>cargo run -p trawler</code> and the app's
+            <code>--core</code> mode.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 (one launch). Expected #3 and #6, plus #1 for the
+            window opening (owning the core comes in W2). Q2, Q3, Q10, Q11 and Q13.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected"><code>cargo run</code> opens the window, and
+            <code>cargo run -p trawler</code> is the headless core. An integration test fails if <code>tauri</code>
+            or <code>wry</code> enter the <code>trawler</code> package's dependency tree. Another integration test
+            spawns the core entry with port 0 and reads a parseable ready line, sees the API answer at it, closes
+            stdin and sees the process exit with both ports rebindable. Unit tests cover flag parsing, the
+            ready-line format and the stale-bundle check.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">none — the first WU</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-ONEAPP.W2">
+        <h3 id="w2">E-ONEAPP.W2 — the app supervises its core</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A supervisor module in the shell. It spawns
+            <code>current_exe() --core</code> on fixed <code>7420</code>/<code>7421</code> (Q4, Q11), waits for the
+            ready line, and injects the bound API address before first paint into every webview the shell opens,
+            including E-INSPWIN's inspector windows, whichever epic lands second. This generalizes
+            <code>e2e_core_address</code> into production. It keeps the child's state (starting · running ·
+            exited(code) · attached) and a bounded ring of its stderr lines, and exposes both, plus Restart, as
+            Tauri commands and events. On every exit path (<code>RunEvent::Exit</code>, terminate, logout) it closes
+            stdin, waits, then kills. A port conflict gets a native dialog naming the port, then a quit (Q5). A
+            second launch focuses the first instance (Q8, <code>tauri-plugin-single-instance</code>). Attach mode:
+            <code>TRAWLER_API</code> (renamed from <code>TRAWLER_E2E_API</code>) in every build skips the spawn (Q9).
+            The CA moves to the app data directory and adopts an existing <code>./ca</code> on first launch (Q6).</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4. Expected #1, #2, #4, #5, #7 and #8. Q4–Q9, Q11 and Q12.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">An integration test drives the supervisor on
+            ephemeral ports through start → running → kill the child → exited(signal) → restart → running → quit,
+            and asserts both ports are rebindable and no child remains. A second test kills the supervising
+            process and asserts that the child exits. Unit tests cover attach-mode selection, the conflict message,
+            the log ring's bound, and CA-dir resolution and adoption. The quit-dialog rules are untouched.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the workspace, the core flags and the ready line</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-ONEAPP.W3">
+        <h3 id="w3">E-ONEAPP.W3 — the Capture service page</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A new settings surface, <strong>Capture
+            service</strong>, opened from the app menu (Settings… ⌘,). It shows the state, pid, uptime and bound
+            ports; a Restart that warns it clears the captured list (flows live in the core's memory); and a live,
+            auto-scrolling tail of the core's log. The attached state shows the address and no Restart. The
+            existing "core not answering" state gains the same Restart when the core is owned. This is a new
+            surface, so it goes through a design run (mockup + lists, DEC-53) and the design-review step before
+            any code.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-SVC, and UC-4 (the not-answering Restart). Expected #10. Q12 and Q14.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Vitest covers each state's rendering, the
+            Restart confirmation, the attached variant, and the log tail's bound and auto-scroll against the
+            supervisor's command and event contract. A shell integration test asserts that the Restart command
+            round-trips through the supervisor.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W2 — the supervisor's state, log and Restart it renders</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-ONEAPP.W4">
+        <h3 id="w4">E-ONEAPP.W4 — a quit says what it now does</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">DEC-64 rule 6 is amended (quitting the app stops
+            the capture service), and the <a href="../../ui/src/ProxyCloseDialog.tsx">ProxyCloseDialog</a>
+            sentences change from "once … stops" to "quitting stops …". This is a copy edit to an existing surface,
+            accounted as <code>design.undesigned</code> with its reason, and adds no new surface.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-ONBOARD (quit). Expected #9.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Vitest asserts the new sentences per dialog
+            case. A shell integration test asserts that the terminate path stops the core.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W2 — the quit has to stop the core before the copy can say so</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-ONEAPP.W5">
+        <h3 id="w5">E-ONEAPP.W5 — the epic's e2e and the distillation</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary"><code>one-app.spec.ts</code> launches the app
+            binary with no external core. The e2e build has the supervisor bind ephemeral ports and reads them
+            from the ready line. The existing specs keep the attach-mode harness. <code>cargo xtask ui e2e</code>
+            runs both, and the distillation below lands.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E: expected #1, #2, #8 and #10, driven through the real window</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">e2e is green over the journeys in the e2e plan,
+            and the T0/T1/T2 docs reflect the new truth.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3, W4</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <table>
+        <tr><th>Journey</th><th>Drives</th><th>Asserts</th></tr>
+        <tr><td>J1 · one launch captures</td><td>launch the app binary alone (e2e build, ephemeral ports), then
+          send one request through its proxy to the local origin</td><td>The row appears in the window's list, and
+          <code>GET /flows</code> on the reported API port returns it</td></tr>
+        <tr><td>J2 · the service page tells the truth</td><td>open Settings → Capture service, kill the core's pid
+          from the harness, then press Restart</td><td>Running with the reported pid and ports, and the log shows the
+          start line. After the kill the state is exited and the window is alive. After Restart the API answers on
+          the same port.</td></tr>
+        <tr><td>J3 · quit releases</td><td>quit the app via the window</td><td>Both reported ports can be bound
+          again, and neither the app process nor its child remains</td></tr>
+        <tr><td>J4 · attach mode</td><td>the existing onboarding, capture, replay and flows specs, launched with
+          <code>TRAWLER_API</code> pointing at the harness core</td><td>Green as today, and the service page shows
+          "attached". Attach mode is real, not dead code.</td></tr>
+      </table>
+      <p>No waiver is planned. The port-conflict dialog, single-instance focus and the parent-SIGKILL lifeline are
+        native and outside the webview, so W2 proves them at integration level, not in e2e.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <tr><th>Tier</th><th>Doc</th><th>Absorbs</th></tr>
+        <tr><td>T2</td><td><code>docs/decisions/</code> new DEC + index</td><td>The app supervises its core:
+          a self-spawned child, the stdin lifeline, the ready line, the injected API address, attach mode, one
+          workspace</td></tr>
+        <tr><td>T2</td><td><a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a></td><td>Marked
+          superseded in its topology and GUI-free-root-build clauses only</td></tr>
+        <tr><td>T2</td><td><a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a></td><td>Rule 6 amended</td></tr>
+        <tr><td>T2</td><td><a href="../use-cases/web-ui.html">web-ui.html</a> + index</td><td>UC-4, the new
+          UC-SVC, and UC-ONBOARD's quit row</td></tr>
+        <tr><td>T2</td><td><code>docs/design-rules/</code></td><td>Anything the Capture service design run
+          promotes to a rule</td></tr>
+        <tr><td>T1</td><td><a href="../architecture.html">architecture.html</a></td><td>The topology diagram, the
+          "UI out of process" row, the workspace layout and the Run/dev rows, with a <code>Reviewed-By</code>
+          trailer via <code>mr commit</code></td></tr>
+        <tr><td>T0</td><td>CLAUDE.md</td><td>Stack / Layout / Commands lines: <code>cargo run</code> opens the
+          app, <code>cargo run -p trawler</code> is the headless core, <code>ui/src-tauri</code> is a workspace
+          member, and the root build compiles the GUI. Approved by the owner (Q10).</td></tr>
+      </table>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table>
+        <tr><th>#</th><th>Question</th><th>Answer</th></tr>
+        <tr><td>Q1</td><td>The core in the app's process, or as a sidecar child process?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Sidecar</strong>, managed from the
+            GUI process, with a settings page for its status, a restart and its log (→ UC-SVC, W3). A core crash no
+            longer takes the window down.</td></tr>
+        <tr><td>Q2</td><td>How does <code>cargo run</code> open the GUI?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Refactor:</strong> the packaging
+            is now the whole app. <code>ui/src-tauri</code> joins the workspace as a default member with
+            <code>default-run</code>, and the core stays the root package. No launcher binary is needed.</td></tr>
+        <tr><td>Q3</td><td>May <code>cargo build</code> / <code>cargo test</code> at the root compile the GUI?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Yes</strong>, as the base for
+            packaging the whole app in a future epic. This replaces v2's "No". The <code>trawler</code> lib itself
+            stays GUI-free, and a dependency-tree test guards it.</td></tr>
+        <tr><td>Q4</td><td>Fixed ports or ephemeral?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Fixed</strong>
+            <code>7420</code>/<code>7421</code>. A conflict gets a dialog with no silent fallback. Ephemeral only in
+            the e2e build.</td></tr>
+        <tr><td>Q5</td><td>A headless core is already on the ports: attach automatically?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>No.</strong> Only an explicit
+            <code>TRAWLER_API</code> attaches. Otherwise the conflict dialog appears.</td></tr>
+        <tr><td>Q6</td><td>Where does the CA live?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>As proposed:</strong>
+            <code>~/Library/Application Support/dev.trawler.app/ca</code>, adopting an existing <code>./ca</code> on
+            first launch. The headless core keeps <code>./ca</code>.</td></tr>
+        <tr><td>Q7</td><td>Closing the last window: quit, or keep capturing in the background?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Quit for now.</strong> A later epic
+            brings the background service and tray icon.</td></tr>
+        <tr><td>Q8</td><td>A second launch?</td><td><span class="badge approval">owner ruling 2026-11-03</span>
+          <strong>Single instance:</strong> focus the running window.</td></tr>
+        <tr><td>Q9</td><td>Attach mode in release builds, or e2e only?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Every build</strong>, as
+            <code>TRAWLER_API</code>.</td></tr>
+        <tr><td>Q10</td><td>May the epic edit the T0 lines in CLAUDE.md that describe <code>cargo run</code> and the out-of-process app?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>Yes</strong>, at W5 once the truth
+            has changed, via <code>mr commit</code> with a <code>Reviewed-By</code> trailer. This includes the
+            "headless build stays GUI-free" line, which Q3 makes untrue.</td></tr>
+        <tr><td>Q11</td><td>What binary runs as the sidecar?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>As proposed:</strong> the app binary re-executes itself as <code>trawler --core</code>, which calls
+            the same core entry as <code>cargo run -p trawler</code>. A plain <code>cargo run</code> builds only the
+            app package's binaries (checked), so a separate <code>trawler-core</code> binary would be missing on a
+            fresh clone. Tauri's <code>externalBin</code> also needs a target-triple-named file staged before its
+            build script runs. With self-spawn there is one binary to build, bundle and sign. The cost: the child
+            links the GUI frameworks without ever initializing them.</td></tr>
+        <tr><td>Q12</td><td>The core dies mid-session: restart it automatically?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>As proposed: no.</strong> The window stays up, the state shows exited(code) with the log tail,
+            and one press restarts it. A silent restart would hide the crash and would quietly empty the captured
+            list, which lives in the core's memory.</td></tr>
+        <tr><td>Q13</td><td>The root build now compiles the app, which embeds the front-end bundle. How does
+          <code>cargo build</code> get <code>ui/dist</code>?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>As proposed:</strong> the app's build script runs <code>pnpm build</code> when <code>ui/src</code> is
+            newer than <code>ui/dist</code>, and fails with a message naming <code>pnpm install</code> when
+            Node/pnpm is absent. As a consequence, the root <code>cargo test</code> needs Node + pnpm installed.
+            Server/CI use without them is <code>cargo test -p trawler</code>.</td></tr>
+        <tr><td>Q14</td><td>Does the Capture service page offer Stop as well as Restart?</td>
+          <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>As proposed: Restart only.</strong> A stopped core while the system proxy points at
+            <code>:7420</code> leaves the machine without internet, which is exactly what DEC-64 guards. Quitting
+            remains the way to stop, and it goes through DEC-64's check.</td></tr>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
