@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9a7aa9f34851f0dfae082">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Splitter (component design)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .a-grip-x{cursor:col-resize;touch-action:none}
+    .a-grip-y{cursor:row-resize;touch-action:none}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Splitter <span class="badge id">T1</span></h1>
+      <p>A line between two zones that the user drags, or steps from the keyboard, to size one of them between two bounds.</p>
+      <div class="meta">Component design · 2026-11-03 · Trawler · status: <strong>confirmed</strong> 2026-11-03 (round 1; C5 dropped the reset key) · proposed by the
+        <a href="../2026-11-03-panels-splitters-design-run.html">splitters' design run</a> (E-PANELS.W2) · built by
+        E-PANELS.W3 · retires into the TSDoc on build (DEC-16)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <p class="callout" data-c="claim">Without it every resizable split repeats the same pointer capture, clamp, key
+      handling and ARIA by hand, and one of them is bound to drop the keyboard path.</p>
+    <table data-c="facts">
+      <tr><th>Fact</th><th>Value</th></tr>
+      <tr><td>tier</td><td>T1: position in, value out. Which value, which bounds and where it is saved are the
+        caller's (<code>useLayout</code>)</td></tr>
+      <tr><td>tenants</td><td>the list/pane split (<code>Layout</code>), the headers/body split (<code>FlowDetail</code>), each
+        fixed column boundary in <code>FlowList</code>'s label row</td></tr>
+      <tr><td>exists today</td><td>no: the pane has a fixed <code>w-pane</code>, the headers have <code>max-h-zone-cap</code>, and the columns are
+        the <code>COLUMNS</code> string</td></tr>
+      <tr><td>made of</td><td>nothing: one <code>div</code> with <code>role="separator"</code> and its line</td></tr>
+    </table>
+    <table data-c="drivers">
+      <tr><th>Driver</th><th>Design consequence</th></tr>
+      <tr><td>DEC-67: the user sizes the layout within designed bounds</td><td><code>min</code> / <code>max</code> are required props, and every
+        value is clamped before it reaches the caller</td></tr>
+      <tr><td>keyboard-parity</td><td>focusable; the arrows, Shift, Home and End each have a defined act; Enter has none (owner, C5)</td></tr>
+      <tr><td>zero-accent</td><td>the line lifts from <code>hairline</code> to <code>ink-mute</code>, and no colour is added</td></tr>
+      <tr><td>a 1 px line is not a target</td><td>a hit band reaches <code>grip-reach</code> past the line on each side</td></tr>
+      <tr><td>Q6: double-click restores one default</td><td><code>onReset</code> on double-click only; no reset key (owner, C5): the keys reach the default by value, View ▸ Reset Layout resets all</td></tr>
+    </table>
+
+    <h2 id="anatomy">Anatomy</h2>
+    <table data-c="anatomy">
+      <tr><th>#</th><th>Part</th><th>Spec</th><th>Why</th></tr>
+      <tr><td>1</td><td>line</td><td>1 px, <code>bg-hairline</code> at rest, <code>bg-ink-mute</code> when active. Along the split's whole length</td><td>it replaces the border the two zones already shared, so at rest the screen looks unchanged</td></tr>
+      <tr><td>2</td><td>hit band</td><td>the line plus <code>grip-reach</code> (4 px) on each side, transparent, above both zones (<code>z-sticky</code>). The cursor is <code>col-resize</code> or <code>row-resize</code></td><td>9 px is reachable and still covers no control in either zone. Both zones keep at least 16 px of padding</td></tr>
+      <tr><td>3</td><td>focus ring</td><td><code>outline-focus outline-ink-mute outline-offset-focus-inset</code> on the band, keyboard focus only</td><td>the ring every focusable member carries, kept inside the band so neither zone clips it</td></tr>
+    </table>
+    <p class="kd">A column handle is the same component with the gap between two label cells as its band (12 px,
+      <code>w-3</code>), and its line is only as tall as the label row.</p>
+
+    <h2 id="behavior">Behavior</h2>
+    <p class="kd">Anatomy is what you see; behavior is what it does.</p>
+    <table data-c="behavior">
+      <tr><th>Rule</th><th>Example</th><th>Spec</th><th>Why</th></tr>
+      <tr><td>drag</td><td>pane 520 → drag 40 px left → 560</td><td>pointer capture on press. value = start + dir × Δpx × perPx, clamped. The
+        whole document shows the resize cursor and selects no text until release</td><td>start-relative, so a pointer that overshoots a bound and comes back picks up where it crossed</td></tr>
+      <tr><td>direction</td><td>splitter A: right = narrower pane</td><td><code>dir</code>: +1 when moving along the axis grows the value, −1 when it shrinks it</td><td>the value is the caller's zone size, whichever side the zone sits on</td></tr>
+      <tr><td>keys</td><td>← on splitter A → pane +8</td><td>the arrows along the axis move the line 8 px, with Shift 48 px. Home goes to <code>min</code>, End to <code>max</code></td><td>the arrows are spatial (the line goes where the arrow points); Home and End follow the value, as ARIA's separator does</td></tr>
+      <tr><td>reset</td><td>double-click → 520</td><td>double-click calls <code>onReset</code>. The caller supplies the default</td><td>Q6</td></tr>
+      <tr><td>commit</td><td>a drag of 300 moves → 1 write</td><td><code>onChange</code> on every move; <code>onCommit</code> once on release, a key step or a reset</td><td>the caller saves on commit only, never mid-drag</td></tr>
+      <tr><td>bounds move</td><td>window shrinks under a pane at max</td><td>a <code>max</code> below <code>value</code> renders at <code>max</code> and does not call <code>onChange</code></td><td>the clamp changes what is shown, never what is saved (E-PANELS expected result 6)</td></tr>
+    </table>
+
+    <h2 id="states">States</h2>
+    <div class="app" data-c="states">
+      <div class="grid grid-cols-4 gap-4 font-ui text-chrome text-ink-mute">
+        <div><div class="relative h-12 rounded-card bg-canvas"><div class="mx-auto h-full w-px bg-hairline"></div></div>rest</div>
+        <div><div class="relative h-12 rounded-card bg-canvas"><div class="mx-auto h-full w-px bg-ink-mute"></div></div>hover · drag</div>
+        <div><div class="relative h-12 rounded-card bg-canvas outline outline-focus outline-ink-mute outline-offset-focus-inset"><div class="mx-auto h-full w-px bg-ink-mute"></div></div>keyboard focus</div>
+        <div><div class="relative h-12 rounded-card bg-canvas"><div class="mx-auto h-full w-px bg-ink-mute"></div></div>at a bound: no look of its own</div>
+      </div>
+    </div>
+    <p class="kd">Not states: disabled (a split that cannot move is not rendered as one), collapsed (Q7), a mark for
+      "at a bound" (<code>aria-valuenow</code> equals the bound, and the line stops following the pointer).</p>
+
+    <h2 id="forks">Forks</h2>
+    <table data-c="forks">
+      <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
+      <tr><td>hit area</td><td><span class="badge auto">settled</span> a 9 px band over the 1 px line</td><td><span class="badge approval">rejected</span> a visible 8 px gutter with a grip glyph: it adds chrome to every split for an affordance the cursor already gives</td></tr>
+      <tr><td>reset key</td><td><span class="badge auto">settled</span> none (owner, C5)</td><td><span class="badge approval">rejected</span> Enter to reset · Enter to collapse, as in ARIA's window splitter example: nothing collapses here (Q7)</td></tr>
+      <tr><td>value unit</td><td><span class="badge auto">settled</span> the caller's unit, with <code>perPx</code> converting pixels (1 for px, 1 / height for a share)</td><td><span class="badge approval">rejected</span> always px: the headers split is a share of the pane, so it would convert twice</td></tr>
+    </table>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <tr><th>Prop</th><th>Type</th><th>Note</th></tr>
+      <tr><td><code>axis</code></td><td><code>"x" | "y"</code></td><td>x: a vertical line between left and right</td></tr>
+      <tr><td><code>value</code> · <code>min</code> · <code>max</code></td><td><code>number</code></td><td>live bounds; the caller derives them</td></tr>
+      <tr><td><code>dir</code></td><td><code>1 | -1</code></td><td>see behavior</td></tr>
+      <tr><td><code>perPx</code></td><td><code>number</code>, default 1</td><td>value units per pixel</td></tr>
+      <tr><td><code>onChange</code> · <code>onCommit</code> · <code>onReset</code></td><td><code>(v) =&gt; void</code> · <code>() =&gt; void</code> · <code>() =&gt; void</code></td><td>clamped values only</td></tr>
+      <tr><td><code>label</code> · <code>valueText</code></td><td><code>string</code></td><td>the accessible name, e.g. <em>detail pane width</em>, and <em>520 px</em></td></tr>
+      <tr><td><code>className</code></td><td><code>string</code></td><td>the band's placement only</td></tr>
+    </table>
+    <pre data-c="tsdoc"><code>/**
+ * Splitter — a line between two zones the user drags or steps to size one of them between two bounds.
+ * @tier T1 — position in, clamped value out; which value, its bounds and where it is saved are the caller's
+ * @anatomy 1px line (hairline at rest, ink-mute when active) · transparent hit band grip-reach past each side, z-sticky, resize cursor · the shared focus ring, inset
+ * @use any split the user sizes: list ↔ pane, headers ↔ body, a fixed column's boundary in a label row
+ * @avoid a split that collapses or hides a zone (Q7: none does) · a fixed layout boundary, which stays a border · choosing or saving the value inside it · a visible grip glyph or gutter
+ * @states rest · hover · dragging (document-wide resize cursor, no text selection) · focus (keyboard only). No disabled, collapsed or at-bound state
+ * @madeof —
+ */</code></pre>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit">
+      <div class="card"><h3>Use</h3><p>A boundary the user may move, where both sides keep a minimum and the value is
+        saved by the caller: the list/pane split, the headers/body split, a fixed column's boundary.</p></div>
+      <div class="card"><h3>Avoid</h3><p>Collapsing a zone (closing the pane is <em>deselect the flow</em>) · a boundary nobody
+        sizes, which stays a <code>border-hairline</code> · a value with known options, which is
+        <code>SegmentedControl</code> or <code>Select</code>.</p></div>
+    </div>
+
+    <h2 id="tokens">Tokens</h2>
+    <table data-c="tokens">
+      <tr><th>Part</th><th>Classes</th></tr>
+      <tr><td>line</td><td><code>w-px</code> / <code>h-px</code> · <code>bg-hairline</code> → <code>bg-ink-mute</code></td></tr>
+      <tr><td>band</td><td><code>absolute z-sticky -inset-x-grip-reach</code> (or <code>-inset-y-</code>) · <code>cursor-col-resize</code> / <code>cursor-row-resize</code> (proposed members)</td></tr>
+      <tr><td>column band</td><td><code>absolute inset-y-0 w-3 -right-3</code> or <code>-left-3</code>: exactly the label row's <code>gap-3</code></td></tr>
+      <tr><td>focus</td><td><code>focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus-inset</code></td></tr>
+    </table>
+
+    <h2 id="specimen">Live specimen</h2>
+    <p class="kd">A stand-in drawn here because the component does not exist yet (a proposed part). Drag the line,
+      or Tab to it and use the arrows, Home and End. Bounds 96 … 320, default 192.</p>
+    <div class="app" data-c="specimen"><div id="spec-live"></div></div>
+
+  </main>
+  <script type="text/babel">
+    const { React, createRoot } = window.Trawler;
+    const { useState } = React;
+    const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+    function Specimen() {
+      const [w, setW] = useState(192);
+      const [hot, setHot] = useState(false);
+      const set = (v) => setW(Math.round(clamp(v, 96, 320)));
+      const down = (e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const x0 = e.clientX;
+        const from = w;
+        setHot(true);
+        document.body.style.cursor = "col-resize";
+        const move = (m) => set(from + (m.clientX - x0));
+        const up = () => {
+          setHot(false);
+          document.body.style.cursor = "";
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      };
+      const key = (e) => {
+        const step = e.shiftKey ? 48 : 8;
+        if (e.key === "ArrowRight") set(w + step);
+        else if (e.key === "ArrowLeft") set(w - step);
+        else if (e.key === "Home") set(96);
+        else if (e.key === "End") set(320);
+        else return;
+        e.preventDefault();
+      };
+      return (
+        <div className="flex h-24 rounded-card border border-hairline bg-canvas font-ui text-chrome text-ink-mute">
+          <div className="shrink-0 p-2" style={{ width: w }}>{w} px</div>
+          <div className="relative h-full w-px">
+            <div
+              role="separator" tabIndex={0} aria-orientation="vertical" aria-label="left zone width"
+              aria-valuenow={w} aria-valuemin={96} aria-valuemax={320}
+              onPointerDown={down} onPointerEnter={() => setHot(true)} onPointerLeave={() => setHot(false)}
+              onDoubleClick={() => set(192)} onKeyDown={key}
+              className="a-grip-x group absolute inset-y-0 -inset-x-chrome-y z-sticky focus:outline-none focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus-inset"
+            >
+              <div className={`mx-auto h-full w-px group-focus-visible:bg-ink-mute ${hot ? "bg-ink-mute" : "bg-hairline"}`} />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 bg-canvas-soft p-2">the other zone</div>
+        </div>
+      );
+    }
+    createRoot(document.getElementById("spec-live")).render(<Specimen />);
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
