@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONEAPP
+wu: E-ONEAPP.W1
+branch: HEAD
+tests:
+  unit: { count: 42, covers: "flag parsing into Config (defaults, each flag, bad port, missing value, unknown flag); the ready line's exact format, round-trip and that a log line is not one; the stale-bundle truth table, newest input at any depth, missing inputs, a fresh bundle runs no build, a stale one without node_modules names pnpm install; --core dispatch only as the first argument; ui dev hands cargo --no-default-features" }
+  integration: { count: 6, covers: "the real trawler binary on port 0 with --lifeline prints a parseable ready line, writes its CA to --ca-dir, answers GET /flows, exits 0 when stdin closes and frees both ports; an unknown flag exits 2 with usage and nothing on stdout; cargo tree of the trawler package holds no tauri/wry/tao while the app's tree holds trawler and wry" }
+  e2e: { waived: "the epic's e2e is W5 (one-app.spec.ts); W1 changes no journey the existing specs drive. The existing suite was run on the moved binary path: cargo xtask ui e2e, 4 of 4 spec files passed" }
