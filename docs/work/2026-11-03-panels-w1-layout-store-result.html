@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae99f909f34851f0dfae033" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W1 result: the decision and the layout store</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W1 — result</h1>
+      <p>The shell keeps one saved layout, read whole or not at all; DEC-67 records why and how.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU result · <span class="badge id">E-PANELS.W1</span> · branch
+        <code>wu/panels/layout-store</code> · <a href="2026-11-03-panels-w1-layout-store-plan.html">WU plan</a> ·
+        <a href="2026-11-03-panels-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Shipped</th><th></th></tr>
+      <tr><td><code>layout_read</code> / <code>layout_write</code> over <code>layout.json</code>, both builds</td>
+        <td><code>ui/src-tauri/src/layout.rs</code>, registered in <code>lib.rs</code> and <code>scenario.rs</code></td>
+        <td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>wrong shape / corrupt / missing reads as no saved layout</td><td><code>deny_unknown_fields</code> on the
+        whole shape; any read failure is <code>None</code> → <code>null</code></td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>write never tears the file</td><td>staged sibling <code>layout.json.staged</code>, then rename</td>
+        <td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>app bridge</td><td><code>ui/src/layoutStore.ts</code> (<code>readLayout</code> → <code>null</code> on
+        refusal, <code>writeLayout</code> rejects); wire shape <code>ui/src/layoutWire.json</code></td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>DEC-next + index + DEC-36 status</td><td>DEC-67, index row, DEC-36 header and index status: split
+        rejection superseded</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>screen unchanged</td><td>no UI-rendering file in the diff</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>What</th><th>Why</th></tr>
+      <tr><td>the epic plan's W1 summary loses "schema-versioned"</td><td>it contradicted ruling Q4 (no version field),
+        stated two sentences later</td></tr>
+      <tr><td><code>setup::config_dir</code> became <code>pub(crate)</code>; <code>layout</code> is a <code>pub</code>
+        module of the shell's lib</td><td>one resolver for the config dir; the integration test sees the store only
+        through the crate's public surface</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Layer</th><th>Where</th><th>Result</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/layout.rs</code> (6) · <code>ui/src/layoutStore.test.ts</code> (5)</td>
+        <td>green; shell crate 152 unit in all</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/layout_store.rs</code>: the wire fixture through
+        <code>layout_write</code>'s argument shape, a temp config dir and back, equal JSON · <code>xtask</code>
+        <code>both_shell_builds_register_exactly_the_commands_the_app_invokes</code></td><td>green</td></tr>
+      <tr><td>e2e</td><td>waived: nothing reads the store until W3; W6's relaunch journey covers it</td><td>—</td></tr>
+      <tr><td>lint</td><td>clippy <code>-D warnings</code> on the shell, release and <code>scenario</code> features; fmt;
+        <code>tsc</code>; eslint</td><td>clean</td></tr>
+      <tr><td>commits</td><td><code>e45bc4d6</code> plan · <code>133d2c7f</code> code · <code>827b668d</code> DEC-67</td><td></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: <code>docs/decisions/dec-67-the-user-sizes-the-layout.html</code> (new) + its index row; DEC-36's header and
+      index status name the supersession. UC-4 / UC-5 stay as they are: nothing the user sees has changed yet, and W6
+      distills the user-sized layout into them. T1: nothing.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>What</th><th>Who</th></tr>
+      <tr><td>the e2e launcher wipes <code>layout.json</code> before and after a run</td><td>W6, as planned</td></tr>
+      <tr><td>window geometry: <code>tauri-plugin-window-state</code>'s own file, or a field in this store (which, by
+        rule 3, makes every older file read as the default)</td><td>W5</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

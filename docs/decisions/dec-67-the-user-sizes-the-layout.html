@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae99cab9f34851f0dfae01c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-67: the user sizes the layout</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-67 — the user sizes the layout</h1>
+      <p>The list/pane split, the headers/body split, the flow list's fixed columns and every window are sized by the
+        user within designed bounds, and come back the way they were left. The designed values become the defaults a
+        reset returns to.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T2 decision · minted by <strong>E-PANELS.W1</strong> from the epic
+        plan's rulings Q1–Q9 · supersedes in part <a href="dec-36-the-pane-and-the-window.html">DEC-36</a> (its rejection
+        of a draggable split) · UC-4 · UC-5 · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What changed</th></tr>
+      <tr><td>DEC-36 fixed the pane at 520&nbsp;px and rejected a draggable split: three things the shell lacked (a
+        stored preference, a drag affordance, a minimum on both sides) for a gain its run could not show</td><td>the
+        owner asked for the capability, 2026-11-03: a reader with a long cookie wants a wider pane, one scanning paths a
+        narrower one, and every relaunch forgot the window. The gain is now the requirement, and E-PANELS builds all
+        three</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> Each split and each fixed flow-list column is draggable and keyboard-resizable between
+        a minimum and a maximum; nothing collapses to zero. Sizes persist in the shell, in <code>layout.json</code> in the
+        app config directory: pane width, headers share and the column widths once for the whole app, window geometry
+        once per window label. A saved layout is restored whole or not at all.</p>
+    </div>
+
+    <h2 id="dec-36">What happens to DEC-36</h2>
+    <table data-c="dec-36">
+      <tr><th>DEC-36 says</th><th>Now</th></tr>
+      <tr><td>rejected: a draggable split</td><td><strong>superseded</strong> by this record</td></tr>
+      <tr><td>pane 520, window 1440, one decision</td><td>kept, as the defaults a reset returns to</td></tr>
+      <tr><td><code>path = window − pane − 612</code></td><td>generalised to <code>path = window − pane − Σ(tracks)</code>;
+        612 is the default sum, and every maximum is derived so the path keeps its minimum</td></tr>
+      <tr><td>widths only from a declared scale (DEC-17)</td><td>kept: default, minimum and maximum are tokens; a dragged
+        value is user state between two tokens, never a design magnitude</td></tr>
+      <tr><td>rejected: raising the minimum window</td><td>kept: the bounds adapt to the window instead</td></tr>
+    </table>
+
+    <h2 id="rules">The persistence contract</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The shell owns the file, beside the dismissed-notice markers; the app reaches it through
+        <code>layout_read</code> / <code>layout_write</code>. No layout state passes through the core or the control
+        API</td><td>one home for the app's remembered choices (as DEC-66); <code>curl</code> keeps seeing everything the
+        app does (DEC-12)</td></tr>
+      <tr><td>2</td><td>Pane width, headers share and each column width are one value for the whole app; window size,
+        position and maximized state are one record per window label</td><td>every flow opens at the same pane, an
+        inspector window reads the same headers share as the main one, and each window reopens where it was</td></tr>
+      <tr><td>3</td><td>No version field. A file that does not parse into exactly the current shape (missing, extra or
+        mistyped field, not JSON) reads as no saved layout: the whole default, never a partial restore</td><td>a part of
+        a layout restored beside defaults is a layout nobody chose</td></tr>
+      <tr><td>4</td><td>The store checks shape, never bounds; the app clamps a restored value to the live bounds</td><td>the
+        bounds are tokens and the window's size, both of which can change under a saved value</td></tr>
+      <tr><td>5</td><td>A write replaces the file whole, through a staged sibling and a rename</td><td>a crash mid-write
+        leaves the old layout or the new one, never a torn file</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>The window's <code>localStorage</code></td><td>per origin: the dev server and the bundle would keep
+        separate layouts, and the e2e could not clear it from outside</td></tr>
+      <tr><td>A version field with migrations</td><td>a layout is cheap to lose and costly to restore wrong; the default
+        is always a valid answer</td></tr>
+      <tr><td>Saving sizes per window</td><td>the pane and the headers share would differ between windows showing the same
+        flow</td></tr>
+      <tr><td>Storing layout in the core</td><td>the core has no window; layout is the shell's</td></tr>
+      <tr><td>Collapsing a panel to zero</td><td>closing the pane stays <em>deselect the flow</em></td></tr>
+      <tr><td>Reordering or hiding columns</td><td>changes the arrangement, which this record keeps fixed</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

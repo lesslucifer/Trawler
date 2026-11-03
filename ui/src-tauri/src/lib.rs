@@ -1,3 +1,4 @@
+pub mod layout;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -38,6 +39,8 @@ pub fn run() {
         setup::dismiss_notice,
         setup::notes_shown,
         setup::show_notes,
+        layout::layout_read,
+        layout::layout_write,
         route::open_route,
         reach::confirm_reach,
         reach::confirm_replace_proxy
