@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v22 · 2026-09-17 · Trawler</div>
+      <div class="meta">v23 · 2026-11-03 · Trawler</div>
     </div>
   </header>
   <main>
@@ -47,8 +47,8 @@
         <tr>
           <td><a href="dec-12-native-ui-stack.html"><code>dec-12-native-ui-stack.html</code></a></td>
           <td><span class="badge id">DEC-12</span></td>
-          <td>Primary UI is a native desktop app (Tauri+Vite+TS+React+Tailwind, mirror Strata), an out-of-process client of the control API; Warp design system with functional status color; open CORS grant on the loopback API; configurable API base URL; web shell kept — reverses the web-primary framing</td>
-          <td><span class="badge auto">active</span></td>
+          <td>Primary UI is a native desktop app (Tauri+Vite+TS+React+Tailwind, mirror Strata), an out-of-process client of the control API; Warp design system with functional status color; open CORS grant on the loopback API; configurable API base URL; web shell kept — reverses the web-primary framing. Its topology and GUI-free-root-build clauses are superseded by DEC-68</td>
+          <td><span class="badge auto">active · partly superseded</span></td>
         </tr>
         <tr>
           <td><a href="dec-13-onboarding-capabilities.html"><code>dec-13-onboarding-capabilities.html</code></a></td>
@@ -825,6 +825,18 @@
             exempt, and a note earns its place only if it changes what the user does or helps when something fails.
             Replaces W13's R1 (a <em>?</em> per line). Rejected: a <em>?</em> per line, a checkbox, localStorage,
             exemptions, notes shown at first</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-68-the-app-supervises-its-core.html"><code>dec-68-the-app-supervises-its-core.html</code></a></td>
+          <td><span class="badge id">DEC-68</span></td>
+          <td><strong>The app supervises its core.</strong> The app spawns its own binary as <code>--core</code>, one
+            core entry (<code>trawler::cli::main</code>) shared with the headless <code>trawler</code>; the core prints
+            one JSON ready line with its bound addresses, logs on stderr, and with <code>--lifeline</code> exits on stdin
+            EOF. One workspace: a bare <code>cargo run</code> is the app, <code>cargo run -p trawler</code> the headless
+            core, which stays GUI-free by test. The app embeds <code>ui/dist</code> and its build script rebuilds a stale
+            bundle. Supersedes DEC-12's topology and GUI-free-root-build clauses. Rejected: the core in-process, a
+            separate sidecar binary, a launcher binary, stdin EOF always fatal, the address in a log line</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
