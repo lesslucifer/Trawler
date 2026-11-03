@@ -1,0 +1,34 @@
+schema: doc/v1
+epic: E-PANELS
+wu: E-PANELS.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html"
+    tier: T2
+    action: added
+    distills: "The Splitter design's forks: a line with a transparent grip-reach band, reset by double-click and no key, the caller's unit with perPx; what follows for keys, saving and a lowered bound."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "The DEC-68 row."
+  - path: "docs/work/2026-11-03-panels-splitters-design-run.html"
+    tier: T3
+    action: updated
+    distills: "Its two links to the retired Splitter design now point at the component's TSDoc."
+  - path: "docs/work/2026-11-03-panels-w2-splitters-design-result.html"
+    tier: T3
+    action: updated
+    distills: "Its link to the retired Splitter design now points at the component's TSDoc."
+  - path: "docs/work/2026-11-03-panels-w3-splitter-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's requirement, mapping, parts, expected result and test plan."
+  - path: "docs/work/2026-11-03-panels-w3-splitter-result.html"
+    tier: T3
+    action: added
+    distills: "W3's outcome, deviations (a View of its own off macOS, the share wrapper, no commit for a still press, review round 1's three fixes, the PointerEvent polyfill), evidence, distillation and follow-ups."
+  - path: "docs/work/components/splitter.html"
+    tier: T3
+    action: archived
+    distills: "The confirmed Splitter component design, now built; its contract is Splitter.tsx's TSDoc."
+    distilled_to: ["docs/decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html"]
