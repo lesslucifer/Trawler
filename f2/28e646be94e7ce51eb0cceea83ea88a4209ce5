@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU wu/panels/layout-store -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W1
+branch: wu/panels/layout-store
+base: 2c3178d57524c46b9b544ac31aef67eea14611a5
+head: f228e646be94e7ce51eb0cceea83ea88a4209ce5
+diff_sha256: fb6659a3c9e28e629fbaeb29f1c881efb9b760d609d6605f41664f825daaa60a
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  stage_seconds:
+    gate0: 243
+    finders: 17
+    verifiers: 15
+    total: 261
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-03
