@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9aa219f34851f0dfae0c1" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W1 result: hand data to a window of its own</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W1 — result</h1>
+      <p>The shell can hand a payload to a window of its own, by value, and the decision that governs every data window is
+        on the record.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W1</span> · branch
+        <code>wu/inspect-window/payload-handoff</code> · <a href="2026-11-03-inspect-window-w1-payload-handoff-plan.html">WU
+        plan</a> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th></th></tr>
+      <tr><td>DEC-next recorded</td><td>DEC-68 (DEC-67 is held by <code>epic/panels</code>) + its index row</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>new key → one more window, payload claimed once, byte-identical</td><td><code>open_data_window</code> /
+        <code>take_data_payload</code> over raw frames; 10 MiB round-trips on the mock runtime</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>same key → focus, payload untouched</td><td>an open or still-parked label focuses and parks nothing</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>main destroyed → data windows destroyed</td><td><code>on_destroyed</code> on the window-event hook; a
+        destroyed data window also drops its unclaimed payload</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td><code>data-*</code> capability, both builds register</td><td><code>capabilities/data-window.json</code>
+        (core default, save, file write), enabled in the e2e config; both handler lists carry the two commands</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>.ts helpers + browser fallback</td><td><code>ui/src/dataWindow.ts</code>; no <code>.tsx</code> touched</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>integration: two opens yield one window <em>titled by the first</em></td><td>the title is not asserted; the
+        payload's caption is</td><td>the mock runtime drops window titles; W7's J1 asserts the title through the real
+        window</td></tr>
+      <tr><td>integration: destroying main destroys both</td><td>the test calls <code>on_destroyed</code>, the function the
+        hook runs, rather than <code>main.destroy()</code></td><td>the mock runtime emits no <code>Destroyed</code> event
+        outside its run loop</td></tr>
+      <tr><td>—</td><td>the data window's size is 1200×800 (min 600×400), provisional</td><td>DEC-36 leaves the size to the
+        design run (W2), which may revise it</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>ef31ea13</code> plan · <code>d4c21681</code> code + DEC-68</td></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/data_window.rs</code> (11) · <code>ui/src/dataWindow.test.ts</code> (10)</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/data_window.rs</code> (7, mock runtime) ·
+        <code>xtask/src/ui.rs</code>: the registration test, plus <em>the e2e build enables every capability the app
+        ships</em></td></tr>
+      <tr><td>suites</td><td>shell <code>cargo test</code> 157 + 7 green; clippy <code>-D warnings</code> green in the
+        real and scenario builds; xtask <code>ui::</code> 24 green; vitest 60,771 in 67 files green</td></tr>
+      <tr><td>docs</td><td><a href="../decisions/dec-68-the-data-window.html">DEC-68</a> ·
+        <a href="../decisions/decisions-index.html">decisions index</a></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2: DEC-68 records the data window (payload by value, original /
+      working copy / view, no write-back, no core, where UC-5's evidence rule stops, the narrow capability) and its row is in
+      the decisions index. UC-9 and UC-5's entry-point line land with W7, as the epic's distillation plan says.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W3</td><td>a <code>data-*</code> window loads the same bundle and today mounts <code>App</code>; W3 mounts the
+        data screen there instead, and keeps App's close listener off it (the data capability grants no
+        <code>destroy</code>). Unreachable until then: nothing calls <code>openDataWindow</code></td></tr>
+      <tr><td>W7</td><td>the e2e's <code>wdio</code> capability names only <code>main</code>; the spec needs it on
+        <code>data-*</code> to drive the window</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
