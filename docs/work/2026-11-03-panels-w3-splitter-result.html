@@ -54,6 +54,16 @@
         collection component stays untouched</td></tr>
       <tr><td>a press that never moves commits nothing</td><td>a double-click is two presses; without this it would
         write three times</td></tr>
+      <tr><td><code>FlowList</code> builds its grid from the layout's column widths (<code>columnTemplate</code>),
+        and App hands it the saved widths; <code>ROW_CHROME</code> names the row's inset and gap once</td><td>review round
+        1 (altitude, important): the list's tracks and chrome were a second copy of what splitter A's bound counts. The
+        column handles stay W4's</td></tr>
+      <tr><td>a pane width is rounded to whole pixels as it is set</td><td>review round 1 (correctness, blocker): a
+        drag under display scaling gives fractional pixels, which the shell's integer field refused, and the write was
+        lost silently</td></tr>
+      <tr><td>splitter B's value is the share the headers actually take, at most the ceiling</td><td>review round 1
+        (correctness, important): a short leg sits below its ceiling, and a drag starting from the ceiling did not follow
+        the pointer</td></tr>
       <tr><td>test setup gains a <code>PointerEvent</code> polyfill</td><td>jsdom has none, so fired pointer events
         lost <code>clientX</code> and <code>button</code></td></tr>
     </table>
@@ -63,15 +73,15 @@
       <tr><th>Layer</th><th>Where</th><th>Result</th></tr>
       <tr><td>unit</td><td><code>components/Splitter.test.tsx</code> (16) · <code>layoutBounds.test.ts</code> (10) ·
         <code>useLayout.test.ts</code> (10) · <code>layoutStore.test.ts</code> (+2) · <code>FlowDetail.test.tsx</code>
-        (+2) · <code>menu.rs</code> (+2)</td><td>green</td></tr>
-      <tr><td>integration</td><td><code>layoutSplit.test.tsx</code> (6): <code>Layout</code> + <code>FlowDetail</code>
+        (+3) · <code>FlowList.test.tsx</code> (+1) · <code>menu.rs</code> (+2)</td><td>green</td></tr>
+      <tr><td>integration</td><td><code>layoutSplit.test.tsx</code> (7): <code>Layout</code> + <code>FlowDetail</code>
         under one <code>useLayout</code> through a stubbed Tauri bridge serving <code>layoutWire.json</code>; the
         collection, registry and citation tests</td><td>green</td></tr>
       <tr><td>e2e</td><td>waived: the real-window journeys are W6's <code>layout.spec.ts</code></td><td>—</td></tr>
       <tr><td>suite · lint</td><td>vitest 71 files · eslint (closed vocabulary) · class reconciliation · clippy both
         builds</td><td>green</td></tr>
       <tr><td>commits</td><td><code>c3d96931</code> plan · <code>4184cded</code> code · <code>e2a307f6</code> DEC-68 ·
-        this result</td><td></td></tr>
+        <code>322424df</code> result · <code>5d15f282</code> review round 1's fixes</td><td></td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
@@ -84,8 +94,8 @@
     <h2 id="follow-ups">Follow-ups</h2>
     <table data-item="follow-ups" data-c="follow-ups">
       <tr><th>What</th><th>Who</th></tr>
-      <tr><td>column handles and per-track tokens; <code>DEFAULT_COLUMNS</code> in <code>layoutBounds.ts</code> becomes
-        the one source of <code>FlowList</code>'s template; rename <code>columns.size</code> → <code>duration</code></td>
+      <tr><td>column handles and per-track tokens on <code>columnTemplate</code>, the path track's
+        <code>path-min</code> floor (Q8); rename <code>columns.size</code> → <code>duration</code></td>
         <td>W4</td></tr>
       <tr><td>the real-window journeys, including Reset Layout from the menu bar</td><td>W6</td></tr>
     </table>
