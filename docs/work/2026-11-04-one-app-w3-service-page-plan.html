@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea155a9f34851f0dfae282" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP.W3 plan: the Capture service page</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP.W3 — the Capture service page</h1>
+      <p>Settings… (⌘,) opens a page that shows the capture service's state, ports and live log and can restart it.
+        When the window's core stops answering because the core exited, the window offers the same restart.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-ONEAPP.W3</span> · branch
+        <code>wu/one-app/service-page</code> · <a href="2026-11-03-one-app-plan.html">epic plan</a> · depends on
+        <a href="2026-11-03-one-app-w2-supervised-core-plan.html">W2</a> · design run
+        <a href="2026-11-04-one-app-service-page-design-run.html">the Capture service page</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      The app menu's <em>Settings…</em> (⌘,) opens a Capture service page that renders the supervisor's
+      <code>CoreState</code> (starting · running with pid, start time and both ports · exited with its code or signal
+      · attached with its address), streams the core's log as it arrives, and offers <em>restart</em>, which
+      first warns that the captured list is cleared. The attached state shows no restart. When the core is owned and
+      has exited, the main window's "isn't answering" state offers that same restart.
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to" data-c="maps-to">
+      E-ONEAPP · UC-SVC (new) · UC-4 (the not-answering restart) · expected #10 · owner rulings Q12 (no automatic
+      restart) and Q14 (restart only, no stop). It renders W2's contract, <code>ui/src/coreService.ts</code>, and
+      adds no core API. W4 owns the quit copy, and W5 drives this page end to end (J2).
+    </p>
+
+    <h2 id="order">Order — design, then build</h2>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart LR
+  P["this plan"] --> D["design run: mockup + lists (DEC-53)"]
+  D --> H{"owner reads the mockup"}
+  H -- "a call moves it" --> D
+  H -- "LGTM" --> C["close: review row · verify-doc green · archived"]
+  C --> B["build: page · window · menu · log marks · not-answering restart"]
+  B --> G["notes · code review · design step (implements: the run)"]
+      </pre>
+      <div class="caption">A new surface may only be cited (check 9). The build begins once the owner has closed the run.</div>
+    </div>
+
+    <h2 id="change">The change</h2>
+    <table data-c="change">
+      <tr><th>Seam</th><th>After</th></tr>
+      <tr><td><code>ui/src-tauri/src/menu.rs</code></td><td>the app submenu gains <em>Settings…</em> (⌘,)
+        above the Services separator. Its action opens the settings window, or focuses it if it is already open</td></tr>
+      <tr><td>settings window (shell)</td><td>a second webview window labelled <code>settings</code>, built on demand
+        with the core address injected (W2's <code>core_address</code> covers every webview). The window opens
+        the page at <code>#settings</code>. Closing it never quits the app</td></tr>
+      <tr><td><code>ui/src/CaptureService.tsx</code> (new screen)</td><td>the page from the closed run: state line,
+        facts, restart with its confirm and in-flight halves, and the log tail. It is built only from the run's
+        mounted components plus build-local elements</td></tr>
+      <tr><td><code>ui/src/useCoreService.ts</code> (new)</td><td>reads <code>readCoreStatus</code> and
+        <code>readCoreLog</code> once, then follows <code>onCoreState</code>/<code>onCoreLog</code>. It keeps
+        the tail at the supervisor's bound (<code>LOG_LINES</code> = 2000) and exposes <code>restart()</code>
+        with its in-flight flag</td></tr>
+      <tr><td><code>ui/src/NotAnswering.tsx</code></td><td>given an owned core that has exited, its action is
+        <em>restart</em> instead of <em>try again</em>, and the detail names the exit</td></tr>
+      <tr><td><code>supervisor.rs</code> (only if the run decides it)</td><td>a start mark pushed into the log ring
+        at each spawn, so a crash's last lines stay readable after a restart (W2 follow-up)</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Check</th><th>Observable</th></tr>
+      <tr><td><code>cargo run</code>, then ⌘,</td><td>a Settings window opens on Capture service: running, with the
+        pid, the start time, ports 7420 and 7421, and the core's startup lines in the log</td></tr>
+      <tr><td><code>kill -9 &lt;that pid&gt;</code></td><td>the page reads "stopped by signal 9" without a reload,
+        and the main window stays open and offers restart in its "isn't answering" state</td></tr>
+      <tr><td>press restart, then confirm</td><td>the warning names the cleared list, the button disables beside
+        "restarting…", the state returns to running with a new pid on the same ports, and the log marks where the
+        new core began</td></tr>
+      <tr><td><code>TRAWLER_API=… cargo run</code>, then ⌘,</td><td>the page reads "attached", shows that address
+        and says the app does not manage the service. It offers no restart</td></tr>
+      <tr><td>⌘, twice</td><td>one Settings window, focused</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> ·
+        <code>restart_core_round_trips_through_the_supervisor</code></td><td>the real <code>restart_core</code>
+        command, on a Tauri mock runtime over a supervised <code>--core</code> on ephemeral ports, returns
+        <code>running</code> with a new pid on the same ports and emits <code>core://state</code> starting →
+        running. In attach mode it is refused and spawns nothing</td></tr>
+      <tr><td>unit (Vitest)</td><td><code>ui/src/CaptureService.test.tsx</code></td><td>each state renders its
+        line and facts (starting · running · exited code · exited signal · attached). Restart asks first, a cancel
+        sends nothing, and a confirm calls <code>restart_core</code> once with the button disabled beside its
+        progress line. Attached has no restart. A rejected restart is said, never swallowed</td></tr>
+      <tr><td>unit (Vitest)</td><td><code>ui/src/useCoreService.test.ts</code></td><td>the initial read plus events
+        stay in arrival order. The tail keeps its newest 2000 lines. It auto-follows only while scrolled to the
+        bottom, and listeners are released on unmount</td></tr>
+      <tr><td>unit (Vitest)</td><td><code>NotAnswering</code> in <code>App.test.tsx</code></td><td>an owned,
+        exited core offers restart, and any other state keeps try again</td></tr>
+      <tr><td>unit (Rust)</td><td><code>menu.rs</code> · the shell's settings-window helper</td><td>the Settings id
+        maps to opening settings, and Quit still closes the main window. An open settings window is focused, never
+        duplicated. The start mark's format is tested if the run keeps it</td></tr>
+      <tr><td>e2e</td><td>waived: "J2 (the service page tells the truth) is W5's one-app.spec.ts, which needs the
+        owned-core e2e build W5 introduces. Today's e2e suite runs attached (J4) and stays green"</td><td>—</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

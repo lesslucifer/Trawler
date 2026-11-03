@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea155b9f34851f0dfae284">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: the Capture service page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .a-mock h2,.a-mock h3{margin:0;padding:0;border:0}
+    .a-mock p,.a-mock li{color:inherit}
+    /* mockup assembly only. The base is an owned core, running, nothing pressed. */
+    .a-zone{display:block}
+    .a-on-starting,.a-on-code,.a-on-signal,.a-on-asking,.a-on-restarting,.a-on-refused,.a-on-attached,.a-on-band,.a-on-scrolled{display:none}
+    .starting .a-on-starting,.code .a-on-code,.signal .a-on-signal,.asking .a-on-asking,.restarting .a-on-restarting,
+    .refused .a-on-refused,.attached .a-on-attached,.band .a-on-band,.scrolled .a-on-scrolled{display:block}
+    .starting .a-off-starting,.code .a-off-code,.signal .a-off-signal,.asking .a-off-asking,.restarting .a-off-restarting,
+    .refused .a-off-refused,.attached .a-off-attached,.band .a-off-band,.scrolled .a-off-scrolled{display:none}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — the Capture service page</h1>
+      <p>What Settings… shows about the process Trawler captures with: whether it runs, where it listens, what it
+        logs, and the one thing a user can do about it, restart it.</p>
+      <div class="meta">Design run · round 1 opened 2026-11-04 · Trawler · T3 (docs/work/) · <strong>E-ONEAPP.W3</strong>
+        · branch <code>wu/one-app/service-page</code> · epic <a href="2026-11-03-one-app-plan.html">E-ONEAPP</a> ·
+        <a href="2026-11-04-one-app-w3-service-page-plan.html">WU plan</a> · input: W2's contract,
+        <code>ui/src/coreService.ts</code></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="ready">
+
+    <h2 id="mockup">Mockup</h2>
+    <p class="kd">Mounted from the real <code>ui/src/components/</code>. The frame is the Settings window, and the
+      log tail is build-local (see Proposals). Each button shows one state. Read each one alone.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-mock bg-canvas-soft p-8" id="mock">
+          <div class="mx-auto flex w-pane flex-col rounded-lg border border-hairline bg-canvas p-4 font-ui text-body text-ink">
+            <div class="a-zone mb-3" data-zone="heading" id="m-heading"></div>
+            <div class="a-zone mb-3" data-zone="state" id="m-state"></div>
+            <div class="a-zone mb-3" data-zone="facts" id="m-facts"></div>
+            <div class="a-zone mb-4" data-zone="actions" id="m-actions"></div>
+            <div class="a-zone" data-zone="log" id="m-log" data-wire="collection" data-order="wire"></div>
+            <div class="a-zone" data-zone="band" id="m-band"></div>
+          </div>
+        </div>
+      </div>
+      <p>overflow: the window opens at the pane width and its own height. heading, state, facts and actions are
+        bounded — one line each, and the facts are at most four rows. log is the only unbounded zone: it takes the
+        window's remaining height and scrolls itself. Its rows are capped at the supervisor's ring
+        (<code>LOG_LINES</code>, 2000 lines, owner: <code>supervisor.rs</code>), and a long line wraps. band is the
+        main window's existing notice band, one line plus its action.</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="starting"
+        data-label-off="▶ starting" data-label-on="◀ running">▶ starting</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="code"
+        data-label-off="▶ it exited, code 101" data-label-on="◀ running">▶ it exited, code 101</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="signal"
+        data-label-off="▶ it was killed, signal 9" data-label-on="◀ running">▶ it was killed, signal 9</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="asking"
+        data-label-off="▶ restart pressed" data-label-on="◀ at rest">▶ restart pressed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="restarting"
+        data-label-off="▶ restarting" data-label-on="◀ at rest">▶ restarting</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="refused"
+        data-label-off="▶ the restart failed" data-label-on="◀ at rest">▶ the restart failed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="scrolled"
+        data-label-off="▶ log scrolled up" data-label-on="◀ log following">▶ log scrolled up</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="attached"
+        data-label-off="▶ attached (TRAWLER_API)" data-label-on="◀ owned">▶ attached (TRAWLER_API)</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="band"
+        data-label-off="▶ the main window, core exited" data-label-on="◀ the Settings window">▶ the main window, core exited</button>
+      <script type="text/babel">
+        const { React, createRoot, Button, Notice, StatusLine, CopyText, TimestampText } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+        const STARTED = new Date(2026, 10, 4, 14, 10, 4);
+
+        const page = "a-off-band";
+
+        mount("m-heading", (
+          <h2 className={`${page} font-serif text-title italic`}>Capture service</h2>
+        ));
+
+        mount("m-state", (
+          <div className={page}>
+            <div className="a-off-starting a-off-code a-off-signal a-off-attached a-off-restarting">
+              <StatusLine status={{ glyph: "✓", tone: "ok", short: "running" }} />
+            </div>
+            <div className="a-on-starting a-on-restarting">
+              <StatusLine status={{ glyph: "⟳", tone: "muted", short: "starting" }} />
+            </div>
+            <div className="a-on-code">
+              <StatusLine status={{ glyph: "⚠", tone: "warn", short: "stopped — exit code 101" }} />
+            </div>
+            <div className="a-on-signal">
+              <StatusLine status={{ glyph: "⚠", tone: "warn", short: "stopped — killed (signal 9)" }} />
+            </div>
+            <div className="a-on-attached">
+              <StatusLine status={{ glyph: "◐", tone: "muted", short: "attached — started outside this app" }} />
+            </div>
+          </div>
+        ));
+
+        const fact = (name, value) => (
+          <div className="flex items-baseline gap-3">
+            <dt className="w-field shrink-0 text-ink-mute">{name}</dt>
+            <dd className="min-w-0">{value}</dd>
+          </div>
+        );
+        const address = (what, value) => (
+          <span data-wire={what} className="font-mono"><CopyText value={value} label={what} /></span>
+        );
+
+        mount("m-facts", (
+          <dl className={`${page} flex flex-col gap-grid-gap-y`}>
+            <div className="a-off-code a-off-signal a-off-attached a-off-starting a-off-restarting">
+              {fact("process", <span data-wire="process id" className="font-mono">48213</span>)}
+              {fact("running since", <TimestampText timestamp={STARTED} />)}
+            </div>
+            <div className="a-off-attached">
+              {fact("proxy", address("proxy address", "127.0.0.1:7420"))}
+              {fact("control API", address("control API address", "127.0.0.1:7421"))}
+            </div>
+            <div className="a-on-attached">
+              {fact("control API", address("control API address", "127.0.0.1:52817"))}
+            </div>
+          </dl>
+        ));
+
+        mount("m-actions", (
+          <div className={page}>
+            <div className="a-off-asking a-off-restarting a-off-refused a-off-attached a-off-starting">
+              <Button onClick={noop}>restart</Button>
+            </div>
+            <div className="a-on-asking">
+              <Notice tone="warn"
+                detail="Every flow captured so far lives in the capture service and goes with it."
+                action={<div className="flex gap-chrome-gap"><Button onClick={noop}>restart</Button><Button onClick={noop} frame="bare" tone="mute">cancel</Button></div>}>
+                Restarting clears the captured list
+              </Notice>
+            </div>
+            <div className="a-on-restarting a-on-starting">
+              <div className="flex items-center gap-3">
+                <Button onClick={noop} disabled>restart</Button>
+                <Notice tone="pending">waiting for the capture service to start…</Notice>
+              </div>
+            </div>
+            <div className="a-on-refused">
+              <Notice tone="warn" detail="Another program is using port 7420. Quit it, then try again."
+                action={<Button onClick={noop}>try again</Button>}>
+                The capture service couldn't restart
+              </Notice>
+            </div>
+            <div className="a-on-attached">
+              <Notice tone="mute">This app didn't start the capture service, so it can't restart it or show its log.</Notice>
+            </div>
+          </div>
+        ));
+
+        const LINES = [
+          ["mark", "started 14:02:31 · process 48207"],
+          ["line", "2026-11-04T07:02:31.412Z  INFO trawler::ca: loaded existing CA from /Users/me/Library/Application Support/dev.trawler.app/ca"],
+          ["line", "2026-11-04T07:02:31.418Z  INFO trawler: proxy listening on http://127.0.0.1:7420"],
+          ["line", "2026-11-04T07:02:31.418Z  INFO trawler: control API listening on http://127.0.0.1:7421"],
+          ["line", "2026-11-04T07:09:58.002Z ERROR trawler: proxy stopped: too many open files (os error 24)"],
+          ["mark", "started 14:10:04 · process 48213"],
+          ["line", "2026-11-04T07:10:04.151Z  INFO trawler::ca: loaded existing CA from /Users/me/Library/Application Support/dev.trawler.app/ca"],
+          ["line", "2026-11-04T07:10:04.156Z  INFO trawler: proxy listening on http://127.0.0.1:7420"],
+          ["line", "2026-11-04T07:10:04.156Z  INFO trawler: control API listening on http://127.0.0.1:7421"],
+          ["line", "2026-11-04T07:10:04.156Z  INFO trawler: loopback only — other devices cannot reach this Trawler"],
+        ];
+
+        mount("m-log", (
+          <div className={`${page} a-off-attached flex flex-col gap-chrome-gap`}>
+            <div className="text-label uppercase tracking-label text-ink-mute">log</div>
+            <div className="h-body-max overflow-auto rounded-card border border-hairline bg-canvas-soft p-2">
+              {LINES.map(([kind, text], i) => kind === "mark"
+                ? <div key={i} className="my-chrome-y border-t border-hairline pt-chrome-y font-ui text-chrome text-ink-mute">{text}</div>
+                : <div key={i} data-wire="log line" className="whitespace-pre-wrap break-words font-mono text-chrome text-ink-body">{text}</div>)}
+            </div>
+            <div className="a-on-scrolled">
+              <Button onClick={noop}>show newest</Button>
+            </div>
+          </div>
+        ));
+
+        mount("m-band", (
+          <div className="a-on-band">
+            <Notice tone="warn" detail="It stopped — exit code 101."
+              action={<Button onClick={noop}>restart</Button>}>
+              Trawler's capture service isn't answering
+            </Notice>
+          </div>
+        ));
+      </script>
+    </div>
+
+    <h3 id="which-state">Which state shows what</h3>
+    <table data-c="states">
+      <tr><th><code>CoreState</code></th><th>State line</th><th>Facts</th><th>Action</th><th>Log</th></tr>
+      <tr><td>starting</td><td>⟳ starting</td><td>proxy · control API (the requested ports)</td><td>restart disabled, beside "waiting…"</td><td>follows</td></tr>
+      <tr><td>running</td><td>✓ running</td><td>process · running since · proxy · control API</td><td>restart → asks first</td><td>follows</td></tr>
+      <tr><td>exited (code)</td><td>⚠ stopped — exit code <em>n</em></td><td>proxy · control API</td><td>restart, at once: nothing is left to clear</td><td>kept, the crash's last lines readable</td></tr>
+      <tr><td>exited (signal)</td><td>⚠ stopped — killed (signal <em>n</em>)</td><td>same</td><td>same</td><td>same</td></tr>
+      <tr><td>attached</td><td>◐ attached — started outside this app</td><td>control API (the attached address)</td><td>none, and a sentence says why</td><td>none — this app has no log for that service</td></tr>
+    </table>
+
+    <h3 id="questions">Calls for round 1</h3>
+    <table data-c="questions">
+      <tr><th>#</th><th>The run drew</th><th>Instead, you could rule</th><th>Why the run drew it</th></tr>
+      <tr><td>D1</td><td>this page shows the process id and both addresses with their ports</td><td>this page
+        names no address, as everywhere else</td><td>The lexicon keeps addresses off screen because users have no
+        referent for them. This page exists for the user who does (UC-SVC asks for pid and ports), and
+        <code>curl</code> needs the address. The run proposes a lexicon exception for this page only</td></tr>
+      <tr><td>D2</td><td><em>running since 14:10:04</em> (absolute, local)</td><td>a ticking uptime, e.g. "up 7 min"</td>
+        <td><code>DurationText</code> @avoid: no live-ticking counter. Absolute time also lines up with the log's
+        own times (<code>TimestampText</code> @use)</td></tr>
+      <tr><td>D3</td><td>a separate Settings window, opened by ⌘,, which closes without quitting</td><td>a third
+        screen inside the main window, beside the list and setup</td><td>⌘, opening its own window is the macOS
+        convention, and the log stays readable next to the list it explains. W2 already injects the address into
+        every webview</td></tr>
+      <tr><td>D4</td><td>restart asks first only while a core is running. On an exited core it acts at once, here
+        and in the main window's band</td><td>always ask</td><td>The warning is about losing the captured list, and an
+        exited core has already lost it. Asking anyway would warn about nothing</td></tr>
+      <tr><td>D5</td><td>the log marks where each core began (<em>started 14:10:04 · process 48213</em>), and
+        keeps the old core's lines</td><td>clear the log on restart</td><td>A crash's last lines are the reason
+        to open this page, and Restart is the next press after reading them (W2's follow-up)</td></tr>
+    </table>
+
+    <h2 id="given">Given — what the page is handed</h2>
+    <table data-item="capabilities" data-c="given-table">
+      <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
+      <tr><td><code>readCoreStatus()</code> → <code>CoreState</code>, then <code>onCoreState</code></td><td>used</td><td>state line, facts, which action shows</td></tr>
+      <tr><td><code>CoreState.running.pid</code></td><td>used</td><td>facts: process, and the log's start mark</td></tr>
+      <tr><td><code>CoreState.running.started_at_ms</code></td><td>used</td><td>facts: running since (D2), and the start mark</td></tr>
+      <tr><td><code>CoreState.running.proxy</code> · <code>.api</code> · <code>attached.api</code></td><td>used</td><td>facts: copyable addresses (D1)</td></tr>
+      <tr><td><code>CoreState.exited.code</code> · <code>.signal</code></td><td>used</td><td>state line, and the band's detail</td></tr>
+      <tr><td><code>readCoreLog()</code> then <code>onCoreLog</code></td><td>used</td><td>log, in arrival order, capped at 2000</td></tr>
+      <tr><td><code>restartCore()</code>, and its rejection</td><td>used</td><td>actions: restart, its in-flight half, and the failed outcome</td></tr>
+      <tr><td><code>refusal(err)</code> — the shell's conflict sentence</td><td>used</td><td>the failed restart's detail, so a taken port reads as it does at launch</td></tr>
+      <tr><td><code>readCoreStatus()</code> resolving <code>null</code> (the web shell, UC-3)</td><td>deliberately unused</td><td>the web shell has no app menu, so it never opens this page</td></tr>
+    </table>
+    <p class="kd">Not given: the number of flows the restart would clear · why a core exited beyond its code or signal (that is in the log) · whether an attached core is healthy · a stop without a quit (Q14).</p>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
+      <tr><td>choose Trawler → Settings…</td><td>— (the app menu)</td><td>proposed: ⌘, opens or focuses the Settings window, with focus on its first control</td></tr>
+      <tr><td>click restart</td><td>actions</td><td>Tab · Enter or Space</td></tr>
+      <tr><td>click the warning's restart · cancel</td><td>actions</td><td>Tab · Enter or Space. Esc is cancel (dismiss the surface — unchanged), and focus returns to restart</td></tr>
+      <tr><td>click try again</td><td>actions</td><td>Tab · Enter or Space</td></tr>
+      <tr><td>click an address to copy it</td><td>facts</td><td>Tab · Enter or Space (CopyText trigger)</td></tr>
+      <tr><td>drag-select part of a log line</td><td>log</td><td>native selection + ⌘C — never intercepted</td></tr>
+      <tr><td>scroll the log</td><td>log</td><td>proposed: the log is one tab stop. ↑ / ↓ / Page Up / Page Down / Home / End scroll it</td></tr>
+      <tr><td>click show newest</td><td>log</td><td>Tab · Enter or Space; End does the same from the log</td></tr>
+      <tr><td>click the band's restart</td><td>band</td><td>Tab · Enter or Space</td></tr>
+      <tr><td>close the Settings window</td><td>— (the window)</td><td>proposed: ⌘W closes it. The app keeps running</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+      <tr><td>local element (T3)</td><td><code>LogTail</code> — mono lines in arrival order, a start mark per core,
+        auto-follow while at the bottom, <em>show newest</em> otherwise</td><td><code>TextRenderer</code> renders one
+        body at <code>TEXT_MAX</code> with a cut marker and does not follow. <code>StepList</code> is for steps. One
+        sample is not enough to justify a registry entry, so it stays build-local</td><td>this run → W3's build</td></tr>
+      <tr><td>lexicon</td><td><em>restart</em> — stop the capture service and start it again on the same ports</td><td>no term
+        yet. It is never <em>reload</em>, <em>reconnect</em> or <em>reset</em></td><td>this run → the rulebook on close</td></tr>
+      <tr><td>lexicon</td><td><em>attached</em> — the app drives a capture service it did not start</td><td>no term yet.
+        It is never <em>external</em> or <em>remote</em></td><td>this run → the rulebook on close</td></tr>
+      <tr><td>lexicon</td><td>an exception on <em>capture service</em>: the Capture service page may show its process id and addresses (D1)</td><td>the row
+        bans them everywhere</td><td>the owner, D1</td></tr>
+      <tr><td>keyboard convention</td><td>⌘, opens Settings · ⌘W closes a secondary window · a scrolling region is one tab stop with the arrow and page keys</td><td>none of the three is in the conventions table</td><td>this run → the rulebook on close</td></tr>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr><td>a reading of an attached core's health. The supervisor holds none, because it never spawned that core</td><td>none needed now. The main window's answering state already covers it</td><td>attached shows ◐ and its address, and claims nothing about health</td></tr>
+      <tr><td>how many flows a restart clears</td><td>the page could read <code>GET /flows</code>. The owner may ask for it</td><td>the warning says "the captured list", with no number</td></tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>Start — the epic's rulings: no automatic restart (Q12), restart only and no stop (Q14), restart warns that it clears the list (W3 summary)</td><td>mockup — exited shows the crash and waits for a press; one action; the warning step · capabilities — no stop given</td><td><code>taste</code> — the epic plan's Q12 and Q14</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
