@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea19e59f34851f0dfae296" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W4 plan: column widths</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W4 — build: column widths</h1>
+      <p>The five fixed flow-list columns become user-sized from handles in the label row, saved and reset with the rest of
+        the layout; the label row scrolls sideways with the rows.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-PANELS.W4</span> · branch
+        <code>wu/panels/columns</code> · <a href="2026-11-03-panels-plan.html">epic plan</a> · built from
+        <a href="2026-11-03-panels-splitters-design-run.html">the design run</a> and
+        <a href="../../ui/src/components/Splitter.tsx">Splitter's TSDoc</a> (DEC-68) · base <code>9cc6ac01</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      Each of the flow list's five fixed columns (time, method, host, status, duration) is sized by a
+      <code>Splitter</code> on its boundary in the label row, dragged or stepped between its own token bounds while the
+      path keeps at least <code>path-min</code>; the label row and every row read one grid template and scroll sideways
+      together; widths are restored, saved and reset through the same <code>useLayout</code> as the splits, and a wider
+      column lowers splitter A's live maximum.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-PANELS · UC-4 (flow-list columns) · the epic's expected results 2a, 4, 5, 6, 7 · rulings Q5 (columns are in
+      scope), Q8 (labels scroll with the rows), Q9 (widths only) · the design run's C3 (a wide column lowers splitter A's
+      max), C4 (ticks visible at rest), C5 (no reset key), C6 (rename <code>columns.size</code> →
+      <code>duration</code>), C7 (the bounds) · DEC-67 · DEC-68.
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  T["tailwind.config.js\ncol-&lt;track&gt; · -min · -max"] --> B["layoutBounds.ts\nCOLUMN_BOUNDS · DEFAULT_COLUMNS\ncolumnTemplate · listMin"]
+  U["useLayout\nsetColumn · resetColumn · commit"] --> F
+  B --> F["FlowList\nlabel row: 5 Splitters\none template for labels + rows"]
+  B --> L["Layout\nsplitter A max = f(window, Σ tracks)"]
+  U --> L
+  U <--> S[("layout.json\ncolumns.duration")]
+      </pre>
+      <div class="caption">The widths join the layout W3 already saves; the label row and splitter A read the same
+        track sum.</div>
+    </div>
+    <table data-c="parts">
+      <tr><th>Part</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>tokens</td><td><code>ui/tailwind.config.js</code></td><td>spacing <code>col-time</code> 160 / 136 / 240 ·
+        <code>col-method</code> 70 / 56 / 112 · <code>col-host</code> 180 / 96 / 480 · <code>col-status</code> 70 / 48
+        / 112 · <code>col-duration</code> 90 / 64 / 160 (default / <code>-min</code> / <code>-max</code>), the run's
+        bounds table</td></tr>
+      <tr><td>bounds</td><td><code>ui/src/layoutBounds.ts</code></td><td><code>COLUMN_BOUNDS</code> per track read from
+        the tokens; <code>DEFAULT_COLUMNS</code> from them, never a second copy; <code>columnTemplate</code> sets the
+        path track to <code>minmax(path-min, 1fr)</code>; <code>listMin</code> and <code>paneBounds</code> unchanged in
+        form, fed the live widths</td></tr>
+      <tr><td>wire</td><td><code>layoutStore.ts</code> · <code>ui/src-tauri/src/layout.rs</code> ·
+        <code>layoutWire.json</code></td><td><code>columns.size</code> renamed <code>duration</code> (C6); a file still
+        carrying <code>size</code> fails the shape and reads as no saved layout (DEC-67 rule 3)</td></tr>
+      <tr><td>hook</td><td><code>ui/src/useLayout.ts</code></td><td><code>setColumn(track, px)</code> rounds to whole
+        pixels; <code>resetColumn(track)</code>; a restored column is clamped to its token bounds; Reset Layout already
+        restores the columns</td></tr>
+      <tr><td>list</td><td><code>ui/src/FlowList.tsx</code></td><td>a horizontal scroller holds the label row and the
+        listbox at <code>min-width: listMin</code>; the listbox keeps the vertical scroll and the virtualizer unchanged.
+        Each fixed label carries a <code>Splitter</code> centred in the 12 px gap on its path-facing edge: time, method,
+        host on the right (<code>dir</code> 1), status, duration on the left (<code>dir</code> −1). Handles precede the
+        rows in tab order. The label row reads the column names from one track table</td></tr>
+      <tr><td>wiring</td><td><code>ui/src/App.tsx</code></td><td>the one <code>useLayout</code> reaches
+        <code>FlowList</code> as <code>split</code>, as it reaches <code>Layout</code></td></tr>
+    </table>
+    <table data-c="forks">
+      <tr><th>Fork</th><th>Taken</th><th>Not taken, and why</th></tr>
+      <tr><td>Q8: how labels scroll with the rows</td><td>an outer horizontal scroller around the label row and the
+        listbox; the listbox scrolls only vertically</td><td>a sticky label row inside the listbox's own scroller: puts
+        five separators and a non-option row inside <code>role="listbox"</code>, and offsets every virtual row by a
+        measured header height. Cost of the taken fork: with the list narrower than its row, the vertical scrollbar
+        sits at the row's right end, reached by scrolling sideways</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Act</th><th>Expected</th></tr>
+      <tr><td>drag the host handle past both ends</td><td>host stops at 96 and at 480; each other track likewise at its
+        own min / max</td></tr>
+      <tr><td>Tab to the host handle, → once, Shift+→ once, End, Home</td><td>180 → 188 → 236 → 480 → 96</td></tr>
+      <tr><td>Tab to the status handle, ← once</td><td>70 → 78 (the left-edge handles widen leftwards)</td></tr>
+      <tr><td>double-click the host handle</td><td>180, one write follows</td></tr>
+      <tr><td>View ▸ Reset Layout</td><td>every column back to its default with the splits, one write</td></tr>
+      <tr><td>host at 480 with a flow open at 1440</td><td>splitter A's live max is 384: the pane shows 384, the saved
+        pane is unchanged (C3)</td></tr>
+      <tr><td>list narrower than its row</td><td>labels and cells scroll sideways together; path never below 128</td></tr>
+      <tr><td>launch with a saved layout · one with a column of 5000 · an old file with <code>size</code></td><td>the
+        saved widths · that column at its max · every default</td></tr>
+      <tr><td>a 300-move column drag</td><td>one <code>layout_write</code>, after release; rows are not re-measured</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>unit</td><td><code>layoutBounds.test.ts</code>: each track's default / min / max read from the tokens,
+        <code>columnTemplate</code> with the <code>minmax</code> path, <code>listMin</code> 1090 with host 480, splitter
+        A's max 384 at 1440 with host 480. <code>useLayout.test.ts</code>: <code>setColumn</code> rounds,
+        <code>resetColumn</code> restores one, a stale restored column clamps, the reset event restores the columns.
+        <code>FlowList.test.tsx</code>: five separators with their labels and bounds, left-edge handles step with
+        <code>dir</code> −1, a drag reports the clamped width and commits once, label row and rows share one template,
+        handles precede the listbox in tab order, no handles without <code>split</code>.
+        <code>layoutStore.test.ts</code> and <code>layout.rs</code>: the <code>duration</code> key round-trips, a file
+        with <code>size</code> reads as none</td></tr>
+      <tr><td>integration</td><td><code>layoutColumns.test.tsx</code>: <code>Layout</code> with a <code>FlowList</code>
+        and an open pane under one <code>useLayout</code>, through the stubbed bridge serving
+        <code>layoutWire.json</code>: labels and rows open at the fixture's host width; a key step and a drag on a
+        handle each end in one <code>layout_write</code> carrying the whole layout; widening host to its max lowers
+        splitter A's <code>aria-valuemax</code> to 384; double-click and the reset event restore 180.
+        <code>perf.test.tsx</code> stays green</td></tr>
+      <tr><td>e2e</td><td>waived: the real-window journeys (column drag and bounds, label/cell x-offsets, relaunch) are
+        W6's <code>layout.spec.ts</code>; jsdom has no layout to measure offsets with</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
