@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 672453e952dbd2399d12626c3c1677710218a7d5
+base: 6ba95b4e385c6e2644088121da53b5b5da4330bd
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-inspect-window-w1-payload-handoff-result.html
+report_sha256: e4d1141eee9ee873a2e24a81ddbbb538cd354596df0f81f623d1c10ca528c717
+date: 2026-11-03
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBQbcuN6yXry0MxYUoGv1WRxz87IGVlyuNiwyP/kGpskx+7UGLy+AyflY
+  yirlrFchaXU35gX975OobXwZghJbUK
+  -----END SSH SIGNATURE-----
