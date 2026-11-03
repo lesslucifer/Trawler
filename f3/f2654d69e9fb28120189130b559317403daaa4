@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-ONEAPP
+wu: E-ONEAPP.W2
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-68-the-app-supervises-its-core.html"
+    tier: T2
+    action: updated
+    distills: "rules 9-12: spawn in the setup hook with create:false windows and the address injected into every webview; a taken port named by probe, single-instance only when owned; one stop path (stdin, 5 s grace, kill) with restart on the last ports and a generation guard; the CA in the app data dir, adopting a whole ./ca"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-68's row carries the supervised launch, the conflict refusal, the stop path and the CA's home"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-4's row: the app starts and stops its own capture service"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-4: launching the app starts its own core; one launch, one app (conflict dialog, single instance, every quit stops the core, the window outlives a dead core, TRAWLER_API attaches)"
+  - path: "docs/work/2026-11-03-one-app-w2-supervised-core-plan.html"
+    tier: T3
+    action: added
+    distills: "the W2 plan: requirement, mapping, launch sequence, change, stop paths, expected result, test plan"
+  - path: "docs/work/2026-11-03-one-app-w2-supervised-core-result.html"
+    tier: T3
+    action: added
+    distills: "the W2 result: outcome, deviations, evidence, distillation, follow-ups"
