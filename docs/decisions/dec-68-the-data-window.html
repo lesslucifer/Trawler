@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9aa1e9f34851f0dfae0bf">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-68: the data window</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-68 — the data window</h1>
+      <p>A data window is a front-end tool that is handed a piece of data by value and helps the user work with it. It
+        knows nothing of flows or the core, keeps the data it was given as the original, and works on a scratch copy that
+        never flows back.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T2 decision · minted by <strong>E-INSPWIN.W1</strong> from the owner's
+        rulings on the epic plan's Q1–Q12 · UC-9, UC-5 · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Today</th><th>The limit</th></tr>
+      <tr><td>BodyViewer is a glance: text and JSON cut at 128 KiB, hex at 4 KiB, a 520 px pane, pretty/raw, copy and
+        save</td><td>no way past a cut, no search, filter, reformat, decode or edit</td></tr>
+      <tr><td>UC-5's evidence rule: the pane shows what was captured, never a client-side rewrite</td><td>any tool that
+        edits must live somewhere that rule does not bind, and say where the line is</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> Any component holding data may open a <em>data window</em> with
+        <code>{key, title, bytes, typeHint?}</code>. The window works only with that payload: it keeps the bytes as the
+        <em>original</em>, lets the user change a <em>working copy</em> freely, and shows <em>views</em> over it. Nothing it
+        does reaches the opener, the capture or the core.</p>
+    </div>
+
+    <h2 id="model">The model</h2>
+    <div class="diagram" data-c="model">
+      <pre class="mermaid">
+flowchart LR
+  OP["opener — owns where the data came from, writes the title"] -- "payload, by value" --> SH["shell: create or focus data-&lt;hex(key)&gt;"]
+  SH -- "claimed once" --> O["original (immutable, the evidence)"]
+  O --> W["working copy (scratch, undoable)"]
+  W --> V["view (search, filter)"]
+  W -. "never" .-> OP
+      </pre>
+      <div class="caption">The core is absent by design: the opener already holds the bytes.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The payload is all the window receives. <code>key</code> is opaque and only focuses an open window;
+        <code>title</code> is the opener's caption; <code>typeHint</code> is a media type, optional. No flow id, leg or
+        source kind</td><td>a generic tool; every opener is one call</td></tr>
+      <tr><td>2</td><td>By value, as a snapshot: the shell parks the bytes for the new window, which claims them once</td><td>the
+        window never fetches, so it never talks to the core (DEC-12) and never goes stale mid-edit</td></tr>
+      <tr><td>3</td><td>One window per key. Opening a key whose window is open focuses it and leaves its working copy
+        intact</td><td>reopening is a return, not a reset</td></tr>
+      <tr><td>4</td><td>The original never changes; <em>restore original</em> returns its exact bytes. Copy and save name
+        what they deliver: original, working copy or this view</td><td>the evidence stays one click away</td></tr>
+      <tr><td>5</td><td>UC-5's evidence rule binds the pane, not the window. In the window the original is the evidence
+        the pane handed over; everything else is scratch and is marked as such</td><td>where the line sits between the
+        pane's read-only surfaces and an editable one</td></tr>
+      <tr><td>6</td><td>No write-back. Edits live as long as their window; closing one asks nothing; data windows close
+        with the main window</td><td>scratch by definition; sending a changed request stays the composer's (UC-8)</td></tr>
+      <tr><td>7</td><td>No render caps in the window; a body is at most the core's 10 MiB body cap</td><td>the window is
+        the way past the pane's cuts</td></tr>
+      <tr><td>8</td><td>The bytes cross the IPC as raw bodies both ways, never JSON arrays or base64</td><td>10 MiB as a
+        JSON number array is tens of MiB of text on each side</td></tr>
+      <tr><td>9</td><td>A <code>data-*</code> window holds its own capability: the core default, the save dialog and file
+        write, nothing else</td><td>a window that edits scratch needs no more reach than saving what it names</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Hand over a flow id and let the window fetch</td><td>couples the window to flows and the core (Q2, Q3)</td></tr>
+      <tr><td>One reused data window</td><td>switching data would throw away a working copy (Q1)</td></tr>
+      <tr><td>Live data that follows the capture</td><td>a working copy over moving data has no stable original (Q3)</td></tr>
+      <tr><td>Lift the pane's caps instead</td><td>the pane stays a glance; the window is the way past it</td></tr>
+      <tr><td>Write edits back to the capture or the pane</td><td>the capture is evidence (UC-5); changed sends are the
+        composer's</td></tr>
+      <tr><td>Ask before closing a modified window</td><td>edits are scratch; DEC-64 asks only about what a close leaves
+        without internet (Q8, Q12)</td></tr>
+      <tr><td>Pass the payload in the window URL or as a JSON command argument</td><td>a URL cannot hold 10 MiB; JSON
+        inflates the bytes (rule 8)</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

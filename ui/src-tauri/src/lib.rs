@@ -1,3 +1,4 @@
+pub mod data_window;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -18,6 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .menu(menu::build)
         .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()));
+    let builder = data_window::install(builder);
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         setup::ca_trusted,
@@ -40,7 +42,9 @@ pub fn run() {
         setup::show_notes,
         route::open_route,
         reach::confirm_reach,
-        reach::confirm_replace_proxy
+        reach::confirm_replace_proxy,
+        data_window::open_data_window,
+        data_window::take_data_payload
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);

@@ -827,6 +827,18 @@
             exemptions, notes shown at first</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-68-the-data-window.html"><code>dec-68-the-data-window.html</code></a></td>
+          <td><span class="badge id">DEC-68</span></td>
+          <td><strong>The data window.</strong> Any component holding data opens a window with
+            <code>{key, title, bytes, typeHint?}</code>, by value; the shell creates or focuses
+            <code>data-&lt;hex(key)&gt;</code> and the window claims the payload once, as raw IPC bytes. It keeps the
+            original, edits a scratch working copy, shows views, and knows nothing of flows or the core. UC-5's evidence
+            rule binds the pane, not the window. No write-back, no caps, no close ask; data windows close with the main
+            window and hold only core default, save and file write. Rejected: a flow id fetched by the window, one reused
+            window, live data, lifted pane caps, write-back, a close ask, the payload in a URL or as JSON</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

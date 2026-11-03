@@ -18,6 +18,7 @@
     "security": {
       "capabilities": [
         "default",
+        "data-window",
         {
           "identifier": "wdio",
           "windows": [
