@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU panels/splitter -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W3
+branch: wu/panels/splitter
+base: cf09e4be260f75f58256f38f5241c0b39fc7201e
+head: c70b513351c476efb91229e1debb9f4f201f7888
+diff_sha256: f11caeda9cec772ceaf7af3ddc1ccb04c6f8cfb6f500ba07cbe543c653c0bf57
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    nit: 4
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 1, verified: 1 }
+findings: { found: 4, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "restorable clamps pane and headersShare but not the column widths"
+    waived: "columns have no bounds until W4 mints the per-track tokens; the app never writes non-default widths before W4's handles, and only a hand-edited layout.json can carry one"
+  - finding: "on a short headers leg below zone-min, ArrowUp or Home commits a zone-min share and a write while the line stays put"
+    waived: "deliberate per DEC-68's short-leg rule: the share saved is where the line is dropped, never below zone-min; the cost is one debounced write"
+  - finding: "the unmemoized FlowList re-renders its visible rows on each drag move"
+    waived: "bounded by the virtualizer's visible window plus overscan, not by the flow count (verified in round 1); the per-move cost that grew with the data, the body decode, is fixed in 24754e37"
+  - finding: "ROW_CHROME restates the row classes FlowList writes as literals"
+    waived: "the closed-vocabulary lint and Tailwind's scanner need whole literal class names in FlowList; FlowList.test pins both rows to ROW_CHROME, so drift fails a test"
+verdict: PASS
+date: 2026-11-04
