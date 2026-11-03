@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea011e9f34851f0dfae26f" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W3 result: Splitter and useLayout</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W3 — result</h1>
+      <p>The list/pane and headers/body splits are user-sized through one <code>Splitter</code> and one
+        <code>useLayout</code>, saved on release, and reset all from View ▸ Reset Layout.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU result · <span class="badge id">E-PANELS.W3</span> · branch
+        <code>wu/panels/splitter</code> · <a href="2026-11-03-panels-w3-splitter-plan.html">WU plan</a> ·
+        <a href="2026-11-03-panels-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Shipped</th><th></th></tr>
+      <tr><td><code>Splitter</code> in the collection, from the confirmed design</td><td><a
+        href="../../ui/src/components/Splitter.tsx">Splitter.tsx</a>: separator role, pointer capture, start-relative
+        drag, 8 / 48 px steps, Home / End, Enter inert, double-click reset, one commit per release / step / reset;
+        exported and mounted by the collection test</td><td>delivered</td></tr>
+      <tr><td>tokens</td><td><code>pane-min</code> 384 · <code>pane-max</code> 960 · <code>path-min</code> 128 ·
+        <code>grip-reach</code> 4 · <code>zone-min</code> 15 % · <code>zone-max</code> 60 % · cursors
+        <code>col-resize</code> / <code>row-resize</code></td><td>delivered</td></tr>
+      <tr><td>bounds read from the tokens</td><td><a href="../../ui/src/layoutBounds.ts">layoutBounds.ts</a> imports the
+        Tailwind config; splitter A's range matches the run's identity table at 1440 / 1311 / 1280 / 1132 / 850</td>
+        <td>delivered</td></tr>
+      <tr><td><code>useLayout</code>: restore, clamp, debounced write, reset one / all</td><td><a
+        href="../../ui/src/useLayout.ts">useLayout.ts</a>; a pending write flushes on unmount</td><td>delivered</td></tr>
+      <tr><td>both splits applied; the composer inherits the width</td><td><code>Layout.tsx</code> (splitter A, the
+        aside at the clamped width) · <code>FlowDetail.tsx</code> (the headers ceiling at the share, splitter B over its
+        bottom border) · <code>App.tsx</code> (one hook for both)</td><td>delivered</td></tr>
+      <tr><td>View ▸ Reset Layout</td><td><code>menu.rs</code>: the item emits <code>layout-reset</code>; one builder,
+        so both shell builds carry it</td><td>delivered, see deviations</td></tr>
+      <tr><td>the design file retired (DEC-16)</td><td>forks distilled to <a
+        href="../decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html">DEC-68</a>; the TSDoc is the contract;
+        <code>components/splitter.html</code> removed</td><td>delivered</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>What</th><th>Why</th></tr>
+      <tr><td>Reset Layout brings its own View submenu on Windows and Linux, placed before Window</td><td>the run's C1
+        said <code>Menu::default</code> builds a View menu on every platform; tauri 2.11 builds it on macOS only</td></tr>
+      <tr><td>the headers ceiling is an inline <code>max-height</code> on a wrapper round the headers
+        <code>Section</code>, and splitter B overlaps the section's bottom border by <code>-mt-px</code></td><td>a dragged
+        share is user state, not a token (DEC-67); <code>Section</code> takes no style and draws its own border, so the
+        collection component stays untouched</td></tr>
+      <tr><td>a press that never moves commits nothing</td><td>a double-click is two presses; without this it would
+        write three times</td></tr>
+      <tr><td>test setup gains a <code>PointerEvent</code> polyfill</td><td>jsdom has none, so fired pointer events
+        lost <code>clientX</code> and <code>button</code></td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Layer</th><th>Where</th><th>Result</th></tr>
+      <tr><td>unit</td><td><code>components/Splitter.test.tsx</code> (16) · <code>layoutBounds.test.ts</code> (10) ·
+        <code>useLayout.test.ts</code> (10) · <code>layoutStore.test.ts</code> (+2) · <code>FlowDetail.test.tsx</code>
+        (+2) · <code>menu.rs</code> (+2)</td><td>green</td></tr>
+      <tr><td>integration</td><td><code>layoutSplit.test.tsx</code> (6): <code>Layout</code> + <code>FlowDetail</code>
+        under one <code>useLayout</code> through a stubbed Tauri bridge serving <code>layoutWire.json</code>; the
+        collection, registry and citation tests</td><td>green</td></tr>
+      <tr><td>e2e</td><td>waived: the real-window journeys are W6's <code>layout.spec.ts</code></td><td>—</td></tr>
+      <tr><td>suite · lint</td><td>vitest 71 files · eslint (closed vocabulary) · class reconciliation · clippy both
+        builds</td><td>green</td></tr>
+      <tr><td>commits</td><td><code>c3d96931</code> plan · <code>4184cded</code> code · <code>e2a307f6</code> DEC-68 ·
+        this result</td><td></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: <a href="../decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html">DEC-68</a> + its index row (the
+      Splitter design's forks, DEC-16). UC-4 / UC-5 and the keyboard vocabulary wait for W6, as the epic's distillation
+      plan has it. T1: nothing.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>What</th><th>Who</th></tr>
+      <tr><td>column handles and per-track tokens; <code>DEFAULT_COLUMNS</code> in <code>layoutBounds.ts</code> becomes
+        the one source of <code>FlowList</code>'s template; rename <code>columns.size</code> → <code>duration</code></td>
+        <td>W4</td></tr>
+      <tr><td>the real-window journeys, including Reset Layout from the menu bar</td><td>W6</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
