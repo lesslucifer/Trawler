@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-68-the-data-window.html"
+    tier: T2
+    action: added
+    distills: "DEC-68: the data window is handed {key, title, bytes, typeHint?} by value, keeps the original, edits a scratch working copy and shows views; one window per key, claimed once over raw IPC bytes; no write-back, no caps, no close ask, closes with main; UC-5's evidence rule binds the pane, not the window; a narrow data-* capability."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-68's routing row."
+  - path: "docs/work/2026-11-03-inspect-window-w1-payload-handoff-plan.html"
+    tier: T3
+    action: added
+    distills: "W1's requirement, mapping, what it builds, expected result and test plan."
+  - path: "docs/work/2026-11-03-inspect-window-w1-payload-handoff-result.html"
+    tier: T3
+    action: added
+    distills: "W1's outcome, deviations (title and Destroyed not observable on the mock runtime; provisional window size), evidence (review round 1 and its fixes) and follow-ups for W3 and W7."
