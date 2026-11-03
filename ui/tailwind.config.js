@@ -86,6 +86,13 @@ export default {
       "pane-narrow": "208px",
       "pane-label": "256px",
       pane: "520px",
+      "pane-min": "384px",
+      "pane-max": "960px",
+      // The narrowest a flow row's path cell may get: about sixteen mono
+      // characters, enough to recognise an endpoint.
+      "path-min": "128px",
+      // How far a splitter's hit band reaches past its 1px line on each side.
+      "grip-reach": "4px",
       "listing-max": "184px",
       "body-max": "256px",
       "dialog-max": "384px",
@@ -112,6 +119,8 @@ export default {
       ...theme("spacing"),
       full: "100%",
       "zone-cap": "35%",
+      "zone-min": "15%",
+      "zone-max": "60%",
     }),
     // Closed at one member because the UI renders one weight. Left open,
     // Tailwind's nine magnitudes all resolve and no check can say so — an open
@@ -228,6 +237,8 @@ export default {
       default: "default",
       pointer: "pointer",
       text: "text",
+      "col-resize": "col-resize",
+      "row-resize": "row-resize",
     },
     flex: {
       1: "1 1 0%",

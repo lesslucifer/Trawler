@@ -4,21 +4,17 @@ import type { FlowSource, FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { NotAnswering } from "./NotAnswering";
 import { Button, DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
+import { DEFAULT_COLUMNS, columnTemplate } from "./layoutBounds";
+import type { ColumnWidths } from "./layoutStore";
 
 const ROW_HEIGHT = 30;
 
-// Cell 1 is sized by the timestamp import produces, not by the mark it also
-// holds: a HAR handed over from another machine was captured on another day, so
-// TimestampText's cross-day form (115.2px) plus the mark's reserved 16px box is
-// what the column has to hold. The mark itself never enters the arithmetic.
-const COLUMNS = "160px 70px 180px 1fr 70px 90px";
-
-function HeaderRow() {
+function HeaderRow({ template }: { template: string }) {
   return (
     <div
       data-wire="none"
       className="grid gap-3 border-b border-hairline px-4 py-chrome-y text-body uppercase tracking-label text-ink-mute"
-      style={{ gridTemplateColumns: COLUMNS }}
+      style={{ gridTemplateColumns: template }}
     >
       <span>Time</span>
       <span>Method</span>
@@ -132,7 +128,9 @@ export function FlowList({
   retrying = false,
   onRetry = () => {},
   onSetUp,
+  columns = DEFAULT_COLUMNS,
 }: {
+  columns?: ColumnWidths;
   flows: FlowSummary[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
@@ -144,6 +142,7 @@ export function FlowList({
   onRetry?: () => void;
   onSetUp?: () => void;
 }) {
+  const template = columnTemplate(columns);
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: flows.length,
@@ -190,7 +189,7 @@ export function FlowList({
   if (flows.length === 0) {
     return (
       <div className="flex h-full flex-col">
-        <HeaderRow />
+        <HeaderRow template={template} />
         <Absence
           filtered={filtered}
           cleared={cleared}
@@ -206,7 +205,7 @@ export function FlowList({
 
   return (
     <div className="flex h-full flex-col">
-      <HeaderRow />
+      <HeaderRow template={template} />
       <div
         ref={parentRef}
         data-testid="flow-scroll"
@@ -237,7 +236,7 @@ export function FlowList({
                   selected ? "bg-canvas-soft" : ""
                 }`}
                 style={{
-                  gridTemplateColumns: COLUMNS,
+                  gridTemplateColumns: template,
                   height: ROW_HEIGHT,
                   transform: `translateY(${item.start}px)`,
                 }}

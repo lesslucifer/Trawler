@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export type ColumnWidths = {
   time: number;
@@ -26,4 +27,17 @@ export async function readLayout(call: Invoke = invoke): Promise<SavedLayout | n
 
 export async function writeLayout(layout: SavedLayout, call: Invoke = invoke): Promise<void> {
   await call("layout_write", { layout });
+}
+
+export const RESET_LAYOUT_EVENT = "layout-reset";
+
+type Unlisten = () => void;
+type Listen = (event: string, handler: () => void) => Promise<Unlisten>;
+
+export async function onLayoutReset(handler: () => void, subscribe: Listen = listen): Promise<Unlisten> {
+  try {
+    return await subscribe(RESET_LAYOUT_EVENT, handler);
+  } catch {
+    return () => {};
+  }
 }

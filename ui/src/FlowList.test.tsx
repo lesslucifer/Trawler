@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowList } from "./FlowList";
+import { ROW_CHROME } from "./layoutBounds";
 import type { FlowSummary } from "./api";
 
 function flow(over: Partial<FlowSummary> = {}): FlowSummary {
@@ -429,4 +430,17 @@ test("each provenance wears its own face, and a captured row wears none", () => 
   );
   const faces = screen.getAllByTestId("flow-row").map((row) => row.querySelector('[data-wire="started_at"]')?.firstElementChild?.textContent);
   expect(faces).toEqual(["", "↑", "↗"]);
+});
+
+test("the label row and every row lay out the saved column widths, with the chrome the pane's bound counts", () => {
+  const { container } = render(
+    <FlowList flows={[flow()]} columns={{ time: 200, method: 70, host: 300, status: 70, size: 90 }} />,
+  );
+  const row = container.querySelector('[data-testid="flow-row"]') as HTMLElement;
+  const label = screen.getByText("Time").parentElement as HTMLElement;
+  for (const grid of [row, label]) {
+    expect(grid.style.gridTemplateColumns).toBe("200px 70px 300px 1fr 70px 90px");
+    expect(grid.classList).toContain(ROW_CHROME.inset);
+    expect(grid.classList).toContain(ROW_CHROME.gap);
+  }
 });
