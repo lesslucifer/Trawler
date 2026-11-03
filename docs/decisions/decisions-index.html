@@ -835,7 +835,9 @@
             one JSON ready line with its bound addresses, logs on stderr, and with <code>--lifeline</code> exits on stdin
             EOF. One workspace: a bare <code>cargo run</code> is the app, <code>cargo run -p trawler</code> the headless
             core, which stays GUI-free by test. The app embeds <code>ui/dist</code> and its build script rebuilds a stale
-            bundle. Supersedes DEC-12's topology and GUI-free-root-build clauses. Rejected: the core in-process, a
+            bundle. The window opens only after the core's ready line, its address injected into every webview; a
+            taken port is a native dialog and no window; every stop closes stdin, waits, then kills; the CA lives in the
+            app data dir, adopting <code>./ca</code>. Supersedes DEC-12's topology and GUI-free-root-build clauses. Rejected: the core in-process, a
             separate sidecar binary, a launcher binary, stdin EOF always fatal, the address in a log line</td>
           <td><span class="badge auto">active</span></td>
         </tr>

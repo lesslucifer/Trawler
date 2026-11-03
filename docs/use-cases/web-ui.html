@@ -58,8 +58,8 @@
 
     <h2 id="uc-4">UC-4 — Watch live traffic in the native app</h2>
     <div data-c="uc-4-contract">
-      <p>With Trawler running, launching the native desktop app (<span class="badge id">E-UIFOUND</span>,
-      Tauri + React) shows the captured flows (method, host, path, status, duration) in the Warp-styled
+      <p>Launching the native desktop app (<span class="badge id">E-UIFOUND</span>, Tauri + React) starts its
+      own capture service and shows the captured flows (method, host, path, status, duration) in the Warp-styled
       base layout and updates live as new traffic passes the proxy, via the existing
       <code>GET /stream</code> SSE stream.</p>
       <ul>
@@ -74,6 +74,12 @@
         (<span class="badge id">E-RFINISH</span>). The status control takes either resolution and says so
         in its placeholder — <code>status — 404 or 4xx</code> — and a refusal is rendered rather than
         swallowed (below).</li>
+        <li><strong>One launch, one app</strong> (<span class="badge id">E-ONEAPP.W2</span>,
+        <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a>): the app runs its core as a
+        child process on <code>:7420</code>/<code>:7421</code> and opens its window once that core is ready. A taken
+        port is a native dialog naming it, and no window opens. A second launch brings the first window forward.
+        Every quit stops the core, and the window outlives a core that dies. <code>TRAWLER_API=&lt;url&gt;</code>
+        attaches to an existing core instead, starting none.</li>
         <li>The app is a pure <em>cross-origin</em> client of <code>127.0.0.1:7421</code> — it reaches no
         core internals; everything it shows is equally reachable with <code>curl</code>. Because the
         webview origin differs from the API's, every API response carries an open CORS grant

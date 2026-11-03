@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea0b759f34851f0dfae27d" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP.W2 result: the app supervises its core</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP.W2 result — the app supervises its core</h1>
+      <p>Delivered as planned. One <code>cargo run</code> gives a window over a core the app spawned, and that core
+        goes away on every quit, <code>kill -9</code> included. A taken port is refused before any window opens.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-ONEAPP.W2</span> · branch
+        <code>wu/one-app/supervised-core</code> · <a href="2026-11-03-one-app-w2-supervised-core-plan.html">WU plan</a> ·
+        <a href="2026-11-03-one-app-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th>How it was seen</th></tr>
+      <tr><td><code>cargo run</code>, nothing else running</td><td><span class="badge auto">delivered</span></td>
+        <td>the "Trawler" window opened over <code>trawler-ui --core --lifeline --ca-dir ~/Library/Application
+        Support/dev.trawler.app/ca --proxy-port 7420 --api-port 7421</code>. <code>curl -x :7420</code> to a local origin
+        returned 200, and <code>GET :7421/flows</code> listed it</td></tr>
+      <tr><td>quit by ⌘Q · <code>kill -9</code> the app</td><td><span class="badge auto">delivered</span></td>
+        <td>⌘Q (the menu's Quit, driven by System Events): the app exited, no trawler process remained, and both ports
+        were free. <code>kill -9</code> the app: the core followed it through the lifeline, and the ports were free.
+        Dock Quit and logout reach the same <code>RunEvent::Exit</code>, and were not driven</td></tr>
+      <tr><td>a held <code>:7420</code></td><td><span class="badge auto">delivered</span></td><td>the app opened no window
+        and printed "Another program is using port 7420, which Trawler's capture service needs. Quit that program, then
+        open Trawler again." The same sentence is the dialog's text</td></tr>
+      <tr><td>a second launch</td><td><span class="badge auto">delivered</span></td><td>the second process exited within 4 s,
+        and one core remained</td></tr>
+      <tr><td><code>TRAWLER_API</code> set</td><td><span class="badge auto">delivered</span></td><td>pointed at a headless core on
+        an ephemeral port: the window opened, no <code>--core</code> child was spawned, and the attached core outlived the
+        quit</td></tr>
+      <tr><td>an existing <code>./ca</code> is adopted</td><td><span class="badge auto">delivered</span></td><td>the first launch from
+        the repo root copied <code>trawler-ca.pem</code>/<code>.key</code> into the app data dir, byte-identical
+        (<code>cmp</code>)</td></tr>
+      <tr><td>lint and suite green</td><td><span class="badge auto">delivered</span></td><td><code>cargo clippy --workspace
+        --all-targets -D warnings</code> (and with <code>e2e</code>, <code>scenario</code>). <code>cargo test --workspace</code>:
+        29 binaries, 0 failed. Vitest: 67 files passed</td></tr>
+      <tr><td>existing e2e, now attached</td><td><span class="badge auto">delivered</span></td><td id="e2e-run"><code>cargo xtask ui
+        e2e</code>: 4 of 4 spec files passed, each window built by the setup hook (<code>"create": false</code>) and attached through <code>TRAWLER_API</code></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>From the plan</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>commands and events only in the shell</td><td>added <code>ui/src/coreService.ts</code>: the
+        <code>CoreState</code> type, three invokes and two event subscriptions, with Vitest. It renders nothing</td>
+        <td>the xtask guard <code>both_shell_builds_register_exactly_the_commands_the_app_invokes</code> refuses a
+        registered command no front-end code calls. This is also the contract W3 renders</td></tr>
+      <tr><td>single-instance in every launch</td><td>registered only when the app owns its core</td><td>an attached e2e run
+        must not hand over to (and exit into) a Trawler already running on the machine. An attached app holds no port,
+        so a second one is harmless</td></tr>
+      <tr><td>the scenario build</td><td>registers the three core commands too</td><td>the same guard requires both builds
+        to register one set</td></tr>
+      <tr><td>none otherwise</td><td>—</td><td>—</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>e39daa07</code> plan · <code>439f823d</code> supervisor · this report's commit (docs)</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/supervisor.rs</code> (3): kill → exited(signal 9) → restart on the
+        same ports → stop frees them · a SIGKILLed supervisor leaves no core · a held port is
+        <code>Conflict{port}</code></td></tr>
+      <tr><td>unit</td><td><code>supervisor.rs</code> (7) · <code>core.rs</code> (9) · <code>core_address.rs</code> (3, kept) ·
+        <code>xtask/src/ui.rs</code> <code>every_config_leaves_the_window_to_the_setup_hook</code> (1) ·
+        <code>ui/src/coreService.test.ts</code> (4)</td></tr>
+      <tr><td>e2e</td><td>waived for the WU: the owned-core journeys are W5's. The existing suite ran attached through
+        <code>TRAWLER_API</code> (row above)</td></tr>
+      <tr><td>docs</td><td><a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a> v2 (rules 9–12) ·
+        <a href="../decisions/decisions-index.html">decisions index</a> ·
+        <a href="../use-cases/web-ui.html#uc-4">UC-4</a> + <a href="../use-cases/use-cases-index.html">use-case index</a></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: UC-4 now says the app starts and stops its own capture service, with the conflict, single-instance and attach
+      contract; DEC-68 gains rules 9–12 (spawn in setup with <code>create: false</code>, conflict by probe,
+      single-instance only when owned, one stop path, the CA's home and adoption). UC-SVC is W3's and UC-ONBOARD's quit
+      is W4's. T1 and T0 are W5's, per Q10.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Where</th></tr>
+      <tr><td>UC-4's "window outlives a core that dies" shows today's "not answering" state with no Restart</td><td>W3</td></tr>
+      <tr><td>the log ring spans restarts, so a crash's last lines stay readable after Restart</td><td>W3 decides
+        whether the page marks where each core began</td></tr>
+      <tr><td>an unbundled <code>cargo run</code> copies <code>./ca</code> only from the launch cwd</td><td>none: a bundled launch has
+        no meaningful cwd, which is why the CA moved (Q6)</td></tr>
+      <tr><td>the W1 follow-up on the e2e bundle flavour embedded by a later <code>cargo run</code></td><td>still open, W5</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
