@@ -337,11 +337,11 @@
             before, ~168 after, with the path cell going 208 → 308&nbsp;px in the same move. Rejected: keeping 380,
             440 (27 characters for 60&nbsp;px of every path), 560+, a bounded share <code>min(40%, 520px)</code>
             (measured 8&nbsp;px from the fixed choice at 1280 and identical above 1300), a draggable split (a stored
-            preference, a drag affordance and a minimum on both sides, for an unshown gain), and raising the minimum
+            preference, a drag affordance and a minimum on both sides, for an unshown gain) — superseded by DEC-67, and raising the minimum
             window (it narrows a capability the list alone uses). <strong>Carries a known defect made wider</strong>:
             no valid arrangement below 1132&nbsp;px with the pane open, up from 992, against a declared minimum of
             800 — escalated with the arithmetic rather than fixed by re-deciding the row grammar</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · split rejection superseded by DEC-67</td>
         </tr>
         <tr>
           <td><a href="dec-37-har-as-the-interchange-format.html"><code>dec-37-har-as-the-interchange-format.html</code></a></td>
@@ -825,6 +825,18 @@
             exempt, and a note earns its place only if it changes what the user does or helps when something fails.
             Replaces W13's R1 (a <em>?</em> per line). Rejected: a <em>?</em> per line, a checkbox, localStorage,
             exemptions, notes shown at first</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-67-the-user-sizes-the-layout.html"><code>dec-67-the-user-sizes-the-layout.html</code></a></td>
+          <td><span class="badge id">DEC-67</span></td>
+          <td><strong>The user sizes the layout.</strong> The list/pane and headers/body splits, the flow list's fixed
+            columns and every window are user-sized within designed bounds, never to zero, and restored at launch. The shell
+            keeps them in <code>layout.json</code> in its config dir (<code>layout_read</code> / <code>layout_write</code>),
+            nothing in the core: splits and columns once for the app, geometry once per window label. No version field: a
+            file not exactly the current shape is the whole default; the store checks shape, the app clamps bounds; writes
+            are staged then renamed. Supersedes DEC-36's split rejection; 520 / 1440 stay as defaults. Rejected:
+            localStorage, a version field, per-window sizes, layout in the core, collapse to zero, column reorder/hide</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
