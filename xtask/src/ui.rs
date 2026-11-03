@@ -15,7 +15,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         }
         ["dev"] => {
             pnpm(&dir, &["install"], &[])?;
-            pnpm(&dir, &["tauri", "dev"], &[])?;
+            pnpm(&dir, DEV_ARGS, &[])?;
             Ok((0, String::new()))
         }
         ["bench"] => {
@@ -30,6 +30,10 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         _ => Err(super::USAGE.to_string()),
     }
 }
+
+// The app embeds ui/dist by default (`custom-protocol`); dev drops that
+// feature so the window loads the Vite dev server and keeps HMR.
+const DEV_ARGS: &[&str] = &["tauri", "dev", "--", "--no-default-features"];
 
 // Design files render the real ui/src/components/ collection. On a file:// origin
 // a page may not read local files and module scripts never execute, so the
@@ -129,7 +133,7 @@ fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{judge_run_tally, run};
+    use super::{judge_run_tally, run, DEV_ARGS};
     use std::collections::BTreeSet;
     use std::path::Path;
 
@@ -138,6 +142,12 @@ mod tests {
             r#"{{"specs":{specs},"finished":{},"passed":{passed},"failed":{failed}}}"#,
             passed + failed
         )
+    }
+
+    #[test]
+    fn dev_hands_cargo_no_default_features_so_the_window_loads_the_dev_server() {
+        let runner_args = DEV_ARGS.iter().skip_while(|arg| **arg != "--").skip(1);
+        assert_eq!(runner_args.collect::<Vec<_>>(), [&"--no-default-features"]);
     }
 
     #[test]

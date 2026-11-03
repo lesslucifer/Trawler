@@ -42,13 +42,14 @@ fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     match os {
         "macos" => elevated_script(&quoted(argv)),
         "windows" => {
-            let args = argv[1..].iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(",");
+            let argument_list =
+                argv[1..].iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(",");
             vec![
                 "powershell".into(),
                 "-NoProfile".into(),
                 "-Command".into(),
                 format!(
-                    "$p = Start-Process -FilePath '{}' -ArgumentList {args} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
+                    "$p = Start-Process -FilePath '{}' -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
                     argv[0]
                 ),
             ]
@@ -211,8 +212,8 @@ fn macos_live_verifies(pem: &str) -> Option<bool> {
         std::env::temp_dir().join(format!("trawler-ca-probe-{}-{n}.pem", std::process::id()));
     std::fs::write(&cert, pem).ok()?;
     let argv = macos_verify_argv(&cert);
-    let args: Vec<&str> = argv[1..].iter().map(String::as_str).collect();
-    let verified = ran(&argv[0], &args).map(|out| out.ok);
+    let rest: Vec<&str> = argv[1..].iter().map(String::as_str).collect();
+    let verified = ran(&argv[0], &rest).map(|out| out.ok);
     let _ = std::fs::remove_file(&cert);
     verified
 }
@@ -367,8 +368,12 @@ fn running_simulators(devices: &Path) -> Vec<RunningSimulator> {
 
 fn der_hex(live: &str) -> Option<String> {
     use base64::Engine as _;
+    use std::fmt::Write as _;
     let der = base64::engine::general_purpose::STANDARD.decode(live).ok()?;
-    Some(der.iter().map(|byte| format!("{byte:02X}")).collect())
+    Some(der.iter().fold(String::with_capacity(der.len() * 2), |mut hex, byte| {
+        let _ = write!(hex, "{byte:02X}");
+        hex
+    }))
 }
 
 fn simulator_store_trust(
@@ -446,10 +451,10 @@ fn simulator_developer_dir(
 }
 
 pub(crate) fn simctl(developer_dir: Option<&str>, args: &[&str]) -> Vec<String> {
-    let mut argv = developer_dir
+    let mut command = developer_dir
         .map_or_else(Vec::new, |dir| vec!["env".to_string(), format!("DEVELOPER_DIR={dir}")]);
-    argv.extend(["xcrun", "simctl"].iter().chain(args).map(ToString::to_string));
-    argv
+    command.extend(["xcrun", "simctl"].iter().chain(args).map(ToString::to_string));
+    command
 }
 
 #[derive(Debug, Default)]
@@ -705,9 +710,9 @@ impl Emulators {
     }
 
     pub(crate) fn on(&self, serial: &str, args: &[&str]) -> Vec<String> {
-        let mut argv = argv(&[&self.adb, "-s", serial]);
-        argv.extend(args.iter().map(ToString::to_string));
-        argv
+        let mut command = argv(&[&self.adb, "-s", serial]);
+        command.extend(args.iter().map(ToString::to_string));
+        command
     }
 
     fn on_each(&self, args: &[&str]) -> Vec<Vec<String>> {
@@ -1793,7 +1798,7 @@ fn remember_notes_shown(config_dir: &Path, shown: bool) -> std::io::Result<()> {
 #[tauri::command]
 pub fn notice_dismissed(app: tauri::AppHandle, key: String) -> Result<bool, String> {
     let key = NoticeKey::try_from(key.as_str())?;
-    Ok(config_dir(&app).map(|dir| notice_is_dismissed(&dir, key)).unwrap_or(false))
+    Ok(config_dir(&app).is_ok_and(|dir| notice_is_dismissed(&dir, key)))
 }
 
 #[tauri::command]
