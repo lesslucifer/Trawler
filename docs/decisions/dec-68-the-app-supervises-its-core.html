@@ -12,7 +12,7 @@
       <p>Trawler is one program to its user: the app starts the capture core as a child process of its own binary,
         and the repo is one Cargo workspace whose bare <code>cargo run</code> opens that app. The API boundary does not
         move.</p>
-      <div class="meta">v1 · 2026-11-03 · Trawler · T2 decision · minted by <strong>E-ONEAPP.W1</strong> from the owner's
+      <div class="meta">v2 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-ONEAPP.W1</strong>, rules 9–12 by <strong>E-ONEAPP.W2</strong>, from the owner's
         rulings on Q1–Q14 (2026-11-03) · supersedes <a href="dec-12-native-ui-stack.html">DEC-12</a>'s topology and
         GUI-free-root-build clauses only · UC-4 · <strong>active</strong></div>
     </div>
@@ -65,6 +65,20 @@
       <tr><td>8</td><td><code>TRAWLER_API</code> attaches the app to an existing core and spawns none, in every
         build. Fixed ports 7420/7421, a native dialog on conflict, no automatic restart</td><td>Q4, Q5, Q9, Q12.
         Realized by E-ONEAPP.W2</td></tr>
+      <tr><td>9</td><td>The core is spawned in the setup hook, and no window exists until it is ready: every
+        tauri config declares its window <code>"create": false</code>, and setup builds it after registering the
+        bound address as an init script on every webview</td><td>config windows are built before setup runs. A
+        conflict must reach its dialog with no window open, and a page told its address after load would have to
+        navigate, which aborts the shell (WKWebView)</td></tr>
+      <tr><td>10</td><td>A taken port is named by probing the requested ports after the child exits unready, never
+        by reading its log. Single-instance registers only when the app owns its core</td><td>rule 2. An attached
+        app (the e2e) holds no port and must never yield to a Trawler already running on the machine</td></tr>
+      <tr><td>11</td><td>Every stop closes the child's stdin, waits 5 s, then kills it. Restart reuses the ports of
+        the last ready line. A generation counter keeps a replaced child's exit from overwriting the new state</td>
+        <td>one stop path for quit and restart. Ephemeral ports survive a restart</td></tr>
+      <tr><td>12</td><td>An owned core's CA lives in <code>&lt;app data&gt;/ca</code>. The first launch copies a whole
+        <code>./ca</code> (pem + key) there, never over an existing CA. The headless core keeps <code>./ca</code></td>
+        <td>Q6: a launch from Finder has no meaningful cwd. Devices already trust the old CA</td></tr>
     </table>
 
     <h2 id="kept">What DEC-12 keeps</h2>

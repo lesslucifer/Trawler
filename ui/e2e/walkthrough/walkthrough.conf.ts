@@ -130,7 +130,7 @@ export const config: WebdriverIO.Config = {
   onPrepare: async () => {
     const ports = await startCore();
     await prepare(ports, run.launch.prelaunch);
-    process.env.TRAWLER_E2E_API = ports.front;
+    process.env.TRAWLER_API = ports.front;
     process.env.TRAWLER_SCENARIO_HOST = run.reel.host;
     process.env.TRAWLER_SCENARIO_SCRIPT = JSON.stringify(run.launch.prelaunch.scenario ?? {});
   },

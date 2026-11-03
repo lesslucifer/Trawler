@@ -519,6 +519,20 @@ mod tests {
         }
     }
 
+    // Tauri builds config windows before the setup hook, and the shell may open
+    // its window only once it knows its core's address (E-ONEAPP.W2).
+    #[test]
+    fn every_config_leaves_the_window_to_the_setup_hook() {
+        let repo = crate::repo_root().expect("repo root");
+        for config in ["tauri.conf.json", "tauri.conf.e2e.json", "tauri.conf.walkthrough.json"] {
+            assert_eq!(
+                window_of(&repo, config)["create"].as_bool(),
+                Some(false),
+                "{config}: the window must declare \"create\": false"
+            );
+        }
+    }
+
     // The e2e asserts no picture, so its window stays off the screen. The
     // walkthrough films what a user sees, and a hidden page loads no recording.
     #[test]
