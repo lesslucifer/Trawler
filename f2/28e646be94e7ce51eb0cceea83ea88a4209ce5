@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PANELS
+wu: E-PANELS.W1
+branch: HEAD
+tests:
+  unit: { count: 11, covers: "The shell store: a written layout reads back unchanged; a file in the wire shape reads; no dir and no file read as no saved layout; bytes that are not JSON read as none; a missing, extra or mistyped field (and [] / null) reads as none; a write makes the dir, replaces the file and leaves no staged copy. The app bridge: readLayout names layout_read and returns the shell's layout, null for none and null when the shell refuses; writeLayout sends the whole layout as layout_write's one argument and passes a refused write on." }
+  integration: { count: 1, covers: "The wire contract, snapshot-locked by ui/src/layoutWire.json, which layoutStore.test.ts also reads: the fixture, deserialised as the IPC delivers layout_write's argument, is written into a temp config dir through the crate's public store and reads back to the same JSON; a never-written dir serialises to null, the read's empty answer. xtask's both_shell_builds_register_exactly_the_commands_the_app_invokes is green with layout_read and layout_write in both builds and invoked by the app." }
+  e2e: { waived: "Nothing reads the store until W3 renders a splitter; the epic's e2e (W6, layout.spec.ts) proves persistence through the real window across a relaunch." }
