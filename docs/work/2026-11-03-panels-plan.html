@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9629b9f34851f0dfadf68" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS — epic plan</h1>
+      <p>Every split, every flow-list column and every window the app opens can be resized by the user, and
+        comes back the way they left it.</p>
+      <div class="meta">v3 · 2026-11-03 · ready: every open question ruled · Trawler · T3 (docs/work/) · branch <code>epic/panels</code>
+        · WU branches <code>wu/panels/&lt;slug&gt;</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">The app's layout is fixed today: the detail pane is the <code>pane</code> token
+      (520&nbsp;px), the headers zone is capped at <code>zone-cap</code> (35&nbsp;%) of the pane, and the window
+      always opens at 1440×800 wherever the OS puts it; the flow-list columns are fixed tracks
+      (<code>160 70 180 1fr 70 90</code>). A reader with a long cookie wants a wider pane; a reader
+      scanning paths wants a narrower one; nobody can choose, and every relaunch forgets the window. This epic
+      makes each split and each fixed column draggable and keyboard-resizable within designed bounds, and
+      persists split sizes, column widths and window geometry locally, so the layout a user sets is the layout they get back. It reverses DEC-36's
+      rejection of a draggable split — the three things that rejection said the shell lacked (a stored
+      preference, a drag affordance, a minimum on both sides) are exactly what this epic builds.</p>
+
+    <h2 id="surfaces">What gets resizable</h2>
+    <table data-c="surfaces">
+      <tr><th>Surface</th><th>Today (source)</th><th>After</th></tr>
+      <tr><td>list ↔ detail pane (also hosts the composer)</td><td><code>w-pane</code> 520&nbsp;px fixed — <code>ui/src/Layout.tsx</code></td><td>vertical splitter; default <code>pane</code>, bounded by <code>pane-min</code> / <code>pane-max</code> and by the list's own minimum</td></tr>
+      <tr><td>flow-list columns (time, method, host, status, size)</td><td><code>COLUMNS = "160px 70px 180px 1fr 70px 90px"</code> — <code>ui/src/FlowList.tsx</code></td><td>a resize handle on each column boundary in the label row; each fixed track bounded by its own minimum (its content floor) and a maximum; path stays <code>1fr</code> — the remainder — with its own <code>path-min</code>; label row and rows read one width set</td></tr>
+      <tr><td>headers ↔ body, inside the pane</td><td><code>max-h-zone-cap</code> 35&nbsp;% — <code>ui/src/FlowDetail.tsx</code></td><td>horizontal splitter; default 35&nbsp;%, bounded share both sides; body stays the primary zone (DEC-32)</td></tr>
+      <tr><td>main window</td><td>1440×800, min 850×600 — <code>ui/src-tauri/tauri.conf.json</code></td><td>size, position and maximized state restored at launch, clamped onto a monitor that exists</td></tr>
+      <tr><td>inspector windows (E-INSPWIN)</td><td>do not exist yet</td><td>adopt this epic's window-geometry mechanism — see <a href="#decided">Q1</a></td></tr>
+    </table>
+
+    <div class="diagram" data-c="layout-diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph W["main window — geometry persisted (shell)"]
+    direction LR
+    subgraph L["flow list (min: list-min)"]
+      direction LR
+      C["time ⇹ method ⇹ host ⇹ path (1fr) ⇹ status ⇹ size\ncolumn handles: track-min … track-max"]
+    end
+    L ---|"⇆ splitter A\npane-min … pane-max"| P
+    subgraph P["detail pane / composer"]
+      direction TB
+      H["headers"] ---|"⇅ splitter B\nshare bounds"| B["body (primary)"]
+    end
+  end
+  S[("layout.json\napp config dir")] -.restore.-> W
+  W -.debounced write.-> S
+      </pre>
+      <div class="caption">Two splitters, five column handles and one window; sizes flow to one file the shell owns. <code>list-min</code> = Σ(track widths) + <code>path-min</code>, so the columns and splitter A bound each other.</div>
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <table>
+        <tr><th>UC</th><th>Change (contract-level)</th></tr>
+        <tr><td><span class="badge id">UC-4</span></td><td>The native app's layout is user-sized: the list/pane split can be dragged or keyboard-stepped within designed bounds; the flow-list columns can be dragged or keyboard-stepped within per-column bounds; the window reopens at its last geometry. A saved layout that no longer fits (smaller monitor, a file whose shape the app no longer reads) falls back to defaults rather than restoring something broken.</td></tr>
+        <tr><td><span class="badge id">UC-5</span></td><td>Inside the flow detail, the headers/body split is user-sized; the body stays the zone that takes the remaining height. The pane's chosen width is the width every flow opens at.</td></tr>
+        <tr><td><span class="badge id">UC-8</span></td><td>The composer occupies the same pane and so inherits the pane width; nothing composer-specific is added.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <tr><th>#</th><th>Observable after the epic</th></tr>
+        <tr><td>1</td><td>Dragging the list/pane splitter changes the pane width; it never goes below <code>pane-min</code>, above <code>pane-max</code>, or narrower than the list's minimum allows.</td></tr>
+        <tr><td>2</td><td>The splitter is focusable (<code>role="separator"</code>, <code>aria-valuenow/min/max</code>); arrow keys step it, Home/End jump to its bounds, and the reset gesture returns the default — keys registered in the <code>keyboard-conventions</code> vocabulary.</td></tr>
+        <tr><td>2a</td><td>Each column handle behaves the same horizontally: the track never goes below its minimum or above its maximum, path never below <code>path-min</code>; the label and the cells it names stay aligned at every width.</td></tr>
+        <tr><td>3</td><td>The headers/body splitter behaves the same, vertically, with the body keeping its minimum share.</td></tr>
+        <tr><td>4</td><td>Quit and relaunch: the pane width, headers share, column widths and window size/position/maximized state are what they were.</td></tr>
+        <tr><td>5</td><td>A missing, corrupt or unrecognised-shape <code>layout.json</code> yields the default layout and no error surface; a window saved onto a monitor that is gone opens on a visible one.</td></tr>
+        <tr><td>6</td><td>Shrinking the window clamps the pane so the list keeps its minimum; growing it back restores the user's width, not the clamped one.</td></tr>
+        <tr><td>7</td><td>Double-clicking a splitter or column handle restores that one default; "Reset layout" (placement per the design run) restores every default in one act.</td></tr>
+        <tr><td>8</td><td><code>curl</code> still sees everything: no layout state goes through the core or the control API (DEC-12).</td></tr>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <ul>
+        <li>Reordering, hiding or adding flow-list columns — widths change, the column set and order do not (see <a href="#decided">Q9</a>).</li>
+        <li>Docking, tabbing, detaching or rearranging panels — sizes change, the arrangement does not.</li>
+        <li>Resizable modals (<code>ModalShell</code> dialogs) — they stay content-sized.</li>
+        <li>Syncing layout across machines or storing it in the core.</li>
+        <li>The inspector windows themselves — E-INSPWIN owns them.</li>
+      </ul>
+    </div>
+
+    <h2 id="dec-36">DEC-36 — what is superseded, what survives</h2>
+    <table data-c="dec-36">
+      <tr><th>DEC-36 says</th><th>Fate</th><th>Why</th></tr>
+      <tr><td>Rejected: a draggable split — "a stored preference, a drag affordance, and a minimum on both sides" not in the shell</td><td><span class="badge approval">superseded</span></td><td>This epic builds all three; the user asked for the capability, so the gain DEC-36's run "could not show" is now the requirement.</td></tr>
+      <tr><td>Pane 520&nbsp;px, window 1440 — one decision</td><td><span class="badge auto">kept, as defaults</span></td><td>They become the defaults a reset returns to.</td></tr>
+      <tr><td>Identity <code>path = window − pane − 612</code>, 612 = the row's fixed tracks</td><td><span class="badge approval">generalised</span></td><td>Becomes <code>path = window − pane − Σ(tracks)</code>; 612 is the default sum. Every bound (<code>pane-max</code>, each <code>track-max</code>) is derived so <code>path ≥ path-min</code> holds.</td></tr>
+      <tr><td>"Whoever next arranges the flow row" — the known label/row split below 1132&nbsp;px</td><td><span class="badge approval">this epic is that WU</span></td><td>Column resizing opens the row grammar E-RFINISH reserved; whether it also fixes the scroll defect is <a href="#decided">Q8</a>.</td></tr>
+      <tr><td>Widths only from a declared scale (via DEC-17)</td><td><span class="badge auto">kept</span></td><td>Default, min and max are tokens in <code>ui/tailwind.config.js</code>; the dragged value is user state between two tokens, never a design magnitude.</td></tr>
+      <tr><td>Rejected: raising the minimum window</td><td><span class="badge auto">kept</span></td><td>The splitter's bounds adapt to the window instead.</td></tr>
+    </table>
+    <p class="caption">W1 records this as <strong>DEC-next (E-PANELS: the user sizes the layout)</strong>, numbered with the next free id when it lands; DEC-36 gains a "superseded in part by" line in its status.</p>
+
+    <h2 id="wus">Working units</h2>
+    <div class="diagram" data-c="wu-graph">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 · decision + layout store (shell)"] --> W2["W2 · design run: splitters"]
+  W2 --> W3["W3 · build: Splitter + useLayout"]
+  W3 --> W4["W4 · build: column widths"]
+  W1 --> W5["W5 · window geometry"]
+  W3 --> W6["W6 · e2e + distill"]
+  W4 --> W6
+  W5 --> W6
+      </pre>
+      <div class="caption">W5 needs no design (no UI-rendering file) and can run beside W2–W4.</div>
+    </div>
+
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-PANELS.W1">
+        <h3 id="w1">E-PANELS.W1 — the decision and the layout store</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">DEC-next (E-PANELS: the user sizes the layout), superseding DEC-36's split rejection (table above) and fixing the persistence contract. Shell side: <code>layout.json</code> in the app config dir (beside the existing notice markers), schema-versioned, read/written by two Tauri commands (<code>layout_read</code>, <code>layout_write</code>) registered in both the release and scenario builds. No version field: a file that does not parse into the current shape (pane, headers share, column widths) reads as "no saved layout" — the whole default, never a partial restore.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 / UC-5 persistence rows; expected results 4, 5, 8.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Unit: round-trip, corrupt file, shape mismatch (missing / extra / mistyped field), missing dir. Integration: the command pair against a temp config dir; the xtask command-registry test stays green with the new commands. DEC record in <code>docs/decisions/</code> + index row.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">none — the first WU</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-PANELS.W2">
+        <h3 id="w2">E-PANELS.W2 — design run: the splitters</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A closed design run (per <code>docs/design-flow.html</code>) for the app shell with both splitters and the column handles: the handle's look at rest/hover/focus/drag, hit area, cursor, the new tokens (<code>pane-min</code>, <code>pane-max</code>, <code>list-min</code>, headers-share bounds, per-track min/max, <code>path-min</code>), keyboard steps, double-click reset and the "Reset layout" placement; the answer to <a href="#decided">Q8</a>. A component design for the new registry component <code>Splitter</code>. Archived, with a <code>design/v1</code> note.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 / UC-5 layout rows; expected results 1–3 (incl. 2a), 6, 7; DEC-17 tokens.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">One archived run green under verify-doc; the keyboard-conventions vocabulary rows proposed; the bounds stated as tokens with the DEC-36 identity checked at the minimum window.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the decision the run designs within.</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-PANELS.W3">
+        <h3 id="w3">E-PANELS.W3 — build: Splitter and useLayout</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The <code>Splitter</code> registry component (pointer + keyboard + double-click reset, ARIA separator) and a <code>useLayout</code> hook that restores from W1's store, clamps to the live bounds, and writes debounced. Applied in <code>Layout.tsx</code> (list ↔ pane) and <code>FlowDetail.tsx</code> (headers ↔ body). New tokens in <code>ui/tailwind.config.js</code>. Cites W2's run in its <code>design/v1</code> note.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 / UC-5; expected results 1–3, 5–7; W2's closed run.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Unit (Vitest): clamp math, keyboard steps, reset, restore-with-stale-value, write debounce. Component: Splitter states. Integration: Layout + FlowDetail restore a saved layout through a stubbed command bridge.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W2 (the closed run it cites), W1 (the store).</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-PANELS.W4">
+        <h3 id="w4">E-PANELS.W4 — build: column widths</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary"><code>FlowList.tsx</code>'s fixed <code>COLUMNS</code> string becomes a template built from <code>useLayout</code>'s column widths; a <code>Splitter</code> on each boundary in the label row; the label row and every virtualized row read the one template. <code>list-min</code> and <code>pane-max</code> derive from the live track sum. Per-track min/max tokens and <code>path-min</code> in <code>ui/tailwind.config.js</code>; Q8's answer applied. Cites W2's run in its <code>design/v1</code> note.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 column row; expected results 2a, 4–7; W2's closed run.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Unit (Vitest): template from widths, per-track clamp, path-min holds when the pane widens, double-click reset of one column. Integration: FlowList restores saved widths through the stubbed bridge and label/cell x-offsets match per column; the perf test stays green (no re-measure per row on drag).</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3 (Splitter, useLayout), W2 (the closed run).</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-PANELS.W5">
+        <h3 id="w5">E-PANELS.W5 — window geometry</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">Shell-side save/restore of the main window's size, position and maximized state, clamped onto an available monitor, keyed by window label so later windows (E-INSPWIN) reuse it. Default: <code>tauri-plugin-window-state</code> if its file location and clamp behaviour fit the contract; otherwise the same <code>layout.json</code> store. Capability permissions updated.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 window row; expected results 4, 5.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Unit: clamp of a saved rect against monitor sets (gone monitor, smaller monitor, below min size). Integration: save then restore through a temp config dir. No UI-rendering file touched, so no design owed.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the persistence contract (and the store, if the plugin is not used).</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-PANELS.W6">
+        <h3 id="w6">E-PANELS.W6 — e2e and distillation</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary"><code>ui/e2e/specs/layout.spec.ts</code> through the real window (below), the e2e launcher's marker wipe extended to <code>layout.json</code>, and the distillation into T2.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E; every expected-result row.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">e2e green; UC-4/UC-5 rows, the DEC and the design-rules vocabulary current; plan and reports archived.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3, W4 and W5.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <table>
+        <tr><th>Journey</th><th>Asserts</th></tr>
+        <tr><td>Drag and bound</td><td>select a flow → drag splitter A past both ends → pane width equals <code>pane-min</code> / <code>pane-max</code>; drag splitter B → headers share within bounds.</td></tr>
+        <tr><td>Columns</td><td>drag the host handle past both ends → host track equals its min / max, path never below <code>path-min</code>; each label's left edge equals its cells' left edge; double-click the handle → 180.</td></tr>
+        <tr><td>Keyboard</td><td>focus splitter A → arrows move it by the designed step; End reaches max; reset gesture returns 520.</td></tr>
+        <tr><td>Survives a relaunch</td><td>set pane, headers share, a column width, window size → end the session and relaunch the app (<code>browser.reloadSession()</code>) → all four restored.</td></tr>
+        <tr><td>Broken save</td><td>write a corrupt / wrong-shape <code>layout.json</code> before launch → defaults, no error notice.</td></tr>
+        <tr><td>Reset layout</td><td>after changes, the reset act → every default back, file rewritten.</td></tr>
+      </table>
+      <p>The launcher removes <code>layout.json</code> before and after the run, like the notice markers, so no run inherits another's layout. Off-monitor restore is unit-level only (W5) — a real second monitor is not hermetic; that is the stated waiver for that row.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <tr><th>Truth</th><th>Lands in</th></tr>
+        <tr><td>user-sized layout and columns, persisted, falls back on a bad save</td><td><code>docs/use-cases/web-ui.html</code> UC-4, UC-5 + index row</td></tr>
+        <tr><td>the supersession and the persistence contract</td><td>DEC-next (E-PANELS: the user sizes the layout) in <code>docs/decisions/</code> + <code>decisions-index.html</code>; DEC-36 status line (split rejection superseded, identity generalised)</td></tr>
+        <tr><td>splitter keys, new tokens</td><td><code>docs/design-rules/design-rules-index.html</code> keyboard-conventions; tokens stay in code</td></tr>
+        <tr><td>Splitter contract</td><td>its TSDoc (the design file retires there, DEC-16)</td></tr>
+        <tr><td>T1</td><td>none expected — the shell stays a window with no core logic</td></tr>
+      </table>
+    </div>
+
+    <h2 id="decided">Open questions — all ruled (review rounds 1–2)</h2>
+    <div data-item="open-questions">
+      <table>
+        <tr><th>#</th><th>Question</th><th>Decision</th></tr>
+        <tr><td>Q1</td><td>Seam with E-INSPWIN: who provides window-geometry persistence for its inspector windows?</td><td>E-PANELS provides the mechanism (W5, keyed by window label); whichever epic lands second adopts the other's — if E-INSPWIN lands first, W5 retrofits its windows.</td></tr>
+        <tr><td>Q2</td><td>Where does layout persist?</td><td>Shell-side <code>layout.json</code> in the app config dir (beside the notice markers). Not <code>localStorage</code>: it is per-origin, so dev and bundle would keep separate layouts and the e2e could not clear it from outside.</td></tr>
+        <tr><td>Q3</td><td>Is a size saved once for the app, or once per window?</td><td>
+          <table>
+            <tr><th>What</th><th>Saved</th><th>So</th></tr>
+            <tr><td>pane width, headers share, each column width</td><td>one value each, for the whole app</td><td>every flow opens at the same pane width; an inspector window showing a flow detail (E-INSPWIN) uses the same headers share as the main window; changing it in one place changes it everywhere</td></tr>
+            <tr><td>window size / position / maximized</td><td>one record per window label</td><td>the main window and each inspector window each reopen where they last were</td></tr>
+          </table>
+        </td></tr>
+        <tr><td>Q4</td><td>Is the saved layout versioned?</td><td>No version field. A file that does not parse into the current shape gives the whole default layout.</td></tr>
+        <tr><td>Q5</td><td>Do flow-list columns count as "panels"?</td><td>Yes — column widths are in this epic (W4).</td></tr>
+        <tr><td>Q6</td><td>Reset affordance — where?</td><td>Double-click a splitter or column handle resets that one; a "Reset layout" act resets all (placement is W2's).</td></tr>
+        <tr><td>Q7</td><td>May a panel collapse to zero?</td><td>No — min bounds only; closing the pane stays "deselect the flow".</td></tr>
+        <tr><td>Q8</td><td>DEC-36 records a known defect: below 1132&nbsp;px with the pane open, the rows scroll sideways and the label row does not, so labels and cells come apart. Column resizing touches exactly that row. Fix it here?</td><td>Yes — the label row moves into the rows' horizontal scroll container, so labels and cells move together at any width. It is the same file and the same template W4 already rewrites.</td></tr>
+        <tr><td>Q9</td><td>Columns in scope means widths only, or also reorder / hide?</td><td>Widths only. Reorder and hide change the arrangement, which this epic keeps fixed; a later epic if wanted.</td></tr>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
