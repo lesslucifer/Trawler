@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: fa6f0ad8784d55d922d03d0bb4ac0fc3b8bf90bb
+base: 2df4ed0755f384d878b848b3423859ce269cc108
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-panels-w2-splitters-design-result.html
+report_sha256: 1ed3d6ba19a34f0855a5162e92555444c93c411ff803415a81054b62f3800989
+date: 2026-11-03
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAIkF8fkkdpz/kXsXAUtkfGBigGkluRTbp/DoZarT0xKGcKQsp7Wf1X2x
+  uSMqXOj13+Utg7nxv33iBIGbtlL2YC
+  -----END SSH SIGNATURE-----
