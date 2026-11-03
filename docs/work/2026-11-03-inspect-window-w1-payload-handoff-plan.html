@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9aa1d9f34851f0dfae0bd" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W1 plan: hand data to a window of its own</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W1 — hand data to a window of its own</h1>
+      <p>The decision record and the shell plumbing that every later WU stands on: an opener hands a payload by value, the
+        shell creates or focuses one window per key, and that window claims its payload once.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W1</span> · branch
+        <code>wu/inspect-window/payload-handoff</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      <code>openDataWindow({key, title, bytes, typeHint?})</code> opens a native window labelled
+      <code>data-&lt;hex(key)&gt;</code> titled <code>title</code>, or focuses the open one with that key without touching
+      its payload; the new window's <code>takeDataPayload()</code> returns exactly the bytes and caption handed over, once,
+      and every data window closes with the main window.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · UC-9 window lifecycle · epic expected rows 2 (same key focuses, another key opens a second window, data
+      windows close with the main one) and 10 (the shell relays, the core is never called) · mints DEC-68 (the data window;
+      DEC-67 is held by <code>epic/panels</code>).
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">
+sequenceDiagram
+  participant O as opener (main window)
+  participant S as shell (data_window.rs)
+  participant D as data-&lt;hex(key)&gt;
+  O->>S: open_data_window — raw body: frame(caption, bytes)
+  alt label open or parked
+    S->>D: set_focus (payload untouched)
+  else new key
+    S->>S: park(label, payload)
+    S->>D: build window (same bundle, title)
+    D->>S: take_data_payload
+    S-->>D: raw frame, then nothing (claimed once)
+  end
+  Note over S,D: main Destroyed → every data-* destroyed · data-* Destroyed → its unclaimed payload dropped
+      </pre>
+      <div class="caption">Bytes travel as raw IPC bodies both ways; the frame is a 4-byte big-endian caption length, the
+        caption as JSON, then the bytes.</div>
+    </div>
+
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>DEC-68</td><td><code>docs/decisions/</code> + index</td><td>generic data tool fed by value; original / working
+        copy / view; no write-back; no core; the pane's evidence rule stops at the handed-over original</td></tr>
+      <tr><td>commands</td><td><code>ui/src-tauri/src/data_window.rs</code></td><td><code>open_data_window</code> (async,
+        raw body) · <code>take_data_payload</code> (raw response, empty when nothing is parked for the caller's label);
+        registered in both shell builds</td></tr>
+      <tr><td>lifecycle</td><td>same module, wired in <code>lib.rs</code></td><td>managed parking state + window-event hook,
+        in both builds</td></tr>
+      <tr><td>capability</td><td><code>capabilities/data-window.json</code></td><td><code>data-*</code>: core default, save
+        dialog, file write — nothing else; enabled in the e2e config too</td></tr>
+      <tr><td>front end</td><td><code>ui/src/dataWindow.ts</code></td><td><code>openDataWindow</code>,
+        <code>takeDataPayload</code>, the frame codec, and a browser fallback (named <code>window.open</code> + a registry
+        on the opener) for vite dev — no <code>.tsx</code></td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>State</th><th>Expected</th></tr>
+      <tr><td>open with a new key</td><td>one more <code>data-*</code> window, the opener's title, its payload claimable
+        once, byte-identical</td></tr>
+      <tr><td>open again with that key</td><td>no new window; the open one is focused; whatever is parked for it is
+        unchanged</td></tr>
+      <tr><td>another key</td><td>a second data window</td></tr>
+      <tr><td>main window destroyed</td><td>every data window is destroyed; nothing asks</td></tr>
+      <tr><td>non-data window claims</td><td>nothing</td></tr>
+      <tr><td>the app today</td><td>unchanged: no opener calls <code>openDataWindow</code> until W3</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>unit (Rust)</td><td><code>data_window.rs</code>: key → label stable, label-safe, injective (prefix keys,
+        unicode, empty); frame round-trip and refusal of short / overlong / non-JSON frames; park keeps the first payload,
+        take claims once, discard drops it; only the main window's destruction closes data windows</td></tr>
+      <tr><td>unit (TS)</td><td><code>dataWindow.test.ts</code>: frame codec round-trip and agreement with the Rust layout;
+        name mapping matches the shell's; the shell path invokes the two commands with raw bodies; the browser path parks
+        on the opener, focuses an open window without re-parking, and a child claims once</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/data_window.rs</code> on the mock runtime: a 10 MiB payload
+        round-trips byte-identical through both commands; two opens with one key yield one window titled by the first;
+        another key yields a second; destroying main destroys both. <code>xtask</code>'s registration test stays green
+        (both builds register what the app invokes) and a new xtask test holds every shipped capability enabled in the e2e
+        config</td></tr>
+      <tr><td>e2e</td><td>waived: no screen opens a data window until W3; W7's spec drives the real windows</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
