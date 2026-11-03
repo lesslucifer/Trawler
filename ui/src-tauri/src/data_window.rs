@@ -246,6 +246,13 @@ mod tests {
     }
 
     #[test]
+    fn the_data_window_capability_names_exactly_the_labels_the_shell_mints() {
+        let capability: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/data-window.json")).unwrap();
+        assert_eq!(capability["windows"], serde_json::json!([format!("{LABEL_PREFIX}*")]));
+    }
+
+    #[test]
     fn only_the_main_window_takes_the_data_windows_with_it() {
         assert!(closes_with(MAIN_WINDOW, "data-6b"));
         assert!(!closes_with(MAIN_WINDOW, MAIN_WINDOW));

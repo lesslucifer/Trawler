@@ -60,9 +60,10 @@ export function openInBrowser(payload: DataPayload, host: Window = window): void
     open.focus();
     return;
   }
-  registry(host).set(name, payload);
   const child = host.open(host.location.pathname, name);
-  if (child) browserWindows.set(name, child);
+  if (!child) return;
+  registry(host).set(name, payload);
+  browserWindows.set(name, child);
 }
 
 export function takeInBrowser(self: Window = window): DataPayload | null {

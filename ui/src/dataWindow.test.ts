@@ -116,6 +116,15 @@ test("in a browser, a closed window's key opens a new one", () => {
   expect(takeInBrowser(children[1] as unknown as Window)?.bytes).toEqual(new Uint8Array([2]));
 });
 
+test("in a browser, a blocked popup leaves nothing parked on the opener", () => {
+  const { host } = browserHost();
+  (host.open as ReturnType<typeof vi.fn>).mockReturnValueOnce(null);
+
+  openInBrowser(payload("browser-blocked"), host);
+
+  expect(host[PAYLOAD_REGISTRY]?.has(dataWindowLabel("browser-blocked")) ?? false).toBe(false);
+});
+
 test("in a browser, a window that is not a data window claims nothing", () => {
   expect(takeInBrowser({ name: "", opener: null } as unknown as Window)).toBeNull();
   expect(takeInBrowser({ name: "data-6b", opener: null } as unknown as Window)).toBeNull();

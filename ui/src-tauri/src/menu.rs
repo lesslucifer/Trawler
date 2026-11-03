@@ -7,9 +7,10 @@
 use tauri::menu::{AboutMetadata, Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Manager, Runtime};
 
+use crate::data_window::MAIN_WINDOW;
+
 pub const QUIT_ID: &str = "trawler-quit";
 const QUIT_ACCELERATOR: &str = "CmdOrCtrl+Q";
-const MAIN_WINDOW: &str = "main";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MenuAction {
