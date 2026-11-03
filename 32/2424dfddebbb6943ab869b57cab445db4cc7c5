@@ -1,0 +1,28 @@
+schema: cr/v5
+scope: "WU panels/splitter -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W3
+branch: wu/panels/splitter
+base: cf09e4be260f75f58256f38f5241c0b39fc7201e
+head: 322424dfddebbb6943ab869b57cab445db4cc7c5
+diff_sha256: 5fa0a30e9cf343e84a59784752633b5f4986120ab7398a0d8e6c401cfd34d8dc
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 3
+    nit: 2
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 2, verified: 2 }
+findings: { found: 5, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "SavedLayout.columns is persisted but nothing in FlowList reads it, so paneBounds rests on widths the list does not render"
+    waived: "fixed after this round in 5d15f282 (FlowList renders the saved columns); outside the range this note binds"
+verdict: FAIL
+date: 2026-11-03
