@@ -18,11 +18,16 @@ export const HEADERS_SHARE: Bounds & { initial: number } = {
   max: share("zone-max"),
 };
 
-const ROW_PADDING = 2 * px("4");
-const CELL_GAP = px("3");
+export const ROW_CHROME = { inset: "px-4", gap: "gap-3" } as const;
+
+const tokenOf = (cls: string) => cls.slice(cls.indexOf("-") + 1);
+const ROW_PADDING = 2 * px(tokenOf(ROW_CHROME.inset));
+const CELL_GAP = px(tokenOf(ROW_CHROME.gap));
 const PATH_MIN = px("path-min");
 const SPLIT_LINE = 1;
 
+// The time column holds the cross-day timestamp an import produces (115.2px)
+// plus the source mark's reserved 16px box; the mark never enters the arithmetic.
 export const DEFAULT_COLUMNS: ColumnWidths = { time: 160, method: 70, host: 180, status: 70, size: 90 };
 
 export const DEFAULT_LAYOUT: SavedLayout = {
@@ -30,6 +35,10 @@ export const DEFAULT_LAYOUT: SavedLayout = {
   headersShare: HEADERS_SHARE.initial,
   columns: DEFAULT_COLUMNS,
 };
+
+export function columnTemplate({ time, method, host, status, size }: ColumnWidths): string {
+  return `${time}px ${method}px ${host}px 1fr ${status}px ${size}px`;
+}
 
 export function clamp(value: number, { min, max }: Bounds): number {
   return Math.min(Math.max(value, min), max);

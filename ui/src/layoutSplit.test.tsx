@@ -129,6 +129,17 @@ describe("the user-sized splits, through the shell's layout store", () => {
     expect(writes()).toEqual([["layout_write", { layout: { ...wire, pane: 700 } }]]);
   });
 
+  it("saves a drag under a scaled display as whole pixels", async () => {
+    const ui = await launch();
+    fireEvent.pointerDown(ui.paneSplitter(), { button: 0, clientX: 1000, pointerId: 1 });
+    fireEvent.pointerMove(ui.paneSplitter(), { clientX: 949.5, pointerId: 1 });
+    fireEvent.pointerUp(ui.paneSplitter(), { pointerId: 1 });
+    settle();
+    const [[, args]] = writes() as unknown as [[string, { layout: typeof wire }]];
+    expect(Number.isInteger(args.layout.pane)).toBe(true);
+    expect(args.layout.pane).toBe(651);
+  });
+
   it("puts every size back on the shell's Reset Layout", async () => {
     const ui = await launch();
     act(() => bridge.listeners.get(RESET_LAYOUT_EVENT)?.());

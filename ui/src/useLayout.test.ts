@@ -114,4 +114,15 @@ describe("useLayout", () => {
     await act(async () => vi.advanceTimersByTime(LAYOUT_WRITE_MS));
     expect(result.current.layout).toEqual(DEFAULT_LAYOUT);
   });
+
+  it("saves a pane width the shell can store, whole pixels, from a fractional drag", async () => {
+    const { store } = stubStore();
+    const { result } = await mount(store);
+    act(() => {
+      result.current.setPane(600.5);
+      result.current.commit();
+    });
+    act(() => vi.advanceTimersByTime(LAYOUT_WRITE_MS));
+    expect(store.write).toHaveBeenCalledWith({ ...DEFAULT_LAYOUT, pane: 601 });
+  });
 });

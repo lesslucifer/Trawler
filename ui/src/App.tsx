@@ -1170,6 +1170,7 @@ export default function App({
     >
       {closeDialog}
       <FlowList
+        columns={split.layout.columns}
         flows={flows}
         selectedId={inspected ?? (pane?.kind === "composer" ? seedId : null)}
         onSelect={inspect}

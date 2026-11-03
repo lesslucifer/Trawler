@@ -82,6 +82,7 @@ export function FlowDetail({
 }) {
   const [leg, setLeg] = useState<Leg>("request");
   const [measure, height] = useHeight();
+  const [measureHeaders, headersHeight] = useHeight();
 
   // The list keeps focus when Enter opens the panel, so the origin is read once
   // at mount — before anything inside the panel can take focus — and Esc is
@@ -124,6 +125,8 @@ export function FlowDetail({
   }
 
   const headers = leg === "request" ? flow.request_headers : flow.response_headers;
+  const ceiling = split.layout.headersShare;
+  const headersAt = height > 0 ? Math.min(ceiling, headersHeight / height) : ceiling;
 
   return (
     <div ref={measure} data-testid="detail" className="flex h-full flex-col font-ui text-ink">
@@ -161,11 +164,12 @@ export function FlowDetail({
           panel and scrolls inside itself, the body fills the rest and scrolls
           inside itself, and the panel as a whole never scrolls. The share is a
           ceiling, so a short leg keeps its own height and the splitter sits
-          under its last row. */}
+          under its last row — which is where a drag or a step starts from. */}
       <div
+        ref={measureHeaders}
         data-testid="headers-zone"
         className="flex min-h-0 flex-col"
-        style={{ maxHeight: `${split.layout.headersShare * 100}%` }}
+        style={{ maxHeight: `${ceiling * 100}%` }}
       >
         <Section title={`Headers · ${headers.length}`} className="flex min-h-0 flex-col">
           <div data-testid="headers-scroll" className="relative min-h-0 overflow-auto">
@@ -178,14 +182,14 @@ export function FlowDetail({
           axis="y"
           dir={1}
           perPx={1 / Math.max(height, 1)}
-          value={split.layout.headersShare}
+          value={headersAt}
           min={HEADERS_SHARE.min}
           max={HEADERS_SHARE.max}
           onChange={split.setHeadersShare}
           onCommit={split.commit}
           onReset={split.resetHeadersShare}
           label="headers height"
-          valueText={`${Math.round(split.layout.headersShare * 100)} % of the pane`}
+          valueText={`${Math.round(headersAt * 100)} % of the pane`}
         />
       </div>
 

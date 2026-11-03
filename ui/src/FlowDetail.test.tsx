@@ -381,3 +381,30 @@ test("the pane's height turns a dragged pixel into a share", () => {
     tall.mockRestore();
   }
 });
+
+test("splitter B starts from where a short leg puts it, not from the ceiling above it", () => {
+  const setHeadersShare = vi.fn();
+  const heights = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      return { height: this.dataset.testid === "headers-zone" ? 80 : 400 } as DOMRect;
+    });
+  try {
+    render(
+      <FlowDetail
+        split={{ ...still, layout: { ...DEFAULT_LAYOUT, headersShare: 0.5 }, setHeadersShare }}
+        api={stubApi()}
+        flow={view()}
+        onClose={() => {}}
+      />,
+    );
+    const splitter = screen.getByRole("separator", { name: "headers height" });
+    expect(splitter).toHaveAttribute("aria-valuenow", "0.2");
+    expect(splitter).toHaveAttribute("aria-valuetext", "20 % of the pane");
+    expect(screen.getByTestId("headers-zone")).toHaveStyle({ maxHeight: "50%" });
+    fireEvent.keyDown(splitter, { key: "ArrowUp" });
+    expect(setHeadersShare.mock.lastCall?.[0]).toBeCloseTo(0.18);
+  } finally {
+    heights.mockRestore();
+  }
+});

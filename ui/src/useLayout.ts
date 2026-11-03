@@ -90,7 +90,7 @@ export function useLayout(store: LayoutStore = shell): LayoutControls {
   return useMemo(
     () => ({
       layout,
-      setPane: (pane: number) => update((current) => ({ ...current, pane })),
+      setPane: (pane: number) => update((current) => ({ ...current, pane: Math.round(pane) })),
       setHeadersShare: (headersShare: number) => update((current) => ({ ...current, headersShare })),
       resetPane: () => update((current) => ({ ...current, pane: DEFAULT_LAYOUT.pane })),
       resetHeadersShare: () => update((current) => ({ ...current, headersShare: DEFAULT_LAYOUT.headersShare })),
