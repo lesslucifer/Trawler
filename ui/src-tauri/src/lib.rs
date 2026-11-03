@@ -4,6 +4,8 @@
 
 #[cfg(test)]
 mod bundle;
+mod core;
+mod core_address;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -11,9 +13,7 @@ mod reach;
 mod route;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
-
-#[cfg(feature = "e2e")]
-mod e2e_core_address;
+pub mod supervisor;
 
 #[cfg(feature = "scenario")]
 mod scenario;
@@ -31,12 +31,25 @@ pub fn core_args(
     }
 }
 
+use tauri::Manager;
+
 pub fn run() {
-    let builder = tauri::Builder::default()
+    let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
+    let builder = tauri::Builder::default();
+    // Only an owned core holds the fixed ports, so only then does a second
+    // launch hand over to the first; an attached app (the e2e) never yields to
+    // a Trawler already running on this machine.
+    let builder = if mode == core::Mode::Own {
+        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| core::focus_main(app)))
+    } else {
+        builder
+    };
+    let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .menu(menu::build)
-        .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()));
+        .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()))
+        .setup(move |app| core::setup(app, mode));
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         setup::ca_trusted,
@@ -59,20 +72,26 @@ pub fn run() {
         setup::show_notes,
         route::open_route,
         reach::confirm_reach,
-        reach::confirm_replace_proxy
+        reach::confirm_replace_proxy,
+        core::core_status,
+        core::core_log,
+        core::restart_core
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);
     #[cfg(feature = "e2e")]
-    let builder = builder
-        .plugin(e2e_core_address::init())
-        .plugin(tauri_plugin_wdio::init())
-        .plugin(tauri_plugin_wdio_webdriver::init());
+    let builder =
+        builder.plugin(tauri_plugin_wdio::init()).plugin(tauri_plugin_wdio_webdriver::init());
 
-    builder
-        .build(tauri::generate_context!())
-        .expect("error while running trawler-ui")
-        .run(|_, _| {});
+    builder.build(tauri::generate_context!()).expect("error while running trawler-ui").run(
+        |app, event| {
+            if let tauri::RunEvent::Exit = event {
+                if let Some(core) = app.try_state::<core::Core>() {
+                    core.stop();
+                }
+            }
+        },
+    );
 }
 
 #[cfg(test)]

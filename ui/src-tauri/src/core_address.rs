@@ -1,17 +1,11 @@
-// The e2e drives this window against a core on an ephemeral port, so the port
-// cannot be baked into the bundle — the run's launcher passes it down as this
-// variable and the window reads it before its first script runs.
-//
 // Before first paint is the whole point. Telling the page later means navigating
 // it, and a navigation is what the shell cannot survive here: WKWebView stops
 // the custom-scheme tasks the Tauri IPC rides on, and wry answers a stopped task
 // with an Objective-C exception across a nounwind boundary, which aborts the
 // process.
-const CORE_ADDRESS_VAR: &str = "TRAWLER_E2E_API";
-
-pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
-    let builder = tauri::plugin::Builder::new("trawler-e2e-core-address");
-    match core_address_script(std::env::var(CORE_ADDRESS_VAR).ok().as_deref()) {
+pub fn init<R: tauri::Runtime>(address: &str) -> tauri::plugin::TauriPlugin<R> {
+    let builder = tauri::plugin::Builder::new("trawler-core-address");
+    match core_address_script(Some(address)) {
         Some(script) => builder.js_init_script(script),
         None => builder,
     }
@@ -37,8 +31,8 @@ mod tests {
         );
     }
 
-    // No variable means a developer launching the app by hand, who must keep the
-    // shipped default rather than a global pinning them to nothing.
+    // A blank address would pin every webview to nowhere; the shipped default
+    // is the better guess.
     #[test]
     fn an_absent_or_blank_address_injects_nothing() {
         assert!(core_address_script(None).is_none());

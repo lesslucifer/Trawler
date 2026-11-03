@@ -20,12 +20,12 @@ export const PORTS_FILE = resolve(here, ".core-ports.json");
 // file passed: a service that fails before any spec starts leaves wdio green.
 const RUN_TALLY = resolve(here, ".run-tally.json");
 
-// The app reads its core's address from this variable at window creation, before
-// its first script runs (`e2e_core_address` in the shell). The launcher spawns
+// This variable attaches the app to the run's core (attach mode): it spawns none and
+// injects the address before the first script runs (`core_address`). The launcher spawns
 // the app, so exporting it here is what puts it in the app's environment — and it
 // is why no spec ever navigates the window: a reload mid-run stops the WKWebView
 // scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
-const CORE_ADDRESS_VAR = "TRAWLER_E2E_API";
+const CORE_ADDRESS_VAR = "TRAWLER_API";
 
 // The app writes its dismissed-notice markers into the real user config dir, so
 // they outlive a run. A marker left by an earlier one would silence the clear ask

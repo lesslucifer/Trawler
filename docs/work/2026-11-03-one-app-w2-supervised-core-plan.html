@@ -131,7 +131,7 @@ flowchart LR
         <code>trawler-ui --core</code> on port 0: running with a pid and answering <code>/flows</code> → SIGKILL that
         pid → <code>exited{signal: 9}</code> observed → <code>restart</code> → running on the same ports → stop → both
         ports bind again and the pid is gone. Log lines reached the ring and the observer</td></tr>
-      <tr><td>integration</td><td>same file · <code>a_core_outlives_no_supervisor_that_was_killed</code></td><td>the
+      <tr><td>integration</td><td>same file · <code>a_killed_supervisor_leaves_no_core_behind</code></td><td>the
         test binary re-executes itself in an ignored supervisor role, which starts a core and reports its pid. The test
         SIGKILLs the supervisor, then the core pid disappears and its ports bind again</td></tr>
       <tr><td>integration</td><td>same file · <code>a_taken_port_is_named_before_any_window</code></td><td>a held
@@ -143,7 +143,7 @@ flowchart LR
       <tr><td>unit</td><td><code>core.rs</code></td><td>attach selection (set, blank, absent); the conflict sentence names
         the port; CA dir resolution; adoption copies pem + key once, never overwrites, and ignores a half CA</td></tr>
       <tr><td>unit</td><td><code>core_address.rs</code></td><td>the three existing escaping tests, kept</td></tr>
-      <tr><td>unit</td><td><code>xtask/tests/ui.rs</code></td><td>every tauri config sets <code>"create": false</code>
+      <tr><td>unit</td><td><code>xtask/src/ui.rs</code> · <code>every_config_leaves_the_window_to_the_setup_hook</code></td><td>every tauri config sets <code>"create": false</code>
         on its window</td></tr>
       <tr><td>e2e</td><td><code>waived: "the owned-core journeys J1–J3 land in W5 (one-app.spec.ts); the existing
         specs keep running, now attached through TRAWLER_API (J4)"</code></td><td>—</td></tr>
