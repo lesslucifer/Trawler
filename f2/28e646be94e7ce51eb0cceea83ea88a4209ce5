@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: f228e646be94e7ce51eb0cceea83ea88a4209ce5
+base: 2c3178d57524c46b9b544ac31aef67eea14611a5
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-panels-w1-layout-store-result.html
+report_sha256: 8488357793e355d4d36b8567049cf8de2e1d70771ce8d43d48002d302793ffa7
+date: 2026-11-03
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDHHC3gp/V8l1SWyP96an1nogKSfMHWez+DAxJBljB3vMk7NsAkc5wusz
+  g8G8DmzvZEzkwd1OrggLSlxkDWHAwM
+  -----END SSH SIGNATURE-----
