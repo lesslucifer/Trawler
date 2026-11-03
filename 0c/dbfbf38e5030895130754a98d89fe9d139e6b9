@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 0cdbfbf38e5030895130754a98d89fe9d139e6b9
+base: deb45e3aa1985dbfe073de7d6b69a2eaad0a0892
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-one-app-w1-one-workspace-result.html
+report_sha256: cc3a4ab70e6669b9df5a327c79e272813a97cba8cd889a1d1e5a0472fe0b62f6
+date: 2026-11-03
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAHJ8TbfsjxORh7gn32lMLiPgEu3RQfDIKfp87Ct/Wz7mqrSsEn0ihMLH
+  Y0xrsXWEcT04xGnjzPFm24mAwaoroM
+  -----END SSH SIGNATURE-----
