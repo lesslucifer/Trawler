@@ -47,7 +47,7 @@
       <tr><td>5</td><td>the modified marker, undo/redo and restore original; the filtered-view marker naming its producer</td><td>run mockup · reuse or proposal</td></tr>
       <tr><td>6</td><td>what copy and save deliver: original, working copy or this view</td><td>run mockup · owner call</td></tr>
       <tr><td>7</td><td>the decoder panel: base64, URL, JWT; replace, open in a new window, the reasons a decode fails</td><td>run mockup</td></tr>
-      <tr><td>8</td><td>the entry point on BodyViewer's toolbar and CutMarker, and its key (Q9)</td><td>run · <code>CutMarker</code> amendment</td></tr>
+      <tr><td>8</td><td>the entry point on BodyViewer's toolbar and CutMarker, and its key (Q9)</td><td>run · the <code>CutMarker</code> delta, declared in the run</td></tr>
       <tr><td>9</td><td>the window's default and minimum size (DEC-36 is untouched)</td><td>run · owner call · proposals (config)</td></tr>
       <tr><td>10</td><td>key paths for find, filter, undo, decode and open</td><td>run keyboard item · rulebook vocabulary proposals</td></tr>
     </table>
@@ -92,7 +92,7 @@
       <pre class="mermaid">
 flowchart TD
   A["substrate: registry + rulebook, frozen"] --> B["run: Given · live mockup · keyboard · proposals · blocked-on"]
-  B --> C["component designs: EditSurface · FormTable · HexView · CutMarker amended"]
+  B --> C["component designs: EditSurface · FormTable · HexView; the CutMarker delta in the run"]
   C --> V{"verify-doc + headless render"}
   V -- red --> B
   V -- green --> H["owner's round"]
@@ -108,7 +108,7 @@ flowchart TD
     <table data-c="docs">
       <tr><th>Path</th><th>Tier</th><th>Why</th></tr>
       <tr><td><code>docs/work/2026-11-03-data-window-design-run.html</code></td><td>T3</td><td>the run</td></tr>
-      <tr><td><code>docs/work/components/edit-surface.html</code> · <code>form-table.html</code> · <code>hex-view.html</code> · <code>cut-marker.html</code></td><td>T3</td><td>the component designs W3–W5 build</td></tr>
+      <tr><td><code>docs/work/components/edit-surface.html</code> · <code>form-table.html</code> · <code>hex-view.html</code></td><td>T3</td><td>the component designs W3–W5 build. CutMarker already ships, so its amendment is a delta inside the run</td></tr>
       <tr><td>this plan · its result</td><td>T3</td><td>the WU's own docs</td></tr>
     </table>
     <p data-c="t2">No T2 synthesis: a design reaches UC-9 / UC-5 and the rulebook after it is built (W7), so
