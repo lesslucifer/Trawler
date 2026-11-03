@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: c70b513351c476efb91229e1debb9f4f201f7888
+base: cf09e4be260f75f58256f38f5241c0b39fc7201e
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-panels-w3-splitter-result.html
+report_sha256: 8fed5287e5b7ca99eb9434ee2a85d542daf8cf73d607766700ec633c32b91a80
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDnhRfxwkQ/oQk3L4qIINelctv5B5wN/2g+i2pWl7XfhNrsH61yGgHQCK
+  rOOExOGD8nEgXe57Y0zOk9tYYXnzUP
+  -----END SSH SIGNATURE-----
