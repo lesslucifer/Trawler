@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 644061089550ae4430f4711e5ea9e6a1603efd92
+base: a74695b49ed63ebf8f9b2fde11298b68f29ea6ee
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-04-panels-epic-result.html
+report_sha256: 6c60e24a21417a56eff2549e85248d9f658598230130632c5ffe6a7bfdea2d14
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDOCsxwpt7G23T2HlzGM4O1seE8O27+081giPxhT1OovLN54YtZU980nx
+  AFFm7OkFiwAiOT3T1MZKfe19Zka7wP
+  -----END SSH SIGNATURE-----
