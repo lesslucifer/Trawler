@@ -1,0 +1,155 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { expect, test } from "vitest";
+import { line, RUNNING, coreStub } from "./coreStub";
+import { mergeLog, useCoreLog, useCoreService } from "./useCoreService";
+
+test("an in-order arrival is appended", () => {
+  expect(mergeLog([line(0, "a")], [line(1, "b"), line(2, "c")])).toEqual([
+    line(0, "a"),
+    line(1, "b"),
+    line(2, "c"),
+  ]);
+});
+
+test("a line heard live and read in the snapshot shows once, in sequence order", () => {
+  expect(mergeLog([line(5, "live")], [line(4, "old"), line(5, "live")])).toEqual([
+    line(4, "old"),
+    line(5, "live"),
+  ]);
+});
+
+test("the tail keeps only its newest entries", () => {
+  const many = Array.from({ length: 2005 }, (_, seq) => line(seq, `line ${seq}`));
+  const kept = mergeLog([], many);
+  expect(kept).toHaveLength(2000);
+  expect(kept[0].seq).toBe(5);
+  expect(mergeLog([line(0, "a"), line(1, "b")], [line(2, "c")], 2)).toEqual([line(1, "b"), line(2, "c")]);
+});
+
+test("the state is read once, then followed", async () => {
+  const stub = coreStub({ state: RUNNING });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(result.current.state).toEqual(RUNNING));
+  act(() => stub.emitState({ state: "exited", code: null, signal: 9 }));
+  expect(result.current.state).toEqual({ state: "exited", code: null, signal: 9 });
+});
+
+test("an event heard before the first read answers is not overwritten by it", async () => {
+  let answer: (state: typeof RUNNING) => void = () => {};
+  const stub = coreStub();
+  stub.call.mockImplementation((command: string) =>
+    command === "core_status" ? new Promise((resolve) => (answer = resolve)) : Promise.resolve([]),
+  );
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(stub.on).toHaveBeenCalled());
+  act(() => stub.emitState({ state: "starting" }));
+  await act(async () => answer(RUNNING));
+  expect(result.current.state).toEqual({ state: "starting" });
+});
+
+test("a restart is in flight until it answers, then its state stands", async () => {
+  let finish: () => void = () => {};
+  const restarted = { ...RUNNING, pid: 1 };
+  const stub = coreStub({
+    state: RUNNING,
+    restart: () => new Promise((resolve) => (finish = () => resolve(restarted))),
+  });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  act(() => void result.current.restart());
+  expect(result.current.restarting).toBe(true);
+  await act(async () => finish());
+  expect(result.current.restarting).toBe(false);
+  expect(result.current.state).toEqual(restarted);
+  expect(stub.call.mock.calls.filter(([command]) => command === "restart_core")).toHaveLength(1);
+});
+
+test("a refused restart is kept as its sentence", async () => {
+  const stub = coreStub({
+    state: RUNNING,
+    restart: () => Promise.reject("Another program is using port 7420. Quit it, then try again."),
+  });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await act(() => result.current.restart());
+  expect(result.current.refusal).toBe("Another program is using port 7420. Quit it, then try again.");
+  expect(result.current.restarting).toBe(false);
+});
+
+test("the log joins its snapshot and live lines, and lets go on unmount", async () => {
+  const stub = coreStub({ log: [line(0, "snapshot")] });
+  const { result, unmount } = renderHook(() => useCoreLog(stub.bridge));
+  await waitFor(() => expect(result.current).toEqual([line(0, "snapshot")]));
+  act(() => stub.emitLog(line(1, "live")));
+  act(() => stub.emitLog(line(1, "live")));
+  expect(result.current).toEqual([line(0, "snapshot"), line(1, "live")]);
+  unmount();
+  await waitFor(() => expect(stub.unlisten).toHaveBeenCalled());
+});
+
+test("a refusal gives way once the core is running again", async () => {
+  const stub = coreStub({ state: RUNNING, restart: () => Promise.reject("refused") });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await act(() => result.current.restart());
+  expect(result.current.refusal).toBe("refused");
+  act(() => stub.emitState({ ...RUNNING, pid: 2 }));
+  expect(result.current.refusal).toBeNull();
+});
+
+test("a restart's reply never overwrites a newer state event", async () => {
+  let finish: () => void = () => {};
+  const stub = coreStub({
+    state: RUNNING,
+    restart: () => new Promise((resolve) => (finish = () => resolve({ ...RUNNING, pid: 1 }))),
+  });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(result.current.state).toEqual(RUNNING));
+  act(() => void result.current.restart());
+  act(() => stub.emitState({ state: "exited", code: null, signal: 9 }));
+  await act(async () => finish());
+  expect(result.current.state).toEqual({ state: "exited", code: null, signal: 9 });
+});
+
+function heldListener(stub: ReturnType<typeof coreStub>) {
+  let register: () => void = () => {};
+  const registered = new Promise<void>((resolve) => (register = resolve));
+  const listen = stub.on.getMockImplementation()!;
+  stub.on.mockImplementation(async (event, handler) => {
+    await registered;
+    return listen(event, handler);
+  });
+  return () => act(async () => register());
+}
+
+test("the state is read only once its listener is registered", async () => {
+  const stub = coreStub({ state: RUNNING });
+  const register = heldListener(stub);
+  renderHook(() => useCoreService(stub.bridge));
+  await act(async () => {});
+  expect(stub.call).not.toHaveBeenCalledWith("core_status");
+  await register();
+  await waitFor(() => expect(stub.call).toHaveBeenCalledWith("core_status"));
+});
+
+test("the log is read only once its listener is registered", async () => {
+  const stub = coreStub({ log: [line(0, "snapshot")] });
+  const register = heldListener(stub);
+  const { result } = renderHook(() => useCoreLog(stub.bridge));
+  await act(async () => {});
+  expect(stub.call).not.toHaveBeenCalledWith("core_log");
+  await register();
+  await waitFor(() => expect(result.current).toEqual([line(0, "snapshot")]));
+});
+
+test("inside the app, settings opens through the shell", async () => {
+  const stub = coreStub({ state: RUNNING });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(result.current.openSettings).not.toBeNull());
+  act(() => result.current.openSettings?.());
+  expect(stub.call).toHaveBeenCalledWith("open_settings");
+});
+
+test("with no app around it, there is no settings to open", async () => {
+  const stub = coreStub({ state: null });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(stub.call).toHaveBeenCalledWith("core_status"));
+  expect(result.current.openSettings).toBeNull();
+});

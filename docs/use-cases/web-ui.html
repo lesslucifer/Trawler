@@ -24,7 +24,7 @@
       + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
       UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
       way into setup, by <span class="badge id">E-ONBRVP.W2</span> · This machine's status by
-      <span class="badge id">E-ONBRVP.W3</span></div>    </div>
+      <span class="badge id">E-ONBRVP.W3</span> · UC-SVC by <span class="badge id">E-ONEAPP.W3</span></div>    </div>
   </header>
   <main>
 
@@ -78,8 +78,9 @@
         <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a>): the app runs its core as a
         child process on <code>:7420</code>/<code>:7421</code> and opens its window once that core is ready. A taken
         port is a native dialog naming it, and no window opens. A second launch brings the first window forward.
-        Every quit stops the core, and the window outlives a core that dies. <code>TRAWLER_API=&lt;url&gt;</code>
-        attaches to an existing core instead, starting none.</li>
+        Every quit stops the core, and the window outlives a core that dies: its "isn't answering" statement then
+        names the exit and offers <em>restart</em> in place of <em>try again</em> (<span class="badge id">E-ONEAPP.W3</span>).
+        <code>TRAWLER_API=&lt;url&gt;</code> attaches to an existing core instead, starting none.</li>
         <li>The app is a pure <em>cross-origin</em> client of <code>127.0.0.1:7421</code> — it reaches no
         core internals; everything it shows is equally reachable with <code>curl</code>. Because the
         webview origin differs from the API's, every API response carries an open CORS grant
@@ -375,6 +376,22 @@
       viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
       <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
     </div>
+
+    <h2 id="uc-svc">UC-SVC — See and restart the capture service</h2>
+    <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens a Settings window on the Capture service page
+      (<span class="badge id">E-ONEAPP.W3</span>, <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a>
+      rules 13–14). It follows the service live and closes without quitting the app. The web shell has no Settings, so its capture menu offers none.</p>
+    <table data-c="uc-svc-states">
+      <tr><th>The service is</th><th>The page shows</th><th>It offers</th></tr>
+      <tr><td>starting</td><td>⟳ starting</td><td>restart, held beside "waiting for the capture service to start…"</td></tr>
+      <tr><td>running</td><td>✓ running · process id · running since (local time) · proxy and control API addresses, each copied on click</td><td>restart, which first warns that it clears the captured list</td></tr>
+      <tr><td>exited</td><td>⚠ stopped — exit code <em>n</em> or killed (signal <em>n</em>) · the last addresses</td><td>restart, at once: nothing is left to clear. Never restarted on its own (Q12)</td></tr>
+      <tr><td>attached</td><td>◐ attached — started outside this app · its address</td><td>nothing: the app neither restarts it nor has its log</td></tr>
+    </table>
+    <p class="kd" data-c="uc-svc-log">The log shows up to 2000 of the service's own lines, newest last, marking where each
+      core started, so a crash's last lines outlive the restart after it. It follows new lines while scrolled to the bottom,
+      and offers <em>show newest</em> otherwise. A failed restart is said with its reason and a <em>try again</em>. There is
+      no stop: quitting stops the service (Q14).</p>
 
     <h2 id="uc-onboard">UC-ONBOARD — Set up capture, for this machine or another device</h2>
     <div data-c="uc-onboard-contract">

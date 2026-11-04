@@ -8,7 +8,10 @@ import {
   readCoreStatus,
   restartCore,
   type CoreState,
+  type LogEntry,
 } from "./coreService";
+
+const line: LogEntry = { seq: 0, kind: "line", text: "INFO trawler: proxy listening" };
 
 const running: CoreState = {
   state: "running",
@@ -19,10 +22,10 @@ const running: CoreState = {
 };
 
 test("status, log and restart go to the shell's three core commands", async () => {
-  const call = vi.fn(async (command: string) => (command === "core_log" ? ["line"] : running)) as never;
+  const call = vi.fn(async (command: string) => (command === "core_log" ? [line] : running)) as never;
 
   await expect(readCoreStatus(call)).resolves.toEqual(running);
-  await expect(readCoreLog(call)).resolves.toEqual(["line"]);
+  await expect(readCoreLog(call)).resolves.toEqual([line]);
   await expect(restartCore(call)).resolves.toEqual(running);
 
   expect(call).toHaveBeenNthCalledWith(1, "core_status");
@@ -54,14 +57,14 @@ test("state and log events hand over their payloads", async () => {
     return () => undefined;
   }) as never;
   const states: CoreState[] = [];
-  const lines: string[] = [];
+  const lines: LogEntry[] = [];
 
   await onCoreState((state) => states.push(state), on);
-  await onCoreLog((line) => lines.push(line), on);
+  await onCoreLog((entry) => lines.push(entry), on);
   handlers.get(CORE_STATE_EVENT)?.({ payload: { state: "exited", code: null, signal: 9 } });
-  handlers.get(CORE_LOG_EVENT)?.({ payload: "INFO trawler: proxy listening" });
+  handlers.get(CORE_LOG_EVENT)?.({ payload: line });
 
   expect(states).toEqual([{ state: "exited", code: null, signal: 9 }]);
-  expect(lines).toEqual(["INFO trawler: proxy listening"]);
+  expect(lines).toEqual([line]);
   expect([CORE_STATE_EVENT, CORE_LOG_EVENT]).toEqual(["core://state", "core://log"]);
 });

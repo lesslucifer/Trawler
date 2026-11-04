@@ -1,29 +1,19 @@
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
-use trawler_ui_lib::supervisor::{CoreEvent, CoreState, Launch, StartError, Supervisor};
+use trawler_ui_lib::supervisor::{CoreEvent, CoreState, LogEntry, Logged, StartError, Supervisor};
 
-const PATIENCE: Duration = Duration::from_secs(20);
+mod common;
+use common::{launch, PATIENCE};
+
 const ROLE_VAR: &str = "TRAWLER_SUPERVISOR_ROLE_CA";
 // libtest prints the test's name with no newline before the role speaks, so the
 // report is found inside a line, never at its start.
 const CORE_REPORT: &str = "supervised core: ";
-
-fn launch(ca_dir: &Path, proxy_port: u16, api_port: u16) -> Launch {
-    Launch {
-        program: PathBuf::from(env!("CARGO_BIN_EXE_trawler-ui")),
-        leading_args: vec![trawler_ui_lib::CORE_FLAG.into()],
-        ca_dir: ca_dir.to_path_buf(),
-        proxy_port,
-        api_port,
-        ready_timeout: PATIENCE,
-        grace: Duration::from_secs(5),
-    }
-}
 
 fn watched() -> (Arc<dyn Fn(CoreEvent) + Send + Sync>, mpsc::Receiver<CoreEvent>) {
     let (tx, rx) = mpsc::channel();
@@ -105,8 +95,51 @@ fn a_supervised_core_survives_a_kill_restarts_on_its_ports_and_leaves_on_stop() 
         })
         .collect();
     assert_eq!(states, ["starting", "running", "exited", "starting", "running", "exited"]);
-    assert!(seen.iter().any(|e| matches!(e, CoreEvent::Log(line) if line.contains("listening"))));
-    assert!(supervisor.log().iter().any(|line| line.contains("listening")));
+    assert!(seen.iter().any(
+        |e| matches!(e, CoreEvent::Log(Logged { entry: LogEntry::Line { text }, .. }) if text.contains("listening"))
+    ));
+    assert!(supervisor.log().iter().any(
+        |logged| matches!(&logged.entry, LogEntry::Line { text } if text.contains("listening"))
+    ));
+    let starts: Vec<u32> = supervisor
+        .log()
+        .iter()
+        .filter_map(|logged| match logged.entry {
+            LogEntry::Start { pid, .. } => Some(pid),
+            LogEntry::Line { .. } => None,
+        })
+        .collect();
+    assert_eq!(starts, [pid, restarted_pid], "each core's lines begin under its own start mark");
+}
+
+#[test]
+fn restarts_asked_for_at_once_run_one_after_the_other() {
+    let ca = tempfile::tempdir().unwrap();
+    let (observer, _events) = watched();
+    let supervisor = Arc::new(Supervisor::start(launch(ca.path(), 0, 0), observer).unwrap());
+    let (_, proxy, api) = running(&supervisor.snapshot());
+
+    let restarts: Vec<_> = (0..2)
+        .map(|_| {
+            let supervisor = Arc::clone(&supervisor);
+            std::thread::spawn(move || supervisor.restart())
+        })
+        .collect();
+    let pids: Vec<u32> = restarts
+        .into_iter()
+        .map(|restart| {
+            let state = restart.join().unwrap().expect("each restart succeeds");
+            let (pid, restarted_proxy, restarted_api) = running(&state);
+            assert_eq!((restarted_proxy, restarted_api), (proxy, api));
+            pid
+        })
+        .collect();
+
+    let (current, _, _) = running(&supervisor.snapshot());
+    assert!(pids.contains(&current));
+    let replaced = pids.into_iter().find(|&pid| pid != current).expect("two cores were started");
+    eventually("the replaced core is gone", || !alive(replaced));
+    supervisor.stop();
 }
 
 #[test]

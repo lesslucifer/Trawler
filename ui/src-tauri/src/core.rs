@@ -5,7 +5,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
-use crate::supervisor::{CoreEvent, CoreState, Launch, StartError, Supervisor};
+use crate::supervisor::{CoreEvent, CoreState, Launch, Logged, Observer, StartError, Supervisor};
 
 pub const ATTACH_VAR: &str = "TRAWLER_API";
 pub const STATE_EVENT: &str = "core://state";
@@ -85,6 +85,31 @@ pub fn refusal(err: &StartError) -> String {
     }
 }
 
+pub fn restart_refusal(err: &StartError) -> String {
+    match err {
+        StartError::Conflict { port } => {
+            format!("Another program is using port {port}. Quit it, then try again.")
+        }
+        other => {
+            let sentence = other.to_string();
+            let mut chars = sentence.chars();
+            chars.next().map_or_else(String::new, |first| {
+                format!("{}{}.", first.to_uppercase(), chars.as_str())
+            })
+        }
+    }
+}
+
+pub fn observer<R: Runtime>(app: &AppHandle<R>) -> Observer {
+    let emitter = app.clone();
+    Arc::new(move |event| {
+        let _ = match event {
+            CoreEvent::State(state) => emitter.emit(STATE_EVENT, state),
+            CoreEvent::Log(logged) => emitter.emit(LOG_EVENT, logged),
+        };
+    })
+}
+
 pub fn setup<R: Runtime>(
     app: &mut tauri::App<R>,
     mode: Mode,
@@ -129,16 +154,7 @@ fn own<R: Runtime>(app: &AppHandle<R>) -> Result<Supervisor, StartError> {
         ready_timeout: READY_TIMEOUT,
         grace: STOP_GRACE,
     };
-    let emitter = app.clone();
-    Supervisor::start(
-        launch,
-        Arc::new(move |event| {
-            let _ = match event {
-                CoreEvent::State(state) => emitter.emit(STATE_EVENT, state),
-                CoreEvent::Log(line) => emitter.emit(LOG_EVENT, line),
-            };
-        }),
-    )
+    Supervisor::start(launch, observer(app))
 }
 
 fn refuse<R: Runtime>(app: &AppHandle<R>, err: &StartError) {
@@ -158,7 +174,7 @@ fn report(line: &str) {
 }
 
 pub fn focus_main<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = app.get_webview_window(crate::settings::MAIN_WINDOW) {
         let _ = window.unminimize();
         let _ = window.show();
         let _ = window.set_focus();
@@ -171,7 +187,7 @@ pub fn core_status(core: State<'_, Core>) -> CoreState {
 }
 
 #[tauri::command]
-pub fn core_log(core: State<'_, Core>) -> Vec<String> {
+pub fn core_log(core: State<'_, Core>) -> Vec<Logged> {
     match core.inner() {
         Core::Owned(supervisor) => supervisor.log(),
         Core::Attached(_) => Vec::new(),
@@ -189,7 +205,7 @@ pub async fn restart_core(core: State<'_, Core>) -> Result<CoreState, String> {
     tauri::async_runtime::spawn_blocking(move || supervisor.restart())
         .await
         .map_err(|err| err.to_string())?
-        .map_err(|err| err.to_string())
+        .map_err(|err| restart_refusal(&err))
 }
 
 #[cfg(test)]
@@ -223,6 +239,22 @@ mod tests {
         assert_eq!(
             sentence,
             "the capture service exited with code 1 before it was ready. Open Trawler again to retry."
+        );
+    }
+
+    #[test]
+    fn a_restart_refused_for_a_port_says_to_quit_its_holder_and_try_again() {
+        assert_eq!(
+            restart_refusal(&StartError::Conflict { port: 7420 }),
+            "Another program is using port 7420. Quit it, then try again."
+        );
+    }
+
+    #[test]
+    fn any_other_restart_refusal_is_one_capitalised_sentence() {
+        assert_eq!(
+            restart_refusal(&StartError::Exited { code: Some(1), signal: None }),
+            "The capture service exited with code 1 before it was ready."
         );
     }
 

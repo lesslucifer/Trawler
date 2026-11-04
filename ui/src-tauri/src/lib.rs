@@ -4,13 +4,14 @@
 
 #[cfg(test)]
 mod bundle;
-mod core;
+pub mod core;
 mod core_address;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod route;
+pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
@@ -49,6 +50,13 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .menu(menu::build)
         .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()))
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed)
+                && settings::ends_the_app(window.label())
+            {
+                window.app_handle().exit(0);
+            }
+        })
         .setup(move |app| core::setup(app, mode));
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -75,7 +83,8 @@ pub fn run() {
         reach::confirm_replace_proxy,
         core::core_status,
         core::core_log,
-        core::restart_core
+        core::restart_core,
+        settings::open_settings
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);
