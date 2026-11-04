@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W2
+branch: HEAD
+tests:
+  unit: { waived: "The WU adds no executable code; its artifacts are a design run and component designs, and every predicate over them is a verify-doc rule with its own tests in xtask." }
+  integration: { waived: "The contract is a green, closed, citable run: verify-doc asserts green, 6·run-closed asserts closed at this merge, design-scope and 9·design assert W3–W6 can cite it." }
+  e2e: { waived: "A design doc renders no surface a driver can touch; W7's data-window.spec.ts drives the built window." }
