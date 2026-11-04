@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W5
+branch: wu/inspect-window/form-text-hex-tools
+changes:
+  - path: "docs/work/2026-11-04-inspect-window-w5-form-text-hex-tools-plan.html"
+    tier: T3
+    action: added
+    distills: "W5's requirement, pieces, split against W6 and W7, expected result and test plan"
+  - path: "docs/work/2026-11-04-inspect-window-w5-form-text-hex-tools-result.html"
+    tier: T3
+    action: added
+    distills: "W5's outcome, deviations (caller-held marks and reveal on FormTable and HexView, find moved to find.ts, Esc on a table or dump leaves the field, the XML unit read from a tag line, text outside elements left as written), evidence, distillation and follow-ups"
+t2_waived: "no decision, use case or design rule changed: the form, text, XML and hex tools sit inside DEC-70's working copy, the component contract changes live in FormTable's and HexView's TSDoc, and UC-9's rows and the new keys land in T2 with W7 per the epic's distillation plan"
