@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 74f7a4979b09cb890d4b1d3ef3e8cf39be690761
+base: 7ccec09fb14f0b67987e4818f90732f151d4eb8c
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-sticky-ui-w2-e2e-distill-result.html
+report_sha256: 2e1104608c9f5e7ab18b2fe5f99192692c75c85c1cd3172fac5abd749a24f813
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBET+bSKr5T6aBxEMVOv7aflPuBWizOAR6iZEniPxxis+MJnLG+uUxuBG
+  FvLbIdRvQiAriyltNcc4M/IqnKRaUP
+  -----END SSH SIGNATURE-----
