@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU sticky-choices -> epic/sticky-ui"
+epic: E-STICKY
+wu: E-STICKY.W1
+branch: wu/sticky-ui/sticky-choices
+base: ea973847c1482d15ec0bdfbcb876b9950dc94fe6
+head: 8c631a3504a2669c1598adc0a0ce8ac59055e2da
+diff_sha256: 720c8468715f7f0302d278a88a17374f7997d85356f204c956f0f819b5ef0e57
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  by_finder:
+    correctness: { found: 4, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 2 }
+findings: { found: 7, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "Shell's go handler carries the remembered-platform rule (seed re-invoke, persist choose) rather than the onboarding machine or a hook"
+    waived: "every user dispatch routes through go and the reducer stays pure; view prefs are Shell state, so the rule sits with its one owner and nothing drifts"
+  - finding: "a rejected view_prefs_write is swallowed with no retry or notice, so a failed save loses that choice"
+    waived: "best-effort persistence by design, the same as useLayout's write; a UI preference lost on a failing disk is not worth a retry loop or an alarm"
+  - finding: "the shell types leg and body mode as enums but keeps lastPlatform an unvalidated string, splitting validation across the boundary"
+    waived: "the platform set is owned by the app (PLATFORM_IDS), which validates on read; the shell keeps it opaque so the set lives in one place"
+verdict: PASS
+date: 2026-11-04
