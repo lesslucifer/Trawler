@@ -66,10 +66,24 @@ fn signal_of(_: ExitStatus) -> Option<i32> {
     None
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LogEntry {
+    Start { pid: u32, at_ms: u64 },
+    Line { text: String },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Logged {
+    pub seq: u64,
+    #[serde(flatten)]
+    pub entry: LogEntry,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CoreEvent {
     State(CoreState),
-    Log(String),
+    Log(Logged),
 }
 
 pub type Observer = Arc<dyn Fn(CoreEvent) + Send + Sync>;
@@ -104,26 +118,30 @@ impl fmt::Display for StartError {
 
 #[derive(Debug)]
 pub struct LogRing {
-    lines: VecDeque<String>,
+    entries: VecDeque<Logged>,
     capacity: usize,
+    next_seq: u64,
 }
 
 impl LogRing {
     pub fn new(capacity: usize) -> Self {
-        Self { lines: VecDeque::with_capacity(capacity.min(LOG_LINES)), capacity }
+        Self { entries: VecDeque::with_capacity(capacity.min(LOG_LINES)), capacity, next_seq: 0 }
     }
 
-    pub fn push(&mut self, line: String) {
-        if self.lines.len() == self.capacity {
-            self.lines.pop_front();
+    pub fn push(&mut self, entry: LogEntry) -> Logged {
+        let logged = Logged { seq: self.next_seq, entry };
+        self.next_seq += 1;
+        if self.entries.len() == self.capacity {
+            self.entries.pop_front();
         }
         if self.capacity > 0 {
-            self.lines.push_back(line);
+            self.entries.push_back(logged.clone());
         }
+        logged
     }
 
-    pub fn lines(&self) -> Vec<String> {
-        self.lines.iter().cloned().collect()
+    pub fn entries(&self) -> Vec<Logged> {
+        self.entries.iter().cloned().collect()
     }
 }
 
@@ -159,6 +177,11 @@ impl Inner {
         drop(shared);
         (self.observer)(CoreEvent::State(state));
         true
+    }
+
+    fn record(&self, entry: LogEntry) {
+        let logged = self.lock().log.push(entry);
+        (self.observer)(CoreEvent::Log(logged));
     }
 }
 
@@ -196,8 +219,8 @@ impl Supervisor {
         self.inner.lock().state.clone()
     }
 
-    pub fn log(&self) -> Vec<String> {
-        self.inner.lock().log.lines()
+    pub fn log(&self) -> Vec<Logged> {
+        self.inner.lock().log.entries()
     }
 
     pub fn restart(&self) -> Result<CoreState, StartError> {
@@ -237,12 +260,12 @@ impl Supervisor {
             .spawn()
             .map_err(|err| StartError::Spawn(err.to_string()))?;
         let stdin = child.stdin.take();
+        self.inner.record(LogEntry::Start { pid: child.id(), at_ms: now_ms() });
         if let Some(stderr) = child.stderr.take() {
             let inner = Arc::clone(&self.inner);
             std::thread::spawn(move || {
-                for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-                    inner.lock().log.push(line.clone());
-                    (inner.observer)(CoreEvent::Log(line));
+                for text in BufReader::new(stderr).lines().map_while(Result::ok) {
+                    inner.record(LogEntry::Line { text });
                 }
             });
         }
@@ -396,20 +419,48 @@ mod tests {
         );
     }
 
+    fn line(text: &str) -> LogEntry {
+        LogEntry::Line { text: text.into() }
+    }
+
     #[test]
-    fn the_log_ring_keeps_its_newest_lines_in_order() {
+    fn the_log_ring_keeps_its_newest_entries_in_order() {
         let mut ring = LogRing::new(3);
-        for n in 1..=5 {
-            ring.push(format!("line {n}"));
+        ring.push(LogEntry::Start { pid: 7, at_ms: 1 });
+        for n in 1..=3 {
+            ring.push(line(&format!("line {n}")));
         }
-        assert_eq!(ring.lines(), ["line 3", "line 4", "line 5"]);
+        let kept: Vec<(u64, LogEntry)> =
+            ring.entries().into_iter().map(|logged| (logged.seq, logged.entry)).collect();
+        assert_eq!(kept, [(1, line("line 1")), (2, line("line 2")), (3, line("line 3"))]);
+    }
+
+    #[test]
+    fn every_entry_gets_the_next_sequence_number_even_unkept() {
+        let mut ring = LogRing::new(0);
+        assert_eq!(ring.push(line("a")).seq, 0);
+        assert_eq!(ring.push(line("b")).seq, 1);
     }
 
     #[test]
     fn a_ring_with_no_room_keeps_nothing() {
         let mut ring = LogRing::new(0);
-        ring.push("line".into());
-        assert!(ring.lines().is_empty());
+        ring.push(line("line"));
+        assert!(ring.entries().is_empty());
+    }
+
+    #[test]
+    fn each_log_entry_serializes_under_a_kind_tag() {
+        let json = |entry: &LogEntry| serde_json::to_string(entry).unwrap();
+        assert_eq!(
+            json(&LogEntry::Start { pid: 42, at_ms: 1000 }),
+            r#"{"kind":"start","pid":42,"at_ms":1000}"#
+        );
+        assert_eq!(json(&line("INFO up")), r#"{"kind":"line","text":"INFO up"}"#);
+        assert_eq!(
+            serde_json::to_string(&Logged { seq: 3, entry: line("INFO up") }).unwrap(),
+            r#"{"seq":3,"kind":"line","text":"INFO up"}"#
+        );
     }
 
     #[test]

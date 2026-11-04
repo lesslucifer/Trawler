@@ -7,36 +7,45 @@
 use tauri::menu::{AboutMetadata, Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Manager, Runtime};
 
+use crate::settings::{self, MAIN_WINDOW};
+
 pub const QUIT_ID: &str = "trawler-quit";
+pub const SETTINGS_ID: &str = "trawler-settings";
 const QUIT_ACCELERATOR: &str = "CmdOrCtrl+Q";
-const MAIN_WINDOW: &str = "main";
+const SETTINGS_ACCELERATOR: &str = "CmdOrCtrl+,";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MenuAction {
     CloseMainWindow,
+    OpenSettings,
     Ignore,
 }
 
 pub fn action_for(id: &str) -> MenuAction {
-    if id == QUIT_ID {
-        MenuAction::CloseMainWindow
-    } else {
-        MenuAction::Ignore
+    match id {
+        QUIT_ID => MenuAction::CloseMainWindow,
+        SETTINGS_ID => MenuAction::OpenSettings,
+        _ => MenuAction::Ignore,
     }
 }
 
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
-    if action_for(id) != MenuAction::CloseMainWindow {
-        return;
-    }
-    match app.get_webview_window(MAIN_WINDOW) {
-        Some(window) => {
-            if let Err(err) = window.close() {
-                eprintln!("closing the window for Quit failed: {err}");
+    match action_for(id) {
+        MenuAction::CloseMainWindow => match app.get_webview_window(MAIN_WINDOW) {
+            Some(window) => {
+                if let Err(err) = window.close() {
+                    eprintln!("closing the window for Quit failed: {err}");
+                }
+            }
+            None => app.exit(0),
+        },
+        MenuAction::OpenSettings => {
+            if let Err(err) = settings::open(app) {
+                eprintln!("opening Settings failed: {err}");
             }
         }
-        None => app.exit(0),
+        MenuAction::Ignore => {}
     }
 }
 
@@ -47,8 +56,14 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             menu.remove_at(0)?;
         }
         menu.insert(&app_submenu(app)?, 0)?;
+    } else if let Some(MenuItemKind::Submenu(first)) = menu.items()?.first() {
+        first.prepend(&settings_item(app)?)?;
     }
     Ok(menu)
+}
+
+fn settings_item<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<MenuItem<R>> {
+    MenuItem::with_id(app, SETTINGS_ID, "Settings…", true, Some(SETTINGS_ACCELERATOR))
 }
 
 fn app_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
@@ -64,6 +79,8 @@ fn app_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
         true,
         &[
             &PredefinedMenuItem::about(app, None, Some(about))?,
+            &PredefinedMenuItem::separator(app)?,
+            &settings_item(app)?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::services(app, None)?,
             &PredefinedMenuItem::separator(app)?,
@@ -90,5 +107,10 @@ mod tests {
         assert_eq!(action_for(QUIT_ID), MenuAction::CloseMainWindow);
         assert_eq!(action_for("about"), MenuAction::Ignore);
         assert_eq!(action_for(""), MenuAction::Ignore);
+    }
+
+    #[test]
+    fn settings_opens_settings() {
+        assert_eq!(action_for(SETTINGS_ID), MenuAction::OpenSettings);
     }
 }

@@ -49,6 +49,7 @@ import { bounded, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
+import { CoreServiceContext, tauriBridge, useCoreService, type CoreBridge } from "./useCoreService";
 import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Composer } from "./Composer";
@@ -156,6 +157,23 @@ function useNowPast(edge: number | null): number {
 }
 
 export default function App({
+  api,
+  initialState,
+  core = tauriBridge,
+}: {
+  api?: TrawlerApi;
+  initialState?: OnbState;
+  core?: CoreBridge;
+}) {
+  const service = useCoreService(core);
+  return (
+    <CoreServiceContext.Provider value={service}>
+      <Shell api={api} initialState={initialState} />
+    </CoreServiceContext.Provider>
+  );
+}
+
+function Shell({
   api,
   initialState,
 }: {

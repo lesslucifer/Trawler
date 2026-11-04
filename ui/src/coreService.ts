@@ -7,11 +7,16 @@ export type CoreState =
   | { state: "exited"; code: number | null; signal: number | null }
   | { state: "attached"; api: string };
 
+export type LogEntry =
+  | { seq: number; kind: "start"; pid: number; at_ms: number }
+  | { seq: number; kind: "line"; text: string };
+
+export const LOG_LINES = 2000;
 export const CORE_STATE_EVENT = "core://state";
 export const CORE_LOG_EVENT = "core://log";
 
-type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
-type Listen = <T>(event: string, handler: (event: { payload: T }) => void) => Promise<UnlistenFn>;
+export type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+export type Listen = <T>(event: string, handler: (event: { payload: T }) => void) => Promise<UnlistenFn>;
 
 // The web shell (UC-3) has no app around it, so it has no service to read.
 export async function readCoreStatus(call: Invoke = invoke): Promise<CoreState | null> {
@@ -22,9 +27,9 @@ export async function readCoreStatus(call: Invoke = invoke): Promise<CoreState |
   }
 }
 
-export async function readCoreLog(call: Invoke = invoke): Promise<string[]> {
+export async function readCoreLog(call: Invoke = invoke): Promise<LogEntry[]> {
   try {
-    return await call<string[]>("core_log");
+    return await call<LogEntry[]>("core_log");
   } catch {
     return [];
   }
@@ -38,6 +43,12 @@ export function onCoreState(handler: (state: CoreState) => void, on: Listen = li
   return on<CoreState>(CORE_STATE_EVENT, (event) => handler(event.payload));
 }
 
-export function onCoreLog(handler: (line: string) => void, on: Listen = listen): Promise<UnlistenFn> {
-  return on<string>(CORE_LOG_EVENT, (event) => handler(event.payload));
+export function onCoreLog(handler: (entry: LogEntry) => void, on: Listen = listen): Promise<UnlistenFn> {
+  return on<LogEntry>(CORE_LOG_EVENT, (event) => handler(event.payload));
+}
+
+export function stoppedWords({ code, signal }: { code: number | null; signal: number | null }): string {
+  if (signal !== null) return `killed (signal ${signal})`;
+  if (code !== null) return `exit code ${code}`;
+  return "for an unknown reason";
 }

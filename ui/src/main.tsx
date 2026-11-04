@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { CaptureService } from "./CaptureService";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import "@fontsource/dm-mono/400.css";
@@ -13,8 +14,8 @@ if (import.meta.env.VITE_E2E) {
   void import("@wdio/tauri-plugin");
 }
 
+const page = (window as { __TRAWLER_PAGE__?: string }).__TRAWLER_PAGE__;
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <React.StrictMode>{page === "settings" ? <CaptureService /> : <App />}</React.StrictMode>,
 );
