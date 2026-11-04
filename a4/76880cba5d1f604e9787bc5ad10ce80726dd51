@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W6
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-04-inspect-window-w6-decoders-plan.html"
+    tier: T3
+    action: added
+    distills: "W6's requirement, pieces, split against W7, expected result and test plan"
+  - path: "docs/work/2026-11-04-inspect-window-w6-decoders-result.html"
+    tier: T3
+    action: added
+    distills: "W6's outcome, deviations (one reading in place of the switch, the selection's range spliced, decode on editable text and the form table only), the bundle check per worktree, evidence with review rounds 1 and 2 and the fixes, distillation and follow-ups"
+t2_waived: "no decision, use case or design rule changed: the decoders sit inside DEC-71's working copy and window contract, the component changes live in EditSurface's and IconButton's code and TSDoc, and UC-9's decoder rows and cmd-shift-D land in T2 with W7 per the epic's distillation plan"
