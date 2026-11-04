@@ -107,3 +107,34 @@ test("a restart's reply never overwrites a newer state event", async () => {
   await act(async () => finish());
   expect(result.current.state).toEqual({ state: "exited", code: null, signal: 9 });
 });
+
+function heldListener(stub: ReturnType<typeof coreStub>) {
+  let register: () => void = () => {};
+  const registered = new Promise<void>((resolve) => (register = resolve));
+  const listen = stub.on.getMockImplementation()!;
+  stub.on.mockImplementation(async (event, handler) => {
+    await registered;
+    return listen(event, handler);
+  });
+  return () => act(async () => register());
+}
+
+test("the state is read only once its listener is registered", async () => {
+  const stub = coreStub({ state: RUNNING });
+  const register = heldListener(stub);
+  renderHook(() => useCoreService(stub.bridge));
+  await act(async () => {});
+  expect(stub.call).not.toHaveBeenCalledWith("core_status");
+  await register();
+  await waitFor(() => expect(stub.call).toHaveBeenCalledWith("core_status"));
+});
+
+test("the log is read only once its listener is registered", async () => {
+  const stub = coreStub({ log: [line(0, "snapshot")] });
+  const register = heldListener(stub);
+  const { result } = renderHook(() => useCoreLog(stub.bridge));
+  await act(async () => {});
+  expect(stub.call).not.toHaveBeenCalledWith("core_log");
+  await register();
+  await waitFor(() => expect(result.current).toEqual([line(0, "snapshot")]));
+});

@@ -76,6 +76,11 @@
         <code>coreService.ts</code>. One verified nit was fixed too: a refusal clears once the core runs again, and a
         restart's reply never overwrites a newer state event</td><td>the code review's correctness and altitude
         finders. Without the lock, the concurrency test failed 3 of 3 on a spurious port conflict</td></tr>
+      <tr><td>review round 2 (FAIL)</td><td>one verified blocker was fixed behind two regression tests that failed
+        first. Tauri registers a listener in an async command but answers the sync <code>core_log</code> /
+        <code>core_status</code> inline, so each hook now reads its snapshot only once its listener is registered. A
+        restart's applied result also counts as newer than that read</td><td>the altitude finder, verified from the
+        Tauri 2.11.5 source. Round 1's verifier had refuted the same race from memory</td></tr>
       <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
         <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
         service from context, so a provider is the whole fixture</td></tr>
@@ -84,13 +89,13 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · this report</td></tr>
+      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · round 2's fix · this report</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (3): restart round-trips through the
         supervisor · attached refuses · settings opens once. <code>tests/supervisor.rs</code> gains one start mark per
         core, and <code>restarts_asked_for_at_once_run_one_after_the_other</code></td></tr>
       <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization, a failed spawn published as exited, the page's cap pinned to the ring's) · core.rs (two restart
         sentences) · menu.rs (Settings action) · settings.rs (only main ends the app) · Vitest:
-        <code>CaptureService.test.tsx</code> (10) · <code>useCoreService.test.ts</code> (10) ·
+        <code>CaptureService.test.tsx</code> (10) · <code>useCoreService.test.ts</code> (12) ·
         <code>NotAnswering.test.tsx</code> (4) · <code>coreService.test.ts</code> (4, updated)</td></tr>
       <tr><td>e2e</td><td>waived for the WU: J2 belongs to W5's owned-core e2e build</td></tr>
       <tr><td>docs</td><td>UC-SVC + UC-4 in <a href="../use-cases/web-ui.html#uc-svc">web-ui.html</a> and the

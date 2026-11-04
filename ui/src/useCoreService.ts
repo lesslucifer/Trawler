@@ -30,6 +30,9 @@ export interface CoreService {
 
 export const CoreServiceContext = createContext<CoreService | null>(null);
 
+// Tauri registers a listener in an async command but serves a sync one inline,
+// so a snapshot read sent beside the listen can be answered first, and an event
+// emitted in between reaches neither. The read waits for the registration.
 function released(subscription: Promise<UnlistenFn | undefined>) {
   void subscription.then((unlisten) => unlisten?.());
 }
@@ -38,19 +41,21 @@ export function useCoreService(bridge: CoreBridge = tauriBridge): CoreService {
   const [state, setState] = useState<CoreState | null>(null);
   const [restarting, setRestarting] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
-  const eventsHeard = useRef(0);
+  const updates = useRef(0);
 
   useEffect(() => {
     let live = true;
     const subscription = onCoreState((next) => {
-      eventsHeard.current += 1;
+      updates.current += 1;
       if (!live) return;
       setState(next);
       if (next.state === "running") setRefusal(null);
     }, bridge.on).catch(() => undefined);
-    void readCoreStatus(bridge.call).then((read) => {
-      if (live && eventsHeard.current === 0) setState(read);
-    });
+    void subscription
+      .then(() => readCoreStatus(bridge.call))
+      .then((read) => {
+        if (live && updates.current === 0) setState(read);
+      });
     return () => {
       live = false;
       released(subscription);
@@ -60,10 +65,13 @@ export function useCoreService(bridge: CoreBridge = tauriBridge): CoreService {
   const restart = useCallback(async () => {
     setRestarting(true);
     setRefusal(null);
-    const heardBefore = eventsHeard.current;
+    const updatesBefore = updates.current;
     try {
       const restarted = await restartCore(bridge.call);
-      if (eventsHeard.current === heardBefore) setState(restarted);
+      if (updates.current === updatesBefore) {
+        updates.current += 1;
+        setState(restarted);
+      }
     } catch (err) {
       setRefusal(err instanceof Error ? err.message : String(err));
     } finally {
@@ -98,7 +106,7 @@ export function useCoreLog(bridge: CoreBridge = tauriBridge): LogEntry[] {
       if (live) setEntries((kept) => mergeLog(kept, incoming));
     };
     const subscription = onCoreLog((entry) => add([entry]), bridge.on).catch(() => undefined);
-    void readCoreLog(bridge.call).then(add);
+    void subscription.then(() => readCoreLog(bridge.call)).then(add);
     return () => {
       live = false;
       released(subscription);
