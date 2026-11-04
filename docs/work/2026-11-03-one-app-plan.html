@@ -11,7 +11,7 @@
       <h1>E-ONEAPP — epic plan</h1>
       <p>One launch, one app: the window starts the capture service as a supervised child process, shows its
         health, and stops it when it quits. <code>cargo run</code> builds and opens the whole app.</p>
-      <div class="meta">v3 · opened 2026-11-03 · owner rulings on Q1–Q14 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/one-app</code>
+      <div class="meta">v3 · opened 2026-11-03 · owner rulings on Q1–Q14 2026-11-03, Q15 2026-11-04 · Trawler · T3 (docs/work/) · branch <code>epic/one-app</code>
         · WU branches <code>wu/one-app/&lt;slug&gt;</code></div>
     </div>
   </header>
@@ -248,9 +248,11 @@ flowchart LR
         <table>
           <tr><th>What it builds</th><td data-item="wu-summary">DEC-64 rule 6 is amended (quitting the app stops
             the capture service), and the <a href="../../ui/src/ProxyCloseDialog.tsx">ProxyCloseDialog</a>
-            sentences change from "once … stops" to "quitting stops …". This is a copy edit to an existing surface,
-            accounted as <code>design.undesigned</code> with its reason, and adds no new surface.</td></tr>
-          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-ONBOARD (quit). Expected #9.</td></tr>
+            sentences change from "once … stops" to "quitting stops …" when the core is owned. Attached, they stay as
+            today (Q15). This is a copy edit to an existing surface,
+            accounted as <code>design.undesigned</code> with its reason, and adds no new surface.
+            <a href="2026-11-04-one-app-w4-quit-truth-plan.html">WU plan</a>.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-ONBOARD (quit). Expected #9. Q15.</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Vitest asserts the new sentences per dialog
             case. A shell integration test asserts that the terminate path stops the core.</td></tr>
           <tr><th>Dependencies</th><td data-item="wu-deps">W2 — the quit has to stop the core before the copy can say so</td></tr>
@@ -376,6 +378,11 @@ flowchart LR
           <td><span class="badge approval">owner ruling 2026-11-03</span> <strong>As proposed: Restart only.</strong> A stopped core while the system proxy points at
             <code>:7420</code> leaves the machine without internet, which is exactly what DEC-64 guards. Quitting
             remains the way to stop, and it goes through DEC-64's check.</td></tr>
+        <tr><td>Q15</td><td>The quit dialog will say "quitting stops Trawler's capture service". What does it say when the
+          core is attached, where a quit stops nothing?</td>
+          <td><span class="badge approval">owner ruling 2026-11-04</span> <strong>Keep today's copy when attached.</strong>
+            The dialog still asks, with "once Trawler's capture service stops…", which stays true there. Only an owned
+            core gets "quitting stops…" (W4).</td></tr>
       </table>
     </div>
 
