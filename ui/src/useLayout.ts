@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onLayoutReset, readLayout, writeLayout, type SavedLayout } from "./layoutStore";
-import { DEFAULT_LAYOUT, HEADERS_SHARE, PANE, clamp } from "./layoutBounds";
+import { DEFAULT_LAYOUT, HEADERS_SHARE, PANE, clamp, restorableColumns, type Track } from "./layoutBounds";
 
 export const LAYOUT_WRITE_MS = 250;
 
@@ -16,6 +16,8 @@ export type LayoutControls = {
   setHeadersShare: (share: number) => void;
   resetPane: () => void;
   resetHeadersShare: () => void;
+  setColumn: (track: Track, width: number) => void;
+  resetColumn: (track: Track) => void;
   commit: () => void;
 };
 
@@ -26,6 +28,7 @@ function restorable(saved: SavedLayout): SavedLayout {
     ...saved,
     pane: clamp(saved.pane, PANE),
     headersShare: clamp(saved.headersShare, HEADERS_SHARE),
+    columns: restorableColumns(saved.columns),
   };
 }
 
@@ -94,6 +97,10 @@ export function useLayout(store: LayoutStore = shell): LayoutControls {
       setHeadersShare: (headersShare: number) => update((current) => ({ ...current, headersShare })),
       resetPane: () => update((current) => ({ ...current, pane: DEFAULT_LAYOUT.pane })),
       resetHeadersShare: () => update((current) => ({ ...current, headersShare: DEFAULT_LAYOUT.headersShare })),
+      setColumn: (track: Track, width: number) =>
+        update((current) => ({ ...current, columns: { ...current.columns, [track]: Math.round(width) } })),
+      resetColumn: (track: Track) =>
+        update((current) => ({ ...current, columns: { ...current.columns, [track]: DEFAULT_LAYOUT.columns[track] } })),
       commit,
     }),
     [layout, update, commit],

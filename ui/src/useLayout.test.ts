@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { SavedLayout } from "./layoutStore";
-import { DEFAULT_LAYOUT } from "./layoutBounds";
+import { DEFAULT_COLUMNS, DEFAULT_LAYOUT } from "./layoutBounds";
 import { LAYOUT_WRITE_MS, useLayout, type LayoutStore } from "./useLayout";
 import wire from "./layoutWire.json";
 
@@ -124,5 +124,39 @@ describe("useLayout", () => {
     });
     act(() => vi.advanceTimersByTime(LAYOUT_WRITE_MS));
     expect(store.write).toHaveBeenCalledWith({ ...DEFAULT_LAYOUT, pane: 601 });
+  });
+
+  it("clamps each stale saved column into its own token bounds", async () => {
+    const { store } = stubStore(async () => ({
+      ...saved,
+      columns: { time: 5000, method: 1, host: 240, status: 0, duration: 900 },
+    }));
+    const { result } = await mount(store);
+    expect(result.current.layout.columns).toEqual({ time: 240, method: 56, host: 240, status: 48, duration: 160 });
+  });
+
+  it("sets one column in whole pixels and saves the whole layout", async () => {
+    const { store } = stubStore(async () => saved);
+    const { result } = await mount(store);
+    act(() => {
+      result.current.setColumn("host", 300.6);
+      result.current.commit();
+    });
+    act(() => vi.advanceTimersByTime(LAYOUT_WRITE_MS));
+    expect(store.write).toHaveBeenCalledWith({ ...saved, columns: { ...saved.columns, host: 301 } });
+  });
+
+  it("resets one column and leaves the others", async () => {
+    const { store } = stubStore(async () => ({ ...saved, columns: { ...saved.columns, method: 100 } }));
+    const { result } = await mount(store);
+    act(() => result.current.resetColumn("host"));
+    expect(result.current.layout.columns).toEqual({ ...saved.columns, method: 100, host: 180 });
+  });
+
+  it("puts the columns back with the splits on the shell's reset event", async () => {
+    const { store, fireReset } = stubStore(async () => saved);
+    const { result } = await mount(store);
+    act(() => fireReset());
+    expect(result.current.layout.columns).toEqual(DEFAULT_COLUMNS);
   });
 });
