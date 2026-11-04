@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PANELS
+wu: E-PANELS.W5
+branch: HEAD
+tests:
+  unit: { count: 22, covers: "A saved window placed against monitor sets: unchanged inside its monitor, centred on the primary when its monitor is gone, shrunk into a smaller work area, moved in off an edge, raised to its minimum in a 2x monitor's pixels, hosted by the larger overlap when straddling two, nothing placed with no monitor, the frame kept inside the work area, maximized carried with its rect. Moves and resizes update the record only while the window is normal. windows.json round-trips two labels; absent, corrupt and wrong-shape files read as no records; a write makes the dir and leaves no staged copy. layout.json's staged write, now shared, still leaves no staged copy." }
+  integration: { count: 1, covers: "Records for two labels saved into a temp config dir, read back and placed against a two-monitor set return exactly as saved; the same file corrupted reads as no records." }
+  e2e: { waived: "The relaunch journey through the real window is W6's layout.spec.ts per the epic E2E plan; off-monitor restore stays unit-level, a second monitor not being hermetic." }
