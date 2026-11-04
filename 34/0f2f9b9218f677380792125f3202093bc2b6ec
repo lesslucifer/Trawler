@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 340f2f9b9218f677380792125f3202093bc2b6ec
+base: 999ca87c2ba49535f23954ddcdda849676094cff
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-panels-w6-e2e-result.html
+report_sha256: 4e4c4b010f6f8927e8a0a20efd2d98bdf40b58cc827a6173bcf1f314f3579948
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEC+ORJv4mXzDX6Lzso5isczZD7E00sWSofd/6671u6M/oDTd2A3w2RNKe
+  1D9b7W3PXc27+hp9RW+cA2XT3vQBQM
+  -----END SSH SIGNATURE-----
