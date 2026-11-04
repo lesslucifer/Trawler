@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-PANELS
+wu: E-PANELS.W5
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-03-panels-plan.html"
+    tier: T3
+    action: updated
+    distills: "W5's block records the plugin ruled out and the windows.json store, Reset Layout leaving the window, and links the W5 plan"
+  - path: "docs/work/2026-11-04-panels-w5-window-geometry-plan.html"
+    tier: T3
+    action: added
+    distills: "W5's requirement, forks (own module over tauri-plugin-window-state, windows.json beside layout.json, Reset Layout leaves the window), expected results and test plan"
+  - path: "docs/work/2026-11-04-panels-w5-window-geometry-result.html"
+    tier: T3
+    action: added
+    distills: "what W5 shipped, its deviation and evidence, and the pre-existing e2e dependency pin"
+t2_waived: "UC-4's window row is distilled by W6, per the epic's distillation plan; W5 follows DEC-67's read-whole rule and adds no decision."
