@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VIEW_PREFS, readViewPrefs, writeViewPrefs, type ViewPrefs } from "./viewPrefsStore";
 
-export const VIEW_PREFS_WRITE_MS = 250;
-
 export type ViewPrefsStore = {
   read: () => Promise<Partial<ViewPrefs>>;
   write: (prefs: ViewPrefs) => Promise<void>;
@@ -21,13 +19,13 @@ export function useViewPrefs(store: ViewPrefsStore = shell): ViewPrefsControls {
   const touched = useRef(new Set<keyof ViewPrefs>());
   const settled = useRef(false);
   const owed = useRef(false);
-  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const storeRef = useRef(store);
 
-  const flush = useCallback(() => {
-    if (pending.current !== null) clearTimeout(pending.current);
-    pending.current = null;
-    if (!settled.current) return;
+  const save = useCallback(() => {
+    if (!settled.current) {
+      owed.current = true;
+      return;
+    }
     owed.current = false;
     storeRef.current.write(latest.current).catch(() => {});
   }, []);
@@ -38,11 +36,9 @@ export function useViewPrefs(store: ViewPrefsStore = shell): ViewPrefsControls {
       touched.current.add(field);
       latest.current = { ...latest.current, [field]: value };
       setPrefs(latest.current);
-      owed.current = true;
-      if (pending.current !== null) clearTimeout(pending.current);
-      pending.current = setTimeout(flush, VIEW_PREFS_WRITE_MS);
+      save();
     },
-    [flush],
+    [save],
   );
 
   useEffect(() => {
@@ -58,19 +54,12 @@ export function useViewPrefs(store: ViewPrefsStore = shell): ViewPrefsControls {
           latest.current = { ...latest.current, ...Object.fromEntries(untouched) };
           setPrefs(latest.current);
         }
-        if (owed.current && pending.current === null) flush();
+        if (owed.current) save();
       });
     return () => {
       live = false;
     };
-  }, [flush]);
-
-  useEffect(
-    () => () => {
-      if (owed.current) flush();
-    },
-    [flush],
-  );
+  }, [save]);
 
   return useMemo(() => ({ prefs, set }), [prefs, set]);
 }

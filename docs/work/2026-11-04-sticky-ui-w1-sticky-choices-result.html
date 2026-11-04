@@ -26,8 +26,8 @@
         fields under the sent ones</td></tr>
       <tr><td>both shell builds register <code>view_prefs_read</code> / <code>view_prefs_write</code></td><td>delivered —
         the xtask registry test is green</td></tr>
-      <tr><td>one writer in Shell, read once, early choice wins, debounced</td><td>delivered —
-        <code>useViewPrefs</code>; a write is also held until the read settles</td></tr>
+      <tr><td>one writer in Shell, read once, early choice wins, debounced</td><td>delivered without the debounce —
+        <code>useViewPrefs</code> writes each choice at once; a write is held only until the read settles</td></tr>
       <tr><td>sticky leg and body mode</td><td>delivered — controlled props from Shell; visually unchanged</td></tr>
       <tr><td>setup opens on the last platform, launch check on This machine</td><td>delivered —
         <code>re-invoke</code> carries the remembered platform; <code>not-detected</code> untouched</td></tr>
@@ -44,12 +44,18 @@
       <tr><td><code>restore</code> made generic</td><td>also takes the minimum size as an argument;
         <code>track_from</code> and <code>tracked_records</code> added</td><td>Settings is not a config window, so its
         minimum is not in the config; the two functions let the mock-runtime test install a tracker and read it</td></tr>
+      <tr><td>writes are debounced</td><td>each choice is written the moment it is made</td><td>review round 1 verified
+        an important: Cmd-Q, the Dock's Quit and the last window closing end the process without unmounting the app,
+        so a choice waiting on the 250 ms timer was lost. Every field today changes on a discrete click, so the
+        debounce bought nothing; regression test "sends the whole record the moment a choice is made"</td></tr>
     </table>
 
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>commits</td><td><code>da848bb1</code> WU plan · <code>cb5fa6ef</code> build</td></tr>
+      <tr><td>commits</td><td><code>da848bb1</code> WU plan · <code>cb5fa6ef</code> build · the round-1 fix after
+        this report's first version</td></tr>
+      <tr><td>review</td><td>round 1 FAIL (one important, above); round 2 on the fixed tip</td></tr>
       <tr><td>unit (Rust)</td><td><code>ui/src-tauri/src/view_prefs.rs</code> tests (5)</td></tr>
       <tr><td>unit (TS)</td><td><code>viewPrefsStore.test.ts</code> (6) · <code>useViewPrefs.test.ts</code> (7) ·
         <code>onboardingMachine.test.ts</code> (+2) · <code>FlowDetail.test.tsx</code> (+2) ·
@@ -73,6 +79,10 @@
         <code>SAVED_SIZES</code>); until then an e2e run inherits the leg and body mode the last run picked</td></tr>
       <tr><td>W2</td><td>existing specs select the leg and body mode they assert (<code>flows.spec</code> after
         <code>replay.spec</code>)</td></tr>
+      <tr><td>later epic</td><td><code>useLayout</code> has the same shape: its 250 ms write flushes only on unmount,
+        so a splitter drop within 250 ms of a quit is lost. Pre-existing, out of this WU's scope</td></tr>
+      <tr><td>E-QUERY</td><td>typed query text may want a debounce; if so, it must also flush before the process
+        ends</td></tr>
       <tr><td>E-QUERY</td><td>adds its query field to <code>ViewPrefs</code> and writes through Shell's one
         <code>useViewPrefs</code></td></tr>
     </table>
