@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb064e9f34851f0dfae534">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: the query bar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .a-mock h1{margin:0;padding:0;border:0}
+    .a-fit{overflow:hidden;border:1px solid var(--line);border-radius:4px}
+    .a-mock{transform-origin:top left}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run: the query bar</h1>
+      <p>The header with one query bar where the free-text field, the host and method dropdowns and the status field
+        were. Every filter is a chip. Typing writes a draft and suggestions follow it. The list follows the chips,
+        never a keystroke.</p>
+      <div class="meta">Design run · round 1 on 2026-11-04, closed (archived) · Trawler · T3 (docs/work/) ·
+        <strong>E-QUERY.W2</strong> · branch <code>wu/query-bar/query-bar-design</code> · epic
+        <a href="2026-11-04-query-bar-plan.html">E-QUERY</a> · <a href="2026-11-04-query-bar-w2-design-plan.html">WU plan</a> ·
+        component: <a href="components/query-bar.html">QueryBar</a> · within
+        <a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="mockup">Mockup</h2>
+    <p class="kd">Live. Click the bar (or hover the frame and press ⌘F) and type. <code>st</code> then Tab completes
+      <code>status:</code>; <code>4</code> then Enter makes a <code>status:4xx</code> chip, and only then do the rows move.
+      Enter or Tab takes the highlighted suggestion, ↑/↓ move the highlight, Space ends a chip as typed (quotes keep a
+      space: <code>"login token"</code>), Backspace in an empty draft removes the last chip, and each chip's × removes
+      that one. Try <code>-method:OPTIONS</code>, <code>host:localhost:8080</code>,
+      <code>login token</code>, <code>stauts:4xx</code>. The buttons under the frame force one state at a time.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-fit" id="fit">
+          <div class="a-mock flex flex-col bg-canvas font-ui text-ink" id="mock">
+            <div class="a-zone shrink-0" id="m-header" data-zone="app header"></div>
+            <div class="a-zone flex min-h-0 flex-1 flex-col" id="m-list" data-zone="flow list"
+              data-wire="collection" data-order="wire"></div>
+          </div>
+        </div>
+        <div class="mt-2 font-ui text-chrome text-ink-mute" id="readout"></div>
+      </div>
+      <p>overflow: app header pinned; it grows a line rather than clipping (Layout), and the query bar's chips wrap
+        inside it, so the bar takes a second line once its chips fill the first. No cap: every chip is one the user
+        added. The suggestions overlay below the draft and never push content; they scroll past
+        <code>listing-max</code> (184 px, about seven rows), the cap Select's popup already uses. A chip's value wraps,
+        never truncates. flow list: rows scroll vertically, capped by the capture ring, as today.</p>
+      <p class="kd">Payload is mono: each row's cells (<span class="font-mono" data-wire="host">api.example.com</span>, path,
+        time, method, status, duration) and every host a suggestion offers. The bar itself is mono too: the draft,
+        the chips and the suggestions are typed grammar, read as typed (C5).</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="focused"
+        data-label-off="▶ the bar focused, nothing typed" data-label-on="◀ at rest">▶ the bar focused, nothing typed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="key-draft"
+        data-label-off="▶ typing a key: st" data-label-on="◀ at rest">▶ typing a key: st</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="value-draft"
+        data-label-off="▶ typing a value: status:4" data-label-on="◀ at rest">▶ typing a value: status:4</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="host-draft"
+        data-label-off="▶ typing a host: host:loc" data-label-on="◀ at rest">▶ typing a host: host:loc</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="moved"
+        data-label-off="▶ moved down with ↓" data-label-on="◀ at rest">▶ moved down with ↓</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="fault"
+        data-label-off="▶ a draft that does not parse, after Enter" data-label-on="◀ at rest">▶ a draft that does not parse, after Enter</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="chips"
+        data-label-off="▶ repeated and negated chips" data-label-on="◀ at rest">▶ repeated and negated chips</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="text"
+        data-label-off="▶ two text chips" data-label-on="◀ at rest">▶ two text chips</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="refused"
+        data-label-off="▶ a chip the capture service refused" data-label-on="◀ at rest">▶ a chip the capture service refused</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="nomatch"
+        data-label-off="▶ chips that match nothing" data-label-on="◀ at rest">▶ chips that match nothing</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="narrow"
+        data-label-off="▶ seven chips in an 850 px window" data-label-on="◀ at rest">▶ seven chips in an 850 px window</button>
+      <script type="text/babel">
+        const { React, createRoot, StatusDot, TimestampText, MethodLabel, StatusPill, DurationText, IconButton,
+                TonedText, Notice, HTTP_METHODS } = window.Trawler;
+        const { useRef, useEffect, useSyncExternalStore } = React;
+
+        const KEYS = [
+          { key: "host", hint: "a host seen, or part of one" },
+          { key: "method", hint: "GET, POST, …" },
+          { key: "status", hint: "a code like 404, or a class like 4xx" },
+          { key: "type", hint: "the response type, like json" },
+          { key: "source", hint: "captured, imported or sent" },
+          { key: "is", hint: "pending or https" },
+        ];
+        const KEY = Object.fromEntries(KEYS.map((k) => [k.key, k]));
+        const FIXED = {
+          status: [["2xx", "success"], ["3xx", "redirect"], ["4xx", "client error"], ["5xx", "server error"]],
+          type: ["json", "html", "xml", "javascript", "css", "image", "font", "form", "text"].map((t) => [t, ""]),
+          source: [["captured", "through the proxy"], ["imported", "from a HAR file or a curl command"], ["sent", "by Trawler, from a draft"]],
+          is: [["pending", "no response yet"], ["https", "sent over https"]],
+        };
+        const valuesOf = (key, hosts) =>
+          key === "host" ? hosts.map((h) => [h, ""]) : key === "method" ? HTTP_METHODS.map((m) => [m, ""]) : FIXED[key];
+
+        function distance(a, b) {
+          const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+          for (let j = 1; j <= b.length; j++) d[0][j] = j;
+          for (let i = 1; i <= a.length; i++)
+            for (let j = 1; j <= b.length; j++)
+              d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+          return d[a.length][b.length];
+        }
+        const openQuote = (t) => (t.match(/"/g) ?? []).length % 2 === 1;
+
+        function judge(key, value) {
+          if (key === "status")
+            return /^[1-5](\d\d|xx)$/i.test(value) ? { value: value.toLowerCase() }
+              : { fault: `“${value}” isn't a status — try a code like 404 or a class like 4xx` };
+          if (key === "method")
+            return /^[a-z]+$/i.test(value) ? { value: value.toUpperCase() } : { fault: `a method is letters only, like GET` };
+          if (key === "source" || key === "is") {
+            const ok = FIXED[key].map(([v]) => v);
+            return ok.includes(value.toLowerCase()) ? { value: value.toLowerCase() }
+              : { fault: `${key} is ${ok.slice(0, -1).join(", ")} or ${ok[ok.length - 1]}` };
+          }
+          return { value };
+        }
+
+        function parse(draft) {
+          const t = draft.trim();
+          if (!t) return {};
+          const neg = t.startsWith("-") && t.length > 1;
+          const rest = neg ? t.slice(1) : t;
+          if (rest.startsWith('"')) {
+            if (rest.length < 2 || !rest.endsWith('"')) return { fault: "a quote is opened and never closed" };
+            const v = rest.slice(1, -1);
+            return v.trim() ? { chip: { neg, key: "q", value: v } } : { fault: "the quotes hold nothing" };
+          }
+          const m = rest.match(/^([A-Za-z_]+):(.*)$/);
+          if (m) {
+            const k = m[1].toLowerCase();
+            if (KEY[k]) {
+              if (!m[2]) return { fault: `${k}: needs a value — ${KEY[k].hint}` };
+              const j = judge(k, m[2]);
+              return j.fault ? { fault: j.fault } : { chip: { neg, key: k, value: j.value } };
+            }
+            const near = KEYS.find((x) => distance(k, x.key) <= 2 && k.length >= 2);
+            if (near) return { fault: `unknown key “${m[1]}” — did you mean ${near.key}?` };
+          }
+          return { chip: { neg, key: "q", value: rest } };
+        }
+        const label = (c) => `${c.neg ? "-" : ""}${c.key === "q" ? (/\s/.test(c.value) ? `"${c.value}"` : c.value) : `${c.key}:${c.value}`}`;
+
+        function rowsFor(draft, hosts) {
+          const t = draft.trimStart();
+          const neg = t.startsWith("-");
+          const rest = neg ? t.slice(1) : t;
+          const pre = neg ? "-" : "";
+          const out = [];
+          const m = rest.match(/^([A-Za-z_]+):(.*)$/);
+          const k = m && KEY[m[1].toLowerCase()];
+          if (k) {
+            const typed = m[2].toLowerCase();
+            for (const [v, hint] of valuesOf(k.key, hosts))
+              if (v.toLowerCase().includes(typed)) out.push({ kind: "value", text: `${pre}${k.key}:${v}`, key: k.key, value: v, hint });
+          } else if (!rest.includes(":") && !rest.startsWith('"')) {
+            for (const x of KEYS)
+              if (x.key.startsWith(rest.toLowerCase()))
+                out.push({ kind: "key", text: `${pre}${x.key}:`, key: x.key, hint: neg ? `leave out by ${x.key}` : x.hint });
+          }
+          const p = parse(draft);
+          if (p.chip && !out.some((r) => r.text.toLowerCase() === label(p.chip).toLowerCase()))
+            out.unshift({
+              kind: "typed", text: label(p.chip), key: p.chip.key, value: p.chip.value,
+              hint: p.chip.key === "q" ? (p.chip.neg ? "leave out every URI containing it" : "search the URI for it") : "as typed",
+            });
+          return out;
+        }
+        const firstSuggestion = (rows) => Math.max(0, rows.findIndex((r) => r.kind !== "typed"));
+
+        const NOW = Date.now();
+        const FLOWS = [
+          ["GET", "https", "api.example.com", "/v2/accounts/8812/sessions", 200, "json", "captured", 84],
+          ["POST", "https", "auth.example.com", "/oauth/token", 200, "json", "captured", 212],
+          ["OPTIONS", "https", "api.example.com", "/v2/accounts/8812/sessions", 204, null, "captured", 9],
+          ["GET", "http", "localhost:8080", "/health", 200, "json", "captured", 3],
+          ["POST", "http", "localhost:8080", "/login", 401, "json", "captured", 41],
+          ["GET", "https", "cdn.static-assets.net", "/fonts/inter/Inter-Regular.woff2", 304, "font", "captured", 12],
+          ["GET", "https", "api.example.com", "/v2/search?q=login&token=eyJ0IjoxNzMw", 500, "json", "captured", 3020],
+          ["DELETE", "https", "api.example.com", "/v2/accounts/8812/sessions/4398", 404, "json", "sent", 77],
+          ["GET", "https", "app.example.com", "/accounts/8812/sessions", 200, "html", "imported", 140],
+          ["GET", "https", "api.example.com", "/v2/feature-flags", null, null, "captured", null],
+          ["PUT", "https", "storage.example.com", "/buckets/exports/objects/har-2026-11-04.json", 200, "json", "captured", 2210],
+          ["OPTIONS", "https", "auth.example.com", "/oauth/token", 204, null, "captured", 7],
+          ["GET", "https", "auth.example.com", "/login?token=abc123&next=%2Faccounts", 302, "html", "captured", 58],
+          ["POST", "https", "graphql.example.com", "/graphql", 200, "json", "captured", 640],
+          ["GET", "http", "localhost:8080", "/static/app.js", 200, "javascript", "captured", 6],
+          ["GET", "https", "images.example-cdn.com", "/u/8812/avatar@2x.png", 200, "image/png", "captured", 33],
+        ].map(([method, scheme, host, path, status, type, source, ms], i) => ({
+          id: i, method, scheme, host, path, status, type, source, ms,
+          uri: `${scheme}://${host}${path}`, at: new Date(NOW - (16 - i) * 4200).toISOString(),
+        }));
+        const HOSTS = [...new Set(FLOWS.map((f) => f.host))];
+
+        function matches(f, c) {
+          const v = c.value.toLowerCase();
+          if (c.key === "q") return f.uri.toLowerCase().includes(v);
+          if (c.key === "host") return f.host.toLowerCase().includes(v);
+          if (c.key === "method") return f.method === c.value;
+          if (c.key === "status") return f.status !== null && (v.endsWith("xx") ? String(f.status)[0] === v[0] : String(f.status) === v);
+          if (c.key === "type") return (f.type ?? "").includes(v);
+          if (c.key === "source") return f.source === v;
+          return v === "pending" ? f.status === null : f.scheme === "https";
+        }
+        function select(chips) {
+          const groups = {};
+          chips.filter((c) => !c.neg).forEach((c, i) => (groups[c.key === "q" ? `q${i}` : c.key] ??= []).push(c));
+          const out = chips.filter((c) => c.neg);
+          return FLOWS.filter((f) => Object.values(groups).every((g) => g.some((c) => matches(f, c))) && !out.some((c) => matches(f, c)));
+        }
+
+        const BASE = { chips: [], draft: "", open: false, moved: false, active: 0, fault: null, win: 1280, k: 1, fetches: 0 };
+        const store = (() => {
+          let s = { ...BASE };
+          const subs = new Set();
+          return {
+            get: () => s,
+            set: (patch) => { s = { ...s, ...(typeof patch === "function" ? patch(s) : patch) }; subs.forEach((f) => f()); },
+            sub: (f) => { subs.add(f); return () => subs.delete(f); },
+          };
+        })();
+        const useS = () => useSyncExternalStore(store.sub, store.get);
+        const setChips = (chips) => store.set((p) => ({ chips, fetches: p.fetches + 1 }));
+        const draftBox = { current: null };
+
+        function ChipValue({ c }) {
+          if (c.key === "method") return <MethodLabel method={c.value} />;
+          if (c.key === "host") return <span data-wire="host" className="break-all font-mono">{c.value}</span>;
+          return <span className="break-all">{c.key === "q" && /\s/.test(c.value) ? `"${c.value}"` : c.value}</span>;
+        }
+
+        function Chip({ c, onRemove }) {
+          return (
+            <span
+              aria-invalid={c.refused ? "true" : undefined}
+              className={`inline-flex min-h-control items-center rounded-button border pl-chrome-x font-mono text-control text-ink ${
+                c.refused ? "border-warn" : "border-transparent"} bg-wash-tint`}
+            >
+              {c.refused && <span aria-hidden="true" className="mr-chrome-tight text-warn">⚠</span>}
+              {c.neg && <span className="text-ink-mute">-</span>}
+              {c.key !== "q" && <span className="text-ink-mute">{c.key}:</span>}
+              <ChipValue c={c} />
+              <IconButton glyph="close" size={24} label={`remove ${label(c)}`} onClick={onRemove} />
+            </span>
+          );
+        }
+
+        function Suggestion({ row, active, badge, onTake, onHover }) {
+          return (
+            <li
+              role="option"
+              aria-selected={active}
+              onMouseDown={(e) => { e.preventDefault(); onTake(); }}
+              onMouseEnter={onHover}
+              className={`flex min-h-control cursor-pointer items-center gap-2 whitespace-nowrap px-control-x py-control-y text-control ${
+                active ? "bg-wash-tint text-ink" : "text-ink-body"}`}
+            >
+              <span className="font-mono">
+                {row.kind === "key" ? row.text : row.key === "method" ? (
+                  <>{row.text.startsWith("-") && <span className="text-ink-mute">-</span>}<span className="text-ink-mute">method:</span><MethodLabel method={row.value} /></>
+                ) : row.key === "host" ? (
+                  <>{row.text.startsWith("-") && <span className="text-ink-mute">-</span>}<span className="text-ink-mute">host:</span><span data-wire="host">{row.value}</span></>
+                ) : row.text}
+              </span>
+              {row.hint && <span className="font-ui text-ink-mute">{row.hint}</span>}
+              <span className="ml-auto pl-2 font-ui text-chrome text-ink-mute">{badge ?? ""}</span>
+            </li>
+          );
+        }
+
+        function QueryBar() {
+          const s = useS();
+          const input = useRef(null);
+          draftBox.current = input;
+          const rows = s.open && !s.fault ? rowsFor(s.draft, HOSTS) : [];
+          const active = s.moved ? Math.min(s.active, rows.length - 1) : firstSuggestion(rows);
+          const add = (chip) => {
+            store.set({ draft: "", fault: null, moved: false, active: 0 });
+            if (!s.chips.some((c) => label(c) === label(chip))) setChips([...s.chips, chip]);
+          };
+          const accept = (text) => {
+            const p = parse(text);
+            if (p.chip) add(p.chip);
+            else if (p.fault) store.set({ fault: p.fault, open: true });
+          };
+          const take = (row) => (row.kind === "key" ? store.set({ draft: row.text, moved: false, active: 0, fault: null }) : accept(row.text));
+          const badge = (row, i) => (i === active ? "↵ enter" : null);
+          const onKey = (e) => {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              if (!rows.length) return;
+              e.preventDefault();
+              const n = Math.min(Math.max(active + (e.key === "ArrowDown" ? 1 : -1), 0), rows.length - 1);
+              store.set({ moved: true, active: n, open: true });
+            } else if (e.key === "Tab" && !e.shiftKey) {
+              if (rows.length) { e.preventDefault(); take(rows[active]); }
+              else if (s.draft.trim()) { e.preventDefault(); accept(s.draft); }
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              if (rows[active]) take(rows[active]);
+              else if (s.draft.trim()) accept(s.draft);
+            } else if (e.key === " " && s.draft.trim() && !openQuote(s.draft)) {
+              e.preventDefault();
+              accept(s.draft);
+            } else if (e.key === "Escape") {
+              store.set({ open: false, moved: false });
+            } else if (e.key === "Backspace" && s.draft === "" && s.chips.length) {
+              e.preventDefault();
+              setChips(s.chips.slice(0, -1));
+            }
+          };
+          return (
+            <div
+              onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); input.current?.focus(); } }}
+              className="flex min-w-field-lg flex-1 flex-wrap items-center gap-chrome-tight rounded-button border border-hairline bg-canvas p-chrome-tight transition-colors hover:border-ink-mute focus-within:border-ink-mute"
+            >
+              {s.chips.map((c) => (
+                <Chip key={label(c)} c={c} onRemove={() => { setChips(s.chips.filter((x) => x !== c)); input.current?.focus(); }} />
+              ))}
+              <div className="relative min-w-field-sm flex-1">
+                <input
+                  ref={input}
+                  type="text"
+                  aria-label="filter"
+                  aria-expanded={rows.length > 0 || !!s.fault}
+                  role="combobox"
+                  value={s.draft}
+                  placeholder={s.chips.length ? "add a filter" : "filter — status:4xx, host:api, or any text"}
+                  onChange={(e) => store.set({ draft: e.target.value, fault: null, moved: false, active: 0, open: true })}
+                  onFocus={() => store.set({ open: true })}
+                  onBlur={() => store.set({ open: false, moved: false })}
+                  onKeyDown={onKey}
+                  className="h-control w-full border-none bg-transparent px-chrome-x font-mono text-control text-ink outline-none placeholder:font-ui placeholder:text-ink-mute"
+                />
+                {s.open && (s.fault || rows.length > 0) && (
+                  <div className="absolute left-0 top-full z-popup mt-chrome-y min-w-picker overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop">
+                    {s.fault ? (
+                      <div className="px-control-x py-control-y"><Notice tone="warn">{s.fault}</Notice></div>
+                    ) : (
+                      <ul role="listbox" aria-label="suggestions" className="max-h-listing-max overflow-y-auto py-chrome-tight">
+                        {rows.map((row, i) => (
+                          <Suggestion key={row.kind + row.text} row={row} active={i === active} badge={badge(row, i)}
+                            onTake={() => take(row)} onHover={() => store.set({ moved: true, active: i })} />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        function Header() {
+          const s = useS();
+          const refused = s.chips.some((c) => c.refused);
+          const n = refused ? 0 : select(s.chips).length;
+          return (
+            <header className="flex flex-wrap items-center gap-3 border-b border-hairline bg-canvas-soft px-4 py-2">
+              <StatusDot status="connected" opens="setup" onClick={() => {}} />
+              <h1 className="mr-2 font-serif text-title italic">Trawler</h1>
+              <QueryBar />
+              <div className="flex items-center gap-2">
+                <span className="w-field-sm text-right">
+                  <TonedText tone="muted" className="inline-flex items-center justify-end gap-chrome-tight whitespace-nowrap text-control">
+                    {`${n} ${n === 1 ? "flow" : "flows"}`}
+                  </TonedText>
+                </span>
+                <IconButton label={`clear ${n} flows`} onClick={() => {}}>⌫</IconButton>
+                <IconButton label="capture actions" onClick={() => {}}>⋮</IconButton>
+              </div>
+            </header>
+          );
+        }
+
+        const TPL = "160px 70px 180px minmax(128px,1fr) 70px 90px";
+
+        function List() {
+          const s = useS();
+          const refused = s.chips.find((c) => c.refused);
+          const rows = refused ? [] : select(s.chips);
+          return (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div data-wire="none" className="grid gap-3 border-b border-hairline bg-canvas px-4 py-chrome-y text-body uppercase tracking-label text-ink-mute"
+                style={{ gridTemplateColumns: TPL }}>
+                <span>Time</span><span>Method</span><span>Host</span><span>Path</span><span className="text-center">Status</span><span>Duration</span>
+              </div>
+              {refused ? (
+                <div className="flex flex-1 items-center justify-center p-12">
+                  <Notice layout="region" detail="Remove the marked filter, or try a code like 404 or a class like 4xx.">
+                    {`“${label(refused)}” isn't a status code`}
+                  </Notice>
+                </div>
+              ) : rows.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center p-12">
+                  <Notice layout="region" detail="Remove a filter above, or widen one.">Nothing matches your filter</Notice>
+                </div>
+              ) : (
+                <div className="min-h-0 flex-1 overflow-auto">
+                  {rows.map((f) => (
+                    <div key={f.id} className="grid items-center gap-3 border-b border-hairline px-4 font-mono text-ink-body hover:bg-canvas-soft"
+                      style={{ gridTemplateColumns: TPL, height: 30 }}>
+                      <span data-wire="started_at"><span className="inline-block w-4 text-ink-mute">{f.source === "sent" ? "↗" : ""}</span><TimestampText timestamp={f.at} /></span>
+                      <span data-wire="method"><MethodLabel method={f.method} /></span>
+                      <span data-wire="host" className="truncate">{f.host}</span>
+                      <span data-wire="path" className="truncate" title={f.uri}>{f.path}</span>
+                      <span data-wire="status" className="text-center"><StatusPill status={f.status} /></span>
+                      <span data-wire="duration_ms"><DurationText value={f.ms} /></span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
+        mount("m-header", <Header />);
+        mount("m-list", <List />);
+
+        const C = (t) => parse(t).chip;
+        const PRESETS = {
+          focused: { open: true },
+          "key-draft": { draft: "st", open: true },
+          "value-draft": { draft: "status:4", open: true },
+          "host-draft": { draft: "host:loc", open: true },
+          moved: { draft: "st", open: true, moved: true, active: 0 },
+          fault: { draft: "stauts:4xx", open: true, fault: "unknown key “stauts” — did you mean status?" },
+          chips: { chips: ["host:api", "host:auth", "-method:OPTIONS", "type:json"].map(C) },
+          text: { chips: ["login", "token"].map(C) },
+          refused: { chips: [C("host:api"), { neg: false, key: "status", value: "6xx", refused: true }] },
+          nomatch: { chips: ["host:localhost:8080", "method:DELETE"].map(C) },
+          narrow: { chips: ["host:api", "host:auth", "-method:OPTIONS", "type:json", "status:2xx", "is:https", '"v2/accounts"'].map(C), win: 850 },
+        };
+
+        const FRAME_H = 520;
+        const mock = document.getElementById("mock");
+        const fit = document.getElementById("fit");
+        const readout = document.getElementById("readout");
+        function apply() {
+          const s = store.get();
+          const k = Math.min(1, fit.clientWidth / s.win);
+          if (k !== s.k) { store.set({ k }); return; }
+          mock.style.width = `${s.win}px`;
+          mock.style.height = `${FRAME_H}px`;
+          mock.style.transform = `scale(${k})`;
+          fit.style.height = `${FRAME_H * k}px`;
+          fit.style.maxWidth = `${s.win}px`;
+          const query = s.chips.map((c) => `${c.neg ? "not_" : ""}${c.key === "type" ? "content_type" : c.key}=${encodeURIComponent(c.value)}`).join("&");
+          readout.textContent = `window ${s.win} · listings fetched ${s.fetches} · GET /flows?${query}`;
+        }
+        store.sub(apply);
+        new ResizeObserver(apply).observe(fit);
+
+        let prev = new Set(mock.classList);
+        const buttons = [...document.querySelectorAll('[data-state-toggle="mock"]')];
+        new MutationObserver(() => {
+          const now = new Set(mock.classList);
+          const added = [...now].find((c) => !prev.has(c) && PRESETS[c]);
+          if (added) {
+            [...now].filter((c) => c !== added && PRESETS[c]).forEach((c) => mock.classList.remove(c));
+            store.set((p) => ({ ...BASE, k: p.k, fetches: p.fetches, ...PRESETS[added] }));
+          } else if ([...prev].some((c) => PRESETS[c] && !now.has(c))) {
+            store.set((p) => ({ ...BASE, k: p.k, fetches: p.fetches }));
+          }
+          buttons.forEach((b) => { b.textContent = mock.classList.contains(b.dataset.stateClass) ? b.dataset.labelOn : b.dataset.labelOff; });
+          prev = new Set(mock.classList);
+        }).observe(mock, { attributes: true, attributeFilter: ["class"] });
+
+        window.addEventListener("keydown", (e) => {
+          if (e.metaKey && e.key.toLowerCase() === "f" && (mock.matches(":hover") || mock.contains(document.activeElement))) {
+            e.preventDefault();
+            draftBox.current?.current?.focus();
+          }
+        });
+        apply();
+      </script>
+    </div>
+
+    <h3 id="grammar">The grammar the bar reads</h3>
+    <table data-c="grammar">
+      <tr><th>Typed</th><th>Chip</th><th>Sent (W1)</th><th>Selects</th></tr>
+      <tr><td><code>login</code> · <code>"two words"</code></td><td>text</td><td><code>q=</code></td><td>URIs containing it; several text chips must all match (Q10)</td></tr>
+      <tr><td><code>host:</code> <code>method:</code> <code>status:</code> <code>type:</code> <code>source:</code> <code>is:</code></td><td>keyed</td><td><code>host=</code> <code>method=</code> <code>status=</code> <code>content_type=</code> <code>source=</code> <code>is=</code></td><td>one key repeated matches any of its chips (Q2); different keys must all match</td></tr>
+      <tr><td><code>-</code> before either</td><td>negated</td><td><code>not_&lt;key&gt;=</code> · <code>not_q=</code></td><td>none of them</td></tr>
+      <tr><td>a near miss of a key (<code>stauts:</code>), an empty value, an unclosed quote, a status that is not a code or class, a <code>source:</code> or <code>is:</code> outside its set</td><td>none: a fault</td><td>nothing</td><td>the draft stays and says why (DEC-70 rule 8)</td></tr>
+      <tr><td>any other <code>word:rest</code> (<code>localhost:8080</code>, <code>https://api</code>)</td><td>text</td><td><code>q=</code></td><td>URIs containing it (C3)</td></tr>
+    </table>
+
+    <h3 id="suggestions">What the suggestions offer</h3>
+    <table data-c="suggestions-table">
+      <tr><th>Draft</th><th>Rows, in order</th><th>Highlighted</th><th>Enter or Tab takes · Space takes</th></tr>
+      <tr><td>empty, focused</td><td>the six keys, each with its hint</td><td><code>host:</code></td><td><code>host:</code> into the draft · nothing</td></tr>
+      <tr><td><code>st</code></td><td>the draft as a text chip (<em>search the URI for it</em>), then <code>status:</code></td><td><code>status:</code></td><td><code>status:</code> into the draft · a text chip <code>st</code></td></tr>
+      <tr><td><code>status:4</code></td><td><code>status:4xx</code> (not parseable as typed, so no as-typed row)</td><td><code>status:4xx</code></td><td>the chip · a fault: <em>“4” isn't a status</em></td></tr>
+      <tr><td><code>host:api</code></td><td><code>host:api</code> as typed, then every host seen containing <em>api</em></td><td>the first host seen</td><td>that host's chip · <code>host:api</code></td></tr>
+      <tr><td><code>login</code></td><td>the draft as a text chip only</td><td><code>login</code></td><td>the chip · the chip</td></tr>
+      <tr><td>after ↑/↓</td><td>unchanged</td><td>the moved-to row</td><td>the moved-to row · the draft as typed</td></tr>
+      <tr><td>no rows (<code>stauts:4xx</code>)</td><td>none</td><td>—</td><td>the draft as typed, or its fault</td></tr>
+      <tr><td><code>-</code> + any of the above</td><td>the same rows with <code>-</code>, hints read <em>leave out by …</em></td><td>as above</td><td>as above</td></tr>
+    </table>
+    <p class="kd">Values per key: hosts seen (accumulated, port kept) · <code>HTTP_METHODS</code> · 2xx 3xx 4xx 5xx ·
+      a fixed type list (C8) · captured imported sent · pending https. The highlighted row carries <em>↵ enter</em> at
+      its right edge. To take the draft exactly as typed when a suggestion is highlighted, press ↑ to the as-typed row,
+      or Space.</p>
+
+    <h3 id="calls">Calls for the owner's round</h3>
+    <table data-c="calls">
+      <tr><th>#</th><th>The run drew</th><th>The alternative</th></tr>
+      <tr><td>C1</td><td><strong>Enter takes the highlighted suggestion</strong>, as in Select, and so does Tab. <code>st</code> + Enter completes <code>status:</code>; the as-typed row is reached with ↑, or taken with Space. <strong>Owner: the alternative</strong></td><td>was drawn: Tab takes the highlight, Enter takes what is typed</td></tr>
+      <tr><td>C2</td><td><strong>Space ends a chip</strong> outside quotes, so typing <code>login token</code> straight through makes two text chips. A phrase with a space is typed in quotes: <code>"login token"</code> is one text chip, matching URIs that contain the phrase</td><td>space is literal, and only Enter, Tab or a click ends a chip. <code>login token</code> becomes one text chip</td></tr>
+      <tr><td>C3</td><td>an unknown key is a fault <strong>only as a near miss</strong> of a real key (two edits or fewer: <code>stauts</code>, <code>mehtod</code>). Any other <code>word:rest</code> is text, so <code>localhost:8080</code> and <code>https://api</code> search the URI</td><td>every unknown key is a fault, and a colon inside text needs quotes</td></tr>
+      <tr><td>C4</td><td>a fault shows <strong>when a chip is attempted</strong> (Enter, Tab, Space), as a warn Notice in the suggestions' place, and goes with the next keystroke</td><td>live as you type · or under the bar, in the header, which then grows a line</td></tr>
+      <tr><td>C5</td><td>the bar is <strong>mono</strong>: draft, chips and suggestions are typed grammar, read as typed (Field's <code>verbatim</code>). Hints and the placeholder are ui</td><td>ui for keys and mono for values only</td></tr>
+      <tr><td>C6</td><td>a chip is a <code>wash-tint</code> pill one control high: key muted, value ink (a method toned by MethodLabel), a 24 px × at its end. Negated: a leading <code>-</code>, exactly as typed. Refused: a warn border and ⚠</td><td>negated drawn with a <em>not</em> word or struck through · a bordered chip in the small-control box</td></tr>
+      <tr><td>C7</td><td><strong>no clear-all</strong>. Backspace in the empty draft removes the last chip, and every chip's × is a tab stop</td><td>a clear-all × at the bar's right end</td></tr>
+      <tr><td>C8</td><td><code>type:</code> offers a fixed list: json html xml javascript css image font form text. The listing's summary carries no content type, so there is nothing seen to offer</td><td>widen the summary with its content type, and offer the types seen (a W1 follow-up)</td></tr>
+      <tr><td>C9</td><td>a chip is <strong>not edited in place</strong>: remove it and type it again</td><td>a click on the chip, or Enter on it, returns its text to the draft</td></tr>
+      <tr><td>C10</td><td>the list's two notices reworded for chips: <em>Nothing matches your filter</em> · <em>Remove a filter above, or widen one.</em> A refusal names the chip, <em>“status:6xx” isn't a status code</em> · <em>Remove the marked filter, or try a code like 404 or a class like 4xx.</em></td><td>today's text, which points at <em>the fields above</em></td></tr>
+      <tr><td>C11</td><td>no ⌘F hint drawn in the bar; the placeholder says what to type</td><td>a muted <em>⌘F</em> at the bar's right end while it is not focused</td></tr>
+    </table>
+
+    <h2 id="given">Given: what the bar is handed</h2>
+    <table data-item="capabilities" data-c="given-table">
+      <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
+      <tr><td>the listing, export and clear taking W1's parameters (<code>q</code> all of, other keys any of, <code>not_&lt;key&gt;</code>, <code>is</code>)</td><td>used</td><td>the chips are sent as those parameters, and the capture menu's export and clear take the same set</td></tr>
+      <tr><td>the core's <code>400</code> naming the parameter as sent (W1, DEC-70 rule 6)</td><td>used</td><td>the chip that produced it is marked; the row region says why (C10)</td></tr>
+      <tr><td>the hosts seen (<code>useFlows</code>'s <code>hosts</code>, accumulated, port kept)</td><td>used</td><td><code>host:</code> suggestions</td></tr>
+      <tr><td><code>HTTP_METHODS</code></td><td>used</td><td><code>method:</code> suggestions, each drawn by MethodLabel</td></tr>
+      <tr><td>the flow count</td><td>used</td><td>the capture slot, unchanged</td></tr>
+      <tr><td>the list's absences (silent, cleared, filtered, refused)</td><td>used</td><td>filtered and refused reworded (C10); silent and cleared unchanged</td></tr>
+      <tr><td>the window's key events</td><td>used</td><td>⌘F focuses the draft (Q3)</td></tr>
+      <tr><td>the chips saved at the last quit (Q4)</td><td>used</td><td>restored before the first listing, drawn as any chip: a restore has no look of its own</td></tr>
+      <tr><td>E-STICKY's store for those chips</td><td>blocked</td><td>not on this epic's base; see blocked-on</td></tr>
+      <tr><td>each flow's content type</td><td>deliberately unused</td><td>the summary does not carry one, so <code>type:</code> offers a fixed list (C8)</td></tr>
+      <tr><td>the SSE stream</td><td>deliberately unused</td><td>the stream stays unfiltered; the list refetches on events with the chips' parameters, as today</td></tr>
+      <tr><td><code>prefers-reduced-motion</code></td><td>deliberately unused</td><td>nothing animates: the border lifts and a popup appears</td></tr>
+    </table>
+    <p class="kd">Not given (may not be assumed to exist): a query grammar in the core (<code>?query=</code>) · OR within a
+      key · searching headers or bodies · filtering by duration or size · suggestions fetched from the core · saved
+      queries or presets · actions in the bar (Q8).</p>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
+      <tr><td>click into the bar</td><td>app header, query bar</td><td>⌘F from anywhere in the main window, or Tab to the draft. proposed: focus the query bar</td></tr>
+      <tr><td>hover a suggestion</td><td>suggestions</td><td>↑ / ↓ move the highlight, no wrap (move within a list without selecting)</td></tr>
+      <tr><td>click a key suggestion</td><td>suggestions</td><td>Enter takes the highlighted row (take the moved-to item), and the key goes into the draft. Tab does the same. proposed: Tab takes a suggestion</td></tr>
+      <tr><td>click a value suggestion</td><td>suggestions</td><td>Enter, or Tab, on the highlighted row: the chip is made (take the moved-to item)</td></tr>
+      <tr><td>click the as-typed suggestion</td><td>suggestions</td><td>↑ to it, then Enter (take the moved-to item), or Space outside quotes (C2). proposed: end a chip</td></tr>
+      <tr><td>click outside to close the suggestions</td><td>suggestions</td><td>Esc: the suggestions close and the draft is unchanged (dismiss the surface — unchanged)</td></tr>
+      <tr><td>click a chip's ×</td><td>query bar, a chip</td><td>Shift+Tab to that ×, Enter or Space (activate the focused element). The last chip also goes with Backspace in an empty draft. proposed: remove the last chip</td></tr>
+      <tr><td>scroll the suggestions</td><td>suggestions</td><td>↑ / ↓ keep the highlighted row in view</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+      <tr><td>component (T2)</td><td><code>QueryBar</code>: chips, a draft, suggestions. It owns the grammar (draft → chip or fault,
+        draft → suggestions) through a pure <code>query.ts</code>; chips, hosts seen and the refusal come from the caller.
+        Design: <a href="components/query-bar.html">components/query-bar.html</a></td><td>Field's <code>@avoid</code>: it judges
+        nothing typed. Select's <code>@avoid</code>: free-text entry and more than one value. Nothing in the collection
+        renders a removable token</td><td>W3</td></tr>
+      <tr><td>TSDoc</td><td>Field's <code>@use</code> and <code>@avoid</code> drop <em>the filter bar's free-text box and its status box</em> and
+        <em>the filter bar's four controls</em>; Select's tenants drop the host and method filters</td><td>those tenants go</td><td>W3</td></tr>
+      <tr><td>keyboard vocabulary</td><td><em>focus the query bar</em> ⌘F · <em>Tab takes a suggestion</em>: Tab, like Enter, takes the
+        highlighted suggestion · <em>end a chip</em>: Space outside quotes takes the draft as typed · <em>remove the last chip</em>:
+        Backspace in an empty draft</td><td>the conventions have no typed-token pattern</td><td>W4 distills it into the rulebook</td></tr>
+      <tr><td>lexicon</td><td><em>filter</em>: one chip in the query bar. Never <em>tag</em>, <em>token</em> or <em>pill</em> on screen. The
+        screen never says <em>draft</em> for the bar's typed text: that word is the composer's</td><td>new terms</td><td>W4</td></tr>
+      <tr><td>microcopy</td><td>FlowList's filtered and refused notices (C10)</td><td>they name the fields that go</td><td>W3</td></tr>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr><td>a store for the chips across a relaunch: E-STICKY's is on <code>epic/sticky-ui</code>, not on this epic's base</td><td>W3: use E-STICKY's store if it has landed on main, else a small one of its own that E-STICKY adopts (Q4)</td><td>drew restored chips as plain chips; the store has no look</td></tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>Start: the epic plan's W2 block and rulings Q3 (⌘F), Q4 (chips survive a relaunch), Q5 (only a chip refetches), Q7 (a chip, text included), Q8 (no actions in the bar), Q10 (text chips all of)</td><td>capabilities · mockup · keyboard · proposals: one bar of chips in the four controls' place, suggestions computed in the client, the list moving only on a chip</td><td><code>DEC-70</code></td></tr>
+        <tr><td>Owner, round 1: C1 changed, "use the alternative": Enter takes the highlight, as in Select</td><td>mockup: Enter and Tab both take the highlighted row, the badge is <em>↵ enter</em> on the highlight only · the suggestions table · keyboard: three suggestion rows · proposals: <em>complete with Tab</em> becomes <em>Tab takes a suggestion</em> · the component design: behavior, forks, specimen</td><td><code>keyboard-parity</code> · Select's <em>take the moved-to item</em> · <code>QueryBar</code> API</td></tr>
+        <tr><td>Owner, round 1: C2, on the alternative, "but how do we type it?"</td><td>the C2 row and the mockup's note say it: a phrase with a space is typed in quotes, <code>"login token"</code> is one text chip. C2 held as drawn</td><td><code>DEC-70</code> rule 8: a typed form the draft can always reach</td></tr>
+        <tr><td>Owner, round 1: C3–C11 held</td><td>nothing: drawn as held</td><td><code>taste</code> · C8: <code>DEC-21</code>, no prop without a truthful source</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

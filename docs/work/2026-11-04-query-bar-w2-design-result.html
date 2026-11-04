@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb0e9d9f34851f0dfae5a2" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-QUERY.W2 result: the query bar designed</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-QUERY.W2 — result</h1>
+      <p>One closed design run for the query bar and a confirmed <code>QueryBar</code> design; W3 builds from them.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-QUERY.W2</span> · branch
+        <code>wu/query-bar/query-bar-design</code> · <a href="2026-11-04-query-bar-w2-design-plan.html">WU plan</a> ·
+        <a href="2026-11-04-query-bar-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Shipped</th><th></th></tr>
+      <tr><td>a design run whose live mockup puts one query bar where the four filter controls were, over the header's
+        and the list's real components</td><td><a href="2026-11-04-query-bar-design-run.html">the run</a>, archived; the
+        chips filter the mockup's rows by W1's rules, and eleven state toggles cover the focused bar, key and value
+        drafts, a moved highlight, a fault, every chip kind, a refused chip, an empty result and an 850 px window</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>the grammar and the suggestions stated</td><td>grammar table · suggestions table · values per key</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a key path per pointer act</td><td>keyboard item, 8 rows</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td><code>QueryBar</code> component design</td><td><a href="components/query-bar.html">components/query-bar.html</a>,
+        T2, confirmed 2026-11-04</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>the owner's round recorded</td><td>review item: C1 changed, C2 answered and held, C3–C11 held</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>no file under <code>ui/src/</code></td><td>none in the diff</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>What</th><th>Why</th></tr>
+      <tr><td>Enter and Tab both take the highlighted suggestion; the draft as typed is taken with Space, or with ↑ to
+        its row. The epic plan's walk-through says Tab, which still holds</td><td>owner, C1: Enter means what it means
+        in Select</td></tr>
+      <tr><td><code>host:api</code> + Enter now takes the first host seen containing <em>api</em>, not the substring;
+        the substring chip is Space or ↑ + Enter. Either selects that host's flows</td><td>follows C1. W4's e2e builds
+        <code>host:api</code> with Space</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Layer</th><th>Where</th><th>Result</th></tr>
+      <tr><td>unit</td><td>waived: no executable code; every predicate is a verify-doc rule tested in xtask</td><td>—</td></tr>
+      <tr><td>integration</td><td>waived: <code>verify-doc</code> green, 6·run-closed, <code>design-scope</code></td><td>green</td></tr>
+      <tr><td>e2e</td><td>waived: a design doc renders no driveable surface; W4's WebDriver spec drives the built bar</td><td>—</td></tr>
+      <tr><td>render</td><td><code>scripts/check-render.mjs</code> on both docs; headless Chrome over the states; the mockup's
+        parser and selection run against the epic's expected results</td><td>clean</td></tr>
+      <tr><td>commits</td><td><code>8c4dc9c1</code> plan · <code>960e2e58</code> run, open · <code>79e1ad4a</code> the round's close · this result</td><td></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: none yet, waived: a design reaches UC-4, DEC-70 and the rulebook (keyboard vocabulary <em>focus the query
+      bar</em>, <em>Tab takes a suggestion</em>, <em>end a chip</em>, <em>remove the last chip</em>; lexicon
+      <em>filter</em>) after it is built, at W4. T1: nothing.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>What</th><th>Who</th></tr>
+      <tr><td>build <code>QueryBar</code> and <code>query.ts</code> from the confirmed design; the header swap in
+        <code>App.tsx</code>; <code>useFlows</code> sending the chips' parameters only on a chip change; the refusal
+        mapped to its chips; FlowList's two notices (C10); Field's and Select's TSDoc tenants</td><td>W3</td></tr>
+      <tr><td>a store for the chips across a relaunch: E-STICKY's if it has landed on main, else W3's own</td><td>W3</td></tr>
+      <tr><td>the content type in the listing's summary, so <code>type:</code> could offer types seen (C8 alternative)</td><td>the roadmap</td></tr>
+      <tr><td>keyboard vocabulary and lexicon into the rulebook; UC-4; DEC-70 widened</td><td>W4</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

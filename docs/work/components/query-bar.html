@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb064e9f34851f0dfae536">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — QueryBar (component design)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>QueryBar <span class="badge id">T2</span></h1>
+      <p>One box of filter chips and a draft. Typing writes the draft, suggestions follow it, and a chip is made only
+        when the draft parses.</p>
+      <div class="meta">Component design · 2026-11-04 · Trawler · status: <strong>confirmed</strong> 2026-11-04 (round 1; C1 took the alternative: Enter takes the highlight) · proposed by the
+        <a href="../2026-11-04-query-bar-design-run.html">query bar's design run</a> (E-QUERY.W2) · built by
+        E-QUERY.W3 · retires into the TSDoc on build (DEC-16)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <p class="callout" data-c="claim">Without it the header keeps four controls with four rules, two filters stay
+      unreachable, and a typed filter has nowhere to say it is wrong except an empty list.</p>
+    <table data-c="facts">
+      <tr><th>Fact</th><th>Value</th></tr>
+      <tr><td>tier</td><td>T2: it owns the grammar, draft → chip or fault and draft → suggestions, through a pure
+        <code>query.ts</code> it imports, the way MethodLabel owns verb → tone. A draft is a pure function of one string
+        (DEC-20). The chips, the hosts seen and the refusal are app state, so they come from the caller</td></tr>
+      <tr><td>tenants</td><td>the app header, in place of the free-text Field, the host and method Selects and the status
+        Field</td></tr>
+      <tr><td>exists today</td><td>no: <code>App.tsx</code>'s header renders the four controls, and <code>useFlows</code> holds one
+        value per key</td></tr>
+      <tr><td>made of</td><td>IconButton (each chip's ×) · MethodLabel (a method value) · Notice (a fault). The box is
+        Field's box (DEC-18); the draft is a borderless input inside it, as Select's filter row is</td></tr>
+    </table>
+    <table data-c="drivers">
+      <tr><th>Driver</th><th>Design consequence</th></tr>
+      <tr><td>DEC-70 rule 8: a draft that does not parse never reaches the core</td><td><code>onChange(chips)</code> fires only when a
+        chip is added or removed; a fault is the component's own state, never the caller's</td></tr>
+      <tr><td>Q5: only a chip refetches</td><td>typing never calls out; suggestions are computed in the component</td></tr>
+      <tr><td>DEC-70 rule 6: a refusal names its parameter</td><td>the caller passes which chips were refused; the component marks them</td></tr>
+      <tr><td>DEC-18: one small-control box</td><td>the bar is Field's box; a chip draws no second box (a wash, no border at rest)</td></tr>
+      <tr><td>keyboard-parity</td><td>every pointer act has a key: Tab, Enter, Space, ↑/↓, Esc, Backspace, and the chips' × in tab order</td></tr>
+      <tr><td>colour-plus-text</td><td>a refused chip carries ⚠ beside the warn border; a negated chip carries its <code>-</code></td></tr>
+      <tr><td>wrap-not-truncate</td><td>a long value wraps inside its chip, and the chips wrap inside the bar</td></tr>
+    </table>
+
+    <h2 id="anatomy">Anatomy</h2>
+    <div class="app" data-c="anatomy-specimen"><div id="spec-anatomy"></div></div>
+    <table data-c="anatomy">
+      <tr><th>#</th><th>Part</th><th>Spec</th><th>Why</th></tr>
+      <tr><td>1</td><td>box</td><td>Field's box: <code>border-hairline</code>, <code>rounded-button</code>, <code>bg-canvas</code>; padding
+        <code>chrome-tight</code> so a 24 px chip sits inside a 30 px bar. The border lifts to <code>ink-mute</code> on hover and while
+        anything inside has focus. <code>flex-wrap</code>, width from the caller</td><td>DEC-18: the bar is a text input's box, not a new one</td></tr>
+      <tr><td>2</td><td>chip</td><td><code>bg-wash-tint</code> pill, <code>min-h-control</code>, mono <code>text-control</code>: <code>-</code> (negated) and
+        <code>key:</code> in <code>ink-mute</code>, the value in <code>ink</code>. A method value is a MethodLabel; a host value is
+        <code>data-wire="host"</code>. A text chip with a space shows its quotes</td><td>it reads back exactly what was typed, so the bar teaches its own grammar</td></tr>
+      <tr><td>3</td><td>×</td><td>IconButton <code>glyph="close"</code> <code>size={24}</code> at the chip's end, named <em>remove &lt;chip&gt;</em>. A tab stop</td><td>the shell's hit floor and focus ring; a 24 px × fits the 24 px chip</td></tr>
+      <tr><td>4</td><td>refused mark</td><td>the chip's border turns <code>warn</code> and ⚠ leads it; <code>aria-invalid</code></td><td>the row region says why; the chip says which</td></tr>
+      <tr><td>5</td><td>draft</td><td>a borderless mono input, <code>min-w-field-sm</code>, filling the rest of the last line.
+        <code>role="combobox"</code>. Placeholder in ui: <em>filter — status:4xx, host:api, or any text</em>, then <em>add a filter</em> once a chip exists</td><td>the draft wraps to a new line rather than shrinking below a word</td></tr>
+      <tr><td>6</td><td>suggestions</td><td>Select's popup surface (<code>bg-canvas</code>, hairline, <code>rounded-card</code>, <code>shadow-pop</code>,
+        <code>z-popup</code>) under the draft, <code>min-w-picker</code>, scrolling past <code>listing-max</code>. A row: the completion in mono,
+        its hint in ui <code>ink-mute</code>, and <em>↵ enter</em> at the right edge of the highlighted row. The
+        highlight is Select's <code>bg-wash-tint</code></td><td>one floating surface in the collection, not two</td></tr>
+      <tr><td>7</td><td>fault</td><td>a warn Notice, inline, in the suggestions' place: <em>unknown key “stauts” — did you mean status?</em></td><td>Notice owns a sentence at a tone with its glyph</td></tr>
+    </table>
+
+    <h2 id="behavior">Behavior</h2>
+    <p class="kd">Anatomy is what you see; behavior is what it does.</p>
+    <table data-c="behavior">
+      <tr><th>Rule</th><th>Example</th><th>Spec</th><th>Why</th></tr>
+      <tr><td>typing</td><td><code>sta</code></td><td>updates the draft and its suggestions, clears a fault, and never calls <code>onChange</code></td><td>Q5</td></tr>
+      <tr><td>Enter</td><td><code>st</code> → <code>status:</code> · <code>status:4</code> → chip <code>status:4xx</code></td><td>takes the highlighted row: a key goes into the draft, a value becomes a chip. With no rows, it tries the draft as typed</td><td>C1 (owner): Select's <em>take the moved-to item</em></td></tr>
+      <tr><td>Tab</td><td>as Enter</td><td>takes the highlighted row. With an empty draft and no rows, focus moves on</td><td>completion is the bar's main act</td></tr>
+      <tr><td>Space</td><td><code>login token</code> → two chips · <code>"login token"</code> → one</td><td>outside quotes, takes the draft as typed, whatever is highlighted</td><td>C2: the as-typed path with one key</td></tr>
+      <tr><td>↑ / ↓</td><td>moves the highlight</td><td>no wrap; the <em>↵ enter</em> badge follows it. ↑ reaches the as-typed row</td><td>Select's convention</td></tr>
+      <tr><td>Esc</td><td>closes the suggestions</td><td>the draft and the chips stay</td><td>dismiss the surface — unchanged</td></tr>
+      <tr><td>Backspace</td><td>empty draft → the last chip goes</td><td>calls <code>onChange</code> without it</td><td>the typed-token idiom</td></tr>
+      <tr><td>×</td><td>removes that chip</td><td>calls <code>onChange</code> without it; focus returns to the draft</td><td>the pointer path to any chip</td></tr>
+      <tr><td>fault</td><td><code>stauts:4xx</code> + Enter</td><td>no chip; the fault replaces the suggestions until the next keystroke</td><td>C4, DEC-70 rule 8</td></tr>
+      <tr><td>duplicate</td><td><code>host:api</code> twice</td><td>the draft clears, no chip is added, <code>onChange</code> is not called</td><td>a second identical chip changes nothing</td></tr>
+      <tr><td>unknown key</td><td><code>localhost:8080</code></td><td>text, unless the key is within two edits of a real one</td><td>C3</td></tr>
+      <tr><td>focus</td><td>⌘F</td><td>the caller binds ⌘F and calls the bar's <code>focus()</code> (a ref)</td><td>Q3; the window's keys are the screen's, not the component's</td></tr>
+    </table>
+
+    <h2 id="states">States</h2>
+    <div class="app" data-c="states">
+      <div class="grid grid-cols-2 gap-4 font-ui text-chrome text-ink-mute">
+        <div><div id="spec-rest"></div>rest, empty</div>
+        <div><div id="spec-chips"></div>rest, with chips (keyed, repeated, negated, text)</div>
+        <div><div id="spec-refused"></div>a chip refused by the core</div>
+        <div><div id="spec-narrow"></div>chips wrapping in a narrow bar</div>
+      </div>
+    </div>
+    <p class="kd">Focused, suggesting, moved and faulted are live states: the specimen at the end shows each. Not states:
+      disabled (the list can always be filtered), loading (suggestions are local), restored (a restored chip is a chip),
+      a chip being edited (C9).</p>
+
+    <h2 id="forks">Forks</h2>
+    <table data-c="forks">
+      <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
+      <tr><td>tier</td><td><span class="badge auto">settled</span> T2, grammar inside</td><td><span class="badge approval">rejected</span> T1 with <code>parse</code> and <code>suggest</code> props: the grammar has one tenant, and two copies of it would drift on the rule that must not (DEC-20)</td></tr>
+      <tr><td>Tab or Enter</td><td><span class="badge auto">settled</span> Enter and Tab both take the highlight, as in Select; Space takes what is typed (owner, C1)</td><td><span class="badge approval">rejected</span> Tab takes the suggestion and Enter the typed text: Enter would mean something here it means nowhere else in the app</td></tr>
+      <tr><td>where a fault is said</td><td><span class="badge auto">settled</span> in the suggestions' place, on an attempt (C4)</td><td><span class="badge approval">rejected</span> live as you type: <code>status:4</code> is a fault on its way to <code>status:404</code></td></tr>
+      <tr><td>chip box</td><td><span class="badge auto">settled</span> a wash, no border at rest (C6)</td><td><span class="badge approval">rejected</span> the small-control box per chip: boxes inside a box, and a chip would read as a button</td></tr>
+    </table>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <tr><th>Prop</th><th>Type</th><th>Note</th></tr>
+      <tr><td><code>chips</code></td><td><code>Chip[]</code>, <code>{ key: "q" | "host" | "method" | "status" | "type" | "source" | "is"; value: string; negated: boolean }</code></td><td>controlled; restored chips arrive here</td></tr>
+      <tr><td><code>onChange</code></td><td><code>(chips: Chip[]) =&gt; void</code></td><td>only on add or remove</td></tr>
+      <tr><td><code>hosts</code></td><td><code>string[]</code></td><td>the hosts seen, port kept</td></tr>
+      <tr><td><code>refused</code></td><td><code>(chip: Chip) =&gt; boolean</code></td><td>which chips the core's last refusal named</td></tr>
+      <tr><td><code>className</code></td><td><code>string</code></td><td>width only</td></tr>
+      <tr><td>ref</td><td><code>{ focus(): void }</code></td><td>for the screen's ⌘F</td></tr>
+    </table>
+    <pre data-c="tsdoc"><code>/**
+ * QueryBar — one box of filter chips and a draft; suggestions follow the draft, and a chip is made only when the draft parses.
+ * @tier T2 — owns the grammar (draft → chip or fault, draft → suggestions) through query.ts; chips, hosts seen and the refusal are the caller's
+ * @anatomy Field's box, flex-wrap, chrome-tight padding · chips: wash-tint pill, mono, key and "-" ink-mute, value ink (MethodLabel for a method), IconButton × size 24 · refused: warn border + ⚠ · draft: borderless mono input, min-w-field-sm · suggestions: Select's popup surface under the draft, completion mono + hint ui + the key that takes it · fault: an inline warn Notice in the suggestions' place
+ * @use the one filter of a list the user narrows by typed keys and text: the flow list's header
+ * @avoid one free-text value (Field) · one choice among options (Select) · actions or commands in the bar (DEC-70 rule 9) · calling the caller on a keystroke: onChange is for chips only · editing a chip in place
+ * @states rest · focused (suggestions, Enter or Tab takes the highlight, Space the draft as typed) · moved (↑/↓ highlight) · faulted (warn Notice until the next keystroke) · chips · a refused chip. No disabled, loading or restored state
+ * @madeof IconButton · MethodLabel · Notice
+ */</code></pre>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit">
+      <div class="card"><h3>Use</h3><p>A list narrowed by several typed filters at once, where each filter is a key and a
+        value, or text, and the list should move only on a finished filter.</p></div>
+      <div class="card"><h3>Avoid</h3><p>One free-text value (<code>Field</code>) · one choice among known options
+        (<code>Select</code>, or <code>SegmentedControl</code> under five) · actions in the bar (they stay in the menus).</p></div>
+    </div>
+
+    <h2 id="tokens">Tokens</h2>
+    <table data-c="tokens">
+      <tr><th>Part</th><th>Classes</th></tr>
+      <tr><td>box</td><td><code>flex flex-wrap items-center gap-chrome-tight rounded-button border border-hairline bg-canvas p-chrome-tight hover:border-ink-mute focus-within:border-ink-mute</code></td></tr>
+      <tr><td>chip</td><td><code>inline-flex min-h-control items-center rounded-button border border-transparent bg-wash-tint pl-chrome-x font-mono text-control text-ink</code> · refused <code>border-warn</code>, ⚠ <code>text-warn mr-chrome-tight</code> · key <code>text-ink-mute</code> · value <code>break-all</code></td></tr>
+      <tr><td>draft</td><td><code>h-control w-full border-none bg-transparent px-chrome-x font-mono text-control text-ink outline-none placeholder:font-ui placeholder:text-ink-mute</code> in a <code>relative min-w-field-sm flex-1</code> wrapper</td></tr>
+      <tr><td>suggestions</td><td><code>absolute left-0 top-full mt-chrome-y z-popup min-w-picker rounded-card border border-hairline bg-canvas shadow-pop</code> · list <code>max-h-listing-max overflow-y-auto py-chrome-tight</code> · row <code>min-h-control px-control-x py-control-y text-control</code>, highlight <code>bg-wash-tint text-ink</code> · hint <code>font-ui text-ink-mute</code> · badge <code>ml-auto font-ui text-chrome text-ink-mute</code></td></tr>
+    </table>
+
+    <h2 id="specimen">Live specimen</h2>
+    <p class="kd">A stand-in drawn here because the component does not exist yet (a proposed part). Type, Tab, Enter,
+      Space, ↑/↓, Esc, Backspace. The line under it is what <code>onChange</code> last reported.</p>
+    <div class="app" data-c="specimen"><div id="spec-live"></div></div>
+
+  </main>
+  <script type="text/babel">
+    const { React, createRoot, IconButton, MethodLabel, Notice, HTTP_METHODS } = window.Trawler;
+    const { useRef, useState } = React;
+
+    const KEYS = [
+      { key: "host", hint: "a host seen, or part of one" },
+      { key: "method", hint: "GET, POST, …" },
+      { key: "status", hint: "a code like 404, or a class like 4xx" },
+      { key: "type", hint: "the response type, like json" },
+      { key: "source", hint: "captured, imported or sent" },
+      { key: "is", hint: "pending or https" },
+    ];
+    const KEY = Object.fromEntries(KEYS.map((k) => [k.key, k]));
+    const FIXED = {
+      status: [["2xx", "success"], ["3xx", "redirect"], ["4xx", "client error"], ["5xx", "server error"]],
+      type: ["json", "html", "xml", "javascript", "css", "image", "font", "form", "text"].map((t) => [t, ""]),
+      source: [["captured", "through the proxy"], ["imported", "from a HAR file or a curl command"], ["sent", "by Trawler, from a draft"]],
+      is: [["pending", "no response yet"], ["https", "sent over https"]],
+    };
+    const HOSTS = ["api.example.com", "auth.example.com", "localhost:8080", "cdn.static-assets.net"];
+    const valuesOf = (key) => (key === "host" ? HOSTS.map((h) => [h, ""]) : key === "method" ? HTTP_METHODS.map((m) => [m, ""]) : FIXED[key]);
+    function distance(a, b) {
+      const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+      for (let j = 1; j <= b.length; j++) d[0][j] = j;
+      for (let i = 1; i <= a.length; i++)
+        for (let j = 1; j <= b.length; j++)
+          d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      return d[a.length][b.length];
+    }
+    const openQuote = (t) => (t.match(/"/g) ?? []).length % 2 === 1;
+    function judge(key, value) {
+      if (key === "status")
+        return /^[1-5](\d\d|xx)$/i.test(value) ? { value: value.toLowerCase() } : { fault: `“${value}” isn't a status — try a code like 404 or a class like 4xx` };
+      if (key === "method") return /^[a-z]+$/i.test(value) ? { value: value.toUpperCase() } : { fault: "a method is letters only, like GET" };
+      if (key === "source" || key === "is") {
+        const ok = FIXED[key].map(([v]) => v);
+        return ok.includes(value.toLowerCase()) ? { value: value.toLowerCase() } : { fault: `${key} is ${ok.slice(0, -1).join(", ")} or ${ok[ok.length - 1]}` };
+      }
+      return { value };
+    }
+    function parse(draft) {
+      const t = draft.trim();
+      if (!t) return {};
+      const neg = t.startsWith("-") && t.length > 1;
+      const rest = neg ? t.slice(1) : t;
+      if (rest.startsWith('"')) {
+        if (rest.length < 2 || !rest.endsWith('"')) return { fault: "a quote is opened and never closed" };
+        const v = rest.slice(1, -1);
+        return v.trim() ? { chip: { neg, key: "q", value: v } } : { fault: "the quotes hold nothing" };
+      }
+      const m = rest.match(/^([A-Za-z_]+):(.*)$/);
+      if (m) {
+        const k = m[1].toLowerCase();
+        if (KEY[k]) {
+          if (!m[2]) return { fault: `${k}: needs a value — ${KEY[k].hint}` };
+          const j = judge(k, m[2]);
+          return j.fault ? { fault: j.fault } : { chip: { neg, key: k, value: j.value } };
+        }
+        const near = KEYS.find((x) => distance(k, x.key) <= 2 && k.length >= 2);
+        if (near) return { fault: `unknown key “${m[1]}” — did you mean ${near.key}?` };
+      }
+      return { chip: { neg, key: "q", value: rest } };
+    }
+    const label = (c) => `${c.neg ? "-" : ""}${c.key === "q" ? (/\s/.test(c.value) ? `"${c.value}"` : c.value) : `${c.key}:${c.value}`}`;
+    function rowsFor(draft) {
+      const t = draft.trimStart();
+      const neg = t.startsWith("-");
+      const rest = neg ? t.slice(1) : t;
+      const pre = neg ? "-" : "";
+      const out = [];
+      const m = rest.match(/^([A-Za-z_]+):(.*)$/);
+      const k = m && KEY[m[1].toLowerCase()];
+      if (k) {
+        for (const [v, hint] of valuesOf(k.key))
+          if (v.toLowerCase().includes(m[2].toLowerCase())) out.push({ kind: "value", text: `${pre}${k.key}:${v}`, key: k.key, value: v, hint });
+      } else if (!rest.includes(":") && !rest.startsWith('"')) {
+        for (const x of KEYS) if (x.key.startsWith(rest.toLowerCase())) out.push({ kind: "key", text: `${pre}${x.key}:`, key: x.key, hint: neg ? `leave out by ${x.key}` : x.hint });
+      }
+      const p = parse(draft);
+      if (p.chip && !out.some((r) => r.text.toLowerCase() === label(p.chip).toLowerCase()))
+        out.unshift({ kind: "typed", text: label(p.chip), key: p.chip.key, value: p.chip.value, hint: p.chip.key === "q" ? (p.chip.neg ? "leave out every URI containing it" : "search the URI for it") : "as typed" });
+      return out;
+    }
+
+    function Chip({ c, onRemove }) {
+      return (
+        <span aria-invalid={c.refused ? "true" : undefined}
+          className={`inline-flex min-h-control items-center rounded-button border pl-chrome-x font-mono text-control text-ink ${c.refused ? "border-warn" : "border-transparent"} bg-wash-tint`}>
+          {c.refused && <span aria-hidden="true" className="mr-chrome-tight text-warn">⚠</span>}
+          {c.neg && <span className="text-ink-mute">-</span>}
+          {c.key !== "q" && <span className="text-ink-mute">{c.key}:</span>}
+          {c.key === "method" ? <MethodLabel method={c.value} /> : <span className="break-all">{c.key === "q" && /\s/.test(c.value) ? `"${c.value}"` : c.value}</span>}
+          <IconButton glyph="close" size={24} label={`remove ${label(c)}`} onClick={onRemove} />
+        </span>
+      );
+    }
+
+    function Bar({ initial = [], forceOpen = false, initialDraft = "", width = "w-full", onReport }) {
+      const [chips, setChipsState] = useState(initial);
+      const [draft, setDraft] = useState(initialDraft);
+      const [open, setOpen] = useState(forceOpen);
+      const [moved, setMoved] = useState(false);
+      const [at, setAt] = useState(0);
+      const [fault, setFault] = useState(null);
+      const input = useRef(null);
+      const setChips = (next) => { setChipsState(next); onReport?.(next); };
+      const rows = open && !fault ? rowsFor(draft) : [];
+      const active = moved ? Math.min(at, rows.length - 1) : Math.max(0, rows.findIndex((r) => r.kind !== "typed"));
+      const reset = () => { setDraft(""); setFault(null); setMoved(false); setAt(0); };
+      const accept = (text) => {
+        const p = parse(text);
+        if (p.chip) { reset(); if (!chips.some((c) => label(c) === label(p.chip))) setChips([...chips, p.chip]); }
+        else if (p.fault) { setFault(p.fault); setOpen(true); }
+      };
+      const take = (row) => (row.kind === "key" ? (setDraft(row.text), setMoved(false), setAt(0)) : accept(row.text));
+      const badge = (row, i) => (i === active ? "↵ enter" : null);
+      const onKey = (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          if (!rows.length) return;
+          e.preventDefault();
+          setMoved(true);
+          setAt(Math.min(Math.max(active + (e.key === "ArrowDown" ? 1 : -1), 0), rows.length - 1));
+        } else if (e.key === "Tab" && !e.shiftKey) {
+          if (rows.length) { e.preventDefault(); take(rows[active]); } else if (draft.trim()) { e.preventDefault(); accept(draft); }
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (rows[active]) take(rows[active]); else if (draft.trim()) accept(draft);
+        } else if (e.key === " " && draft.trim() && !openQuote(draft)) {
+          e.preventDefault();
+          accept(draft);
+        } else if (e.key === "Escape") { setOpen(false); setMoved(false); }
+        else if (e.key === "Backspace" && draft === "" && chips.length) { e.preventDefault(); setChips(chips.slice(0, -1)); }
+      };
+      return (
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); input.current?.focus(); } }}
+          className={`flex flex-wrap items-center gap-chrome-tight rounded-button border border-hairline bg-canvas p-chrome-tight transition-colors hover:border-ink-mute focus-within:border-ink-mute ${width}`}>
+          {chips.map((c) => <Chip key={label(c)} c={c} onRemove={() => { setChips(chips.filter((x) => x !== c)); input.current?.focus(); }} />)}
+          <div className="relative min-w-field-sm flex-1">
+            <input ref={input} type="text" role="combobox" aria-label="filter" aria-expanded={rows.length > 0 || !!fault} value={draft}
+              placeholder={chips.length ? "add a filter" : "filter — status:4xx, host:api, or any text"}
+              onChange={(e) => { setDraft(e.target.value); setFault(null); setMoved(false); setAt(0); setOpen(true); }}
+              onFocus={() => setOpen(true)} onBlur={() => { setOpen(false); setMoved(false); }} onKeyDown={onKey}
+              className="h-control w-full border-none bg-transparent px-chrome-x font-mono text-control text-ink outline-none placeholder:font-ui placeholder:text-ink-mute" />
+            {open && (fault || rows.length > 0) && (
+              <div className="absolute left-0 top-full z-popup mt-chrome-y min-w-picker overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop">
+                {fault ? <div className="px-control-x py-control-y"><Notice tone="warn">{fault}</Notice></div> : (
+                  <ul role="listbox" aria-label="suggestions" className="max-h-listing-max overflow-y-auto py-chrome-tight">
+                    {rows.map((row, i) => (
+                      <li key={row.kind + row.text} role="option" aria-selected={i === active}
+                        onMouseDown={(e) => { e.preventDefault(); take(row); }} onMouseEnter={() => { setMoved(true); setAt(i); }}
+                        className={`flex min-h-control cursor-pointer items-center gap-2 whitespace-nowrap px-control-x py-control-y text-control ${i === active ? "bg-wash-tint text-ink" : "text-ink-body"}`}>
+                        <span className="font-mono">{row.key === "method" && row.kind !== "key"
+                          ? <><span className="text-ink-mute">{row.text.startsWith("-") ? "-" : ""}method:</span><MethodLabel method={row.value} /></> : row.text}</span>
+                        {row.hint && <span className="font-ui text-ink-mute">{row.hint}</span>}
+                        <span className="ml-auto pl-2 font-ui text-chrome text-ink-mute">{badge(row, i) ?? ""}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function Live() {
+      const [said, setSaid] = useState([]);
+      return (
+        <div className="flex flex-col gap-2 bg-canvas-soft p-4 font-ui">
+          <Bar onReport={setSaid} />
+          <div className="mt-12 font-mono text-chrome text-ink-mute">onChange → [{said.map(label).join(", ")}]</div>
+        </div>
+      );
+    }
+
+    const C = (t) => parse(t).chip;
+    const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
+    const pad = (node) => <div className="bg-canvas-soft p-2 font-ui">{node}</div>;
+    mount("spec-anatomy", pad(<Bar initial={["host:api", "-method:OPTIONS", "login", { neg: false, key: "status", value: "6xx", refused: true }].map((t) => (typeof t === "string" ? C(t) : t))} />));
+    mount("spec-rest", pad(<Bar />));
+    mount("spec-chips", pad(<Bar initial={["host:api", "host:auth", "-method:OPTIONS", '"two words"'].map(C)} />));
+    mount("spec-refused", pad(<Bar initial={[C("host:api"), { neg: false, key: "status", value: "6xx", refused: true }]} />));
+    mount("spec-narrow", pad(<Bar width="w-pane-label" initial={["host:api", "host:auth", "type:json", "-method:OPTIONS", "is:https"].map(C)} />));
+    mount("spec-live", <Live />);
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
