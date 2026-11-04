@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-68-the-app-supervises-its-core.html"
+    tier: T2
+    action: updated
+    distills: "rules 13-14: numbered log entries with a start mark per spawn, merged by sequence; Settings is a second window and the main window ends the app"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "the run's proposals: lexicon restart and attached, the Capture service page's exception to capture service, and the open-Settings (app menu and capture menu), close-a-secondary-window and scroll-a-region key conventions"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "the UC-SVC row and UC-4's restart of an exited core"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-SVC's contract (states, restart, log, both ways into Settings) and UC-4's not-answering restart"
+  - path: "docs/work/2026-11-04-one-app-service-page-design-run.html"
+    tier: T3
+    action: added
+    distills: "the closed design run the build cites: mockup, Given, keyboard, proposals, blocked-on and the owner's LGTM"
+  - path: "docs/work/2026-11-04-one-app-w3-service-page-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan: requirement, change seams, test plan"
+  - path: "docs/work/2026-11-04-one-app-w3-service-page-result.html"
+    tier: T3
+    action: added
+    distills: "the WU result: outcome, deviations, evidence, distillation, follow-ups"
