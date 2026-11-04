@@ -39,7 +39,8 @@
         ⌥Z from the surface, never from a field being typed in</td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>XML re-indent ⌥⇧F, or where it is not well-formed</td><td><em>re-indented</em>: a tag a line, the text's
         own unit (2 spaces when none) and line break; an element holding text kept as written inside; comments, CDATA,
-        the doctype, HTML void elements and raw script text read; a BOM and closing break kept; disabled with
+        the doctype and raw script text read; an HTML void element closed empty unless a close shows it was an element,
+        so an RSS <code>&lt;link&gt;</code> stays one; a BOM and closing break kept; disabled with
         <em>not well-formed at line L, column C: why</em>, and the key then does nothing</td><td><span class="badge auto">delivered</span></td></tr>
     </table>
 
@@ -64,21 +65,30 @@
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>4d637d80</code> plan · <code>6060b912</code> find in the form table and the hex dump,
-        sort by key, show encoded, copy as JSON, wrap, XML re-indent</td></tr>
+        sort by key, show encoded, copy as JSON, wrap, XML re-indent · <code>631429e6</code> review round 1's fix</td></tr>
       <tr><td>unit</td><td><code>find</code> (11: W4's 4 moved from jsonTools, a hex query read as bytes or text, byte
         matches across a row, non-overlapping, ASCII folded for text only, a UTF-8 query, the cap) · <code>formPairs</code>
         (8 new: sort stable with repeated, empty and badly escaped keys; JSON with repeats, integer-like and
-        <code>__proto__</code> keys and a lone surrogate; find in pairs and its cap) · <code>xmlTools</code> (16: every
-        layout case in the plan, 10 000-deep nesting, CRLF and a BOM, eight malformed inputs with line and column) ·
+        <code>__proto__</code> keys and a lone surrogate; find in pairs and its cap) · <code>xmlTools</code> (20: every
+        layout case in the plan, script text after a character that lowercases longer, a closed void name as an
+        element, an unclosed one handing its text to its parent, 10 000-deep nesting, CRLF and a BOM, nine malformed
+        inputs with line and column) ·
         FormTable and HexView (reveal on request only, an edit reveals nothing)</td></tr>
       <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (14 new, 1 replaced: find in a 300 KiB
         form by every key, the row brought into view, an edit recounted, Esc; sort by key and its undo; copy as JSON;
         show encoded edited, found in, and read back by the table; a 1 MiB binary payload found as bytes across a row and
         as text; wrap from ⋯ and ⌥Z, left alone in a field; XML re-indent from ⋯ and ⌥⇧F, undone, restored, CRLF kept,
         disabled with where on a malformed text, absent when read-only; find offered on every kind but an image)</td></tr>
-      <tr><td>suites</td><td>vitest 61 198 in 89 files green; eslint, <code>tsc -b</code> and <code>vite build</code>
+      <tr><td>suites</td><td>vitest 61 202 in 89 files green; eslint, <code>tsc -b</code> and <code>vite build</code>
         clean; the pre-commit fmt and clippy green</td></tr>
-      <tr><td>review</td><td>round 1 on the tip that carries this report</td></tr>
+      <tr><td>review</td><td>Round 1 FAIL on <code>5a3f307b</code>: two verified blockers and one important, all in
+        XML re-indent — a script body's end found in a lowercased copy whose offsets drift after a character like İ, so
+        valid input was refused; HTML void names made empty in every document, so RSS <code>&lt;link&gt;</code> left a
+        feed unindented; and that lowercased copy made once per script or style. Fixed with regression tests first in
+        <code>631429e6</code>: a case-insensitive search in the text itself, and a void-named element closed empty only
+        when a close shows it was not an element. The altitude nit (the screen's <code>Found</code> type named like
+        <code>find.ts</code>'s) is renamed in the same commit. Refuted: a regex built per pair (measured ~1 ms over
+        5 000 pairs) and the per-line indent pad (inherent in the output). Round 2 on the tip that carries this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
