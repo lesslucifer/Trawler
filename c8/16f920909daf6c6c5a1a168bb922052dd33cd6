@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "Epic E-STICKY -> main. The whole epic's code as one range: the view-prefs one writer and store client (ui/src/useViewPrefs.ts, viewPrefsStore.ts, viewPrefsWire.json), the sticky surfaces (App.tsx, FlowDetail.tsx, BodyViewer.tsx, onboardingMachine.ts) and their tests, and the e2e sticky specs and launchers (ui/e2e/). ONE ROUND. W1 was reviewed on its own diff (PASS after round 2) and W2 (PASS in one round); this round judges the epic as a single range against main, the seams between them. Finders read the shell under ui/src-tauri/ for context. The close commit at the tip changes no code path."
+epic: E-STICKY
+branch: epic/sticky-ui
+base: 7cc251f48827a4fa6d8115d667b5f539da48cff6
+head: c816f920909daf6c6c5a1a168bb922052dd33cd6
+diff_sha256: b78005aca6fb8c1c696b46c2605155bcf1856c8690d5ba1fece3f7533923ea80
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 3
+  stage_seconds:
+    gate0: 358
+    finders: 24
+    verifiers: 15
+    total: 430
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "The remembered-platform rule for a user re-invoke lives in Shell's go wrapper rather than in onboardingMachine.reduce"
+    waived: "W1's review accepted the shape: every user dispatch routes through go and the reducer stays pure; view prefs are Shell state, so the rule sits with its one owner"
+  - finding: "lastPlatform is persisted from go on a choose event while the leg and body mode persist through useViewPrefs setters, so the three fields are wired at different layers"
+    waived: "all three still write through the one useViewPrefs record (DEC-70 rule 1); only the trigger differs, since a platform is chosen inside setup's event flow and the leg and mode on a click in the pane"
+  - finding: "The per-field enum validation is implemented in both viewPrefsStore.ts and view_prefs.rs, so the value sets can drift"
+    waived: "W1's review accepted the split: the shell keeps lastPlatform opaque so the platform set lives in the app; the leg and mode wire values are pinned by viewPrefsWire.json, read by both sides' tests"
+refuted: "ONE CANDIDATE REFUTED. Correctness (important): useViewPrefs' set returns early on a value equal to the current one, so a default-equal pick before the launch read settles would lose to the saved value. The verifier found no user path to it: the read is a local shell invoke issued on mount and settles at startup, while the leg and body mode exist only once a flow from the core is selected and the platform only once the user opens setup."
+verdict: PASS
+date: 2026-11-04
