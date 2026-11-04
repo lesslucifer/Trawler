@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU json-tools -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W4
+branch: wu/inspect-window/json-tools
+base: 70187414e774b27267f8ca9ed8e101402f5f97ad
+head: 30d04ff98774a35b13348370008bdbc30c93a0fe
+diff_sha256: be13dde314150dcb6986ca8a88defae0fc1746e91f5685a1a8f983e0620d59ce
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  stage_seconds:
+    finders: 71
+    verifiers: 17
+    total: 502
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 3, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "the reason 'a string is not closed' can never show: fail() replaces any reason with the end-of-text one when i >= text.length"
+    waived: "recorded on a FAIL round; the fix lands in the next round's range"
+  - finding: "the indent row's chosen value is read from the current step's name rather than stored as typed state"
+    waived: "step names come only from INDENTS' own constants, so no other step can carry one; reading the history keeps undo and redo showing the right choice without a second state to keep in step"
+verdict: FAIL
+date: 2026-11-04
