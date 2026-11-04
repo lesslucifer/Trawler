@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9faeb9f34851f0dfae0f3" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W2 plan: the data window's design run</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W2: the data window's design run</h1>
+      <p>One closed design run for the data window, plus one component design for each registry component it proposes.
+        W3–W6 build from these by blob. Nothing under <code>ui/src/</code> changes.</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W2</span> · branch
+        <code>wu/inspect-window/data-window-design</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a> ·
+        base <code>8bbb9418</code> · depends on W1 (DEC-68)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      W2 delivers one design run at <code>docs/work/2026-11-03-data-window-design-run.html</code> and a component design
+      under <code>docs/work/components/</code> for each registry component it proposes. The run mounts the real collection
+      around a stateful data window: the six kinds and the override, original / working copy, the find bar, a ⋯ menu
+      and a right-click menu holding each kind's acts, the status bar with the kind picker and the modified marker, the
+      decode peek, the long-form table, and the empty and undecodable states. It also draws the entry point on <code>BodyViewer</code> and <code>CutMarker</code>. The owner
+      reviews it. It is closed in three steps (review · green · <code>data-status="archived"</code>), and a
+      <code>design/v1</code> note on the tip names every artifact.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · the epic plan's W2 summary block · UC-9 all rows · UC-5 entry point · expected results 1–9 as drawn
+      states · rulings Q1 (one window per key), Q4 (re-ruled 2026-11-04: filter deferred), Q7 (no caps), Q9 (entry points, keys set here),
+      Q12 (closing asks nothing) · DEC-68 (the data window) · DEC-59 (Field) · DEC-34 (truncation escape) · DEC-17 (closed
+      vocabulary) · DEC-53 (six items, three-step close).
+    </p>
+
+    <h2 id="what">What the run must decide</h2>
+    <table data-c="decides">
+      <tr><th>#</th><th>Decision</th><th>Where it lands</th></tr>
+      <tr><td>1</td><td>the window's zones: header (title, copy, ⋯), the find bar, the surface, the status bar (kind, size, modified), the menus</td><td>run mockup</td></tr>
+      <tr><td>2</td><td>the editable whole-data surface for JSON, XML and text (SourceSurface's <code>@avoid</code> forbids editing)</td><td>run · <code>EditSurface</code> design</td></tr>
+      <tr><td>3</td><td>the long-form table: whole values, editable, virtualised without truncating (DEC-34)</td><td>run · <code>FormTable</code> design</td></tr>
+      <tr><td>4</td><td>an uncapped, virtualised hex dump with find (HexRenderer owns a 4 KiB cap)</td><td>run · <code>HexView</code> design</td></tr>
+      <tr><td>5</td><td>the modified marker, undo/redo and restore original</td><td>run mockup · reuse or proposal</td></tr>
+      <tr><td>6</td><td>what copy and save deliver: what is on screen, the original one menu item away</td><td>run mockup · owner call</td></tr>
+      <tr><td>7</td><td>the decode peek: base64, URL, JWT; replace, open in a new window, the reasons a decode fails</td><td>run mockup</td></tr>
+      <tr><td>8</td><td>the entry point on BodyViewer's toolbar and CutMarker, and its key (Q9)</td><td>run · the <code>CutMarker</code> delta, declared in the run</td></tr>
+      <tr><td>9</td><td>the window's default and minimum size (DEC-36 is untouched)</td><td>run · owner call · proposals (config)</td></tr>
+      <tr><td>10</td><td>key paths for find, the menus, undo, decode and open</td><td>run keyboard item · rulebook vocabulary proposals</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>Observable at this WU's tip</th><th>Checked by</th></tr>
+      <tr><td>1</td><td>the run doc carries <code>data-artifact="design-run"</code>, is archived, has a newly minted htmldoc id, and loads the bootstrap</td><td>htmldoc·id · 6·run-closed</td></tr>
+      <tr><td>2</td><td>the mockup mounts the collection from <code>window.Trawler</code>. State toggles cover each kind, the ⋯ and right-click menus, modified, find matches, the decode peek (decoded, binary and undecodable), an empty payload, no payload, and the entry point on the pane</td><td>assets·specimen · mockup·state · the owner</td></tr>
+      <tr><td>3</td><td>every Given (the payload, the six kinds, the override, original / working copy, the deferred view, the decoders) is answered</td><td>capabilities·answered</td></tr>
+      <tr><td>4</td><td>a key path for each pointer act; new keys are on proposals as rulebook vocabulary</td><td>keyboard-parity·path</td></tr>
+      <tr><td>5</td><td>each proposed registry component has a component design on file; local elements are named on proposals</td><td>the doc · the owner</td></tr>
+      <tr><td>6</td><td>the review item records the owner's round</td><td>review·recorded</td></tr>
+      <tr><td>7</td><td><code>design/v1</code> on the tip names the run and every component design, with an empty built set</td><td>9·design · design-scope</td></tr>
+    </table>
+
+    <h2 id="not-here">Not here</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>any file under <code>ui/src/</code>, tokens in <code>tailwind.config.js</code>, the window size in <code>tauri.conf.json</code></td><td>W3 (window, working copy, surfaces, entry point), W4–W6 (tools)</td></tr>
+      <tr><td>the rulebook's new vocabulary, UC-9 / UC-5</td><td>proposed here, written at W7's distillation</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p data-c="test-why">No code path changes. A design run is still a design-bearing diff, so it is not exempt; each
+      layer is waived with its reason.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>What asserts what</th></tr>
+      <tr><td>unit</td><td>waived: "the WU adds no executable code; its artifacts are a design run and component designs,
+        and every predicate over them is a verify-doc rule with its own tests in xtask"</td></tr>
+      <tr><td>integration</td><td>waived: "the contract is a green, closed, citable run; verify-doc asserts green,
+        6·run-closed asserts closed at this merge, design-scope and 9·design assert W3–W6 can cite it"</td></tr>
+      <tr><td>e2e</td><td>waived: "a design doc renders no surface a driver can touch; W7's data-window.spec.ts drives the
+        built window"</td></tr>
+      <tr><td>before the merge</td><td><code>cargo xtask verify-doc</code> on the run, each component design, this plan
+        and the result · headless render of each mockup state · <code>cargo xtask design-scope epic/inspect-window HEAD</code> ·
+        <code>cargo xtask verify-dod wu HEAD --target epic/inspect-window</code></td></tr>
+    </table>
+
+    <h2 id="order">Order of work</h2>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart TD
+  A["substrate: registry + rulebook, frozen"] --> B["run: Given · live mockup · keyboard · proposals · blocked-on"]
+  B --> C["component designs: Menu · EditSurface · FormTable · HexView; the CutMarker delta in the run"]
+  C --> V{"verify-doc + headless render"}
+  V -- red --> B
+  V -- green --> H["owner's round"]
+  H -- a call --> R["review row · re-draw"] --> V
+  H -- held --> CL["close: review · green · archived"]
+  CL --> N["notes write · design step → design/v1"]
+  N --> RES["result report"] --> MR["mr confirm (the owner)"] --> M["merge --no-ff into epic/inspect-window"]
+      </pre>
+      <div class="caption">The owner's round is the only loop. No code review: the diff changes no code path (DEC-46).</div>
+    </div>
+
+    <h2 id="docs">Docs this WU touches</h2>
+    <table data-c="docs">
+      <tr><th>Path</th><th>Tier</th><th>Why</th></tr>
+      <tr><td><code>docs/work/2026-11-03-data-window-design-run.html</code></td><td>T3</td><td>the run</td></tr>
+      <tr><td><code>docs/work/components/menu.html</code> · <code>edit-surface.html</code> · <code>form-table.html</code> · <code>hex-view.html</code></td><td>T3</td><td>the component designs W3–W6 build (Menu added in round 2). CutMarker already ships, so its amendment is a delta inside the run</td></tr>
+      <tr><td>this plan · its result</td><td>T3</td><td>the WU's own docs</td></tr>
+    </table>
+    <p data-c="t2">No T2 synthesis: a design reaches UC-9 / UC-5 and the rulebook after it is built (W7), so
+      <code>doc/v1</code> carries <code>t2_waived</code> with that reason.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

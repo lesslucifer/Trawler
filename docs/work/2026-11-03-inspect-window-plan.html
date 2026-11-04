@@ -9,9 +9,9 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-INSPWIN — epic plan</h1>
-      <p>A data window: hand it a piece of data and it gives the user room and tools to read, search, filter,
+      <p>A data window: hand it a piece of data and it gives the user room and tools to read, find in,
         reformat, decode and freely edit a working copy — the original always one click away.</p>
-      <div class="meta">v3, owner rulings recorded · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
+      <div class="meta">v4, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
         · WU branches <code>wu/inspect-window/&lt;slug&gt;</code></div>
     </div>
   </header>
@@ -38,7 +38,7 @@ flowchart LR
   SH -- "payload, by value" --> DW["data window"]
   subgraph DW_IN["inside the data window"]
     O["original<br/>(immutable)"] --> W["working copy<br/>(edit · reformat · decode, undoable)"]
-    W --> V["view<br/>(search highlights · filter results)"]
+    W --> V["find marks<br/>(highlights, never a change)"]
   end
   DW --- DW_IN
       </pre>
@@ -55,33 +55,33 @@ flowchart LR
       <tr><td>Original</td><td>The bytes as handed in. Never mutated; <em>restore original</em> resets the working copy to it.</td></tr>
       <tr><td>Working copy</td><td>What the user edits. Free text edits, reformat, sort, decode-in-place all change it,
         each step undoable; a <em>modified</em> marker shows whenever it differs from the original.</td></tr>
-      <tr><td>View</td><td>Non-destructive lenses over the working copy: search highlights, JSONPath / text filter results.
-        Marked as a filtered view, naming its producer; clearing returns to the whole working copy.</td></tr>
+      <tr><td>Find marks</td><td>Highlights over the working copy, never a change to it. The JSONPath / text filter view is
+        deferred (Q4).</td></tr>
       <tr><td>Kind</td><td>Detected by the window from <code>typeHint</code>, else by sniffing the bytes: json · form · xml ·
         text · hex · image. The user can override it (e.g. treat this text as JSON).</td></tr>
-      <tr><td>Copy / save</td><td>Always name what they deliver: <em>original</em>, <em>working copy</em>, or <em>this view</em>.</td></tr>
+      <tr><td>Copy / save</td><td>Deliver what is on screen, the working copy; <em>copy original</em> and <em>save original</em> deliver the handed-in bytes.</td></tr>
     </table>
 
     <h2 id="toolsets">Toolsets by kind</h2>
     <table data-c="toolsets-table">
-      <tr><th>Kind</th><th>Read</th><th>Search</th><th>Filter (view)</th><th>Edit / reformat (working copy)</th><th>Extract</th></tr>
+      <tr><th>Kind</th><th>Read</th><th>Search</th><th>Filter (deferred, Q4)</th><th>Edit / reformat (working copy)</th><th>Extract</th></tr>
       <tr><td>JSON</td><td>Whole document, virtualised, fold gutter; fold/expand all and to depth&nbsp;N</td>
-        <td>Over keys and/or values, match count, next/prev by keyboard</td>
-        <td>JSONPath query → matching nodes; text filter → only branches containing a match, ancestors kept</td>
+        <td>Find, match count, next/prev by keyboard</td>
+        <td>—</td>
         <td>Free edit; indent 2 / 4 / tab, minified, sorted keys</td>
         <td>Copy a node's path, copy a node's value</td></tr>
       <tr><td>Form</td><td>Every pair, uncapped; each value whole and wrapped, never clamped; duplicate keys shown as such</td>
-        <td>Over keys and values, match count</td>
-        <td>Rows whose key or value matches</td>
+        <td>Find over keys and values, match count</td>
+        <td>—</td>
         <td>Edit a key or value, add/remove a pair; sort by key; decoded ⇄ encoded</td>
-        <td>Copy a value; export as query string / JSON</td></tr>
+        <td>Copy a value; copy as JSON</td></tr>
       <tr><td>Text</td><td>Whole, virtualised; wrap on/off</td><td>Find, count, next/prev</td><td>—</td><td>Free edit</td><td>Copy selection</td></tr>
-      <tr><td>XML / HTML</td><td>Whole, virtualised, fold gutter</td><td>Find</td><td>—</td><td>Free edit; pretty-print</td><td>Copy selection</td></tr>
-      <tr><td>Hex</td><td>Whole dump, virtualised</td><td>Find hex or ASCII</td><td>—</td><td>— (read-only)</td><td>Copy a range</td></tr>
+      <tr><td>XML / HTML</td><td>Whole, virtualised, fold gutter</td><td>Find</td><td>—</td><td>Free edit; re-indent</td><td>Copy selection</td></tr>
+      <tr><td>Hex</td><td>Whole dump, virtualised</td><td>Find bytes or ASCII, read from the query</td><td>—</td><td>— (read-only)</td><td>Copy a range</td></tr>
       <tr><td>Image</td><td>Actual size / fit, zoom</td><td>—</td><td>—</td><td>—</td><td>Save</td></tr>
       <tr><td><em>any text kind</em></td><td colspan="5"><strong>Decoders</strong> on a selection or a JSON/form value: base64
         (standard and URL-safe, padding optional), URL-encoding, JWT (header + payload as JSON, signature shown, never
-        verified). Result shown beside the selection; <em>replace with decoded</em> applies it to the working copy;
+        verified). Result shown in a peek under the selection, the decoder guessed and switchable; <em>replace with decoded</em> applies it to the working copy;
         <em>open in data window</em> hands the decoded bytes to a new window. An undecodable input says why.</td></tr>
     </table>
 
@@ -97,7 +97,7 @@ flowchart LR
           <td><strong>Work with a piece of data in its own window.</strong> Given a payload, the window renders the data
             whole, offers the toolset of its kind and decoders, and lets the user edit a working copy freely with undo
             and <em>restore original</em>. Nothing it does reaches the opener, the capture or the core. Copy and save
-            name <em>original</em>, <em>working copy</em> or <em>this view</em>.</td></tr>
+            deliver what is on screen; the <em>original</em> is always one menu item away.</td></tr>
         <tr><td>UC-3 · UC-4 · UC-8</td><td>unchanged</td><td>Web shell, list and composer are out of scope.</td></tr>
       </table>
     </div>
@@ -111,16 +111,15 @@ flowchart LR
         <tr><td>2</td><td>Opening with the same key focuses the open window (its edits intact); another key opens a second
           window. Closing a data window asks nothing (DEC-64); data windows close with the main window.</td></tr>
         <tr><td>3</td><td>A 2&nbsp;MB JSON payload renders whole, scrolls smoothly, folds per node, all, and to depth&nbsp;N.</td></tr>
-        <tr><td>4</td><td>JSON search counts and steps through matches; JSONPath and text filter show a view naming its
-          producer; clearing returns to the whole working copy.</td></tr>
+        <tr><td>4</td><td>JSON find counts and steps through matches.</td></tr>
         <tr><td>5</td><td>Edits and reformats (indent, minified, sorted keys) change the working copy, undo step by step,
           raise the <em>modified</em> marker; <em>restore original</em> returns the exact original bytes.</td></tr>
-        <tr><td>6</td><td>A form payload over 128&nbsp;KiB shows every pair whole; search, filter, sort, edit and export work.</td></tr>
+        <tr><td>6</td><td>A form payload over 128&nbsp;KiB shows every pair whole; find, sort, edit and copy as JSON work.</td></tr>
         <tr><td>7</td><td>Text, XML and hex payloads past the pane's caps render whole with find.</td></tr>
         <tr><td>8</td><td>A JWT, base64 or URL-encoded selection decodes beside it; replace and open-in-window both work; a
           malformed input says why in the user's words.</td></tr>
-        <tr><td>9</td><td>Copy/save <em>original</em> yields the handed-in bytes regardless of any edit; <em>working copy</em>
-          and <em>this view</em> yield exactly what they name.</td></tr>
+        <tr><td>9</td><td>Copy/save <em>original</em> yields the handed-in bytes regardless of any edit; copy and save yield
+          exactly what is on screen.</td></tr>
         <tr><td>10</td><td>Nothing in the data window changes the pane, the capture or any core state; the window makes no
           network request.</td></tr>
       </table>
@@ -149,7 +148,7 @@ flowchart LR
       <tr><td>Renderers</td><td><code>components/{Json,Xml,Form,Text,Hex,Image}Renderer.tsx</code>, <code>SourceSurface.tsx</code> (CodeMirror 6, read-only)</td><td>Pane members stay capped and read-only. The window needs uncapped, editable surfaces: CodeMirror virtualises and edits (JSON/XML/text); form and hex need a virtualised list (<code>@tanstack/react-virtual</code>, already a dep).</td></tr>
       <tr><td>Caps</td><td><code>body.ts</code>: <code>TREE_MAX</code>/<code>TEXT_MAX</code> 128&nbsp;KiB, <code>HEX_MAX</code> 4&nbsp;KiB</td><td>Untouched for the pane; the window has none.</td></tr>
       <tr><td>Cut statement</td><td><code>components/CutMarker.tsx</code> — "what is shown, of how much, and the way out"</td><td>The data window becomes its way out.</td></tr>
-      <tr><td>Copy / save</td><td><code>CopyButton</code>, <code>saveBody</code></td><td>Reused; gain the original / working copy / this view choice.</td></tr>
+      <tr><td>Copy / save</td><td><code>CopyButton</code>, <code>saveBody</code></td><td>Reused: copy and save deliver what is on screen; <em>copy original</em> and <em>save original</em> sit in the ⋯ menu.</td></tr>
       <tr><td>Windows + capability</td><td><code>tauri.conf.json</code> (one window <code>main</code>), <code>capabilities/default.json</code></td><td>Gains a <code>data-*</code> label family.</td></tr>
       <tr><td>Shell commands</td><td><code>ui/src-tauri/src/lib.rs</code> + <code>scenario.rs</code>; xtask asserts both builds register what the app invokes</td><td>New commands land in both builds.</td></tr>
     </table>
@@ -160,7 +159,7 @@ flowchart LR
       <tr><td><a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a> thin shell</td><td>The shell creates/focuses windows and relays the payload; it inspects nothing. The window holds no core logic and calls no API.</td></tr>
       <tr><td>UC-5 evidence rule; <code>JsonRenderer</code> / <code>SourceSurface</code> <code>@avoid</code> "pretty-printing client-side", "making it editable"</td><td>Still binding on the pane. The window is outside it: its <em>original</em> is the evidence the pane handed over, and everything else is scratch — the new decision record draws that line, and the window's surfaces cite it in TSDoc.</td></tr>
       <tr><td><a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a> pane 520 / window 1440</td><td>Untouched; the data window's default size is its own config value, set in the design run.</td></tr>
-      <tr><td><a href="../decisions/dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html">DEC-59</a> Field</td><td>Search, filter and query inputs and form value editing reuse <code>Field</code>.</td></tr>
+      <tr><td><a href="../decisions/dec-59-field-gains-a-multi-line-form-and-a-verbatim-face.html">DEC-59</a> Field</td><td>The find input and form value editing reuse <code>Field</code>.</td></tr>
       <tr><td><a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> fixed-height rows may truncate</td><td>A virtualised form row holding a long value must <em>not</em> truncate — the design run picks variable-height rows or expand-in-place.</td></tr>
       <tr><td><a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a> · <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> design → build</td><td>New screen: a design WU closes a run first; build WUs cite its blob (gate check 9).</td></tr>
     </table>
@@ -207,12 +206,12 @@ flowchart LR
         <h3 id="w2">E-INSPWIN.W2 — design run: the data window</h3>
         <table>
           <tr><th>What it builds</th><td data-item="wu-summary">One closed run per <a href="../design-flow.html">the design
-            flow</a>. Given list: the payload, the six kinds and the override, original / working copy / view, the
-            decoders. Mounted stateful mockup: title, kind picker, toolbar per kind (search, filter/query, reformat,
-            fold-to-depth), <em>modified</em> marker + undo + <em>restore original</em>, filtered-view marker with its
-            producer and the way back, decoder panel, copy/save choice, the long-form table with whole and editable values,
+            flow</a>. Given list: the payload, the six kinds and the override, original / working copy, the
+            decoders. Mounted stateful mockup: title, find bar, a ⋯ menu per kind (reformat, fold-to-depth, undo,
+            <em>restore original</em>, copy/save original), status bar with the kind picker and the <em>modified</em> marker,
+            the decode peek from a right-click, copy/save of what is on screen, the long-form table with whole and editable values,
             empty and undecodable states. Keyboard list. Proposals: editable whole-data surface, virtualised form and hex,
-            toolbar, markers, decoder panel, the entry point on <code>BodyViewer</code> and <code>CutMarker</code>.
+            menu, status bar, decode peek, the entry point on <code>BodyViewer</code> and <code>CutMarker</code>.
             Archived green with a <code>design/v1</code> note.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 all rows; UC-5 entry point</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">An archived run; verify-doc green; every Given answered; a
@@ -227,8 +226,8 @@ flowchart LR
           <tr><th>What it builds</th><td data-item="wu-summary">The data-window screen mounted for a <code>data-*</code>
             window: claims its payload, detects kind (override allowed), renders all six kinds whole on editable
             surfaces (hex/image read-only). The working-copy model: original kept, edits with undo/redo,
-            <em>modified</em> marker, <em>restore original</em>; the filtered-view frame the tools will feed; copy/save
-            <em>original</em> / <em>working copy</em> / <em>this view</em>. The entry point on <code>BodyViewer</code> and
+            <em>modified</em> marker, <em>restore original</em>; the ⋯ and right-click menus (Menu); copy/save of what is on
+            screen, and of the <em>original</em>. The entry point on <code>BodyViewer</code> and
             <code>CutMarker</code>. Cites W2's run blob.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 open, whole data, working copy; UC-5 entry point</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Rows 1, 3 (render + fold), 5 (free edit, undo, restore), 7
@@ -242,14 +241,14 @@ flowchart LR
       <div data-wu="E-INSPWIN.W4">
         <h3 id="w4">E-INSPWIN.W4 — build: JSON tools</h3>
         <table>
-          <tr><th>What it builds</th><td data-item="wu-summary">Search over keys/values (count, next/prev, keyboard); fold to
-            depth&nbsp;N; JSONPath query and text filter as views; reformat (indent 2/4/tab, minified, sorted keys) as
+          <tr><th>What it builds</th><td data-item="wu-summary">Find (count, next/prev, keyboard); fold to
+            depth&nbsp;N; reformat (indent 2/4/tab, minified, sorted keys) as
             undoable working-copy steps; copy node path / value. Component designs retire into TSDoc (DEC-16). Cites W2's
             run blob.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 JSON rows</td></tr>
-          <tr><th>Expected outcome</th><td data-item="wu-expected">Rows 4, 5 (reformat) hold. Unit: query/filter edge inputs
-            (empty result, deep nesting, duplicate keys, numbers past 2<sup>53</sup> kept verbatim), reformat preserves
-            the value; filter over a user-broken (unparseable) working copy says so instead of failing.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Rows 4, 5 (reformat) hold. Unit: reformat edge inputs
+            (deep nesting, duplicate keys, numbers past 2<sup>53</sup> kept verbatim) preserve the value; indent and sort
+            over a user-broken (unparseable) working copy say so instead of failing.</td></tr>
           <tr><th>Dependencies</th><td data-item="wu-deps">W3</td></tr>
         </table>
       </div>
@@ -257,12 +256,12 @@ flowchart LR
       <div data-wu="E-INSPWIN.W5">
         <h3 id="w5">E-INSPWIN.W5 — build: form and text/XML/hex tools</h3>
         <table>
-          <tr><th>What it builds</th><td data-item="wu-summary">Form: search, row filter, sort by key, edit/add/remove pair,
-            decoded ⇄ encoded, export as JSON / query string, copy value. Text, XML, hex: find with count and keyboard
-            stepping, wrap toggle, XML pretty-print as a working-copy step. Cites W2's run blob.</td></tr>
+          <tr><th>What it builds</th><td data-item="wu-summary">Form: find, sort by key, edit/add/remove pair,
+            decoded ⇄ encoded, copy as JSON, copy value. Text, XML, hex: find with count and keyboard
+            stepping, wrap toggle, XML re-indent as a working-copy step. Cites W2's run blob.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 form, text, XML, hex rows</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Rows 6, 7 hold. Unit: duplicate keys and empty values
-            survive sort/edit/export, malformed percent-escapes stay as-is, hex find across row boundaries.</td></tr>
+            survive sort/edit/copy as JSON, malformed percent-escapes stay as-is, hex find across row boundaries.</td></tr>
           <tr><th>Dependencies</th><td data-item="wu-deps">W3</td></tr>
         </table>
       </div>
@@ -272,12 +271,12 @@ flowchart LR
         <table>
           <tr><th>What it builds</th><td data-item="wu-summary">Decode a selection or a JSON/form value as base64 (standard,
             URL-safe, padding optional), URL-encoding, or JWT (header + payload pretty JSON, signature shown, never
-            verified); result panel; <em>replace with decoded</em> as a working-copy step; <em>open in data window</em>
+            verified); the decode peek, from a right-click or a key, the decoder guessed and switchable; <em>replace</em> as a working-copy step; <em>open in data window</em>
             for the decoded bytes; reasons for undecodable input. Cites W2's run blob.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 decoder rows</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Row 8 holds. Unit: each decoder over valid, padding-less,
             URL-safe, binary-result and malformed inputs (JWT with 2 or 4 segments, non-JSON payload); decoded binary
-            opens as hex.</td></tr>
+            opens in a new data window as hex.</td></tr>
           <tr><th>Dependencies</th><td data-item="wu-deps">W3</td></tr>
         </table>
       </div>
@@ -304,11 +303,10 @@ flowchart LR
         <tr><td>J1 · open and focus</td><td>A seeded JSON body over 128&nbsp;KiB shows a cut in the pane → <em>open in data
           window</em> from the cut marker → second handle, title as the opener wrote it, whole document; open again from
           the toolbar → still two handles, focused.</td></tr>
-        <tr><td>J2 · work a JSON document</td><td>Search reports the seeded count and steps; JSONPath query → filtered-view
-          marker naming it; sorted keys + a hand edit → <em>modified</em>; copy <em>working copy</em> = edited text, copy
-          <em>original</em> = seeded bytes; undo twice → unmodified; edit again → <em>restore original</em>.</td></tr>
-        <tr><td>J3 · a long form and a token</td><td>Seeded 300&nbsp;KiB form: last pair present and whole; filter to one key;
-          decode its JWT value → header + payload JSON; open the decoded payload in a new data window.</td></tr>
+        <tr><td>J2 · work a JSON document</td><td>Find reports the seeded count and steps; sorted keys + a hand edit →
+          <em>modified</em>; copy = edited text, copy <em>original</em> = seeded bytes; undo twice → unmodified; edit again → <em>restore original</em>.</td></tr>
+        <tr><td>J3 · a long form and a token</td><td>Seeded 300&nbsp;KiB form: last pair present and whole; find one key;
+          right-click its JWT value → decode → header + payload JSON; open the decoded payload in a new data window.</td></tr>
         <tr><td>J4 · no write-back</td><td>After edits, the pane still shows the captured body, <code>GET
           /flows/{id}/response/body</code> is unchanged; close the data window → main window open, nothing asked.</td></tr>
       </table>
@@ -321,7 +319,7 @@ flowchart LR
         <tr><td><a href="../use-cases/web-ui.html">use-cases/web-ui.html</a></td><td>T2</td><td>New UC-9 section; UC-5 entry-point line</td></tr>
         <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>UC-9 row; UC-5 row amended</td></tr>
         <tr><td>DEC-next (E-INSPWIN: the data window), <code>docs/decisions/</code> + <a href="../decisions/decisions-index.html">decisions-index</a></td><td>T2</td><td>W1's record: generic payload by value, original / working copy / view, no write-back, no core</td></tr>
-        <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>T2</td><td>Only if the run adds a vocabulary member (e.g. the modified/filtered markers' tones) or a rule</td></tr>
+        <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>T2</td><td>Only if the run adds a vocabulary member (e.g. the modified marker's tone, the menu's rows) or a rule</td></tr>
         <tr><td>Component TSDoc in <code>ui/src/components/</code></td><td>T4</td><td>Each built component design retires into its TSDoc (DEC-16); <code>CutMarker</code>'s "way out" names the window</td></tr>
         <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1 (rarely)</td><td>One line only if "the shell owns one window" is stated there today</td></tr>
       </table>
@@ -334,7 +332,7 @@ flowchart LR
         <tr><td>Q1</td><td>One window per opened data, or one reused data window?</td><td>decided</td><td>One per opener-supplied <code>key</code> (BodyViewer: its flow + leg, opaque to the window); reopening focuses it with its working copy intact.</td></tr>
         <tr><td>Q2</td><td>Hand the data over by reference or by value?</td><td>decided</td><td>By value.</td></tr>
         <tr><td>Q3</td><td>Live or snapshot?</td><td>decided</td><td>Snapshot; the window knows nothing of flows — it works with the data it was given.</td></tr>
-        <tr><td>Q4</td><td>JSON filter language?</td><td>decided</td><td>JSONPath (RFC 9535) plus a plain text filter that keeps matching branches; jq deferred.</td></tr>
+        <tr><td>Q4</td><td>JSON filter language?</td><td>decided</td><td>Re-ruled by the owner on 2026-11-04 (W2's round 1): the filter is deferred to a later epic; this epic ships find only. It was JSONPath (RFC 9535) plus a text filter, jq deferred.</td></tr>
         <tr><td>Q5</td><td>Which components open a data window in this epic?</td><td>decided</td><td>The window is generic — it never knows what the data is. <code>BodyViewer</code> and its <code>CutMarker</code> ship as openers now; header values and single form values are one-call follow-ups.</td></tr>
         <tr><td>Q6</td><td>Value decoders (base64, URL, JWT)?</td><td>decided</td><td>In this epic (W6).</td></tr>
         <tr><td>Q7</td><td>Render caps in the window?</td><td>decided</td><td>None; the opener's payload is rendered whole (a body is at most the 10&nbsp;MiB <code>body_cap</code>).</td></tr>
