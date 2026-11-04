@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb01139f34851f0dfae521" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-QUERY.W1 result: lists, negation and is in the core</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-QUERY.W1 — result: lists, negation and is in the core</h1>
+      <p>Delivered as planned. The three doors take repeated keys, <code>not_&lt;key&gt;</code> and <code>is</code>
+        through one filter, and <code>host=localhost:8080</code> now lists that host.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-QUERY.W1</span> · branch
+        <code>wu/query-bar/filter-lists</code> · <a href="2026-11-04-query-bar-w1-filter-lists-plan.html">WU plan</a> ·
+        <a href="2026-11-04-query-bar-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Shipped</th></tr>
+      <tr><td>repeated <code>q</code> all of, other keys any of</td><td>delivered: <code>FlowFilter</code> holds any-of
+        groups, one per key, with each <code>Predicate::Text</code> in a group of its own</td></tr>
+      <tr><td><code>not_&lt;key&gt;</code> none of</td><td>delivered for all seven keys, <code>not_q</code> and
+        <code>not_is</code> included</td></tr>
+      <tr><td><code>is=pending|https</code></td><td>delivered: no response yet · <code>https://</code> scheme</td></tr>
+      <tr><td>host matches host or host:port</td><td>delivered: <code>Flow::host_with_port</code>, derived once at
+        construction like <code>host</code></td></tr>
+      <tr><td>single parameter unchanged</td><td>delivered, the old refusal text included. An empty <code>host=</code>
+        still matches flows with no host</td></tr>
+      <tr><td>refusal names the parameter as sent</td><td>delivered: <code>not_status must be …</code>,
+        <code>is must be pending or https</code></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Difference</th><th>Why</th></tr>
+      <tr><td>The export comparison covers only the listed rows that have a response</td><td>the HAR export has always
+        left out pending flows (<code>har_entry</code> needs a response). <code>is=pending</code> therefore exports an
+        empty log, which is unchanged behaviour and outside this WU</td></tr>
+      <tr><td>Keys repeated before this WU were a <code>400</code> from axum's <code>Query</code>; they are now
+        accepted</td><td>this is the WU's purpose. No client relied on the refusal</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Layer</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>src/store.rs</code>: repeated key any of, repeated text all of, different keys all of,
+        exclusion, negated status keeps pending, <code>is</code>, host and port, source; the old filter tests ported.
+        <code>src/flow.rs</code>: <code>host_with_port</code>, <code>is_https</code>. <code>src/api/routes.rs</code>:
+        pairs to filter, every refusal names its parameter</td></tr>
+      <tr><td>integration</td><td><code>tests/api.rs</code>:
+        <em>listing_export_and_clear_select_the_same_flows_for_lists_negation_and_is</em> (nine queries, a fresh store per
+        clear), <em>a_single_parameter_selects_what_it_did_before_lists_arrived</em>,
+        <em>every_door_refuses_an_unreadable_value_naming_the_parameter_as_sent</em></td></tr>
+      <tr><td>e2e</td><td>waived: W4's WebDriver spec drives these parameters through the app</td></tr>
+      <tr><td>docs</td><td><a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a> (landed
+        on the epic before this WU) · <code>docs/use-cases/web-ui.html</code> listing, UC-6 and UC-7 rows ·
+        <code>docs/use-cases/use-cases-index.html</code> listing row</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: the listing contract table in <code>docs/use-cases/web-ui.html</code> gained the repeated-key, <code>not_</code>,
+      <code>is</code> and host:port rows and the widened refusal row. The UC-6 export and UC-7 clear rows name the same
+      forms, and the index's listing row says so. UC-4's filter-bar text stays for W4, which builds the bar. T1 is
+      unchanged, because the shape did not move.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups" data-c="follow-ups">
+      none new. W3 consumes these parameters, and W4 widens DEC-70 with what the build settles.
+    </p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
