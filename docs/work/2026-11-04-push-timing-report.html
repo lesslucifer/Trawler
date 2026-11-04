@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb443d9f34851f0dfae618">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Push timing report</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Push timing — where the 10+ minutes go</h1>
+      <p>Every check <code>git push</code> runs, timed one by one on <code>main</code> @ <code>4d1c1942</code>, loaded and quiet, with the wait traced to its cause. This is the E-GATEPAR baseline.</p>
+      <div class="meta">2026-11-04 · Trawler · T3 report · <span class="badge id">E-GATEPAR</span> · macOS 26.5.1, 14 cores, 7 worktrees on one shared <code>target/</code></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="callout" data-c="verdict-callout">
+      <strong>Fixed on this machine: a push after a code change dropped from ≈ 15.5 min to ≈ 2 min.</strong> The tests were never slow (13–20 s).
+      Every freshly linked test binary waited a median of 21 s on a Gatekeeper scan, held up by <code>syspolicyd</code>'s error loop.
+      Enabling the Developer Tools exemption for Cursor and iTerm removed the wait. Restarting <code>syspolicyd</code> did <em>not</em> clear its error loop.
+      The biggest remaining cost is <strong>doc-tests for crates with zero doc-tests: 52 of the 67 s test run</strong>.
+    </div>
+
+    <div class="diagram" data-c="pie">
+      <pre class="mermaid">
+pie showData title cargo test --all on push (run 2, seconds)
+  "launch / assessment wait" : 820
+  "compile (no-run + incremental)" : 53
+  "test bodies (libtest-reported)" : 22
+  "front-end bundle (pnpm build)" : 7
+  "verify-dod range" : 0.6
+      </pre>
+      <div class="caption">Breakdown of a push on <code>main</code>. "Launch" is the stage's wall time minus everything libtest and cargo account for.</div>
+    </div>
+
+    <h2 id="checks">The checks on push</h2>
+    <table data-c="checks-table">
+      <thead><tr><th>#</th><th>Check (in order)</th><th>Runs when</th><th>Measured</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>pnpm build</code>, via <code>trawler-ui</code>'s build script</td><td>a <code>ui/</code> input is newer than <code>ui/dist/index.html</code> (any merge or checkout touching <code>ui/src</code>)</td><td><strong>7.0 s</strong></td><td>Needs <code>ui/node_modules</code>; a fresh worktree fails here (<code>pnpm install</code> 1.4 s).</td></tr>
+        <tr><td>2</td><td>Compile test binaries (inside <code>cargo test --all</code>)</td><td>every push</td><td><strong>34 s</strong> warm · <strong>154 s</strong> after another worktree's build</td><td>Run 3 recompiled <code>rustls</code>…<code>hudsucker</code>, <code>trawler</code> although this worktree had no change.</td></tr>
+        <tr><td>3</td><td>Run 31 test binaries, <strong>one at a time</strong> (<code>cargo test --all</code>; <code>cargo-nextest</code> is not installed)</td><td>every push, cache ignored (C3)</td><td><strong>862 s</strong> (run 2) · <strong>347 s → red</strong> (run 3)</td><td>libtest reports 22 s of test bodies. Stops at the first failing binary.</td></tr>
+        <tr><td>4</td><td><code>cargo xtask verify-dod range</code></td><td>push to <code>main</code> / <code>epic/*</code></td><td><strong>0.6 s</strong></td><td>Notes walk only.</td></tr>
+        <tr><td>5</td><td><code>git push --no-verify refs/notes/*</code></td><td>notes refs exist</td><td>not measured</td><td>Network push to GitHub; one round trip.</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">Not on push, but the planned merge gate (W3) runs them: <code>cargo fmt --check</code> 0.3 s · <code>cargo clippy --workspace --all-targets</code> <strong>131 s</strong>. The hook-feature tests (<code>hook-tests</code>, <code>design-e2e</code>, …) are feature-gated and never run on push.</p>
+
+    <h2 id="after">After the machine fix — before vs after</h2>
+    <table data-c="before-after">
+      <thead><tr><th>Stage</th><th>Before (run 4, quiet)</th><th>After (run 5, Developer Tools on)</th></tr></thead>
+      <tbody>
+        <tr><td>Fresh binary, first launch</td><td>median 21.4 s per test binary</td><td><strong>0.00–0.06 s</strong></td></tr>
+        <tr><td>Compile after a change</td><td>92.9 s</td><td><strong>55.9 s</strong></td></tr>
+        <tr><td><code>cargo test --all</code> after a change</td><td>830.3 s</td><td><strong>67.0 s</strong>: tests 13.6 s · <strong>empty doc-tests 52.3 s</strong></td></tr>
+        <tr><td><code>cargo test --all</code>, nothing changed</td><td>52.9 s</td><td>64.9 s: tests 13.4 s · empty doc-tests 51.0 s</td></tr>
+        <tr><td><code>verify-dod range</code></td><td>0.5 s</td><td>20.1 s: rebuilt the <code>xtask</code> binary after the touch; 0.5 s when xtask is unchanged</td></tr>
+        <tr><td>clippy (merge gate)</td><td>163.6 s</td><td><strong>68.4 s</strong></td></tr>
+        <tr><td><strong>Push after a change</strong> (compile + suite + verify)</td><td><strong>≈ 924 s</strong></td><td><strong>≈ 123–143 s</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="caption">Gatekeeper scans logged in the 10 min after the fix: 3, where before there was one per fresh binary. The <code>syspolicyd</code> error loop is still running (~200 errors/s, about 20% CPU) but no longer sits in the launch path.</p>
+
+    <h2 id="quiet">Quiet-machine run (other worktrees off)</h2>
+    <table data-c="quiet-table">
+      <thead><tr><th>Stage</th><th>Wall</th><th>Of which tests (libtest)</th><th><code>syspolicyd</code> CPU used</th></tr></thead>
+      <tbody>
+        <tr><td>Compile after a change (one file touched per crate)</td><td><strong>92.9 s</strong></td><td>—</td><td>0.4 s</td></tr>
+        <tr><td><code>cargo test --all</code>, binaries freshly relinked (= a real push after a change)</td><td><strong>830.3 s</strong></td><td>19.8 s</td><td><strong>5 min 12 s</strong></td></tr>
+        <tr><td><code>cargo test --all</code>, nothing changed (binaries already scanned)</td><td><strong>52.9 s</strong></td><td>20.9 s · plus 31.5 s of doc-tests for <strong>0</strong> doc-tests</td><td>25 s</td></tr>
+        <tr><td><code>verify-dod range</code> · <code>fmt --check</code></td><td>0.5 s · 0.3 s</td><td>—</td><td>—</td></tr>
+        <tr><td><code>clippy --workspace --all-targets</code> (merge gate, not push)</td><td>163.6 s</td><td>—</td><td>57 s</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">First-launch wait per binary (34 binaries incl. doc-tests): min 4.8 s · <strong>median 21.4 s</strong> · max 66.2 s. It doesn't depend on size: the 1 MB <code>trawler</code> lib test binary waits as long as the 5.4 MB <code>ca</code> binary.</p>
+
+    <h2 id="root-cause">Root cause — isolating the wait</h2>
+    <table data-c="isolation">
+      <thead><tr><th>Freshly linked <code>ca</code> test binary, first launch</th><th>Wait</th><th>Rules out</th></tr></thead>
+      <tbody>
+        <tr><td>launched via <code>cargo test</code></td><td>19.7 s</td><td>—</td></tr>
+        <tr><td>launched directly from a shell</td><td>25.0 s</td><td>cargo as the launcher</td></tr>
+        <tr><td>launched directly with cargo's <code>DYLD_*</code> env</td><td>19.9 s</td><td>environment</td></tr>
+        <tr><td>old binary deleted before relinking (new inode)</td><td>20.7 s</td><td>in-place overwrite</td></tr>
+        <tr><td>re-signed in place with <code>codesign -s -</code></td><td>28.3 s</td><td>the linker's signature</td></tr>
+        <tr><td>byte copy to a new file, never launched</td><td>0.5 s</td><td>binary content and size</td></tr>
+        <tr><td>tiny <code>rustc</code> programs, new or reused path, in <code>target/</code> or <code>~</code></td><td>0.4–1.0 s</td><td>location, path reuse</td></tr>
+        <tr><td>any binary, second launch</td><td>0.01 s</td><td>— (result cached)</td></tr>
+      </tbody>
+    </table>
+    <div class="diagram" data-c="syspolicyd-log">
+      <pre class="mermaid">
+flowchart LR
+  X["exec fresh test binary<br/>(provenance-tagged by the link)"] --> G["syspolicyd: GK performScan<br/>XProtect + notarization lookup<br/>(network 711 ms)"]
+  G --> V["evaluateScanResult → allowed<br/>result cached → next launch 0.01 s"]
+  L["syspolicyd error loop<br/>'Unable to initialize qtn_proc: 3'<br/>'dispatch_mig_server returned 268435459'<br/>~200/s idle · 7,800 in one 28 s launch"] -.->|starves| G
+      </pre>
+      <div class="caption">From <code>log show</code> during one slow launch. The scan takes under 1 s; the 20 s is <code>syspolicyd</code> busy in its error loop. Process up 5 h, 47 min CPU. What feeds the loop is not identified.</div>
+    </div>
+
+    <h2 id="evidence">Evidence — launches, not tests (run 2, loaded)</h2>
+    <table data-c="per-binary">
+      <thead><tr><th>Binary</th><th>Tests</th><th>libtest: test time</th><th>Wall time (per-test pass, loaded)</th><th>Wall time (quiet)</th></tr></thead>
+      <tbody>
+        <tr><td><code>mr</code> (xtask)</td><td>64</td><td>6.5 s</td><td><strong>138 s</strong>, about 47 s per test</td><td>5.4 s; one test alone 0.07 s</td></tr>
+        <tr><td><code>trawler</code> lib</td><td>291</td><td>0.3 s</td><td><strong>92 s</strong></td><td>—</td></tr>
+        <tr><td><code>core_entry</code></td><td>2</td><td>1.1 s</td><td><strong>71 s, 0 passed</strong> (10 s deadline hit)</td><td>—</td></tr>
+        <tr><td><code>ca</code></td><td>3</td><td>0.00 s</td><td><strong>70 s</strong></td><td>0.00 s</td></tr>
+        <tr><td><code>view_prefs_store</code></td><td>1</td><td>0.00 s</td><td><strong>59 s</strong></td><td>—</td></tr>
+        <tr><td><code>reach</code></td><td>12</td><td>1.0 s</td><td>45 s</td><td>—</td></tr>
+        <tr><td><code>xtask</code> lib</td><td>318</td><td>1.6 s</td><td>40 s</td><td>—</td></tr>
+        <tr><td><code>supervisor</code> (app)</td><td>5</td><td>0.15 s</td><td>26 s, 0 passed (deadline hit)</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <table data-c="probe">
+      <thead><tr><th>Probe: a freshly linked <code>rustc</code> hello-world</th><th>1st launch</th><th>2nd launch</th></tr></thead>
+      <tbody>
+        <tr><td>binary 1 (<code>syspolicyd</code> busy)</td><td><strong>19.47 s</strong></td><td>0.02 s</td></tr>
+        <tr><td>binary 2</td><td>0.43 s</td><td>0.02 s</td></tr>
+        <tr><td>binary 3</td><td>0.52 s</td><td>0.02 s</td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="mechanism">
+      <pre class="mermaid">
+flowchart LR
+  L["cargo links 31 test binaries<br/>(new executables every change)"] --> E["exec each binary<br/>+ tests exec git / ssh-keygen / swiftc / cargo / trawler"]
+  E --> S{"syspolicyd assessment<br/>(shared by 7 worktrees' builds)"}
+  S -->|idle| F["~0.02–0.5 s"]
+  S -->|backlogged| W["seconds to minutes per launch"]
+  W --> R["test deadlines (10 s) expire<br/>→ false red, cargo test stops"]
+      </pre>
+      <div class="caption">Why the cost changes so much between runs: it depends on how busy the system's assessment queue is, not on Trawler's code.</div>
+    </div>
+
+    <h2 id="findings">Findings</h2>
+    <table data-c="findings">
+      <thead><tr><th>#</th><th>Finding</th><th>Weight</th><th>Fix lives in</th></tr></thead>
+      <tbody>
+        <tr><td>F1</td><td>Each freshly linked binary's first launch waits on a Gatekeeper scan in a <code>syspolicyd</code> stuck in an error loop: median 21 s, about 95% of push time</td><td><strong>resolved here</strong> by the Developer Tools exemption; the restart alone did not clear the loop</td><td>machine (done) · repo: W5 probe guards other machines</td></tr>
+        <tr><td>F2</td><td>pre-push runs the suite blind, even on a tree proven green minutes earlier (plan C3)</td><td>multiplier: every push pays F1</td><td>E-GATEPAR.W4</td></tr>
+        <tr><td>F3</td><td>Launch wait exceeds test deadlines → false reds (<code>core_entry</code>, <code>supervisor</code>), and <code>cargo test</code> stops at the first red binary</td><td>blocks pushes</td><td>disappears with F1; the probe (W5) names the cause instead of a red test</td></tr>
+        <tr><td>F4</td><td>Shared <code>target/</code>: dependencies recompiled (2 m 34 s) with no change in this worktree</td><td>sporadic, large</td><td>out of scope (split-target decided no); W7 records the frequency</td></tr>
+        <tr><td>F5</td><td><code>cargo-nextest</code> absent → binaries run serially; the hook's faster path is never taken</td><td>minor while F1 dominates</td><td>W5 (prerequisite check)</td></tr>
+        <tr><td>F6</td><td>31 separate test binaries = 31 links + 31 first-launch assessments per change</td><td>scales F1</td><td>W6 (consolidate test targets, plan Q5)</td></tr>
+        <tr><td>F7</td><td>Doc-tests run for 3 crates that have <strong>0</strong> doc-tests: 31.5 s even with nothing changed</td><td><strong>now dominant</strong>: 51–52 s of a 65–67 s run</td><td>W6: <code>doctest = false</code> where a crate has none</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="machine-fix">Machine fix (user action, not in the repo)</h2>
+    <table data-c="devtools">
+      <thead><tr><th>Step</th><th>Action</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>sudo killall syspolicyd</code></td><td>restarted, but the error loop resumed at once (4,137 errors in the first 20 s)</td></tr>
+        <tr><td>2</td><td>Developer Tools: <strong>Cursor</strong> and <strong>iTerm</strong> enabled</td><td><strong>first-launch wait gone</strong> (21 s → 0.06 s); run 5</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="method">Method</h2>
+    <table data-c="method-table">
+      <thead><tr><th>Run</th><th>What</th><th>Conditions</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Every stage once</td><td>aborted: worktree had no <code>ui/node_modules</code> (finding for check 1)</td></tr>
+        <tr><td>2</td><td><code>pnpm build</code> → <code>cargo test --all --no-run</code> → <code>cargo test --all</code> → clippy → each test binary run directly with <code>--format json --report-time</code></td><td>another session ran <code>cargo test</code> in a sibling worktree concurrently, the normal state with 7 worktrees</td></tr>
+        <tr><td>3</td><td><code>cargo test --all</code> again, nothing changed locally</td><td>quieter; deps recompiled anyway (F4); red at <code>core_entry</code> (F3)</td></tr>
+        <tr><td>4</td><td>other worktrees off: 3 fresh probes → touch one file per crate → <code>cargo test --all --no-run</code> → <code>cargo test --all --no-fail-fast</code> (each output line timestamped) → same again unchanged → verify-dod · fmt · clippy; <code>syspolicyd</code> CPU sampled per stage</td><td>quiet machine; source of the <a href="#quiet">quiet table</a></td></tr>
+        <tr><td>5</td><td>run 4's script again after steps 1–2 of the machine fix</td><td>quiet machine; source of the <a href="#after">before/after table</a></td></tr>
+        <tr><td>isolation</td><td>the <a href="#root-cause">root-cause</a> rows plus <code>log show</code> for <code>syspolicyd</code> / <code>XprotectService</code> / <code>amfid</code></td><td>after run 4</td></tr>
+        <tr><td>probe</td><td>3 fresh hello-world binaries, each launched twice; a single <code>mr</code> test and the whole <code>mr</code> binary, quiet</td><td>after run 2</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
