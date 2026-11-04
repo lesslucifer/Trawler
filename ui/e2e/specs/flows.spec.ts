@@ -24,6 +24,9 @@ const selectLeg = async (leg: "request" | "response") => {
   await legSegment(leg).click();
   await $(`[data-testid="body-viewer"][data-leg="${leg}"]`).waitForExist({ timeout: 15_000 });
 };
+const selectPrettyWhereOffered = async () => {
+  if (await responseMode("pretty").isExisting()) await responseMode("pretty").click();
+};
 // WebDriver cannot read the OS clipboard, so the panel's clipboard is replaced
 // with a recorder before a copy and read back after — the payload is asserted
 // for real, not inferred from a label.
@@ -261,8 +264,9 @@ describe("UC-4 — watch live traffic in the native app", () => {
 // fresh launch is onboarding (UC-ONBOARD); the first decrypted flow reveals the
 // list, so this block reveals it once up front before selecting rows to inspect.
 //
-// The panel opens on the request leg, so every response-body assertion selects
-// the response leg first; the pane's data-leg then scopes the selector.
+// The leg and the body mode are the user's (DEC-70): an earlier spec's choice
+// carries into this one, so each assertion selects the leg and mode it reads;
+// the pane's data-leg then scopes the selector.
 describe("UC-5 — inspect a captured flow in the native app", () => {
   before(async () => {
     await shellIsUp();
@@ -295,10 +299,12 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
   async function openResponseOf(path: string) {
     await openRowFor(path);
     await selectLeg("response");
+    await selectPrettyWhereOffered();
   }
 
-  it("opens the detail on the request leg with headers, timing, and versions", async () => {
+  it("shows the request leg with headers, timing, and versions", async () => {
     await openRowFor("/json");
+    await selectLeg("request");
     const detail = await $('[data-testid="detail"]').getText();
     expect(detail).toContain("/json");
     expect(detail).toContain("HTTP/1.1");
@@ -321,6 +327,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
   });
 
   it("renders a JSON response body as copy-exact source", async () => {
+    await selectPrettyWhereOffered();
     await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
     const shown = await inResponsePane('[data-testid="body-json"]').getText();
     expect(shown).toContain('"greeting"');
