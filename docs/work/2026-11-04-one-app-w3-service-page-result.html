@@ -106,7 +106,7 @@
         Tauri 2.11.5's <code>webview_window.rs</code> and <code>app.rs</code></td></tr>
       <tr><td>a second way into Settings (owner, after round 7)</td><td>the main window's capture menu ends with
         <em>settings…</em>, which opens the same window through an async <code>open_settings</code> command, off the
-        main thread for the same Windows reason. The web shell reads no service, so its menu offers none</td><td>the
+        main thread for the same Windows reason. Both shell builds register it (round 8's Gate 0 caught the scenario build without it). The web shell reads no service, so its menu offers none</td><td>the
         owner's ask on reading the build</td></tr>
       <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
         <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
@@ -116,7 +116,7 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · <code>eb0e2365</code> round 3's fixes · <code>7ab41704</code> round 4's fix · <code>8d784a37</code> round 5's fix · <code>583d66a3</code> round 6's fix · <code>9726cd4c</code> the capture menu's settings… · this report</td></tr>
+      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · <code>eb0e2365</code> round 3's fixes · <code>7ab41704</code> round 4's fix · <code>8d784a37</code> round 5's fix · <code>583d66a3</code> round 6's fix · <code>9726cd4c</code> the capture menu's settings… · <code>dbe7356b</code> the scenario build registers it too · this report</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (4): restart round-trips through the
         supervisor · attached refuses · settings opens once · the menu builds it off the calling thread · the page's <code>open_settings</code> opens one window. <code>tests/supervisor.rs</code> gains one start mark per
         core, and <code>restarts_asked_for_at_once_run_one_after_the_other</code></td></tr>
