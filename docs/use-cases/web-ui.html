@@ -21,7 +21,8 @@
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
       UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
-      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
+      + UC-7 by <span class="badge id">E-EXPORT</span> · the listing's lists, <code>not_</code> and <code>is</code> by
+      <span class="badge id">E-QUERY.W1</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
       UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
       way into setup, by <span class="badge id">E-ONBRVP.W2</span> · This machine's status by
       <span class="badge id">E-ONBRVP.W3</span> · UC-SVC by <span class="badge id">E-ONEAPP.W3</span></div>    </div>
@@ -288,8 +289,26 @@
             Every row also carries <code>seed</code>: the flow a sent one was replayed from, <code>null</code> otherwise</td>
           </tr>
           <tr>
-            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is none of the three</td>
-            <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
+            <td><code>?host=a&amp;host=b</code> · <code>?q=login&amp;q=token</code> (<span class="badge id">E-QUERY.W1</span>)</td>
+            <td>a repeated <code>q</code> matches <strong>all of</strong> its values; any other repeated key matches
+            <strong>any of</strong> them; different keys combine as all of. A single parameter selects what it did before
+            (<a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a>)</td>
+          </tr>
+          <tr>
+            <td><code>?not_method=OPTIONS</code> · <code>not_&lt;key&gt;</code> for every key, repeatable</td>
+            <td>every flow the key would select, removed. <code>not_status=5xx</code> keeps a flow with no response yet</td>
+          </tr>
+          <tr>
+            <td><code>?is=pending</code> · <code>?is=https</code></td>
+            <td>flows with no response yet · flows requested over https</td>
+          </tr>
+          <tr>
+            <td><code>?host=localhost:8080</code></td>
+            <td><code>host</code> is a substring of the host, or of host:port when the URI names a port</td>
+          </tr>
+          <tr>
+            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is none of the three · a <code>status</code> that names no code or class · an <code>is</code> that is neither state, in either form</td>
+            <td>refused <code>400</code> with a reason led by the parameter as sent (<code>not_status must be …</code>) — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
           </tr>
         </tbody>
       </table>
@@ -1027,7 +1046,8 @@ the client lacks the certificate"]
             <code>timings</code> block, and its bodies</td>
           </tr>
           <tr>
-            <td><code>GET /flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code></td>
+            <td><code>GET /flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code>, with every
+            listing form: repeated keys, <code>not_&lt;key&gt;</code>, <code>is</code></td>
             <td>the same document over the filtered set: <strong>the export selects exactly what
             the listing with those parameters lists</strong>, in the same order — the same filter,
             not a second implementation of it</td>
@@ -1214,7 +1234,8 @@ the client lacks the certificate"]
             answers with, so both mutating endpoints report what they did</td>
           </tr>
           <tr>
-            <td><code>DELETE /flows?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…&amp;source=…</code></td>
+            <td><code>DELETE /flows?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…&amp;source=…</code>, with
+            every listing form: repeated keys, <code>not_&lt;key&gt;</code>, <code>is</code></td>
             <td>only the matching rows leave: <strong>a delete selects exactly what the listing
             with those parameters lists</strong> — the same filter as the listing and the export,
             not a third implementation. Every survivor stays whole: still listed, still readable
@@ -1223,7 +1244,7 @@ the client lacks the certificate"]
           <tr>
             <td>a filter matching nothing</td>
             <td><code>200</code> with <code>{ "removed": 0 }</code> — the request expresses an end
-            state and that state is already true. An unrecognised <code>source=</code> is the
+            state and that state is already true. A value the listing refuses is the
             exception: <code>400</code> with a reason, because a destructive request must never
             act on a set the caller did not name</td>
           </tr>
