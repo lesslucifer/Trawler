@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb07d39f34851f0dfae54c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-70: a choice belongs to the user, not the flow</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-70 — a choice belongs to the user, not the flow</h1>
+      <p>A view choice made on one flow carries to the next flow and across a relaunch. The detail's leg, the body
+        mode and setup's last platform live in one record, held by Shell and kept by the shell in
+        <code>view-prefs.json</code>.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-STICKY</strong> from the epic
+        plan's rulings Q1–Q6 · amends <a href="dec-31-leg-is-panel-scoped.html">DEC-31</a> (who holds the body view)
+        and <a href="dec-60-a-setup-session-starts-when-setup-opens.html">DEC-60</a> rule 6 (the last device outlives
+        the app session) · relates to <a href="dec-67-the-user-sizes-the-layout.html">DEC-67</a> · UC-5 · UC-ONBOARD ·
+        UC-SVC · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What changed</th></tr>
+      <tr><td><code>FlowDetail</code> was keyed by the flow, so each flow remounted the pane and reset its leg and
+        the body's raw | pretty; a relaunch forgot both, and setup's last platform ended with the app session</td>
+        <td>the owner, 2026-11-04: "select once". A choice states what the user wants to read, which does not change
+        with the row they click</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The leg (<code>request | response</code>), the body mode (<code>pretty | raw</code>,
+        one setting for both legs) and setup's <code>lastPlatform</code> are one record, held by Shell, read once at
+        launch and written whole on every choice to <code>view-prefs.json</code> in the shell's config dir
+        (<code>view_prefs_read</code> / <code>view_prefs_write</code>). The Settings window reopens where it was left,
+        as every window does under DEC-67.</p>
+    </div>
+
+    <h2 id="rules">The contract</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>One writer: Shell holds the only record. Every field — E-QUERY's query text included — goes
+        through it; the Settings page never mounts it</td><td>two writers of one file overwrite each other's
+        fields</td></tr>
+      <tr><td>2</td><td>Each field is read on its own: missing, mistyped or unknown values read as that field's
+        default (Request, pretty, none), never as an error</td><td>losing one choice costs a click; losing all of them
+        for one bad field costs every click</td></tr>
+      <tr><td>3</td><td>Fields the app does not know are kept: a write merges the file's unknown fields under the ones
+        it sends</td><td>an older and a newer app share the file; neither erases the other's choices</td></tr>
+      <tr><td>4</td><td>A choice made before the launch read lands wins; no write happens until that read settles</td>
+        <td>an early click is the user's latest word, and an early write would erase the saved fields</td></tr>
+      <tr><td>5</td><td>Each choice is written the moment it is made, staged then renamed (DEC-67 rule 5)</td><td>⌘Q,
+        the Dock's Quit and the last window closing end the process without unmounting the app, so a timer
+        loses the last choice</td></tr>
+      <tr><td>6</td><td><code>lastPlatform</code> seeds only setup the user opens (the dot, "set up capture", "set up
+        another device", DEC-60 rule 6 still applied). The launch check's own setup and the session's
+        <code>chosen</code> start on This machine every launch</td><td><code>chosen</code> decides whether adb
+        runs, in setup and at quit; no launch should run it before the user opens setup</td></tr>
+      <tr><td>7</td><td>A flow with no response yet, opened on Response, shows Response with its own "no response yet"
+        state</td><td>the choice stays put; the flow says what it lacks</td></tr>
+    </table>
+
+    <h2 id="vs-dec-67">Why not <code>layout.json</code></h2>
+    <table data-c="vs-dec-67">
+      <tr><th></th><th><code>layout.json</code> (DEC-67)</th><th><code>view-prefs.json</code></th></tr>
+      <tr><td>holds</td><td>sizes</td><td>choices of what to read</td></tr>
+      <tr><td>a bad file</td><td>whole default — a partial layout is one nobody chose</td><td>field by field — each
+        choice stands alone</td></tr>
+      <tr><td>unknown fields</td><td>rejected</td><td>kept</td></tr>
+      <tr><td>View ▸ Reset Layout</td><td>resets it</td><td>leaves it (Q2)</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>A body mode per leg</td><td>the owner asked to choose once (Q1)</td></tr>
+      <tr><td>Fields in <code>layout.json</code></td><td>its whole-or-nothing read and its reset are right for sizes,
+        wrong for choices</td></tr>
+      <tr><td>Restoring <code>chosen</code> at launch</td><td>adb would run at launch and at quit for a user who has not
+        opened setup (Q3)</td></tr>
+      <tr><td>Restoring the selected flow, an open composer or its draft</td><td>the ring is in memory; the ids would
+        point at nothing</td></tr>
+      <tr><td>A debounced write</td><td>lost the last choice on a quit (review round 1, E-STICKY.W1)</td></tr>
+      <tr><td><code>localStorage</code></td><td>per origin, as DEC-67 rejected it</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
