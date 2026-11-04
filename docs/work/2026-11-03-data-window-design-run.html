@@ -24,7 +24,7 @@
       <h1>Design run: the data window</h1>
       <p>A window handed one piece of data by value. It renders the data whole and lets the user edit a scratch copy,
         find in it and decode any value. Only find stays on screen; every other act sits in one ⋯ menu or a right-click.</p>
-      <div class="meta">Design run · round 2 on 2026-11-04, open for the owner · Trawler · T3 (docs/work/) ·
+      <div class="meta">Design run · closed 2026-11-04 after the owner's rounds 1 and 2 · Trawler · T3 (docs/work/) ·
         <strong>E-INSPWIN.W2</strong> · branch <code>wu/inspect-window/data-window-design</code> · epic
         <a href="2026-11-03-inspect-window-plan.html">E-INSPWIN</a> ·
         <a href="2026-11-03-inspect-window-w2-data-window-design-plan.html">WU plan</a> · components:
@@ -33,7 +33,7 @@
         CutMarker amended in <a href="#cut-marker">its delta</a> · within DEC-68</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="ready">
+  <main data-artifact="design-run" data-status="archived">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Live. Click a line, type, click away. Open ⋯ to undo, restore the original, re-indent, sort keys,
@@ -302,9 +302,15 @@
         }
         const DECODERS = { jwt, base64, url: urlDecode };
 
+        const DECODER_LABEL = { jwt: "JWT", base64: "base64", url: "URL" };
+        const meaningful = (id, r) => !r.err && (id !== "url" || /%[0-9A-Fa-f]{2}/.test(r.input)) && (id !== "base64" || r.kind !== "binary" || !!r.looks);
+        function decodersFor(input) {
+          const first = detect(input);
+          return [first, ...Object.keys(DECODERS).filter((id) => id !== first)].filter((id) => meaningful(id, { ...DECODERS[id](input), input }));
+        }
         function openPeek(input, origin) {
           if (!input) return;
-          store.set({ peek: { input, origin, using: detect(input), guessed: true }, menu: null });
+          store.set({ peek: { input, origin, using: decodersFor(input)[0] ?? null }, menu: null });
         }
         function decodeNow() {
           const s = store.get();
@@ -633,8 +639,9 @@
 
         function Peek() {
           const s = useS();
-          const { input, origin, using, guessed } = s.peek;
-          const r = DECODERS[using](input);
+          const { input, origin, using } = s.peek;
+          const options = decodersFor(input);
+          const r = using ? DECODERS[using](input) : { err: DECODERS[detect(input)](input).err, none: true };
           const from = origin.type === "row" ? `the value of “${origin.key}”` : "the selection";
           const replace = () => {
             const value = r.kind === "jwt" ? r.payload : r.raw;
@@ -653,19 +660,19 @@
             <div data-testid="decode-peek" className="rounded-card border border-hairline bg-canvas-soft font-ui"
               onKeyDown={(e) => { if (e.key === "Escape") store.set({ peek: null }); }}>
               <div className="flex flex-wrap items-center gap-chrome-gap border-b border-hairline px-3 py-chrome-y">
-                <span className="text-label uppercase tracking-label text-ink-mute">decoded as</span>
-                <SegmentedControl options={[{ value: "jwt", label: "JWT" }, { value: "base64", label: "base64" }, { value: "url", label: "URL" }]} value={using}
-                  onChange={(v) => store.set((x) => ({ peek: { ...x.peek, using: v, guessed: false } }))} ariaLabel="decode as" />
-                <span className="text-chrome text-ink-mute">{guessed ? "guessed from its shape · " : ""}{from} · {input.length} characters</span>
+                <span className="text-label uppercase tracking-label text-ink-mute">{options.length ? "decoded as" : "decode"}</span>
+                {options.length > 1 && <SegmentedControl options={options.map((id) => ({ value: id, label: DECODER_LABEL[id] }))} value={using}
+                  onChange={(v) => store.set((x) => ({ peek: { ...x.peek, using: v } }))} ariaLabel="decode as" />}
+                {options.length === 1 && <span className="text-control text-ink">{DECODER_LABEL[using]}</span>}
                 <span className="ml-auto flex items-center gap-chrome-gap">
-                  {!r.err && r.kind !== "binary" && <Button onClick={replace}>{r.kind === "jwt" ? "replace with the payload" : "replace"}</Button>}
-                  {!r.err && r.kind !== "binary" && <IconButton label="open in data window" onClick={openNew}>⧉</IconButton>}
+                  {!r.err && r.kind !== "binary" && <IconButton label={r.kind === "jwt" ? "replace with the payload" : "replace with decoded"} onClick={replace}>⇄</IconButton>}
+                  {!r.err && <IconButton label="open in data window" onClick={openNew}>⧉</IconButton>}
                   <IconButton glyph="close" label="close the peek" onClick={() => store.set({ peek: null })} />
                 </span>
               </div>
               <div className="max-h-body-max overflow-auto px-3 py-2">
                 {r.err ? (
-                  <Notice tone="warn" detail={`${from === "the selection" ? "the selection is" : "the value is"} left as it was`}>{using === "jwt" ? "not a JWT" : using === "url" ? "not URL-encoded" : "not base64"}: {r.err}</Notice>
+                  <Notice tone="warn" detail={`${from === "the selection" ? "the selection is" : "the value is"} left as it was`}>not base64, URL-encoded or a JWT: {r.err ?? "it decodes to nothing readable"}</Notice>
                 ) : r.kind === "jwt" ? (
                   <div className="flex flex-col gap-2">
                     {block("header", show(r.header, "json"))}
@@ -673,7 +680,7 @@
                     {block("signature · not verified", <span data-wire="signature" className="break-all font-mono text-body text-ink-body">{r.signature}</span>)}
                   </div>
                 ) : r.kind === "binary" ? (
-                  <Notice detail="binary cannot replace text in place; it opens as data of its own" action={<Button onClick={openNew}>open in data window</Button>}>
+                  <Notice detail="binary cannot replace text in place; ⧉ opens it as data of its own">
                     {human(r.bytes.length)} of binary · {r.looks ? `looks like ${r.looks}` : "no known signature"}
                   </Notice>
                 ) : show(r.text, r.kind === "json" ? "json" : "plain")}
@@ -968,7 +975,7 @@
       </script>
     </div>
 
-    <h3 id="calls">Calls for the owner's round 2</h3>
+    <h3 id="calls">Round 2 calls: held by the owner</h3>
     <table data-c="calls">
       <tr><th>#</th><th>The run drew</th><th>The alternative</th></tr>
       <tr><td>D1</td><td>a choice row inside the ⋯ menu: <em>indent 2 · 4 · tab · minified</em> and <em>fold to 1 · 2 · 3 · all · none</em>, one row each, ← / → to move</td><td>submenus, which add a hover path and a second popover; or a row per choice, which makes the JSON menu 17 rows long</td></tr>
@@ -1004,7 +1011,7 @@
       <tr><td>the kind override</td><td>used</td><td>the kind Select in the status bar. The note beside it reads <em>your choice · detected …</em></td></tr>
       <tr><td>original / working copy</td><td>used</td><td>the surface is the working copy and is always editable. <em>modified · N edits</em> in the status bar. Undo, redo, restore original, copy original and save original in ⋯. Copy and save deliver what is on screen</td></tr>
       <tr><td>the filtered view: JSONPath and text filter (Q4)</td><td>deliberately unused</td><td>deferred by the owner on 2026-11-04 to a later epic: this window ships find only. Nothing on screen leaves a place for it</td></tr>
-      <tr><td>decoders: base64 (standard, URL-safe, padding optional) · URL-encoding · JWT</td><td>used</td><td>the decode peek, from a right-click or ⌘⇧D. The decoder is guessed from the value's shape and can be switched; each failure gives its reason in words</td></tr>
+      <tr><td>decoders: base64 (standard, URL-safe, padding optional) · URL-encoding · JWT</td><td>used</td><td>the decode peek, from a right-click or ⌘⇧D. It offers only the decoders that read the value; a switch appears only when more than one does. When none does, it gives the reason in words</td></tr>
       <tr><td><code>openDataWindow(payload)</code> (W1)</td><td>used</td><td>the peek's ⧉ and its binary result, the pane's ⧉ and the cut marker's button</td></tr>
       <tr><td>the save dialog and file write (DEC-68 rule 9)</td><td>used</td><td>save and save original in ⋯, and ⌘S</td></tr>
       <tr><td>the clipboard</td><td>used</td><td>copy (CopyButton) · copy original · copy as JSON · the right-click copy · native ⌘C</td></tr>
@@ -1038,7 +1045,7 @@
       <tr><td>right-click a selection, choose <em>decode</em></td><td>surface</td><td>proposed: ⌘⇧D decodes the selection, or the focused form row's value. Every right-click item has its own key, so the menu itself needs none (macOS has no context-menu key)</td></tr>
       <tr><td>right-click, choose <em>copy</em> / <em>copy the value</em></td><td>surface</td><td>⌘C (on a form row: focus the value cell, ⌘C)</td></tr>
       <tr><td>click a decoder in the peek</td><td>surface (the peek)</td><td>Tab to the segment · ← / → (SegmentedControl's)</td></tr>
-      <tr><td>click <em>replace</em> or ⧉ in the peek</td><td>surface (the peek)</td><td>Tab to it · Enter</td></tr>
+      <tr><td>click ⇄ (replace) or ⧉ in the peek</td><td>surface (the peek)</td><td>Tab to it · Enter</td></tr>
       <tr><td>click × on the peek</td><td>surface (the peek)</td><td>Esc while focus is in the peek or the surface (dismiss)</td></tr>
       <tr><td>choose the kind</td><td>status bar</td><td>Tab to the Select · Enter · ↑ / ↓ · Enter (Select's)</td></tr>
       <tr><td>click a form key or value to edit it</td><td>surface (form)</td><td>Tab to the cell · Enter opens the Field · ⌘↵ commits · Esc cancels (dismiss)</td></tr>
@@ -1059,9 +1066,9 @@
       <tr><td>component amendment (T2)</td><td><code>CutMarker</code>: the way out becomes <em>open in data window</em>, a Button beside the line, wherever an opener is provided; it still says <em>save to see all</em> where none is. The delta is <a href="#cut-marker">declared above</a>; its TSDoc takes it when W3 builds it</td><td>its anatomy today names save as the only way out</td><td>W3</td></tr>
       <tr><td>screen (T4)</td><td><code>DataWindow</code>: <code>ui/src/DataWindow.tsx</code>, mounted for a <code>data-*</code> window. Owns the working-copy history (original, steps, undo / redo, restore), kind detection, which ⋯ items each kind gets, and the shortcuts</td><td>a new screen</td><td>W3</td></tr>
       <tr><td>local (T3)</td><td><code>FindBar</code>: Field + <em>N of M</em> + ↑ / ↓. On hex it reads a query of hex pairs as bytes and anything else as text, and says which</td><td>no search control in the collection; local to the screen until a second screen needs it</td><td>W4 · W5</td></tr>
-      <tr><td>local (T3)</td><td><code>DecodePeek</code>: decoded-as segment (guessed, switchable), the source and its length, replace, ⧉, ×; the result (JWT header / payload / signature, JSON, text) or a binary Notice whose only act is ⧉, or the reason it failed</td><td>a screen element; mounts SegmentedControl, EditSurface (read-only), Notice, Button, IconButton</td><td>W6</td></tr>
+      <tr><td>local (T3)</td><td><code>DecodePeek</code>: <em>decoded as</em> and the decoder, a switch only among the decoders that read the value; ⇄ replace, ⧉ open, × close, all icons; the result (JWT header / payload / signature, JSON, text) or a binary Notice whose act is ⧉, or the reason none reads it</td><td>a screen element; mounts SegmentedControl, EditSurface (read-only), Notice, IconButton</td><td>W6</td></tr>
       <tr><td>local (T3)</td><td><code>StatusBar</code>: the kind Select, <em>detected from …</em>, size and lines, the selection's length, <em>modified · N edits</em> or <em>read-only</em></td><td>a screen zone; StatusLine is a precondition's verdict, not this</td><td>W3</td></tr>
-      <tr><td>glyphs</td><td>IconButton's registry gains <code>more</code> ⋯ · <code>previous</code> ↑ · <code>next</code> ↓ · <code>window</code> ⧉ (open in data window) · <code>add</code> +. The mockup passes them as children</td><td>the registry holds close, save and help</td><td>W3 (more, window, add) · W4 (previous, next)</td></tr>
+      <tr><td>glyphs</td><td>IconButton's registry gains <code>more</code> ⋯ · <code>previous</code> ↑ · <code>next</code> ↓ · <code>window</code> ⧉ (open in data window) · <code>add</code> + · <code>replace</code> ⇄ (replace with decoded). The mockup passes them as children</td><td>the registry holds close, save and help</td><td>W3 (more, window, add) · W4 (previous, next) · W6 (replace)</td></tr>
       <tr><td>keyboard vocabulary</td><td><em>find</em>: ⌘F, Enter / Shift+Enter, ⌘G / ⇧⌘G, Esc clears · <em>undo / redo the working copy</em>: ⌘Z / ⇧⌘Z · <em>save what is on screen</em>: ⌘S · <em>decode</em>: ⌘⇧D · <em>open in data window</em>: ⌘⇧O · <em>commit a multi-line edit</em>: ⌘↵ · <em>remove a row</em>: ⌘⌫ · <em>re-indent</em>: ⌥⇧F · <em>wrap long lines</em>: ⌥Z · a menu's own keys (Menu's TSDoc) · fold keys as CodeMirror's</td><td>the conventions have no find, edit-history, menu or open pattern</td><td>W7 distills them into the rulebook</td></tr>
       <tr><td>lexicon</td><td><em>data window</em>: the window a piece of data opens in · <em>original</em>: the bytes as handed in, never changed (raw's <em>never: original</em> stands: raw is not this) · <em>working copy</em>: what the user changes · <em>modified</em>: the working copy differs from the original · <em>restore original</em>: make the working copy the original again · <em>re-indent</em>: rewrite the working copy's indentation · <em>minified</em>: the JSON with no whitespace · <em>decoded as</em>: the peek's label for the decoder in use</td><td>new terms</td><td>W7</td></tr>
     </table>
@@ -1099,6 +1106,18 @@
             <li><strong>proposals:</strong> <code>Menu</code> added, with its design. EditSurface and FormTable gain an inset, and FormTable hover acts. <code>DecoderPanel</code> → <code>DecodePeek</code>. <code>StatusBar</code> added. The <code>decoder</code> 400 px token and the 900 px stacking rule dropped. Glyphs: undo / redo out, more / add in. ⌘L dropped</li>
             <li><strong>capabilities:</strong> the view is deliberately unused, deferred</li>
           </ul></td><td>Q4 (re-ruled: deferred) · <code>DEC-68</code> · the epic plan's W4, W5, W7 and J2, J3, amended the same day</td></tr>
+        <tr><td>Round 2, the owner (2026-11-04), three comments on the peek, "the rest looks fine":
+          <ul>
+            <li>"decode as should show parsable type only"</li>
+            <li>drop the helper text ("guessed from its shape · the selection"): users don't need it</li>
+            <li>no long-text buttons such as <em>replace with the payload</em>; use an icon</li>
+          </ul></td><td>
+          <ul>
+            <li><strong>mockup:</strong> the peek lists only the decoders that read the value. A lone one is a label, not a switch. With none, it says why. The source-and-length text is gone</li>
+            <li><strong>mockup:</strong> <em>replace</em> is the icon ⇄. The binary result's worded button becomes the header's ⧉</li>
+            <li><strong>proposals:</strong> the <code>replace</code> ⇄ glyph; DecodePeek's anatomy</li>
+            <li><strong>calls:</strong> D1–D6 held as drawn</li>
+          </ul></td><td><code>taste</code> (which decoders show) · IconButton's <code>@use</code> (the glyph carries the act; its label names it for the keyboard and the reader)</td></tr>
       </tbody>
     </table>
 
