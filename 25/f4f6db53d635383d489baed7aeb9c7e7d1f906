@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU filter-lists -> epic/query-bar"
+epic: E-QUERY
+wu: E-QUERY.W1
+branch: wu/query-bar/filter-lists
+base: c30852c53e8bdc4d65cc5d853613028837c226f4
+head: 25f4f6db53d635383d489baed7aeb9c7e7d1f906
+diff_sha256: 41cb963cb3a73aed34552e3eed4eada57e72c9e1a7242dc4922590b26d247f3e
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 382
+    finders: 27
+    verifiers: 0
+    total: 406
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "contains_ignoring_case lowercases haystack and needle per predicate per flow (src/store.rs)"
+    waived: "the per-flow lowercase is the pre-existing filter pattern, kept unchanged; lowercasing needles once is an unmeasured optimisation for its own change"
+  - finding: "Flow stores host_with_port as an owned String instead of deriving it on demand like is_https (src/flow.rs)"
+    waived: "it mirrors host, derived once at construction so filter scans under the store lock never re-parse the URI; is_https is a prefix check that needs no parse"
+  - finding: "STATUS_GRAMMAR lost its leading 'status' so routes prepends the parameter name (src/store.rs)"
+    waived: "one grammar serves both status and not_status; only the API layer knows which parameter was sent, so it owns the lead (DEC-70 rule 6)"
+verdict: PASS
+date: 2026-11-04
