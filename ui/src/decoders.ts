@@ -1,3 +1,5 @@
+import { rawKind } from "./body";
+import { signatureOf } from "./dataKind";
 import { reformatJson } from "./jsonTools";
 
 export type DecoderId = "jwt" | "base64" | "url";
@@ -16,33 +18,16 @@ export type Decoded = Exclude<Reading, { kind: "unreadable" }>;
 export type Peeked = { decoder: DecoderId; reading: Decoded } | { decoder: null; reason: string };
 
 const DECODER_ORDER: DecoderId[] = ["jwt", "base64", "url"];
-const SIGNATURES: [number[], string][] = [
-  [[0x89, 0x50, 0x4e, 0x47], "PNG"],
-  [[0xff, 0xd8, 0xff], "JPEG"],
-  [[0x47, 0x49, 0x46, 0x38], "GIF"],
-  [[0x1f, 0x8b], "gzip"],
-  [[0x25, 0x50, 0x44, 0x46], "PDF"],
-];
-const CONTROL = /[\u0000-\u0008\u000e-\u001f\u007f]/;
 const BASE64_DIGIT = /[A-Za-z0-9+/\-_]/;
 const ESCAPE = /%[0-9A-Fa-f]{2}/;
 
 const unreadable = (reason: string): Reading => ({ kind: "unreadable", reason });
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-function looksLike(bytes: Uint8Array): string | null {
-  return SIGNATURES.find(([signature]) => signature.every((byte, i) => bytes[i] === byte))?.[1] ?? null;
-}
-
 function readBytes(bytes: Uint8Array): Reading {
   if (bytes.length === 0) return unreadable("it decodes to nothing");
-  let text: string | null;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
-    text = null;
-  }
-  if (text === null || CONTROL.test(text)) return { kind: "binary", bytes, looks: looksLike(bytes) };
+  if (rawKind(bytes) === "hex") return { kind: "binary", bytes, looks: signatureOf(bytes)?.name ?? null };
+  const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
   if (/^\s*[[{]/.test(text)) {
     const laidOut = reformatJson(text, "  ", false, "\n");
     if (laidOut.ok) return { kind: "json", shown: laidOut.text, text, bytes };

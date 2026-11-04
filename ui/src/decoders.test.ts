@@ -56,6 +56,14 @@ describe("base64", () => {
   });
 });
 
+describe("text or binary is the body's own rule (rawKind)", () => {
+  it("DEL is text and a vertical tab or form feed is binary, as the window that opens them reads them", () => {
+    expect(decoded(url("a%7Fb"))).toMatchObject({ kind: "text", text: "a\u007fb" });
+    expect(decoded(url("a%0Bb"))).toMatchObject({ kind: "binary" });
+    expect(decoded(url("a%0Cb"))).toMatchObject({ kind: "binary" });
+  });
+});
+
 describe("url", () => {
   it("decodes escapes and + as a space", () => {
     expect(decoded(url("a%20b+c%26d%E2%9C%93"))).toMatchObject({ kind: "text", text: "a b c&d✓" });

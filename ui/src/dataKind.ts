@@ -20,17 +20,26 @@ export interface Detected {
 
 export const FROM_BYTES = "its bytes";
 
-const IMAGE_SIGNATURES: number[][] = [
-  [0x89, 0x50, 0x4e, 0x47],
-  [0xff, 0xd8, 0xff],
-  [0x47, 0x49, 0x46, 0x38],
+export interface Signature {
+  name: string;
+  image: boolean;
+}
+
+const SIGNATURES: (Signature & { bytes: number[] })[] = [
+  { name: "PNG", image: true, bytes: [0x89, 0x50, 0x4e, 0x47] },
+  { name: "JPEG", image: true, bytes: [0xff, 0xd8, 0xff] },
+  { name: "GIF", image: true, bytes: [0x47, 0x49, 0x46, 0x38] },
+  { name: "gzip", image: false, bytes: [0x1f, 0x8b] },
+  { name: "PDF", image: false, bytes: [0x25, 0x50, 0x44, 0x46] },
 ];
 
-const startsWith = (bytes: Uint8Array, signature: number[]) =>
-  signature.every((byte, i) => bytes[i] === byte);
+export function signatureOf(bytes: Uint8Array): Signature | null {
+  const found = SIGNATURES.find((signature) => signature.bytes.every((byte, i) => bytes[i] === byte));
+  return found ? { name: found.name, image: found.image } : null;
+}
 
 function sniff(bytes: Uint8Array): DataKind {
-  if (IMAGE_SIGNATURES.some((signature) => startsWith(bytes, signature))) return "image";
+  if (signatureOf(bytes)?.image) return "image";
   if (rawKind(bytes) === "hex") return "hex";
   const text = new TextDecoder().decode(bytes).trimStart();
   if (text.startsWith("{") || text.startsWith("[")) {
