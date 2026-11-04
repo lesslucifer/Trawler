@@ -1,0 +1,47 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: b59a4fb153f8c9e7e8be44226b9af46f08b30c03
+diff_sha256: 6bbda9fe38adc974aade62daa06192b64d67a243423119435aab849f165c7ae1
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 9
+  stage_seconds:
+    total: 89
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 4, verified: 3 }
+    altitude: { found: 4, verified: 4 }
+findings: { found: 10, verified: 9, waived: 0 }
+waivers: []
+nits:
+  - finding: "each core log line copies the up-to-2000-entry tail and re-renders and re-scrolls every LogTail row, with no batching"
+    waived: "the core writes about ten lifecycle lines and nothing per request (trawler=info, no per-flow logging), and LOG_LINES bounds each render; the verifier refuted it as important"
+  - finding: "useCoreLog subscribes and reads the snapshot even when the core is attached"
+    waived: "an attached core's core_log answers empty and no core://log event is emitted, so the subscription costs one listener and one empty read"
+  - finding: "LogRing::push clones each Logged line once for the ring and returns the original for the emit"
+    waived: "one small allocation per stderr line on a path that carries a handful of lines per core"
+  - finding: "MAIN_WINDOW and ends_the_app live in the settings module, which menu and core import"
+    waived: "settings.rs is the shell's one window-lifecycle module (the Settings window, and which window ends the app); a separate module for one label adds a seam with no second user"
+  - finding: "restart_refusal formats user-facing text in the command layer beside refusal()"
+    waived: "it sits beside W2's refusal(), the shell's other user-facing StartError sentence, in the same file and layer; round 5 verified this placement"
+  - finding: "Rust tests include_str the TS sources to pin PAGE_GLOBAL, SETTINGS_PAGE and LOG_LINES across the boundary"
+    waived: "the pin is the round-1 and round-5 fix for exactly this drift; a reformat fails a test loudly rather than drifting silently"
+  - finding: "coreStub.ts imports vitest from ui/src outside the *.test.* naming"
+    waived: "it follows the existing apiStub.ts test-support convention in ui/src; only test files import it"
+  - finding: "stop() does not take the restarting lock, so an app exit mid-restart leaves the new child unstopped"
+    waived: "the core runs with --lifeline and exits on stdin EOF, which the OS delivers as the app process ends; the window predates this range"
+  - finding: "two concurrent Settings opens can both pass the open check, and the second build fails on the duplicate label"
+    waived: "the first build opens the one Settings window the user sees; the second's error is only logged or returned, and a later press focuses the open window"
+verdict: PASS
+date: 2026-11-04
