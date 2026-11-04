@@ -104,6 +104,10 @@
         Windows hang itself cannot reproduce on macOS, so the test pins the offload. Live on macOS after the fix,
         <em>Settings…</em> opened the window and Quit still ended the app</td><td>the correctness finder, verified from
         Tauri 2.11.5's <code>webview_window.rs</code> and <code>app.rs</code></td></tr>
+      <tr><td>a second way into Settings (owner, after round 7)</td><td>the main window's capture menu ends with
+        <em>settings…</em>, which opens the same window through an async <code>open_settings</code> command, off the
+        main thread for the same Windows reason. The web shell reads no service, so its menu offers none</td><td>the
+        owner's ask on reading the build</td></tr>
       <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
         <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
         service from context, so a provider is the whole fixture</td></tr>
@@ -112,13 +116,13 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · <code>eb0e2365</code> round 3's fixes · <code>7ab41704</code> round 4's fix · <code>8d784a37</code> round 5's fix · round 6's fix · this report</td></tr>
+      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · <code>eb0e2365</code> round 3's fixes · <code>7ab41704</code> round 4's fix · <code>8d784a37</code> round 5's fix · <code>583d66a3</code> round 6's fix · <code>9726cd4c</code> the capture menu's settings… · this report</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (4): restart round-trips through the
-        supervisor · attached refuses · settings opens once · the menu builds it off the calling thread. <code>tests/supervisor.rs</code> gains one start mark per
+        supervisor · attached refuses · settings opens once · the menu builds it off the calling thread · the page's <code>open_settings</code> opens one window. <code>tests/supervisor.rs</code> gains one start mark per
         core, and <code>restarts_asked_for_at_once_run_one_after_the_other</code></td></tr>
       <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization, a failed spawn published as exited, a core's late lines kept above the next start mark, the page's cap pinned to the ring's) · core.rs (two restart
         sentences) · menu.rs (Settings action) · settings.rs (only main ends the app, the page mark pinned to <code>page.ts</code>) · <code>page.test.ts</code> (2) · Vitest:
-        <code>CaptureService.test.tsx</code> (12) · <code>useCoreService.test.ts</code> (12) ·
+        <code>CaptureService.test.tsx</code> (12) · <code>useCoreService.test.ts</code> (14) · <code>CaptureControls.test.tsx</code> (+2) · <code>App.test.tsx</code> (+1) ·
         <code>NotAnswering.test.tsx</code> (4) · <code>coreService.test.ts</code> (4, updated)</td></tr>
       <tr><td>e2e</td><td>waived for the WU: J2 belongs to W5's owned-core e2e build</td></tr>
       <tr><td>docs</td><td>UC-SVC + UC-4 in <a href="../use-cases/web-ui.html#uc-svc">web-ui.html</a> and the
