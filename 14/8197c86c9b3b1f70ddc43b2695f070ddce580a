@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "Epic E-ONEAPP -> main. The whole epic's code as one range: the core entry and its flags, ready line and lifeline (src/cli.rs, lib.rs, main.rs, tests/core_entry.rs), the e2e launcher's two suites and the GUI-free guard (xtask/src/ui.rs, xtask/tests/ui.rs), the core service bridge and hooks (ui/src/coreService.ts, useCoreService.ts, coreStub.ts, page.ts), the Capture service page (CaptureService.tsx, LogTail.tsx), NotAnswering's restart, the capture menu's Settings act, the quit dialog's owned-core copy (ProxyCloseDialog.tsx, App.tsx), and the owned and attached e2e specs (ui/e2e/). ONE ROUND. Each code-bearing WU was reviewed on its own diff as it landed (W1, W2, W5 PASS in one round, W3 after six, W4 after one); this round judges the epic as a single range against main, the scope no WU review had: the seams between them. Finders read the shell under ui/src-tauri/ for context. The close commit at the tip changes no code path."
+epic: E-ONEAPP
+branch: epic/one-app
+base: a09fd714cee840b18a90402cc5f985ba1cc00440
+head: 148197c86c9b3b1f70ddc43b2695f070ddce580a
+diff_sha256: f0912c8e9971a9a1de990c6d5870f3a6bf4596bdddc4a1a2be5b8fbe0e97bec3
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  stage_seconds:
+    gate0: 258
+    finders: 53
+    verifiers: 25
+    total: 283
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 7, verified: 1, waived: 0 }
+nits:
+  - finding: "A stop() racing a restart's spawn() that is awaiting the ready line finds no owned child and returns; spawn then installs the new child without re-checking its generation, so RunEvent::Exit during a Settings restart leaves that child unreaped by the supervisor (verified nit)."
+    waived: "The outcome the quit promises still holds: the child runs with --lifeline and its stdin pipe lives only in the app process, so the app's exit gives it EOF and it shuts down and frees its ports (DEC-69 rules 3 and 11). The window is the sub-second wait for a restarted core's ready line, and nobody observes the unpublished state after the app is gone. A generation re-check in spawn is a cheap hardening, not a defect."
+  - finding: "Each core log line costs one setEntries, a copy of up to 2000 kept entries in mergeLog, and a re-render of every LogTail row while the Capture service page is open."
+    waived: "Bounded by the 2000-line ring and paid only while the page is mounted; the core logs a few lines per start, so a debug-level flood is the only case where it shows, and the page is a diagnostic surface."
+  - finding: "The supervisor's stdout/stderr readers use BufReader::lines(), so a single newline-free line from the child is buffered and stored at unbounded length; the ring bounds line count, not bytes."
+    waived: "The child is our own core, whose stderr is tracing output line by line; a pathological unterminated line is not an input this process produces."
+  - finding: "LOG_LINES = 2000 is declared in both TypeScript and Rust, pinned by a Rust test that reads coreService.ts's source text rather than one value deriving the other."
+    waived: "W3's review accepted the shape: the pin fails loudly on drift, and xtask already reads ui/ the same way; a generated constant across the process boundary is more machinery than the one number warrants."
+  - finding: "The --core dispatch lives only in the shell, so the trawler binary and the app binary accept different argument grammars, with the shared flags tested on each side."
+    waived: "Deliberate by DEC-69 (Q11): --core is the app re-executing itself into the same core entry; the headless binary has no reason to accept a mode switch it already is."
+refuted: "TWO CANDIDATES REFUTED. Altitude (important): quitStopsCore re-derives the shell's stop rule - the verifier found it mirrors what the shell actually stops (an owned, live core; Supervisor::stop is a no-op over an exited one, an attached core is never stopped), unit-tested over every state, with J3 pinning that a quit stops the core. Altitude (important): the CoreState/LogEntry wire shapes and command names are unpinned - command names are pinned by both_shell_builds_register_exactly_the_commands_the_app_invokes, the Rust wire shapes by literal-JSON tests in supervisor.rs, and the page end to end by J2 against a real core; the repo's precedent (roadmap: the header-rewrite mirror) accepts hand-mirrored shapes across this boundary."
+verdict: PASS
+date: 2026-11-04
