@@ -1,0 +1,13 @@
+schema: design/v1
+epic: E-ONEAPP
+wu: E-ONEAPP.W4
+base: eca548c88d8b95dde491027ce25a49a4ea7a4da5
+design_sha256: e05eee38bd3f6e9ac7d3e4a0757cb53933a9bf9d2a3e9dc4b49b3b0aebc9274d
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/ProxyCloseDialog.tsx
+    why: "a copy edit inside the existing dialog: four stake sentences gain an owned-core wording (quitting stops the capture service) picked by a boolean prop; the frame, title, buttons, steps and layout are untouched, so the E-ONBRVP.W11 design still describes the surface"
+  - path: ui/src/App.tsx
+    why: "passes one boolean (quitStopsCore of the core service's state) to the existing quit dialog; nothing it renders moves or changes shape"
+date: 2026-11-04
