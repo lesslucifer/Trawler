@@ -64,17 +64,22 @@
       base layout and updates live as new traffic passes the proxy, via the existing
       <code>GET /stream</code> SSE stream.</p>
       <ul>
-        <li>A filter bar narrows the list by host, method, status and free text — the same
-        <code>GET /flows</code> query-parameter semantics as UC-3, because the app delegates filtering
-        to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.
-        <strong>The two keys the API matches exactly are chosen, not typed</strong>: method from the closed
-        set of verbs, host from the hosts capture has seen, each with an "any" option that clears it. Free
-        text and status stay typed — the API substring-matches the first, and reads the second at either
-        resolution: <code>status=404</code> is the exact code and <code>status=4xx</code> the class, with
-        anything that names neither refused as a stated <code>400</code> rather than an empty list
-        (<span class="badge id">E-RFINISH</span>). The status control takes either resolution and says so
-        in its placeholder — <code>status — 404 or 4xx</code> — and a refusal is rendered rather than
-        swallowed (below).</li>
+        <li><strong>One query bar of filter chips</strong> (<span class="badge id">E-QUERY</span>, <a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>) narrows
+        the list. Status color distinguishes 2xx / 4xx / 5xx at a glance. The grammar is the app's, and each chip is
+        sent as one <code>GET /flows</code> parameter (<a href="#listing-paging">the listing</a>), so an API client
+        writes the same query directly. Text (<code>login</code>, <code>"two words"</code>) is a substring of the
+        URI, sent as <code>q=</code>, and several text chips match all of them. A keyed chip (<code>host:</code>
+        <code>method:</code> <code>status:</code> <code>type:</code> <code>source:</code> <code>is:</code>) is sent
+        under its key (<code>type</code> as <code>content_type</code>), and the same key twice matches either.
+        <code>status</code> takes <code>404</code> or <code>4xx</code>, <code>is</code> takes <code>pending</code> or
+        <code>https</code>. A <code>-</code> before either hides what it would select, sent as
+        <code>not_&lt;key&gt;=</code>. Typing writes a draft and suggestions follow it: the keys, then that key's
+        values (the hosts seen, the verbs, the status classes, types, sources and states). Enter or Tab takes the
+        highlighted suggestion, Space takes the draft as typed, and a draft that does not parse stays a draft and says
+        why. The list moves only when a chip is added or removed, never on a keystroke. A chip goes by its × or by
+        Backspace in an empty draft. ⌘F focuses the bar, and the chips come back after a relaunch. A value the core
+        still refuses marks the chip that sent it, and the list region names it rather than going silently empty
+        (below).</li>
         <li><strong>One launch, one app</strong> (<span class="badge id">E-ONEAPP.W2</span>,
         <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>): the app runs its core as a
         child process on <code>:7420</code>/<code>:7421</code> and opens its window once that core is ready. A taken
@@ -110,8 +115,10 @@
         <td>Nothing captured yet names the proxy address to send traffic to; a filter that excludes the
         traffic says so and names the act that widens it. One sentence previously served both, telling users
         to send traffic they had already sent.</td></tr>
-        <tr><td>An exactly-matched filter is <strong>chosen rather than typed</strong></td>
-        <td>Method and host are dropdowns. Typing <code>GE</code> into the old free-text method box
+        <tr><td><s>An exactly-matched filter is <strong>chosen rather than typed</strong></s> — reversed by
+        <a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>: every filter is typed into the query bar, and a draft that cannot be satisfied stays a draft that
+        says why, which keeps what the dropdowns protected</td>
+        <td>Method and host were dropdowns. Typing <code>GE</code> into the old free-text method box
         returned an empty list indistinguishable from no traffic, because the server matches the verb
         whole — a query the user could write but never satisfy. What the dropdown costs is stated: a
         partial host (<code>api.</code> matching every API host) is no longer expressible there, and the
@@ -255,7 +262,11 @@
       WebdriverIO drives the real WebKit window against an ephemeral <code>run(Config)</code> core — empty
       layout renders, a proxied request appears live carrying every column, the status pill carries its
       reason phrase, the filter narrows and restores, an unmatched filter states its own absence, the
-      keyboard alone selects a row and opens its detail, and a second request appends without refresh. Three
+      keyboard alone selects a row and opens its detail, and a second request appends without refresh. The query bar (<span class="badge id">E-QUERY.W4</span>) is walked in
+      <code>query-bar.spec.ts</code> and <code>query-bar-relaunched.spec.ts</code> over imported and proxied flows:
+      ⌘F, chips built from suggestions alone with no listing while typing, a host with its port, repeated, negated
+      and combined keys, two text chips, a misspelt key that stays a draft, Backspace, the window's query exported
+      and cleared exactly, and the chips restored after a real quit. Three
       assertions came with the second pass: a status class narrows the list to that class while 2xx and 5xx
       traffic is present and an exact code still narrows to the code; the core is killed under the open
       window and the band appears above rows whose count is unchanged; and its control — a reachable core
