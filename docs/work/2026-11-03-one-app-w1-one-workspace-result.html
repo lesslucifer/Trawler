@@ -47,7 +47,7 @@
       <tr><td>the plan doc was written before the code</td><td>it was committed first (<code>a6180352</code>). The code was written
         in the same session, before the doc</td><td>the Cargo facts the plan names (lock merge, <code>default-run</code>
         resolution, <code>tauri dev</code> argument passthrough) were checked by building first</td></tr>
-      <tr><td>the epic's <em>DEC-next</em></td><td>numbered DEC-68</td><td>DEC-67 is taken on <code>wu/panels/layout-store</code></td></tr>
+      <tr><td>the epic's <em>DEC-next</em></td><td>numbered DEC-69</td><td>DEC-67 and DEC-68 landed on main first, from E-PANELS (minted as DEC-68, renumbered at the back-merge of main)</td></tr>
       <tr><td>"shared lints" read as no change to app code</td><td>the app's code needed 9 fixes for pedantic (renames, a fold,
         <code>is_ok_and</code>), one fn-level <code>print_stderr</code> allow, and two crate-level allows
         (<code>needless_pass_by_value</code>, <code>unnecessary_wraps</code>)</td><td>every pass-by-value site is a
@@ -65,7 +65,7 @@
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>a6180352</code> plan · <code>d861a393</code> core entry · <code>291c6569</code> one workspace ·
-        <code>bcc44c4a</code> DEC-68 · this report's commit</td></tr>
+        <code>bcc44c4a</code> DEC-69 · this report's commit</td></tr>
       <tr><td>integration</td><td><code>tests/core_entry.rs</code> (2) · <code>xtask/tests/ui.rs</code>:
         <code>the_core_package_links_no_gui</code>, <code>the_app_package_links_the_core</code>,
         <code>the_gui_detector_names_tauri_wry_and_tao</code></td></tr>
@@ -73,14 +73,14 @@
         <code>ui/src-tauri/src/lib.rs</code> <code>core_args</code> (3) · <code>xtask/src/ui.rs</code> <code>DEV_ARGS</code> (1)</td></tr>
       <tr><td>e2e</td><td>waived for the WU (the epic's e2e is W5). The existing suite was run on the moved binary path:
         4 of 4 spec files passed</td></tr>
-      <tr><td>docs</td><td>new <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a> ·
+      <tr><td>docs</td><td>new <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a> ·
         <a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a> partly superseded ·
         <a href="../decisions/decisions-index.html">decisions index</a> · this report and the WU plan</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
     <p data-item="distillation" data-c="distillation">
-      T2: DEC-68 minted and indexed; DEC-12 marked partly superseded (topology, GUI-free root build). The UC-4 change
+      T2: DEC-69 minted and indexed; DEC-12 marked partly superseded (topology, GUI-free root build). The UC-4 change
       (the app starts its own core) is not yet true, because the supervisor is W2, so <code>web-ui.html</code> waits. T1
       (<code>architecture.html</code>) and T0 (<code>CLAUDE.md</code>) are W5's, per Q10.
     </p>

@@ -53,13 +53,13 @@
     <table data-item="deviations" data-c="deviations">
       <tr><th>From the plan or design</th><th>What happened</th><th>Why</th></tr>
       <tr><td><code>core_log</code> / <code>core://log</code> carried plain strings</td><td>they now carry
-        <code>{seq, kind: "start"|"line", …}</code>, and each spawn pushes a start mark (DEC-68 rule 13)</td><td>a start
+        <code>{seq, kind: "start"|"line", …}</code>, and each spawn pushes a start mark (DEC-69 rule 13)</td><td>a start
         mark is data, not text the page parses. The page subscribes and then reads, so a line can arrive by both
         routes, and the sequence number merges them exactly</td></tr>
       <tr><td>the window opens at <code>#settings</code></td><td>the window gets a per-window init script
         (<code>window.__TRAWLER_PAGE__</code>) and loads <code>index.html</code></td><td><code>WebviewUrl::App</code>
         is a path, and a <code>#</code> in it would be percent-encoded</td></tr>
-      <tr><td>closing Settings never quits</td><td>also: destroying the main window now exits the app (DEC-68 rule 14)</td>
+      <tr><td>closing Settings never quits</td><td>also: destroying the main window now exits the app (DEC-69 rule 14)</td>
         <td>with a second window, "the last window closed" no longer follows from the main window closing. Q7 needs the
         app to end with its main window</td></tr>
       <tr><td>facts while starting or exited</td><td>show the addresses of the last running core, when there was one</td>
@@ -84,7 +84,7 @@
       <tr><td>review round 3 (FAIL)</td><td>two verified blockers were fixed behind regression tests that failed
         first. The restart warning now takes focus when it opens, so Esc cancels it and focus returns to
         <em>restart</em>, as the run's keyboard row promised. A spawn also waits, at most the stop grace, for the
-        previous core's log reader to finish, so that core's late lines stay above the next start mark (DEC-68
+        previous core's log reader to finish, so that core's late lines stay above the next start mark (DEC-69
         rule 13)</td><td>the correctness finder. Round 3 refuted four other importants: both log-render costs (the
         core logs only a few lines per start), the capability split (same bundle, same origin), and an orphan on quit
         during a restart (the stdin lifeline ends it)</td></tr>
@@ -127,13 +127,13 @@
       <tr><td>e2e</td><td>waived for the WU: J2 belongs to W5's owned-core e2e build</td></tr>
       <tr><td>docs</td><td>UC-SVC + UC-4 in <a href="../use-cases/web-ui.html#uc-svc">web-ui.html</a> and the
         <a href="../use-cases/use-cases-index.html">use-case index</a> ·
-        <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a> v3 (rules 13–14) ·
+        <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a> v3 (rules 13–14) ·
         <a href="../design-rules/design-rules-index.html">the rulebook</a> (restart, attached, the capture-service
         exception, three key conventions)</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
-    <p data-item="distillation" data-c="distillation">T2: UC-SVC is new and UC-4 gains the not-answering restart. DEC-68 gains
+    <p data-item="distillation" data-c="distillation">T2: UC-SVC is new and UC-4 gains the not-answering restart. DEC-69 gains
       rule 13 (numbered log entries and start marks) and rule 14 (Settings is a second window, and the main window ends
       the app). The rulebook takes the run's proposals: <em>restart</em> and <em>attached</em>, the Capture service
       page's exception to <em>capture service</em>, and ⌘, · ⌘W · a scrolling region's keys. <code>LogTail</code> stays

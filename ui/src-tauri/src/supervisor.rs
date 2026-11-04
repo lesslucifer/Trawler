@@ -324,7 +324,7 @@ impl Supervisor {
     }
 
     // The previous core's reader can still hold lines it read before that core
-    // exited; they belong above the next start mark (DEC-68 rule 13). Bounded by
+    // exited; they belong above the next start mark (DEC-69 rule 13). Bounded by
     // the stop grace, in case something else keeps the old pipe open.
     fn drain_previous_log(&self) {
         let draining = self.inner.lock().draining.take();
@@ -386,7 +386,7 @@ fn wait_until(child: &mut Child, deadline: Instant) -> Option<ExitStatus> {
 }
 
 // The core names a taken port only in a log line, which the supervisor never
-// parses (DEC-68 rule 2). Once it has exited, its own sockets are released, so
+// parses (DEC-69 rule 2). Once it has exited, its own sockets are released, so
 // a port that still refuses a bind is held by someone else.
 fn taken_port(ports: [u16; 2]) -> Option<u16> {
     ports

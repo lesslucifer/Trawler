@@ -75,7 +75,7 @@
         in its placeholder — <code>status — 404 or 4xx</code> — and a refusal is rendered rather than
         swallowed (below).</li>
         <li><strong>One launch, one app</strong> (<span class="badge id">E-ONEAPP.W2</span>,
-        <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a>): the app runs its core as a
+        <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>): the app runs its core as a
         child process on <code>:7420</code>/<code>:7421</code> and opens its window once that core is ready. A taken
         port is a native dialog naming it, and no window opens. A second launch brings the first window forward.
         Every quit stops the core, and the window outlives a core that dies: its "isn't answering" statement then
@@ -409,7 +409,7 @@
 
     <h2 id="uc-svc">UC-SVC — See and restart the capture service</h2>
     <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens a Settings window on the Capture service page
-      (<span class="badge id">E-ONEAPP.W3</span>, <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a>
+      (<span class="badge id">E-ONEAPP.W3</span>, <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>
       rules 13–14). It follows the service live and closes without quitting the app. The web shell has no Settings, so its capture menu offers none.</p>
     <table data-c="uc-svc-states">
       <tr><th>The service is</th><th>The page shows</th><th>It offers</th></tr>
