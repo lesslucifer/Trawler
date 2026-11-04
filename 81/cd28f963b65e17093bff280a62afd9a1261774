@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 81cd28f963b65e17093bff280a62afd9a1261774
+base: eca548c88d8b95dde491027ce25a49a4ea7a4da5
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-one-app-w4-quit-truth-result.html
+report_sha256: f9cb60d72e96734564a94f1c57b2afafbb14798673d8fa58588c8f7aadfdeba7
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEARICd9omtOu1uyFT7r4Ge2h0nBsG269ptpi726xRh2M7V9sifHdEdsUo
+  6G5VRGx3FpTE5uWWB429RATlMU7ZAP
+  -----END SSH SIGNATURE-----
