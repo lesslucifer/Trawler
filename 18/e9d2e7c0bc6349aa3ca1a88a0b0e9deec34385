@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 18e9d2e7c0bc6349aa3ca1a88a0b0e9deec34385
+base: ff74a6a5fa36bd8988abd33672687165cfaf180d
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-one-app-w5-e2e-result.html
+report_sha256: b59b5e512add7786ca044545000a9a3b3057cbefb6ac9a221b6dbc0078b2e195
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECCsgFAwUzjiOpEqKkLuQOxoT1vEITCa+5cE77UK2oasnsi9wPk+8j6Vw
+  dWmkKfHLPBWCwsLElrA2Zz6ZglQW4C
+  -----END SSH SIGNATURE-----
