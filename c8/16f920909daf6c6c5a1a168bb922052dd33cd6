@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: c816f920909daf6c6c5a1a168bb922052dd33cd6
+base: 7cc251f48827a4fa6d8115d667b5f539da48cff6
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-04-sticky-ui-epic-result.html
+report_sha256: 8fe2b2d861f85ecaeb83f9a76baf47ada4cf531d4b4c4912a081b814413bb53a
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA3hVkqsarpy7my7XE7juaIWfTva+SDrgIJ8cINsoLyuMOtqF460tGtmW
+  riPuX5YFdpRDtZty++XRZa5PkJ9PgC
+  -----END SSH SIGNATURE-----
