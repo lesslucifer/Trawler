@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { useState, type ComponentProps } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import { BodyViewer } from "./BodyViewer";
 import { hexDump, HEX_MAX, TEXT_MAX, TREE_MAX } from "./body";
@@ -40,12 +41,17 @@ function apiWith(body: Partial<BodyFetch>): TrawlerApi {
 
 const text = (s: string) => new TextEncoder().encode(s);
 
+function Viewer(props: Omit<ComponentProps<typeof BodyViewer>, "pretty" | "onPretty">) {
+  const [pretty, setPretty] = useState(true);
+  return <BodyViewer {...props} pretty={pretty} onPretty={setPretty} />;
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 test("the leg is a prop the pane never asks about", async () => {
   const api = apiWith({ bytes: text("req"), contentType: "text/plain" });
   render(
-    <BodyViewer
+    <Viewer
       api={api}
       flow={flow({ request_body: { state: "captured", size: 3, data_base64: "" } })}
       leg="request"
@@ -63,7 +69,7 @@ test("a JSON body renders through JsonRenderer's source surface, not a lossy tre
     bytes: text('{\n  "user": "ada"\n}'),
     contentType: "application/json",
   });
-  const { container } = render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  const { container } = render(<Viewer api={api} flow={flow()} leg="response" />);
 
   await screen.findByTestId("body-json");
   const shown = container.querySelector(".cm-content")?.textContent ?? "";
@@ -76,7 +82,7 @@ test("an XML body dispatches to XmlRenderer instead of falling through to text",
     bytes: text("<order>\n  <item qty=\"2\"/>\n</order>"),
     contentType: "application/xml",
   });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
 
   expect(await screen.findByTestId("body-xml")).toBeInTheDocument();
   expect(screen.queryByTestId("body-text")).toBeNull();
@@ -84,13 +90,13 @@ test("an XML body dispatches to XmlRenderer instead of falling through to text",
 
 test("a text body renders through TextRenderer", async () => {
   const api = apiWith({ bytes: text("plain words"), contentType: "text/plain" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   expect(await screen.findByTestId("body-text")).toHaveTextContent("plain words");
 });
 
 test("a binary body renders through HexRenderer's toned dump", async () => {
   const api = apiWith({ bytes: new Uint8Array([0, 1, 2]), contentType: "application/octet-stream" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
 
   const hex = await screen.findByTestId("body-hex");
   expect(hex).toHaveTextContent("00000000");
@@ -102,7 +108,7 @@ test("a form body renders through FormRenderer, each value its own copy target",
     bytes: text("user=ada&mode=fast%20one"),
     contentType: "application/x-www-form-urlencoded",
   });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
 
   const form = await screen.findByTestId("body-form");
   expect(form).toHaveTextContent("user");
@@ -118,7 +124,7 @@ test("an image body renders through ImageRenderer over an object URL", async () 
     revokeObjectURL: vi.fn(),
   });
   const api = apiWith({ bytes: new Uint8Array([137, 80]), contentType: "image/png" });
-  const { unmount } = render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  const { unmount } = render(<Viewer api={api} flow={flow()} leg="response" />);
 
   expect(await screen.findByTestId("body-image")).toHaveAttribute("src", "blob:fake");
   unmount();
@@ -129,7 +135,7 @@ test("an image body renders through ImageRenderer over an object URL", async () 
 // half-done rename.
 test("the switch names the two views the lexicon settled on, never 'decoded'", async () => {
   const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-json");
 
   expect(screen.getByRole("radio", { name: "pretty" })).toBeChecked();
@@ -139,7 +145,7 @@ test("the switch names the two views the lexicon settled on, never 'decoded'", a
 
 test("the raw segment refetches undecoded and dispatches on the bytes, not the type", async () => {
   const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-json");
 
   fireEvent.click(screen.getByRole("radio", { name: "raw" }));
@@ -156,7 +162,7 @@ test("the raw segment refetches undecoded and dispatches on the bytes, not the t
 test("a text body over TEXT_MAX states its truncation instead of swallowing it", async () => {
   const big = "x".repeat(TEXT_MAX + 1024);
   const api = apiWith({ bytes: text(big), contentType: "text/plain" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
 
   await screen.findByTestId("body-text");
   const marker = screen.getByText(/⚠ showing .* of .* — save to see all/);
@@ -168,7 +174,7 @@ test("a text body over TEXT_MAX states its truncation instead of swallowing it",
 test("a hex body over HEX_MAX states its truncation, not an easy-to-miss ellipsis", async () => {
   const bytes = new Uint8Array(HEX_MAX + 64).fill(0xff);
   const api = apiWith({ bytes, contentType: "application/octet-stream" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
 
   await screen.findByTestId("body-hex");
   expect(screen.getByText(/⚠ showing .* of .* — save to see all/)).toBeInTheDocument();
@@ -178,7 +184,7 @@ test("a hex body over HEX_MAX states its truncation, not an easy-to-miss ellipsi
 test("a JSON body over the tree cap falls back to text with the family's marker", async () => {
   const huge = `{"pad":"${"x".repeat(TREE_MAX)}"}`;
   const api = apiWith({ bytes: text(huge), contentType: "application/json" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
 
   expect(await screen.findByTestId("body-text")).toBeInTheDocument();
   expect(screen.queryByTestId("body-json")).toBeNull();
@@ -190,7 +196,7 @@ test("copy body yields valid JSON — the payload is the bytes, not a rendered f
   vi.stubGlobal("navigator", { clipboard: { writeText } });
   const source = '{\n  "user": "ada",\n  "tags": [1, 2]\n}';
   const api = apiWith({ bytes: text(source), contentType: "application/json" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-json");
 
   fireEvent.click(screen.getByRole("button", { name: /copy body/ }));
@@ -204,7 +210,7 @@ test("copy body on a hex-rendered body copies the dump the pane shows", async ()
   vi.stubGlobal("navigator", { clipboard: { writeText } });
   const bytes = new Uint8Array([0, 1, 2]);
   const api = apiWith({ bytes, contentType: "application/octet-stream" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-hex");
 
   fireEvent.click(screen.getByRole("button", { name: /copy body/ }));
@@ -218,7 +224,7 @@ test("the copy confirm reverts — the shipped label never did", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     const api = apiWith({ bytes: text("payload"), contentType: "text/plain" });
-    render(<BodyViewer api={api} flow={flow()} leg="response" />);
+    render(<Viewer api={api} flow={flow()} leg="response" />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -246,7 +252,7 @@ test("switching mode clears a standing confirm — no 'copied' left over another
   const writeText = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal("navigator", { clipboard: { writeText } });
   const api = apiWith({ bytes: text("payload"), contentType: "text/plain" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-text");
 
   fireEvent.click(screen.getByRole("button", { name: /copy body/ }));
@@ -265,7 +271,7 @@ test("an image body offers save but no copy — an image has no clipboard text f
     revokeObjectURL: vi.fn(),
   });
   const api = apiWith({ bytes: new Uint8Array([137, 80]), contentType: "image/png" });
-  const { unmount } = render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  const { unmount } = render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-image");
 
   expect(screen.queryByRole("button", { name: /copy body/ })).toBeNull();
@@ -279,7 +285,7 @@ test("save writes all the bytes, which is what makes the cut marker's advice tru
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   const bytes = text("x".repeat(TEXT_MAX + 1024));
   const api = apiWith({ bytes, contentType: "text/plain" });
-  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  render(<Viewer api={api} flow={flow()} leg="response" />);
   await screen.findByTestId("body-text");
 
   fireEvent.click(screen.getByRole("button", { name: "save" }));
@@ -302,7 +308,7 @@ test("save names the file after the endpoint and the served type", async () => {
     });
   const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
   render(
-    <BodyViewer
+    <Viewer
       api={api}
       flow={flow({ uri: "https://api.example.com/v1/charges?limit=3" })}
       leg="response"
@@ -328,7 +334,7 @@ test("the five capture absences each state their own cause, and never fetch", ()
   for (const [body, expected] of cases) {
     const api = apiWith({});
     const { unmount } = render(
-      <BodyViewer api={api} flow={flow({ response_body: body })} leg="response" />,
+      <Viewer api={api} flow={flow({ response_body: body })} leg="response" />,
     );
     expect(screen.getByText(new RegExp(expected.replace(/[()]/g, "\\$&")))).toBeInTheDocument();
     expect(api.getBody).not.toHaveBeenCalled();
@@ -338,7 +344,7 @@ test("the five capture absences each state their own cause, and never fetch", ()
 
 test("a response that has not arrived says so — 'none' would be a different fact", () => {
   const api = apiWith({});
-  render(<BodyViewer api={api} flow={flow({ response_body: null })} leg="response" />);
+  render(<Viewer api={api} flow={flow({ response_body: null })} leg="response" />);
 
   expect(screen.getByText("no response yet")).toBeInTheDocument();
   expect(api.getBody).not.toHaveBeenCalled();
@@ -346,7 +352,7 @@ test("a response that has not arrived says so — 'none' would be a different fa
 
 test("the in-flight state is a notice, not an unstyled paragraph", () => {
   const api = apiWith({ bytes: text("later"), contentType: "text/plain" });
-  const { container } = render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  const { container } = render(<Viewer api={api} flow={flow()} leg="response" />);
 
   const loading = screen.getByText("loading…");
   expect(loading).toBeInTheDocument();
@@ -356,9 +362,23 @@ test("the in-flight state is a notice, not an unstyled paragraph", () => {
 test("the fetch failure is the only absence in warn tone — it is the only fault", async () => {
   const api = apiWith({});
   (api.getBody as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
-  const { container } = render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  const { container } = render(<Viewer api={api} flow={flow()} leg="response" />);
 
   const failure = await screen.findByText("failed to load body");
   expect(container.querySelector("[data-tone='warn']")).toContainElement(failure);
   expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+});
+
+// E-STICKY: the body mode is the user's, so the pane fetches in the mode it is
+// handed and hands a pick back instead of keeping one of its own.
+test("the pane shows the mode it is handed and hands a pick back without taking it", async () => {
+  const api = apiWith({ bytes: text("{}"), contentType: "application/json" });
+  const onPretty = vi.fn();
+  render(<BodyViewer api={api} flow={flow()} leg="response" pretty={false} onPretty={onPretty} />);
+  await waitFor(() => expect(api.getBody).toHaveBeenCalledWith(flow().id, "response", false));
+  const raw = screen.getByRole("radio", { name: "raw" });
+  expect(raw).toBeChecked();
+  fireEvent.click(screen.getByRole("radio", { name: "pretty" }));
+  expect(onPretty).toHaveBeenCalledWith(true);
+  expect(raw).toBeChecked();
 });

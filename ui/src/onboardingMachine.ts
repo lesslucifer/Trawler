@@ -11,8 +11,9 @@ export type DotOpens = "setup" | "list";
 
 // `since` is when this setup session opened (epoch ms), null before one has:
 // a request that started earlier is not news about the session. `chosen` is
-// the platform last picked in this app session, and `another` whether this
-// session was opened to set up another device.
+// the platform setup answers: "this" at launch, seeded from the remembered
+// platform when the user opens setup, and `another` whether this session was
+// opened to set up another device.
 export interface OnbState {
   phase: Phase;
   step: Step;
@@ -26,7 +27,7 @@ export type OnbEvent =
   | { t: "goto"; step: Step }
   | { t: "captured" } // fresh decrypted HTTPS flow — W4 detector dispatches
   | { t: "not-detected"; at: number } // launch self-test answered with nothing that proves capture
-  | { t: "re-invoke"; at: number; another?: boolean } // the dot or "set up capture" from the list / "set up another device" → re-setup
+  | { t: "re-invoke"; at: number; another?: boolean; platform?: PlatformId } // the dot or "set up capture" from the list / "set up another device" → re-setup, on the platform last named
   | { t: "choose"; platform: PlatformId }
   | { t: "exit" }; // "show traffic", or the dot from setup or the launch check — the list, proven or not
 
@@ -52,7 +53,14 @@ export function reduce(s: OnbState, e: OnbEvent): OnbState {
     case "not-detected":
       return { ...s, phase: "onboarding", step: "trust-ca", since: e.at };
     case "re-invoke":
-      return { ...s, phase: "onboarding", step: "trust-ca", since: e.at, another: e.another ?? false };
+      return {
+        ...s,
+        phase: "onboarding",
+        step: "trust-ca",
+        since: e.at,
+        another: e.another ?? false,
+        chosen: e.platform ?? s.chosen,
+      };
     case "choose":
       return { ...s, chosen: e.platform };
     case "exit":
