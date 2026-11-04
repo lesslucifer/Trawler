@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU panels/columns -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W4
+branch: wu/panels/columns
+base: 9cc6ac01fd6d515cf9cca428ea6f86b4ae5ef7b2
+head: 1e853142ac7d8eb189c92051fe34c7876664a207
+diff_sha256: 75711150d39eed21b207f272fe02773409b53a595d37f8d35782f36e72d6d722
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  stage_seconds:
+    gate0: 152
+    finders: 56
+    total: 165
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "In the empty-list branch the label row sits outside the horizontal scroller, so below listMin its rightmost handles are clipped"
+    waived: "An empty list has no cells for the labels to align with; every handle stays focusable and steppable from the keyboard, and the scroller arrives with the first row. Wrapping the empty state in it would push the centred notice off-screen at the same widths."
+  - finding: "Each column-drag tick re-renders every visible virtual row, because the rows are inline JSX"
+    waived: "Bounded by the virtual window (overscan 12), the same per-move cost W3 accepted for splitter A; rows are not re-measured and perf.test.tsx stays green."
+verdict: PASS
+date: 2026-11-04
