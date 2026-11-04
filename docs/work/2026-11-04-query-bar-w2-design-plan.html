@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb064d9f34851f0dfae532" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-QUERY.W2 plan: the query bar's design run</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-QUERY.W2 — the query bar's design run</h1>
+      <p>One closed design run that draws the header with one query bar where four filter controls were, plus one
+        component design for <code>QueryBar</code>. W3 builds from these by blob. Nothing under <code>ui/src/</code> changes.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-QUERY.W2</span> · branch
+        <code>wu/query-bar/query-bar-design</code> · <a href="2026-11-04-query-bar-plan.html">epic plan</a> · base
+        <code>aa8584f1</code> · rules from <a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a> ·
+        consumes W1's parameters</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      W2 delivers one design run at <code>docs/work/2026-11-04-query-bar-design-run.html</code> and one component
+      design at <code>docs/work/components/query-bar.html</code>. The run mounts the real header and flow-list
+      components around a live query bar whose chips filter the mockup's rows. It draws every chip kind (keyed, text,
+      negated, refused by the core), the draft and its fault, and the suggestion list with its highlighted entry. It
+      gives a key path for every pointer act, and lists the owner's calls. The owner reviews it; it is closed in three
+      steps (review · green · <code>data-status="archived"</code>), and a <code>design/v1</code> note on the tip names
+      both artifacts.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-QUERY · the epic plan's W2 summary block · UC-4 (the filter bar, under design → build) · expected results 1–9, 11 and 13 · rulings Q3 (⌘F), Q4 (chips survive a relaunch), Q5 (only a chip refetches), Q7 (a chip, text included),
+      Q8 (no actions in the bar), Q10 (text chips all of) · DEC-70 rules 2, 3, 6, 8, 9 · DEC-18 (one small-control box) ·
+      DEC-17 (closed vocabulary) · DEC-20 (logic lives with its inputs) · DEC-53 (six items, three-step close).
+    </p>
+
+    <h2 id="what">What the run must decide</h2>
+    <table data-c="decides">
+      <tr><th>#</th><th>Decision</th><th>Where it lands</th></tr>
+      <tr><td>1</td><td>the bar's box, width and how it grows as chips are added</td><td>run mockup · overflow line</td></tr>
+      <tr><td>2</td><td>a chip's anatomy for each kind: keyed, text, negated, refused by the core; its × and its hit target</td><td>run · <code>QueryBar</code> design</td></tr>
+      <tr><td>3</td><td>the draft: where its fault is said, when it appears and when it goes</td><td>run · owner call</td></tr>
+      <tr><td>4</td><td>the suggestion list: which entries per draft state, their order, the highlight, and what Tab and Enter each take</td><td>run · owner call</td></tr>
+      <tr><td>5</td><td>the values offered per key (hosts seen, methods, status classes, types, sources, <code>is:</code> states)</td><td>run · owner call</td></tr>
+      <tr><td>6</td><td>keyboard: ⌘F, ↑/↓, Tab, Enter, Esc, Backspace, and reaching a chip's × without a pointer</td><td>run keyboard item · rulebook vocabulary proposal</td></tr>
+      <tr><td>7</td><td>a core refusal mapped back to its chip, and what the row region says</td><td>run mockup · the list's notices</td></tr>
+      <tr><td>8</td><td>the list's empty and refused notices reworded for chips</td><td>run mockup · microcopy</td></tr>
+      <tr><td>9</td><td>the tier of <code>QueryBar</code> and where the grammar lives</td><td>component design · DEC-20</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>Observable at this WU's tip</th><th>Checked by</th></tr>
+      <tr><td>1</td><td>the run doc carries <code>data-artifact="design-run"</code>, is archived, has a newly minted htmldoc id, and loads the bootstrap</td><td>htmldoc·id · 6·run-closed</td></tr>
+      <tr><td>2</td><td>the mockup mounts the real header and row components from <code>window.Trawler</code>, with a live bar in place of the four controls. Typing never changes the rows; adding or removing a chip does. State toggles cover the focused empty bar, a key draft, a value draft, a draft fault, every chip kind, a chip the core refused, the filtered empty list, and a narrow window</td><td>assets·specimen · mockup·state · the owner</td></tr>
+      <tr><td>3</td><td>a key path for each pointer act; new keys are on proposals as rulebook vocabulary</td><td>keyboard-parity·path</td></tr>
+      <tr><td>4</td><td>proposals carry <code>QueryBar</code>, the lexicon entries and the keyboard vocabulary; the component design is on file</td><td>the doc · the owner</td></tr>
+      <tr><td>5</td><td>the review item records the owner's round</td><td>review·recorded</td></tr>
+      <tr><td>6</td><td><code>design/v1</code> on the tip names the run and the component design, with an empty built set</td><td>9·design · design-scope</td></tr>
+    </table>
+
+    <h2 id="not-here">Not here</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>any file under <code>ui/src/</code>: the parser, <code>QueryBar</code>, <code>useFlows</code>, persistence</td><td>W3</td></tr>
+      <tr><td>the rulebook's keyboard and lexicon rows, UC-4's filter-bar text, DEC-70's update</td><td>proposed here, written at W4's distillation</td></tr>
+      <tr><td>the legacy web shell's four inputs</td><td>the epic's non-goals</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p data-c="test-why">No code path changes. A design run is still a design-bearing diff, so it is not exempt; each
+      layer is waived with its reason.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>What asserts what</th></tr>
+      <tr><td>unit</td><td>waived: "the WU adds no executable code; its artifacts are a design run and a component design,
+        and every predicate over them is a verify-doc rule with its own tests in xtask"</td></tr>
+      <tr><td>integration</td><td>waived: "the contract is a green, closed, citable run; verify-doc asserts green,
+        6·run-closed asserts closed at this merge, design-scope and 9·design assert W3 can cite it"</td></tr>
+      <tr><td>e2e</td><td>waived: "a design doc renders no surface a driver can touch; W4's WebDriver spec drives the built bar"</td></tr>
+      <tr><td>before the merge</td><td><code>cargo xtask verify-doc</code> on the run, the component design, this plan
+        and the result · headless render of each mockup state · <code>cargo xtask design-scope epic/query-bar HEAD</code> ·
+        <code>cargo xtask verify-dod wu HEAD --target epic/query-bar</code></td></tr>
+    </table>
+
+    <h2 id="order">Order of work</h2>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart TD
+  A["substrate: registry + rulebook, frozen"] --> B["run: Given · live mockup · keyboard · proposals · blocked-on"]
+  B --> C["component design: QueryBar"]
+  C --> V{"verify-doc + headless render"}
+  V -- red --> B
+  V -- green --> H["owner's round"]
+  H -- a call --> R["review row · re-draw"] --> V
+  H -- held --> CL["close: review · green · archived"]
+  CL --> N["notes write · design step → design/v1"]
+  N --> RES["result report"] --> MR["mr confirm (the owner)"] --> M["merge --no-ff into epic/query-bar"]
+      </pre>
+      <div class="caption">The owner's round is the only loop. No code review: the diff changes no code path (DEC-46).</div>
+    </div>
+
+    <h2 id="docs">Docs this WU touches</h2>
+    <table data-c="docs">
+      <tr><th>Path</th><th>Tier</th><th>Why</th></tr>
+      <tr><td><code>docs/work/2026-11-04-query-bar-design-run.html</code></td><td>T3</td><td>the run</td></tr>
+      <tr><td><code>docs/work/components/query-bar.html</code></td><td>T3</td><td>the component design W3 builds</td></tr>
+      <tr><td>this plan · its result</td><td>T3</td><td>the WU's own docs</td></tr>
+    </table>
+    <p data-c="t2">No T2 synthesis: a design reaches UC-4, DEC-70 and the rulebook after it is built (W4), so
+      <code>doc/v1</code> carries <code>t2_waived</code> with that reason.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
