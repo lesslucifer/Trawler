@@ -1,7 +1,7 @@
 schema: design/v1
 epic: E-ONEAPP
 base: a09fd714cee840b18a90402cc5f985ba1cc00440
-design_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+design_sha256: a3dc614a3e93f86d05b7be9877e7e8d52468839e52a4fa5dcbb8a0cc687e935e
 verdict: PASS
 artifacts: []
 implements:
