@@ -541,8 +541,22 @@ mod tests {
         let held = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = held.local_addr().unwrap().port();
         assert_eq!(taken_port([0, port]), Some(port));
-        drop(held);
-        assert_eq!(taken_port([0, port]), None);
+    }
+
+    #[test]
+    fn an_unset_port_is_never_named() {
+        assert_eq!(taken_port([0, 0]), None);
+    }
+
+    #[test]
+    fn a_free_port_is_not_named() {
+        // A released ephemeral port can be rebound by a parallel test before the probe,
+        // so one fresh port out of several must probe free.
+        let probes_free = (0..8).any(|_| {
+            let port = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+            taken_port([0, port]).is_none()
+        });
+        assert!(probes_free);
     }
 
     #[test]
