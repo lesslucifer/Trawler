@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-STICKY
+wu: E-STICKY.W1
+branch: HEAD
+tests:
+  unit: { count: 256, covers: "view-prefs.json round-trips, reads each wrong field as its default alone and keeps other versions' fields; the app store validates per field; useViewPrefs reads once, lets an early choice win per field, sends the whole record the moment a choice is made, held only until the read settles; a user re-invoke opens setup on the remembered platform while the launch check stays on this machine; the pane and body viewer render and hand back the leg and mode they are given; in App the next flow opens on the last leg and mode, a saved record restores, and a setup pick is saved" }
+  integration: { count: 7, covers: "the wire record the app sends writes and reads back beside a foreign field and a broken file reads as defaults; Settings opened on a tracked app joins the window records the shell saves" }
+  e2e: { waived: "W2 owns the WebDriver spec (real quit and relaunch, corrupt file) and the launcher cleanup, per the epic's E2E plan" }
