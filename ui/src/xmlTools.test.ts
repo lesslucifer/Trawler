@@ -40,6 +40,24 @@ describe("re-indent", () => {
     );
   });
 
+  it("ends raw script text where it closes, whatever case-folding does to the text before it", () => {
+    expect(reindented("<a><b>İİ</b><script>İİİİ x</script><c/></a>")).toBe(
+      lines("<a>", "  <b>İİ</b>", "  <script>İİİİ x</script>", "  <c/>", "</a>"),
+    );
+  });
+
+  it("reads a void name that is closed as an element, so RSS stays XML", () => {
+    expect(reindented("<channel><link>http://x</link><title>t</title><source url='u'/></channel>")).toBe(
+      lines("<channel>", "  <link>http://x</link>", "  <title>t</title>", "  <source url='u'/>", "</channel>"),
+    );
+  });
+
+  it("an unclosed void element holds nothing: its text and elements belong to its parent", () => {
+    expect(reindented("<div><p>one<br>two</p><input><b>x</b></div>")).toBe(
+      lines("<div>", "  <p>one<br>two</p>", "  <input>", "  <b>x</b>", "</div>"),
+    );
+  });
+
   it("nests 10 000 deep without recursion", () => {
     const deep = "<a>".repeat(10_000) + "</a>".repeat(10_000);
     const out = reindented(deep).split("\n");
@@ -66,6 +84,7 @@ describe("a text that is not well-formed", () => {
     ["<a><![CDATA[x", 1, 4, "a CDATA section that never ends"],
     ['<a x="1>', 1, 1, "a tag that never ends"],
     ["<a>1 < 2</a>", 1, 6, "a < that opens no tag"],
+    ["<a><br><b></a>", 1, 11, "</a> closes <b>"],
   ])("%j says line %i, column %i: %s", (text, line, column, reason) => {
     expect(reindentXml(text)).toEqual({ ok: false, line, column, reason });
   });

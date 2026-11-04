@@ -60,8 +60,9 @@ function doctypeEnd(text: string, from: number): number {
 }
 
 function rawTextEnd(text: string, from: number, name: string): number {
-  const close = text.toLowerCase().indexOf(`</${name}`, from);
-  return close < 0 ? text.length : close;
+  const close = new RegExp(`</${name}`, "gi");
+  close.lastIndex = from;
+  return close.exec(text)?.index ?? text.length;
 }
 
 function tokenise(text: string): Token[] {
@@ -97,7 +98,6 @@ function tokenise(text: string): Token[] {
     const lower = name.toLowerCase();
     if (closing) tokens.push({ kind: "close", from: at, to, name });
     else if (text[to - 2] === "/") tokens.push({ kind: "empty", from: at, to, name });
-    else if (VOID.has(lower)) tokens.push({ kind: "empty", from: at, to, name });
     else tokens.push({ kind: "open", from: at, to, name });
     at = to;
     if (!closing && RAW_TEXT.has(lower) && tokens[tokens.length - 1].kind === "open") {
@@ -110,6 +110,7 @@ function tokenise(text: string): Token[] {
 }
 
 const sameName = (a: string, b: string) => a === b || a.toLowerCase() === b.toLowerCase();
+const isVoid = (name: string) => VOID.has(name.toLowerCase());
 const blank = (text: string, token: Token) => token.kind === "text" && text.slice(token.from, token.to).trim() === "";
 
 interface Element {
@@ -123,34 +124,44 @@ function matchElements(text: string, tokens: Token[]): { closes: Map<number, num
   const inline = new Set<number>();
   const open: Element[] = [];
   let topText = false;
+  const holdText = (held: boolean) => {
+    const parent = open[open.length - 1];
+    if (!held) return;
+    if (parent) parent.hasText = true;
+    else topText = true;
+  };
+  const closeVoidsAbove = (name: string) => {
+    for (let top = open[open.length - 1]; top; top = open[open.length - 1]) {
+      const opened = tokens[top.open];
+      if (sameName(opened.name, name) || !isVoid(opened.name)) return;
+      opened.kind = "empty";
+      open.pop();
+      holdText(top.hasText);
+    }
+  };
   tokens.forEach((token, i) => {
+    if (token.kind === "close") closeVoidsAbove(token.name);
     const parent = open[open.length - 1];
     if (token.kind !== "close" && parent && !blank(text, token)) parent.onlyBlank = false;
-    if (token.kind === "text" && !blank(text, token)) {
-      if (parent) parent.hasText = true;
-      else topText = true;
+    if (token.kind === "text") {
+      holdText(!blank(text, token));
     } else if (token.kind === "open") {
       open.push({ open: i, hasText: false, onlyBlank: true });
     } else if (token.kind === "close") {
-      if (!parent) {
-        if (VOID.has(token.name.toLowerCase())) token.kind = "empty";
-        else throw new Malformed(token.from, `</${token.name}> closes nothing`);
-        return;
-      }
-      const opened = tokens[parent.open];
-      if (!sameName(opened.name, token.name)) {
-        if (VOID.has(token.name.toLowerCase())) {
-          token.kind = "empty";
-          parent.onlyBlank = false;
-          return;
+      if (!parent || !sameName(tokens[parent.open].name, token.name)) {
+        if (!isVoid(token.name)) {
+          throw new Malformed(token.from, parent ? `</${token.name}> closes <${tokens[parent.open].name}>` : `</${token.name}> closes nothing`);
         }
-        throw new Malformed(token.from, `</${token.name}> closes <${opened.name}>`);
+        token.kind = "empty";
+        if (parent) parent.onlyBlank = false;
+        return;
       }
       open.pop();
       closes.set(parent.open, i);
       if (parent.hasText || parent.onlyBlank) inline.add(parent.open);
     }
   });
+  closeVoidsAbove("");
   const unclosed = open[open.length - 1];
   if (unclosed) throw new Malformed(tokens[unclosed.open].from, `<${tokens[unclosed.open].name}> is never closed`);
   return { closes, inline, topText };

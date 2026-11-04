@@ -96,7 +96,7 @@ const FOLD_CHOICES = [
 const NEEDS_JSON = "needs valid JSON";
 const SHOWN_ENCODED = "shown encoded";
 
-interface Found {
+interface Search {
   ranges: TextRange[];
   byPair: Map<number, PairMatches>;
   total: number;
@@ -104,9 +104,9 @@ interface Found {
   as: HexQueryMode | null;
 }
 
-const NOTHING_FOUND: Found = { ranges: NO_MATCHES, byPair: NO_PAIR_MATCHES, total: 0, capped: false, as: null };
+const NOTHING_FOUND: Search = { ranges: NO_MATCHES, byPair: NO_PAIR_MATCHES, total: 0, capped: false, as: null };
 
-function findCount(query: string, found: Found, current: number): string {
+function findCount(query: string, found: Search, current: number): string {
   if (!query) return "";
   const count = found.total ? `${current + 1} of ${found.total}${found.capped ? "+" : ""}` : "no match";
   return found.as ? `${count} · as ${found.as}` : count;
@@ -232,7 +232,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const onText = !empty && kind !== "image" && kind !== "hex" && !asTable;
   const searchable = !empty && kind !== "image";
   const breakWith = lineBreak ?? "\n";
-  const found = useMemo((): Found => {
+  const found = useMemo((): Search => {
     if (!query) return NOTHING_FOUND;
     if (onText) {
       const { ranges, capped } = findMatches(surfaceText(text), query);
