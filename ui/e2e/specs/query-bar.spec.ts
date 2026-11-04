@@ -12,6 +12,7 @@ import {
   emptyTheDraft,
   focusDraft,
   highlighted,
+  lastListingIs,
   listings,
   listingsAfter,
   noListingWhile,
@@ -184,11 +185,11 @@ describe("UC-4 — one bar to filter and search", () => {
   });
 
   it("selects what a hand-written query selects, and exports exactly what it lists", async () => {
-    const before = (await listings()).length;
+    const sent = "?status=5xx&not_method=OPTIONS";
     await addChips("status:5xx -method:OPTIONS");
+    await chipsRead(["status:5xx", "-method:OPTIONS"]);
+    await lastListingIs(sent);
     await rowsAre(["auth.example.test/token/refresh"], "status:5xx without preflights");
-    const sent = (await listingsAfter(before, "the two chips")).at(-1)!;
-    expect(sent).toBe("?status=5xx&not_method=OPTIONS");
 
     const shown = urlsOf(await rows());
     expect(await coreRows("?status=5xx&not_method=OPTIONS")).toEqual(shown);

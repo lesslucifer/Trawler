@@ -153,10 +153,14 @@ describe("UC-4 — watch live traffic in the native app", () => {
       timeout: 15_000,
       timeoutMsg: "Tab never made the host chip",
     });
-    await browser.waitUntil(async () => (await rowCount()) >= 1, {
-      timeout: 15_000,
-      timeoutMsg: "the captured host's chip emptied the list",
-    });
+    await browser.waitUntil(
+      async () => {
+        const hosts: string[] = [];
+        for (const row of await $$('[data-testid="flow-row"]')) hosts.push(await row.$('[data-wire="host"]').getText());
+        return hosts.length > 0 && hosts.every((host) => host.startsWith("localhost:"));
+      },
+      { timeout: 15_000, timeoutMsg: "the captured host's chip never narrowed the list to that host" },
+    );
     await removeEveryChip();
   });
 
@@ -189,6 +193,10 @@ describe("UC-4 — watch live traffic in the native app", () => {
     expect((await statuses()).some((s) => s.startsWith("5"))).toBe(false);
 
     await removeEveryChip();
+    await browser.waitUntil(async () => (await statuses()).some((s) => !s.startsWith("4")), {
+      timeout: 15_000,
+      timeoutMsg: "removing the class chip never widened the list past 4xx",
+    });
     await addChips("status:404");
     await browser.waitUntil(
       async () => {

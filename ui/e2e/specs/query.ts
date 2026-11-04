@@ -124,6 +124,13 @@ export async function listingsAfter(count: number, what: string): Promise<string
   return (await listings()).slice(count);
 }
 
+export async function lastListingIs(query: string) {
+  await browser.waitUntil(async () => (await listings()).at(-1) === query, {
+    timeout: 15_000,
+    timeoutMsg: `the window's last listing was never ${query}`,
+  });
+}
+
 export async function noListingWhile(act: () => Promise<void>, what: string) {
   const before = (await listings()).length;
   await act();
