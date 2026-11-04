@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb38dd9f34851f0dfae5e1" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W6 plan: decoders</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W6 — decoders</h1>
+      <p>Decode a selection or a form value in place: a peek under it reads base64, URL-encoding or a JWT, offers only
+        the decoders that read it, replaces it as a working-copy step, or opens the decoded bytes in a data window of
+        their own.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W6</span> · branch
+        <code>wu/inspect-window/decoders</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a> ·
+        builds <a href="2026-11-03-data-window-design-run.html">the design run</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      In the data window, <em>decode</em> (right-click or ⌘⇧D) on a text selection or a form row's value opens a peek
+      under it that reads the value as base64 (standard or URL-safe, padding optional), URL-encoding or a JWT (header and
+      payload as JSON, the signature shown and never verified), offers only the decoders that read it, a switch only when
+      more than one does, and says in words why when none does; ⇄ replaces the value with its decoded form as one undoable
+      step, and ↗ opens the decoded bytes in a new data window — a binary result only that way, as hex or image.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · UC-9 decoder rows · epic expected row 8 · builds the run's local <em>DecodePeek</em> (D4: under the
+      line, pushing lines down, scrolling past 256 px), the right-click <em>decode</em> / <em>decode the value</em> rows
+      (D6), ⌘⇧D, and IconButton's <em>replace</em> ⇄ glyph. W3 built the EditSurface and FormTable insets it mounts in.
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart LR
+  T["right-click · ⌘⇧D"] --> S["DataWindowScreen: a peek on the selection's range or a form row"]
+  S --> D["decoders.ts: readings of the input"]
+  D --> P["DecodePeek in the inset"]
+  P -- "⇄" --> STEP["one named step in the history"]
+  P -- "↗" --> O["openDataWindow: decoded bytes, a key of their own"]
+  P -- "×, Esc, any change to the text" --> X["closed"]
+      </pre>
+      <div class="caption">Every decoder is read once when the peek opens; the peek closes whenever the working copy
+        changes, so a range it holds is never stale.</div>
+    </div>
+
+    <table data-c="pieces">
+      <thead><tr><th>Piece</th><th>Where</th><th>Contract</th></tr></thead>
+      <tbody>
+        <tr><td>logic</td><td><code>decoders.ts</code> (new)</td><td>base64 · URL · JWT, each a reading or a reason in
+          the user's words; a result is JSON (an object or array, shown at 2 spaces, numbers kept verbatim), text (valid
+          UTF-8, no control characters but tab and breaks), binary (with the signature it looks like: PNG, JPEG, GIF,
+          gzip, PDF) or a JWT; the decoder guessed from the shape; the offered list keeps only readings that mean
+          something — URL only over a real <code>%XX</code>, base64 to binary only with a known signature; the bytes and
+          type hint a result opens with</td></tr>
+        <tr><td>EditSurface (T2)</td><td><code>components/EditSurface.tsx</code></td><td>the handle gains
+          <code>selection()</code>: the main selection's range in the surface's offsets</td></tr>
+        <tr><td>IconButton (T1)</td><td><code>components/IconButton.tsx</code></td><td>the registry gains
+          <code>replace</code> ⇄</td></tr>
+        <tr><td>screen</td><td><code>DataWindowScreen.tsx</code></td><td>the local DecodePeek (<em>decoded as</em> with
+          a SegmentedControl or a lone label, ⇄ · ↗ · ×, the JWT's header / payload / <em>signature · not verified</em>,
+          JSON or text on a read-only EditSurface, a binary Notice, a reason Notice); <em>decode</em> first in the
+          selection's right-click, <em>decode the value</em> first on a form row's; ⌘⇧D on the selection or the selected
+          row; replace on a selection splices its range (escaped as string content in JSON), on a row re-encodes the
+          value; Esc closes the peek</td></tr>
+      </tbody>
+    </table>
+
+    <table data-c="scope">
+      <thead><tr><th>This WU</th><th>Left to</th></tr></thead>
+      <tbody>
+        <tr><td>the decoded result opens in a new data window through <code>openDataWindow</code></td><td>W7 J3 opens it
+          through the real windows</td></tr>
+        <tr><td>decode on the editable text kinds and the form table</td><td>hex and image have no text to decode;
+          read-only text keeps W3's native right-click</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>State</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>select a JWT in JSON, right-click → <em>decode</em></td><td>a peek under the selection's last line:
+          <em>decoded as JWT</em>, header and payload as JSON, the signature under <em>signature · not
+          verified</em>; the lines below pushed down</td></tr>
+        <tr><td>a value that reads as base64 and as URL</td><td>a switch between the two; a lone reader is a label, no
+          switch</td></tr>
+        <tr><td>⇄ on that JWT</td><td>one step <em>replaced the selection with its decoded form</em>: the payload,
+          escaped as JSON string content; <em>modified</em>; undo restores the token</td></tr>
+        <tr><td>a form row holding a JWT, ⌘⇧D</td><td>the peek under the row; ⇄ re-encodes the payload into the value:
+          <em>replaced the value of “assertion” with its decoded form</em></td></tr>
+        <tr><td>base64 of a gzip stream</td><td><em>N B of binary · looks like gzip</em>, no ⇄; ↗ opens a data window
+          titled <em>&lt;title&gt; · decoded base64</em> that shows it as hex</td></tr>
+        <tr><td><code>eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODEyIn0</code></td><td><em>decode</em> alone, no switch:
+          <em>not base64, URL-encoded or a JWT: 2 parts separated by dots. A JWT has 3: header, payload,
+          signature</em>; nothing in the working copy changes</td></tr>
+        <tr><td>an edit, undo or kind change with a peek open; Esc; ×</td><td>the peek closes</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Test</th></tr></thead>
+      <tbody>
+        <tr><td>unit (TS)</td><td><code>decoders</code>: base64 standard, URL-safe, padded and padding-less, with
+          whitespace; a 4n+1 length, a foreign character, padding mid-string, each with its reason; to JSON with a number
+          past 2<sup>53</sup> kept, to text, to binary with and without a signature. URL: <code>+</code> and escapes, a
+          bad escape's reason, escapes that are not UTF-8 read as binary. JWT: valid, padding-less, empty signature, 2
+          and 4 parts, a header that is not base64url, a payload that is not JSON. The guess, the offered list (URL only
+          over <code>%XX</code>, base64-to-binary only with a signature), the bytes and type hint each result opens with,
+          and the key: equal bytes one key, different bytes another. EditSurface: <code>selection()</code> after a
+          selection. IconButton: <code>replace</code> renders ⇄</td></tr>
+        <tr><td>integration</td><td><code>DataWindowScreen.test.tsx</code>: a JSON payload decodes a selected JWT from
+          the right-click, replaces it as a step and undoes it; a switch among two readers and a label for one; a form
+          row decodes from its right-click and ⌘⇧D and its value is replaced; a binary result offers ↗ only and opens a
+          payload with the decoded bytes; a malformed token shows its reason and changes nothing; Esc, × and an edit
+          close the peek</td></tr>
+        <tr><td>e2e</td><td>waived: W7's spec drives the real windows (J3 decodes a JWT form value and opens the decoded
+          payload in a new data window)</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
