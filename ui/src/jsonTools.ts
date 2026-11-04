@@ -38,7 +38,6 @@ export const INDENTS: { id: Indent; label: string; step: string }[] = [
   { id: "min", label: "minified", step: "minified" },
 ];
 export const SORT_STEP = "sorted keys";
-export const MATCH_LIMIT = 10_000;
 
 export const INDENT_UNIT: Record<Indent, string | null> = { "2": "  ", "4": "    ", tab: "\t", min: null };
 const NUMBER = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
@@ -328,17 +327,4 @@ export function valueText(text: string, node: JsonNode, lineBreak = "\n"): strin
 
 export function surfaceText(text: string): string {
   return text.replace(/\r\n?/g, "\n");
-}
-
-const SPECIAL = /[.*+?^${}()|[\]\\]/g;
-
-export function findMatches(text: string, query: string, limit = MATCH_LIMIT): { ranges: TextRange[]; capped: boolean } {
-  if (!query) return { ranges: [], capped: false };
-  const pattern = new RegExp(query.replace(SPECIAL, "\\$&"), "gi");
-  const ranges: TextRange[] = [];
-  for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
-    if (ranges.length === limit) return { ranges, capped: true };
-    ranges.push({ from: found.index, to: found.index + found[0].length });
-  }
-  return { ranges, capped: false };
 }

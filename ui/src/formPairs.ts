@@ -1,3 +1,6 @@
+import { findMatches, MATCH_LIMIT } from "./find";
+import type { TextRange } from "./components/index";
+
 export interface FormPair {
   index: number;
   raw: string;
@@ -76,4 +79,55 @@ export function repeats(pairs: FormPair[]): Map<number, Repeat> {
     if (of > 1) out.set(pair.index, { nth, of });
   }
   return out;
+}
+
+export const SORT_BY_KEY_STEP = "sorted by key";
+
+export function sortByKey(text: string): string {
+  return parsePairs(text)
+    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+    .map((pair) => pair.raw)
+    .join("&");
+}
+
+export function pairsAsJson(pairs: FormPair[]): string {
+  const byKey = new Map<string, string[]>();
+  for (const pair of pairs) {
+    const values = byKey.get(pair.key);
+    if (values) values.push(pair.value);
+    else byKey.set(pair.key, [pair.value]);
+  }
+  if (byKey.size === 0) return "{}";
+  const members = [...byKey].map(([key, values]) => {
+    const value = JSON.stringify(values.length === 1 ? values[0] : values, null, 2).replace(/\n/g, "\n  ");
+    return `  ${JSON.stringify(key)}: ${value}`;
+  });
+  return `{\n${members.join(",\n")}\n}`;
+}
+
+export interface PairMatches {
+  first: number;
+  key: TextRange[];
+  value: TextRange[];
+}
+
+export interface PairsFound {
+  byPair: Map<number, PairMatches>;
+  total: number;
+  capped: boolean;
+}
+
+export function findInPairs(pairs: FormPair[], query: string, limit = MATCH_LIMIT): PairsFound {
+  const byPair = new Map<number, PairMatches>();
+  let total = 0;
+  if (!query) return { byPair, total, capped: false };
+  for (const pair of pairs) {
+    const key = findMatches(pair.key, query, limit - total);
+    const value = key.capped ? { ranges: [], capped: true } : findMatches(pair.value, query, limit - total - key.ranges.length);
+    const found = key.ranges.length + value.ranges.length;
+    if (found) byPair.set(pair.index, { first: total, key: key.ranges, value: value.ranges });
+    total += found;
+    if (key.capped || value.capped) return { byPair, total, capped: true };
+  }
+  return { byPair, total, capped: false };
 }

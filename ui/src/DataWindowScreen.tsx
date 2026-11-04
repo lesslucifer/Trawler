@@ -11,9 +11,20 @@ import {
 import { byteLength, captionFilename, captionParts, decodeBody, hexDump, humanBytes, queryCount, saveBody } from "./body";
 import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
-import { addPairAfter, editPair, parsePairs, removePair, type PairPart } from "./formPairs";
+import { findBytes, findMatches, readHexQuery, type HexQueryMode } from "./find";
 import {
-  findMatches,
+  addPairAfter,
+  editPair,
+  findInPairs,
+  pairsAsJson,
+  parsePairs,
+  removePair,
+  SORT_BY_KEY_STEP,
+  sortByKey,
+  type PairMatches,
+  type PairPart,
+} from "./formPairs";
+import {
   indentChosen,
   indentOf,
   INDENT_UNIT,
@@ -27,6 +38,7 @@ import {
   valueText,
   type Indent,
 } from "./jsonTools";
+import { REINDENT_STEP, reindentXml } from "./xmlTools";
 import {
   amend,
   canRedo,
@@ -73,6 +85,7 @@ const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const NO_MATCHES: TextRange[] = [];
+const NO_PAIR_MATCHES = new Map<number, PairMatches>();
 const FOLD_CHOICES = [
   { id: "1", label: "1" },
   { id: "2", label: "2" },
@@ -81,6 +94,23 @@ const FOLD_CHOICES = [
   { id: "none", label: "none" },
 ];
 const NEEDS_JSON = "needs valid JSON";
+const SHOWN_ENCODED = "shown encoded";
+
+interface Found {
+  ranges: TextRange[];
+  byPair: Map<number, PairMatches>;
+  total: number;
+  capped: boolean;
+  as: HexQueryMode | null;
+}
+
+const NOTHING_FOUND: Found = { ranges: NO_MATCHES, byPair: NO_PAIR_MATCHES, total: 0, capped: false, as: null };
+
+function findCount(query: string, found: Found, current: number): string {
+  if (!query) return "";
+  const count = found.total ? `${current + 1} of ${found.total}${found.capped ? "+" : ""}` : "no match";
+  return found.as ? `${count} · as ${found.as}` : count;
+}
 
 function FindBar({
   query,
@@ -172,6 +202,8 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const [at, setAt] = useState(0);
   const [reveal, setReveal] = useState(0);
   const [fold, setFold] = useState<{ id: string; text: string } | null>(null);
+  const [wrap, setWrap] = useState(true);
+  const [encoded, setEncoded] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const surfaceHandle = useRef<EditSurfaceHandle>(null);
   const findBox = useRef<HTMLDivElement>(null);
@@ -195,13 +227,29 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
   const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
-  const onText = !empty && kind !== "image" && kind !== "hex" && !(kind === "form" && !lossy && !mixed);
+  const editableForm = kind === "form" && !lossy && !mixed;
+  const asTable = editableForm && !encoded;
+  const onText = !empty && kind !== "image" && kind !== "hex" && !asTable;
+  const searchable = !empty && kind !== "image";
   const breakWith = lineBreak ?? "\n";
-  const found = useMemo(
-    () => (onText && query ? findMatches(surfaceText(text), query) : { ranges: NO_MATCHES, capped: false }),
-    [onText, query, text],
-  );
-  const total = found.ranges.length;
+  const found = useMemo((): Found => {
+    if (!query) return NOTHING_FOUND;
+    if (onText) {
+      const { ranges, capped } = findMatches(surfaceText(text), query);
+      return { ...NOTHING_FOUND, ranges, total: ranges.length, capped };
+    }
+    if (asTable) {
+      const { byPair, total: count, capped } = findInPairs(pairs, query);
+      return { ...NOTHING_FOUND, byPair, total: count, capped };
+    }
+    if (kind === "hex" && shownBytes) {
+      const hexQuery = readHexQuery(query);
+      const { ranges, capped } = findBytes(shownBytes, hexQuery);
+      return { ...NOTHING_FOUND, ranges, total: ranges.length, capped, as: hexQuery.mode };
+    }
+    return NOTHING_FOUND;
+  }, [asTable, kind, onText, pairs, query, shownBytes, text]);
+  const total = found.total;
   const current = total ? at % total : -1;
   const settledJson = useMemo(
     () => (kind === "json" && !empty ? parseJson(workingText(settled)) : null),
@@ -209,6 +257,10 @@ function Workbench({ payload }: { payload: DataPayload }) {
   );
   const menuJson = useMemo(() => (kind === "json" && menu ? parseJson(surfaceText(text)) : null), [kind, menu, text]);
   const parses = menuJson?.ok ?? false;
+  const menuXml = useMemo(
+    () => (kind === "xml" && !readOnly && menu ? reindentXml(text, breakWith) : null),
+    [kind, readOnly, menu, text, breakWith],
+  );
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));
   const stepFind = useCallback(
@@ -226,7 +278,8 @@ function Workbench({ payload }: { payload: DataPayload }) {
   };
   const dismissFind = () => {
     search("");
-    surfaceHandle.current?.focus();
+    if (surfaceHandle.current) surfaceHandle.current.focus();
+    else findBox.current?.querySelector("input")?.blur();
   };
   const reformat = (indent: Indent) => {
     const name = INDENTS.find((choice) => choice.id === indent)?.step ?? indent;
@@ -241,6 +294,19 @@ function Workbench({ payload }: { payload: DataPayload }) {
       const result = reformatJson(working, indentOf(working), true, breakWith);
       return result.ok ? commit(h, result.text, SORT_STEP) : h;
     });
+  const sortPairs = () => setHistory((h) => commit(h, sortByKey(workingText(h)), SORT_BY_KEY_STEP));
+  const reindent = useCallback(
+    () =>
+      setHistory((h) => {
+        const result = reindentXml(workingText(h), breakWith);
+        return result.ok ? commit(h, result.text, REINDENT_STEP) : h;
+      }),
+    [breakWith],
+  );
+  const toggleEncoded = () => {
+    setEncoded((shown) => !shown);
+    setRow(null);
+  };
   const foldTo = (id: string) => {
     surfaceHandle.current?.foldTo(/^\d+$/.test(id) ? Number(id) : (id as FoldDepth));
     setFold({ id, text });
@@ -276,14 +342,25 @@ function Workbench({ payload }: { payload: DataPayload }) {
     const onKeyDown = (event: KeyboardEvent) => {
       const command = event.metaKey || event.ctrlKey;
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
-      if (!command || empty) return;
+      if (empty) return;
+      if (!command && event.altKey && !typing) {
+        if (event.code === "KeyZ" && !event.shiftKey && onText) {
+          event.preventDefault();
+          setWrap((on) => !on);
+        } else if (event.code === "KeyF" && event.shiftKey && kind === "xml" && !readOnly) {
+          event.preventDefault();
+          reindent();
+        }
+        return;
+      }
+      if (!command) return;
       const key = event.key.toLowerCase();
-      if (key === "f" && onText) {
+      if (key === "f" && searchable) {
         event.preventDefault();
         const input = findBox.current?.querySelector("input");
         input?.focus();
         input?.select();
-      } else if (key === "g" && onText) {
+      } else if (key === "g" && searchable) {
         event.preventDefault();
         stepFind(event.shiftKey ? -1 : 1);
       } else if (event.code === "KeyC" && event.altKey && kind === "json" && !typing && surfaceHandle.current) {
@@ -295,17 +372,17 @@ function Workbench({ payload }: { payload: DataPayload }) {
       } else if (key === "z" && !typing && !readOnly) {
         event.preventDefault();
         setHistory((h) => (event.shiftKey ? redo(h) : undo(h)));
-      } else if (event.key === "Backspace" && !typing && !readOnly && kind === "form" && row !== null) {
+      } else if (event.key === "Backspace" && !typing && asTable && row !== null) {
         event.preventDefault();
         removeRow(row);
-      } else if (key === "c" && !typing && kind === "form" && row !== null && pairs[row] && !window.getSelection()?.toString()) {
+      } else if (key === "c" && !typing && asTable && row !== null && pairs[row] && !window.getSelection()?.toString()) {
         event.preventDefault();
         copy(pairs[row].value);
       }
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [copy, copyNode, empty, kind, onText, pairs, readOnly, removeRow, row, save, stepFind]);
+  }, [asTable, copy, copyNode, empty, kind, onText, pairs, readOnly, reindent, removeRow, row, save, searchable, stepFind]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -327,6 +404,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
       value: fold?.text === text ? fold.id : null,
       pick: foldTo,
     };
+    const wrapRow: MenuItem = { label: "wrap long lines", keys: "⌥Z", checked: wrap, run: () => setWrap((on) => !on) };
     if (kind === "json") {
       sections.push([
         ...(readOnly
@@ -343,9 +421,34 @@ function Workbench({ payload }: { payload: DataPayload }) {
               { label: "sort keys", disabled: !parses, why: NEEDS_JSON, run: sortKeys },
             ]),
         foldRow,
+        wrapRow,
       ]);
     }
-    if (kind === "xml") sections.push([foldRow]);
+    if (kind === "xml") {
+      sections.push([
+        ...(menuXml
+          ? [
+              {
+                label: "re-indent",
+                keys: "⌥⇧F",
+                disabled: !menuXml.ok,
+                why: menuXml.ok ? undefined : `not well-formed at line ${menuXml.line}, column ${menuXml.column}: ${menuXml.reason}`,
+                run: reindent,
+              },
+            ]
+          : []),
+        foldRow,
+        wrapRow,
+      ]);
+    }
+    if (kind === "text" || (kind === "form" && onText)) sections.push([wrapRow]);
+    if (editableForm) {
+      sections.push([
+        { label: "show encoded", checked: encoded, run: toggleEncoded },
+        { label: "sort by key", disabled: encoded, why: SHOWN_ENCODED, run: sortPairs },
+        { label: "copy as JSON", run: () => copy(pairsAsJson(pairs)) },
+      ]);
+    }
     if (kind === "image") {
       sections.push([
         {
@@ -373,7 +476,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
 
   const contextSections = (target: number | null, offset: number | undefined): MenuItem[][] => {
     const pair = target === null ? undefined : pairs[target];
-    if (kind === "form" && pair) {
+    if (asTable && pair) {
       return [
         [{ label: "copy the value", keys: "⌘C", run: () => copy(pair.value) }],
         [
@@ -395,7 +498,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
   };
 
   const onContext = (event: MouseEvent) => {
-    if (readOnly || kind === "form") return;
+    if (readOnly || asTable) return;
     event.preventDefault();
     const point = { x: event.clientX, y: event.clientY };
     const handle = surfaceHandle.current;
@@ -422,8 +525,10 @@ function Workbench({ payload }: { payload: DataPayload }) {
         </div>
       );
     }
-    if (kind === "hex") return <HexView bytes={currentBytes()} onCopy={copy} testId="data-surface" />;
-    if (kind === "form" && !lossy && !mixed) {
+    if (kind === "hex") {
+      return <HexView bytes={currentBytes()} matches={found.ranges} current={current} reveal={reveal} onCopy={copy} testId="data-surface" />;
+    }
+    if (asTable) {
       const edit = (index: number, part: PairPart, value: string) =>
         step(editPair(text, index, part, value), `edited the ${part} of pair ${index + 1}`);
       return (
@@ -435,6 +540,9 @@ function Workbench({ payload }: { payload: DataPayload }) {
           onAdd={(after) => step(addPairAfter(text, after), after < 0 ? "added a pair" : `added a pair after pair ${after + 1}`)}
           onRemove={removeRow}
           onContext={(index, at) => setMenu({ type: "context", at, row: index })}
+          matches={found.byPair}
+          current={current}
+          reveal={reveal}
           testId="data-surface"
         />
       );
@@ -466,6 +574,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
           text={text}
           language={kind === "form" ? "plain" : SURFACE_LANGUAGE[kind]}
           readOnly={lossy || mixed}
+          wrap={wrap}
           lineBreak={breakWith}
           onChange={(next, name, extend) => setHistory((h) => (extend ? amend(h, next, name) : commit(h, next, name)))}
           onSelect={(selected) => setSelection(selected)}
@@ -496,11 +605,11 @@ function Workbench({ payload }: { payload: DataPayload }) {
         )}
       </header>
 
-      {onText && (
+      {searchable && (
         <FindBar
           query={query}
           onQuery={search}
-          count={!query ? "" : total ? `${current + 1} of ${total}${found.capped ? "+" : ""}` : "no match"}
+          count={findCount(query, found, current)}
           total={total}
           onStep={stepFind}
           onDismiss={dismissFind}
@@ -526,11 +635,11 @@ function Workbench({ payload }: { payload: DataPayload }) {
           {override ? `your choice · detected ${kindLabel(detected.kind)} from ${detected.from}` : `detected from ${detected.from}`}
         </span>
         <span>{humanBytes(shownSize)}</span>
-        {!readOnly && !empty && <span>{kind === "form" ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
+        {!readOnly && !empty && <span>{asTable ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
         <span className="ml-auto flex items-center gap-x-3">
           {copied === "confirming" && <span className="text-ok">copied</span>}
           {copied === "error" && <span className="text-warn">copy failed</span>}
-          {selection && kind !== "form" && !readOnly && <span>selection {plural(selection.length, "character")}</span>}
+          {selection && !asTable && !readOnly && <span>selection {plural(selection.length, "character")}</span>}
           {readOnly ? (
             <span>read-only</span>
           ) : (

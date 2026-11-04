@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  findMatches,
   INDENT_UNIT,
   indentChosen,
   indentOf,
@@ -9,7 +8,6 @@ import {
   parseJson,
   pathText,
   reformatJson,
-  surfaceText,
   valueText,
   type JsonNode,
 } from "./jsonTools";
@@ -205,36 +203,5 @@ describe("the node at an offset", () => {
   it("a string's escapes are decoded in its value", () => {
     const escaped = '{"a": "\\u00e9\\n"}';
     expect(valueText(escaped, nodeAt(rootOf(escaped), 8).node)).toBe("é\n");
-  });
-});
-
-describe("find", () => {
-  it("matches case-insensitively, every occurrence, none for an empty query", () => {
-    expect(findMatches("Login login LOGIN", "login").ranges).toEqual([
-      { from: 0, to: 5 },
-      { from: 6, to: 11 },
-      { from: 12, to: 17 },
-    ]);
-    expect(findMatches("abc", "").ranges).toEqual([]);
-  });
-
-  it("reads the query literally", () => {
-    expect(findMatches("a.b axb (x)", ".").ranges).toEqual([{ from: 1, to: 2 }]);
-    expect(findMatches("a.b axb (x)", "(x)").ranges).toEqual([{ from: 8, to: 11 }]);
-  });
-
-  it("stops at the limit and says so", () => {
-    expect(findMatches("aaaa", "a", 3)).toEqual({ ranges: [{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 3 }], capped: true });
-    expect(findMatches("aaa", "a", 3).capped).toBe(false);
-  });
-
-  it("the surface's text counts each line break as one character, whatever its kind", () => {
-    const surface = surfaceText("ab\r\ncd\r\nab");
-    expect(surface).toBe("ab\ncd\nab");
-    expect(findMatches(surface, "ab").ranges).toEqual([
-      { from: 0, to: 2 },
-      { from: 6, to: 8 },
-    ]);
-    expect(surfaceText("a\rb\nc\r\nd")).toBe("a\nb\nc\nd");
   });
 });
