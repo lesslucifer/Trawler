@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   findMatches,
+  INDENT_UNIT,
   indentChosen,
   indentOf,
   layoutJson,
@@ -20,7 +21,7 @@ function rootOf(text: string): JsonNode {
 }
 
 function reformatted(text: string, indent: "2" | "4" | "tab" | "min", sort = false, lineBreak = "\n"): string {
-  const result = reformatJson(text, indent, sort, lineBreak);
+  const result = reformatJson(text, INDENT_UNIT[indent], sort, lineBreak);
   if (!result.ok) throw new Error(`fixture does not parse: ${result.reason}`);
   return result.text;
 }
@@ -52,7 +53,7 @@ describe("parse", () => {
     ['["a\nb"]', 1, 4, "a control character or line break inside a string"],
     ['["\\x"]', 1, 3, "\\x is not an escape JSON knows"],
     ['["\\u12"]', 1, 3, "\\u needs four hex digits"],
-    ['{"a": "open', 1, 12, "the text ends before the JSON does"],
+    ['{"a": "open', 1, 7, "a string is not closed"],
     ["[1] [2]", 1, 5, "there is more text after the JSON ends"],
     ["[01]", 1, 3, "expected , or ]"],
     ["[-]", 1, 2, "a number is not written the way JSON writes numbers"],
@@ -61,7 +62,7 @@ describe("parse", () => {
   });
 
   it("reads past a leading byte-order mark and says it was there", () => {
-    expect(parseJson('﻿{"a":1}')).toMatchObject({ ok: true, bom: true });
+    expect(parseJson('\uFEFF{"a":1}')).toMatchObject({ ok: true, bom: true });
     expect(parseJson('{"a":1}')).toMatchObject({ ok: true, bom: false });
   });
 
@@ -97,7 +98,7 @@ describe("reformat", () => {
   });
 
   it("keeps a byte-order mark and a closing line break", () => {
-    expect(reformatted('﻿{"a":1}\n', "2")).toBe('﻿{\n  "a": 1\n}\n');
+    expect(reformatted('\uFEFF{"a":1}\n', "2")).toBe('\uFEFF{\n  "a": 1\n}\n');
     expect(reformatted('{"a":1}', "2")).toBe('{\n  "a": 1\n}');
   });
 
@@ -122,24 +123,35 @@ describe("reformat", () => {
     expect(reformatted('{"b":1,"\\u0061":2,"a":3,"b":4}', "min", true)).toBe('{"\\u0061":2,"a":3,"b":1,"b":4}');
   });
 
+  it.each([
+    ["8 spaces", "        "],
+    ["3 spaces", "   "],
+    ["a space then a tab", " \t"],
+    ["no indent, one member a line", ""],
+  ])("sorting keeps a text written with %s exactly as indented", (_, unit) => {
+    const text = `{\n${unit}"b": [\n${unit}${unit}1\n${unit}],\n${unit}"a": 2\n}\n`;
+    const sorted = reformatJson(text, indentOf(text), true, "\n");
+    expect(sorted).toEqual({ ok: true, text: `{\n${unit}"a": 2,\n${unit}"b": [\n${unit}${unit}1\n${unit}]\n}\n` });
+  });
+
   it("says where a text that does not parse fails, and changes nothing", () => {
-    expect(reformatJson('{"a": }', "2", false, "\n")).toMatchObject({ ok: false, line: 1, column: 7 });
+    expect(reformatJson('{"a": }', "  ", false, "\n")).toMatchObject({ ok: false, line: 1, column: 7 });
   });
 
   it("layoutJson writes a lone scalar as it was written", () => {
-    expect(layoutJson(rootOf("1E400"), "2", true, "\n")).toBe("1E400");
+    expect(layoutJson(rootOf("1E400"), "  ", true, "\n")).toBe("1E400");
   });
 });
 
 describe("the indent a text is written with", () => {
   it.each([
-    ['{"a":1}', "min"],
-    ['{\n  "a": 1\n}', "2"],
-    ['{\n    "a": 1\n}', "4"],
-    ['{\r\n\t"a": 1\r\n}', "tab"],
-    ['﻿{\n"a": 1\n}\n', "2"],
-  ] as const)("%j is %s", (text, indent) => {
-    expect(indentOf(text)).toBe(indent);
+    ['{"a":1}', null],
+    ['{\n  "a": 1\n}', "  "],
+    ['{\n        "a": 1\n}', "        "],
+    ['{\r\n\t"a": 1\r\n}', "\t"],
+    ['\uFEFF{\n"a": 1\n}\n', ""],
+  ])("%j is indented by %j", (text, unit) => {
+    expect(indentOf(text)).toBe(unit);
   });
 
   it("a reformat step names its choice; any other step none", () => {

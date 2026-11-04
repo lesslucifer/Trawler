@@ -498,6 +498,12 @@ describe("indent and sort keys", () => {
     expect(saved.mock.lastCall![0]).toEqual(encode('{ "id": 9007199254740993, "a": 1, "a": 2 }'));
   });
 
+  it("sort keys changes the key order only, keeping an 8-space indent", async () => {
+    await open(payload({ text: '{\n        "b": 1,\n        "a": [\n                2\n        ]\n}' }));
+    fireEvent.click(moreItem(/^sort keys/));
+    expect(doc()).toBe('{\n        "a": [\n                2\n        ],\n        "b": 1\n}');
+  });
+
   it("a CRLF document is laid out with CRLF", async () => {
     await open(payload({ text: '{"a":1}\r\n' }));
     chooseIn("indent", "2");

@@ -40,7 +40,7 @@ export const INDENTS: { id: Indent; label: string; step: string }[] = [
 export const SORT_STEP = "sorted keys";
 export const MATCH_LIMIT = 10_000;
 
-const UNIT: Record<Exclude<Indent, "min">, string> = { "2": "  ", "4": "    ", tab: "\t" };
+export const INDENT_UNIT: Record<Indent, string | null> = { "2": "  ", "4": "    ", tab: "\t", min: null };
 const NUMBER = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
 const LITERALS = ["true", "false", "null"];
 const ESCAPES = new Set(['"', "\\", "/", "b", "f", "n", "r", "t"]);
@@ -98,7 +98,7 @@ function parseText(text: string, bom: boolean): JsonNode {
     const from = i;
     i += 1;
     for (;;) {
-      if (i >= text.length) fail("a string is not closed");
+      if (i >= text.length) throw new Malformed(from, "a string is not closed");
       const code = text.charCodeAt(i);
       if (code === 0x22) {
         i += 1;
@@ -222,11 +222,10 @@ interface Frame {
 
 const byKey = (a: JsonMember, b: JsonMember) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
 
-export function layoutJson(root: JsonNode, indent: Indent, sort: boolean, lineBreak: string): string {
+export function layoutJson(root: JsonNode, unit: string | null, sort: boolean, lineBreak: string): string {
   const out: string[] = [];
-  const unit = indent === "min" ? "" : UNIT[indent];
   const breakAt = (depth: number) => {
-    if (indent !== "min") out.push(lineBreak, unit.repeat(depth));
+    if (unit !== null) out.push(lineBreak, unit.repeat(depth));
   };
   const open = (node: JsonNode, depth: number): Frame | null => {
     if (node.type !== "object" && node.type !== "array") {
@@ -259,7 +258,7 @@ export function layoutJson(root: JsonNode, indent: Indent, sort: boolean, lineBr
     breakAt(frame.depth);
     const entry = frame.entries[frame.at];
     frame.at += 1;
-    if (entry.keyRaw !== undefined) out.push(entry.keyRaw, indent === "min" ? ":" : ": ");
+    if (entry.keyRaw !== undefined) out.push(entry.keyRaw, unit === null ? ":" : ": ");
     const inner = open(entry.node, frame.depth);
     if (inner) stack.push(inner);
   }
@@ -270,20 +269,16 @@ const endsWithBreak = (text: string) => /[\r\n]$/.test(text);
 
 export type Reformat = { ok: true; text: string } | Extract<JsonParse, { ok: false }>;
 
-export function reformatJson(text: string, indent: Indent, sort: boolean, lineBreak: string): Reformat {
+export function reformatJson(text: string, unit: string | null, sort: boolean, lineBreak: string): Reformat {
   const parsed = parseJson(text);
   if (!parsed.ok) return parsed;
-  const body = layoutJson(parsed.root, indent, sort, lineBreak);
-  return { ok: true, text: `${parsed.bom ? "﻿" : ""}${body}${endsWithBreak(text) ? lineBreak : ""}` };
+  const body = layoutJson(parsed.root, unit, sort, lineBreak);
+  return { ok: true, text: `${parsed.bom ? "\uFEFF" : ""}${body}${endsWithBreak(text) ? lineBreak : ""}` };
 }
 
-export function indentOf(text: string): Indent {
-  const trimmed = text.replace(/^﻿/, "").trim();
-  const indented = /[\r\n]([ \t]*)\S/.exec(trimmed);
-  if (!indented) return "min";
-  const lead = indented[1];
-  if (lead.startsWith("\t")) return "tab";
-  return lead.length === 4 ? "4" : "2";
+export function indentOf(text: string): string | null {
+  const indented = /[\r\n]([ \t]*)\S/.exec(text.replace(/^\uFEFF/, "").trim());
+  return indented ? indented[1] : null;
 }
 
 export function indentChosen(step: string): Indent | null {

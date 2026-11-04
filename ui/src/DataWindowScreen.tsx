@@ -16,6 +16,7 @@ import {
   findMatches,
   indentChosen,
   indentOf,
+  INDENT_UNIT,
   INDENTS,
   nodeAt,
   parseJson,
@@ -230,7 +231,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const reformat = (indent: Indent) => {
     const name = INDENTS.find((choice) => choice.id === indent)?.step ?? indent;
     setHistory((h) => {
-      const result = reformatJson(workingText(h), indent, false, breakWith);
+      const result = reformatJson(workingText(h), INDENT_UNIT[indent], false, breakWith);
       return result.ok ? commit(h, result.text, name) : h;
     });
   };
