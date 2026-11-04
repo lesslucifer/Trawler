@@ -84,3 +84,19 @@ describe("selecting and copying a range", () => {
     expect(byte(17)).toHaveClass("bg-wash-select");
   });
 });
+
+describe("revealing the current match", () => {
+  const far = new Uint8Array(64 * 1024);
+  const match = [{ from: 60_000, to: 60_002 }];
+
+  it("scrolls to its row only when the caller bumps reveal", () => {
+    const scrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = scrollTo;
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, value: 10_000_000 });
+    const scrolledDown = () => scrollTo.mock.calls.some(([to]) => to.top > 0);
+    const { rerender } = render(<HexView bytes={far} matches={match} current={0} testId="hex" />);
+    expect(scrolledDown()).toBe(false);
+    rerender(<HexView bytes={far} matches={match} current={0} reveal={1} testId="hex" />);
+    expect(scrolledDown()).toBe(true);
+  });
+});

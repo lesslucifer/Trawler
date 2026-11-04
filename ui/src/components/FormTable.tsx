@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { repeats, type FormPair, type PairPart } from "../formPairs";
+import { repeats, type FormPair, type PairMatches, type PairPart } from "../formPairs";
+import type { TextRange } from "./EditSurface";
 import { Field } from "./Field";
 import { IconButton } from "./IconButton";
 
@@ -19,30 +20,30 @@ const COLUMNS = { gridTemplateColumns: "5ch minmax(128px, 2fr) 5fr 60px" };
 const MARK = "rounded-button bg-wash-select text-ink";
 const CURRENT = "rounded-button bg-wash-active text-ink outline outline-focus outline-ink-mute";
 
-function occurrences(text: string, needle: string): number[] {
-  if (!needle) return [];
-  const hay = text.toLowerCase();
-  const out: number[] = [];
-  for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + needle.length)) out.push(at);
-  return out;
-}
+const NO_MATCHES = new Map<number, PairMatches>();
 
-function Marked({ text, needle, first, current }: { text: string; needle: string; first: number; current: number }) {
-  const hits = occurrences(text, needle);
-  if (!hits.length) return <>{text}</>;
+function Marked({ text, ranges, first, current }: { text: string; ranges: TextRange[]; first: number; current: number }) {
+  if (!ranges.length) return <>{text}</>;
   const parts: ReactNode[] = [];
   let from = 0;
-  hits.forEach((at, n) => {
-    parts.push(text.slice(from, at));
+  ranges.forEach((range, n) => {
+    parts.push(text.slice(from, range.from));
     parts.push(
-      <mark key={at} data-match={first + n} className={first + n === current ? CURRENT : MARK}>
-        {text.slice(at, at + needle.length)}
+      <mark key={range.from} data-match={first + n} className={first + n === current ? CURRENT : MARK}>
+        {text.slice(range.from, range.to)}
       </mark>,
     );
-    from = at + needle.length;
+    from = range.to;
   });
   parts.push(text.slice(from));
   return <>{parts}</>;
+}
+
+function rowOf(matches: Map<number, PairMatches>, current: number): number | null {
+  for (const [index, found] of matches) {
+    if (current >= found.first && current < found.first + found.key.length + found.value.length) return index;
+  }
+  return null;
 }
 
 /**
@@ -50,8 +51,8 @@ function Marked({ text, needle, first, current }: { text: string; needle: string
  * @tier T2 — owns display decoding, the duplicate-key count and the never-cut rule; the pairs, their order and what an edit means are the caller's
  * @anatomy sticky uppercase-mute label row (# · key · value) · number ink-mute · key mono syn-key, "N of M “key”" under a repeat · value mono ink, wrapped whole, "none" when empty, "kept as sent" under a bad escape · IconButton add + and close × per row, invisible until the row is hovered or selected — focus in a row selects it · selected row canvas-soft · the edited cell a multiline verbatim Field · a new-pair row (new key · new value, ink-mute) after the last · an inset block under one row
  * @use the data window's form surface, decoded (DEC-70)
- * @avoid the body pane (FormRenderer, capped and read-only) · truncating, clamping or fixing a row's height (DEC-34's escape is not taken here: rows are measured, so a 3 KiB value wraps whole) · re-encoding pairs nobody edited · sorting inside it: the caller hands the order · hiding a row's acts from the keyboard: focus shows them as hover does · a Field in every cell: one cell is edited at a time, the rest stay a reading surface · KeyValueRow's clamped, read-only rows
- * @states rest · row hovered or focused (acts shown) · selected row · editing one cell · with find marks · with an inset under one row. No empty, collapsed or loading state
+ * @avoid the body pane (FormRenderer, capped and read-only) · truncating, clamping or fixing a row's height (DEC-34's escape is not taken here: rows are measured, so a 3 KiB value wraps whole) · re-encoding pairs nobody edited · sorting or finding inside it: the caller hands the order and the marks · hiding a row's acts from the keyboard: focus shows them as hover does · a Field in every cell: one cell is edited at a time, the rest stay a reading surface · KeyValueRow's clamped, read-only rows
+ * @states rest · row hovered or focused (acts shown) · selected row · editing one cell · with find marks (the caller's, per pair; the current one's row scrolled to only when the caller bumps reveal, so an edit that moves the marks leaves the view where the user is) · with an inset under one row. No empty, collapsed or loading state
  * @madeof Field (T1) — the edited cell · IconButton (T1) — add and remove · @tanstack/react-virtual (T0)
  */
 export function FormTable({
@@ -63,8 +64,9 @@ export function FormTable({
   onRemove,
   onContext,
   inset = null,
-  find = "",
+  matches = NO_MATCHES,
   current = -1,
+  reveal = 0,
   testId,
 }: {
   pairs: FormPair[];
@@ -75,8 +77,9 @@ export function FormTable({
   onRemove: (index: number) => void;
   onContext?: (index: number, point: { x: number; y: number }) => void;
   inset?: RowInset | null;
-  find?: string;
+  matches?: Map<number, PairMatches>;
   current?: number;
+  reveal?: number;
   testId?: string;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -89,18 +92,7 @@ export function FormTable({
   };
   const opening = useRef<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
-  const needle = find.toLowerCase();
   const counted = useMemo(() => repeats(pairs), [pairs]);
-
-  const firstMatch = useMemo(() => {
-    const starts: number[] = [];
-    let total = 0;
-    for (const pair of pairs) {
-      starts.push(total);
-      total += occurrences(pair.key, needle).length + occurrences(pair.value, needle).length;
-    }
-    return starts;
-  }, [pairs, needle]);
 
   const virtualizer = useVirtualizer({
     count: pairs.length + 1,
@@ -109,11 +101,12 @@ export function FormTable({
     overscan: 8,
   });
 
+  const shownMarks = useRef({ matches, current });
+  shownMarks.current = { matches, current };
   useEffect(() => {
-    if (current < 0) return;
-    const row = firstMatch.findIndex((start, i) => current >= start && (i === firstMatch.length - 1 || current < firstMatch[i + 1]));
-    if (row >= 0) virtualizer.scrollToIndex(row, { align: "center" });
-  }, [current, firstMatch, virtualizer]);
+    const row = rowOf(shownMarks.current.matches, shownMarks.current.current);
+    if (reveal && row !== null) virtualizer.scrollToIndex(row, { align: "center" });
+  }, [reveal, virtualizer]);
 
   useEffect(() => {
     if (opening.current === null || !pairs[opening.current]) return;
@@ -170,7 +163,8 @@ export function FormTable({
       );
     }
     const text = pair[part];
-    const first = firstMatch[pair.index] + (part === "value" ? occurrences(pair.key, needle).length : 0);
+    const found = matches.get(pair.index);
+    const first = found ? found.first + (part === "value" ? found.key.length : 0) : 0;
     return (
       <div
         data-wire={part}
@@ -188,7 +182,7 @@ export function FormTable({
           part === "key" ? "text-syn-key" : text ? "text-ink" : "text-ink-mute"
         }`}
       >
-        {text ? <Marked text={text} needle={needle} first={first} current={current} /> : "none"}
+        {text ? <Marked text={text} ranges={found?.[part] ?? []} first={first} current={current} /> : "none"}
       </div>
     );
   };

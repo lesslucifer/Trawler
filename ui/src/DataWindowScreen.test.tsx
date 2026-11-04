@@ -67,6 +67,11 @@ function moreItem(name: RegExp | ((name: string) => boolean)) {
   return within(screen.getByRole("menu", { name: "more" })).getByRole("menuitem", { name });
 }
 
+function moreCheck(name: RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: "more" }));
+  return within(screen.getByRole("menu", { name: "more" })).getByRole("menuitemcheckbox", { name });
+}
+
 describe("what the window was handed", () => {
   it("nothing: it says so, and makes no request", async () => {
     await open(null);
@@ -459,8 +464,8 @@ describe("find over a 2 MB JSON document", () => {
     expect(marked.map((m) => m.textContent)).toEqual(['"x"', '"x"']);
   });
 
-  it("is offered on text, not on a form table, hex or an image", async () => {
-    await open(payload({ text: "a=1", typeHint: "application/x-www-form-urlencoded" }));
+  it("is offered on every kind but an image", async () => {
+    await open(payload({ bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), typeHint: "image/png", text: undefined }));
     expect(screen.queryByRole("textbox", { name: "find" })).toBeNull();
   });
 });
@@ -626,3 +631,187 @@ describe("copy a node's path or value", () => {
     expect(screen.queryByRole("menuitem", { name: /^copy the path/ })).toBeNull();
   });
 });
+
+const FORM_HINT = "application/x-www-form-urlencoded";
+const rowsShown = () => screen.getAllByTestId("form-pair");
+
+describe("find in a 300 KiB form", () => {
+  const form = Array.from({ length: 5000 }, (_, i) => `field_${i}=${i % 1000 === 7 ? "Needle" : "v".repeat(60)}`).join("&");
+
+  it("counts over keys and values, marks them, steps by every key and brings the row into view", async () => {
+    expect(form.length).toBeGreaterThan(300 * 1024);
+    HTMLElement.prototype.scrollTo = function (this: HTMLElement, to?: ScrollToOptions | number) {
+      this.scrollTop = typeof to === "object" ? (to.top ?? 0) : 0;
+    } as HTMLElement["scrollTo"];
+    const tall = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(10_000_000);
+    await open(payload({ text: form, typeHint: FORM_HINT }));
+    key("f");
+    expect(findBox()).toHaveFocus();
+    findFor("needle");
+    expect(findCount()).toHaveTextContent("1 of 5");
+    expect(document.querySelector("mark.bg-wash-active")).toHaveTextContent("Needle");
+    fireEvent.keyDown(findBox(), { key: "Enter", shiftKey: true });
+    expect(findCount()).toHaveTextContent("5 of 5");
+    key("g");
+    expect(findCount()).toHaveTextContent("1 of 5");
+    findFor("field_4999");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    fireEvent.scroll(screen.getByTestId("data-surface"));
+    expect(rowsShown().some((row) => row.textContent?.includes("field_4999"))).toBe(true);
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo;
+    tall.mockRestore();
+  });
+
+  it("recounts after an edit", async () => {
+    await open(payload({ text: "a=x&b=y", typeHint: FORM_HINT }));
+    findFor("x");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    fireEvent.click(screen.getByRole("button", { name: "edit the value of pair 2" }));
+    const field = screen.getByRole("textbox", { name: "value" });
+    fireEvent.change(field, { target: { value: "xx" } });
+    fireEvent.keyDown(field, { key: "Enter", metaKey: true });
+    expect(findCount()).toHaveTextContent("1 of 3");
+  });
+
+  it("Esc clears it", async () => {
+    await open(payload({ text: "a=x", typeHint: FORM_HINT }));
+    findFor("x");
+    fireEvent.keyDown(findBox(), { key: "Escape" });
+    expect(findBox()).toHaveValue("");
+    expect(findBox()).not.toHaveFocus();
+    expect(document.querySelector("mark")).toBeNull();
+  });
+});
+
+describe("the form's ⋯", () => {
+  const form = "b=2&a=1&b=&a=%ZZ";
+
+  it("sort by key is one step, the bad escape kept as sent; undo returns the wire order", async () => {
+    await open(payload({ text: form, typeHint: FORM_HINT }));
+    fireEvent.click(moreItem(/^sort by key/));
+    expect(rowsShown().map((row) => within(row).getAllByRole("button")[0].textContent)).toEqual(["a", "a", "b", "b"]);
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith("a=1&a=%ZZ&b=2&b=");
+    key("z");
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith(form);
+  });
+
+  it("copy as JSON keeps repeated keys and empty values, and says copied", async () => {
+    await open(payload({ text: form, typeHint: FORM_HINT }));
+    fireEvent.click(moreItem(/^copy as JSON/));
+    expect(writeText).toHaveBeenLastCalledWith('{\n  "b": [\n    "2",\n    ""\n  ],\n  "a": [\n    "1",\n    "%ZZ"\n  ]\n}');
+    await waitFor(() => expect(footer()).toHaveTextContent("copied"));
+  });
+
+  it("show encoded puts the query string on the text surface, editable and findable; sort waits; the table reads the edit", async () => {
+    await open(payload({ text: form, typeHint: FORM_HINT }));
+    fireEvent.click(moreCheck(/^show encoded/));
+    expect(doc()).toBe(form);
+    findFor("%ZZ");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    typeInto(0, "c=3&");
+    expect(footer()).toHaveTextContent("1 line");
+
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    const menu = screen.getByRole("menu", { name: "more" });
+    expect(within(menu).getByRole("menuitemcheckbox", { name: /^show encoded/ })).toHaveAttribute("aria-checked", "true");
+    expect(within(menu).getByRole("menuitem", { name: /^sort by key/ })).toHaveAttribute("aria-disabled", "true");
+    expect(within(menu).getByRole("menuitem", { name: /^sort by key/ })).toHaveTextContent("shown encoded");
+    expect(within(menu).getByRole("menuitemcheckbox", { name: /^wrap long lines/ })).toBeInTheDocument();
+    fireEvent.click(within(menu).getByRole("menuitemcheckbox", { name: /^show encoded/ }));
+
+    expect(rowsShown()).toHaveLength(5);
+    expect(within(rowsShown()[0]).getByText("c")).toBeInTheDocument();
+    expect(footer()).toHaveTextContent("5 pairs");
+  });
+});
+
+describe("find in a 1 MiB binary payload", () => {
+  const bytes = new Uint8Array(1024 * 1024);
+  bytes.set([0xde, 0xad], 15);
+  bytes.set(new TextEncoder().encode("GET /"), 700_000);
+
+  it("reads hex pairs as bytes and anything else as text, says which, and marks a match across two rows", async () => {
+    await open(payload({ bytes, typeHint: "application/octet-stream", text: undefined }));
+    key("f");
+    expect(findBox()).toHaveFocus();
+    findFor("de ad");
+    expect(findCount()).toHaveTextContent("1 of 1 · as bytes");
+    const marked = [...screen.getByTestId("data-surface").querySelectorAll("[data-offset].bg-wash-active")];
+    expect(marked.map((cell) => cell.getAttribute("data-offset"))).toEqual(["15", "16"]);
+    expect(marked[0].closest("[data-testid=hex-row]")).not.toBe(marked[1].closest("[data-testid=hex-row]"));
+
+    findFor("get /");
+    expect(findCount()).toHaveTextContent("1 of 1 · as text");
+    findFor("zz");
+    expect(findCount()).toHaveTextContent("no match · as text");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("wrap long lines", () => {
+  const wrapped = () => view().contentDOM.classList.contains("cm-lineWrapping");
+
+  it("is on by default, flipped from ⋯ and by ⌥Z on text, JSON and XML", async () => {
+    await open(payload({ text: "a long line", typeHint: "text/plain" }));
+    expect(wrapped()).toBe(true);
+    fireEvent.click(moreCheck(/^wrap long lines/));
+    expect(wrapped()).toBe(false);
+    fireEvent.keyDown(document.body, { key: "Ω", code: "KeyZ", altKey: true });
+    expect(wrapped()).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: /^wrap long lines/ })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("⌥Z is left to a field being typed in", async () => {
+    await open(payload({ text: "x", typeHint: "text/plain" }));
+    fireEvent.keyDown(findBox(), { key: "Ω", code: "KeyZ", altKey: true });
+    expect(wrapped()).toBe(true);
+  });
+});
+
+describe("XML re-indent", () => {
+  const xml = '<?xml version="1.0"?><a><b>two  words</b><c/></a>';
+  const indented = '<?xml version="1.0"?>\n<a>\n  <b>two  words</b>\n  <c/>\n</a>';
+
+  it("is a named step from ⋯ and from ⌥⇧F; undo walks it; restore returns the bytes", async () => {
+    await open(payload({ text: xml, typeHint: "application/xml" }));
+    fireEvent.click(moreItem(/^re-indent/));
+    expect(doc()).toBe(indented);
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe(xml);
+    fireEvent.keyDown(document.body, { key: "Ï", code: "KeyF", altKey: true, shiftKey: true });
+    expect(doc()).toBe(indented);
+    fireEvent.click(moreItem(/^restore original/));
+    expect(doc()).toBe(xml);
+  });
+
+  it("keeps the document's CRLF", async () => {
+    await open(payload({ text: "<a>\r\n<b/></a>", typeHint: "application/xml" }));
+    fireEvent.click(moreItem(/^re-indent/));
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith("<a>\r\n  <b/>\r\n</a>");
+  });
+
+  it("on a text that is not well-formed, says where and does nothing by key", async () => {
+    await open(payload({ text: "<a><b></a>", typeHint: "application/xml" }));
+    const item = moreItem(/^re-indent/);
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("not well-formed at line 1, column 7: </a> closes <b>");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    fireEvent.keyDown(document.body, { key: "Ï", code: "KeyF", altKey: true, shiftKey: true });
+    expect(doc()).toBe("<a><b></a>");
+    expect(screen.queryByTestId("modified")).toBeNull();
+  });
+
+  it("is never offered on a read-only XML text", async () => {
+    await open(payload({ text: "<a>\r\n<b/>\n</a>", typeHint: "application/xml" }));
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.queryByRole("menuitem", { name: /^re-indent/ })).toBeNull();
+    expect(screen.getByRole("group", { name: "fold to" })).toBeInTheDocument();
+  });
+});
+

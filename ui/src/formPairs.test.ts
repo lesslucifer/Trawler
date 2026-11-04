@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPairAfter, editPair, parsePairs, removePair, repeats } from "./formPairs";
+import { addPairAfter, editPair, findInPairs, pairsAsJson, parsePairs, removePair, repeats, sortByKey } from "./formPairs";
 
 const FORM = "grant_type=urn%3Aietf&scope=accounts&scope=sessions%20devices&state=&note=50%ZZ+off&flag";
 
@@ -75,5 +75,53 @@ describe("pairs are added and removed in place", () => {
   it("removes exactly the pair named, duplicates and all", () => {
     expect(removePair("a=1&a=2&b=3", 1)).toBe("a=1&b=3");
     expect(removePair("a=1", 0)).toBe("");
+  });
+});
+
+describe("sort by key", () => {
+  it("orders pairs by their decoded key, stable among repeats, each pair's bytes as written", () => {
+    expect(sortByKey("b=2&a=1&b=&a=%ZZ")).toBe("a=1&a=%ZZ&b=2&b=");
+    expect(sortByKey("z%20y=1&z+a=2&=3")).toBe("=3&z+a=2&z%20y=1");
+  });
+
+  it("leaves an empty form empty", () => {
+    expect(sortByKey("")).toBe("");
+  });
+});
+
+describe("the pairs as JSON", () => {
+  it("keeps the first-seen key order; a repeated key holds every value in wire order", () => {
+    expect(pairsAsJson(parsePairs("b=2&a=1&b=&a=%ZZ"))).toBe('{\n  "b": [\n    "2",\n    ""\n  ],\n  "a": [\n    "1",\n    "%ZZ"\n  ]\n}');
+  });
+
+  it("keeps an integer-like key in its place and __proto__ as a key", () => {
+    const json = pairsAsJson(parsePairs("z=1&2=two&__proto__=p"));
+    expect(json).toBe('{\n  "z": "1",\n  "2": "two",\n  "__proto__": "p"\n}');
+    expect(JSON.parse(json)).toEqual(JSON.parse('{"z": "1", "2": "two", "__proto__": "p"}'));
+  });
+
+  it("writes a lone surrogate as an escape, so the JSON stays valid", () => {
+    expect(pairsAsJson([{ index: 0, raw: "", key: "k", value: "\ud800", kept: false }])).toBe('{\n  "k": "\\ud800"\n}');
+  });
+
+  it("is an empty object for no pairs", () => {
+    expect(pairsAsJson([])).toBe("{}");
+  });
+});
+
+describe("find in pairs", () => {
+  const pairs = parsePairs("scope=accounts&Scope=x&note=none&s=scope%20scope");
+
+  it("counts over keys then values, pair by pair, case-insensitive, numbering each pair's first", () => {
+    const found = findInPairs(pairs, "scope");
+    expect(found.total).toBe(4);
+    expect(found.capped).toBe(false);
+    expect([...found.byPair.keys()]).toEqual([0, 1, 3]);
+    expect(found.byPair.get(3)).toEqual({ first: 2, key: [], value: [{ from: 0, to: 5 }, { from: 6, to: 11 }] });
+  });
+
+  it("stops at the limit and says so; an empty query finds nothing", () => {
+    expect(findInPairs(pairs, "scope", 3)).toMatchObject({ total: 3, capped: true });
+    expect(findInPairs(pairs, "")).toEqual({ byPair: new Map(), total: 0, capped: false });
   });
 });

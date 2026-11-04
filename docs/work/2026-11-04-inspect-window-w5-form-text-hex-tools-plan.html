@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb09d39f34851f0dfae55c" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W5 plan: form, text, XML and hex tools</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W5 — form, text, XML and hex tools</h1>
+      <p>The data window's toolsets for every kind but JSON: find in the form table and the hex dump through W4's bar,
+        sort by key, show encoded and copy as JSON on a form, wrap long lines, and XML re-indent as a working-copy step.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W5</span> · branch
+        <code>wu/inspect-window/form-text-hex-tools</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a> ·
+        builds <a href="2026-11-03-data-window-design-run.html">the design run</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      The data window finds (a count, <em>N of M</em>, stepping by key) over a form's keys and values and over a hex
+      dump's bytes — a query of hex pairs read as bytes, anything else as text, saying which, matches crossing row
+      boundaries; a form sorts by key as an undoable step, shows itself encoded as editable text, and copies its pairs as
+      JSON with repeated keys and empty values kept; the text kinds wrap long lines or not; and XML re-indents as an
+      undoable step that keeps every text and attribute as written, or says where it is not well-formed.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · UC-9 form, text, XML and hex rows · epic expected rows 6 (form) and 7 (text, XML, hex with find) ·
+      builds the run's FindBar on hex (<em>as bytes</em> · <em>as text</em>), the ⋯ form section (<em>show encoded</em>,
+      <em>sort by key</em>, <em>copy as JSON</em>), <em>wrap long lines</em> ⌥Z and XML <em>re-indent</em> ⌥⇧F.
+      W3 already built the form's edit, add, remove and copy the value.
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph SCREEN["DataWindowScreen"]
+    FB["FindBar: N of M · as bytes / as text on hex"]
+    MORE["⋯ form: show encoded · sort by key · copy as JSON"]
+    MX["⋯ XML: re-indent ⌥⇧F · wrap ⌥Z"]
+  end
+  FB --> F["find.ts: text matches · hex query · byte matches"]
+  FB --> FT["FormTable: marks, current, reveal"]
+  FB --> HV["HexView: marks, current, reveal"]
+  FB --> ES["EditSurface (W4)"]
+  MORE --> FP["formPairs: sort by key · pairs as JSON"]
+  MX --> XT["xmlTools: tokenise, re-indent, where it breaks"]
+  FP --> STEP["a named step in the one history"]
+  XT --> STEP
+      </pre>
+      <div class="caption">One find rule (literal, case-insensitive) serves every surface; FormTable and HexView reveal the
+        current match only when the caller asks, as EditSurface does since W4.</div>
+    </div>
+
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>logic</td><td><code>find.ts</code> (new)</td><td>W4's <code>findMatches</code> and its 10 000 cap move here
+        from <code>jsonTools</code>; a hex query read as bytes when it is whole hex pairs (spaces allowed), else as
+        UTF-8 text; byte matches over the whole payload, ASCII letters case-insensitive in text mode, capped alike</td></tr>
+      <tr><td>logic</td><td><code>formPairs.ts</code></td><td>sort by key: stable, by the decoded key, each pair's bytes
+        as written; pairs as JSON: an object in first-seen key order, a repeated key an array of its values in wire
+        order, an empty value <code>""</code>; per-pair match starts for find, by <code>findMatches</code></td></tr>
+      <tr><td>logic</td><td><code>xmlTools.ts</code> (new)</td><td>a tokeniser with no recursion over tags, comments,
+        CDATA, processing instructions, the doctype and text, HTML void elements and raw <code>script</code> /
+        <code>style</code> text; re-indent with the text's own indent unit (2 spaces when none) and line break, an element
+        holding text kept as written inside, a BOM and closing break kept; on a mismatched or unclosed tag, the line and
+        column</td></tr>
+      <tr><td>FormTable (T2)</td><td><code>components/FormTable.tsx</code></td><td>marks by the shared find rule; gains
+        <code>reveal</code>: the current match scrolled to only when the caller bumps it</td></tr>
+      <tr><td>HexView (T2)</td><td><code>components/HexView.tsx</code></td><td>gains <code>reveal</code>, same contract</td></tr>
+      <tr><td>screen</td><td><code>DataWindowScreen.tsx</code></td><td>the find bar on the form table and the hex dump;
+        on hex its count reads <em>· as bytes</em> or <em>· as text</em>; the ⋯ form section; <em>show encoded</em> puts
+        the form on EditSurface as editable text (sort waits with <em>shown encoded</em>); <em>wrap long lines</em> ⌥Z as
+        a check row on JSON, XML, text and an encoded form; XML <em>re-indent</em> ⌥⇧F, disabled with where it breaks</td></tr>
+    </table>
+
+    <table data-c="split">
+      <tr><th>This WU</th><th>Left to</th></tr>
+      <tr><td>right-click on a form row: copy the value, add, remove (W3)</td><td>W6 <em>decode the value</em></td></tr>
+      <tr><td>find on every kind but image</td><td>W7 J3 finds one key in a real window</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>State</th><th>Expected</th></tr>
+      <tr><td>⌘F in a 300 KiB form, type a key</td><td><em>1 of N</em> over keys and values, every match marked, the row in
+        view; Enter / ⌘G step, wrapping; an edit recounts and leaves the view</td></tr>
+      <tr><td>⋯ → sort by key on <code>b=2&amp;a=1&amp;b=&amp;a=%ZZ</code></td><td>one step <em>sorted by key</em>:
+        <code>a=1&amp;a=%ZZ&amp;b=2&amp;b=</code>, the bad escape kept as sent; undo returns the wire order</td></tr>
+      <tr><td>⋯ → copy as JSON on the same form</td><td><code>{"b": ["2", ""], "a": ["1", "%ZZ"]}</code> laid out at 2
+        spaces; the status bar says <em>copied</em></td></tr>
+      <tr><td>⋯ → show encoded</td><td>the query string on the text surface, editable, findable; sort by key disabled
+        with <em>shown encoded</em>; toggled back, the table reads the edited text</td></tr>
+      <tr><td>⌘F in a 1 MiB hex dump: <code>de ad</code> · <code>GET</code></td><td><em>1 of N · as bytes</em> ·
+        <em>1 of N · as text</em>; a match across two rows marked in both; the current row in view</td></tr>
+      <tr><td>⌥Z or ⋯ → wrap long lines on text, XML or JSON</td><td>the check row flips; long lines wrap or scroll</td></tr>
+      <tr><td>⌥⇧F or ⋯ → re-indent on minified XML</td><td>one step <em>re-indented</em>: a tag a line, nested by the
+        document's unit, <code>&lt;b&gt;two  words&lt;/b&gt;</code> kept on its line as written</td></tr>
+      <tr><td>re-indent on <code>&lt;a&gt;&lt;b&gt;&lt;/a&gt;</code></td><td>disabled: <em>not well-formed at line 1,
+        column 7: &lt;/a&gt; closes &lt;b&gt;</em>; the key does nothing</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>unit (TS)</td><td><code>find</code>: text matches case-insensitive and capped; a hex query of pairs, with
+        and without spaces, odd digits read as text; byte matches across a 16-byte row boundary, overlapping, ASCII case
+        folded, a UTF-8 query, capped. <code>formPairs</code>: sort stable over repeated and empty keys, bad escapes kept;
+        JSON with repeats, empty values, <code>__proto__</code> and a lone surrogate; match starts. <code>xmlTools</code>:
+        minified and already-indented documents, a declaration, comment, CDATA, doctype, mixed content and an element
+        holding only text kept, attributes with <code>&gt;</code> in quotes, HTML void elements, raw script text,
+        10 000-deep nesting, CRLF, a BOM, each malformed input's line and column. FormTable and HexView: reveal on request
+        only, an edit reveals nothing</td></tr>
+      <tr><td>integration</td><td><code>DataWindowScreen.test.tsx</code>: the screen fed a 300 KiB form finds by every key
+        and recounts on an edit; sort by key and its undo; copy as JSON; show encoded edited and toggled back. A 1 MiB
+        binary payload finds as bytes and as text across a row; an XML payload re-indents as a step, undone, and a
+        malformed one disables it with where; wrap from ⋯ and ⌥Z on text</td></tr>
+      <tr><td>e2e</td><td>waived: W7's spec drives the real windows once W4–W6 land (J3 finds a key in a long form)</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

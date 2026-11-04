@@ -43,19 +43,21 @@ export function copiedRange(bytes: Uint8Array, selection: Selection): string {
  * @anatomy offset ink-mute · 16 bytes ink-body, wider gap after the 8th · ASCII, non-printable as ink-mute "." · matched bytes wash-select + ink in both columns, current wash-active · selection wash-select in both columns
  * @use the data window's hex surface (DEC-70): a binary payload, or any payload the user views as hex
  * @avoid the body pane (HexRenderer, capped at HEX_MAX by contract) · editing bytes · a cut marker or any cap · one text block for the whole dump: a row per element with bytes as spans is what lets a mark sit on a byte and the list window
- * @states rest · with find marks · with a selected range. No editable, empty or loading state
+ * @states rest · with find marks (the current one's row scrolled to only when the caller bumps reveal) · with a selected range. No editable, empty or loading state
  * @madeof @tanstack/react-virtual (T0)
  */
 export function HexView({
   bytes,
   matches = NO_MATCHES,
   current = -1,
+  reveal = 0,
   onCopy = (text) => void writeClipboard(text),
   testId,
 }: {
   bytes: Uint8Array;
   matches?: TextRange[];
   current?: number;
+  reveal?: number;
   onCopy?: (text: string) => void;
   testId?: string;
 }) {
@@ -71,10 +73,12 @@ export function HexView({
     overscan: 16,
   });
 
+  const shownMarks = useRef({ matches, current });
+  shownMarks.current = { matches, current };
   useEffect(() => {
-    const target = matches[current];
-    if (target) virtualizer.scrollToIndex(Math.floor(target.from / WIDTH), { align: "center" });
-  }, [matches, current, virtualizer]);
+    const target = shownMarks.current.matches[shownMarks.current.current];
+    if (reveal && target) virtualizer.scrollToIndex(Math.floor(target.from / WIDTH), { align: "center" });
+  }, [reveal, virtualizer]);
 
   useEffect(() => {
     const release = () => {
