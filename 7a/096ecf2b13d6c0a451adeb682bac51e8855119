@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7a096ecf2b13d6c0a451adeb682bac51e8855119
+base: 70187414e774b27267f8ca9ed8e101402f5f97ad
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-inspect-window-w4-json-tools-result.html
+report_sha256: 58b77a233b91d1b8c56816ed17877d0e6a7fd07c59cbc30c5459e9beacd8f091
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECOdzz+IbLwSf7HrG6f3d1JpujVPNjwPNUS/MOIEgfqYzXII07EZbrNE3
+  dITzgG3fFYbhKQRGzrZNJ4qCwD5SgC
+  -----END SSH SIGNATURE-----
