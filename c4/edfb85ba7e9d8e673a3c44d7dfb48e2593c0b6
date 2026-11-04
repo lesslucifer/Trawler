@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: c4edfb85ba7e9d8e673a3c44d7dfb48e2593c0b6
+base: 8196a69961997be81270ed0f3d1d4c0da0492ce3
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-panels-w5-window-geometry-result.html
+report_sha256: 006a866a5f5e0fa650f573f670bd565d1cf8d97d650f0f6178bb7427a62067d9
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAXfYYktXMWZKbyVTxoYF9XDfTSci57LCJCtOgaYfyUHpZu/Vy3RwTUrT
+  qMjMTc/paCLYPGYOcH9fKUAzdVtxgM
+  -----END SSH SIGNATURE-----
