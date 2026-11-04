@@ -1,0 +1,30 @@
+schema: doc/v1
+epic: E-QUERY
+wu: E-QUERY.W3
+branch: wu/query-bar/query-bar-build
+changes:
+  - path: "docs/decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html"
+    tier: T2
+    action: updated
+    distills: "the bar's forks: the grammar inside QueryBar, Enter and Tab take the highlight, a fault on an attempt, an unknown key a fault only as a near miss, a chip's wash box, no editing in place"
+  - path: "docs/work/2026-11-04-query-bar-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the run's two citations of the QueryBar design marked retired at W3, the links dropped"
+  - path: "docs/work/2026-11-04-query-bar-w2-design-result.html"
+    tier: T3
+    action: updated
+    distills: "the QueryBar design's citation marked retired at W3"
+  - path: "docs/work/2026-11-04-query-bar-w3-build-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's plan: requirement, mapping, what changes, expected result, test plan"
+  - path: "docs/work/2026-11-04-query-bar-w3-build-result.html"
+    tier: T3
+    action: added
+    distills: "W3's result: what shipped against the plan, the deviations, the evidence, the distillation"
+  - path: "docs/work/components/query-bar.html"
+    tier: T3
+    action: archived
+    distills: "QueryBar's component design, retired into the component's TSDoc in ui/src/components/QueryBar.tsx"
+    distilled_to: ["docs/decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html"]
