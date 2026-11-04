@@ -67,6 +67,6 @@ describe("TextRenderer", () => {
   it("states the cut in warn tone, never a silent ellipsis", () => {
     render(<TextRenderer text={"a".repeat(TEXT_MAX + 1)} />);
 
-    expect(screen.getByText(/showing/).className).toContain("text-warn");
+    expect(screen.getByText(/showing/).parentElement!.className).toContain("text-warn");
   });
 });

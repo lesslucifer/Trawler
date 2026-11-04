@@ -190,7 +190,7 @@ describe("the body pane's size report", () => {
     const { container, findByTestId } = viewerOver(OVER_CAP_BYTES, "text/plain");
     await findByTestId("body-text");
 
-    expect(container.textContent).toContain("⚠ showing 256 KiB of 266 KiB — save to see all");
+    expect(container.textContent).toContain("⚠ showing 256 KiB of 266 KiBopen in data window");
     expect(encoded.length).toBeGreaterThan(0);
     expect(Math.max(...encoded)).toBeLessThanOrEqual(TEXT_MAX);
   });
@@ -205,7 +205,7 @@ describe("the body pane's size report", () => {
     const { container, findByTestId } = viewerOver(bytes, "text/plain");
     await findByTestId("body-text");
 
-    expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiB — save to see all");
+    expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiBopen in data window");
   });
 
   // A replacement character the body carries on purpose is valid UTF-8 and its

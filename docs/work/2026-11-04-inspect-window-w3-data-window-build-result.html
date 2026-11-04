@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeacc099f34851f0dfae463" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W3 result: the data window, built</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W3 — result</h1>
+      <p>Every <code>data-*</code> window now mounts the screen W2 designed: the payload whole, a working copy with one
+        history, the ⋯ and right-click menus, and the pane's way in. All data windows share one remembered size and
+        place.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W3</span> · branch
+        <code>wu/inspect-window/data-window-build</code> · <a href="2026-11-04-inspect-window-w3-data-window-build-plan.html">WU
+        plan</a> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th></th></tr>
+      <tr><td>⧉ on the pane, or the cut marker's button, opens the window with what the pane holds</td><td>BodyViewer's ⧉,
+        ⌘⇧O, and CutMarker's Button through the OpenWhole context; pretty and raw are separate keys, raw goes without a
+        hint</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>2 MB JSON whole, editable, folds per node</td><td>EditSurface on CodeMirror's viewport; fold gutter, the
+        <em>… N lines</em> chip, <code>foldTo</code> by depth, all or none</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>an edit, undo, restore original</td><td>one history of named steps; an input group is one step; restore is a
+        step; an unmodified copy delivers the exact handed-in bytes</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>300 KiB form, every pair, edit / add / remove</td><td>FormTable, measured rows, one cell edited at a time, an
+        edit re-encoding only its own pair</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>1 MiB binary, whole and read-only</td><td>HexView, fixed rows, marks across rows, a byte range that copies in
+        the column it started in</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>copy · copy original · save · save original</td><td>what is on screen (the dump on hex) · the handed-in text ·
+        the working bytes · the handed-in bytes, saved under the opener's caption</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>one shared geometry record</td><td>every <code>data-*</code> label reads and writes <code>data-*</code> in
+        <code>windows.json</code>; a data window is built hidden, placed from the record read before its build, then
+        shown</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>the screen at <code>ui/src/DataWindow.tsx</code> (the run's proposal)</td><td><code>DataWindowScreen.tsx</code></td><td>on a
+        case-insensitive disk <code>./DataWindow</code> resolves to W1's <code>dataWindow.ts</code></td></tr>
+      <tr><td>EditSurface: a <code>ref</code> with <code>foldTo</code></td><td>a <code>handle</code> prop</td><td>a
+        <code>forwardRef</code> object is not a function, and the collection's roster counts functions</td></tr>
+      <tr><td>EditSurface: <code>onChange(text, step)</code></td><td><code>onChange(text, step, extend)</code></td><td>the
+        caller's history needs to know when CodeMirror's input group still holds, so a run of keystrokes is one step</td></tr>
+      <tr><td>EditSurface: a broken JSON document folds by indentation</td><td>it folds and highlights what the JSON
+        parser's recovery still reads</td><td>CodeMirror consults a fold service before the syntax tree, so an indentation
+        fallback would replace syntax folding on every document</td></tr>
+      <tr><td>FormTable: row acts shown on hover or focus by <code>group-*</code> classes</td><td>hover is tracked in state;
+        focus in a row selects it, and a selected row shows its acts</td><td><code>group</code> emits no CSS and is not in the
+        closed vocabulary</td></tr>
+      <tr><td>integration: a record present before an open survives the new window's creation</td><td>not asserted;
+        the code reads the record before the build, and the two other rows are asserted</td><td>the mock runtime has no
+        monitor, so it places nothing and records its own zero geometry; <code>placed()</code>'s unit tests hold
+        placement and W7's e2e sees a real window</td></tr>
+      <tr><td>—</td><td>the archived run and W2's result link the four built components instead of their retired design
+        files</td><td>the files left the tree in DEC-16's order; a dead link reds verify-doc</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>8401c963</code> plan · <code>8d707710</code> shared geometry · the screen, its components
+        and the pane's way in</td></tr>
+      <tr><td>unit</td><td>shell <code>window_geometry.rs</code> · <code>dataKind</code> · <code>workingCopy</code> ·
+        <code>formPairs</code> · <code>body</code> · <code>dataWindow</code> · Menu · EditSurface · FormTable · HexView ·
+        CutMarker · IconButton · BodyViewer · the collection roster</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/data_window.rs</code> (9, mock runtime: any number of keys
+        write one record, the last move wins) · <code>ui/src/DataWindowScreen.test.tsx</code> (16: 2 MB JSON, 300 KiB form,
+        1 MiB binary, every copy and save target, no request)</td></tr>
+      <tr><td>suites</td><td>shell <code>cargo test</code> 183 + 9 green; clippy <code>-D warnings</code> green in the real
+        and scenario builds; vitest 60,977 in 81 files green; eslint, <code>tsc -b</code> and <code>vite build</code> clean</td></tr>
+      <tr><td>docs</td><td><a href="../decisions/dec-69-the-data-window.html">DEC-69</a> rule 10 ·
+        <a href="../decisions/decisions-index.html">decisions index</a> · the four design files retired</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2: DEC-69 gains rule 10, the shared geometry record, and its index
+      row says so. Menu, EditSurface, FormTable and HexView retired into their TSDoc in DEC-16's order: every fork is carried
+      by an <code>@avoid</code> or <code>@tier</code> line, then the file was removed. UC-9, UC-5's entry point and the
+      rulebook's keys and lexicon land with W7, as the epic's distillation plan says.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W4</td><td>the find bar over EditSurface's <code>matches</code> / <code>current</code>; reformat and sort keys
+        as steps; <em>fold to</em> in ⋯ over <code>handle.foldTo</code></td></tr>
+      <tr><td>W5</td><td>form find, sort by key, show encoded, copy as JSON; hex find into HexView's marks; wrap long
+        lines (⌥Z); XML re-indent (⌥⇧F)</td></tr>
+      <tr><td>W6</td><td>the decode peek in EditSurface's and FormTable's inset; <em>decode</em> in the right-click menu
+        and ⌘⇧D</td></tr>
+      <tr><td>W7</td><td>DEC-69's views and copy/save lines; UC-9; the keys and lexicon. The e2e drives a real window,
+        where placement from the shared record can be seen</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

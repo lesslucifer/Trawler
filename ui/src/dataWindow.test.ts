@@ -1,6 +1,8 @@
 import { afterEach, expect, test, vi } from "vitest";
 import {
+  claimOnce,
   dataWindowLabel,
+  isDataWindow,
   framePayload,
   openDataWindow,
   openInBrowser,
@@ -128,4 +130,29 @@ test("in a browser, a blocked popup leaves nothing parked on the opener", () => 
 test("in a browser, a window that is not a data window claims nothing", () => {
   expect(takeInBrowser({ name: "", opener: null } as unknown as Window)).toBeNull();
   expect(takeInBrowser({ name: "data-6b", opener: null } as unknown as Window)).toBeNull();
+});
+
+test("a window is a data window by its label in the shell, by its name in a browser", () => {
+  expect(isDataWindow({ name: "data-6b" } as Window)).toBe(true);
+  expect(isDataWindow({ name: "" } as Window)).toBe(false);
+  const shell = { __TAURI_INTERNALS__: { metadata: { currentWindow: { label: "data-6b" } } }, name: "" };
+  Object.assign(window, { __TAURI_INTERNALS__: shell.__TAURI_INTERNALS__ });
+  expect(isDataWindow(shell as unknown as Window)).toBe(true);
+  Object.assign(window, { __TAURI_INTERNALS__: { metadata: { currentWindow: { label: "main" } } } });
+  expect(isDataWindow(window)).toBe(false);
+});
+
+test("a screen that mounts twice shares the one claim instead of claiming null the second time", async () => {
+  let left: DataPayload | null = payload("k");
+  const take = vi.fn(async () => {
+    const claimed = left;
+    left = null;
+    return claimed;
+  });
+
+  const [first, second] = await Promise.all([claimOnce(take), claimOnce(take)]);
+
+  expect(take).toHaveBeenCalledOnce();
+  expect(first).toEqual(payload("k"));
+  expect(second).toBe(first);
 });

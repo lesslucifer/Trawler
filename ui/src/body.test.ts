@@ -1,5 +1,7 @@
 import {
   bodyKind,
+  bodyPayload,
+  captionFilename,
   bodyNotice,
   bodyText,
   byteLength,
@@ -14,6 +16,7 @@ import {
   rawKind,
   saveFilename,
 } from "./body";
+import type { FlowView } from "./api";
 
 test("bodyKind dispatches on the mime type, ignoring parameters", () => {
   expect(bodyKind("application/json")).toBe("json");
@@ -407,3 +410,46 @@ describe("decodeBody", () => {
   it("reports an empty body whole — there is no byte to fail on", () => {
     expect(decodeBody(new Uint8Array())).toEqual({ text: "", whole: true });
   });});
+
+describe("bodyPayload — what the pane hands a data window", () => {
+  const view = {
+    id: "f1",
+    method: "POST",
+    uri: "https://auth.example.com/oauth/token",
+  } as FlowView;
+  const fetched = { bytes: new Uint8Array([1, 2]), contentType: "application/x-www-form-urlencoded" };
+
+  it("pretty: the leg, method and where in the title, the served type as the hint", () => {
+    expect(bodyPayload(view, "request", fetched, true)).toEqual({
+      key: "f1:request:pretty",
+      title: "request body · POST auth.example.com/oauth/token",
+      bytes: fetched.bytes,
+      typeHint: "application/x-www-form-urlencoded",
+    });
+  });
+
+  it("raw: a key of its own, said in the title, and no hint", () => {
+    const payload = bodyPayload(view, "request", fetched, false);
+    expect(payload.key).toBe("f1:request:raw");
+    expect(payload.title).toBe("request body · raw · POST auth.example.com/oauth/token");
+    expect("typeHint" in payload).toBe(false);
+  });
+
+  it("no served type, no hint", () => {
+    expect("typeHint" in bodyPayload(view, "response", { ...fetched, contentType: null }, true)).toBe(false);
+  });
+});
+
+describe("captionFilename — a data window saves under its opener's caption", () => {
+  it("the caption made file-safe, the hint's extension, an optional suffix", () => {
+    expect(captionFilename("response body · GET api.example.com/v2/x", "application/json")).toBe(
+      "response-body-GET-api.example.com-v2-x.json",
+    );
+    expect(captionFilename("a b", undefined, "-original")).toBe("a-b-original.bin");
+  });
+
+  it("a caption with nothing usable is data; a long one is cut short", () => {
+    expect(captionFilename("· · ·", "text/plain")).toBe("data.txt");
+    expect(captionFilename("x".repeat(300), "text/plain")).toBe(`${"x".repeat(80)}.txt`);
+  });
+});

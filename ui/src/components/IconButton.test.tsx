@@ -20,6 +20,15 @@ describe("IconButton", () => {
     expect(screen.getByRole("button", { name: "save" })).toHaveTextContent("↓");
   });
 
+  it.each([
+    ["more", "⋯"],
+    ["window", "⧉"],
+    ["add", "+"],
+  ] as const)("%s draws %s and is named after it unless labelled", (glyph, face) => {
+    render(<IconButton glyph={glyph} onClick={() => {}} />);
+    expect(screen.getByRole("button", { name: glyph })).toHaveTextContent(face);
+  });
+
   it("a custom glyph wins over the named one, and label carries the accessible name", () => {
     render(
       <IconButton glyph="close" label="collapse panel" onClick={() => {}}>

@@ -1,8 +1,9 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import type { BodyFetch, BodyView, FlowView, Leg, TrawlerApi } from "./api";
 import {
   bodyKind,
   bodyNotice,
+  bodyPayload,
   bodyText,
   decodeBody,
   hexDump,
@@ -19,10 +20,12 @@ import {
   ImageRenderer,
   JsonRenderer,
   Notice,
+  OpenWhole,
   SegmentedControl,
   TextRenderer,
   XmlRenderer,
 } from "./components/index";
+import { openDataWindow } from "./dataWindow";
 
 const MODES = [
   { value: "pretty", label: "pretty" },
@@ -96,13 +99,25 @@ export const BodyViewer = memo(function BodyViewer({
   const shownText = () =>
     loaded == null ? "" : kind === "hex" ? hexDump(loaded.bytes) : bodyText(loaded.bytes);
 
+  const opener = useMemo(
+    () => (loaded ? { open: () => void openDataWindow(bodyPayload(flow, leg, loaded, pretty)) } : null),
+    [flow, leg, loaded, pretty],
+  );
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (opener && (event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "o") {
+      event.preventDefault();
+      opener.open();
+    }
+  };
+
   const save = () => {
     if (!loaded) return;
     void saveBody(loaded.bytes, saveFilename(flow.uri, leg, loaded.contentType));
   };
 
   return (
-    <div data-testid="body-viewer" data-leg={leg} className="flex min-h-0 flex-1 flex-col gap-2">
+    <div data-testid="body-viewer" data-leg={leg} onKeyDown={onKeyDown} className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex items-center gap-chrome-gap">
         <SegmentedControl
           options={MODES}
@@ -115,6 +130,7 @@ export const BodyViewer = memo(function BodyViewer({
             {kind !== "image" && (
               <CopyButton label="copy body" getPayload={shownText} />
             )}
+            <IconButton glyph="window" onClick={() => opener?.open()} label="open in data window" />
             <IconButton glyph="save" onClick={save} label="save" />
           </span>
         )}
@@ -134,7 +150,9 @@ export const BodyViewer = memo(function BodyViewer({
         // a static scroll container's overflow leak into the document's
         // scrollable area when its content is a display:contents grid.
         <div data-testid="body-pane" className="relative min-h-0 flex-1 overflow-auto">
-          <Dispatch fetched={loaded} kind={kind} />
+          <OpenWhole.Provider value={opener}>
+            <Dispatch fetched={loaded} kind={kind} />
+          </OpenWhole.Provider>
         </div>
       )}
     </div>

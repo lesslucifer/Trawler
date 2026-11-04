@@ -1,4 +1,5 @@
-import type { BodyView, Leg } from "./api";
+import type { BodyFetch, BodyView, FlowView, Leg } from "./api";
+import type { DataPayload } from "./dataWindow";
 
 // Content-type → renderer dispatch, the core UC-5 contract. Decoded bodies
 // dispatch on the served content type; raw bodies sniff bytes (rawKind),
@@ -236,6 +237,13 @@ function clean(part: string): string {
   return part.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-._]+|[-._]+$/g, "");
 }
 
+// A data window knows only its opener's caption, so that caption is the name a
+// saved file is found again by; the hint, when there is one, picks the extension.
+export function captionFilename(caption: string, typeHint: string | undefined, suffix = ""): string {
+  const name = clean(caption).slice(0, 80).replace(/[-._]+$/, "") || "data";
+  return `${name}${suffix}${bodyExtension(typeHint ?? null)}`;
+}
+
 export function saveFilename(uri: string, leg: Leg, contentType: string | null): string {
   return `${endpointSlug(uri)}-${leg}${bodyExtension(contentType)}`;
 }
@@ -324,4 +332,19 @@ function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
     });
     input.click();
   });
+}
+
+// What the pane hands a data window: the bytes it holds, in the mode it shows.
+// Raw bytes go without a hint, because a served type says nothing about stored
+// bytes that may still be compressed; the window sniffs them, as rawKind does.
+export function bodyPayload(flow: FlowView, leg: Leg, fetched: BodyFetch, pretty: boolean): DataPayload {
+  const mode = pretty ? "pretty" : "raw";
+  const where = flow.uri.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+  const payload: DataPayload = {
+    key: `${flow.id}:${leg}:${mode}`,
+    title: `${leg} body${pretty ? "" : " · raw"} · ${flow.method} ${where}`,
+    bytes: fetched.bytes,
+  };
+  if (pretty && fetched.contentType) payload.typeHint = fetched.contentType;
+  return payload;
 }
