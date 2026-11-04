@@ -49,6 +49,7 @@ export function startHistory(original: string): History {
 
 export const originalText = (history: History) => history.steps[0].text;
 export const workingText = (history: History) => history.steps[history.at].text;
+export const currentStepName = (history: History) => history.steps[history.at].name;
 export const isModified = (history: History) => workingText(history) !== originalText(history);
 export const canUndo = (history: History) => history.at > 0;
 export const canRedo = (history: History) => history.at < history.steps.length - 1;

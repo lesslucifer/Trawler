@@ -146,19 +146,57 @@ describe("find marks", () => {
     expect(current[0].className).toContain("outline-ink-mute");
   });
 
-  it("the current match is unfolded when a fold hides it", () => {
+  const hiding = (view: EditorView, at: number) => {
+    let hidden = 0;
+    foldedRanges(view.state).between(at, at + 4, () => {
+      hidden += 1;
+    });
+    return hidden;
+  };
+
+  it("the current match is unfolded when the caller reveals it", () => {
     const ref = createRef<EditSurfaceHandle>();
     const { container, rerender } = render(<EditSurface handle={ref} text={DOC} language="json" />);
     const view = viewIn(container);
     act(() => ref.current!.foldTo("all"));
     expect(folded(view)).toBeGreaterThan(0);
     const at = DOC.indexOf("dv_2");
-    rerender(<EditSurface handle={ref} text={DOC} language="json" matches={[{ from: at, to: at + 4 }]} current={0} />);
-    let hidden = 0;
-    foldedRanges(view.state).between(at, at + 4, () => {
-      hidden += 1;
+    const marked = { language: "json" as const, matches: [{ from: at, to: at + 4 }], current: 0 };
+    rerender(<EditSurface handle={ref} text={DOC} {...marked} />);
+    expect(hiding(view, at)).toBeGreaterThan(0);
+    rerender(<EditSurface handle={ref} text={DOC} {...marked} reveal={1} />);
+    expect(hiding(view, at)).toBe(0);
+  });
+
+  it("an edit that moves the matches reveals nothing", () => {
+    const ref = createRef<EditSurfaceHandle>();
+    const at = DOC.indexOf("dv_2");
+    const { container, rerender } = render(<EditSurface handle={ref} text={DOC} language="json" />);
+    const view = viewIn(container);
+    act(() => ref.current!.foldTo("all"));
+    const edited = ` ${DOC}`;
+    type(view, 0, " ");
+    rerender(<EditSurface handle={ref} text={edited} language="json" matches={[{ from: at + 1, to: at + 5 }]} current={0} />);
+    expect(hiding(view, at + 1)).toBeGreaterThan(0);
+  });
+});
+
+describe("the handle", () => {
+  it("focuses the document, reads the cursor, and maps a point to a position", () => {
+    const ref = createRef<EditSurfaceHandle>();
+    const { container } = render(<EditSurface handle={ref} text={DOC} language="json" />);
+    const view = viewIn(container);
+    act(() => ref.current!.focus());
+    expect(view.hasFocus).toBe(true);
+    act(() => {
+      view.dispatch({ selection: EditorSelection.cursor(12) });
     });
-    expect(hidden).toBe(0);
+    expect(ref.current!.cursor()).toBe(12);
+    const spy = vi.spyOn(view, "posAtCoords").mockReturnValue(30);
+    expect(ref.current!.positionAt({ x: 4, y: 8 })).toBe(30);
+    expect(spy).toHaveBeenCalledWith({ x: 4, y: 8 });
+    spy.mockReturnValue(null);
+    expect(ref.current!.positionAt({ x: 4, y: 8 })).toBeNull();
   });
 });
 
@@ -177,7 +215,8 @@ describe("folding", () => {
     act(() => ref.current!.foldTo("none"));
     expect(folded(view)).toBe(0);
     act(() => ref.current!.foldTo("all"));
-    expect(folded(view)).toBeGreaterThan(0);
+    expect(folded(view)).toBe(4);
+    expect(view.state.doc.lineAt(foldedRanges(view.state).iter().from).number).toBe(2);
   });
 
   it("a folded line shows how many lines it hides", () => {

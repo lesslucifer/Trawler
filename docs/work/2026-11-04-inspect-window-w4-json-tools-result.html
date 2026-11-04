@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb004c9f34851f0dfae519" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W4 result: JSON tools</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W4 — result</h1>
+      <p>A JSON working copy can now be searched, re-indented, key-sorted, folded to a depth, and mined for a node's path
+        or value. Every value survives a reformat as written.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W4</span> · branch
+        <code>wu/inspect-window/json-tools</code> · <a href="2026-11-04-inspect-window-w4-json-tools-plan.html">WU
+        plan</a> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th></th></tr>
+      <tr><td>⌘F in a 2 MB JSON document: <em>1 of N</em>, stepping both ways, Esc back to the surface</td><td>the find bar
+        under the header on every EditSurface kind; case-insensitive, literal; Enter / ⇧Enter, ⌘G / ⇧⌘G and ↑ ↓ step and
+        wrap; past 10 000 matches the count reads <em>10 000+</em></td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a hand edit while find holds a query: the count follows, the view stays</td><td>matches recount on every
+        edit; EditSurface reveals the current match only when the caller bumps <code>reveal</code></td><td><span
+        class="badge auto">delivered</span></td></tr>
+      <tr><td>indent 2 · 4 · tab · minified and sort keys as steps; undo; restore</td><td>one named step each
+        (<em>indent 4 spaces</em>, <em>sorted keys</em>…); the indent row shows the choice the copy is at; sort keeps the
+        copy's own indent unit, whatever it is</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>numbers past 2<sup>53</sup>, repeated keys, escapes kept</td><td><code>jsonTools</code> keeps each literal's
+        source text and every member; a BOM, a closing line break and CRLF survive; nesting 100 000 deep parses and lays
+        out without recursion</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a copy that does not parse says where</td><td>a warn Notice, once typing pauses: <em>not valid JSON at line
+        L, column C: why</em>; indent and sort keys disabled with <em>needs valid JSON</em>; find and fold still
+        work</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>fold to 1 · 2 · 3 · all · none from ⋯</td><td>on JSON and XML; the choice shows until the text
+        changes</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>copy a node's path or value</td><td>JSON right-click <em>copy the path</em> ⌥⌘C (<code>$.a["b c"][2]</code>)
+        and <em>copy the value</em> ⇧⌥⌘C (a string decoded, anything else as written), at the pointer or the cursor; the
+        status bar says <em>copied</em></td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan or run said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>the run's right-click on a selection holds decode and copy only</td><td>on JSON it also holds <em>copy the
+        path</em> and <em>copy the value</em>, keyed ⌥⌘C / ⇧⌥⌘C</td><td>the epic's toolset row, which the run did not draw;
+        the owner placed it on the right-click on 2026-11-04. Declared undesigned on the design note</td></tr>
+      <tr><td>EditSurface: the current match revealed whenever matches or current change (W3)</td><td>a
+        <code>reveal</code> counter the caller bumps on a step or a new search</td><td>matches move on every edit, so W3's
+        rule would scroll the user away from what they type; a counter also re-reveals a lone match the user scrolled
+        from</td></tr>
+      <tr><td>EditSurface: <code>foldTo("all")</code> as CodeMirror's <code>foldAll</code> (W3)</td><td>every range
+        inside the outermost folds; the outermost stays open</td><td><code>foldAll</code> folds only top-level ranges, so
+        a document collapsed to one chip; the run's mockup folds every nested range</td></tr>
+      <tr><td>the find bar: JSON, then W5 for text and XML</td><td>it serves every EditSurface kind now: JSON, XML,
+        text, and a form or text shown as text</td><td>one surface, one set of marks; W5 adds the form table and the hex
+        dump to the same bar</td></tr>
+      <tr><td>the notice reads <em>find, fold and decode still work</em></td><td><em>find and fold still work</em></td><td>decode
+        lands with W6, which adds it back</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>159f1d94</code> plan · <code>464fd26d</code> find, indent and sort keys, fold to, copy
+        a node's path or value · <code>da6a4d51</code> review round 1's fix</td></tr>
+      <tr><td>unit</td><td><code>jsonTools</code> (50: every layout, sort keeping any indent unit, deep nesting, numbers past 2<sup>53</sup>, repeated
+        keys, escapes, BOM, CRLF, each malformed input's line and column, the node at an offset, its path and value, find)
+        · <code>EditSurface</code> (reveal on request only, an edit reveals nothing, the handle's focus, cursor and
+        position, fold to all) · <code>IconButton</code> (previous ↑, next ↓) · <code>workingCopy</code>
+        (<code>currentStepName</code>)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (19 new: find over a 2 MB JSON document by
+        every key, Esc, no match, a counted edit, CRLF positions, none on a form table; indent, sort, minify as steps
+        undone one at a time, sort keeping an 8-space indent, a big number and repeated keys kept, CRLF laid out; the notice and the disabled items, the
+        notice once typing pauses; read-only JSON offers no reformat; fold to on JSON and XML; copy the path and value from
+        the right-click and the keys, CRLF kept, waiting for a parse, absent on text)</td></tr>
+      <tr><td>suites</td><td>vitest 61 147 in 87 files green; eslint, <code>tsc -b</code> and <code>vite build</code>
+        clean; the pre-commit fmt and clippy green</td></tr>
+      <tr><td>review</td><td>Round 1 FAIL on <code>30d04ff9</code>: one verified important (sort keys laid the whole
+        document out at 2 spaces unless it was indented by exactly 4 spaces or a tab), fixed with regression tests in
+        <code>da6a4d51</code>: the layout takes the indent unit itself and sort reads the one the text is written with.
+        Of its two nits, an unclosed string's reason that could never show is fixed (named at its opening quote); the
+        indent row reading its choice from the step's name is waived on the note. Round 2 on the tip that carries this
+        report</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2 waived: no decision, use case or rule changed. EditSurface's
+      <code>reveal</code> and fold-to-all and IconButton's two glyphs live in their TSDoc (T4). UC-9's JSON rows and the
+      keys (⌘F, ⌘G, ⌥⌘C, ⇧⌥⌘C) land in the rulebook with W7, as the epic's distillation plan says.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W5</td><td>the form table's and the hex dump's find through the same bar; wrap long lines (⌥Z); XML
+        re-indent (⌥⇧F)</td></tr>
+      <tr><td>W6</td><td>decode on the right-click beside copy; the parse notice's detail names decode again</td></tr>
+      <tr><td>W7</td><td>J2 drives find, sort keys and a hand edit in a real window; the keys ⌘F, ⌘G / ⇧⌘G, ⌥⌘C,
+        ⇧⌥⌘C and the step names into the rulebook</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
