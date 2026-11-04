@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app (round 7)"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: 583d66a3e29100dc87c3155afb50a39a0d535071
+diff_sha256: 1569246576c9d8a8148e610cb38e2241e86f895a47f116b7a1a9145b8d0c9d57
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 5
+  stage_seconds:
+    gate0: 184
+    finders: 56
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+nits:
+  - finding: "CaptureService maps CoreState to its StatusLine verdict locally, beside verdicts.ts's StepStatusView vocabulary"
+    waived: "the page resolves the supervisor's CoreState, a different input from setup's readings in verdicts.ts; the one wording both windows share for an exit, stoppedWords, already lives in coreService.ts"
+  - finding: "NotAnswering reads the core-service context instead of taking restart props from Shell"
+    waived: "it is mounted in four App sites plus inside FlowList; one context keeps the restart, its in-flight flag and its refusal from being threaded, and drifting, through each"
+  - finding: "restart_refusal formats user-facing text in the Tauri command layer"
+    waived: "it sits beside W2's refusal(), the shell's other user-facing StartError sentence, in the same file and layer; round 5 verified this placement"
+  - finding: "the state listener counts an update before its live check, so under StrictMode a stale listener's event can skip the second mount's snapshot"
+    waived: "any event a stale listener counts is also delivered to the live listener, which sets that state itself, so nothing is left unset"
+  - finding: "two quick Settings activations can both pass the open check, and the second build fails on the duplicate label"
+    waived: "the first build opens the one Settings window the user sees; the second's error is only logged, and a later press focuses the open window"
+verdict: PASS
+date: 2026-11-04
