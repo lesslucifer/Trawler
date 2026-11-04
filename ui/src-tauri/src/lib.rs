@@ -6,6 +6,7 @@ mod reach;
 mod route;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
+pub mod window_geometry;
 
 #[cfg(feature = "e2e")]
 mod e2e_core_address;
@@ -17,6 +18,11 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .setup(|app| {
+            window_geometry::install(app.handle());
+            Ok(())
+        })
+        .on_window_event(window_geometry::track)
         .menu(menu::build)
         .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()));
     #[cfg(not(feature = "scenario"))]
@@ -53,8 +59,11 @@ pub fn run() {
         .plugin(tauri_plugin_wdio::init())
         .plugin(tauri_plugin_wdio_webdriver::init());
 
-    builder
-        .build(tauri::generate_context!())
-        .expect("error while running trawler-ui")
-        .run(|_, _| {});
+    builder.build(tauri::generate_context!()).expect("error while running trawler-ui").run(
+        |app, event| {
+            if let tauri::RunEvent::Exit = event {
+                window_geometry::save(app);
+            }
+        },
+    );
 }
