@@ -58,9 +58,9 @@
         distilled, and the design retires in the WU that builds it</td></tr>
       <tr><td>the archived design run's two links to the retired design file are now plain citations</td><td>verify-doc
         refuses a link to a file the tree no longer holds</td></tr>
-      <tr><td>added: the supervisor tests pay macOS's first-exec scan before their readiness clock
-        (<code>ui/src-tauri/tests/common/mod.rs</code>)</td><td>Gate 0 was red on <code>quit_stops_core</code>: a freshly
-        linked app binary took 16–22 s to start its first exec, and the tests give the core 20 s to be ready.
+      <tr><td>added: the supervisor tests' readiness patience is 60 s, sized for macOS's scan of a freshly linked
+        binary (<code>ui/src-tauri/tests/common/mod.rs</code>)</td><td>Gate 0 was red on <code>quit_stops_core</code>: a
+        freshly linked app binary sat 16–22 s in the loader before it ran, and the tests gave the core 20 s to be ready.
         <code>cargo test</code> relinks before each run, so the test always paid the scan. The app is unaffected: it
         runs its core from its own, already-scanned binary</td></tr>
     </table>
@@ -79,7 +79,7 @@
         <code>ui/src-tauri/tests/view_prefs_store.rs</code>: the wire record, now with chips, round-trips</td></tr>
       <tr><td>e2e</td><td>waived: W4's WebDriver spec walks the chip flows against a real core</td></tr>
       <tr><td>fix</td><td>after a forced relink, <code>quit_stops_core</code> (2), <code>supervisor</code> (4) and
-        <code>restart_command</code> (6) pass; before the fix both <code>quit_stops_core</code> tests failed with
+        <code>restart_command</code> (6) pass, and so does Gate 0; before the fix both <code>quit_stops_core</code> tests failed with
         <code>NoReady { waited: 20s }</code></td></tr>
       <tr><td>suite</td><td>all 81 front-end test files green, eslint and <code>tsc -b</code> clean, the bundle builds,
         clippy and fmt green at commit</td></tr>
