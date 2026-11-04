@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "wdio run wdio.conf.ts"
+    "test": "wdio run wdio.conf.ts",
+    "test:one-app": "wdio run one-app.conf.ts"
   },
   "devDependencies": {
     "@wdio/cli": "^9.0.0",

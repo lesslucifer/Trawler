@@ -6,6 +6,6 @@ pnpm-lock.yaml
 .core-ports.json
 .DS_Store
 *.log
-.run-tally.json
+.run-tally*.json
 # The walkthrough launcher hands its worker the harness ports the same way.
 walkthrough/.walkthrough-ports.json

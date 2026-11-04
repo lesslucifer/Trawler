@@ -22,7 +22,8 @@
         {
           "identifier": "wdio",
           "windows": [
-            "main"
+            "main",
+            "settings"
           ],
           "permissions": [
             "wdio:default"
