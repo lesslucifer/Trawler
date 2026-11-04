@@ -1,0 +1,28 @@
+schema: cr/v5
+scope: "WU query-bar-e2e -> epic/query-bar"
+epic: E-QUERY
+wu: E-QUERY.W4
+branch: wu/query-bar/query-bar-e2e
+base: 2913e91dddbfeb72fcc87555d0890ee694902be0
+head: 0d38ebc1b3dfc32da57a2105dbe022454aa2a4d9
+diff_sha256: 76fdc16e41f7313e3dd095d2bb3bae0b8cdb534d0e780a4f91f18269a8a586fa
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 7
+  stage_seconds:
+    gate0: 360
+    total: 394
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency: { found: 3, verified: 0 }
+findings: { found: 8, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-05
