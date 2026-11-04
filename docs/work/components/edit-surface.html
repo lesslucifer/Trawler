@@ -21,7 +21,7 @@
         searchable, with no cap.</p>
       <div class="meta">Component design · 2026-11-03 · Trawler · status: draft, awaiting confirmation · proposed by the
         <a href="../2026-11-03-data-window-design-run.html">data window's design run</a> (E-INSPWIN.W2) · built by
-        E-INSPWIN.W3, extended by W4 · retires into the TSDoc on build (DEC-16)</div>
+        E-INSPWIN.W3, extended by W4 (find, fold to depth) and W6 (the inset) · amended by the run's round 2 (2026-11-04) · retires into the TSDoc on build (DEC-16)</div>
     </div>
   </header>
   <main>
@@ -34,7 +34,7 @@
       <tr><td>tier</td><td>T2: owns the editor configuration (editable document, virtualised viewport, fold gutter, the
         three-token highlight, find marks). The text, the history and what an edit means are the caller's (<code>DataWindow</code>)</td></tr>
       <tr><td>tenants</td><td>the data window's surface for json, xml and text, and for a form shown <em>encoded</em> · the
-        decoder panel's result, read-only · a filtered view, read-only</td></tr>
+        decode peek's result, read-only</td></tr>
       <tr><td>exists today</td><td>no. <code>SourceSurface.tsx</code> is the read-only sibling: same CodeMirror 6, same
         highlight, <code>EditorState.readOnly</code> on</td></tr>
       <tr><td>made of</td><td>CodeMirror 6 (T0): <code>@codemirror/view</code>, <code>state</code>, <code>language</code>,
@@ -44,7 +44,7 @@
       <tr><th>Driver</th><th>Design consequence</th></tr>
       <tr><td>DEC-68 rule 7: no render caps</td><td>no <code>TEXT_MAX</code>; CodeMirror's viewport renders only the visible lines, so 10 MiB stays scrollable</td></tr>
       <tr><td>DEC-68 rule 4: the original never changes</td><td>the surface never holds the original. It is handed the working copy's text and reports each change; the caller keeps both</td></tr>
-      <tr><td>one history (the run's C7, C2)</td><td>CodeMirror's own history is off. Each committed change goes to <code>onChange</code>, so reformat, sort, replace and a typed edit undo in one sequence</td></tr>
+      <tr><td>one history (restore original and indent are steps)</td><td>CodeMirror's own history is off. Each committed change goes to <code>onChange</code>, so reformat, sort, replace and a typed edit undo in one sequence</td></tr>
       <tr><td>DEC-68 rule 5: everything but the original is scratch</td><td>the line UC-5 draws sits between this and SourceSurface. The TSDoc cites DEC-68 so the next reader does not "fix" the edit back out</td></tr>
       <tr><td>mono-for-wire-data, the syntax roles</td><td>the document is mono; keys, strings and numbers take <code>syn-key</code> / <code>syn-str</code> / <code>syn-num</code>, punctuation <code>ink-mute</code>, as in SourceSurface</td></tr>
       <tr><td>keyboard-parity</td><td>the surface is one tab stop; inside it the cursor, selection and fold keys are CodeMirror's</td></tr>
@@ -67,11 +67,12 @@
       <tr><th>Rule</th><th>Example</th><th>Spec</th><th>Why</th></tr>
       <tr><td>edit</td><td>type <code>enterprise</code> over <code>team</code></td><td><code>onChange(text, step)</code> fires on each transaction the user makes, coalesced per CodeMirror's input grouping, with a step name (<em>typed on line 9</em>)</td><td>the caller's history needs a step per undo, not per keystroke</td></tr>
       <tr><td>replace from outside</td><td>sort keys, restore original</td><td>a new <code>text</code> prop replaces the document in one transaction and keeps the scroll position when the line still exists</td><td>reformat is the caller's act; the surface only shows its result</td></tr>
-      <tr><td>read-only</td><td>a filtered view, a decoded payload</td><td><code>readOnly</code> sets <code>EditorState.readOnly</code>; selection, find and fold still work</td><td>C9: a view is a lens, never edited</td></tr>
+      <tr><td>read-only</td><td>a decoded JWT payload in the peek</td><td><code>readOnly</code> sets <code>EditorState.readOnly</code>; selection, find and fold still work</td><td>a decoded result is not the working copy; replace is the peek's act</td></tr>
+      <tr><td>inset</td><td>the decode peek under line 9</td><td><code>inset</code> renders the caller's node as a block widget after that line (a CodeMirror block decoration): it scrolls with the document and pushes the lines below it down. One at a time; a change to the text above it keeps it on its line</td><td>the run's D4: the peek must not cover the lines it is compared against</td></tr>
       <tr><td>language</td><td>json · xml · plain</td><td><code>lang-json</code>, <code>lang-xml</code>, or none. A json surface whose text does not parse is still json: the highlighter degrades, the fold gutter falls back to indentation</td><td>a user-broken document must stay editable and foldable</td></tr>
-      <tr><td>find</td><td><code>login</code> → 4 marks, the 2nd current</td><td><code>matches</code> (ranges) and <code>current</code> come from the caller; changing <code>current</code> scrolls it into view and unfolds what hides it</td><td>JSON's key / value scoping is the caller's (W4); the surface only paints ranges</td></tr>
+      <tr><td>find</td><td><code>login</code> → 4 marks, the 2nd current</td><td><code>matches</code> (ranges) and <code>current</code> come from the caller; changing <code>current</code> scrolls it into view and unfolds what hides it</td><td>find is plain text, case-insensitive, with no scopes (the owner's round 1); the surface only paints the caller's ranges</td></tr>
       <tr><td>fold</td><td>fold to depth 2</td><td><code>foldTo(depth | "all" | "none")</code> on a ref; the gutter folds one node</td><td>Q-table: fold per node, all, and to depth N</td></tr>
-      <tr><td>selection</td><td>select a JWT</td><td><code>onSelect(text)</code> with the selected text (empty when collapsed)</td><td>the toolbar's <em>decode</em> enables on it</td></tr>
+      <tr><td>selection</td><td>select a JWT</td><td><code>onSelect(text)</code> with the selected text (empty when collapsed)</td><td>right-click <em>decode</em> and ⌘⇧D read it, and the peek opens under its line</td></tr>
     </table>
 
     <h2 id="states">States</h2>
@@ -85,36 +86,38 @@
       <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
       <tr><td>reuse SourceSurface</td><td><span class="badge auto">settled</span> a sibling component on the same CodeMirror and highlight</td><td><span class="badge approval">rejected</span> an <code>editable</code> prop on SourceSurface: its <code>@avoid</code> bans it, and the pane's evidence rule would hang on a boolean</td></tr>
       <tr><td>whose history</td><td><span class="badge auto">settled</span> the caller's, one list for every step</td><td><span class="badge approval">rejected</span> CodeMirror's history: reformat and decode-replace would undo separately from typing</td></tr>
+      <tr><td>the peek's place</td><td><span class="badge auto">settled</span> a block in the document, under its line</td><td><span class="badge approval">rejected</span> a floating overlay: it would hide the lines the result is compared against (D4)</td></tr>
       <tr><td>large documents</td><td><span class="badge auto">settled</span> CodeMirror's viewport, with the whole text in the state</td><td><span class="badge approval">rejected</span> paging the document: find, fold and select-all would each have to cross pages</td></tr>
     </table>
 
     <h2 id="api">API + TSDoc</h2>
     <table data-c="props">
       <tr><th>Prop</th><th>Type</th><th>Note</th></tr>
-      <tr><td><code>text</code></td><td><code>string</code></td><td>the working copy, or a view's text</td></tr>
+      <tr><td><code>text</code></td><td><code>string</code></td><td>the working copy, or a decoded result</td></tr>
       <tr><td><code>language</code></td><td><code>"json" | "xml" | "plain"</code></td><td>highlight and fold rules</td></tr>
-      <tr><td><code>readOnly</code></td><td><code>boolean</code>, default false</td><td>views and decoded results</td></tr>
+      <tr><td><code>readOnly</code></td><td><code>boolean</code>, default false</td><td>decoded results</td></tr>
       <tr><td><code>wrap</code></td><td><code>boolean</code>, default true</td><td>long lines wrap</td></tr>
       <tr><td><code>matches</code> · <code>current</code></td><td><code>{from, to}[]</code> · <code>number</code></td><td>find ranges in document offsets; −1 for none</td></tr>
       <tr><td><code>onChange</code></td><td><code>(text, step) =&gt; void</code></td><td>one call per user transaction group</td></tr>
-      <tr><td><code>onSelect</code></td><td><code>(text) =&gt; void</code></td><td>the selection's text</td></tr>
+      <tr><td><code>onSelect</code></td><td><code>(text, line) =&gt; void</code></td><td>the selection's text and the line its end is on</td></tr>
+      <tr><td><code>inset</code></td><td><code>{afterLine, node} | null</code></td><td>one block under a line: the decode peek</td></tr>
       <tr><td><code>ref</code></td><td><code>{ foldTo(depth | "all" | "none") }</code></td><td>fold commands</td></tr>
       <tr><td><code>testId</code></td><td><code>string</code></td><td>as SourceSurface</td></tr>
     </table>
     <pre data-c="tsdoc"><code>/**
  * EditSurface — the data window's whole-data surface: every byte of a JSON, XML or text document, editable, foldable and searchable, uncapped.
  * @tier T2 — owns the editor configuration (editable document, virtualised viewport, fold gutter, three-token highlight, find marks); the text, the one history and what a change means are the caller's
- * @anatomy line numbers (ink-mute) · fold gutter ▾/▸ with a "… N lines" wash-tint chip on a folded line · mono text-body document, syn-key/syn-str/syn-num, punctuation ink-mute, wrap on by default · find marks wash-select, current wash-active + 1px ink-mute outline · CodeMirror cursor and selection
- * @use the data window only (DEC-68): its json / xml / text surface and a form shown encoded; read-only for a filtered view and a decoded result
- * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-68 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-68 rule 7) · marking the document edited (DEC-59: the screen says so in words)
- * @states editable · read-only (selection, find and fold still work) · folded (view state) · with find marks. No empty, error or loading state
+ * @anatomy line numbers (ink-mute) · fold gutter ▾/▸ with a "… N lines" wash-tint chip on a folded line · mono text-body document, syn-key/syn-str/syn-num, punctuation ink-mute, wrap on by default · find marks wash-select, current wash-active + 1px ink-mute outline · CodeMirror cursor and selection · an inset block under one line (the caller's node)
+ * @use the data window only (DEC-68): its json / xml / text surface and a form shown encoded; read-only for a decoded result
+ * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-68 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-68 rule 7) · marking the document edited (DEC-59: the screen says so in words) · overlaying the inset on the lines below it: it is a block in the document
+ * @states editable · read-only (selection, find and fold still work) · folded (view state) · with find marks · with an inset under one line. No empty, error or loading state
  * @madeof CodeMirror 6 (T0) — view, state, language, lang-json, lang-xml, search decorations
  */</code></pre>
 
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit">
       <div class="card"><h3>Use</h3><p>Inside the data window: the working copy of a JSON, XML or text payload, a form
-        shown encoded, and read-only for a filtered view or a decoded result.</p></div>
+        shown encoded, and read-only for a decoded result in the peek.</p></div>
       <div class="card"><h3>Avoid</h3><p>The body pane (SourceSurface, read-only, is the evidence) · a plain value that
         is one line (Field) · a form's pairs (FormTable) · binary (HexView).</p></div>
     </div>
@@ -192,7 +195,7 @@
     mount("spec-states", (
       <div className="grid grid-cols-3 gap-4 font-ui text-chrome text-ink-mute">
         <div><Surface initial={DOC} />editable</div>
-        <div><Surface initial={DOC} readOnly />read-only (a view, a decoded result)</div>
+        <div><Surface initial={DOC} readOnly />read-only (a decoded result)</div>
         <div><Surface initial={DOC} folded={[5]} find="kind" />folded, with find marks</div>
       </div>
     ));

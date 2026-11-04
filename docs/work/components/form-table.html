@@ -16,10 +16,10 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>FormTable <span class="badge id">T2</span></h1>
-      <p>Every pair of a URL-encoded form, uncapped, each key and value whole and wrapped, edited in place.</p>
+      <p>Every pair of a URL-encoded form, uncapped, each key and value whole and wrapped, edited in place, with a pair added or removed from its own row.</p>
       <div class="meta">Component design · 2026-11-03 · Trawler · status: draft, awaiting confirmation · proposed by the
         <a href="../2026-11-03-data-window-design-run.html">data window's design run</a> (E-INSPWIN.W2) · built by
-        E-INSPWIN.W3, extended by W5 · retires into the TSDoc on build (DEC-16)</div>
+        E-INSPWIN.W3, extended by W5 (find, sort, export) and W6 (the inset) · amended by the run's round 2 (2026-11-04) · retires into the TSDoc on build (DEC-16)</div>
     </div>
   </header>
   <main>
@@ -33,7 +33,7 @@
         is never cut. The pairs, the order and what an edit means are the caller's</td></tr>
       <tr><td>tenants</td><td>the data window's form surface (decoded)</td></tr>
       <tr><td>exists today</td><td>no. <code>FormRenderer.tsx</code> is the capped, read-only pane member over KeyValueRow</td></tr>
-      <tr><td>made of</td><td>Field (T1) for the cell being edited · IconButton (T1) for remove · <code>@tanstack/react-virtual</code> (T0), already a dependency</td></tr>
+      <tr><td>made of</td><td>Field (T1) for the cell being edited · IconButton (T1) for add and remove · <code>@tanstack/react-virtual</code> (T0), already a dependency</td></tr>
     </table>
     <table data-c="drivers">
       <tr><th>Driver</th><th>Design consequence</th></tr>
@@ -53,9 +53,11 @@
       <tr><td>2</td><td>number</td><td><code>font-ui text-chrome text-ink-mute</code>, right-aligned</td><td>the decoder and the status line name a pair by number</td></tr>
       <tr><td>3</td><td>key</td><td>mono <code>text-body text-syn-key</code>, wrapped; under it, for a repeat, <em>N of M “key”</em> in <code>text-chrome text-ink-mute</code></td><td>the key is the pair's name; the repeat count says which one this is</td></tr>
       <tr><td>4</td><td>value</td><td>mono <code>text-body text-ink</code>, wrapped whole; an empty value reads <em>none</em> in <code>ink-mute</code>; a kept-as-sent value has <em>kept as sent: not a valid percent-escape</em> under it</td><td>lexicon <em>none</em>; a bad escape is shown, not silently repaired</td></tr>
-      <tr><td>5</td><td>remove</td><td>IconButton <code>close</code>, labelled <em>remove pair N</em></td><td>one act per row</td></tr>
-      <tr><td>6</td><td>selected row</td><td><code>bg-canvas-soft</code></td><td>the decoder reads the selected row's value</td></tr>
-      <tr><td>7</td><td>edit cell</td><td>a Field, <code>multiline verbatim</code>, <code>h-12 w-full</code>, in place of the cell</td><td>C4</td></tr>
+      <tr><td>5</td><td>row acts</td><td>IconButton <code>add</code> + (<em>add a pair after pair N</em>) and <code>close</code> × (<em>remove pair N</em>), <code>invisible</code> until the row is hovered, focused or selected</td><td>the owner's round 1: nothing on screen that is not needed now; focus shows them, so the keyboard reaches them</td></tr>
+      <tr><td>6</td><td>selected row</td><td><code>bg-canvas-soft</code>, its row acts shown</td><td>⌘⇧D decodes the selected row's value</td></tr>
+      <tr><td>7</td><td>edit cell</td><td>a Field, <code>multiline verbatim</code>, <code>h-12 w-full</code>, in place of the cell</td><td>edit in place (round-1 C4, held)</td></tr>
+      <tr><td>8</td><td>new-pair row</td><td>after the last pair: <em>new key</em> · <em>new value</em> in <code>font-ui text-chrome text-ink-mute</code>, <code>hover:bg-wash-hover</code>; Enter or a click adds a pair and opens its key Field</td><td>adding at the end needs no hover target</td></tr>
+      <tr><td>9</td><td>inset</td><td>the caller's node in a block under one row, <code>border-b border-hairline</code>, inset past the number column</td><td>the decode peek under the value it decoded (run's D4)</td></tr>
     </table>
 
     <h2 id="behavior">Behavior</h2>
@@ -65,9 +67,9 @@
       <tr><td>decode for display</td><td><code>scope=sessions%20devices</code> → sessions devices</td><td>percent-decoding with + as a space; a malformed escape keeps the raw text and sets the kept-as-sent line</td><td>the reader reads decoded; a broken input is never rewritten</td></tr>
       <tr><td>edit</td><td>click the value → Field → ⌘↵</td><td>click or Enter opens the Field with the decoded text; ⌘↵ or leaving it calls <code>onEdit(index, "key" | "value", text)</code>; Esc cancels</td><td>Enter is a newline inside a multi-line value</td></tr>
       <tr><td>encode back</td><td>edited <code>a b&amp;c</code></td><td>the caller re-encodes the one edited pair; every other pair keeps its exact sent bytes</td><td>an edit must not re-encode pairs nobody touched</td></tr>
-      <tr><td>remove</td><td>× on pair 7</td><td><code>onRemove(index)</code></td><td>the caller's step</td></tr>
-      <tr><td>rows shown</td><td>a filter keeps 2 of 9</td><td><code>rows</code> may be a subset; numbers stay the pair's own. With <code>readOnly</code> no cell opens and × is disabled</td><td>C9: a view is read-only</td></tr>
-      <tr><td>find marks</td><td><code>scope</code> → marks in keys and values</td><td><code>find</code> and <code>current</code> from the caller; current scrolls into view</td><td>the same two washes as EditSurface</td></tr>
+      <tr><td>add · remove</td><td>+ on pair 4 · × on pair 7 · Enter on the new-pair row</td><td><code>onAdd(afterIndex)</code> (−1 never: the new-pair row passes the last index) · <code>onRemove(index)</code></td><td>the caller's steps; the caller opens the new pair's key Field</td></tr>
+      <tr><td>right-click</td><td>right-click pair 5</td><td><code>onContext(index, point)</code>; the caller opens its Menu there</td><td>decode, copy, add and remove from the row (run's D6)</td></tr>
+            <tr><td>find marks</td><td><code>scope</code> → marks in keys and values</td><td><code>find</code> and <code>current</code> from the caller; current scrolls into view</td><td>the same two washes as EditSurface</td></tr>
       <tr><td>virtualise</td><td>12 000 pairs</td><td>rows measured after render (<code>measureElement</code>); overscan of 8</td><td>variable heights, no truncation (DEC-34 not taken)</td></tr>
     </table>
 
@@ -88,20 +90,20 @@
     <table data-c="props">
       <tr><th>Prop</th><th>Type</th><th>Note</th></tr>
       <tr><td><code>pairs</code></td><td><code>{index, key, value, kept}[]</code></td><td>decoded for display, in the caller's order</td></tr>
-      <tr><td><code>rows</code></td><td><code>number[]</code>, optional</td><td>the indexes a view keeps</td></tr>
-      <tr><td><code>readOnly</code></td><td><code>boolean</code></td><td>a view</td></tr>
-      <tr><td><code>selected</code> · <code>onSelect</code></td><td><code>number | null</code> · <code>(index) =&gt; void</code></td><td>the decoder's row</td></tr>
-      <tr><td><code>onEdit</code> · <code>onRemove</code></td><td><code>(index, part, text) =&gt; void</code> · <code>(index) =&gt; void</code></td><td>the caller makes each a step</td></tr>
+            <tr><td><code>selected</code> · <code>onSelect</code></td><td><code>number | null</code> · <code>(index) =&gt; void</code></td><td>the row ⌘⇧D decodes</td></tr>
+      <tr><td><code>onEdit</code> · <code>onAdd</code> · <code>onRemove</code></td><td><code>(index, part, text) =&gt; void</code> · <code>(afterIndex) =&gt; void</code> · <code>(index) =&gt; void</code></td><td>the caller makes each a step</td></tr>
+      <tr><td><code>onContext</code></td><td><code>(index, {x, y}) =&gt; void</code></td><td>a right-click on a row</td></tr>
+      <tr><td><code>inset</code></td><td><code>{afterIndex, node} | null</code></td><td>one block under a row: the decode peek</td></tr>
       <tr><td><code>find</code> · <code>current</code></td><td><code>string</code> · <code>number</code></td><td>marks</td></tr>
     </table>
     <pre data-c="tsdoc"><code>/**
  * FormTable — every pair of a URL-encoded form, uncapped, each key and value whole and wrapped, edited in place.
  * @tier T2 — owns display decoding, the duplicate-key count and the never-cut rule; the pairs, their order and what an edit means are the caller's
- * @anatomy sticky uppercase-mute label row (# · key · value) · number ink-mute · key mono syn-key, "N of M “key”" under a repeat · value mono ink, wrapped whole, "none" when empty, "kept as sent" under a bad escape · IconButton close per row · selected row canvas-soft · the edited cell a multiline verbatim Field
+ * @anatomy sticky uppercase-mute label row (# · key · value) · number ink-mute · key mono syn-key, "N of M “key”" under a repeat · value mono ink, wrapped whole, "none" when empty, "kept as sent" under a bad escape · IconButton add + and close × per row, invisible until hover, focus or selection · selected row canvas-soft · the edited cell a multiline verbatim Field · a new-pair row (new key · new value, ink-mute) after the last · an inset block under one row
  * @use the data window's form surface, decoded (DEC-68)
- * @avoid the body pane (FormRenderer, capped and read-only) · truncating, clamping or fixing a row's height (DEC-34's escape is not taken here) · re-encoding pairs nobody edited · sorting or filtering inside it: the caller hands the order and the rows
- * @states rest · selected row · editing one cell · read-only (a view) · with find marks. No empty, collapsed or loading state
- * @madeof Field (T1) — the edited cell · IconButton (T1) — remove · @tanstack/react-virtual (T0)
+ * @avoid the body pane (FormRenderer, capped and read-only) · truncating, clamping or fixing a row's height (DEC-34's escape is not taken here) · re-encoding pairs nobody edited · sorting inside it: the caller hands the order · hiding a row's acts from the keyboard: focus shows them as hover does
+ * @states rest · row hovered or focused (acts shown) · selected row · editing one cell · with find marks · with an inset under one row. No empty, collapsed or loading state
+ * @madeof Field (T1) — the edited cell · IconButton (T1) — add and remove · @tanstack/react-virtual (T0)
  */</code></pre>
 
     <h2 id="fit">Use / avoid</h2>
@@ -114,16 +116,18 @@
     <h2 id="tokens">Tokens</h2>
     <table data-c="tokens">
       <tr><th>Part</th><th>Classes</th></tr>
-      <tr><td>row</td><td><code>grid items-start gap-3 border-b border-hairline px-4 py-chrome-y</code>, columns 5ch · minmax(128px, 2fr) · 5fr · 28px, a template shape the build writes with a <code>design-allow</code> pragma</td></tr>
+      <tr><td>row</td><td><code>grid items-start gap-3 border-b border-hairline px-4 py-chrome-y</code>, columns 5ch · minmax(128px, 2fr) · 5fr · 60px (two 28 px acts), a template shape the build writes with a <code>design-allow</code> pragma</td></tr>
       <tr><td>label row</td><td><code>sticky top-0 z-sticky bg-canvas text-label uppercase tracking-label text-ink-mute</code></td></tr>
       <tr><td>key · value</td><td><code>font-mono text-body leading-normal whitespace-pre-wrap break-all</code> · <code>text-syn-key</code> · <code>text-ink</code> / <code>text-ink-mute</code></td></tr>
       <tr><td>notes</td><td><code>font-ui text-chrome text-ink-mute</code></td></tr>
       <tr><td>selected · hover</td><td><code>bg-canvas-soft</code> · cell <code>hover:bg-wash-hover rounded-button</code></td></tr>
+      <tr><td>row acts</td><td>row <code>group</code> · acts <code>invisible group-hover:visible group-focus-within:visible</code>, shown on the selected row</td></tr>
+      <tr><td>new-pair row</td><td><code>grid gap-3 px-4 py-chrome-y font-ui text-chrome text-ink-mute hover:bg-wash-hover cursor-text</code></td></tr>
     </table>
 
     <h2 id="specimen">Live specimen</h2>
-    <p class="kd">A stand-in drawn here; the Field and IconButton inside it are the shipped ones. Click a value, edit
-      it, press ⌘↵.</p>
+    <p class="kd">A stand-in drawn here; the Field and IconButton inside it are the shipped ones. Hover a row for + and
+      ×, click a value, edit it, press ⌘↵, or add a pair from the last row.</p>
     <div class="app" data-c="specimen"><div id="spec-live"></div></div>
 
   </main>
@@ -138,9 +142,9 @@
       const [key, a] = d(k); const [value, b] = d(v.join("="));
       return { index: i, key, value, kept: a || b, raw };
     });
-    const COLS = { gridTemplateColumns: "5ch minmax(128px, 2fr) 5fr 28px" };
+    const COLS = { gridTemplateColumns: "5ch minmax(128px, 2fr) 5fr 60px" };
 
-    function Table({ seed = SEED, readOnly = false, find = "", selected: sel0 = null, editing = null }) {
+    function Table({ seed = SEED, find = "", selected: sel0 = null, editing = null }) {
       const [text, setText] = useState(seed);
       const [sel, setSel] = useState(sel0);
       const [edit, setEdit] = useState(editing);
@@ -159,7 +163,7 @@
           </div>
         );
         const t = part === "k" ? p.key : p.value;
-        return <div tabIndex={0} onClick={() => !readOnly && setEdit({ index: p.index, part, text: t })}
+        return <div tabIndex={0} onClick={() => setEdit({ index: p.index, part, text: t })}
           className={`cursor-text whitespace-pre-wrap break-all rounded-button font-mono text-body leading-normal hover:bg-wash-hover ${part === "k" ? "text-syn-key" : t ? "text-ink" : "text-ink-mute"}`}>{t ? mark(t) : "none"}</div>;
       };
       return (
@@ -169,14 +173,19 @@
             {pairs.map((p) => {
               seen[p.key] = (seen[p.key] ?? 0) + 1;
               return (
-                <div key={p.index} onClick={() => setSel(p.index)} className={`grid items-start gap-3 border-b border-hairline px-4 py-chrome-y ${sel === p.index ? "bg-canvas-soft" : ""}`} style={COLS}>
+                <div key={p.index} onClick={() => setSel(p.index)} className={`group grid items-start gap-3 border-b border-hairline px-4 py-chrome-y ${sel === p.index ? "bg-canvas-soft" : ""}`} style={COLS}>
                   <span className="text-right font-ui text-chrome text-ink-mute">{p.index + 1}</span>
                   <div>{cell(p, "k")}{count[p.key] > 1 && <span className="font-ui text-chrome text-ink-mute">{seen[p.key]} of {count[p.key]} “{p.key}”</span>}</div>
                   <div>{cell(p, "v")}{p.kept && <span className="font-ui text-chrome text-ink-mute">kept as sent: not a valid percent-escape</span>}</div>
-                  <IconButton glyph="close" label={`remove pair ${p.index + 1}`} disabled={readOnly} onClick={() => setText(pairs.filter((x) => x.index !== p.index).map((x) => x.raw).join("&"))} />
+                  <span className={`flex ${sel === p.index ? "" : "invisible group-hover:visible group-focus-within:visible"}`}>
+                    <IconButton label={`add a pair after pair ${p.index + 1}`} onClick={() => { const raws = pairs.map((x) => x.raw); raws.splice(p.index + 1, 0, "="); setText(raws.join("&")); setEdit({ index: p.index + 1, part: "k", text: "" }); }}>+</IconButton>
+                    <IconButton glyph="close" label={`remove pair ${p.index + 1}`} onClick={() => setText(pairs.filter((x) => x.index !== p.index).map((x) => x.raw).join("&"))} />
+                  </span>
                 </div>
               );
             })}
+            <div role="button" tabIndex={0} onClick={() => { setText(`${text}&=`); setEdit({ index: pairs.length, part: "k", text: "" }); }}
+              className="grid cursor-text gap-3 px-4 py-chrome-y font-ui text-chrome text-ink-mute hover:bg-wash-hover" style={COLS}><span /><span>new key</span><span>new value</span><span /></div>
           </div>
         </div>
       );
@@ -186,7 +195,7 @@
     mount("spec-states", (
       <div className="grid grid-cols-2 gap-4 font-ui text-chrome text-ink-mute">
         <div><Table seed="client_id=web-4.18.2&scope=accounts&state=" editing={{ index: 0, part: "v", text: "web-4.18.2" }} />editing one cell</div>
-        <div><Table seed="scope=accounts&scope=sessions%20devices" readOnly find="s" />read-only (a view), with find marks</div>
+        <div><Table seed="scope=accounts&scope=sessions%20devices" selected={1} find="s" />a selected row (its + and × shown), with find marks</div>
       </div>
     ));
     mount("spec-live", <Table />);

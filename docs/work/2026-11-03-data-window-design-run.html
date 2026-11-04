@@ -22,51 +22,47 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>Design run: the data window</h1>
-      <p>A window handed one piece of data by value. It renders the data whole, offers the tools of its kind and the
-        decoders, and lets the user work a scratch copy freely, with the original always one click away.</p>
-      <div class="meta">Design run · round 1 on 2026-11-03, open for the owner · Trawler · T3 (docs/work/) ·
+      <p>A window handed one piece of data by value. It renders the data whole and lets the user edit a scratch copy,
+        find in it and decode any value. Only find stays on screen; every other act sits in one ⋯ menu or a right-click.</p>
+      <div class="meta">Design run · round 2 on 2026-11-04, open for the owner · Trawler · T3 (docs/work/) ·
         <strong>E-INSPWIN.W2</strong> · branch <code>wu/inspect-window/data-window-design</code> · epic
         <a href="2026-11-03-inspect-window-plan.html">E-INSPWIN</a> ·
         <a href="2026-11-03-inspect-window-w2-data-window-design-plan.html">WU plan</a> · components:
-        <a href="components/edit-surface.html">EditSurface</a> · <a href="components/form-table.html">FormTable</a> ·
-        <a href="components/hex-view.html">HexView</a> · CutMarker amended in <a href="#cut-marker">its delta</a> ·
-        within DEC-68</div>
+        <a href="components/menu.html">Menu</a> · <a href="components/edit-surface.html">EditSurface</a> ·
+        <a href="components/form-table.html">FormTable</a> · <a href="components/hex-view.html">HexView</a> ·
+        CutMarker amended in <a href="#cut-marker">its delta</a> · within DEC-68</div>
     </div>
   </header>
   <main data-artifact="design-run" data-status="ready">
 
     <h2 id="mockup">Mockup</h2>
-    <p class="kd">Live. Edit a line and click away, then undo, redo or restore the original. Reformat, sort keys, fold
-      from the gutter or to a depth, find and step through matches. Run a JSONPath query (this stand-in reads
-      <code>$</code>, <code>.key</code>, <code>..key</code>, <code>[n]</code> and <code>[*]</code>) or a text filter.
-      Select any text, or a form row, and press <em>decode</em>. Switch what copy and save deliver. The frame is the
-      window at its real size, scaled to fit. The buttons under it force one state, or one payload, at a time.</p>
+    <p class="kd">Live. Click a line, type, click away. Open ⋯ to undo, restore the original, re-indent, sort keys,
+      fold to a depth or save. Type in find and step with ↑ ↓. Select a value (the JWT on
+      <code>session_token</code>), right-click it and choose <em>decode</em>. Change the kind in the status bar. The
+      frame is the window at its real size, scaled to fit; the buttons under it force one state at a time.</p>
     <div data-item="mockup">
       <div class="app">
         <div class="a-fit" id="fit">
-          <div class="a-mock flex flex-col bg-canvas font-ui text-ink" id="mock">
+          <div class="a-mock relative flex flex-col bg-canvas font-ui text-ink" id="mock">
             <div class="a-zone shrink-0" id="m-head" data-zone="window header"></div>
-            <div class="a-zone shrink-0" id="m-tools" data-zone="toolbar"></div>
-            <div class="a-zone shrink-0" id="m-band" data-zone="view band"></div>
-            <div class="flex min-h-0 flex-1" id="m-work">
-              <div class="a-zone flex min-h-0 min-w-0 flex-1 flex-col" id="m-surface" data-zone="surface"
-                data-wire="collection" data-order="wire"></div>
-              <div class="a-zone flex min-h-0 shrink-0 flex-col" id="m-decoder" data-zone="decoder panel"></div>
-            </div>
-            <div class="a-zone shrink-0" id="m-foot" data-zone="status line"></div>
+            <div class="a-zone shrink-0" id="m-find" data-zone="find bar"></div>
+            <div class="a-zone flex min-h-0 min-w-0 flex-1 flex-col" id="m-surface" data-zone="surface"
+              data-wire="collection" data-order="wire"></div>
+            <div class="a-zone shrink-0" id="m-foot" data-zone="status bar"></div>
+            <div class="a-zone pointer-events-none absolute inset-0" id="m-menu" data-zone="menus"></div>
             <div class="a-zone flex min-h-0 flex-1 flex-col" id="m-pane" data-zone="opener: the body pane"></div>
           </div>
         </div>
         <div class="mt-2 font-ui text-chrome text-ink-mute" id="readout"></div>
       </div>
-      <p>overflow: window header, toolbar, view band and status line pinned; header and toolbar wrap onto more rows as
-        the window narrows, never scrolling sideways. surface: the one zone that scrolls, both ways, inside itself, and it is uncapped: it holds
+      <p>overflow: window header, find bar and status bar pinned, each one row that wraps as the window narrows and
+        never scrolls sideways. surface: the one zone that scrolls, both ways, inside itself, and it is uncapped: it holds
         the whole payload, which the core caps at 10 MiB (DEC-68 rule 7), virtualised by EditSurface, FormTable and
-        HexView. Form pairs are in wire order until <em>sort by key</em>, a declared working-copy step that reorders
-        the pairs themselves. decoder panel: 400 px beside the surface (stacked under it below 900 px). It scrolls
-        inside itself, and each result is capped by the pane member it mounts (JsonRenderer 128 KiB, HexRenderer 4 KiB);
-        <em>open in data window</em> is the way past. opener: the body pane, as it is in the main window: its caps and
-        cut marker are unchanged, and the cut marker's way out is this window.</p>
+        HexView. The decode peek opens inside the surface under the line it decodes, scrolls inside itself past 256 px
+        (<code>body-max</code>) and pushes the lines below it down. Form pairs are in wire order until <em>sort by
+        key</em>, a declared working-copy step that reorders the pairs themselves. menus: the ⋯ menu and the right-click
+        menu float over every other zone, one at a time, and flip to stay inside the window. opener: the body pane, as it
+        is in the main window: its caps and cut marker are unchanged, and the cut marker's way out is this window.</p>
       <p class="kd">Payload is mono: the surface's lines, the form keys and values, the hex rows and the decoded
         result. The title is the opener's caption and stays ui.</p>
       <button class="statebtn" data-state-toggle="mock" data-state-class="k-form"
@@ -80,18 +76,23 @@
       <button class="statebtn" data-state-toggle="mock" data-state-class="k-image"
         data-label-off="▶ an image payload" data-label-on="◀ the JSON payload">▶ an image payload</button>
       <br>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="more"
+        data-label-off="▶ the ⋯ menu open" data-label-on="◀ menu closed">▶ the ⋯ menu open</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="context"
+        data-label-off="▶ right-click on a selection" data-label-on="◀ menu closed">▶ right-click on a selection</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="modified"
         data-label-off="▶ modified: sorted keys and a hand edit" data-label-on="◀ unmodified">▶ modified: sorted keys and a hand edit</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="found"
         data-label-off="▶ find with matches" data-label-on="◀ no find">▶ find with matches</button>
-      <button class="statebtn" data-state-toggle="mock" data-state-class="filtered"
-        data-label-off="▶ a filtered view" data-label-on="◀ the whole working copy">▶ a filtered view</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="broken"
         data-label-off="▶ a working copy that no longer parses" data-label-on="◀ a parsing working copy">▶ a working copy that no longer parses</button>
-      <button class="statebtn" data-state-toggle="mock" data-state-class="decoder"
-        data-label-off="▶ a JWT decoded" data-label-on="◀ decoder closed">▶ a JWT decoded</button>
+      <br>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="decoded"
+        data-label-off="▶ a JWT decoded in a peek" data-label-on="◀ peek closed">▶ a JWT decoded in a peek</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="binary"
+        data-label-off="▶ a value that decodes to binary" data-label-on="◀ peek closed">▶ a value that decodes to binary</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="undecodable"
-        data-label-off="▶ an undecodable selection" data-label-on="◀ decoder closed">▶ an undecodable selection</button>
+        data-label-off="▶ an undecodable selection" data-label-on="◀ peek closed">▶ an undecodable selection</button>
       <br>
       <button class="statebtn" data-state-toggle="mock" data-state-class="empty"
         data-label-off="▶ a 0 B payload" data-label-on="◀ a payload">▶ a 0 B payload</button>
@@ -103,25 +104,33 @@
         data-label-off="▶ the opener: the pane with a cut" data-label-on="◀ the data window">▶ the opener: the pane with a cut</button>
       <script type="text/babel">
         const { React, createRoot, Select, SegmentedControl, Field, Button, IconButton, CopyButton, Notice,
-                Section, HexRenderer, ImageRenderer } = window.Trawler;
-        const { useState, useSyncExternalStore } = React;
+                Section, ImageRenderer } = window.Trawler;
+        const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
         const WIN = { def: 1200, min: 600 };
         const FRAME_H = 640;
-        const PANEL_W = 400;
-        const STACK_BELOW = 900;
+        const MENU_W = 256;
         const enc = new TextEncoder();
-        const dec = new TextDecoder();
         const sizeOf = (v) => (typeof v === "string" ? enc.encode(v).length : v.length);
         const human = (n) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KiB` : `${(n / 1048576).toFixed(1)} MiB`;
         const b64url = (s) => btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
+        const BIN = (() => {
+          const out = new Uint8Array(600);
+          out.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+          let x = 7;
+          for (let i = 16; i < 600; i++) { x = (x * 1103515245 + 12345) & 0x7fffffff; out[i] = (x >> 16) & 0xff; }
+          out.set([0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82], 588);
+          out.set(enc.encode("tEXtComment"), 30);
+          return out;
+        })();
         const JWT = [b64url('{"alg":"RS256","kid":"2026-11"}'),
           b64url('{"sub":"8812","scope":"accounts sessions","exp":1730700400,"iss":"https://auth.example.com"}'),
           "Zm9vYmFyYmF6cXV4"].join(".");
-        const AVATAR = btoa('{"w":64,"h":64,"fmt":"png","crc":"9f1c2d"}');
+        const THUMB = btoa(String.fromCharCode(...BIN.slice(0, 72)));
+        const BAD_JWT = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODEyIn0";
         const DOC = {
-          account: { id: 8812, plan: "team", owner: "ops@example.com", avatar_meta: AVATAR },
+          account: { id: 8812, plan: "team", owner: "ops@example.com", thumbnail: THUMB },
           cursor: "eyJ0IjoxNzMwNjE0MDAwfQ",
           session_token: JWT,
           redirect: "https%3A%2F%2Fapp.example.com%2Fcallback%3Fstate%3Dx1",
@@ -138,24 +147,15 @@
           return `${t} ${i % 5 === 0 ? "INFO " : "DEBUG"} ${["proxy", "auth", "store"][i % 3]}  ${["accepted", "decrypted", "stored"][i % 3]} flow ${4400 + i} (${120 + i * 13} ms)`;
         }).join("\n");
         const XML = `<?xml version="1.0" encoding="UTF-8"?><envelope xmlns="urn:example:v2"><Header><id>7f1c2d9e</id><token type="opaque">${btoa("session=4410;scope=accounts")}</token></Header><Body><account id="8812" plan="team"><owner>ops@example.com</owner><devices><device id="dv_4410" platform="web"/><device id="dv_4411" platform="ios"/></devices></account></Body></envelope>`;
-        const BIN = (() => {
-          const out = new Uint8Array(600);
-          out.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
-          let x = 7;
-          for (let i = 16; i < 600; i++) { x = (x * 1103515245 + 12345) & 0x7fffffff; out[i] = (x >> 16) & 0xff; }
-          out.set([0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82], 588);
-          out.set(enc.encode("tEXtComment"), 30);
-          return out;
-        })();
         const SVG = enc.encode(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect x="8" y="8" width="304" height="184" rx="12" fill="none" stroke="gray" stroke-width="4"/><circle cx="100" cy="100" r="48" fill="gray"/><path d="M180 150 L230 60 L280 150 Z" fill="gray"/></svg>`);
 
         const PAYLOADS = {
-          json: { kind: "json", key: "flow:4410:response", title: "response body · GET api.example.com/v2/accounts/8812/sessions", typeHint: "application/json", text: JSON.stringify(DOC, null, 2) },
-          form: { kind: "form", key: "flow:4402:request", title: "request body · POST auth.example.com/oauth/token", typeHint: "application/x-www-form-urlencoded", text: FORM },
-          text: { kind: "text", key: "flow:4431:response", title: "response body · GET logs.example.com/tail?n=40", typeHint: "text/plain", text: LOG },
-          xml: { kind: "xml", key: "flow:4433:response", title: "response body · POST soap.example.com/v2/Account", typeHint: "application/xml", text: XML },
-          hex: { kind: "hex", key: "flow:4440:response", title: "response body · GET storage.example.com/exports/blob", typeHint: "application/octet-stream", bytes: BIN },
-          image: { kind: "image", key: "flow:4445:response", title: "response body · GET images.example-cdn.com/u/8812/badge.svg", typeHint: "image/svg+xml", bytes: SVG },
+          json: { kind: "json", title: "response body · GET api.example.com/v2/accounts/8812/sessions", typeHint: "application/json", text: JSON.stringify(DOC, null, 2) },
+          form: { kind: "form", title: "request body · POST auth.example.com/oauth/token", typeHint: "application/x-www-form-urlencoded", text: FORM },
+          text: { kind: "text", title: "response body · GET logs.example.com/tail?n=40", typeHint: "text/plain", text: LOG },
+          xml: { kind: "xml", title: "response body · POST soap.example.com/v2/Account", typeHint: "application/xml", text: XML },
+          hex: { kind: "hex", title: "response body · GET storage.example.com/exports/blob", typeHint: "application/octet-stream", bytes: BIN },
+          image: { kind: "image", title: "response body · GET images.example-cdn.com/u/8812/badge.svg", typeHint: "image/svg+xml", bytes: SVG },
         };
         const KINDS = [
           { id: "json", label: "JSON" }, { id: "form", label: "form" }, { id: "xml", label: "XML / HTML" },
@@ -168,9 +168,8 @@
           const orig = p.text ?? "";
           return {
             payloadId, override: null, stack: [orig], at: 0, steps: ["original"], fmt: "2",
-            view: null, viewErr: null, filter: { lang: "jsonpath", q: "" }, find: { q: "", scope: "both", at: 0, mode: "hex" },
-            folds: new Set(), wrap: true, deliver: "working", decoder: null, sel: "", row: null, edit: null,
-            encoded: false, fit: "fit", note: "",
+            find: { q: "", at: 0 }, folds: new Set(), wrap: true, encoded: false, fit: "fit",
+            menu: null, peek: null, sel: { text: "", line: null }, row: null, edit: null, note: "",
           };
         }
 
@@ -187,22 +186,24 @@
 
         const payloadOf = (s) => (s.flags.has("nopayload") ? null : PAYLOADS[s.payloadId]);
         const kindOf = (s) => s.override ?? PAYLOADS[s.payloadId].kind;
-        const original = (s) => (s.flags.has("empty") ? "" : PAYLOADS[s.payloadId].text ?? "");
-        const working = (s) => s.stack[s.at];
+        const isEmpty = (s) => s.flags.has("empty");
+        const original = (s) => (isEmpty(s) ? "" : PAYLOADS[s.payloadId].text ?? "");
+        const working = (s) => (isEmpty(s) ? "" : s.stack[s.at]);
         const modified = (s) => !READ_ONLY.has(kindOf(s)) && working(s) !== original(s);
         const bytesOf = (s) => PAYLOADS[s.payloadId].bytes ?? enc.encode(working(s));
+        const lineOf = (text, needle) => text.slice(0, text.indexOf(needle)).split("\n").length - 1;
 
         function push(text, step, extra = {}) {
           store.set((s) => {
             if (text === working(s)) return { ...extra };
             const stack = [...s.stack.slice(0, s.at + 1), text];
             const steps = [...s.steps.slice(0, s.at + 1), step];
-            return { stack, steps, at: stack.length - 1, view: null, viewErr: null, note: step, ...extra };
+            return { stack, steps, at: stack.length - 1, note: step, ...extra };
           });
         }
-        const undo = () => store.set((s) => (s.at > 0 ? { at: s.at - 1, view: null, fmt: null, note: `undo: ${s.steps[s.at]}` } : {}));
-        const redo = () => store.set((s) => (s.at < s.stack.length - 1 ? { at: s.at + 1, view: null, fmt: null, note: `redo: ${s.steps[s.at + 1]}` } : {}));
-        const restore = () => push(original(store.get()), "restore original", { fmt: "2" });
+        const undo = () => store.set((s) => (s.at > 0 ? { at: s.at - 1, fmt: null, peek: null, note: `undo: ${s.steps[s.at]}` } : {}));
+        const redo = () => store.set((s) => (s.at < s.stack.length - 1 ? { at: s.at + 1, fmt: null, peek: null, note: `redo: ${s.steps[s.at + 1]}` } : {}));
+        const restore = () => push(original(store.get()), "restore original", { fmt: "2", peek: null });
 
         function parseJson(text) {
           try { return { ok: true, value: JSON.parse(text) }; } catch (e) {
@@ -215,94 +216,27 @@
         const sortDeep = (v) => Array.isArray(v) ? v.map(sortDeep) : v && typeof v === "object"
           ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortDeep(v[k])])) : v;
         const INDENT = { "2": 2, "4": 4, tab: "\t" };
+        const layout = (v, fmt) => (fmt === "min" ? JSON.stringify(v) : JSON.stringify(v, null, INDENT[fmt]));
         function reformat(fmt) {
-          const s = store.get();
-          const p = parseJson(working(s));
+          const p = parseJson(working(store.get()));
           if (!p.ok) return;
-          const text = fmt === "min" ? JSON.stringify(p.value) : JSON.stringify(p.value, null, INDENT[fmt]);
-          push(text, fmt === "min" ? "minified" : `indent ${fmt}`, { fmt, folds: new Set() });
+          push(layout(p.value, fmt), fmt === "min" ? "minified" : `indent ${fmt === "tab" ? "a tab" : `${fmt} spaces`}`, { fmt, folds: new Set(), peek: null });
         }
         function sortKeys() {
           const s = store.get();
           const p = parseJson(working(s));
           if (!p.ok) return;
-          const fmt = s.fmt ?? "2";
-          const v = sortDeep(p.value);
-          push(fmt === "min" ? JSON.stringify(v) : JSON.stringify(v, null, INDENT[fmt]), "sorted keys", { fmt, folds: new Set() });
+          push(layout(sortDeep(p.value), s.fmt ?? "2"), "sorted keys", { fmt: s.fmt ?? "2", folds: new Set(), peek: null });
         }
         function reindentXml() {
-          const s = store.get();
           let depth = 0;
-          const out = working(s).replace(/>\s*</g, ">\n<").split("\n").map((ln) => {
+          const out = working(store.get()).replace(/>\s*</g, ">\n<").split("\n").map((ln) => {
             if (/^<\//.test(ln)) depth = Math.max(0, depth - 1);
             const line = "  ".repeat(depth) + ln;
             if (/^<[^!?/][^>]*[^/]>$/.test(ln) && !/<\/[^>]+>$/.test(ln.slice(1))) depth += 1;
-            if (/^<[^!?/][^>]*>.*<\/[^>]+>$/.test(ln)) depth = depth;
             return line;
           });
-          push(out.join("\n"), "re-indented", { folds: new Set() });
-        }
-
-        function jsonPath(q, root) {
-          if (!q.startsWith("$")) return { err: `a JSONPath query starts with $, not “${q[0] ?? ""}”` };
-          const re = /\.\.([\w$-]+)|\.([\w$-]+)|\.\*|\[(\*|-?\d+|'[^']*'|"[^"]*")\]/y;
-          let at = 1;
-          let nodes = [root];
-          const kids = (v) => (v && typeof v === "object" ? Object.values(v) : []);
-          const descend = (v, key, acc) => {
-            if (v && typeof v === "object") {
-              if (!Array.isArray(v) && key in v) acc.push(v[key]);
-              kids(v).forEach((c) => descend(c, key, acc));
-            }
-            return acc;
-          };
-          while (at < q.length) {
-            re.lastIndex = at;
-            const m = re.exec(q);
-            if (!m) return { err: `not a JSONPath query: unexpected “${q[at]}” at character ${at + 1}` };
-            at = re.lastIndex;
-            if (m[1]) nodes = nodes.flatMap((n) => descend(n, m[1], []));
-            else if (m[2]) nodes = nodes.flatMap((n) => (n && typeof n === "object" && m[2] in n ? [n[m[2]]] : []));
-            else if (m[0] === ".*" || m[3] === "*") nodes = nodes.flatMap(kids);
-            else if (/^-?\d+$/.test(m[3])) nodes = nodes.flatMap((n) => {
-              if (!Array.isArray(n)) return [];
-              const i = Number(m[3]) < 0 ? n.length + Number(m[3]) : Number(m[3]);
-              return i in n ? [n[i]] : [];
-            });
-            else { const k = m[3].slice(1, -1); nodes = nodes.flatMap((n) => (n && typeof n === "object" && k in n ? [n[k]] : [])); }
-          }
-          return { nodes };
-        }
-        function prune(v, q) {
-          const hit = (x) => String(x).toLowerCase().includes(q);
-          if (Array.isArray(v)) { const kept = v.map((c) => prune(c, q)).filter((c) => c !== undefined); return kept.length ? kept : undefined; }
-          if (v && typeof v === "object") {
-            const out = {};
-            for (const [k, c] of Object.entries(v)) { if (hit(k)) out[k] = c; else { const p = prune(c, q); if (p !== undefined) out[k] = p; } }
-            return Object.keys(out).length ? out : undefined;
-          }
-          return hit(v) ? v : undefined;
-        }
-        const leaves = (v) => (v && typeof v === "object" ? Object.values(v).reduce((n, c) => n + leaves(c), 0) : 1);
-
-        function applyFilter() {
-          const s = store.get();
-          const q = s.filter.q.trim();
-          if (!q) return store.set({ view: null, viewErr: null });
-          if (kindOf(s) === "form") {
-            const all = pairsOf(working(s));
-            const kept = all.filter((p) => (p.k + " " + p.v).toLowerCase().includes(q.toLowerCase()));
-            return store.set({ view: { producer: `rows containing “${q}”`, count: `${kept.length} of ${all.length} pairs`, rows: kept.map((p) => p.i), text: kept.map((p) => p.raw).join("&") }, viewErr: null });
-          }
-          const p = parseJson(working(s));
-          if (!p.ok) return store.set({ view: null, viewErr: `the working copy is not valid JSON at line ${p.line}, column ${p.col}, and the ${s.filter.lang === "jsonpath" ? "query" : "filter"} needs it to parse` });
-          if (s.filter.lang === "jsonpath") {
-            const r = jsonPath(q, p.value);
-            if (r.err) return store.set({ view: null, viewErr: r.err });
-            return store.set({ view: { producer: `JSONPath ${q}`, count: r.nodes.length === 1 ? "1 node" : `${r.nodes.length} nodes`, text: r.nodes.length ? JSON.stringify(r.nodes, null, 2) : "" }, viewErr: null, folds: new Set() });
-          }
-          const kept = prune(p.value, q.toLowerCase());
-          return store.set({ view: { producer: `text filter “${q}”`, count: kept === undefined ? "0 matches" : `${leaves(kept)} matching values, ancestors kept`, text: kept === undefined ? "" : JSON.stringify(kept, null, 2) }, viewErr: null, folds: new Set() });
+          push(out.join("\n"), "re-indented", { folds: new Set(), peek: null });
         }
 
         function pairsOf(text) {
@@ -318,16 +252,21 @@
         }
         const encodePair = (k, v) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
         function setPairs(mapper, step, extra = {}) {
-          const s = store.get();
-          const raws = mapper(pairsOf(working(s)));
-          push(raws.join("&"), step, extra);
+          push(mapper(pairsOf(working(store.get()))).join("&"), step, extra);
         }
+        const addPairAfter = (row) => {
+          setPairs((ps) => { const raws = ps.map((p) => p.raw); raws.splice(row + 1, 0, "="); return raws; }, `added a pair after pair ${row + 1}`);
+          store.set({ row: row + 1, edit: { row: row + 1, field: "k", value: "" }, menu: null });
+        };
+        const removePair = (row) => setPairs((ps) => ps.filter((x) => x.i !== row).map((x) => x.raw), `removed pair ${row + 1}`, { peek: null, menu: null });
 
         function detect(input) {
-          if (/^[\w-]+\.[\w-]+\.[\w-]*$/.test(input)) return "jwt";
-          if (/%[0-9A-Fa-f]{2}|%/.test(input)) return "url";
+          if (/^eyJ[\w-]*\.[\w-]*/.test(input)) return "jwt";
+          if (/%/.test(input)) return "url";
           return "base64";
         }
+        const SIGNATURES = [[[0x89, 0x50, 0x4e, 0x47], "PNG"], [[0xff, 0xd8, 0xff], "JPEG"], [[0x47, 0x49, 0x46, 0x38], "GIF"], [[0x1f, 0x8b], "gzip"], [[0x25, 0x50, 0x44, 0x46], "PDF"]];
+        const sniff = (bytes) => SIGNATURES.find(([sig]) => sig.every((b, i) => bytes[i] === b))?.[1];
         function asResult(bytes) {
           let text = null;
           try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { text = null; }
@@ -335,7 +274,7 @@
             const p = parseJson(text);
             return p.ok && typeof p.value === "object" && p.value !== null ? { kind: "json", text: JSON.stringify(p.value, null, 2), raw: text } : { kind: "text", text, raw: text };
           }
-          return { kind: "binary", bytes };
+          return { kind: "binary", bytes, looks: sniff(bytes) };
         }
         function base64(input) {
           const s = input.replace(/\s+/g, "");
@@ -350,7 +289,8 @@
         function urlDecode(input) {
           const bad = /%(?![0-9A-Fa-f]{2})/.exec(input);
           if (bad) return { err: `“${input.slice(bad.index, bad.index + 3)}” at character ${bad.index + 1} is not a percent-escape: % takes two hex digits` };
-          return { kind: "text", text: decodeURIComponent(input.replace(/\+/g, " ")), raw: decodeURIComponent(input.replace(/\+/g, " ")) };
+          const text = decodeURIComponent(input.replace(/\+/g, " "));
+          return { kind: "text", text, raw: text };
         }
         function jwt(input) {
           const parts = input.trim().split(".");
@@ -360,19 +300,19 @@
           const p = seg(parts[1], "payload"); if (p.err) return p;
           return { kind: "jwt", header: h.text, payload: p.text, signature: parts[2], raw: p.raw };
         }
-        const DECODERS = { base64, url: urlDecode, jwt };
+        const DECODERS = { jwt, base64, url: urlDecode };
 
-        function openDecoder(input, origin) {
+        function openPeek(input, origin) {
           if (!input) return;
-          store.set({ decoder: { input, origin, using: detect(input) } });
+          store.set({ peek: { input, origin, using: detect(input), guessed: true }, menu: null });
         }
         function decodeNow() {
           const s = store.get();
-          if (kindOf(s) === "form" && !s.sel && s.row !== null) {
+          if (kindOf(s) === "form" && !s.encoded && s.row !== null && !s.sel.text) {
             const p = pairsOf(working(s))[s.row];
-            if (p) return openDecoder(p.v, { type: "row", row: p.i, key: p.k });
+            if (p) return openPeek(p.v, { type: "row", row: p.i, key: p.k });
           }
-          openDecoder(s.sel, { type: "selection" });
+          openPeek(s.sel.text, { type: "selection", line: s.sel.line });
         }
 
         function hexDump(bytes) {
@@ -383,12 +323,148 @@
           }
           return rows.join("\n");
         }
-        function delivered(s) {
+        const onScreen = (s) => (kindOf(s) === "hex" ? hexDump(bytesOf(s)) : working(s));
+        const saveNote = (what, n) => store.set({ note: `save dialog: ${what} · ${human(n)}`, menu: null });
+        const save = () => {
+          const s = store.get();
+          if (READ_ONLY.has(kindOf(s))) return saveNote("the bytes", sizeOf(bytesOf(s)));
+          saveNote(modified(s) ? "the working copy" : "the original", sizeOf(working(s)));
+        };
+        const toggleWrap = () => store.set((s) => ({ wrap: !s.wrap, menu: null }));
+
+        function Menu({ label, sections, at, onClose }) {
+          const items = sections.flatMap((sec) => sec.items);
+          const live = items.filter((it) => !it.disabled);
+          const [active, setActive] = useState(0);
+          const ref = useRef(null);
+          useEffect(() => {
+            ref.current?.focus({ preventScroll: true });
+            const down = (e) => { if (ref.current && !ref.current.contains(e.target) && !e.target.closest("[data-more]")) onClose(); };
+            document.addEventListener("mousedown", down);
+            return () => document.removeEventListener("mousedown", down);
+          }, []);
+          const cur = live[active];
+          const step = (choices, value, d) => choices[(choices.findIndex((c) => c.id === value) + d + choices.length) % choices.length].id;
+          const keys = (e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => (a + 1) % live.length); }
+            if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => (a - 1 + live.length) % live.length); }
+            if (e.key === "Home") setActive(0);
+            if (e.key === "End") setActive(live.length - 1);
+            if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+            if (cur?.choices && (e.key === "ArrowRight" || e.key === "ArrowLeft")) cur.pick(step(cur.choices, cur.value, e.key === "ArrowRight" ? 1 : -1));
+            if (e.key === "Enter" && cur && !cur.choices) { e.preventDefault(); cur.run(); }
+          };
+          const row = (it) => {
+            const on = it === cur;
+            const tone = it.disabled ? "text-ink-mute" : on ? "bg-wash-tint text-ink" : "text-ink-body";
+            if (it.choices) return (
+              <div key={it.label} role="group" aria-label={it.label} onMouseEnter={() => !it.disabled && setActive(live.indexOf(it))}
+                className={`flex min-h-control items-center gap-chrome-gap px-control-x py-control-y ${tone}`}>
+                <span className="w-glyph shrink-0" />
+                <span className="flex-1">{it.label}</span>
+                <span className="flex gap-chrome-tight">
+                  {it.choices.map((c) => (
+                    <button key={c.id} role="menuitemradio" aria-checked={c.id === it.value} disabled={it.disabled} tabIndex={-1}
+                      onClick={() => it.pick(c.id)}
+                      className={`rounded-button px-chrome-x ${it.disabled ? "" : c.id === it.value ? "bg-wash-active text-ink" : "text-ink-body hover:bg-wash-hover"}`}>{c.label}</button>
+                  ))}
+                </span>
+              </div>
+            );
+            return (
+              <div key={it.label} role={it.checked === undefined ? "menuitem" : "menuitemcheckbox"} aria-checked={it.checked} aria-disabled={it.disabled || undefined}
+                onMouseEnter={() => !it.disabled && setActive(live.indexOf(it))} onClick={() => !it.disabled && it.run()}
+                className={`flex min-h-control items-center gap-chrome-gap px-control-x py-control-y ${it.disabled ? "" : "cursor-pointer"} ${tone}`}>
+                <span aria-hidden="true" className="w-glyph shrink-0 text-ink">{it.checked ? "✓" : ""}</span>
+                <span className="flex-1">{it.label}</span>
+                <span className="text-ink-mute">{it.disabled && it.why ? it.why : it.keys ?? ""}</span>
+              </div>
+            );
+          };
+          return (
+            <div ref={ref} role="menu" aria-label={label} tabIndex={-1} onKeyDown={keys}
+              className="pointer-events-auto absolute z-popup w-pane-label rounded-card border border-hairline bg-canvas py-chrome-tight font-ui text-control shadow-pop outline-none"
+              style={at}>
+              {sections.map((sec, n) => (
+                <div key={n} className={n ? "mt-chrome-tight border-t border-hairline pt-chrome-tight" : ""}>{sec.items.map(row)}</div>
+              ))}
+            </div>
+          );
+        }
+
+        function moreSections(s) {
           const k = kindOf(s);
-          if (READ_ONLY.has(k)) return k === "hex" ? hexDump(bytesOf(s)) : "";
-          if (s.deliver === "original") return original(s);
-          if (s.deliver === "view" && s.view) return s.view.text;
-          return working(s);
+          const close = (f) => () => { f(); store.set({ menu: null }); };
+          const text = k === "json" || k === "xml" || k === "text" || (k === "form" && s.encoded);
+          const sections = [];
+          if (!READ_ONLY.has(k)) sections.push({ items: [
+            { label: "undo", keys: "⌘Z", disabled: s.at === 0, run: close(undo) },
+            { label: "redo", keys: "⇧⌘Z", disabled: s.at === s.stack.length - 1, run: close(redo) },
+            { label: "restore original", disabled: !modified(s), run: close(restore) },
+          ] });
+          const parses = parseJson(working(s)).ok;
+          const fold = { label: "fold to", choices: [{ id: "1", label: "1" }, { id: "2", label: "2" }, { id: "3", label: "3" }, { id: "all", label: "all" }, { id: "none", label: "none" }], value: s.foldTo, pick: (id) => foldTo(id) };
+          const wrap = { label: "wrap long lines", keys: "⌥Z", checked: s.wrap, run: toggleWrap };
+          if (k === "json") sections.push({ items: [
+            { label: "indent", choices: [{ id: "2", label: "2" }, { id: "4", label: "4" }, { id: "tab", label: "tab" }, { id: "min", label: "minified" }], value: parses ? s.fmt : null, disabled: !parses, pick: reformat },
+            { label: "sort keys", disabled: !parses, why: "needs valid JSON", run: close(sortKeys) },
+            fold, wrap,
+          ] });
+          if (k === "xml") sections.push({ items: [{ label: "re-indent", keys: "⌥⇧F", run: close(reindentXml) }, fold, wrap] });
+          if (k === "text" || (k === "form" && s.encoded)) sections.push({ items: [wrap] });
+          if (k === "form") sections.push({ items: [
+            { label: "show encoded", checked: s.encoded, run: close(() => store.set((x) => ({ encoded: !x.encoded, peek: null, edit: null }))) },
+            { label: "sort by key", disabled: s.encoded, why: "shown encoded", run: close(() => setPairs((ps) => [...ps].sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i)).map((p) => p.raw), "sorted by key")) },
+            { label: "copy as JSON", run: close(() => store.set({ note: "copied the pairs as JSON" })) },
+          ] });
+          if (k === "image") sections.push({ items: [{ label: "size", choices: [{ id: "fit", label: "fit" }, { id: "actual", label: "actual" }], value: s.fit, pick: (id) => store.set({ fit: id }) }] });
+          sections.push({ items: READ_ONLY.has(k) ? [{ label: "save", keys: "⌘S", run: save }] : [
+            { label: "copy original", run: close(() => store.set({ note: `copied the original · ${human(sizeOf(original(store.get())))}` })) },
+            { label: "save", keys: "⌘S", run: save },
+            { label: "save original", run: () => saveNote("the original", sizeOf(original(store.get()))) },
+          ] });
+          return sections;
+        }
+
+        function contextSections(s) {
+          const k = kindOf(s);
+          const close = (f) => () => { f(); store.set({ menu: null }); };
+          const target = s.menu.row;
+          if (k === "form" && !s.encoded && target !== undefined && target !== null) {
+            const p = pairsOf(working(s))[target];
+            return [{ items: [
+              { label: "decode the value", keys: "⌘⇧D", disabled: !p?.v, why: "empty value", run: () => openPeek(p.v, { type: "row", row: p.i, key: p.k }) },
+              { label: "copy the value", keys: "⌘C", run: close(() => store.set({ note: `copied the value of “${p.k}”` })) },
+            ] }, { items: [
+              { label: "add a pair below", run: () => addPairAfter(target) },
+              { label: "remove the pair", keys: "⌘⌫", run: () => removePair(target) },
+            ] }];
+          }
+          return [{ items: [
+            { label: "decode", keys: "⌘⇧D", disabled: !s.sel.text, why: "select a value", run: decodeNow },
+            { label: "copy", keys: "⌘C", disabled: !s.sel.text, run: close(() => store.set({ note: `copied ${s.sel.text.length} characters` })) },
+          ] }];
+        }
+
+        function Menus() {
+          const s = useS();
+          if (!s.menu || s.menu.x === null || !payloadOf(s)) return <div hidden data-closed="a menu opens on ⋯ or a right-click" />;
+          const win = s.flags.has("narrow") ? WIN.min : WIN.def;
+          const close = () => store.set({ menu: null });
+          if (s.menu.type === "more") return <Menu label="more" sections={moreSections(s)} at={{ right: 16, top: s.menu.y }} onClose={close} />;
+          const at = { left: Math.min(s.menu.x, win - MENU_W - 8), top: Math.min(s.menu.y, FRAME_H - 140) };
+          return <Menu label="selection" sections={contextSections(s)} at={at} onClose={close} />;
+        }
+
+        const toMock = (cx, cy) => {
+          const r = document.getElementById("mock").getBoundingClientRect();
+          const k = store.get().k;
+          return { x: (cx - r.left) / k, y: (cy - r.top) / k };
+        };
+        function openMore() {
+          if (store.get().menu?.type === "more") return store.set({ menu: null });
+          const b = document.querySelector("[data-more]").getBoundingClientRect();
+          store.set({ menu: { type: "more", y: toMock(b.left, b.bottom).y + 4 } });
         }
 
         function Head() {
@@ -396,129 +472,33 @@
           const p = payloadOf(s);
           if (!p) return <div className="border-b border-hairline px-4 py-2 font-ui text-note text-ink-mute">data window</div>;
           const k = kindOf(s);
-          const ro = READ_ONLY.has(k);
-          const targets = [{ value: "original", label: "original" }, { value: "working", label: "working copy" }, ...(s.view ? [{ value: "view", label: "this view" }] : [])];
-          const deliver = s.deliver === "view" && !s.view ? "working" : s.deliver;
-          const size = ro ? sizeOf(bytesOf(s)) : sizeOf(original(s));
           return (
-            <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-hairline px-4 py-2">
-              <p className="min-w-0 font-ui text-note text-ink">{p.title}</p>
-              <span className="flex items-center gap-chrome-gap">
-                <Select options={KINDS} value={k} onChange={(id) => store.set({ override: id === p.kind ? null : id, view: null, viewErr: null, folds: new Set() })} label="treat the data as" searchable={false} className="w-field" />
-                <span className="font-ui text-chrome text-ink-mute">{s.override ? `your choice · detected ${KINDS.find((x) => x.id === p.kind).label} from ${p.typeHint}` : `detected from ${p.typeHint}`} · {human(size)}</span>
-              </span>
-              <span className="ml-auto flex flex-wrap items-center gap-chrome-gap">
-                {ro ? (
-                  <span className="font-ui text-chrome text-ink-mute">read-only · copy and save deliver the original</span>
-                ) : (
-                  <>
-                    {modified(s) && <span data-testid="modified" className="font-ui text-chrome text-ink">● modified</span>}
-                    <IconButton label="undo" onClick={undo} disabled={s.at === 0}>↶</IconButton>
-                    <IconButton label="redo" onClick={redo} disabled={s.at === s.stack.length - 1}>↷</IconButton>
-                    <Button onClick={restore} disabled={!modified(s)}>restore original</Button>
-                    <span className="mx-2 h-control w-px bg-hairline" />
-                    <span className="text-label uppercase tracking-label text-ink-mute">copy · save</span>
-                    <SegmentedControl options={targets} value={deliver} onChange={(v) => store.set({ deliver: v })} ariaLabel="what copy and save deliver" />
-                  </>
-                )}
-                {k !== "image" && <CopyButton label="copy" getPayload={() => delivered(store.get())} />}
-                <IconButton glyph="save" label={`save ${ro ? "the original" : deliver === "working" ? "the working copy" : deliver === "view" ? "this view" : "the original"}`}
-                  onClick={() => store.set({ note: `save dialog: ${ro ? "the original" : deliver} · ${human(ro ? sizeOf(bytesOf(store.get())) : sizeOf(delivered(store.get())))}` })} />
-              </span>
+            <header className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-2">
+              <p className="min-w-0 flex-1 break-words font-ui text-note text-ink">{p.title}</p>
+              {!isEmpty(s) && k !== "image" && <CopyButton label="copy" getPayload={() => onScreen(store.get())} />}
+              {!isEmpty(s) && <span data-more><IconButton label="more" expanded={s.menu?.type === "more"} onClick={openMore}>⋯</IconButton></span>}
             </header>
           );
         }
 
-        function FindBar({ scopes }) {
+        const HEX_QUERY = /^\s*([0-9a-fA-F]{2}\s*)+$/;
+        const hexMode = (q) => (HEX_QUERY.test(q) ? "bytes" : "text");
+        function Find() {
           const s = useS();
+          const k = payloadOf(s) ? kindOf(s) : null;
+          if (!k || isEmpty(s) || k === "image") return <div hidden data-closed="find needs data it can search" />;
           const total = matchCount(s);
           const at = total ? (s.find.at % total) + 1 : 0;
           const step = (d) => store.set((x) => ({ find: { ...x.find, at: (x.find.at + d + Math.max(total, 1)) % Math.max(total, 1) } }));
+          const count = !s.find.q ? "" : total ? `${at} of ${total}` : "no match";
           return (
-            <span className="flex items-center gap-chrome-gap">
-              <Field value={s.find.q} onChange={(e) => store.set((x) => ({ find: { ...x.find, q: e.target.value, at: 0 } }))} aria-label="find" placeholder="find" verbatim className="w-field" />
-              {scopes}
-              <span className="w-field-sm font-ui text-chrome text-ink-mute">{s.find.q ? (total ? `${at} of ${total}` : "no match") : ""}</span>
+            <div className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y"
+              onKeyDown={(e) => { if (e.key === "Enter") step(e.shiftKey ? -1 : 1); if (e.key === "Escape") store.set((x) => ({ find: { ...x.find, q: "", at: 0 } })); }}>
+              <Field value={s.find.q} onChange={(e) => store.set((x) => ({ find: { ...x.find, q: e.target.value, at: 0 } }))} aria-label="find"
+                placeholder={k === "hex" ? "find bytes (49 45 4e 44) or text (IEND)" : "find"} verbatim className="min-w-0 flex-1" />
+              <span className="whitespace-nowrap font-ui text-chrome text-ink-mute">{count}{k === "hex" && s.find.q ? ` · as ${hexMode(s.find.q)}` : ""}</span>
               <IconButton label="previous match" onClick={() => step(-1)} disabled={!total}>↑</IconButton>
               <IconButton label="next match" onClick={() => step(1)} disabled={!total}>↓</IconButton>
-            </span>
-          );
-        }
-
-        const Divider = () => <span className="h-control w-px bg-hairline" />;
-
-        function Tools() {
-          const s = useS();
-          if (!payloadOf(s) || s.flags.has("empty")) return <div hidden data-closed="no tools without data" />;
-          const k = kindOf(s);
-          const parses = k === "json" && parseJson(working(s)).ok;
-          const decode = <Button onClick={decodeNow} disabled={!s.sel && !(k === "form" && s.row !== null)}>decode</Button>;
-          const filterBox = (placeholder) => (
-            <span className="flex items-center gap-chrome-gap">
-              <Field value={s.filter.q} onChange={(e) => store.set((x) => ({ filter: { ...x.filter, q: e.target.value } }))} aria-label="filter" placeholder={placeholder} verbatim className="w-field-lg" />
-              <Button onClick={applyFilter} disabled={!s.filter.q.trim()}>apply</Button>
-            </span>
-          );
-          let tools = null;
-          if (k === "json") tools = (
-            <>
-              <FindBar scopes={<SegmentedControl options={[{ value: "keys", label: "keys" }, { value: "values", label: "values" }, { value: "both", label: "both" }]} value={s.find.scope} onChange={(v) => store.set((x) => ({ find: { ...x.find, scope: v, at: 0 } }))} ariaLabel="find in" />} />
-              <Divider />
-              <SegmentedControl options={[{ value: "jsonpath", label: "JSONPath" }, { value: "text", label: "text" }]} value={s.filter.lang} onChange={(v) => store.set((x) => ({ filter: { ...x.filter, lang: v } }))} ariaLabel="filter by" />
-              {filterBox(s.filter.lang === "jsonpath" ? "$.events[*].device" : "keep branches containing…")}
-              <Divider />
-              <Select options={[{ id: "open", label: "expand all" }, { id: "1", label: "fold to depth 1" }, { id: "2", label: "fold to depth 2" }, { id: "3", label: "fold to depth 3" }, { id: "all", label: "fold all" }]} value={undefined} placeholder="fold…" onChange={(id) => foldTo(id)} label="fold" searchable={false} className="w-field" />
-              <SegmentedControl options={[{ value: "2", label: "2" }, { value: "4", label: "4" }, { value: "tab", label: "tab" }, { value: "min", label: "minified" }]} value={parses ? s.fmt ?? "" : ""} onChange={reformat} ariaLabel="indent" disabled={!parses || !!s.view} />
-              <Button onClick={sortKeys} disabled={!parses || !!s.view}>sort keys</Button>
-              <Divider />
-              {decode}
-            </>
-          );
-          if (k === "form") tools = (
-            <>
-              <FindBar />
-              <Divider />
-              {filterBox("rows whose key or value contains…")}
-              <Divider />
-              <SegmentedControl options={[{ value: "decoded", label: "decoded" }, { value: "encoded", label: "encoded" }]} value={s.encoded ? "encoded" : "decoded"} onChange={(v) => store.set({ encoded: v === "encoded", view: null })} ariaLabel="show the pairs" />
-              <Button onClick={() => setPairs((ps) => [...ps].sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i)).map((p) => p.raw), "sorted by key")} disabled={s.encoded || !!s.view}>sort by key</Button>
-              <Button onClick={() => { setPairs((ps) => [...ps.map((p) => p.raw), "="], "added a pair"); store.set((x) => ({ edit: { row: pairsOf(working(x)).length - 1, field: "k", value: "" } })); }} disabled={s.encoded || !!s.view}>add pair</Button>
-              <CopyButton label="copy as JSON" getPayload={() => JSON.stringify(pairsOf(working(store.get())).reduce((o, p) => { o[p.k] = p.k in o ? [].concat(o[p.k], p.v) : p.v; return o; }, {}), null, 2)} />
-              <CopyButton label="copy as query string" getPayload={() => working(store.get())} />
-              <Divider />
-              {decode}
-            </>
-          );
-          if (k === "text" || k === "xml") tools = (
-            <>
-              <FindBar />
-              <Divider />
-              <SegmentedControl options={[{ value: "wrap", label: "wrap" }, { value: "nowrap", label: "no wrap" }]} value={s.wrap ? "wrap" : "nowrap"} onChange={(v) => store.set({ wrap: v === "wrap" })} ariaLabel="long lines" />
-              {k === "xml" && <Select options={[{ id: "open", label: "expand all" }, { id: "1", label: "fold to depth 1" }, { id: "2", label: "fold to depth 2" }, { id: "3", label: "fold to depth 3" }, { id: "all", label: "fold all" }]} value={undefined} placeholder="fold…" onChange={(id) => foldTo(id)} label="fold" searchable={false} className="w-field" />}
-              {k === "xml" && <Button onClick={reindentXml}>re-indent</Button>}
-              <Divider />
-              {decode}
-            </>
-          );
-          if (k === "hex") tools = (
-            <FindBar scopes={<SegmentedControl options={[{ value: "hex", label: "hex" }, { value: "text", label: "text" }]} value={s.find.mode} onChange={(v) => store.set((x) => ({ find: { ...x.find, mode: v, at: 0 } }))} ariaLabel="find as" />} />
-          );
-          if (k === "image") tools = (
-            <SegmentedControl options={[{ value: "fit", label: "fit" }, { value: "actual", label: "actual size" }]} value={s.fit} onChange={(v) => store.set({ fit: v })} ariaLabel="image size" />
-          );
-          return <div className="flex flex-wrap items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">{tools}</div>;
-        }
-
-        function Band() {
-          const s = useS();
-          if (s.viewErr) return <div className="border-b border-hairline px-4 py-chrome-y"><Notice tone="warn">{s.viewErr}</Notice></div>;
-          if (!s.view) return <div hidden data-closed="the band shows only while a view, or a reason a filter cannot run, exists" />;
-          return (
-            <div className="flex items-center gap-2 border-b border-hairline bg-canvas-soft px-4 py-chrome-y">
-              <Notice action={undefined}>
-                filtered view · <span className="font-mono">{s.view.producer}</span> · {s.view.count} · read-only, clear it to edit
-              </Notice>
-              <Button onClick={() => store.set({ view: null, deliver: store.get().deliver === "view" ? "working" : store.get().deliver })} className="ml-auto">clear</Button>
             </div>
           );
         }
@@ -550,50 +530,35 @@
           return [{ t: line, c: "plain" }];
         }
         const TONE = { key: "text-syn-key", str: "text-syn-str", num: "text-syn-num", lit: "text-syn-num", punct: "text-ink-mute", attr: "text-ink-body", plain: "text-ink" };
-        const inScope = (c, scope) => scope === "both" || (scope === "keys" ? c === "key" : c !== "key" && c !== "punct");
+        const MARK = (current) => `rounded-button ${current ? "bg-wash-active outline outline-focus outline-ink-mute" : "bg-wash-select"}`;
 
-        function surfaceText(s) {
-          if (s.view) return s.view.text;
-          return working(s);
-        }
-        function lineMatches(text, lang, q, scope) {
+        function lineMatches(text, q) {
           if (!q) return [];
           const needle = q.toLowerCase();
           const out = [];
           text.split("\n").forEach((line, li) => {
-            let col = 0;
-            for (const tk of tokens(line, lang)) {
-              if (inScope(tk.c, lang === "json" ? scope : "both")) {
-                const hay = tk.t.toLowerCase();
-                let i = hay.indexOf(needle);
-                while (i >= 0) { out.push({ li, from: col + i, to: col + i + needle.length }); i = hay.indexOf(needle, i + needle.length); }
-              }
-              col += tk.t.length;
-            }
+            const hay = line.toLowerCase();
+            let i = hay.indexOf(needle);
+            while (i >= 0) { out.push({ li, from: i, to: i + needle.length }); i = hay.indexOf(needle, i + needle.length); }
           });
           return out;
         }
-        function hexMatches(bytes, q, mode) {
+        function hexMatches(bytes, q) {
           if (!q) return [];
-          let needle;
-          if (mode === "hex") {
-            const h = q.replace(/\s+/g, "");
-            if (!/^([0-9a-fA-F]{2})+$/.test(h)) return [];
-            needle = h.match(/../g).map((x) => parseInt(x, 16));
-          } else needle = Array.from(enc.encode(q));
+          const needle = hexMode(q) === "bytes" ? q.replace(/\s+/g, "").match(/../g).map((x) => parseInt(x, 16)) : Array.from(enc.encode(q));
           const out = [];
           for (let i = 0; i + needle.length <= bytes.length; i++) if (needle.every((b, j) => bytes[i + j] === b)) out.push({ from: i, to: i + needle.length });
           return out;
         }
         function matchCount(s) {
           const k = kindOf(s);
-          if (k === "hex") return hexMatches(bytesOf(s), s.find.q, s.find.mode).length;
+          if (k === "hex") return hexMatches(bytesOf(s), s.find.q).length;
           if (k === "form" && !s.encoded) {
             const q = s.find.q.toLowerCase();
             if (!q) return 0;
             return pairsOf(working(s)).reduce((n, p) => n + (p.k.toLowerCase().split(q).length - 1) + (p.v.toLowerCase().split(q).length - 1), 0);
           }
-          return lineMatches(surfaceText(s), k === "json" ? "json" : k === "xml" ? "xml" : "plain", s.find.q, s.find.scope).length;
+          return lineMatches(working(s), s.find.q).length;
         }
 
         const indentOf = (line) => line.length - line.trimStart().length;
@@ -611,16 +576,15 @@
           return out;
         }
         function foldTo(id) {
-          const s = store.get();
-          const lines = surfaceText(s).split("\n");
+          const lines = working(store.get()).split("\n");
           const ranges = foldRanges(lines);
           const unit = Math.min(...[...ranges.keys()].map((i) => indentOf(lines[i + 1]) - indentOf(lines[i])).filter((n) => n > 0), 99) || 2;
-          if (id === "open") return store.set({ folds: new Set() });
-          if (id === "all") return store.set({ folds: new Set([...ranges.keys()].filter((i) => indentOf(lines[i]) > 0)) });
-          return store.set({ folds: new Set([...ranges.keys()].filter((i) => indentOf(lines[i]) / unit === Number(id))) });
+          const folds = id === "none" ? new Set() : id === "all" ? new Set([...ranges.keys()].filter((i) => indentOf(lines[i]) > 0))
+            : new Set([...ranges.keys()].filter((i) => indentOf(lines[i]) / unit === Number(id)));
+          store.set({ folds, foldTo: id, peek: null, note: id === "none" ? "unfolded all" : `folded to depth ${id}` });
         }
 
-        function LineSurface({ text, lang, editable, wrap, matches, current, folds, onCommit, testid }) {
+        function LineSurface({ text, lang, editable, wrap, matches, current, folds, onCommit, testid, inset }) {
           const lines = text.split("\n");
           const ranges = foldRanges(lines);
           const byLine = new Map();
@@ -637,7 +601,7 @@
               hits.filter((h) => h.from < b && h.to > a).forEach((h) => {
                 if (h.from > at) segs.push(<span key={`${ti}-${at}`} className={TONE[tk.c]}>{lines[i].slice(at, h.from)}</span>);
                 const from = Math.max(h.from, a); const to = Math.min(h.to, b);
-                segs.push(<mark key={`${ti}-m${from}`} data-match={h.n} className={`${TONE[tk.c]} rounded-button ${h.n === current ? "bg-wash-active outline outline-focus outline-ink-mute" : "bg-wash-select"}`}>{lines[i].slice(from, to)}</mark>);
+                segs.push(<mark key={`${ti}-m${from}`} data-match={h.n} className={`${TONE[tk.c]} ${MARK(h.n === current)}`}>{lines[i].slice(from, to)}</mark>);
                 at = to;
               });
               if (at < b) segs.push(<span key={`${ti}-${at}`} className={TONE[tk.c]}>{lines[i].slice(at, b)}</span>);
@@ -662,14 +626,65 @@
               </div>,
             );
             if (folded) i = ranges.get(i);
+            if (inset && inset.after === i) rows.push(<div key={`inset-${i}`} className="py-chrome-y pl-12 pr-4">{inset.node}</div>);
           }
           return <div data-wire={testid} className="py-2 font-mono text-body leading-normal">{rows}</div>;
+        }
+
+        function Peek() {
+          const s = useS();
+          const { input, origin, using, guessed } = s.peek;
+          const r = DECODERS[using](input);
+          const from = origin.type === "row" ? `the value of “${origin.key}”` : "the selection";
+          const replace = () => {
+            const value = r.kind === "jwt" ? r.payload : r.raw;
+            if (origin.type === "row") setPairs((ps) => ps.map((p) => (p.i === origin.row ? encodePair(p.k, value) : p.raw)), `replaced ${from} with its decoded form`, { peek: null });
+            else push(working(store.get()).replace(input, kindOf(store.get()) === "json" ? JSON.stringify(value).slice(1, -1) : value), "replaced the selection with its decoded form", { peek: null });
+          };
+          const openNew = () => store.set({ note: `opened “${payloadOf(store.get()).title} · decoded ${using}” in a new data window` });
+          const block = (label, child) => (
+            <div className="flex flex-col gap-chrome-tight">
+              <span className="font-ui text-label uppercase tracking-label text-ink-mute">{label}</span>
+              {child}
+            </div>
+          );
+          const show = (text, lang) => <LineSurface text={text} lang={lang} editable={false} wrap matches={[]} current={-1} folds={null} testid="decoded" onCommit={() => {}} />;
+          return (
+            <div data-testid="decode-peek" className="rounded-card border border-hairline bg-canvas-soft font-ui"
+              onKeyDown={(e) => { if (e.key === "Escape") store.set({ peek: null }); }}>
+              <div className="flex flex-wrap items-center gap-chrome-gap border-b border-hairline px-3 py-chrome-y">
+                <span className="text-label uppercase tracking-label text-ink-mute">decoded as</span>
+                <SegmentedControl options={[{ value: "jwt", label: "JWT" }, { value: "base64", label: "base64" }, { value: "url", label: "URL" }]} value={using}
+                  onChange={(v) => store.set((x) => ({ peek: { ...x.peek, using: v, guessed: false } }))} ariaLabel="decode as" />
+                <span className="text-chrome text-ink-mute">{guessed ? "guessed from its shape · " : ""}{from} · {input.length} characters</span>
+                <span className="ml-auto flex items-center gap-chrome-gap">
+                  {!r.err && r.kind !== "binary" && <Button onClick={replace}>{r.kind === "jwt" ? "replace with the payload" : "replace"}</Button>}
+                  {!r.err && r.kind !== "binary" && <IconButton label="open in data window" onClick={openNew}>⧉</IconButton>}
+                  <IconButton glyph="close" label="close the peek" onClick={() => store.set({ peek: null })} />
+                </span>
+              </div>
+              <div className="max-h-body-max overflow-auto px-3 py-2">
+                {r.err ? (
+                  <Notice tone="warn" detail={`${from === "the selection" ? "the selection is" : "the value is"} left as it was`}>{using === "jwt" ? "not a JWT" : using === "url" ? "not URL-encoded" : "not base64"}: {r.err}</Notice>
+                ) : r.kind === "jwt" ? (
+                  <div className="flex flex-col gap-2">
+                    {block("header", show(r.header, "json"))}
+                    {block("payload", show(r.payload, "json"))}
+                    {block("signature · not verified", <span data-wire="signature" className="break-all font-mono text-body text-ink-body">{r.signature}</span>)}
+                  </div>
+                ) : r.kind === "binary" ? (
+                  <Notice detail="binary cannot replace text in place; it opens as data of its own" action={<Button onClick={openNew}>open in data window</Button>}>
+                    {human(r.bytes.length)} of binary · {r.looks ? `looks like ${r.looks}` : "no known signature"}
+                  </Notice>
+                ) : show(r.text, r.kind === "json" ? "json" : "plain")}
+              </div>
+            </div>
+          );
         }
 
         function FormSurface() {
           const s = useS();
           const pairs = pairsOf(working(s));
-          const shown = s.view?.rows ? pairs.filter((p) => s.view.rows.includes(p.i)) : pairs;
           const counts = {}; const nth = {};
           pairs.forEach((p) => { counts[p.k] = (counts[p.k] ?? 0) + 1; });
           pairs.forEach((p) => { nth[p.i] = (nth[`#${p.k}`] = (nth[`#${p.k}`] ?? 0) + 1); });
@@ -680,7 +695,7 @@
           const hl = (text) => {
             if (!q) return text;
             const out = []; let at = 0; const low = text.toLowerCase(); let i = low.indexOf(q);
-            while (i >= 0) { out.push(text.slice(at, i)); out.push(<mark key={i} className={`rounded-button text-ink ${n === cur ? "bg-wash-active outline outline-focus outline-ink-mute" : "bg-wash-select"}`}>{text.slice(i, i + q.length)}</mark>); n++; at = i + q.length; i = low.indexOf(q, at); }
+            while (i >= 0) { out.push(text.slice(at, i)); out.push(<mark key={i} className={`text-ink ${MARK(n === cur)}`}>{text.slice(i, i + q.length)}</mark>); n++; at = i + q.length; i = low.indexOf(q, at); }
             out.push(text.slice(at)); return out;
           };
           const commit = (row, field, value) => setPairs((ps) => ps.map((p) => (p.i === row ? encodePair(field === "k" ? value : p.k, field === "v" ? value : p.v) : p.raw)), `edited the ${field === "k" ? "key" : "value"} of pair ${row + 1}`, { edit: null });
@@ -698,30 +713,42 @@
                 onClick={(e) => { e.stopPropagation(); store.set({ row: p.i, edit: { row: p.i, field, value: text } }); }}
                 onKeyDown={(e) => { if (e.key === "Enter") store.set({ row: p.i, edit: { row: p.i, field, value: text } }); }}
                 className={`cursor-text whitespace-pre-wrap break-all rounded-button font-mono text-body leading-normal hover:bg-wash-hover ${field === "k" ? "text-syn-key" : text ? "text-ink" : "text-ink-mute"}`}>
-                {text ? hl(text) : field === "v" ? "none" : "none"}
+                {text ? hl(text) : "none"}
               </div>
             );
           };
+          const COLS = { gridTemplateColumns: "5ch minmax(128px, 2fr) 5fr 60px" };
           return (
             <div className="py-2">
-              <div className="sticky top-0 z-sticky grid gap-3 border-b border-hairline bg-canvas px-4 py-chrome-y text-label uppercase tracking-label text-ink-mute" style={{ gridTemplateColumns: "5ch minmax(128px, 2fr) 5fr 28px" }}>
+              <div className="sticky top-0 z-sticky grid gap-3 border-b border-hairline bg-canvas px-4 py-chrome-y text-label uppercase tracking-label text-ink-mute" style={COLS}>
                 <span>#</span><span>key</span><span>value</span><span />
               </div>
-              {shown.map((p) => (
-                <div key={p.i} onClick={() => store.set({ row: p.i, sel: "" })}
-                  className={`grid items-start gap-3 border-b border-hairline px-4 py-chrome-y ${s.row === p.i ? "bg-canvas-soft" : ""}`} style={{ gridTemplateColumns: "5ch minmax(128px, 2fr) 5fr 28px" }}>
-                  <span className="pt-chrome-tight text-right font-ui text-chrome text-ink-mute">{p.i + 1}</span>
-                  <div>
-                    {cell(p, "k")}
-                    {counts[p.k] > 1 && <span className="font-ui text-chrome text-ink-mute">{nth[p.i]} of {counts[p.k]} “{p.k}”</span>}
+              {pairs.map((p) => (
+                <React.Fragment key={p.i}>
+                  <div onClick={() => store.set({ row: p.i, sel: { text: "", line: null } })}
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); const pt = toMock(e.clientX, e.clientY); store.set({ row: p.i, sel: { text: "", line: null }, menu: { type: "context", x: pt.x, y: pt.y, row: p.i } }); }}
+                    className={`group grid items-start gap-3 border-b border-hairline px-4 py-chrome-y ${s.row === p.i ? "bg-canvas-soft" : ""}`} style={COLS}>
+                    <span className="pt-chrome-tight text-right font-ui text-chrome text-ink-mute">{p.i + 1}</span>
+                    <div>
+                      {cell(p, "k")}
+                      {counts[p.k] > 1 && <span className="font-ui text-chrome text-ink-mute">{nth[p.i]} of {counts[p.k]} “{p.k}”</span>}
+                    </div>
+                    <div>
+                      {cell(p, "v")}
+                      {p.kept && <span className="font-ui text-chrome text-ink-mute">kept as sent: not a valid percent-escape</span>}
+                    </div>
+                    <span className={`flex ${s.row === p.i ? "" : "invisible group-hover:visible group-focus-within:visible"}`}>
+                      <IconButton label={`add a pair after pair ${p.i + 1}`} onClick={() => addPairAfter(p.i)}>+</IconButton>
+                      <IconButton glyph="close" label={`remove pair ${p.i + 1}`} onClick={() => removePair(p.i)} />
+                    </span>
                   </div>
-                  <div>
-                    {cell(p, "v")}
-                    {p.kept && <span className="font-ui text-chrome text-ink-mute">kept as sent: not a valid percent-escape</span>}
-                  </div>
-                  <IconButton glyph="close" label={`remove pair ${p.i + 1}`} disabled={!!s.view} onClick={() => setPairs((ps) => ps.filter((x) => x.i !== p.i).map((x) => x.raw), `removed pair ${p.i + 1}`)} />
-                </div>
+                  {s.peek && s.peek.origin.type === "row" && s.peek.origin.row === p.i && <div className="border-b border-hairline py-chrome-y pl-12 pr-4"><Peek /></div>}
+                </React.Fragment>
               ))}
+              <div role="button" tabIndex={0} onClick={() => addPairAfter(pairs.length - 1)} onKeyDown={(e) => { if (e.key === "Enter") addPairAfter(pairs.length - 1); }}
+                className="grid cursor-text gap-3 px-4 py-chrome-y font-ui text-chrome text-ink-mute hover:bg-wash-hover" style={COLS}>
+                <span /><span>new key</span><span>new value</span><span />
+              </div>
             </div>
           );
         }
@@ -729,7 +756,7 @@
         function HexSurface() {
           const s = useS();
           const bytes = bytesOf(s);
-          const ms = hexMatches(bytes, s.find.q, s.find.mode);
+          const ms = hexMatches(bytes, s.find.q);
           const cur = ms.length ? s.find.at % ms.length : -1;
           const hit = (o) => { const n = ms.findIndex((m) => o >= m.from && o < m.to); return n < 0 ? "" : n === cur ? "bg-wash-active text-ink" : "bg-wash-select text-ink"; };
           const rows = [];
@@ -746,86 +773,48 @@
           return <div data-wire="bytes" className="px-4 py-2 font-mono text-body leading-normal">{rows}</div>;
         }
 
+        function captureSel() {
+          const sel = window.getSelection();
+          const inside = sel && sel.focusNode && document.getElementById("m-surface").contains(sel.focusNode);
+          const text = inside ? sel.toString().trim() : "";
+          const el = inside ? (sel.focusNode.nodeType === 1 ? sel.focusNode : sel.focusNode.parentElement)?.closest("[data-line]") : null;
+          const line = el ? Number(el.dataset.line) : null;
+          const now = store.get().sel;
+          if (text !== now.text || line !== now.line) store.set({ sel: { text, line }, row: text ? null : store.get().row });
+        }
+        function onContext(e) {
+          const k = kindOf(store.get());
+          if (READ_ONLY.has(k)) return;
+          e.preventDefault();
+          captureSel();
+          const pt = toMock(e.clientX, e.clientY);
+          store.set({ menu: { type: "context", x: pt.x, y: pt.y } });
+        }
+
         function Surface() {
           const s = useS();
           const p = payloadOf(s);
           if (!p) return <div className="flex flex-1 items-center justify-center"><Notice layout="region" detail="A data window holds only what its opener hands it, and this one was opened without data. Open it again from a body.">nothing was handed to this window</Notice></div>;
-          if (s.flags.has("empty")) return <div className="flex flex-1 items-center justify-center"><Notice layout="region" detail="the data handed in is 0 B: there is nothing to show, edit or decode">none</Notice></div>;
+          if (isEmpty(s)) return <div className="flex flex-1 items-center justify-center"><Notice layout="region" detail="the data handed in is 0 B: there is nothing to show, edit or decode">none</Notice></div>;
           const k = kindOf(s);
-          const scroller = (child) => <div className="min-h-0 flex-1 overflow-auto" onMouseUp={captureSel} onKeyUp={captureSel}>{child}</div>;
+          const scroller = (child) => <div className="min-h-0 flex-1 overflow-auto" onMouseUp={captureSel} onKeyUp={captureSel} onContextMenu={onContext}>{child}</div>;
           if (k === "image") return scroller(<div className={`p-4 ${s.fit === "fit" ? "" : "w-max"}`}><ImageRenderer bytes={p.bytes ?? enc.encode(working(s))} contentType={p.typeHint} /></div>);
           if (k === "hex") return scroller(<HexSurface />);
           if (k === "form" && !s.encoded) return scroller(<FormSurface />);
-          if (s.view && !s.view.text) return <div className="flex flex-1 items-center justify-center"><Notice layout="region" detail={`nothing in the working copy matches ${s.view.producer}`} action={<Button onClick={() => store.set({ view: null })}>clear</Button>}>none</Notice></div>;
           const lang = k === "json" ? "json" : k === "xml" ? "xml" : "plain";
-          const text = surfaceText(s);
-          const ms = lineMatches(text, lang, s.find.q, s.find.scope);
-          const parse = k === "json" && !s.view ? parseJson(text) : { ok: true };
+          const text = working(s);
+          const ms = lineMatches(text, s.find.q);
+          const parse = k === "json" ? parseJson(text) : { ok: true };
+          const inset = s.peek && s.peek.origin.type === "selection" && s.peek.origin.line !== null ? { after: s.peek.origin.line, node: <Peek /> } : null;
           return (
             <>
-              {!parse.ok && <div className="border-b border-hairline px-4 py-chrome-y"><Notice tone="warn">not valid JSON at line {parse.line}, column {parse.col}. It renders as text; folding still works, and find, query, filter and reformat wait for it to parse</Notice></div>}
+              {!parse.ok && <div className="border-b border-hairline px-4 py-chrome-y"><Notice tone="warn">not valid JSON at line {parse.line}, column {parse.col}. It shows as text: find, fold and decode still work, and indent and sort keys wait for it to parse</Notice></div>}
               {scroller(
-                <LineSurface text={text} lang={parse.ok ? lang : "plain"} editable={!s.view} wrap={k === "json" || k === "form" ? true : s.wrap}
-                  matches={ms} current={ms.length ? s.find.at % ms.length : -1} folds={s.folds} testid={s.view ? "this view" : "working copy"}
-                  onCommit={(t, step) => push(t, step, { fmt: null })} />,
+                <LineSurface text={text} lang={parse.ok ? lang : "plain"} editable wrap={s.wrap}
+                  matches={ms} current={ms.length ? s.find.at % ms.length : -1} folds={s.folds} testid="working copy" inset={inset}
+                  onCommit={(t, step) => push(t, step, { fmt: null, peek: null })} />,
               )}
             </>
-          );
-        }
-        function captureSel() {
-          const sel = window.getSelection();
-          const inside = sel && sel.anchorNode && document.getElementById("m-surface").contains(sel.anchorNode);
-          const text = inside ? sel.toString().trim() : "";
-          if (text !== store.get().sel) store.set({ sel: text, row: text ? null : store.get().row });
-        }
-
-        function Decoder() {
-          const s = useS();
-          if (!s.decoder || !payloadOf(s)) return <div hidden data-closed="the panel opens on decode" />;
-          const { input, origin, using } = s.decoder;
-          const r = DECODERS[using](input);
-          const from = origin.type === "row" ? `the value of “${origin.key}”` : "the selection";
-          const replace = () => {
-            const value = r.kind === "jwt" ? r.payload : r.raw;
-            if (origin.type === "row") setPairs((ps) => ps.map((p) => (p.i === origin.row ? encodePair(p.k, value) : p.raw)), `replaced ${from} with its decoded form`, { decoder: null });
-            else push(working(store.get()).replace(input, kindOf(store.get()) === "json" ? JSON.stringify(value).slice(1, -1) : value), "replaced the selection with its decoded form", { decoder: null });
-          };
-          const block = (label, child) => (
-            <div className="flex flex-col gap-chrome-y">
-              <span className="text-label uppercase tracking-label text-ink-mute">{label}</span>
-              {child}
-            </div>
-          );
-          const pretty = (text, lang) => <div className="rounded-card border border-hairline bg-canvas"><LineSurface text={text} lang={lang} editable={false} wrap matches={[]} current={-1} folds={null} testid="decoded" onCommit={() => {}} /></div>;
-          return (
-            <Section title="decode" className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto px-4 pb-4">
-                <div className="flex items-center gap-chrome-gap">
-                  <SegmentedControl options={[{ value: "base64", label: "base64" }, { value: "url", label: "URL" }, { value: "jwt", label: "JWT" }]} value={using} onChange={(v) => store.set((x) => ({ decoder: { ...x.decoder, using: v } }))} ariaLabel="decode as" />
-                  <IconButton glyph="close" label="close the decoder" onClick={() => store.set({ decoder: null })} className="ml-auto" />
-                </div>
-                <span className="font-ui text-chrome text-ink-mute">from {from} · {input.length} characters{using === "base64" ? " · standard or URL-safe, padding optional" : ""}</span>
-                {r.err ? (
-                  <Notice tone="warn" detail={origin.type === "row" ? "the value is left as it was" : "the selection is left as it was"}>{using === "jwt" ? "not a JWT" : using === "url" ? "not URL-encoded" : "not base64"}: {r.err}</Notice>
-                ) : r.kind === "jwt" ? (
-                  <>
-                    {block("header", pretty(r.header, "json"))}
-                    {block("payload", pretty(r.payload, "json"))}
-                    {block("signature · not verified", <span data-wire="signature" className="break-all font-mono text-body text-ink-body">{r.signature}</span>)}
-                  </>
-                ) : r.kind === "binary" ? (
-                  block(`binary · ${human(r.bytes.length)} · shown as hex`, <div className="rounded-card border border-hairline bg-canvas p-2"><HexRenderer bytes={r.bytes} /></div>)
-                ) : (
-                  block(r.kind === "json" ? "decoded · JSON" : "decoded · text", pretty(r.text, r.kind === "json" ? "json" : "plain"))
-                )}
-                {!r.err && (
-                  <div className="flex flex-wrap gap-chrome-gap">
-                    <Button onClick={replace} disabled={!!s.view || r.kind === "binary"}>{r.kind === "jwt" ? "replace with the payload" : "replace with decoded"}</Button>
-                    <Button onClick={() => store.set({ note: `opened “${payloadOf(store.get()).title} · decoded ${using === "jwt" ? "JWT payload" : using}” in a new data window` })}>open in data window</Button>
-                  </div>
-                )}
-              </div>
-            </Section>
           );
         }
 
@@ -835,19 +824,25 @@
           if (!p) return <div hidden data-closed="no status without data" />;
           const k = kindOf(s);
           const ro = READ_ONLY.has(k);
-          const parts = [KINDS.find((x) => x.id === k).label];
-          if (ro) parts.push(`original ${human(sizeOf(bytesOf(s)))} · read-only`);
-          else {
-            parts.push(`original ${human(sizeOf(original(s)))}`, `working copy ${human(sizeOf(working(s)))}`, `${working(s).split("\n").length} lines`);
-            parts.push(s.at === 0 ? "no edits" : `${s.at} step${s.at === 1 ? "" : "s"} from the original, last: ${s.steps[s.at]}`);
-          }
-          if (s.sel) parts.push(`selection ${s.sel.length} characters`);
-          return <div className="border-t border-hairline px-4 py-chrome-y font-ui text-chrome text-ink-mute">{parts.join(" · ")}</div>;
+          const size = ro ? sizeOf(bytesOf(s)) : sizeOf(working(s));
+          const detected = KINDS.find((x) => x.id === p.kind).label;
+          return (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-chrome-tight border-t border-hairline px-4 py-chrome-y font-ui text-chrome text-ink-mute">
+              <Select options={KINDS} value={k} onChange={(id) => store.set({ override: id === p.kind ? null : id, folds: new Set(), peek: null, menu: null })} label="treat the data as" searchable={false} />
+              <span>{s.override ? `your choice · detected ${detected} from ${p.typeHint}` : `detected from ${p.typeHint}`}</span>
+              <span>{human(isEmpty(s) ? 0 : size)}</span>
+              {!ro && !isEmpty(s) && <span>{k === "form" && !s.encoded ? `${pairsOf(working(s)).length} pairs` : `${working(s).split("\n").length} lines`}</span>}
+              <span className="ml-auto flex items-center gap-x-3">
+                {s.sel.text && <span>selection {s.sel.text.length} characters</span>}
+                {ro ? <span>read-only</span> : modified(s) && <span data-testid="modified" className="text-ink">modified · {s.at} edit{s.at === 1 ? "" : "s"}</span>}
+              </span>
+            </div>
+          );
         }
 
         function Pane() {
-          const s = useS();
           const lines = PAYLOADS.json.text.split("\n").slice(0, 14);
+          const opened = () => store.set({ note: "opened “response body · GET api.example.com/v2/accounts/8812/sessions” in a data window" });
           return (
             <>
               <div className="border-b border-hairline bg-canvas-soft px-4 py-2 font-ui text-chrome text-ink-mute">the main window: the flow list on the left (unchanged), the detail pane at 520 px. A 2.0 MiB JSON response, cut at 128 KiB</div>
@@ -860,15 +855,15 @@
                         <SegmentedControl options={[{ value: "pretty", label: "pretty" }, { value: "raw", label: "raw" }]} value="pretty" onChange={() => {}} ariaLabel="response body mode" />
                         <span className="ml-auto flex items-center gap-chrome-gap">
                           <CopyButton label="copy body" getPayload={() => PAYLOADS.json.text} />
-                          <IconButton label="open in data window" onClick={() => store.set({ note: "opened “response body · GET api.example.com/v2/accounts/8812/sessions” in a data window" })}>⧉</IconButton>
+                          <IconButton label="open in data window" onClick={opened}>⧉</IconButton>
                           <IconButton glyph="save" label="save" onClick={() => {}} />
                         </span>
                       </div>
                       <div className="min-h-0 flex-1 overflow-auto">
                         <pre data-wire="body" className="whitespace-pre-wrap break-all font-mono text-body leading-normal text-ink-body">{lines.join("\n")}</pre>
-                        <span className="mt-chrome-gap flex items-center gap-2 border-t border-hairline pt-chrome-y font-ui text-chrome text-warn">
+                        <span className="mt-chrome-gap flex flex-wrap items-center gap-2 border-t border-hairline pt-chrome-y font-ui text-chrome text-warn">
                           ⚠ showing 128 KiB of 2.0 MiB
-                          <Button onClick={() => store.set({ note: "opened “response body · GET api.example.com/v2/accounts/8812/sessions” in a data window" })}>open in data window</Button>
+                          <Button onClick={opened}>open in data window</Button>
                         </span>
                       </div>
                     </div>
@@ -881,46 +876,57 @@
 
         const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
         mount("m-head", <Head />);
-        mount("m-tools", <Tools />);
-        mount("m-band", <Band />);
+        mount("m-find", <Find />);
         mount("m-surface", <Surface />);
-        mount("m-decoder", <Decoder />);
         mount("m-foot", <Foot />);
+        mount("m-menu", <Menus />);
         mount("m-pane", <Pane />);
+
+        const mock = document.getElementById("mock");
+        const fit = document.getElementById("fit");
+        const readout = document.getElementById("readout");
+
+        function placeAtLine(line, dx, tries = 30) {
+          requestAnimationFrame(() => {
+            const el = mock.querySelector(`#m-surface [data-line="${line}"]`);
+            if (!el) return tries > 0 && placeAtLine(line, dx, tries - 1);
+            const r = el.getBoundingClientRect();
+            const pt = toMock(r.left, r.bottom);
+            store.set((x) => (x.menu ? { menu: { ...x.menu, x: pt.x + dx, y: pt.y } } : {}));
+          });
+        }
 
         function forceFlags(flags) {
           const pid = ["k-form", "k-text", "k-xml", "k-hex", "k-image"].find((f) => flags.has(f))?.slice(2) ?? "json";
           store.set({ flags, ...fresh(pid) });
           const s = () => store.get();
           if (flags.has("modified")) {
-            if (pid === "json") { sortKeys(); const w = working(s()); const at = w.slice(0, w.indexOf('"plan": "team"')).split("\n").length; push(w.replace('"plan": "team"', '"plan": "enterprise"'), `edited line ${at}`, { fmt: null }); }
-            if (pid === "form") { setPairs((ps) => ps.map((p) => (p.k === "client_id" ? encodePair(p.k, "web-4.19.0") : p.raw)), "edited the value of pair 2"); }
-            if (pid === "text" || pid === "xml") { if (pid === "xml") reindentXml(); else push(working(s()).replace("retry in 30 s", "retry in 60 s"), "edited line 10"); }
+            if (pid === "json") { sortKeys(); const w = working(s()); push(w.replace('"plan": "team"', '"plan": "enterprise"'), `edited line ${lineOf(w, '"plan": "team"') + 1}`, { fmt: null }); }
+            if (pid === "form") setPairs((ps) => ps.map((p) => (p.k === "client_id" ? encodePair(p.k, "web-4.19.0") : p.raw)), "edited the value of pair 2");
+            if (pid === "xml") reindentXml();
+            if (pid === "text") push(working(s()).replace("retry in 30 s", "retry in 60 s"), "edited line 10");
           }
-          if (flags.has("broken") && pid === "json") { const w = working(s()); const at = w.slice(0, w.indexOf('"total": 12,')).split("\n").length; push(w.replace('"total": 12,', '"total": 12'), `edited line ${at}`, { fmt: null }); }
-          if (flags.has("found")) store.set({ find: { ...s().find, q: pid === "hex" ? "49 45 4e 44" : pid === "form" ? "scope" : pid === "json" ? "login" : "flow 44", at: 1 } });
-          if (flags.has("filtered")) {
-            if (pid === "form") store.set({ filter: { lang: "text", q: "scope" } });
-            else store.set({ filter: { lang: "jsonpath", q: "$.events[*].device" } });
-            applyFilter();
+          if (flags.has("broken") && pid === "json") { const w = working(s()); push(w.replace('"total": 12,', '"total": 12'), `edited line ${lineOf(w, '"total": 12,') + 1}`, { fmt: null }); }
+          if (flags.has("found")) store.set({ find: { q: pid === "hex" ? "49 45 4e 44" : pid === "form" ? "scope" : pid === "json" ? "login" : "flow 44", at: 1 } });
+          const tokenLine = () => lineOf(working(s()), '"session_token"');
+          if (flags.has("decoded")) {
+            if (pid === "form") { const p = pairsOf(working(s())).find((x) => x.k === "assertion"); store.set({ row: p.i }); openPeek(p.v, { type: "row", row: p.i, key: p.k }); }
+            else { store.set({ sel: { text: JWT, line: tokenLine() } }); openPeek(JWT, { type: "selection", line: tokenLine() }); }
           }
-          if (flags.has("decoder")) {
-            if (pid === "form") { const p = pairsOf(working(s())).find((x) => x.k === "assertion"); store.set({ row: p.i }); openDecoder(p.v, { type: "row", row: p.i, key: p.k }); }
-            else store.set({ sel: JWT, decoder: { input: JWT, origin: { type: "selection" }, using: "jwt" } });
+          if (flags.has("binary") && pid === "json") {
+            const line = lineOf(working(s()), '"thumbnail"');
+            store.set({ sel: { text: THUMB, line } }); openPeek(THUMB, { type: "selection", line });
           }
           if (flags.has("undecodable")) {
-            const bad = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODEyIn0";
-            store.set({ sel: bad, decoder: { input: bad, origin: { type: "selection" }, using: "jwt" } });
+            store.set({ sel: { text: BAD_JWT, line: tokenLine() } }); openPeek(BAD_JWT, { type: "selection", line: tokenLine() });
+          }
+          if (flags.has("more")) store.set({ menu: { type: "more", y: 44 } });
+          if (flags.has("context")) {
+            if (pid === "form") { const p = pairsOf(working(s())).find((x) => x.k === "assertion"); store.set({ row: p.i, menu: { type: "context", x: 520, y: 220, row: p.i } }); }
+            else { store.set({ sel: { text: JWT, line: tokenLine() }, menu: { type: "context", x: null, y: null } }); placeAtLine(tokenLine(), 260); }
           }
         }
 
-        const mock = document.getElementById("mock");
-        const fit = document.getElementById("fit");
-        const readout = document.getElementById("readout");
-        const zones = ["m-head", "m-tools", "m-band", "m-work", "m-foot"].map((id) => document.getElementById(id));
-        const paneZone = document.getElementById("m-pane");
-        const work = document.getElementById("m-work");
-        const decoderZone = document.getElementById("m-decoder");
         function apply() {
           const s = store.get();
           const win = s.flags.has("narrow") ? WIN.min : WIN.def;
@@ -932,22 +938,24 @@
           fit.style.height = `${FRAME_H * k}px`;
           fit.style.maxWidth = `${win}px`;
           const pane = s.flags.has("pane");
-          zones.forEach((z) => { z.style.display = pane ? "none" : ""; });
-          paneZone.style.display = pane ? "" : "none";
-          const stacked = win < STACK_BELOW;
-          work.style.flexDirection = stacked ? "column" : "row";
-          const open = !!s.decoder && !!payloadOf(s);
-          decoderZone.style.display = open ? "" : "none";
-          decoderZone.style.width = stacked ? "" : `${PANEL_W}px`;
-          decoderZone.style.height = stacked ? "50%" : "";
-          decoderZone.style.borderLeft = stacked ? "" : "1px solid var(--line)";
-          decoderZone.style.borderTop = stacked ? "1px solid var(--line)" : "";
-          decoderZone.style.paddingTop = "8px";
+          ["m-head", "m-find", "m-surface", "m-foot", "m-menu"].forEach((id) => { document.getElementById(id).style.display = pane ? "none" : ""; });
+          document.getElementById("m-pane").style.display = pane ? "" : "none";
           readout.textContent = pane ? `the opener · ${s.note || "press ⧉ or the cut marker's button"}` :
             `window ${win} × 800 (min 600 × 400) · history ${s.stack.length} step${s.stack.length === 1 ? "" : "s"}, at ${s.at} · ${modified(s) ? "modified" : "unmodified"}` +
-            (s.view ? ` · view: ${s.view.producer}` : "") + (s.note ? ` · last: ${s.note}` : "");
+            (s.note ? ` · last: ${s.note}` : "");
         }
         store.sub(apply);
+
+        mock.addEventListener("keydown", (e) => {
+          const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
+          const cmd = e.metaKey || e.ctrlKey;
+          if (cmd && e.key === "f") { e.preventDefault(); mock.querySelector("#m-find input")?.focus(); }
+          if (cmd && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+          if (cmd && e.key === "s") { e.preventDefault(); save(); }
+          if (cmd && e.shiftKey && e.key.toLowerCase() === "d") { e.preventDefault(); captureSel(); decodeNow(); }
+          if (e.altKey && e.code === "KeyZ") { e.preventDefault(); toggleWrap(); }
+          if (e.key === "Escape" && !typing) store.set((x) => (x.menu ? { menu: null } : x.peek ? { peek: null } : {}));
+        });
         new MutationObserver(() => forceFlags(new Set(mock.classList))).observe(mock, { attributes: true, attributeFilter: ["class"] });
         let lastWidth = 0;
         new ResizeObserver(() => {
@@ -960,19 +968,15 @@
       </script>
     </div>
 
-    <h3 id="calls">Calls for the owner's round</h3>
+    <h3 id="calls">Calls for the owner's round 2</h3>
     <table data-c="calls">
       <tr><th>#</th><th>The run drew</th><th>The alternative</th></tr>
-      <tr><td>C1</td><td>one switch in the header, <em>copy · save: original | working copy | this view</em>, that both copy and save follow. <em>this view</em> appears only while a view is shown. Read-only kinds (hex, image) drop the switch and say so</td><td>a copy and a save button for each target: six buttons, each naming its target in its own label</td></tr>
-      <tr><td>C2</td><td>JSON reformat as a segment, <em>2 | 4 | tab | minified</em>, lit on the last format applied and dark after a hand edit, plus a <em>sort keys</em> button. Each one is an undoable step</td><td>one <em>format…</em> menu: needs a menu component the collection lacks</td></tr>
-      <tr><td>C3</td><td>XML's reformat is labelled <em>re-indent</em>. The lexicon keeps <em>pretty</em> for a view of unchanged bytes and bans <em>pretty-print</em>, and this act changes the working copy</td><td><em>pretty</em>, which would collide with the pane's pretty/raw switch</td></tr>
-      <tr><td>C4</td><td>a form value is edited in place: click or Enter turns the cell into a multi-line Field, <kbd>⌘↵</kbd> or leaving it commits, Esc cancels. At rest every key and value is whole, wrapped mono text, never clamped</td><td>every cell always a Field: 300 KiB of open textareas, and no reading surface at rest</td></tr>
-      <tr><td>C5</td><td>the decoder opens as a 400 px panel beside the surface, stacked under it below 900 px. It decodes the selection, or the selected form row's value</td><td>inline under the selection, which pushes the document around while the user compares</td></tr>
-      <tr><td>C6</td><td>W1's window size stands: 1200 × 800, minimum 600 × 400</td><td>any other size</td></tr>
-      <tr><td>C7</td><td><em>restore original</em> asks nothing: it is itself one undoable step, so ⌘Z brings the edits back</td><td>a confirm before it throws edits away</td></tr>
-      <tr><td>C8</td><td>the entry point: a ⧉ icon on BodyViewer's toolbar between copy and save, a button on the cut marker, and <kbd>⌘⇧O</kbd> while the body has focus. The window opens on the mode the pane shows: pretty hands the decoded bytes, raw the raw ones</td><td>a worded <em>open in window</em> button on the toolbar, which crowds a 520 px pane</td></tr>
-      <tr><td>C9</td><td>a filtered view is read-only and says so in its band. Clearing it returns to the editable working copy, which the view never changed</td><td>editing inside a view, which would need a merge back into the whole document</td></tr>
-      <tr><td>C10</td><td>a decoded result that is binary is shown as hex in the panel. <em>replace</em> is offered only for text, and <em>open in data window</em> is the way to work the binary</td><td>replace binary in place, which would break a text working copy</td></tr>
+      <tr><td>D1</td><td>a choice row inside the ⋯ menu: <em>indent 2 · 4 · tab · minified</em> and <em>fold to 1 · 2 · 3 · all · none</em>, one row each, ← / → to move</td><td>submenus, which add a hover path and a second popover; or a row per choice, which makes the JSON menu 17 rows long</td></tr>
+      <tr><td>D2</td><td>form's <em>copy as query string</em> is dropped. The header's <em>copy</em> already delivers the query string; <em>copy as JSON</em> stays in ⋯</td><td>keep both copy-as items in ⋯</td></tr>
+      <tr><td>D3</td><td>the kind picker in the status bar is the shipped Select at control height, so the bar is one control tall</td><td>a borderless, status-bar-sized trigger: a new Select face, its own component design</td></tr>
+      <tr><td>D4</td><td>the peek opens under the line holding the end of the selection, inset from the gutter, and pushes the lines below it down; past 256 px it scrolls inside itself</td><td>a floating peek that covers the lines below, which hides what the user is comparing against</td></tr>
+      <tr><td>D5</td><td>for hex and image the ⋯ menu keeps only save (and image's <em>fit · actual</em>), so ⋯ is still there, in the same place, on every kind</td><td>hide ⋯ on read-only kinds, keeping only ⌘S</td></tr>
+      <tr><td>D6</td><td>the right-click menu holds only acts on what was clicked: <em>decode</em> and <em>copy</em> on a selection; <em>decode the value</em>, <em>copy the value</em>, <em>add a pair below</em> and <em>remove the pair</em> on a form row</td><td>repeat the ⋯ items in the right-click menu too</td></tr>
     </table>
 
     <h3 id="cut-marker">CutMarker's delta</h3>
@@ -994,52 +998,52 @@
       <tr><td><code>takeDataPayload()</code> → a payload, or <code>null</code> (W1)</td><td>used</td><td>the payload drives every zone; <code>null</code> is the <em>nothing was handed to this window</em> state</td></tr>
       <tr><td><code>payload.title</code></td><td>used</td><td>the native window title and the header line, as the opener wrote it</td></tr>
       <tr><td><code>payload.bytes</code></td><td>used</td><td>the original, never changed. The working copy starts as a copy of it. A 0 B payload is the <em>none</em> state</td></tr>
-      <tr><td><code>payload.typeHint</code></td><td>used</td><td>kind detection reads it first and the header names it: <em>detected from application/json</em></td></tr>
+      <tr><td><code>payload.typeHint</code></td><td>used</td><td>kind detection reads it first and the status bar names it: <em>detected from application/json</em></td></tr>
       <tr><td><code>payload.key</code></td><td>deliberately unused</td><td>opaque, and only the shell reads it, to focus an open window (DEC-68 rule 3). The screen never shows it</td></tr>
-      <tr><td>the six kinds: json · form · xml · text · hex · image</td><td>used</td><td>one surface and toolbar each; see the payload toggles</td></tr>
-      <tr><td>the kind override</td><td>used</td><td>the kind Select in the header. The note beside it reads <em>your choice · detected …</em></td></tr>
-      <tr><td>original / working copy / view</td><td>used</td><td>restore original · the modified marker and undo / redo · the view band; copy and save name which one they deliver</td></tr>
-      <tr><td>decoders: base64 (standard, URL-safe, padding optional) · URL-encoding · JWT</td><td>used</td><td>the decoder panel; each failure gives its reason in words</td></tr>
-      <tr><td><code>openDataWindow(payload)</code> (W1)</td><td>used</td><td>the decoder's <em>open in data window</em>, and the pane's ⧉ and cut-marker button</td></tr>
-      <tr><td>the save dialog and file write (DEC-68 rule 9)</td><td>used</td><td>save, delivering what the switch names</td></tr>
-      <tr><td>the clipboard</td><td>used</td><td>copy (CopyButton) · form export · native ⌘C on any selection</td></tr>
-      <tr><td>BodyViewer's loaded bytes, content type and mode (the opener)</td><td>used</td><td>the entry point hands what the pane holds in the mode it shows (C8)</td></tr>
-      <tr><td>the window size, 1200 × 800, minimum 600 × 400 (W1)</td><td>used</td><td>the frame, and the stacking rule below 900 px (C6)</td></tr>
+      <tr><td>the six kinds: json · form · xml · text · hex · image</td><td>used</td><td>one surface each and the ⋯ items that fit it; see the payload toggles</td></tr>
+      <tr><td>the kind override</td><td>used</td><td>the kind Select in the status bar. The note beside it reads <em>your choice · detected …</em></td></tr>
+      <tr><td>original / working copy</td><td>used</td><td>the surface is the working copy and is always editable. <em>modified · N edits</em> in the status bar. Undo, redo, restore original, copy original and save original in ⋯. Copy and save deliver what is on screen</td></tr>
+      <tr><td>the filtered view: JSONPath and text filter (Q4)</td><td>deliberately unused</td><td>deferred by the owner on 2026-11-04 to a later epic: this window ships find only. Nothing on screen leaves a place for it</td></tr>
+      <tr><td>decoders: base64 (standard, URL-safe, padding optional) · URL-encoding · JWT</td><td>used</td><td>the decode peek, from a right-click or ⌘⇧D. The decoder is guessed from the value's shape and can be switched; each failure gives its reason in words</td></tr>
+      <tr><td><code>openDataWindow(payload)</code> (W1)</td><td>used</td><td>the peek's ⧉ and its binary result, the pane's ⧉ and the cut marker's button</td></tr>
+      <tr><td>the save dialog and file write (DEC-68 rule 9)</td><td>used</td><td>save and save original in ⋯, and ⌘S</td></tr>
+      <tr><td>the clipboard</td><td>used</td><td>copy (CopyButton) · copy original · copy as JSON · the right-click copy · native ⌘C</td></tr>
+      <tr><td>BodyViewer's loaded bytes, content type and mode (the opener)</td><td>used</td><td>the entry point hands what the pane holds in the mode it shows: pretty hands the decoded bytes, raw the raw ones</td></tr>
+      <tr><td>the window size, 1200 × 800, minimum 600 × 400 (W1)</td><td>used</td><td>the frame and the narrow state. Nothing stacks or hides at the minimum: every zone is one wrapping row or the surface</td></tr>
       <tr><td>remembering size and position (Q11)</td><td>blocked</td><td>waits on E-PANELS' mechanism; see blocked-on</td></tr>
       <tr><td>the core, the control API, any flow or leg</td><td>deliberately unused</td><td>DEC-68: the window knows only its payload and makes no request</td></tr>
-      <tr><td><code>prefers-reduced-motion</code></td><td>deliberately unused</td><td>nothing animates. A copy confirm is CopyButton's label swap</td></tr>
+      <tr><td><code>prefers-reduced-motion</code></td><td>deliberately unused</td><td>nothing animates. A copy confirm is CopyButton's label swap; menus and the peek appear without a transition</td></tr>
     </table>
     <p class="kd">Not given (may not be assumed to exist): a way to write back to the opener, the capture or the core ·
       a diff of original against working copy · jq · schema-bound decoders · edits that outlive the window (Q12) ·
-      a menu component.</p>
+      a menu component (proposed below).</p>
 
     <h2 id="keyboard">Keyboard</h2>
     <table data-item="keyboard" data-c="keyboard-table">
       <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
       <tr><td>click into the surface and type</td><td>surface</td><td>Tab to the surface · arrows move the cursor · typing edits the working copy</td></tr>
-      <tr><td>select text with the pointer</td><td>surface</td><td>Shift + arrows · ⌘A. partial take: native selection + ⌘C</td></tr>
-      <tr><td>click a fold marker in the gutter</td><td>surface</td><td>proposed: fold / unfold at the cursor ⌥⌘[ / ⌥⌘]; fold all / expand all ⌃⌥[ / ⌃⌥] (CodeMirror's own)</td></tr>
-      <tr><td>choose <em>fold to depth N</em></td><td>toolbar</td><td>Tab to it · Enter opens · ↑ / ↓ · Enter takes (Select's)</td></tr>
-      <tr><td>type in <em>find</em></td><td>toolbar</td><td>proposed: ⌘F focuses find from anywhere in the window · Esc clears it and returns to the surface (dismiss)</td></tr>
-      <tr><td>click ↑ / ↓ to step through matches</td><td>toolbar</td><td>proposed: Enter / Shift+Enter in find · ⌘G / ⇧⌘G from the surface</td></tr>
-      <tr><td>click a find scope (keys · values · both; hex · text)</td><td>toolbar</td><td>Tab to the segment · ← / → (SegmentedControl's)</td></tr>
-      <tr><td>type a query or filter and click <em>apply</em></td><td>toolbar</td><td>proposed: ⌘L focuses the filter · Enter applies</td></tr>
-      <tr><td>click <em>clear</em> on the view band</td><td>view band</td><td>Esc in the filter box · or Tab to <em>clear</em>, Enter</td></tr>
-      <tr><td>click an indent segment</td><td>toolbar</td><td>Tab to the segment · ← / → applies</td></tr>
-      <tr><td>click <em>sort keys</em>, <em>sort by key</em>, <em>add pair</em>, <em>re-indent</em>, <em>apply</em></td><td>toolbar</td><td>Tab to the button · Enter / Space</td></tr>
-      <tr><td>click undo / redo</td><td>window header</td><td>proposed: ⌘Z / ⇧⌘Z anywhere outside a Field, over the one working-copy history</td></tr>
-      <tr><td>click <em>restore original</em></td><td>window header</td><td>Tab to it · Enter. No shortcut: it is a whole-document act, undoable with ⌘Z</td></tr>
-      <tr><td>choose the kind</td><td>window header</td><td>Tab to the Select · Enter · ↑ / ↓ · Enter</td></tr>
-      <tr><td>click a <em>copy · save</em> target</td><td>window header</td><td>Tab to the segment · ← / →</td></tr>
+      <tr><td>select text with the pointer</td><td>surface</td><td>Shift + arrows · ⌘A · ⌘C copies the selection</td></tr>
+      <tr><td>click a fold marker in the gutter</td><td>surface</td><td>proposed: fold / unfold at the cursor ⌥⌘[ / ⌥⌘]; fold all / unfold all ⌃⌥[ / ⌃⌥] (CodeMirror's own)</td></tr>
+      <tr><td>type in find</td><td>find bar</td><td>proposed: ⌘F focuses find from anywhere in the window · Esc clears it and returns to the surface (dismiss)</td></tr>
+      <tr><td>click ↑ / ↓ to step through matches</td><td>find bar</td><td>proposed: Enter / Shift+Enter in find · ⌘G / ⇧⌘G from the surface</td></tr>
       <tr><td>click <em>copy</em></td><td>window header</td><td>Tab to it · Enter (CopyButton's)</td></tr>
-      <tr><td>click save</td><td>window header</td><td>proposed: ⌘S saves what the switch names · or Tab to it, Enter</td></tr>
-      <tr><td>click <em>decode</em> with a selection</td><td>toolbar</td><td>proposed: ⌘⇧D decodes the selection, or the focused form row's value</td></tr>
-      <tr><td>click a decoder segment</td><td>decoder panel</td><td>Tab to the segment · ← / →</td></tr>
-      <tr><td>click <em>replace with decoded</em> or <em>open in data window</em></td><td>decoder panel</td><td>Tab to the button · Enter</td></tr>
-      <tr><td>click × on the decoder</td><td>decoder panel</td><td>Esc while focus is in the panel (dismiss)</td></tr>
+      <tr><td>click ⋯</td><td>window header</td><td>Tab to it · Enter, Space or ↓ opens (Menu's) · focus moves to the first live item</td></tr>
+      <tr><td>hover and click a menu item</td><td>menus</td><td>↑ / ↓ · Home / End · type-ahead on the label · Enter runs · Esc closes and returns focus to what opened it (Menu's)</td></tr>
+      <tr><td>click a choice in a choice row (indent, fold to, size)</td><td>menus</td><td>on the row, ← / → moves the choice and applies it (Menu's)</td></tr>
+      <tr><td>choose undo / redo</td><td>menus</td><td>proposed: ⌘Z / ⇧⌘Z anywhere outside a Field, over the one working-copy history</td></tr>
+      <tr><td>choose <em>restore original</em>, <em>sort keys</em>, <em>sort by key</em>, <em>show encoded</em>, <em>copy as JSON</em>, <em>copy original</em>, <em>save original</em></td><td>menus</td><td>⋯ then ↑ / ↓ and Enter. No shortcuts: whole-document acts, each undoable or harmless</td></tr>
+      <tr><td>choose <em>re-indent</em> (XML)</td><td>menus</td><td>proposed: ⌥⇧F (the editor convention for format document)</td></tr>
+      <tr><td>choose <em>wrap long lines</em></td><td>menus</td><td>proposed: ⌥Z (the editor convention)</td></tr>
+      <tr><td>choose <em>save</em></td><td>menus</td><td>proposed: ⌘S saves what is on screen</td></tr>
+      <tr><td>right-click a selection, choose <em>decode</em></td><td>surface</td><td>proposed: ⌘⇧D decodes the selection, or the focused form row's value. Every right-click item has its own key, so the menu itself needs none (macOS has no context-menu key)</td></tr>
+      <tr><td>right-click, choose <em>copy</em> / <em>copy the value</em></td><td>surface</td><td>⌘C (on a form row: focus the value cell, ⌘C)</td></tr>
+      <tr><td>click a decoder in the peek</td><td>surface (the peek)</td><td>Tab to the segment · ← / → (SegmentedControl's)</td></tr>
+      <tr><td>click <em>replace</em> or ⧉ in the peek</td><td>surface (the peek)</td><td>Tab to it · Enter</td></tr>
+      <tr><td>click × on the peek</td><td>surface (the peek)</td><td>Esc while focus is in the peek or the surface (dismiss)</td></tr>
+      <tr><td>choose the kind</td><td>status bar</td><td>Tab to the Select · Enter · ↑ / ↓ · Enter (Select's)</td></tr>
       <tr><td>click a form key or value to edit it</td><td>surface (form)</td><td>Tab to the cell · Enter opens the Field · ⌘↵ commits · Esc cancels (dismiss)</td></tr>
-      <tr><td>click a form row to select it</td><td>surface (form)</td><td>focusing a cell selects its row</td></tr>
-      <tr><td>click × to remove a pair</td><td>surface (form)</td><td>Tab to it · Enter</td></tr>
+      <tr><td>hover a row and click + or ×</td><td>surface (form)</td><td>focus in a row shows its + and ×: Tab to one · Enter · proposed: ⌘⌫ removes the focused row's pair</td></tr>
+      <tr><td>click the empty last row to add a pair</td><td>surface (form)</td><td>Tab to it · Enter opens its key Field</td></tr>
       <tr><td>scroll the surface</td><td>surface</td><td>native: arrows, Page Up / Down, Home / End while the surface has focus</td></tr>
       <tr><td>click ⧉ on the pane, or the cut marker's button</td><td>opener: the body pane</td><td>Tab to it · Enter · proposed: ⌘⇧O while the body has focus (Q9)</td></tr>
       <tr><td>close the window</td><td>— (the native title bar)</td><td>⌘W, the platform's own. It asks nothing (Q12)</td></tr>
@@ -1048,23 +1052,24 @@
     <h2 id="proposals">Proposals</h2>
     <table data-item="proposals" data-c="proposals-table">
       <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
-      <tr><td>component (T2)</td><td><code>EditSurface</code>: the whole-data editable surface for JSON, XML and text. CodeMirror, virtualised, fold gutter, find highlights, one history the screen owns. A read-only mode for views and decoded results. Design: <a href="components/edit-surface.html">components/edit-surface.html</a></td><td>SourceSurface's <code>@avoid</code>: "making it editable"; TextRenderer's: "a CodeMirror surface"; both are capped pane members</td><td>W3 (surface) · W4 (JSON find, fold to depth)</td></tr>
-      <tr><td>component (T2)</td><td><code>FormTable</code>: every pair, uncapped, variable-height rows, whole wrapped values, edit in place, duplicate keys and kept-as-sent values marked. Design: <a href="components/form-table.html">components/form-table.html</a></td><td>FormRenderer caps at 128 KiB; KeyValueRow's <code>@avoid</code>: "editable forms", "data needing sort/filter"; DEC-34's fixed-height escape is not taken</td><td>W3 (render, edit) · W5 (find, filter, sort, export)</td></tr>
-      <tr><td>component (T2)</td><td><code>HexView</code>: the whole dump, virtualised, find in hex or text across row boundaries, a byte-range selection that copies. Design: <a href="components/hex-view.html">components/hex-view.html</a></td><td>HexRenderer owns a 4 KiB cap by contract</td><td>W3 (render) · W5 (find)</td></tr>
+      <tr><td>component (T2)</td><td><code>Menu</code>: a popover list of acts opened from a trigger or at a point. Sections, a shortcut or a reason per row, check rows and choice rows, full keyboard, one open at a time. Design: <a href="components/menu.html">components/menu.html</a></td><td>Select picks one value and closes; MenuPath only names another app's controls. Nothing runs an act from a list</td><td>W3 (⋯, right-click)</td></tr>
+      <tr><td>component (T2)</td><td><code>EditSurface</code>: the whole-data editable surface for JSON, XML and text, with an inset slot under a line for the decode peek. Design: <a href="components/edit-surface.html">components/edit-surface.html</a></td><td>SourceSurface's <code>@avoid</code>: "making it editable"; TextRenderer's: "a CodeMirror surface"; both are capped pane members</td><td>W3 (surface) · W4 (JSON find, fold to depth) · W6 (inset)</td></tr>
+      <tr><td>component (T2)</td><td><code>FormTable</code>: every pair, uncapped, whole wrapped values, edit in place, + and × shown on hover or focus, an empty last row that adds a pair, an inset under a row. Design: <a href="components/form-table.html">components/form-table.html</a></td><td>FormRenderer caps at 128 KiB; KeyValueRow's <code>@avoid</code>: "editable forms"; DEC-34's fixed-height escape is not taken</td><td>W3 (render, edit) · W5 (find, sort, export) · W6 (inset)</td></tr>
+      <tr><td>component (T2)</td><td><code>HexView</code>: the whole dump, virtualised, find marks across row boundaries, a byte-range selection that copies. Design: <a href="components/hex-view.html">components/hex-view.html</a></td><td>HexRenderer owns a 4 KiB cap by contract</td><td>W3 (render) · W5 (find)</td></tr>
       <tr><td>component amendment (T2)</td><td><code>CutMarker</code>: the way out becomes <em>open in data window</em>, a Button beside the line, wherever an opener is provided; it still says <em>save to see all</em> where none is. The delta is <a href="#cut-marker">declared above</a>; its TSDoc takes it when W3 builds it</td><td>its anatomy today names save as the only way out</td><td>W3</td></tr>
-      <tr><td>screen (T4)</td><td><code>DataWindow</code>: <code>ui/src/DataWindow.tsx</code>, mounted for a <code>data-*</code> window. Owns the working-copy history (original, steps, undo / redo, restore), the view, and kind detection</td><td>a new screen</td><td>W3</td></tr>
-      <tr><td>local (T3)</td><td><code>FindBar</code>: Field + optional scope segment + <em>N of M</em> + ↑ / ↓, one per kind's toolbar</td><td>no search control in the collection; local to the screen until a second screen needs it</td><td>W4 · W5</td></tr>
-      <tr><td>local (T3)</td><td><code>DecoderPanel</code>: decoder segment, the input's source and length, the result (JWT header / payload / signature, JSON, text, binary as hex), replace, open in data window, the reason it failed</td><td>a screen zone; mounts Section, SegmentedControl, EditSurface (read-only), HexRenderer, Notice, Button</td><td>W6</td></tr>
-      <tr><td>glyphs</td><td>IconButton's registry gains <code>undo</code> ↶ · <code>redo</code> ↷ · <code>previous</code> ↑ · <code>next</code> ↓ · <code>window</code> ⧉ (open in data window). The mockup passes them as children</td><td>the registry holds close, save and help</td><td>W3 (undo, redo, window) · W4 (previous, next)</td></tr>
-      <tr><td>token</td><td><code>decoder</code> 400 px: the decoder panel's width. The mockup sets it inline</td><td>no spacing member between <code>pane-label</code> 256 and <code>pane</code> 520 fits a JWT's pretty payload beside the document</td><td>W6</td></tr>
-      <tr><td>keyboard vocabulary</td><td><em>find</em>: ⌘F, Enter / Shift+Enter, ⌘G / ⇧⌘G, Esc clears · <em>focus the filter</em>: ⌘L · <em>undo / redo the working copy</em>: ⌘Z / ⇧⌘Z · <em>save what is named</em>: ⌘S · <em>decode the selection</em>: ⌘⇧D · <em>open in data window</em>: ⌘⇧O · <em>commit a multi-line edit</em>: ⌘↵ · fold keys as CodeMirror's</td><td>the conventions have no find, edit-history or open pattern</td><td>W7 distills them into the rulebook</td></tr>
-      <tr><td>lexicon</td><td><em>data window</em>: the window a piece of data opens in · <em>original</em>: the bytes as handed in, never changed (raw's <em>never: original</em> stands: raw is not this) · <em>working copy</em>: what the user changes · <em>this view</em>: a filter's or query's result · <em>modified</em>: the working copy differs from the original · <em>restore original</em>: make the working copy the original again · <em>re-indent</em>: rewrite the working copy's indentation (C3) · <em>minified</em>: the JSON with no whitespace</td><td>new terms</td><td>W7</td></tr>
+      <tr><td>screen (T4)</td><td><code>DataWindow</code>: <code>ui/src/DataWindow.tsx</code>, mounted for a <code>data-*</code> window. Owns the working-copy history (original, steps, undo / redo, restore), kind detection, which ⋯ items each kind gets, and the shortcuts</td><td>a new screen</td><td>W3</td></tr>
+      <tr><td>local (T3)</td><td><code>FindBar</code>: Field + <em>N of M</em> + ↑ / ↓. On hex it reads a query of hex pairs as bytes and anything else as text, and says which</td><td>no search control in the collection; local to the screen until a second screen needs it</td><td>W4 · W5</td></tr>
+      <tr><td>local (T3)</td><td><code>DecodePeek</code>: decoded-as segment (guessed, switchable), the source and its length, replace, ⧉, ×; the result (JWT header / payload / signature, JSON, text) or a binary Notice whose only act is ⧉, or the reason it failed</td><td>a screen element; mounts SegmentedControl, EditSurface (read-only), Notice, Button, IconButton</td><td>W6</td></tr>
+      <tr><td>local (T3)</td><td><code>StatusBar</code>: the kind Select, <em>detected from …</em>, size and lines, the selection's length, <em>modified · N edits</em> or <em>read-only</em></td><td>a screen zone; StatusLine is a precondition's verdict, not this</td><td>W3</td></tr>
+      <tr><td>glyphs</td><td>IconButton's registry gains <code>more</code> ⋯ · <code>previous</code> ↑ · <code>next</code> ↓ · <code>window</code> ⧉ (open in data window) · <code>add</code> +. The mockup passes them as children</td><td>the registry holds close, save and help</td><td>W3 (more, window, add) · W4 (previous, next)</td></tr>
+      <tr><td>keyboard vocabulary</td><td><em>find</em>: ⌘F, Enter / Shift+Enter, ⌘G / ⇧⌘G, Esc clears · <em>undo / redo the working copy</em>: ⌘Z / ⇧⌘Z · <em>save what is on screen</em>: ⌘S · <em>decode</em>: ⌘⇧D · <em>open in data window</em>: ⌘⇧O · <em>commit a multi-line edit</em>: ⌘↵ · <em>remove a row</em>: ⌘⌫ · <em>re-indent</em>: ⌥⇧F · <em>wrap long lines</em>: ⌥Z · a menu's own keys (Menu's TSDoc) · fold keys as CodeMirror's</td><td>the conventions have no find, edit-history, menu or open pattern</td><td>W7 distills them into the rulebook</td></tr>
+      <tr><td>lexicon</td><td><em>data window</em>: the window a piece of data opens in · <em>original</em>: the bytes as handed in, never changed (raw's <em>never: original</em> stands: raw is not this) · <em>working copy</em>: what the user changes · <em>modified</em>: the working copy differs from the original · <em>restore original</em>: make the working copy the original again · <em>re-indent</em>: rewrite the working copy's indentation · <em>minified</em>: the JSON with no whitespace · <em>decoded as</em>: the peek's label for the decoder in use</td><td>new terms</td><td>W7</td></tr>
     </table>
 
     <h2 id="blocked-on">Blocked-on</h2>
     <table data-item="blocked-on" data-c="blocked-table">
       <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
-      <tr><td>remembering a data window's size and position (Q11)</td><td>E-PANELS: its persistence mechanism, wired to <code>data-*</code> windows by whichever epic merges second</td><td>draws W1's fixed default and minimum; the stacking rule is set against the minimum</td></tr>
+      <tr><td>remembering a data window's size and position (Q11)</td><td>E-PANELS: its persistence mechanism, wired to <code>data-*</code> windows by whichever epic merges second</td><td>draws W1's fixed default and minimum</td></tr>
     </table>
 
     <h2 id="review">Review</h2>
@@ -1072,6 +1077,28 @@
       <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
       <tbody>
         <tr><td>Start: the epic plan's W2 block, its toolset table and rulings Q1, Q4, Q7, Q9 and Q12</td><td>capabilities · mockup · keyboard · proposals: six kinds on one frame, the working copy's history in the header, the view band, the decoder panel, the entry point on the pane</td><td><code>DEC-68</code></td></tr>
+        <tr><td>Round 1, the owner (2026-11-04): "the functionality is good, but the UI/UX of the menu is terrible; make it simpler". Then, question by question:
+          <ul>
+            <li>a bar with a ⋯ menu, styled like the VS Code editor</li>
+            <li>find always on screen, and find only, with no scopes</li>
+            <li>nothing else stays on screen</li>
+            <li>the kind, the size and <em>modified</em> go to a bottom status bar</li>
+            <li>copy and save deliver what is on screen; the original is reached from ⋯</li>
+            <li>⋯ is grouped, each item showing its shortcut</li>
+            <li>decode is a right-click that opens a peek, which guesses the decoder and offers a switch</li>
+            <li>binary results open in a new window</li>
+            <li>hex find works out bytes or text on its own</li>
+            <li>form acts go in ⋯, with + on row hover and an empty last row</li>
+            <li>the surface is always editable</li>
+            <li>all three entry points stay</li>
+            <li>the JSONPath / text filter is deferred to a later epic</li>
+          </ul></td><td>
+          <ul>
+            <li><strong>mockup:</strong> toolbar, view band and decoder panel removed. Find bar, status bar, ⋯ and right-click menus, and the inline peek added. States <em>filtered view</em> → <em>⋯ open</em>, <em>right-click</em>, <em>binary decode</em></li>
+            <li><strong>round-1 calls:</strong> C1, C2, C5 and C10 replaced as above. C9 is gone with the filter. C3 (<em>re-indent</em>), C4 (edit in place), C6 (1200 × 800), C7 (restore asks nothing) and C8 (entry point) stand</li>
+            <li><strong>proposals:</strong> <code>Menu</code> added, with its design. EditSurface and FormTable gain an inset, and FormTable hover acts. <code>DecoderPanel</code> → <code>DecodePeek</code>. <code>StatusBar</code> added. The <code>decoder</code> 400 px token and the 900 px stacking rule dropped. Glyphs: undo / redo out, more / add in. ⌘L dropped</li>
+            <li><strong>capabilities:</strong> the view is deliberately unused, deferred</li>
+          </ul></td><td>Q4 (re-ruled: deferred) · <code>DEC-68</code> · the epic plan's W4, W5, W7 and J2, J3, amended the same day</td></tr>
       </tbody>
     </table>
 

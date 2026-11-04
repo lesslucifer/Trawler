@@ -20,7 +20,7 @@
         byte range that copies.</p>
       <div class="meta">Component design · 2026-11-03 · Trawler · status: draft, awaiting confirmation · proposed by the
         <a href="../2026-11-03-data-window-design-run.html">data window's design run</a> (E-INSPWIN.W2) · built by
-        E-INSPWIN.W3, extended by W5 · retires into the TSDoc on build (DEC-16)</div>
+        E-INSPWIN.W3, extended by W5 · amended by the run's round 2 (2026-11-04) · retires into the TSDoc on build (DEC-16)</div>
     </div>
   </header>
   <main>
@@ -39,7 +39,7 @@
       <tr><th>Driver</th><th>Design consequence</th></tr>
       <tr><td>DEC-68 rule 7: no caps</td><td>fixed-height rows (one line each, 16 bytes), virtualised: 10 MiB is 655 360 rows and renders only the visible ones</td></tr>
       <tr><td>DEC-34</td><td>a fixed-height row truncates nothing: every row is exactly 16 bytes wide, so the escape is not needed</td></tr>
-      <tr><td>the epic plan: hex is read-only</td><td>no editing; the header says <em>read-only</em> and copy and save deliver the original</td></tr>
+      <tr><td>the epic plan: hex is read-only</td><td>no editing; the status bar says <em>read-only</em>, copy delivers the dump as text and save the bytes</td></tr>
       <tr><td>find across rows (W5 test)</td><td>marks are byte ranges, painted per byte in both columns, so a match spanning two rows marks both</td></tr>
       <tr><td>mono-for-wire-data, zero-accent</td><td>mono throughout; offsets and dots <code>ink-mute</code>, bytes <code>ink-body</code>, marks the two washes</td></tr>
     </table>
@@ -61,7 +61,7 @@
       <tr><th>Rule</th><th>Example</th><th>Spec</th><th>Why</th></tr>
       <tr><td>select a range</td><td>drag from 0x0c to 0x13</td><td>press on a byte or character, drag, release; Shift+arrows extend by a byte (↑ / ↓ by a row)</td><td>keyboard-parity</td></tr>
       <tr><td>copy a range</td><td>⌘C over 8 bytes</td><td>the column the selection started in decides the form: <code>49 48 44 52 …</code> from the bytes, <code>IHDR…</code> from ASCII</td><td>a reader copies what they were reading</td></tr>
-      <tr><td>find</td><td><code>49 45 4e 44</code> or <code>IEND</code></td><td><code>matches</code> are byte ranges from the caller; <code>current</code> scrolls into view</td><td>the hex / text choice is the caller's FindBar</td></tr>
+      <tr><td>find</td><td><code>49 45 4e 44</code> or <code>IEND</code></td><td><code>matches</code> are byte ranges from the caller; <code>current</code> scrolls into view</td><td>the caller reads a query of hex pairs as bytes and anything else as text, and says which (<em>1 of 1 · as bytes</em>): one find box, no mode switch</td></tr>
       <tr><td>virtualise</td><td>10 MiB</td><td>one fixed row height, overscan of 16 rows</td><td>no cap</td></tr>
     </table>
 
@@ -97,8 +97,8 @@
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit">
       <div class="card"><h3>Use</h3><p>The data window, for bytes that are not text, or any payload viewed as hex.</p></div>
-      <div class="card"><h3>Avoid</h3><p>The pane (HexRenderer) · a decoded result in the decoder panel (HexRenderer is
-        enough, capped, with <em>open in data window</em> as its way past).</p></div>
+      <div class="card"><h3>Avoid</h3><p>The pane (HexRenderer) · a decoded binary in the decode peek (the peek names its
+        size and signature and opens it in a data window of its own, where this is its surface).</p></div>
     </div>
 
     <h2 id="tokens">Tokens</h2>

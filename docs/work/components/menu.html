@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeab5ea9f34851f0dfae2fa">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Menu (component design)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Menu <span class="badge id">T2</span></h1>
+      <p>A popover list of acts, opened from a trigger or at the pointer. Each row runs one act, toggles one setting or
+        picks one of a few choices, and shows its shortcut.</p>
+      <div class="meta">Component design · 2026-11-04 · Trawler · status: draft, awaiting confirmation · proposed by the
+        <a href="../2026-11-03-data-window-design-run.html">data window's design run</a> (E-INSPWIN.W2, round 2) ·
+        built by E-INSPWIN.W3 · retires into the TSDoc on build (DEC-16)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <p class="callout" data-c="claim">Without it, every act a screen offers needs a control of its own on screen. The
+      data window's first round showed about 20 at once on the JSON kind. Menu is how a screen keeps one trigger in view
+      and still gives every act a label, a shortcut and a key path.</p>
+    <table data-c="facts">
+      <tr><th>Fact</th><th>Value</th></tr>
+      <tr><td>tier</td><td>T2: owns the popover, the row forms, roving focus, dismissal and placement. Which acts exist,
+        when each is disabled and what each does are the caller's</td></tr>
+      <tr><td>tenants</td><td>the data window's ⋯ menu (anchored to the trigger) and its right-click menu (at the pointer)</td></tr>
+      <tr><td>exists today</td><td>no. Select's popup is the only floating surface; MenuPath is text naming another app's menus</td></tr>
+      <tr><td>made of</td><td>no collection member. Select's popup surface, re-used by token (<code>z-popup</code>, <code>shadow-pop</code>)</td></tr>
+    </table>
+    <table data-c="drivers">
+      <tr><th>Driver</th><th>Design consequence</th></tr>
+      <tr><td>the owner's round 1: "make it simpler"</td><td>one trigger in place of a toolbar. Grouped sections, each row showing its key on the right</td></tr>
+      <tr><td>keyboard-parity</td><td>every row is reachable with ↑ / ↓ and runs on Enter. A choice row moves with ← / →. Esc closes and focus returns to what opened it</td></tr>
+      <tr><td>zero-accent</td><td>the keyboard-active row is <code>bg-wash-tint</code>, a checked row has ✓ in its tick column, and a chosen choice is <code>bg-wash-active</code>: each has a second channel besides tone</td></tr>
+      <tr><td>disabled says why</td><td>a disabled row is <code>ink-mute</code> and puts its reason where its key would be (<em>needs valid JSON</em>), so it never just goes grey</td></tr>
+      <tr><td>Select's popup</td><td>the same surface, radius, border, shadow and row height, so a menu and a picker read as one family</td></tr>
+    </table>
+
+    <h2 id="anatomy">Anatomy</h2>
+    <div class="app" data-c="anatomy-spec"><div id="spec-anatomy"></div></div>
+    <table data-c="anatomy">
+      <tr><th>#</th><th>Part</th><th>Spec</th><th>Why</th></tr>
+      <tr><td>1</td><td>surface</td><td><code>w-pane-label</code> (256 px), <code>rounded-card border border-hairline bg-canvas shadow-pop z-popup</code>, <code>py-chrome-tight</code></td><td>Select's popup; wide enough for a label, a choice row and a key</td></tr>
+      <tr><td>2</td><td>section rule</td><td><code>border-t border-hairline</code> between sections, no section titles</td><td>groups read by their rule; a title per group would double the menu's height</td></tr>
+      <tr><td>3</td><td>action row</td><td><code>min-h-control</code>, <code>px-control-x py-control-y</code>, Inter <code>text-control</code>, <code>ink-body</code>: tick column · label · key (<code>ink-mute</code>, right)</td><td>Select's row; the key teaches the shortcut</td></tr>
+      <tr><td>4</td><td>check row</td><td>an action row whose tick column holds ✓ (ink) when on</td><td>a setting that stays (wrap long lines)</td></tr>
+      <tr><td>5</td><td>choice row</td><td>label, then 2–5 inline choices, <code>rounded-button px-chrome-x</code>; the chosen one <code>bg-wash-active text-ink</code></td><td>indent 2 · 4 · tab · minified on one row, with no submenu (run's D1)</td></tr>
+      <tr><td>6</td><td>active row</td><td><code>bg-wash-tint text-ink</code>, set by pointer hover and by ↑ / ↓ alike</td><td>one highlight for both inputs, as in Select</td></tr>
+      <tr><td>7</td><td>disabled row</td><td><code>ink-mute</code>, skipped by ↑ / ↓, its reason in the key column</td><td>disabled says why</td></tr>
+    </table>
+
+    <h2 id="behavior">Behavior</h2>
+    <p class="kd">Anatomy is what you see; behavior is what it does.</p>
+    <table data-c="behavior">
+      <tr><th>Rule</th><th>Example</th><th>Spec</th><th>Why</th></tr>
+      <tr><td>open from a trigger</td><td>⋯ in the header</td><td><code>anchor</code>: below the trigger, right edges aligned, flipped above when it would leave the window. The trigger shows <code>aria-expanded</code></td><td>the menu stays next to what opened it</td></tr>
+      <tr><td>open at a point</td><td>right-click on a selection</td><td><code>at</code>: its top-left at the pointer, moved left or up to stay inside the window</td><td>a context menu starts where the user clicked</td></tr>
+      <tr><td>focus</td><td>open → first live row</td><td>focus moves into the menu; ↑ / ↓ wrap, Home / End jump, a typed letter moves to the next label starting with it</td><td>keyboard-parity</td></tr>
+      <tr><td>run</td><td>Enter on <em>sort keys</em></td><td>an action row calls its <code>run</code>, then the menu closes; a check row toggles and closes</td><td>one act per open, as a menu bar does</td></tr>
+      <tr><td>choose</td><td>→ on <em>indent</em></td><td>a choice row calls <code>pick(id)</code> and stays open, so the user can see each choice applied</td><td>indent and fold-to-depth are tried, not just picked</td></tr>
+      <tr><td>dismiss</td><td>Esc · a click outside · the trigger again · the window losing focus</td><td><code>onClose</code>; focus returns to the trigger, or to the surface for a menu opened at a point</td><td>dismiss</td></tr>
+      <tr><td>one at a time</td><td>⋯ open, then a right-click</td><td>the caller holds one <code>menu</code> state; opening one closes the other</td><td>two popovers would fight for focus</td></tr>
+    </table>
+
+    <h2 id="states">States</h2>
+    <div class="app" data-c="states"><div id="spec-states"></div></div>
+    <p class="kd">Not states: closed (it is not mounted) · loading (the caller builds the rows before opening) · empty
+      (a caller with no rows shows no trigger) · a submenu (D1: choice rows instead).</p>
+
+    <h2 id="forks">Forks</h2>
+    <table data-c="forks">
+      <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
+      <tr><td>few choices</td><td><span class="badge auto">settled</span> a choice row</td><td><span class="badge approval">rejected</span> submenus: a hover path, a second popover and a second focus scope, for four choices</td></tr>
+      <tr><td>re-use Select</td><td><span class="badge auto">settled</span> a component of its own on Select's surface tokens</td><td><span class="badge approval">rejected</span> Select's <code>@avoid</code>: option groups and disabled entries; it holds a value, a menu runs acts</td></tr>
+      <tr><td>section titles</td><td><span class="badge auto">settled</span> rules only</td><td><span class="badge approval">rejected</span> <em>EDIT</em> / <em>FORMAT</em> labels: the labels already say what a row does</td></tr>
+    </table>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <tr><th>Prop</th><th>Type</th><th>Note</th></tr>
+      <tr><td><code>label</code></td><td><code>string</code></td><td>the menu's accessible name</td></tr>
+      <tr><td><code>sections</code></td><td><code>MenuItem[][]</code></td><td>rows in order, a rule between sections</td></tr>
+      <tr><td><code>MenuItem</code></td><td><code>{label, keys?, disabled?, why?, checked?, run}</code> · <code>{label, choices, value, pick, disabled?}</code></td><td>an action (or a check, when <code>checked</code> is set) · a choice row</td></tr>
+      <tr><td><code>anchor</code> · <code>at</code></td><td><code>RefObject&lt;HTMLElement&gt;</code> · <code>{x, y}</code></td><td>exactly one: a trigger or a point</td></tr>
+      <tr><td><code>onClose</code></td><td><code>() =&gt; void</code></td><td>every dismissal and every run</td></tr>
+    </table>
+    <pre data-c="tsdoc"><code>/**
+ * Menu — a popover list of acts, opened from a trigger or at a point; each row runs an act, toggles a setting or picks one of a few choices, and shows its key.
+ * @tier T2 — owns the popover, the row forms, roving focus, dismissal and placement; which acts exist, when each is disabled and what each does are the caller's
+ * @anatomy Select's popup surface (canvas, hairline border, radius, shadow-pop, z-popup), 256px wide · sections split by a hairline rule, untitled · rows min-height 24, Inter text-control ink-body: 9px tick column (✓ on a check row) · label · key in ink-mute on the right · choice row: label then 2–5 inline choices, the chosen one wash-active + ink · active row wash-tint + ink · disabled row ink-mute with its reason in the key column
+ * @use a screen's overflow of acts behind one trigger (the data window's ⋯) · a right-click on a selection or a row, holding only acts on what was clicked
+ * @avoid picking a value that stays shown (Select) · two to four always-visible choices (SegmentedControl) · submenus — a choice row covers a few choices, a longer list is a Select · section titles · a row without a key path: every row needs a key of its own or the menu's own ↑ / ↓ · an act that is the screen's primary one (it belongs on screen) · disabling a row without a reason
+ * @states open from a trigger · open at a point · a row active · a check row on · a choice row with one chosen · a disabled row with its reason. No closed, empty or loading state
+ * @madeof — (Select's popup tokens, no member)
+ */</code></pre>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit">
+      <div class="card"><h3>Use</h3><p>The data window's ⋯ (undo, restore original, indent, sort, fold, wrap, copy and save the
+        original) and its right-click menu (decode, copy, add and remove a pair).</p></div>
+      <div class="card"><h3>Avoid</h3><p>A value picker (Select) · a visible switch (SegmentedControl) · the one act a screen
+        exists for (a Button on screen).</p></div>
+    </div>
+
+    <h2 id="tokens">Tokens</h2>
+    <table data-c="tokens">
+      <tr><th>Part</th><th>Classes</th></tr>
+      <tr><td>surface</td><td><code>absolute z-popup w-pane-label rounded-card border border-hairline bg-canvas py-chrome-tight shadow-pop font-ui text-control</code></td></tr>
+      <tr><td>section rule</td><td><code>mt-chrome-tight border-t border-hairline pt-chrome-tight</code></td></tr>
+      <tr><td>row</td><td><code>flex min-h-control items-center gap-chrome-gap px-control-x py-control-y</code> · tick <code>w-glyph text-ink</code> · key <code>text-ink-mute</code></td></tr>
+      <tr><td>row tones</td><td>rest <code>text-ink-body</code> · active <code>bg-wash-tint text-ink</code> · disabled <code>text-ink-mute</code></td></tr>
+      <tr><td>choice</td><td><code>rounded-button px-chrome-x</code> · chosen <code>bg-wash-active text-ink</code> · rest <code>hover:bg-wash-hover</code></td></tr>
+    </table>
+
+    <h2 id="specimen">Live specimen</h2>
+    <p class="kd">A stand-in drawn here, because the component does not exist yet. Click ⋯, move with the arrows or the
+      pointer, try ← / → on <em>indent</em>, press Enter or Esc.</p>
+    <div class="app" data-c="specimen"><div id="spec-live"></div></div>
+
+  </main>
+  <script type="text/babel">
+    const { React, createRoot, IconButton } = window.Trawler;
+    const { useState } = React;
+
+    function MenuStandIn({ sections, startAt = 0, style }) {
+      const live = sections.flat().filter((it) => !it.disabled);
+      const [active, setActive] = useState(startAt);
+      const cur = live[active];
+      const keys = (e) => {
+        if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => (a + 1) % live.length); }
+        if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => (a - 1 + live.length) % live.length); }
+        if (cur?.choices && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+          const i = cur.choices.findIndex((c) => c.id === cur.value);
+          cur.pick(cur.choices[(i + (e.key === "ArrowRight" ? 1 : -1) + cur.choices.length) % cur.choices.length].id);
+        }
+        if (e.key === "Enter" && cur?.run) cur.run();
+        if (e.key === "Escape" && cur?.close) cur.close();
+      };
+      const row = (it) => {
+        const tone = it.disabled ? "text-ink-mute" : it === cur ? "bg-wash-tint text-ink" : "text-ink-body";
+        return (
+          <div key={it.label} onMouseEnter={() => !it.disabled && setActive(live.indexOf(it))} onClick={() => !it.disabled && it.run?.()}
+            className={`flex min-h-control items-center gap-chrome-gap px-control-x py-control-y ${tone}`}>
+            <span className="w-glyph shrink-0 text-ink">{it.checked ? "✓" : ""}</span>
+            <span className="flex-1">{it.label}</span>
+            {it.choices ? (
+              <span className="flex gap-chrome-tight">{it.choices.map((c) => (
+                <button key={c.id} tabIndex={-1} onClick={() => it.pick(c.id)} className={`rounded-button px-chrome-x ${c.id === it.value ? "bg-wash-active text-ink" : "text-ink-body hover:bg-wash-hover"}`}>{c.label}</button>
+              ))}</span>
+            ) : <span className="text-ink-mute">{it.disabled && it.why ? it.why : it.keys ?? ""}</span>}
+          </div>
+        );
+      };
+      return (
+        <div role="menu" tabIndex={0} onKeyDown={keys} style={style}
+          className="z-popup w-pane-label rounded-card border border-hairline bg-canvas py-chrome-tight font-ui text-control shadow-pop outline-none">
+          {sections.map((sec, n) => <div key={n} className={n ? "mt-chrome-tight border-t border-hairline pt-chrome-tight" : ""}>{sec.map(row)}</div>)}
+        </div>
+      );
+    }
+
+    function JsonMenu({ startAt, broken = false, onRun = () => {} }) {
+      const [fmt, setFmt] = useState("2");
+      const [wrap, setWrap] = useState(true);
+      return (
+        <MenuStandIn startAt={startAt} sections={[
+          [{ label: "undo", keys: "⌘Z", run: onRun }, { label: "redo", keys: "⇧⌘Z", disabled: true }, { label: "restore original", run: onRun }],
+          [{ label: "indent", choices: [{ id: "2", label: "2" }, { id: "4", label: "4" }, { id: "tab", label: "tab" }, { id: "min", label: "minified" }], value: broken ? null : fmt, pick: setFmt, disabled: broken },
+           { label: "sort keys", disabled: broken, why: "needs valid JSON", run: onRun },
+           { label: "wrap long lines", keys: "⌥Z", checked: wrap, run: () => setWrap(!wrap) }],
+          [{ label: "copy original", run: onRun }, { label: "save", keys: "⌘S", run: onRun }, { label: "save original", run: onRun }],
+        ]} />
+      );
+    }
+
+    function Live() {
+      const [open, setOpen] = useState(false);
+      const [last, setLast] = useState("");
+      return (
+        <div className="relative flex h-step-media flex-col rounded-card border border-hairline bg-canvas font-ui text-ink">
+          <div className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-2">
+            <p className="flex-1 text-note">response body · GET api.example.com/v2/accounts/8812/sessions</p>
+            <IconButton label="more" expanded={open} onClick={() => setOpen(!open)}>⋯</IconButton>
+          </div>
+          <p className="p-4 text-chrome text-ink-mute">{last ? `ran: ${last}` : "nothing run yet"}</p>
+          {open && <div className="absolute right-4 top-12"><JsonMenu onRun={() => { setLast("an act"); setOpen(false); }} /></div>}
+        </div>
+      );
+    }
+
+    const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
+    mount("spec-anatomy", <JsonMenu startAt={3} />);
+    mount("spec-states", (
+      <div className="grid grid-cols-2 gap-4 font-ui text-chrome text-ink-mute">
+        <div className="flex flex-col gap-2"><JsonMenu broken startAt={0} />a working copy that no longer parses: indent and sort keys disabled, the reason in place of the key</div>
+        <div className="flex flex-col gap-2">
+          <MenuStandIn sections={[[{ label: "decode", keys: "⌘⇧D" }, { label: "copy", keys: "⌘C" }]]} />
+          opened at a point (a right-click on a selection): only acts on what was clicked
+        </div>
+      </div>
+    ));
+    mount("spec-live", <Live />);
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
