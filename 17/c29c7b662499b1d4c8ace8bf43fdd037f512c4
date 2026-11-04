@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 17c29c7b662499b1d4c8ace8bf43fdd037f512c4
+base: 6cc1fcb5edf95925b3970a1eb6e0ae549a920094
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-inspect-window-w3-data-window-build-result.html
+report_sha256: d47c75d0e51d0b72e7ad067df52d202153c0b7181c592c8efb2c6ac41c569a63
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDMZI0yTNt0M1BOMBVFwr2/tW8GerVO0FxuGip0yjwEDyJI6c64CnOwmQ
+  sLyaeM7PUN4TpHg6uGlT8/9B8yMEoP
+  -----END SSH SIGNATURE-----
