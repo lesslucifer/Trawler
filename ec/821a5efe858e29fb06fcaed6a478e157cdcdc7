@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU one-app/quit-truth -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W4
+branch: wu/one-app/quit-truth
+base: eca548c88d8b95dde491027ce25a49a4ea7a4da5
+head: ec821a5efe858e29fb06fcaed6a478e157cdcdc7
+diff_sha256: 23184206ecabc0e43de53e2a02f468a62a894b26bb604435e196ea7d03c5c5e6
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 1
+  stage_seconds:
+    gate0: 175
+    total: 182
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 2 }
+findings: { found: 2, verified: 2, waived: 0 }
+verified:
+  - severity: important
+    location: "ui/src/App.tsx:846"
+    finding: "whether the app owns its core is an inline negation over CoreState in the view, with no named predicate beside the type, so a new variant counts as owned silently"
+  - severity: important
+    location: "ui/src/App.tsx:846"
+    finding: "quitStops is true over an exited owned core, so the reachable unread prompt says quitting stops a service that has already stopped"
+verdict: FAIL
+date: 2026-11-04
