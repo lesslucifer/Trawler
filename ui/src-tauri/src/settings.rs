@@ -2,10 +2,13 @@ use std::thread::JoinHandle;
 
 use tauri::{AppHandle, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
+use crate::window_geometry::{self, MinSize};
+
 pub const SETTINGS_WINDOW: &str = "settings";
 pub const MAIN_WINDOW: &str = "main";
 const PAGE_GLOBAL: &str = "__TRAWLER_PAGE__";
 const SETTINGS_PAGE: &str = "settings";
+const SETTINGS_MIN: MinSize = MinSize { width: 440.0, height: 360.0 };
 
 fn page_script() -> String {
     format!("window.{PAGE_GLOBAL} = \"{SETTINGS_PAGE}\";")
@@ -45,13 +48,16 @@ pub fn open<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         window.show()?;
         return window.set_focus();
     }
-    WebviewWindowBuilder::new(app, SETTINGS_WINDOW, WebviewUrl::App("index.html".into()))
-        .title("Settings")
-        .inner_size(560.0, 640.0)
-        .min_inner_size(440.0, 360.0)
-        .initialization_script(page_script())
-        .build()?;
-    Ok(())
+    let window =
+        WebviewWindowBuilder::new(app, SETTINGS_WINDOW, WebviewUrl::App("index.html".into()))
+            .title("Settings")
+            .inner_size(560.0, 640.0)
+            .min_inner_size(SETTINGS_MIN.width, SETTINGS_MIN.height)
+            .initialization_script(page_script())
+            .visible(false)
+            .build()?;
+    window_geometry::restore(&window.as_ref().window(), SETTINGS_MIN);
+    window.show()
 }
 
 #[cfg(test)]

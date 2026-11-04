@@ -14,6 +14,7 @@ import {
   defaultProxyAddr,
   UNREACHABLE,
   type FlowView,
+  type Leg,
   type ReachState,
   type TrawlerApi,
 } from "./api";
@@ -50,6 +51,7 @@ import { bounded, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { useLayout } from "./useLayout";
+import { useViewPrefs } from "./useViewPrefs";
 import { NotAnswering } from "./NotAnswering";
 import { quitStopsCore } from "./coreService";
 import { CoreServiceContext, tauriBridge, useCoreService, type CoreBridge } from "./useCoreService";
@@ -212,6 +214,13 @@ function Shell({
   const [clearedEmpty, setClearedEmpty] = useState(false);
   const [pane, setPane] = useState<Pane>(null);
   const split = useLayout();
+  const view = useViewPrefs();
+  const setView = view.set;
+  const chooseLeg = useCallback((leg: Leg) => setView("leg", leg), [setView]);
+  const choosePretty = useCallback(
+    (pretty: boolean) => setView("bodyMode", pretty ? "pretty" : "raw"),
+    [setView],
+  );
   const inspected = pane?.kind === "inspector" ? pane.id : null;
   const [retryNonce, setRetryNonce] = useState(0);
   const { flow: detail, failed: detailFailed } = useFlowDetail(
@@ -857,8 +866,11 @@ function Shell({
   const mainRef = useRef<HTMLElement>(null);
   const movedByUser = useRef(false);
   const go = (e: OnbEvent) => {
-    if (reduce(state, e).phase !== state.phase) movedByUser.current = true;
-    dispatch(e);
+    const remembered = view.prefs.lastPlatform;
+    const event = e.t === "re-invoke" && remembered ? { ...e, platform: remembered } : e;
+    if (event.t === "choose") view.set("lastPlatform", event.platform);
+    if (reduce(state, event).phase !== state.phase) movedByUser.current = true;
+    dispatch(event);
   };
   useEffect(() => {
     if (!movedByUser.current) return;
@@ -1187,6 +1199,10 @@ function Shell({
             onClose={() => setPane(null)}
             onReplay={detail ? () => compose(detail) : undefined}
             split={split}
+            leg={view.prefs.leg}
+            onLeg={chooseLeg}
+            pretty={view.prefs.bodyMode === "pretty"}
+            onPretty={choosePretty}
           />
         ) : undefined
       }

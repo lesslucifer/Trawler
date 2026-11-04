@@ -72,6 +72,10 @@ export function FlowDetail({
   onClose,
   onReplay,
   split,
+  leg,
+  onLeg,
+  pretty,
+  onPretty,
 }: {
   api: TrawlerApi;
   flow: FlowView | null;
@@ -79,8 +83,11 @@ export function FlowDetail({
   onClose: () => void;
   onReplay?: () => void;
   split: LayoutControls;
+  leg: Leg;
+  onLeg: (leg: Leg) => void;
+  pretty: boolean;
+  onPretty: (pretty: boolean) => void;
 }) {
-  const [leg, setLeg] = useState<Leg>("request");
   const [measure, height] = useHeight();
   const [measureHeaders, headersHeight] = useHeight();
 
@@ -136,7 +143,7 @@ export function FlowDetail({
         <SegmentedControl
           options={LEGS}
           value={leg}
-          onChange={(value) => setLeg(value as Leg)}
+          onChange={(value) => onLeg(value as Leg)}
           ariaLabel="leg"
         />
         <span className="ml-auto flex items-center gap-2">
@@ -196,7 +203,7 @@ export function FlowDetail({
       </div>
 
       <Section title="Body" className="flex min-h-0 flex-1 flex-col">
-        <BodyViewer api={api} flow={flow} leg={leg} />
+        <BodyViewer api={api} flow={flow} leg={leg} pretty={pretty} onPretty={onPretty} />
       </Section>
     </div>
   );
