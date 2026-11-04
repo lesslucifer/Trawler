@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 25f4f6db53d635383d489baed7aeb9c7e7d1f906
+base: c30852c53e8bdc4d65cc5d853613028837c226f4
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-query-bar-w1-filter-lists-result.html
+report_sha256: bd27b305d752e56572ec0aec227f343e25fe106b3cf8d194685b1f7234288d63
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAED/6zOlGj4m5bXTz/s0LwwcPk492BbGuLX+EHUE+rLnby32HDKUIZxgC3
+  xTO5lrHN6YdJqbDUMCKSvLG3xYhD8L
+  -----END SSH SIGNATURE-----
