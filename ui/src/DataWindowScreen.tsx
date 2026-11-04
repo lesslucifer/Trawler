@@ -11,10 +11,12 @@ import {
   decodeOriginal,
   editCount,
   isModified,
+  lineBreakOf,
   redo,
   restoreOriginal,
   startHistory,
   undo,
+  utf8Length,
   workingBytes,
   workingText,
   type History,
@@ -63,19 +65,29 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const more = useRef<HTMLButtonElement>(null);
 
   const kind = override ?? detected.kind;
+  const lineBreak = useMemo(() => lineBreakOf(original), [original]);
   const lossy = !decoded.whole && !READ_ONLY_KINDS.has(kind);
-  const readOnly = READ_ONLY_KINDS.has(kind) || lossy;
+  const mixed = lineBreak === null && !READ_ONLY_KINDS.has(kind);
+  const readOnly = READ_ONLY_KINDS.has(kind) || lossy || mixed;
   const text = workingText(history);
-  const bytes = useMemo(() => workingBytes(history, payload.bytes), [history, payload.bytes]);
+  const shownBytes = useMemo(
+    () => (READ_ONLY_KINDS.has(kind) ? workingBytes(history, payload.bytes) : null),
+    [kind, history, payload.bytes],
+  );
+  const shownSize = useMemo(
+    () => (isModified(history) ? utf8Length(workingText(history)) : payload.bytes.length),
+    [history, payload.bytes],
+  );
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
   const lines = useMemo(() => lineCount(text), [text]);
   const empty = payload.bytes.length === 0;
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));
-  const onScreen = () => (kind === "hex" ? hexDump(bytes, bytes.length) : text);
+  const currentBytes = () => shownBytes ?? workingBytes(history, payload.bytes);
+  const onScreen = () => (shownBytes && kind === "hex" ? hexDump(shownBytes, shownBytes.length) : text);
   const save = useCallback(() => {
-    void saveBody(bytes, captionFilename(payload.title, payload.typeHint));
-  }, [bytes, payload]);
+    void saveBody(shownBytes ?? workingBytes(history, payload.bytes), captionFilename(payload.title, payload.typeHint));
+  }, [shownBytes, history, payload]);
   const saveOriginal = () => {
     void saveBody(payload.bytes, captionFilename(payload.title, payload.typeHint, "-original"));
   };
@@ -185,13 +197,13 @@ function Workbench({ payload }: { payload: DataPayload }) {
       return (
         <div className="min-h-0 flex-1 overflow-auto p-4">
           <div className={size === "fit" ? "" : "w-max"}>
-            <ImageRenderer bytes={bytes} contentType={payload.typeHint ?? null} />
+            <ImageRenderer bytes={currentBytes()} contentType={payload.typeHint ?? null} />
           </div>
         </div>
       );
     }
-    if (kind === "hex") return <HexView bytes={bytes} testId="data-surface" />;
-    if (kind === "form" && !lossy) {
+    if (kind === "hex") return <HexView bytes={currentBytes()} testId="data-surface" />;
+    if (kind === "form" && !lossy && !mixed) {
       const edit = (index: number, part: PairPart, value: string) =>
         step(editPair(text, index, part, value), `edited the ${part} of pair ${index + 1}`);
       return (
@@ -209,6 +221,13 @@ function Workbench({ payload }: { payload: DataPayload }) {
     }
     return (
       <div className="flex min-h-0 flex-1 flex-col" onContextMenu={onContext}>
+        {mixed && !lossy && (
+          <div className="border-b border-hairline px-4 py-chrome-y">
+            <Notice tone="warn" detail="an edit would rewrite every break to one kind, so it stays read-only; hex shows every byte">
+              mixed line breaks: CRLF, CR and LF in one text
+            </Notice>
+          </div>
+        )}
         {lossy && (
           <div className="border-b border-hairline px-4 py-chrome-y">
             <Notice tone="warn" detail="an edit would rewrite those bytes too, so it stays read-only; hex shows every byte">
@@ -219,7 +238,8 @@ function Workbench({ payload }: { payload: DataPayload }) {
         <EditSurface
           text={text}
           language={kind === "form" ? "plain" : SURFACE_LANGUAGE[kind]}
-          readOnly={lossy}
+          readOnly={lossy || mixed}
+          lineBreak={lineBreak ?? "\n"}
           onChange={(next, name, extend) => setHistory((h) => (extend ? amend(h, next, name) : commit(h, next, name)))}
           onSelect={(selected) => setSelection(selected)}
           testId="data-surface"
@@ -261,7 +281,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
         <span data-testid="detected">
           {override ? `your choice · detected ${kindLabel(detected.kind)} from ${detected.from}` : `detected from ${detected.from}`}
         </span>
-        <span>{humanBytes(bytes.length)}</span>
+        <span>{humanBytes(shownSize)}</span>
         {!readOnly && !empty && <span>{kind === "form" ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
         <span className="ml-auto flex items-center gap-x-3">
           {selection && kind !== "form" && !readOnly && <span>selection {plural(selection.length, "character")}</span>}

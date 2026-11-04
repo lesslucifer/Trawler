@@ -26,6 +26,29 @@ export function decodeOriginal(bytes: Uint8Array): DecodedOriginal {
   }
 }
 
+export function lineBreakOf(text: string): string | null {
+  const crlf = text.split("\r\n").length - 1;
+  const cr = text.split("\r").length - 1 - crlf;
+  const lf = text.split("\n").length - 1 - crlf;
+  const kinds = [crlf > 0, cr > 0, lf > 0].filter(Boolean).length;
+  if (kinds > 1) return null;
+  return crlf > 0 ? "\r\n" : cr > 0 ? "\r" : "\n";
+}
+
+export function utf8Length(text: string): number {
+  let length = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    if (code < 0x80) length += 1;
+    else if (code < 0x800) length += 2;
+    else if (code >= 0xd800 && code < 0xdc00 && i + 1 < text.length) {
+      length += 4;
+      i += 1;
+    } else length += 3;
+  }
+  return length;
+}
+
 export function startHistory(original: string): History {
   return { steps: [{ text: original, name: ORIGINAL_STEP }], at: 0, dropped: 0 };
 }

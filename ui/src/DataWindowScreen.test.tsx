@@ -154,6 +154,20 @@ describe("bytes the text cannot hold", () => {
     expect(saved.mock.lastCall![0]).toBe(bytes);
   });
 
+  it("an edit keeps the CRLF line breaks it did not touch", async () => {
+    const bytes = encode("one\r\ntwo\r\nthree");
+    await open(payload({ bytes, typeHint: "text/plain", text: undefined }));
+    typeInto(0, "x");
+    key("s");
+    expect(new TextDecoder().decode(saved.mock.lastCall![0])).toBe("xone\r\ntwo\r\nthree");
+  });
+
+  it("mixed line breaks stay read-only and say why", async () => {
+    await open(payload({ bytes: encode("a\r\nb\nc"), typeHint: "text/plain", text: undefined }));
+    expect(screen.getByText(/mixed line breaks/)).toBeInTheDocument();
+    expect(view().state.readOnly).toBe(true);
+  });
+
   it("a byte-order mark survives an edit", async () => {
     const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...encode("abc")]);
     await open(payload({ bytes, typeHint: "text/plain", text: undefined }));

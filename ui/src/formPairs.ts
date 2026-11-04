@@ -37,7 +37,8 @@ export function editPair(text: string, index: number, part: PairPart, edited: st
     .map((raw, i) => {
       if (i !== index) return raw;
       const [key, value] = splitRaw(raw);
-      return part === "key" ? `${encodeURIComponent(edited)}=${value}` : `${key}=${encodeURIComponent(edited)}`;
+      if (part === "value") return `${key}=${encodeURIComponent(edited)}`;
+      return raw.includes("=") ? `${encodeURIComponent(edited)}=${value}` : encodeURIComponent(edited);
     })
     .join("&");
 }

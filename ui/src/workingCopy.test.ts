@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   amend,
+  utf8Length,
+  lineBreakOf,
   decodeOriginal,
   canRedo,
   canUndo,
@@ -134,4 +136,23 @@ describe("the original as text", () => {
   it("bytes that are not UTF-8 decode lossily and say so", () => {
     expect(decodeOriginal(new Uint8Array([0x61, 0xff]))).toEqual({ text: "a\ufffd", whole: false });
   });
+});
+
+describe("the line break a text is written with", () => {
+  it.each([
+    ["a\nb", "\n"],
+    ["one line", "\n"],
+    ["a\r\nb\r\n", "\r\n"],
+    ["a\rb", "\r"],
+    ["a\r\nb\nc", null],
+    ["a\rb\nc", null],
+  ])("%j → %j", (text, lineBreak) => {
+    expect(lineBreakOf(text)).toBe(lineBreak);
+  });
+});
+
+it("a text's UTF-8 length is counted without encoding it", () => {
+  for (const text of ["", "abc", "café", "日本", "a😀b", "\ud800"]) {
+    expect(utf8Length(text)).toBe(new TextEncoder().encode(text).length);
+  }
 });

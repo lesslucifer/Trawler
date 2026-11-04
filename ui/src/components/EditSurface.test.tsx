@@ -70,6 +70,17 @@ describe("changes go to the caller's history", () => {
     ]);
   });
 
+  it("reports the text written with the caller's line break, and keeps it on a new line", () => {
+    const onChange = vi.fn();
+    const { container } = render(<EditSurface text={"a\r\nb"} language="plain" lineBreak={"\r\n"} onChange={onChange} />);
+    const view = viewIn(container);
+    expect(view.state.doc.lines).toBe(2);
+    act(() => {
+      view.dispatch(view.state.replaceSelection(view.state.lineBreak));
+    });
+    expect(onChange.mock.calls[0][0]).toBe("\r\na\r\nb");
+  });
+
   it("another kind of edit starts a new step", () => {
     const onChange = vi.fn();
     const { container } = render(<EditSurface text="abc" language="plain" onChange={onChange} />);

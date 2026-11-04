@@ -56,6 +56,7 @@ export interface EditSurfaceProps {
   onChange?: (text: string, step: string, extend: boolean) => void;
   onSelect?: (text: string, line: number) => void;
   inset?: LineInset | null;
+  lineBreak?: string;
   handle?: Ref<EditSurfaceHandle>;
   testId?: string;
 }
@@ -199,7 +200,7 @@ const selectedText = (state: EditorState, selection: EditorSelection) =>
  * EditSurface — the data window's whole-data surface: every byte of a JSON, XML or text document, editable, foldable and searchable, uncapped.
  * @tier T2 — owns the editor configuration (editable document, virtualised viewport, fold gutter, three-token highlight, find marks); the text, the one history and what a change means are the caller's
  * @anatomy line numbers (ink-mute) · fold gutter ▾/▸ with a "… N lines" wash-tint chip on a folded line · mono text-body document, syn-key/syn-str/syn-num, punctuation ink-mute, wrap on by default · find marks wash-select, current wash-active + 1px ink-mute outline · CodeMirror cursor and selection · an inset block under one line (the caller's node)
- * @use the data window only (DEC-69): its json / xml / text surface and a form shown encoded; read-only for a decoded result
+ * @use the data window only (DEC-69): its json / xml / text surface and a form shown encoded; read-only for a decoded result; the caller names the line break the text is written with, so an edit keeps the ones it did not touch
  * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-69 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it, with extend set while CodeMirror's input grouping still holds · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-69 rule 7) · marking the document edited (DEC-59: the screen says so in words) · overlaying the inset on the lines below it: it is a block in the document
  * @states editable · read-only (selection, find and fold still work) · folded (view state) · with find marks · with an inset under one line. A json document that no longer parses stays json: the parser's recovery keeps highlighting and folding what still reads. No empty, error or loading state
  * @madeof CodeMirror 6 (T0) — view, state, language, lang-json, lang-xml, search decorations
@@ -214,6 +215,7 @@ export function EditSurface({
   onChange,
   onSelect,
   inset = null,
+  lineBreak = "\n",
   handle,
   testId,
 }: EditSurfaceProps) {
@@ -223,7 +225,12 @@ export function EditSurface({
   callbacks.current = { onChange, onSelect };
   const group = useRef<{ step: string; at: number } | null>(null);
   const shown = useRef(text);
-  const compartments = useRef({ language: new Compartment(), readOnly: new Compartment(), wrap: new Compartment() });
+  const compartments = useRef({
+    language: new Compartment(),
+    readOnly: new Compartment(),
+    wrap: new Compartment(),
+    lineBreak: new Compartment(),
+  });
   const [insetHost] = useState(() => document.createElement("div"));
 
   useImperativeHandle(handle, () => ({
@@ -238,7 +245,7 @@ export function EditSurface({
 
   useEffect(() => {
     if (!host.current) return;
-    const { language: lang, readOnly: locked, wrap: wrapped } = compartments.current;
+    const { language: lang, readOnly: locked, wrap: wrapped, lineBreak: separator } = compartments.current;
     const listener = EditorView.updateListener.of((update) => {
       const user = update.transactions.filter((tr) => tr.docChanged && !tr.annotation(external));
       if (user.length) {
@@ -246,7 +253,7 @@ export function EditSurface({
         const now = Date.now();
         const extend = group.current !== null && group.current.step === step && now - group.current.at < GROUP_MS;
         group.current = { step, at: now };
-        shown.current = update.state.doc.toString();
+        shown.current = update.state.sliceDoc();
         callbacks.current.onChange?.(shown.current, step, extend);
       }
       if (update.selectionSet) {
@@ -268,6 +275,7 @@ export function EditSurface({
           keymap.of([...foldKeymap, ...standardKeymap]),
           warpTheme,
           surfaceTheme,
+          separator.of(EditorState.lineSeparator.of(lineBreak)),
           lang.of(language(choice)),
           locked.of(EditorState.readOnly.of(readOnly)),
           wrapped.of(wrap ? EditorView.lineWrapping : []),
@@ -304,6 +312,12 @@ export function EditSurface({
   useEffect(() => {
     view.current?.dispatch({ effects: compartments.current.readOnly.reconfigure(EditorState.readOnly.of(readOnly)) });
   }, [readOnly]);
+
+  useEffect(() => {
+    view.current?.dispatch({
+      effects: compartments.current.lineBreak.reconfigure(EditorState.lineSeparator.of(lineBreak)),
+    });
+  }, [lineBreak]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: compartments.current.wrap.reconfigure(wrap ? EditorView.lineWrapping : []) });

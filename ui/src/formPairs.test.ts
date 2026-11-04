@@ -54,6 +54,7 @@ describe("an edit re-encodes only its own pair", () => {
     expect(editPair("%ZZ=ok", 0, "value", "new")).toBe("%ZZ=new");
     expect(editPair("a+b=1%7e", 0, "key", "c d")).toBe("c%20d=1%7e");
     expect(editPair("flag", 0, "value", "on")).toBe("flag=on");
+    expect(editPair("flag", 0, "key", "on air")).toBe("on%20air");
     expect(parsePairs(editPair("%ZZ=ok", 0, "value", "new"))[0].kept).toBe(true);
   });
 });
