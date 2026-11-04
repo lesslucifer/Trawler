@@ -51,6 +51,10 @@ export function onCoreLog(handler: (entry: LogEntry) => void, on: Listen = liste
   return on<LogEntry>(CORE_LOG_EVENT, (event) => handler(event.payload));
 }
 
+export function quitStopsCore(state: CoreState | null): boolean {
+  return state?.state === "starting" || state?.state === "running";
+}
+
 export function stoppedWords({ code, signal }: { code: number | null; signal: number | null }): string {
   if (signal !== null) return `killed (signal ${signal})`;
   if (code !== null) return `exit code ${code}`;

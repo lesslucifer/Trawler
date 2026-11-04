@@ -3489,6 +3489,21 @@ describe("quitting", () => {
     await requestClose();
     await waitFor(() => expect(dialog()).toHaveTextContent(stake));
   });
+
+  // Review round 1: an owned core that already exited is not stopped by the quit.
+  test("over an owned core that exited, an unread proxy keeps the sentence that stays true", async () => {
+    onMacHost();
+    proxyReads("unknown");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    const shell = coreStub({ state: { state: "exited", code: null, signal: 9 } });
+    render(<App api={api} initialState={PROVEN} core={shell.bridge} />);
+    await waitFor(() => expect(shell.call).toHaveBeenCalledWith("core_status"));
+
+    await requestClose();
+    await waitFor(() => expect(dialog()).toHaveTextContent(CLOSE_COPY.stake.unread("this Mac")));
+    expect(dialog()).not.toHaveTextContent(/Quitting stops/);
+  });
 });
 
 test("the capture menu opens Settings inside the app, and offers none in the web shell", async () => {
