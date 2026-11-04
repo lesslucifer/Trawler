@@ -1,0 +1,32 @@
+schema: doc/v1
+epic: E-STICKY
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "W2 residue: a splitter dropped just before a quit is lost (useLayout flushes only on unmount)."
+  - path: "docs/decisions/dec-31-leg-is-panel-scoped.html"
+    tier: T2
+    action: updated
+    distills: "W2: amended by DEC-70 - Shell holds the leg and the body view, which carry between flows."
+  - path: "docs/decisions/dec-60-a-setup-session-starts-when-setup-opens.html"
+    tier: T2
+    action: updated
+    distills: "W2: rule 6 amended by DEC-70 - the last device outlives the app session; the launch check opens on This machine."
+  - path: "docs/decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html"
+    tier: T2
+    action: added
+    distills: "W1-W2: the view-prefs store - one record, one writer, field-by-field read, unknown fields kept, immediate writes, lastPlatform only for setup the user opens, why not layout.json."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-70 routed; DEC-31 and DEC-60 rows name their amendments."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-5, UC-SVC and UC-ONBOARD rows state what sticks across a relaunch."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-5 leg and body mode are the user's; UC-SVC Settings reopens where it was; UC-ONBOARD last platform across a relaunch."
