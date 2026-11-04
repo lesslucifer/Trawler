@@ -89,7 +89,9 @@
         size) and two importants (a second UTF-8 length rule beside <code>byteLength</code>; copies from a menu or a key
         failing silently), fixed with regression tests: <code>byteLength</code> is the one rule, counted without
         encoding; lines are counted over every break kind; every copy goes through CopyButton's
-        <code>writeClipboard</code> and the status bar says <em>copied</em> or <em>copy failed</em></td></tr>
+        <code>writeClipboard</code> and the status bar says <em>copied</em> or <em>copy failed</em>. Round 4 FAIL on
+        <code>96ee2ff9</code>: one verified important (fold to a depth compared every fold range with every other), fixed
+        as one sweep over the ranges in line order</td></tr>
       <tr><td>docs</td><td><a href="../decisions/dec-69-the-data-window.html">DEC-69</a> rule 10 ·
         <a href="../decisions/decisions-index.html">decisions index</a> · the four design files retired</td></tr>
     </table>

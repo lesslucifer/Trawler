@@ -172,11 +172,15 @@ function foldRanges(state: EditorState): TextRange[] {
 }
 
 function foldToDepth(view: EditorView, depth: number) {
-  const ranges = foldRanges(view.state);
-  const level = (range: TextRange) =>
-    ranges.filter((outer) => outer !== range && outer.from <= range.from && outer.to >= range.to).length;
+  const open: TextRange[] = [];
+  const atDepth: TextRange[] = [];
+  for (const range of foldRanges(view.state)) {
+    while (open.length && open[open.length - 1].to < range.to) open.pop();
+    if (open.length === depth) atDepth.push(range);
+    open.push(range);
+  }
   unfoldAll(view);
-  const effects = ranges.filter((range) => level(range) === depth).map((range) => foldEffect.of(range));
+  const effects = atDepth.map((range) => foldEffect.of(range));
   if (effects.length) view.dispatch({ effects });
 }
 
