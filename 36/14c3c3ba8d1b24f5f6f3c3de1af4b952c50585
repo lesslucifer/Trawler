@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app (round 2)"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: 3614c3c3ba8d1b24f5f6f3c3de1af4b952c50585
+diff_sha256: 110eab6019ca35f8e040ae4a4b211a2b5a95ec16fef06998c49832d7878b4c2c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 11
+  stage_seconds:
+    gate0: 183
+    finders: 54
+  by_finder:
+    correctness: { found: 5, verified: 0 }
+    efficiency: { found: 3, verified: 0 }
+    altitude: { found: 4, verified: 1 }
+findings: { found: 12, verified: 1, waived: 0 }
+blocking:
+  - "blocker (raised important, re-judged by the verifier from the Tauri 2.11.5 source): plugin:event|listen is an async command whose registration is spawned, while core_log/core_status are sync commands run inline, so the snapshot can be served before the listener exists and an event emitted in between is lost for good"
+verdict: FAIL
+date: 2026-11-04
