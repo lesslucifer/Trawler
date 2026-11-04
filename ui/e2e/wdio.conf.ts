@@ -27,17 +27,21 @@ const RUN_TALLY = resolve(here, ".run-tally.json");
 // scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
 const CORE_ADDRESS_VAR = "TRAWLER_E2E_API";
 
-// The app writes its dismissed-notice markers into the real user config dir, so
-// they outlive a run. A marker left by an earlier one would silence the clear ask
-// the capture spec exists to assert, and the spec's own last case leaves one
+// The app writes its dismissed-notice markers, its saved layout and its saved
+// window geometry into the real user config dir, so they outlive a run. A marker
+// left by an earlier one would silence the clear ask the capture spec exists to
+// assert, and the spec's own last case leaves one behind; a layout or a window the
+// user sized would open the run at their sizes, and the layout specs leave both
 // behind — so the run starts and ends without them.
-const NOTICE_MARKERS = [
+const SAVED_STATE = [
   "clear-ask-dismissed",
   "remote-notice-dismissed",
+  "layout.json",
+  "windows.json",
 ].map((name) => resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name));
 
-function clearNoticeMarkers() {
-  for (const marker of NOTICE_MARKERS) rmSync(marker, { force: true });
+function clearSavedState() {
+  for (const file of SAVED_STATE) rmSync(file, { force: true });
 }
 
 // The shell reads the Android emulator through the first SDK that holds adb,
@@ -77,11 +81,16 @@ function useFakeSdk() {
 // harness exits the process rather than draining it, so nothing can follow. The
 // capture and replay specs sit between them — each leaves the capture empty, which
 // the flows spec refills from its own hits. Order is explicit, not
-// alphabetical-by-accident.
+// alphabetical-by-accident. The three layout specs run in this order because each
+// of the first two ends by quitting the app, and the launcher launches it again
+// for the next file: that relaunch is what the second and third assert.
 const SPECS = [
   "./specs/onboarding.spec.ts",
   "./specs/capture.spec.ts",
   "./specs/replay.spec.ts",
+  "./specs/layout.spec.ts",
+  "./specs/layout-relaunched.spec.ts",
+  "./specs/layout-broken.spec.ts",
   "./specs/flows.spec.ts",
 ];
 
@@ -144,7 +153,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 60_000 },
 
   onPrepare: async () => {
-    clearNoticeMarkers();
+    clearSavedState();
     useFakeSdk();
     await startCore();
     await seedSentFlow();
@@ -168,6 +177,6 @@ export const config: WebdriverIO.Config = {
     harness?.kill();
     rmSync(PORTS_FILE, { force: true });
     if (fakeSdk) rmSync(fakeSdk, { recursive: true, force: true });
-    clearNoticeMarkers();
+    clearSavedState();
   },
 };

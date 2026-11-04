@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea00d29f34851f0dfae25b">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-68: a split is a line, reset by the pointer</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-68 — a split is a line, reset by the pointer</h1>
+      <p>What a user-sized boundary looks like, how it is reset, and what unit it speaks: the three forks of the Splitter
+        design, kept here when the design file retired into the component's TSDoc (DEC-16).</p>
+      <div class="meta">v1 · 2026-11-03 · Trawler · T2 decision · minted by <strong>E-PANELS.W3</strong> from the
+        splitters' design run (owner's round 1, C4 and C5) · within <a href="dec-67-the-user-sizes-the-layout.html">DEC-67</a>
+        · UC-4 · UC-5 · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> A user-sized boundary is the 1&nbsp;px line the two zones already shared, with a
+        transparent hit band reaching <code>grip-reach</code> past it on each side. A double-click resets that one
+        boundary; no key does. The value is the caller's unit, with pixels converted by the caller's ratio.</p>
+    </div>
+
+    <h2 id="forks">The forks</h2>
+    <table data-c="forks">
+      <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
+      <tr><td>affordance</td><td>a 9&nbsp;px transparent band over the 1&nbsp;px line; the line lifts from
+        <code>hairline</code> to <code>ink-mute</code> on hover and drag; the resize cursor says the rest</td><td>a visible
+        8&nbsp;px gutter with a grip glyph: chrome on every split for what the cursor already says, and a screen that no
+        longer looks the same at rest</td></tr>
+      <tr><td>reset key</td><td>none (owner, C5: "no need keyboard involved"). The arrows and Home / End reach every
+        value, the default included; View ▸ Reset Layout resets all</td><td>Enter to reset: a second meaning for a key
+        the rest of the app uses to act · Enter to collapse, as ARIA's window-splitter example does: nothing collapses
+        here (DEC-67)</td></tr>
+      <tr><td>unit</td><td>the caller's: pixels for a width, a share for the headers, with <code>perPx</code> converting a
+        dragged or stepped pixel</td><td>always pixels: the headers split is a share of the pane, so it would convert
+        twice and drift as the pane's height changes</td></tr>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences">
+      <tr><th>Where</th><th>What follows</th></tr>
+      <tr><td>keyboard vocabulary</td><td><em>resize a split</em>: arrows along the axis by 8&nbsp;px, Shift 48&nbsp;px,
+        Home / End to the bounds; no reset key</td></tr>
+      <tr><td>saving</td><td>a drag saves once, on release; a key step and a reset each save; nothing saves mid-drag</td></tr>
+      <tr><td>a short leg</td><td>the headers share is a ceiling, so a leg shorter than it puts the line under its last
+        row: a drag or a step starts there, even below <code>zone-min</code>, and the share saved is where the line is
+        dropped, never below <code>zone-min</code></td></tr>
+      <tr><td>a lowered bound</td><td>a value outside the live bounds is shown at the bound and not reported: the clamp
+        changes what is shown, never what is saved</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
