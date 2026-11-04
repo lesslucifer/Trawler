@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-STICKY
+wu: E-STICKY.W1
+base: ea973847c1482d15ec0bdfbcb876b9950dc94fe6
+design_sha256: 0f05bc61dd54b2dc20842cde61cd9357a23cea642a202b27c4c873d86a9c1f0d
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "Shell now holds the leg, the body mode and the remembered platform through useViewPrefs and passes them down; no element, copy, token or layout changes"
+  - path: ui/src/BodyViewer.tsx
+    why: "the pretty/raw choice becomes a controlled prop instead of local state; the same segmented control renders in the same place"
+  - path: ui/src/FlowDetail.tsx
+    why: "the request/response leg becomes a controlled prop instead of local state; the same segmented control renders in the same place"
+date: 2026-11-04
