@@ -2,6 +2,8 @@
 // is configurable — never a hardcoded port in component code. Dev/preview/tests
 // inject it; the released app exposes it as configuration.
 
+import { chipParams, type Chip } from "./query";
+
 export type FlowSource = "captured" | "imported" | "sent";
 
 // The encodings the core serves its CA in, one per kind of installer.
@@ -70,23 +72,7 @@ export interface HarExport {
   filename: string;
 }
 
-export interface Filter {
-  q?: string;
-  host?: string;
-  method?: string;
-  status?: string;
-}
-
-const FILTER_KEYS: (keyof Filter)[] = ["q", "host", "method", "status"];
-
-export function filterParams(filter: Filter): URLSearchParams {
-  const params = new URLSearchParams();
-  for (const key of FILTER_KEYS) {
-    const value = filter[key]?.trim();
-    if (value) params.set(key, value);
-  }
-  return params;
-}
+export type Filter = readonly Chip[];
 
 // The API answered and refused. Its absence is the other outcome: a fetch that
 // rejects never produces one, so `instanceof ApiError` is how a caller tells a
@@ -222,7 +208,8 @@ export function createApi(baseUrl?: string): TrawlerApi {
   const base = () => (baseUrl ?? defaultBaseUrl()).replace(/\/$/, "");
   return {
     async listFlows(filter) {
-      const res = await fetch(`${base()}/flows?${filterParams(filter)}`);
+      const res = await fetch(`${base()}/flows?${chipParams(filter)}`);
+      if (res.status === 400) throw new ApiError(400, await refusal(res));
       if (!res.ok) throw new ApiError(res.status, `GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
     },
@@ -232,7 +219,7 @@ export function createApi(baseUrl?: string): TrawlerApi {
       return ((await res.json()) as { flows: FlowSummary[] }).flows[0] ?? null;
     },
     async exportHar(filter) {
-      const res = await fetch(`${base()}/flows/export?${filterParams(filter)}`);
+      const res = await fetch(`${base()}/flows/export?${chipParams(filter)}`);
       // A door, not a reader: its failure is shown to a person beside the
       // control they pressed, so it carries the server's sentence like the other
       // two do. The readers above stay status-shaped — nothing renders those.
@@ -261,7 +248,7 @@ export function createApi(baseUrl?: string): TrawlerApi {
       );
     },
     async clearFlows(filter) {
-      const res = await fetch(`${base()}/flows?${filterParams(filter)}`, { method: "DELETE" });
+      const res = await fetch(`${base()}/flows?${chipParams(filter)}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await refusal(res));
       return ((await res.json()) as { removed: number }).removed;
     },

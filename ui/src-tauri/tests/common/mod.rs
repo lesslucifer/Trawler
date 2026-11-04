@@ -3,7 +3,10 @@ use std::time::Duration;
 
 use trawler_ui_lib::supervisor::Launch;
 
-pub const PATIENCE: Duration = Duration::from_secs(20);
+// macOS scans a freshly linked binary before it first runs: 16-22s for this
+// one, and `cargo test` relinks it before a run. The core itself is ready in
+// milliseconds, so the patience is sized for the scan, not for the core.
+pub const PATIENCE: Duration = Duration::from_secs(60);
 
 pub fn launch(ca_dir: &Path, proxy_port: u16, api_port: u16) -> Launch {
     Launch {

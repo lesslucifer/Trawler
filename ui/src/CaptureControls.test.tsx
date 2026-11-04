@@ -32,7 +32,7 @@ function mount(over: Partial<TrawlerApi> = {}, props: { count?: number; filter?:
   render(
     <CaptureControls
       api={api}
-      filter={props.filter ?? {}}
+      filter={props.filter ?? []}
       count={props.count ?? 6}
       onCleared={onCleared}
     />,
@@ -65,10 +65,10 @@ test("export sends the live filter, saves under the server's name, and says so m
       }),
   );
   const saveBody = vi.spyOn(files, "saveBody").mockResolvedValue("/tmp/trawler-20260908.har");
-  mount({ exportHar }, { filter: { host: "api.example.com" } });
+  mount({ exportHar }, { filter: [{ key: "host", value: "api.example.com", negated: false }] });
 
   choose(CAPTURE_COPY.exportAct);
-  await waitFor(() => expect(exportHar).toHaveBeenCalledWith({ host: "api.example.com" }));
+  await waitFor(() => expect(exportHar).toHaveBeenCalledWith([{ key: "host", value: "api.example.com", negated: false }]));
 
   expect(slot()).toHaveTextContent(CAPTURE_COPY.exporting);
   fireEvent.click(trigger());
@@ -138,12 +138,12 @@ test.each([
 
 test("confirming clears what the filter selects and tells the screen an absence is coming", async () => {
   const clearFlows = vi.fn(async () => 3);
-  const { onCleared } = mount({ clearFlows }, { filter: { method: "GET" } });
+  const { onCleared } = mount({ clearFlows }, { filter: [{ key: "method", value: "GET", negated: false }] });
 
   await openClear();
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.clear }));
 
-  await waitFor(() => expect(clearFlows).toHaveBeenCalledWith({ method: "GET" }));
+  await waitFor(() => expect(clearFlows).toHaveBeenCalledWith([{ key: "method", value: "GET", negated: false }]));
   await waitFor(() => expect(onCleared).toHaveBeenCalledOnce());
   expect(screen.queryByRole("dialog")).toBeNull();
 });
@@ -174,11 +174,11 @@ test("the suppression preference is written only when a checked ask is confirmed
 test("a dismissed ask clears immediately with the live filter", async () => {
   vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
   const clearFlows = vi.fn(async () => 2);
-  const { onCleared } = mount({ clearFlows }, { filter: { host: "api.example.com" } });
+  const { onCleared } = mount({ clearFlows }, { filter: [{ key: "host", value: "api.example.com", negated: false }] });
 
   fireEvent.click(clearButton());
 
-  await waitFor(() => expect(clearFlows).toHaveBeenCalledWith({ host: "api.example.com" }));
+  await waitFor(() => expect(clearFlows).toHaveBeenCalledWith([{ key: "host", value: "api.example.com", negated: false }]));
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(onCleared).toHaveBeenCalledOnce();
 });
@@ -431,7 +431,7 @@ test("a successful import closes its own ask after StrictMode has remounted it",
   const importCurl = vi.fn(async () => 1);
   render(
     <StrictMode>
-      <CaptureControls api={apiStub({ importCurl })} filter={{}} count={6} onCleared={vi.fn()} />
+      <CaptureControls api={apiStub({ importCurl })} filter={[]} count={6} onCleared={vi.fn()} />
     </StrictMode>,
   );
 
@@ -451,7 +451,7 @@ test("a refused import still speaks after StrictMode has remounted the ask", asy
   });
   render(
     <StrictMode>
-      <CaptureControls api={apiStub({ importCurl })} filter={{}} count={6} onCleared={vi.fn()} />
+      <CaptureControls api={apiStub({ importCurl })} filter={[]} count={6} onCleared={vi.fn()} />
     </StrictMode>,
   );
 
@@ -724,7 +724,7 @@ test("a clear that fails after the ask was cancelled still says so in the header
 
 test("new request follows import… in the menu, wears ↗, and opens a draft", () => {
   const onNewRequest = vi.fn();
-  render(<CaptureControls api={apiStub()} filter={{}} count={6} onCleared={() => {}} onNewRequest={onNewRequest} />);
+  render(<CaptureControls api={apiStub()} filter={[]} count={6} onCleared={() => {}} onNewRequest={onNewRequest} />);
   fireEvent.click(trigger());
 
   const items = screen.getAllByRole("menuitem");
@@ -741,7 +741,7 @@ test("new request follows import… in the menu, wears ↗, and opens a draft", 
 // F26: a list that already has flows has no empty state to lead into setup.
 test("set up another device closes the menu and runs its handler", () => {
   const onSetUpDevice = vi.fn();
-  render(<CaptureControls api={apiStub()} filter={{}} count={400} onCleared={() => {}} onSetUpDevice={onSetUpDevice} />);
+  render(<CaptureControls api={apiStub()} filter={[]} count={400} onCleared={() => {}} onSetUpDevice={onSetUpDevice} />);
   fireEvent.click(trigger());
 
   const items = screen.getAllByRole("menuitem");
@@ -753,7 +753,7 @@ test("set up another device closes the menu and runs its handler", () => {
 });
 
 test("without a way into setup, the menu offers none", () => {
-  render(<CaptureControls api={apiStub()} filter={{}} count={6} onCleared={() => {}} />);
+  render(<CaptureControls api={apiStub()} filter={[]} count={6} onCleared={() => {}} />);
   fireEvent.click(trigger());
 
   expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.setUpDeviceAct })).toBeNull();
@@ -764,7 +764,7 @@ test("settings… closes the menu last and opens Settings", () => {
   render(
     <CaptureControls
       api={apiStub()}
-      filter={{}}
+      filter={[]}
       count={6}
       onCleared={() => {}}
       onSetUpDevice={() => {}}
@@ -782,7 +782,7 @@ test("settings… closes the menu last and opens Settings", () => {
 });
 
 test("without an app around it, the menu offers no settings", () => {
-  render(<CaptureControls api={apiStub()} filter={{}} count={6} onCleared={() => {}} />);
+  render(<CaptureControls api={apiStub()} filter={[]} count={6} onCleared={() => {}} />);
   fireEvent.click(trigger());
 
   expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.settingsAct })).toBeNull();

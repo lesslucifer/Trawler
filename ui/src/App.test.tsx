@@ -96,8 +96,19 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
   };
 }
 
-// Mock API: `store` is the current server-side result; a filter with host !== ""
-// narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
+const queryBar = () => screen.getByRole("combobox", { name: "filter" });
+
+// Types a filter into the bar and ends it as typed, the way Space does.
+function addFilter(text: string) {
+  const bar = queryBar();
+  fireEvent.change(bar, { target: { value: text } });
+  fireEvent.keyDown(bar, { key: " " });
+}
+
+const text = (value: string) => ({ key: "q", value, negated: false });
+
+// Mock API: `store` is the current server-side result; host and text chips
+// narrow it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
 function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
   let onConnection: (authority: string) => void = () => {};
@@ -109,9 +120,12 @@ function mockApi(store: () => FlowSummary[]) {
       // is a case-insensitive substring of the URI, while host is matched there
       // against the parsed host alone. The fixtures put each host in exactly one
       // flow's authority, so the two agree here.
-      const like = (uri: string, needle?: string) =>
-        !needle?.trim() || uri.toLowerCase().includes(needle.trim().toLowerCase());
-      return store().filter((f) => like(f.uri, filter.host) && like(f.uri, filter.q));
+      const like = (uri: string, needle: string) => uri.toLowerCase().includes(needle.toLowerCase());
+      const wanted = (key: string) => filter.filter((chip) => chip.key === key && !chip.negated).map((chip) => chip.value);
+      const hosts = wanted("host");
+      return store().filter(
+        (f) => (hosts.length === 0 || hosts.some((h) => like(f.uri, h))) && wanted("q").every((q) => like(f.uri, q)),
+      );
     }),
     caCertPem: vi.fn(async () => PEM),
     caFile: vi.fn(async () => new TextEncoder().encode(PEM)),
@@ -965,7 +979,7 @@ test("setup reads every captured row whatever the list is filtered to, and back 
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "nomatch" } });
+  addFilter("nomatch");
   await waitFor(() => expect(screen.queryByTestId("flow-row")).toBeNull());
 
   fireEvent.click(screen.getByTestId("status-dot"));
@@ -975,9 +989,9 @@ test("setup reads every captured row whatever the list is filtered to, and back 
   expect(await screen.findByText("done — capturing traffic")).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
-  await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ q: "nomatch" }));
+  await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith([text("nomatch")]));
   expect(screen.queryByTestId("flow-row")).toBeNull();
-  expect(screen.getByLabelText("filter")).toHaveValue("nomatch");
+  expect(screen.getByRole("button", { name: "remove nomatch" })).toBeInTheDocument();
 });
 
 test("a tunnel from before setup opened is not this session's traffic", async () => {
@@ -1860,14 +1874,16 @@ test("a core that will not say leaves the screen saying Trawler answers here onl
   expect(screen.queryByTestId("device-address")).toBeNull();
 });
 
-// Choosing a host offered by the dropdown, rather than typing one: the options
-// are every host capture has seen, so narrowing to one excludes the others.
+// Choosing a host the bar offers, rather than typing one: the suggestions are
+// every host capture has seen, so narrowing to one excludes the others.
 async function chooseHost(label: string) {
-  fireEvent.click(screen.getByLabelText("host"));
-  fireEvent.click(await screen.findByRole("option", { name: label }));
+  const bar = queryBar();
+  bar.focus();
+  fireEvent.change(bar, { target: { value: "host:" } });
+  fireEvent.mouseDown(await screen.findByRole("option", { name: new RegExp(`^host:${label}`) }));
 }
 
-test("choosing a host narrows the list to it; SSE appends a new row once cleared", async () => {
+test("choosing a host narrows the list to it; SSE appends a new row once its chip goes", async () => {
   let rows = [
     flow({ id: "f1", uri: "http://example.com/" }),
     flow({ id: "f2", uri: "http://other.test/" }),
@@ -1880,24 +1896,23 @@ test("choosing a host narrows the list to it; SSE appends a new row once cleared
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
   expect(screen.getByTestId("flow-row")).toHaveTextContent("other.test");
 
-  await chooseHost("any host");
+  fireEvent.click(screen.getByRole("button", { name: "remove host:other.test" }));
   rows = [...rows, flow({ id: "f3", uri: "http://example.com/second", status: 404 })];
   fire();
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(3));
 });
 
-test("the method filter offers the verbs as a closed set rather than free text", async () => {
+test("the bar offers the verbs once method: is typed, and never a partial verb", async () => {
   const { api } = mockApi(() => [flow({ id: "f1" })]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  fireEvent.click(screen.getByLabelText("method"));
+  queryBar().focus();
+  fireEvent.change(queryBar(), { target: { value: "method:" } });
   const offered = (await screen.findAllByRole("option")).map((o) => o.textContent);
-  expect(offered).toContain("GET");
-  expect(offered).toContain("DELETE");
-  // The exactness the design flagged: typing "GE" used to return an empty list
-  // indistinguishable from no traffic, because the server matches the verb whole.
-  expect(offered).not.toContain("GE");
+  expect(offered.some((o) => o?.startsWith("method:GET"))).toBe(true);
+  expect(offered.some((o) => o?.startsWith("method:DELETE"))).toBe(true);
+  expect(offered.some((o) => o?.startsWith("method:GE") && !o.startsWith("method:GET"))).toBe(false);
 });
 
 test("host options are every host seen, not only those the current filter leaves", async () => {
@@ -1912,23 +1927,22 @@ test("host options are every host seen, not only those the current filter leaves
   await chooseHost("other.test");
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
 
-  // example.com is absent from the filtered list, and must still be selectable —
+  // example.com is absent from the filtered list, and must still be offered —
   // otherwise choosing a host would strand the user on it.
-  fireEvent.click(screen.getByLabelText("host"));
+  fireEvent.change(queryBar(), { target: { value: "host:" } });
   const offered = (await screen.findAllByRole("option")).map((o) => o.textContent);
-  expect(offered).toContain("example.com");
-  expect(offered).toContain("any host");
+  expect(offered.some((o) => o?.startsWith("host:example.com"))).toBe(true);
 });
 
-test("the status filter stays free text, because the useful set is unknowable", async () => {
+test("a status code no suggestion offers is still a chip, because the useful set is unknowable", async () => {
   const { api } = mockApi(() => [flow({ id: "f1" })]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  const status = screen.getByLabelText("status");
-  expect(status.tagName).toBe("INPUT");
-  fireEvent.change(status, { target: { value: "404" } });
-  expect(status).toHaveValue("404");
+  addFilter("status:404");
+  await waitFor(() =>
+    expect(api.listFlows).toHaveBeenLastCalledWith([{ key: "status", value: "404", negated: false }]),
+  );
 });
 
 test("a host that matches nothing says the query excludes the traffic, not that none exists", async () => {
@@ -1938,7 +1952,7 @@ test("a host that matches nothing says the query excludes the traffic, not that 
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "no-such-path" } });
+  addFilter("no-such-path");
   await waitFor(() => expect(screen.queryByTestId("flow-row")).toBeNull());
   expect(screen.getByTestId("empty")).toHaveTextContent("Nothing matches your filter");
   expect(screen.getByTestId("empty")).not.toHaveTextContent("Nothing captured yet");
@@ -2102,7 +2116,7 @@ test("export is scoped by whatever the filters selected, not by the whole captur
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
 
   await chooseAct(CAPTURE_COPY.exportAct);
-  await waitFor(() => expect(api.exportHar).toHaveBeenCalledWith({ host: "other.test" }));
+  await waitFor(() => expect(api.exportHar).toHaveBeenCalledWith([{ key: "host", value: "other.test", negated: false }]));
 });
 
 test("clearing empties the list into an absence only a clear produces, and the count follows", async () => {
@@ -2160,7 +2174,7 @@ test("narrowing after a clear reads as the filter's absence, not as the clear's"
   fire();
   await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("All cleared"));
 
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "nothing" } });
+  addFilter("nothing");
   await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("Nothing matches your filter"));
 });
 
@@ -2175,7 +2189,7 @@ test("a dismissed clear ask sends the live filter and refills from the bus witho
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
   clearCapture(1);
 
-  await waitFor(() => expect(api.clearFlows).toHaveBeenCalledWith({ host: "other.test" }));
+  await waitFor(() => expect(api.clearFlows).toHaveBeenCalledWith([{ key: "host", value: "other.test", negated: false }]));
   expect(screen.queryByRole("dialog")).toBeNull();
 
   rows = [flow({ id: "f1", uri: "http://example.com/" })];
@@ -2253,25 +2267,106 @@ function shellApi(answer: () => Promise<FlowSummary[]>) {
 
 const HTTPS = flow({ uri: "https://example.com/" });
 
-test("the status filter says what it takes, and hints no keypad it cannot honour", async () => {
+test("the header holds one query bar where the four filter controls were", async () => {
   const { api } = shellApi(async () => [HTTPS]);
   render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
 
-  const status = await screen.findByLabelText("status");
-  expect(status).toHaveAttribute("placeholder", "status — 404 or 4xx");
-  // A class is a letter; a numeric keypad is a promise the field can no longer keep.
-  expect(status).not.toHaveAttribute("inputMode");
-  expect(status.className).toContain("w-field");
-  expect(status.className).not.toContain("w-field-sm");
+  expect(queryBar()).toHaveAttribute("placeholder", "filter — status:4xx, host:api, or any text");
+  expect(screen.queryByLabelText("host")).toBeNull();
+  expect(screen.queryByLabelText("method")).toBeNull();
+  expect(screen.queryByLabelText("status")).toBeNull();
+  expect(screen.getAllByRole("combobox")).toHaveLength(1);
 });
 
-test("a status class reaches the API as typed", async () => {
+test("typing never lists; a chip lists once, with the chips' parameters", async () => {
+  const { api, listFlows } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  await new Promise((r) => setTimeout(r, 200));
+  const before = listFlows.mock.calls.length;
+
+  const bar = queryBar();
+  bar.focus();
+  for (const typed of ["s", "st", "status:", "status:4"]) fireEvent.change(bar, { target: { value: typed } });
+  await new Promise((r) => setTimeout(r, 200));
+  expect(listFlows).toHaveBeenCalledTimes(before);
+
+  fireEvent.keyDown(bar, { key: "Enter" });
+  await waitFor(() =>
+    expect(listFlows).toHaveBeenLastCalledWith([{ key: "status", value: "4xx", negated: false }]),
+  );
+  expect(listFlows).toHaveBeenCalledTimes(before + 1);
+});
+
+test("a typo stays a draft that says why, and the list does not move", async () => {
+  const { api, listFlows } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  await new Promise((r) => setTimeout(r, 200));
+  const before = listFlows.mock.calls.length;
+
+  const bar = queryBar();
+  bar.focus();
+  fireEvent.change(bar, { target: { value: "stauts:4xx" } });
+  fireEvent.keyDown(bar, { key: "Enter" });
+
+  expect(screen.getByText("unknown key “stauts” — did you mean status?")).toBeInTheDocument();
+  expect(bar).toHaveValue("stauts:4xx");
+  expect(screen.queryByTestId("chip")).toBeNull();
+  await new Promise((r) => setTimeout(r, 200));
+  expect(listFlows).toHaveBeenCalledTimes(before);
+});
+
+test("⌘F focuses the bar from anywhere in the window", async () => {
+  const { api } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  const shortcut = new KeyboardEvent("keydown", { key: "f", metaKey: true, bubbles: true, cancelable: true });
+  window.dispatchEvent(shortcut);
+  expect(document.activeElement).toBe(queryBar());
+  expect(shortcut.defaultPrevented).toBe(true);
+});
+
+test("saved chips come back in the bar, and the listing carries them", async () => {
+  const saved = [
+    { key: "status", value: "4xx", negated: false },
+    { key: "method", value: "OPTIONS", negated: true },
+  ];
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "view_prefs_read" ? { chips: saved } : undefined,
+  );
+  const { api, listFlows } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+
+  expect(await screen.findByRole("button", { name: "remove status:4xx" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "remove -method:OPTIONS" })).toBeInTheDocument();
+  await waitFor(() => expect(listFlows).toHaveBeenLastCalledWith(saved));
+});
+
+test("a chip is saved the moment it is made", async () => {
+  const { api } = shellApi(async () => [HTTPS]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  addFilter("-method:options");
+  await waitFor(() =>
+    expect(invoke).toHaveBeenCalledWith("view_prefs_write", {
+      prefs: expect.objectContaining({ chips: [{ key: "method", value: "OPTIONS", negated: true }] }),
+    }),
+  );
+});
+
+test("a status class reaches the API as its parameter", async () => {
   const { api, listFlows } = shellApi(async () => [HTTPS]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xx" } });
-  await waitFor(() => expect(listFlows).toHaveBeenLastCalledWith({ status: "4xx" }));
+  addFilter("status:4xx");
+  await waitFor(() =>
+    expect(listFlows).toHaveBeenLastCalledWith([{ key: "status", value: "4xx", negated: false }]),
+  );
 });
 
 test("a core that stops answering states it above rows that do not move", async () => {
@@ -2281,7 +2376,7 @@ test("a core that stops answering states it above rows that do not move", async 
   await screen.findByTestId("flow-row");
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+  addFilter("x");
 
   await screen.findByText("Trawler's capture service isn't answering");
   expect(screen.getByText(/The requests below are the last it sent/)).toBeInTheDocument();
@@ -2313,15 +2408,17 @@ test("a refused query is not a failed connection — the row region says so, the
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
+  answer = () => Promise.reject(new ApiError(400, "status must be a code like 404 or a class like 4xx"));
+  addFilter("status:4xx");
 
   const region = await screen.findByTestId("empty");
-  expect(region).toHaveTextContent("“4xz” isn't a status code");
-  expect(region).toHaveTextContent("Try a code like 404, or a range like 4xx.");
+  expect(region).toHaveTextContent("“status:4xx” isn't a status code");
+  expect(region).toHaveTextContent("Remove the marked filter, or try a code like 404 or a range like 4xx.");
   expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
-  // The field keeps the text — nothing is corrected for the user.
-  expect(screen.getByLabelText("status")).toHaveValue("4xz");
+  // The chip stays, marked — nothing is corrected for the user.
+  const [chip] = screen.getAllByTestId("chip");
+  expect(chip).toHaveAttribute("aria-invalid", "true");
+  expect(chip).toHaveTextContent("⚠");
   expect(screen.getByText("0 flows")).toBeInTheDocument();
 });
 
@@ -2333,7 +2430,7 @@ test("retry disables its button and names what is awaited, then leaves with focu
   await screen.findByTestId("flow-row");
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+  addFilter("x");
   await screen.findByText("Trawler's capture service isn't answering");
 
   answer = () => new Promise<FlowSummary[]>((res) => (release = res));
@@ -2358,7 +2455,7 @@ test("a retry that fails again keeps the band and re-enables the way out", async
   await screen.findByTestId("flow-row");
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+  addFilter("x");
   await screen.findByText("Trawler's capture service isn't answering");
 
   await act(async () => {
@@ -2644,11 +2741,11 @@ test("a failed detail fetch does not speak for the list — a refused query keep
 
   // The core is plainly alive: it answers the listing, and it answered the pane
   // with a 500. Now refuse the query.
-  list = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
+  list = () => Promise.reject(new ApiError(400, "status must be a code like 404 or a class like 4xx"));
+  addFilter("status:4xx");
 
   const region = await screen.findByTestId("empty");
-  expect(region).toHaveTextContent("“4xz” isn't a status code");
+  expect(region).toHaveTextContent("“status:4xx” isn't a status code");
   expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull();
 });
 
@@ -2682,8 +2779,8 @@ test("a pane whose fetch failed says so, and does not keep claiming it is loadin
   expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 
   // An unrelated listing arriving must not silence it either.
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "example" } });
-  await waitFor(() => expect(screen.getByLabelText("filter")).toHaveValue("example"));
+  addFilter("example");
+  await screen.findByRole("button", { name: "remove example" });
   expect(screen.getByTestId("detail-failed")).toHaveTextContent("could not load this flow");
 });
 
@@ -2703,7 +2800,7 @@ test("a pane failure is stated even when the list is empty for its own reason", 
   );
 
   list = async () => [];
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "matches-nothing" } });
+  addFilter("matches-nothing");
   await screen.findByTestId("empty");
 
   // The list says its own thing; the pane still says its own.
@@ -2743,7 +2840,7 @@ test("a core going silent does not put the pane back on 'loading this flow…'",
   );
 
   list = () => Promise.reject(new TypeError("Failed to fetch"));
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "example" } });
+  addFilter("example");
   await screen.findByText("Trawler's capture service isn't answering");
 
   expect(screen.queryByTestId("detail-loading")).toBeNull();
@@ -2758,10 +2855,10 @@ test("a connection that recovers on its own does not move focus", async () => {
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByText("Trawler's capture service isn't answering");
 
-  const field = screen.getByLabelText("filter");
+  const field = queryBar();
   field.focus();
   answer = async () => [HTTPS];
-  fireEvent.change(field, { target: { value: "example" } });
+  addFilter("example");
 
   await waitFor(() => expect(screen.queryByText("Trawler's capture service isn't answering")).toBeNull());
   expect(document.activeElement).toBe(field);
@@ -2776,17 +2873,17 @@ test("a core that goes silent after refusing a query states both, hiding neither
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  list = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  fireEvent.change(screen.getByLabelText("status"), { target: { value: "4xz" } });
-  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("“4xz” isn't a status code"));
+  list = () => Promise.reject(new ApiError(400, "status must be a code like 404 or a class like 4xx"));
+  addFilter("status:4xx");
+  await waitFor(() => expect(screen.getByTestId("empty")).toHaveTextContent("“status:4xx” isn't a status code"));
 
   list = () => Promise.reject(new TypeError("Failed to fetch"));
-  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "x" } });
+  addFilter("x");
 
   const band = await screen.findByTestId("band");
   expect(band).toHaveTextContent("Trawler's capture service isn't answering");
   // The refusal keeps its own region; the silence is stated above it.
-  expect(screen.getByTestId("empty")).toHaveTextContent("“4xz” isn't a status code");
+  expect(screen.getByTestId("empty")).toHaveTextContent("“status:4xx” isn't a status code");
   // And the band makes no claim about rows that are not there.
   expect(band).not.toHaveTextContent("The requests below are the last it sent.");});
 
@@ -3551,7 +3648,7 @@ describe("what the user chose stays chosen", () => {
     expect(radio("response body mode", "raw")).toBeChecked();
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith("view_prefs_write", {
-        prefs: { leg: "response", bodyMode: "raw", lastPlatform: null },
+        prefs: { leg: "response", bodyMode: "raw", lastPlatform: null, chips: [] },
       }),
     );
   });
@@ -3589,7 +3686,7 @@ describe("what the user chose stays chosen", () => {
     pickPlatform("Android emulator");
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith("view_prefs_write", {
-        prefs: { leg: "request", bodyMode: "pretty", lastPlatform: "android-sim" },
+        prefs: { leg: "request", bodyMode: "pretty", lastPlatform: "android-sim", chips: [] },
       }),
     );
   });

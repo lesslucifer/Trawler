@@ -54,6 +54,13 @@ const SPECIMENS: Record<string, ReactElement> = {
   MenuPath: <collection.MenuPath path={["Trust", "When using this certificate", "Always Trust"]} />,
   QrCode: <collection.QrCode value="http://192.168.1.24:7421/ca.cer" label="the certificate URL" />,
   Notice: <collection.Notice>nothing captured yet</collection.Notice>,
+  QueryBar: (
+    <collection.QueryBar
+      chips={[{ key: "status", value: "4xx", negated: false }]}
+      onChange={() => {}}
+      hosts={["api.example.com"]}
+    />
+  ),
   Section: <collection.Section title="request">body</collection.Section>,
   SegmentedControl: (
     <collection.SegmentedControl

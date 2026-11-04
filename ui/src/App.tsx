@@ -80,14 +80,12 @@ import {
 } from "./ownRequest";
 import {
   Button,
-  Field,
-  HTTP_METHODS,
-  MethodLabel,
   Notice,
-  Select,
+  QueryBar,
   StatusDot,
-  type SelectOption,
+  type QueryBarHandle,
 } from "./components/index";
+import { chipLabel, paramOf, type Chip } from "./query";
 import {
   dotEvent,
   dotOpens,
@@ -117,20 +115,6 @@ export const CA_READ_PATIENCE_MS = 5_000;
 // joins its run.
 const READINGS_APART_MAX_MS = 4 * WATCH_MS;
 
-// Select holds at most one option and never returns to unselected, so "any" is a
-// real choice that happens to mean no filter — not a clear affordance the
-// component's contract rules out.
-const ANY = "\u0000any";
-
-const METHOD_OPTIONS: SelectOption[] = [
-  { id: ANY, label: "any method" },
-  ...HTTP_METHODS.map((m) => ({
-    id: m,
-    label: m,
-    element: <MethodLabel method={m} />,
-  })),
-];
-
 // The detail pane shows one flow's inspector or the composer, in place of each
 // other (epic decision 7): the list stays beside it, where a sent row lands.
 type Pane = { kind: "inspector"; id: string } | { kind: "composer" } | null;
@@ -139,13 +123,6 @@ type Pane = { kind: "inspector"; id: string } | { kind: "composer" } | null;
 // holds may move nothing on it (U4).
 const sameReach = (a: ReachState, b: ReachState) =>
   JSON.stringify(a) === JSON.stringify(b);
-
-function hostOptions(hosts: string[]): SelectOption[] {
-  return [
-    { id: ANY, label: "any host" },
-    ...hosts.map((h) => ({ id: h, label: h })),
-  ];
-}
 
 // The dot changes on its own once after a capture, when it goes quiet, so the
 // shell re-renders at that edge rather than ticking.
@@ -192,8 +169,10 @@ function Shell({
     initialState,
     (s) => s ?? initial(),
   );
+  const view = useViewPrefs();
+  const setView = view.set;
+  const chips = view.prefs.chips;
   const {
-    filter,
     flows,
     everything,
     hosts,
@@ -205,8 +184,7 @@ function Shell({
     refused,
     retrying,
     retry,
-    update,
-  } = useFlows(client, state.phase === "list" ? "list" : "setup");
+  } = useFlows(client, state.phase === "list" ? "list" : "setup", chips);
   // Which absence an empty list shows turns on WHY it is empty, and a clear is
   // the one reason no property of the list can carry. The flag disarms as soon
   // as rows return or the query moves, so it can only ever describe the emptiness
@@ -214,8 +192,6 @@ function Shell({
   const [clearedEmpty, setClearedEmpty] = useState(false);
   const [pane, setPane] = useState<Pane>(null);
   const split = useLayout();
-  const view = useViewPrefs();
-  const setView = view.set;
   const chooseLeg = useCallback((leg: Leg) => setView("leg", leg), [setView]);
   const choosePretty = useCallback(
     (pretty: boolean) => setView("bodyMode", pretty ? "pretty" : "raw"),
@@ -263,7 +239,7 @@ function Shell({
       () => live && setLaunchUnanswered(true),
       LAUNCH_PATIENCE_MS,
     );
-    client.listFlows({}).then(
+    client.listFlows([]).then(
       (flows) =>
         live &&
         dispatch(
@@ -311,17 +287,37 @@ function Shell({
     if (state.phase === "onboarding") setJustSetUp(false);
   }, [state.phase]);
 
-  // Which absence the list shows turns on whether the user narrowed it, so an
-  // empty-but-blank field must not count as an active filter.
-  const hasFilter = Object.values(filter).some((v) => (v ?? "") !== "");
-
-  const updateFilter = useCallback(
-    (key: keyof typeof filter, value: string) => {
+  const setChips = useCallback(
+    (next: Chip[]) => {
       setClearedEmpty(false);
-      update(key, value);
+      setView("chips", next);
     },
-    [update],
+    [setView],
   );
+
+  const isRefused = useCallback(
+    (chip: Chip) => refused !== null && paramOf(chip) === refused.param,
+    [refused],
+  );
+
+  const refusedFilter = useMemo(() => {
+    if (refused === null) return null;
+    const named = chips.filter((chip) => paramOf(chip) === refused.param);
+    const label = named.length > 0 ? named.map(chipLabel).join(" ") : refused.param;
+    return { label, param: refused.param, reason: refused.reason };
+  }, [chips, refused]);
+
+  const queryBar = useRef<QueryBarHandle>(null);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "f" || queryBar.current === null) return;
+      event.preventDefault();
+      queryBar.current.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     if (flows.length > 0) setClearedEmpty(false);
@@ -1132,45 +1128,17 @@ function Shell({
           {dot}
           <h1 className="mr-2 font-serif text-title italic">Trawler</h1>
           {reachChip}
-          <Field
-            aria-label="filter"
-            placeholder="filter — free text"
-            className="min-w-field flex-1"
-            value={filter.q ?? ""}
-            onChange={(e) => updateFilter("q", e.target.value)}
-          />
-          <Select
-            label="host"
-            placeholder="any host"
-            className="w-field-lg"
-            options={hostOptions(hosts)}
-            value={filter.host || ANY}
-            onChange={(id) => updateFilter("host", id === ANY ? "" : id)}
-          />
-          <Select
-            label="method"
-            placeholder="any method"
-            className="w-field-lg"
-            searchable={false}
-            options={METHOD_OPTIONS}
-            value={filter.method || ANY}
-            onChange={(id) => updateFilter("method", id === ANY ? "" : id)}
-          />
-          {/* Free text, on its second and durable leg: a Select can offer only
-              values capture has already seen, and filtering for a 404 before one
-              arrives is the debugging act. The set is not knowable, so no closed
-              control serves this key — and no keypad hint either, now that a
-              class is a letter. */}
-          <Field
-            aria-label="status"
-            placeholder="status — 404 or 4xx"
-            className="mr-2 w-field"
-            value={filter.status ?? ""}
-            onChange={(e) => updateFilter("status", e.target.value)}
+          <QueryBar
+            handle={queryBar}
+            className="mr-2 min-w-field flex-1"
+            chips={chips}
+            onChange={setChips}
+            hosts={hosts}
+            refused={isRefused}
           />
           <CaptureControls
             api={client}
-            filter={filter}
+            filter={chips}
             count={flows.length}
             onCleared={() => setClearedEmpty(true)}
             onNewRequest={() => compose(null)}
@@ -1213,10 +1181,10 @@ function Shell({
         flows={flows}
         selectedId={inspected ?? (pane?.kind === "composer" ? seedId : null)}
         onSelect={inspect}
-        filtered={hasFilter}
+        filtered={chips.length > 0}
         cleared={clearedEmpty}
         silent={silent}
-        refused={refused}
+        refused={refusedFilter}
         retrying={retrying}
         onRetry={retryConnection}
         onSetUp={setUp}
