@@ -141,7 +141,7 @@ pub enum StatusMatch {
 }
 
 pub const STATUS_GRAMMAR: &str =
-    "status must be an exact code (100-599, e.g. 404) or a class (1xx-5xx, e.g. 4xx)";
+    "must be an exact code (100-599, e.g. 404) or a class (1xx-5xx, e.g. 4xx)";
 
 impl StatusMatch {
     pub fn matches(self, status: u16) -> bool {
@@ -178,57 +178,90 @@ impl FromStr for StatusMatch {
     }
 }
 
-#[derive(Default, Debug)]
+/// A state no keyed field spells: `Pending` has no response yet, `Https` was
+/// requested over https.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Condition {
+    Pending,
+    Https,
+}
+
+/// One value of one filter key, judged against one flow.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Predicate {
+    Host(String),
+    Method(String),
+    Status(StatusMatch),
+    ContentType(String),
+    Text(String),
+    Source(FlowSource),
+    Is(Condition),
+}
+
+impl Predicate {
+    pub fn matches(&self, flow: &Flow) -> bool {
+        match self {
+            Self::Host(needle) => {
+                contains_ignoring_case(flow.host_with_port().unwrap_or_default(), needle)
+            }
+            Self::Method(method) => flow.request.method.eq_ignore_ascii_case(method),
+            Self::Status(status) => {
+                flow.response.as_ref().is_some_and(|r| status.matches(r.status))
+            }
+            Self::ContentType(needle) => {
+                let hit = |c: Option<&str>| c.is_some_and(|c| contains_ignoring_case(c, needle));
+                hit(flow.request_content_type()) || hit(flow.response_content_type())
+            }
+            Self::Text(needle) => contains_ignoring_case(&flow.request.uri, needle),
+            Self::Source(source) => flow.source == *source,
+            Self::Is(Condition::Pending) => flow.response.is_none(),
+            Self::Is(Condition::Https) => flow.is_https(),
+        }
+    }
+
+    /// Repeated text narrows — every word must appear — while any other key
+    /// repeated widens to either value, so only text is never grouped.
+    fn shares_group_with(&self, other: &Self) -> bool {
+        !matches!(self, Self::Text(_))
+            && std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+
+fn contains_ignoring_case(haystack: &str, needle: &str) -> bool {
+    haystack.to_ascii_lowercase().contains(&needle.to_ascii_lowercase())
+}
+
+/// A flow is selected when every group holds a predicate it matches and no
+/// excluded predicate matches it. The empty filter selects everything.
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct FlowFilter {
-    pub host: Option<String>,
-    pub method: Option<String>,
-    pub status: Option<StatusMatch>,
-    pub content_type: Option<String>,
-    pub q: Option<String>,
-    pub source: Option<FlowSource>,
+    all_of: Vec<Vec<Predicate>>,
+    none_of: Vec<Predicate>,
 }
 
 impl FlowFilter {
+    pub fn only(predicate: Predicate) -> Self {
+        Self::default().require(predicate)
+    }
+
+    #[must_use]
+    pub fn require(mut self, predicate: Predicate) -> Self {
+        match self.all_of.iter_mut().find(|group| group[0].shares_group_with(&predicate)) {
+            Some(group) => group.push(predicate),
+            None => self.all_of.push(vec![predicate]),
+        }
+        self
+    }
+
+    #[must_use]
+    pub fn exclude(mut self, predicate: Predicate) -> Self {
+        self.none_of.push(predicate);
+        self
+    }
+
     pub fn matches(&self, flow: &Flow) -> bool {
-        if let Some(host) = &self.host {
-            let flow_host = flow.host().unwrap_or_default().to_ascii_lowercase();
-            if !flow_host.contains(&host.to_ascii_lowercase()) {
-                return false;
-            }
-        }
-        if let Some(method) = &self.method {
-            if !flow.request.method.eq_ignore_ascii_case(method) {
-                return false;
-            }
-        }
-        if let Some(status) = self.status {
-            if !flow.response.as_ref().is_some_and(|r| status.matches(r.status)) {
-                return false;
-            }
-        }
-        if let Some(ct) = &self.content_type {
-            let needle = ct.to_ascii_lowercase();
-            let hit = flow
-                .request_content_type()
-                .is_some_and(|c| c.to_ascii_lowercase().contains(&needle))
-                || flow
-                    .response_content_type()
-                    .is_some_and(|c| c.to_ascii_lowercase().contains(&needle));
-            if !hit {
-                return false;
-            }
-        }
-        if let Some(source) = self.source {
-            if flow.source != source {
-                return false;
-            }
-        }
-        if let Some(q) = &self.q {
-            if !flow.request.uri.to_ascii_lowercase().contains(&q.to_ascii_lowercase()) {
-                return false;
-            }
-        }
-        true
+        self.all_of.iter().all(|group| group.iter().any(|p| p.matches(flow)))
+            && !self.none_of.iter().any(|p| p.matches(flow))
     }
 }
 
@@ -547,7 +580,7 @@ mod tests {
         s.import(vec![FlowBuilder::new().uri("http://sent/").method("POST").build().sent(None)]);
 
         let by_source = |source| {
-            uris(&s.list(&FlowFilter { source: Some(source), ..FlowFilter::default() }))
+            uris(&s.list(&FlowFilter::only(Predicate::Source(source))))
                 .iter()
                 .map(|u| (*u).to_owned())
                 .collect::<Vec<String>>()
@@ -556,11 +589,10 @@ mod tests {
         assert_eq!(by_source(FlowSource::Imported), vec!["http://file/post", "http://file/"]);
         assert_eq!(by_source(FlowSource::Sent), vec!["http://sent/"]);
 
-        let composed = s.list(&FlowFilter {
-            source: Some(FlowSource::Imported),
-            method: Some("post".into()),
-            ..FlowFilter::default()
-        });
+        let composed = s.list(
+            &FlowFilter::only(Predicate::Source(FlowSource::Imported))
+                .require(Predicate::Method("post".into())),
+        );
         assert_eq!(uris(&composed), vec!["http://file/post"]);
     }
 
@@ -575,10 +607,7 @@ mod tests {
         let survivor_id = survivor.id;
         s.insert(survivor);
 
-        let removed = s.remove_matching(&FlowFilter {
-            host: Some("drop.test".into()),
-            ..FlowFilter::default()
-        });
+        let removed = s.remove_matching(&FlowFilter::only(Predicate::Host("drop.test".into())));
 
         assert_eq!(removed, vec![doomed_id]);
         assert!(s.get(doomed_id).is_none());
@@ -598,7 +627,7 @@ mod tests {
         s.insert(FlowBuilder::new().uri("http://light/").req_body(captured(b"ab")).build());
         assert_eq!(s.total_bytes(), 12);
 
-        s.remove_matching(&FlowFilter { host: Some("heavy".into()), ..FlowFilter::default() });
+        s.remove_matching(&FlowFilter::only(Predicate::Host("heavy".into())));
         assert_eq!(s.total_bytes(), 2);
         assert!(s.get(heavy_id).is_none());
 
@@ -685,7 +714,7 @@ mod tests {
         s.insert(second);
         let mut rx = s.subscribe();
 
-        s.remove_matching(&FlowFilter { host: Some("nothing".into()), ..FlowFilter::default() });
+        s.remove_matching(&FlowFilter::only(Predicate::Host("nothing".into())));
         assert!(rx.try_recv().is_err(), "a no-op is not news");
 
         s.remove_matching(&FlowFilter::default());
@@ -797,21 +826,15 @@ mod tests {
         );
 
         let one = |f: FlowFilter| s.list(&f).len();
-        assert_eq!(one(FlowFilter { host: Some("EXAMPLE".into()), ..Default::default() }), 1);
-        assert_eq!(one(FlowFilter { method: Some("post".into()), ..Default::default() }), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::Host("EXAMPLE".into()))), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::Method("post".into()))), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::Status(StatusMatch::Exact(200)))), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::ContentType("json".into()))), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::ContentType("png".into()))), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::Text("users".into()))), 1);
         assert_eq!(
-            one(FlowFilter { status: Some(StatusMatch::Exact(200)), ..Default::default() }),
-            1
-        );
-        assert_eq!(one(FlowFilter { content_type: Some("json".into()), ..Default::default() }), 1);
-        assert_eq!(one(FlowFilter { content_type: Some("png".into()), ..Default::default() }), 1);
-        assert_eq!(one(FlowFilter { q: Some("users".into()), ..Default::default() }), 1);
-        assert_eq!(
-            one(FlowFilter {
-                method: Some("GET".into()),
-                status: Some(StatusMatch::Exact(201)),
-                ..Default::default()
-            }),
+            one(FlowFilter::only(Predicate::Method("GET".into()))
+                .require(Predicate::Status(StatusMatch::Exact(201)))),
             0
         );
         assert_eq!(one(FlowFilter::default()), 2);
@@ -871,7 +894,7 @@ mod tests {
             let host = if i % 2 == 0 { "keep" } else { "drop" };
             s.insert(FlowBuilder::new().uri(&format!("http://{host}/{i}")).build());
         }
-        let filter = || FlowFilter { host: Some("keep".into()), ..Default::default() };
+        let filter = || FlowFilter::only(Predicate::Host("keep".into()));
 
         let first = s.page(&filter(), 2, None);
         assert_eq!(uris(&first.flows), vec!["http://keep/4", "http://keep/2"]);
@@ -895,7 +918,7 @@ mod tests {
             })
             .collect();
         s.remove(ids[7]);
-        s.remove_matching(&FlowFilter { host: Some("h".into()), ..Default::default() });
+        s.remove_matching(&FlowFilter::only(Predicate::Host("h".into())));
         for i in 40..60 {
             s.insert(FlowBuilder::new().uri(&format!("http://h/{i}")).build());
         }
@@ -985,7 +1008,7 @@ mod tests {
         s.insert(pivot);
         s.insert(FlowBuilder::new().uri("http://keep/new").build());
 
-        let filter = FlowFilter { host: Some("keep".into()), ..Default::default() };
+        let filter = FlowFilter::only(Predicate::Host("keep".into()));
         let page = s.page(&filter, 5, Some(pivot_id));
         assert_eq!(uris(&page.flows), vec!["http://keep/old"]);
     }
@@ -1007,11 +1030,7 @@ mod tests {
     fn status_filter_excludes_responseless() {
         let s = store();
         s.insert(FlowBuilder::new().build());
-        assert_eq!(
-            s.list(&FlowFilter { status: Some(StatusMatch::Exact(200)), ..Default::default() })
-                .len(),
-            0
-        );
+        assert_eq!(s.list(&FlowFilter::only(Predicate::Status(StatusMatch::Exact(200)))).len(), 0);
     }
 
     #[test]
@@ -1074,24 +1093,12 @@ mod tests {
             s.insert(FlowBuilder::new().uri("http://x/y").status(status).build());
         }
         let one = |f: FlowFilter| s.list(&f).len();
+        assert_eq!(one(FlowFilter::only(Predicate::Status(StatusMatch::Class(4)))), 2);
+        assert_eq!(one(FlowFilter::only(Predicate::Status(StatusMatch::Class(5)))), 1);
+        assert_eq!(one(FlowFilter::only(Predicate::Status(StatusMatch::Exact(404)))), 1);
         assert_eq!(
-            one(FlowFilter { status: Some(StatusMatch::Class(4)), ..Default::default() }),
-            2
-        );
-        assert_eq!(
-            one(FlowFilter { status: Some(StatusMatch::Class(5)), ..Default::default() }),
-            1
-        );
-        assert_eq!(
-            one(FlowFilter { status: Some(StatusMatch::Exact(404)), ..Default::default() }),
-            1
-        );
-        assert_eq!(
-            one(FlowFilter {
-                method: Some("nope".into()),
-                status: Some(StatusMatch::Class(4)),
-                ..Default::default()
-            }),
+            one(FlowFilter::only(Predicate::Method("nope".into()))
+                .require(Predicate::Status(StatusMatch::Class(4)))),
             0
         );
     }
@@ -1100,9 +1107,136 @@ mod tests {
     fn status_class_excludes_responseless() {
         let s = store();
         s.insert(FlowBuilder::new().build());
+        assert_eq!(s.list(&FlowFilter::only(Predicate::Status(StatusMatch::Class(2)))).len(), 0);
+    }
+
+    fn mixed_store() -> Store {
+        let s = store();
+        s.insert(
+            FlowBuilder::new()
+                .method("GET")
+                .uri("http://api.test/login?token=1")
+                .status(200)
+                .build(),
+        );
+        s.insert(
+            FlowBuilder::new().method("OPTIONS").uri("https://auth.test/login").status(204).build(),
+        );
+        s.insert(
+            FlowBuilder::new()
+                .method("POST")
+                .uri("http://localhost:8080/upload")
+                .resp_header("Content-Type", "application/json")
+                .status(503)
+                .build(),
+        );
+        s.insert(FlowBuilder::new().method("GET").uri("https://api.test/pending").build());
+        s
+    }
+
+    fn selected(s: &Store, filter: &FlowFilter) -> Vec<String> {
+        uris(&s.list(filter)).iter().rev().map(|u| (*u).to_owned()).collect()
+    }
+
+    #[test]
+    fn a_repeated_key_matches_any_of_its_values() {
+        let s = mixed_store();
+        let either = FlowFilter::only(Predicate::Method("options".into()))
+            .require(Predicate::Method("post".into()));
         assert_eq!(
-            s.list(&FlowFilter { status: Some(StatusMatch::Class(2)), ..Default::default() }).len(),
-            0
+            selected(&s, &either),
+            ["https://auth.test/login", "http://localhost:8080/upload"]
+        );
+    }
+
+    #[test]
+    fn repeated_text_matches_all_of_its_values() {
+        let s = mixed_store();
+        let both = FlowFilter::only(Predicate::Text("login".into()))
+            .require(Predicate::Text("TOKEN".into()));
+        assert_eq!(selected(&s, &both), ["http://api.test/login?token=1"]);
+    }
+
+    #[test]
+    fn different_keys_must_all_match() {
+        let s = mixed_store();
+        let filter = FlowFilter::only(Predicate::Host("api".into()))
+            .require(Predicate::Host("auth".into()))
+            .require(Predicate::Is(Condition::Https));
+        assert_eq!(selected(&s, &filter), ["https://auth.test/login", "https://api.test/pending"]);
+    }
+
+    #[test]
+    fn an_excluded_predicate_removes_every_flow_it_matches() {
+        let s = mixed_store();
+        let filter = FlowFilter::default()
+            .exclude(Predicate::Method("OPTIONS".into()))
+            .exclude(Predicate::ContentType("json".into()));
+        assert_eq!(
+            selected(&s, &filter),
+            ["http://api.test/login?token=1", "https://api.test/pending"]
+        );
+        let no_text = FlowFilter::default()
+            .exclude(Predicate::Text("login".into()))
+            .exclude(Predicate::Text("upload".into()));
+        assert_eq!(selected(&s, &no_text), ["https://api.test/pending"]);
+    }
+
+    #[test]
+    fn a_negated_status_keeps_a_pending_flow() {
+        let s = mixed_store();
+        let filter = FlowFilter::default().exclude(Predicate::Status(StatusMatch::Class(5)));
+        assert_eq!(
+            selected(&s, &filter),
+            [
+                "http://api.test/login?token=1",
+                "https://auth.test/login",
+                "https://api.test/pending"
+            ]
+        );
+    }
+
+    #[test]
+    fn is_selects_pending_and_https_flows() {
+        let s = mixed_store();
+        assert_eq!(
+            selected(&s, &FlowFilter::only(Predicate::Is(Condition::Pending))),
+            ["https://api.test/pending"]
+        );
+        assert_eq!(
+            selected(&s, &FlowFilter::only(Predicate::Is(Condition::Https))),
+            ["https://auth.test/login", "https://api.test/pending"]
+        );
+        assert_eq!(
+            selected(&s, &FlowFilter::default().exclude(Predicate::Is(Condition::Pending))).len(),
+            3
+        );
+    }
+
+    #[test]
+    fn the_host_filter_matches_the_host_or_its_port() {
+        let s = mixed_store();
+        let by_host =
+            |needle: &str| selected(&s, &FlowFilter::only(Predicate::Host(needle.into())));
+        assert_eq!(by_host("localhost:8080"), ["http://localhost:8080/upload"]);
+        assert_eq!(by_host("LOCALHOST"), ["http://localhost:8080/upload"]);
+        assert_eq!(by_host("localhost:9090"), Vec::<String>::new());
+        assert_eq!(by_host("api.test").len(), 2);
+        s.insert(FlowBuilder::new().uri("/no-host").build());
+        assert_eq!(by_host("").len(), 5, "an empty host matches every flow, hostless ones too");
+    }
+
+    #[test]
+    fn each_source_predicate_selects_its_provenance() {
+        let s = mixed_store();
+        s.import(vec![FlowBuilder::new().uri("http://file/").build().imported()]);
+        assert_eq!(
+            selected(&s, &FlowFilter::only(Predicate::Source(FlowSource::Imported))),
+            ["http://file/"]
+        );
+        assert_eq!(
+            selected(&s, &FlowFilter::default().exclude(Predicate::Source(FlowSource::Captured))),
+            ["http://file/"]
         );
     }
 
@@ -1191,7 +1325,7 @@ mod tests {
                 match removals.next() {
                     Some(0) => {
                         let host = format!("h{}.test", i % 3);
-                        s.remove_matching(&FlowFilter { host: Some(host), ..FlowFilter::default() });
+                        s.remove_matching(&FlowFilter::only(Predicate::Host(host)));
                     }
                     Some(1) => {
                         let oldest = s.list(&FlowFilter::default()).last().map(|flow| flow.id);
@@ -1303,7 +1437,7 @@ mod tests {
                 s.insert(FlowBuilder::new().uri(&format!("http://{pre}{i}/")).build());
             }
             let all = s.list(&FlowFilter::default()).len();
-            let filtered = s.list(&FlowFilter { host: Some(needle), ..Default::default() }).len();
+            let filtered = s.list(&FlowFilter::only(Predicate::Host(needle))).len();
             proptest::prop_assert!(filtered <= all);
         }
     }

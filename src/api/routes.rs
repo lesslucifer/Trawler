@@ -21,7 +21,7 @@ use super::view::{self, FlowPageView, FlowSummary, FlowView, ReachView};
 use super::{curl, decode, har, send};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::sender::{Outgoing, SendError, Sender};
-use crate::store::{FlowFilter, StatusMatch, Store, STATUS_GRAMMAR};
+use crate::store::{Condition, FlowFilter, Predicate, Store, STATUS_GRAMMAR};
 use crate::{ca, reach};
 
 #[derive(Clone)]
@@ -33,47 +33,52 @@ pub struct AppState {
 }
 
 /// The filter half of a listing request. Every endpoint that selects flows
-/// deserializes into this and converts, so the listing and the export cannot
-/// come to select different sets. It is a field list rather than a nested
-/// `#[serde(flatten)]` member because `serde_urlencoded`, which axum's `Query`
-/// uses, cannot deserialize a flattened struct from a query string.
+/// deserializes into this and converts, so the listing, the export and the
+/// clear cannot come to select different sets. It keeps the raw pairs because
+/// `serde_urlencoded`, which axum's `Query` uses, refuses a key repeated into
+/// one field, and a repeated key is how a caller asks for more than one value.
 #[derive(Deserialize)]
-pub struct FilterQuery {
-    host: Option<String>,
-    method: Option<String>,
-    status: Option<String>,
-    content_type: Option<String>,
-    q: Option<String>,
-    source: Option<String>,
-}
+#[serde(transparent)]
+pub struct FilterQuery(Vec<(String, String)>);
 
 impl FilterQuery {
-    /// Fails rather than ignoring an unrecognised `source` or `status`: an empty
-    /// listing reads to a caller exactly like "nothing matched". Both refusals
-    /// live here rather than in each endpoint, so the export and the clear refuse
-    /// exactly what the listing refuses.
-    fn into_filter(self) -> Result<FlowFilter, &'static str> {
-        let source = self
-            .source
-            .as_deref()
-            .map(|value| {
-                view::parse_source(value).ok_or("source must be captured, imported or sent")
-            })
-            .transpose()?;
-        let status = self
-            .status
-            .as_deref()
-            .map(|value| value.parse::<StatusMatch>().map_err(|()| STATUS_GRAMMAR))
-            .transpose()?;
-        Ok(FlowFilter {
-            host: self.host,
-            method: self.method,
-            status,
-            content_type: self.content_type,
-            q: self.q,
-            source,
+    /// Fails rather than ignoring a value it cannot read: an empty listing reads
+    /// to a caller exactly like "nothing matched". The reason leads with the
+    /// parameter as sent, so a client can tell `status` from `not_status`. A key
+    /// the filter does not own is left to the extractor that does, as paging is.
+    fn into_filter(self) -> Result<FlowFilter, String> {
+        self.0.into_iter().try_fold(FlowFilter::default(), |filter, (param, value)| {
+            let (negated, key) = match param.strip_prefix("not_") {
+                Some(key) => (true, key),
+                None => (false, param.as_str()),
+            };
+            match filter_predicate(key, value) {
+                Ok(None) => Ok(filter),
+                Ok(Some(predicate)) if negated => Ok(filter.exclude(predicate)),
+                Ok(Some(predicate)) => Ok(filter.require(predicate)),
+                Err(grammar) => Err(format!("{param} {grammar}")),
+            }
         })
     }
+}
+
+fn filter_predicate(key: &str, value: String) -> Result<Option<Predicate>, &'static str> {
+    Ok(Some(match key {
+        "host" => Predicate::Host(value),
+        "method" => Predicate::Method(value),
+        "status" => Predicate::Status(value.parse().map_err(|()| STATUS_GRAMMAR)?),
+        "content_type" => Predicate::ContentType(value),
+        "q" => Predicate::Text(value),
+        "source" => Predicate::Source(
+            view::parse_source(&value).ok_or("must be captured, imported or sent")?,
+        ),
+        "is" => Predicate::Is(match value.as_str() {
+            "pending" => Condition::Pending,
+            "https" => Condition::Https,
+            _ => return Err("must be pending or https"),
+        }),
+        _ => return Ok(None),
+    }))
 }
 
 /// The paging half, extracted alongside `FilterQuery` rather than nesting it:
@@ -477,8 +482,8 @@ fn bad_id() -> Response {
     bad_request("invalid flow id")
 }
 
-fn bad_request(reason: &'static str) -> Response {
-    (StatusCode::BAD_REQUEST, reason).into_response()
+fn bad_request(reason: impl Into<String>) -> Response {
+    (StatusCode::BAD_REQUEST, reason.into()).into_response()
 }
 
 fn parse_cursor(cursor: &str) -> Result<FlowId, &'static str> {
@@ -938,5 +943,43 @@ mod tests {
 
         assert!(!view.armed);
         assert!(state.reach.addresses().await.is_none());
+    }
+
+    fn filter_of(query: &str) -> Result<crate::store::FlowFilter, String> {
+        let uri = format!("http://x/flows?{query}").parse::<axum::http::Uri>().expect("uri");
+        let Query(filter): Query<super::FilterQuery> = Query::try_from_uri(&uri).expect("query");
+        filter.into_filter()
+    }
+
+    #[test]
+    fn repeated_and_negated_keys_become_one_filter() {
+        use crate::store::{Condition, FlowFilter, Predicate, StatusMatch};
+        let filter = filter_of(
+            "host=a&q=x&host=b&not_method=GET&not_status=5xx&is=pending&q=y&limit=2&cursor=c&other=1",
+        );
+        let expected = FlowFilter::only(Predicate::Host("a".into()))
+            .require(Predicate::Text("x".into()))
+            .require(Predicate::Host("b".into()))
+            .exclude(Predicate::Method("GET".into()))
+            .exclude(Predicate::Status(StatusMatch::Class(5)))
+            .require(Predicate::Is(Condition::Pending))
+            .require(Predicate::Text("y".into()));
+        assert_eq!(filter, Ok(expected));
+        assert_eq!(filter_of(""), Ok(FlowFilter::default()));
+    }
+
+    #[test]
+    fn every_refusal_names_the_parameter_as_sent() {
+        let status_grammar = crate::store::STATUS_GRAMMAR;
+        for (query, reason) in [
+            ("status=9xx", format!("status {status_grammar}")),
+            ("not_status=999", format!("not_status {status_grammar}")),
+            ("source=proxied", "source must be captured, imported or sent".to_owned()),
+            ("not_source=x", "not_source must be captured, imported or sent".to_owned()),
+            ("is=done", "is must be pending or https".to_owned()),
+            ("host=a&not_is=", "not_is must be pending or https".to_owned()),
+        ] {
+            assert_eq!(filter_of(query), Err(reason), "{query}");
+        }
     }
 }

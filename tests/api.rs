@@ -1493,3 +1493,165 @@ async fn every_door_the_app_calls_answers_what_it_did_and_refuses_in_a_sentence(
     let (_, imported) = json(&r, "/flows?source=imported").await;
     assert_eq!(imported.as_array().unwrap().len(), 2, "both doors mark what they let in");
 }
+
+fn query_fixture_store() -> Arc<Store> {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(
+        FlowBuilder::new().method("GET").uri("http://api.test/login?token=1").status(200).build(),
+    );
+    store.insert(
+        FlowBuilder::new().method("OPTIONS").uri("https://auth.test/login").status(204).build(),
+    );
+    store.insert(
+        FlowBuilder::new()
+            .method("POST")
+            .uri("http://localhost:8080/upload")
+            .resp_header("Content-Type", "application/json")
+            .status(503)
+            .build(),
+    );
+    store.insert(FlowBuilder::new().method("GET").uri("https://api.test/pending").build());
+    store.import(vec![FlowBuilder::new()
+        .method("GET")
+        .uri("http://file.test/a")
+        .status(404)
+        .build()
+        .imported()]);
+    store
+}
+
+fn listed_rows(value: &Value) -> Vec<(String, bool)> {
+    value
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| (row["uri"].as_str().unwrap().to_owned(), !row["status"].is_null()))
+        .collect()
+}
+
+// The listing, the export and the clear share one filter, so for every list,
+// negation and `is` query they select the same flows.
+#[tokio::test]
+async fn listing_export_and_clear_select_the_same_flows_for_lists_negation_and_is() {
+    let expectations: [(&str, &[&str]); 9] = [
+        (
+            "host=api&host=auth",
+            &[
+                "https://api.test/pending",
+                "https://auth.test/login",
+                "http://api.test/login?token=1",
+            ],
+        ),
+        ("q=login&q=token", &["http://api.test/login?token=1"]),
+        ("content_type=json&not_method=OPTIONS", &["http://localhost:8080/upload"]),
+        (
+            "not_status=5xx&not_source=imported",
+            &[
+                "https://api.test/pending",
+                "https://auth.test/login",
+                "http://api.test/login?token=1",
+            ],
+        ),
+        ("is=pending", &["https://api.test/pending"]),
+        ("is=https&not_is=pending", &["https://auth.test/login"]),
+        ("host=localhost:8080", &["http://localhost:8080/upload"]),
+        (
+            "method=get&method=post&status=4xx&status=5xx",
+            &["http://file.test/a", "http://localhost:8080/upload"],
+        ),
+        ("not_q=login&not_q=upload", &["http://file.test/a", "https://api.test/pending"]),
+    ];
+    for (query, expected) in expectations {
+        let r = router_with(query_fixture_store());
+        let (status, listed) = json(&r, &format!("/flows?{query}")).await;
+        assert_eq!(status, StatusCode::OK, "{query}");
+        let rows = listed_rows(&listed);
+        let uris: Vec<&str> = rows.iter().map(|(uri, _)| uri.as_str()).collect();
+        assert_eq!(uris, expected, "`{query}` lists");
+
+        let (_, exported) = json(&r, &format!("/flows/export?{query}")).await;
+        let exported_urls: Vec<&str> = exported["log"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| entry["request"]["url"].as_str().unwrap())
+            .collect();
+        let answered: Vec<&str> = rows
+            .iter()
+            .filter(|(_, has_status)| *has_status)
+            .map(|(uri, _)| uri.as_str())
+            .collect();
+        assert_eq!(exported_urls, answered, "`{query}` exports what it lists");
+
+        let (_, before) = json(&r, "/flows").await;
+        let (status, removed) = delete(&r, &format!("/flows?{query}")).await;
+        assert_eq!(status, StatusCode::OK, "{query}");
+        assert_eq!(removed, json!({ "removed": expected.len() }), "`{query}` clears what it lists");
+        let (_, after) = json(&r, "/flows").await;
+        let survivors: Vec<String> = listed_rows(&before)
+            .into_iter()
+            .map(|(uri, _)| uri)
+            .filter(|uri| !expected.contains(&uri.as_str()))
+            .collect();
+        let after_uris: Vec<String> = listed_rows(&after).into_iter().map(|(uri, _)| uri).collect();
+        assert_eq!(after_uris, survivors, "`{query}` leaves everything it did not list");
+    }
+}
+
+#[tokio::test]
+async fn a_single_parameter_selects_what_it_did_before_lists_arrived() {
+    let r = router_with(query_fixture_store());
+    for (query, expected) in [
+        ("host=api.test", 2),
+        ("host=localhost", 1),
+        ("method=GET", 3),
+        ("status=204", 1),
+        ("status=4xx", 1),
+        ("content_type=json", 1),
+        ("q=login", 2),
+        ("source=imported", 1),
+        ("host=", 5),
+        ("", 5),
+    ] {
+        let (status, listed) = json(&r, &format!("/flows?{query}")).await;
+        assert_eq!(status, StatusCode::OK, "{query}");
+        assert_eq!(listed.as_array().unwrap().len(), expected, "`{query}`");
+    }
+}
+
+#[tokio::test]
+async fn every_door_refuses_an_unreadable_value_naming_the_parameter_as_sent() {
+    let r = router_with(query_fixture_store());
+    for (query, leads) in [
+        ("not_status=9xx", "not_status must be"),
+        ("host=a&is=done", "is must be pending or https"),
+        ("not_source=proxied", "not_source must be"),
+    ] {
+        for (door, (status, body)) in [
+            ("listing", get_text(&r, &format!("/flows?{query}")).await),
+            ("export", get_text(&r, &format!("/flows/export?{query}")).await),
+            ("clear", delete_text(&r, &format!("/flows?{query}")).await),
+        ] {
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{door} {query}");
+            assert!(body.starts_with(leads), "{door} {query}: {body:?}");
+        }
+    }
+    assert_eq!(
+        json(&r, "/flows").await.1.as_array().unwrap().len(),
+        5,
+        "a refused clear removes nothing"
+    );
+}
+
+async fn delete_text(router: &Router, uri: &str) -> (StatusCode, String) {
+    let req = Request::builder().method("DELETE").uri(uri).body(Body::empty()).unwrap();
+    let res = router.clone().oneshot(req).await.unwrap();
+    let status = res.status();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap().to_vec();
+    (status, String::from_utf8(bytes).unwrap())
+}
+
+async fn get_text(router: &Router, uri: &str) -> (StatusCode, String) {
+    let (status, _, body) = get(router, uri).await;
+    (status, String::from_utf8(body).unwrap())
+}

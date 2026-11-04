@@ -118,6 +118,7 @@ pub struct Flow {
     /// reference the store keeps alive.
     pub seed: Option<FlowId>,
     host: Option<String>,
+    host_with_port: Option<String>,
 }
 
 /// The version spelling every flow carries, whichever side of Trawler made the
@@ -141,7 +142,12 @@ pub(crate) fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a 
 
 impl Flow {
     pub fn new(request: RequestRec) -> Self {
-        let host = request.uri.parse::<http::Uri>().ok().and_then(|u| u.host().map(str::to_owned));
+        let uri = request.uri.parse::<http::Uri>().ok();
+        let host = uri.as_ref().and_then(|u| u.host().map(str::to_owned));
+        let host_with_port = uri
+            .as_ref()
+            .and_then(|u| Some(format!("{}:{}", u.host()?, u.port_u16()?)))
+            .or_else(|| host.clone());
         Self {
             id: FlowId::new(),
             started_at: SystemTime::now(),
@@ -151,6 +157,7 @@ impl Flow {
             source: FlowSource::Captured,
             seed: None,
             host,
+            host_with_port,
         }
     }
 
@@ -179,6 +186,16 @@ impl Flow {
     /// re-parse the URI.
     pub fn host(&self) -> Option<&str> {
         self.host.as_deref()
+    }
+
+    /// `host:port` when the URI names a port, else the host — the spelling a
+    /// client reading the URL as a browser does shows its user.
+    pub fn host_with_port(&self) -> Option<&str> {
+        self.host_with_port.as_deref()
+    }
+
+    pub fn is_https(&self) -> bool {
+        self.request.uri.get(..8).is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"))
     }
 
     pub fn request_content_type(&self) -> Option<&str> {
@@ -243,6 +260,25 @@ mod tests {
         assert!(host("http://[::1]:8080/").unwrap().contains("::1"));
         assert_eq!(host("/only/path"), None);
         assert_eq!(host("not a uri"), None);
+    }
+
+    #[test]
+    fn host_with_port_keeps_a_named_port_and_falls_back_to_the_host() {
+        let spelled =
+            |uri: &str| FlowBuilder::new().uri(uri).build().host_with_port().map(str::to_owned);
+        assert_eq!(spelled("http://localhost:8080/x").as_deref(), Some("localhost:8080"));
+        assert_eq!(spelled("http://example.com/x").as_deref(), Some("example.com"));
+        assert_eq!(spelled("http://[::1]:8080/").as_deref(), Some("[::1]:8080"));
+        assert_eq!(spelled("/only/path"), None);
+    }
+
+    #[test]
+    fn https_is_read_from_the_scheme_in_any_case() {
+        let https = |uri: &str| FlowBuilder::new().uri(uri).build().is_https();
+        assert!(https("https://a.test/"));
+        assert!(https("HTTPS://a.test/"));
+        assert!(!https("http://a.test/"));
+        assert!(!https("/https"));
     }
 
     #[test]
