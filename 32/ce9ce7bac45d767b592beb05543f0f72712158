@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app (round 3)"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: 32ce9ce7bac45d767b592beb05543f0f72712158
+diff_sha256: 0c396d967481096eeab9111c612a6afa58b6c630d33776330145a18b2e90cfd5
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 7
+  stage_seconds:
+    gate0: 95
+    finders: 77
+  by_finder:
+    correctness: { found: 4, verified: 2 }
+    efficiency: { found: 3, verified: 0 }
+    altitude: { found: 5, verified: 0 }
+findings: { found: 12, verified: 2, waived: 0 }
+blocking:
+  - "blocker (raised important): pressing restart unmounts the focused button and nothing moves focus into the warning, so Esc never reaches its handler and the design run's keyboard row is broken"
+  - "blocker (raised important): the previous core's stderr reader is never drained before the next spawn records its Start mark, so a late line of the old core can show under the new core's heading (DEC-68 rule 13)"
+verdict: FAIL
+date: 2026-11-04
