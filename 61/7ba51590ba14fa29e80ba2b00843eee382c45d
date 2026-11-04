@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-STICKY
+wu: E-STICKY.W1
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-04-sticky-ui-w1-sticky-choices-plan.html"
+    tier: T3
+    action: added
+    distills: "E-STICKY.W1 requirement, mapping, parts and test plan"
+  - path: "docs/work/2026-11-04-sticky-ui-w1-sticky-choices-result.html"
+    tier: T3
+    action: added
+    distills: "E-STICKY.W1 outcome, deviations, evidence and follow-ups"
+t2_waived: "the epic plan (Q6) assigns all distillation to E-STICKY.W2, after its e2e proves the behaviour: UC-5, UC-ONBOARD, UC-SVC, the new DEC and the DEC-31 / DEC-60 amendments"
