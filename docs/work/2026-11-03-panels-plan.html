@@ -168,10 +168,10 @@ flowchart LR
       <div data-wu="E-PANELS.W5">
         <h3 id="w5">E-PANELS.W5 — window geometry</h3>
         <table>
-          <tr><th>What it builds</th><td data-item="wu-summary">Shell-side save/restore of the main window's size, position and maximized state, clamped onto an available monitor, keyed by window label so later windows (E-INSPWIN) reuse it. Default: <code>tauri-plugin-window-state</code> if its file location and clamp behaviour fit the contract; otherwise the same <code>layout.json</code> store. Capability permissions updated.</td></tr>
+          <tr><th>What it builds</th><td data-item="wu-summary">Shell-side save/restore of the main window's size, position and maximized state, clamped onto an available monitor, keyed by window label so later windows (E-INSPWIN) reuse it. <code>tauri-plugin-window-state</code> was checked and does not fit (no size clamp, an off-screen position kept when one corner is on a monitor, placement untestable): a shell module of our own keeps the records in <code>windows.json</code> beside <code>layout.json</code>, read whole or not at all; both run launchers remove it. Reset Layout leaves the window as it is. Plan: <a href="2026-11-04-panels-w5-window-geometry-plan.html">W5 plan</a>.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-4 window row; expected results 4, 5.</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Unit: clamp of a saved rect against monitor sets (gone monitor, smaller monitor, below min size). Integration: save then restore through a temp config dir. No UI-rendering file touched, so no design owed.</td></tr>
-          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the persistence contract (and the store, if the plugin is not used).</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the persistence contract and its staged-write store.</td></tr>
         </table>
       </div>
 

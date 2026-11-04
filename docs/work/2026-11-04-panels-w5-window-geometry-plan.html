@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeaa82d9f34851f0dfae2ae" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PANELS.W5 plan: window geometry</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PANELS.W5 — window geometry</h1>
+      <p>Each window reopens at the size, place and maximized state it was left in, moved onto a monitor that still
+        exists.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-PANELS.W5</span> · branch
+        <code>wu/panels/window-geometry</code> · <a href="2026-11-03-panels-plan.html">epic plan</a> · base
+        <code>8196a699</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      The shell records each window's size, position and maximized state by window label as the user moves and resizes
+      it, saves the records to <code>windows.json</code> in its config directory when a window closes and when the app
+      exits, and at launch puts a window with a record back at it — placed inside the work area of the monitor it
+      overlaps most, or centred on the primary monitor when none is left, never below the window's minimum size — while
+      a missing or unreadable file leaves every window at its configured default.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-PANELS · UC-4 (window row) · the epic's expected results 4 (the window survives a relaunch) and 5 (a broken save
+      gives the default; a window saved on a gone monitor opens on a visible one) · rulings Q1 (keyed by window label,
+      for E-INSPWIN), Q2 (shell-side file in the app config dir), Q3 (one record per window label), Q4 (no version
+      field) · DEC-67's read-whole-or-not-at-all rule.
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  F[("app config dir\nwindows.json\n{ label: rect + maximized }")] -- "read at launch" --> T["Tracker\none record per label"]
+  T -- "setup: placed(record, monitors)" --> W["window\nset_size · set_position · maximize"]
+  W -- "Moved · Resized" --> T
+  T -- "Destroyed · RunEvent::Exit\nstaged file, then rename" --> F
+      </pre>
+      <div class="caption">The shell alone owns the file; the web app, the core and the control API never see it
+        (DEC-12).</div>
+    </div>
+    <table data-c="parts">
+      <tr><th>Part</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>store</td><td><code>ui/src-tauri/src/window_geometry.rs</code></td><td><code>windows.json</code>:
+        <code>{ "&lt;label&gt;": { x, y, width, height, maximized } }</code>, physical pixels — outer position, inner
+        size, the units the window events report. A file that does not parse into exactly that shape reads as no
+        records at all (DEC-67 rule). Written whole through a staged sibling and a rename, like
+        <code>layout.json</code></td></tr>
+      <tr><td>placement</td><td>same module, a pure function</td><td><code>placed(record, frame, monitors, min)</code>
+        → the rect to apply, or none when no monitor is known. Host = the work area the record overlaps most, else the
+        primary's, centred. Size: at most the work area less the frame, at least the window's minimum in that
+        monitor's pixels. Position: moved until the framed rect lies inside the host. <code>maximized</code> passes
+        through</td></tr>
+      <tr><td>tracking</td><td>same module</td><td>on <code>Moved</code> / <code>Resized</code> of a window the record
+        takes the new position / size, unless the window is minimized or maximized (then only the flag changes), so the
+        record keeps the un-maximized rect to return to</td></tr>
+      <tr><td>wiring</td><td><code>ui/src-tauri/src/lib.rs</code></td><td>the builder's <code>setup</code> restores
+        every config window; <code>on_window_event</code> tracks and saves on <code>Destroyed</code>; the run loop
+        saves on <code>RunEvent::Exit</code> (the Dock's Quit and logout end there). Both release and scenario builds.
+        A later window (E-INSPWIN) calls the same public <code>restore</code> after it is built</td></tr>
+      <tr><td>hermetic runs</td><td><code>ui/e2e/wdio.conf.ts</code> ·
+        <code>ui/e2e/walkthrough/walkthrough.conf.ts</code></td><td>both launchers remove <code>windows.json</code>
+        before and after a run, as the e2e already does its notice markers, so neither inherits a window the user
+        moved</td></tr>
+    </table>
+    <table data-c="forks">
+      <tr><th>Fork</th><th>Taken</th><th>Not taken, and why</th></tr>
+      <tr><td>who persists the geometry</td><td>a shell module of our own (the epic plan's fallback)</td><td><code>tauri-plugin-window-state</code>
+        2.5: it never fits the size to a monitor; it restores the position whenever any one corner lands on any
+        monitor, so a window can return mostly off-screen; it writes in place, only at exit; its placement is private,
+        so the epic's "clamp against monitor sets" unit test could not be written</td></tr>
+      <tr><td>which file</td><td><code>windows.json</code>, beside <code>layout.json</code></td><td>inside
+        <code>layout.json</code>: the web app replaces that file whole on every layout change, so a shell-written window
+        record would be lost or raced; and W1's shape rejects any extra field</td></tr>
+      <tr><td>Reset Layout</td><td>leaves the window where it is</td><td>also resetting the window: it would jump the
+        window under the pointer, and the OS already gives the window its own size gestures (zoom, drag)</td></tr>
+      <tr><td>capability permissions</td><td>unchanged</td><td>the web app calls nothing new; the epic plan's
+        "permissions updated" assumed the plugin's commands</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>State</th><th>Expected</th></tr>
+      <tr><td>move and resize the main window, quit, relaunch</td><td>the same size and place</td></tr>
+      <tr><td>maximize, quit, relaunch, un-maximize</td><td>opens maximized; un-maximizing returns the size it had
+        before</td></tr>
+      <tr><td>a record on a monitor that is gone</td><td>the saved size, centred on the primary monitor's work
+        area</td></tr>
+      <tr><td>a record larger than its monitor, or hanging off its edge</td><td>shrunk to the work area, moved fully
+        inside it</td></tr>
+      <tr><td>a record below the window's minimum</td><td>raised to the minimum (850 × 600 points, in that monitor's
+        pixels)</td></tr>
+      <tr><td>no file, not JSON, wrong shape, no record for the label</td><td>the window opens at its configured
+        default; nothing errors</td></tr>
+      <tr><td>a save while another label's record is on file</td><td>that record survives untouched</td></tr>
+      <tr><td>e2e and walkthrough runs</td><td>start at 1440 × 800 whatever the user last did</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>unit</td><td><code>window_geometry.rs</code>: <code>placed</code> against monitor sets — inside its
+        monitor (unchanged), the monitor gone (centred on the primary), a smaller monitor (shrunk and moved in), off an
+        edge (moved in), below the minimum on a 2× monitor (raised), straddling two monitors (the larger overlap hosts),
+        no monitors (none), the frame kept inside the work area, maximized carried. Store: round-trip of two labels,
+        missing file / dir, corrupt bytes, missing / extra / mistyped field read as no records, a write replaces and
+        leaves no staged file. Tracking: a move or resize while maximized or minimized keeps the rect and updates only
+        the flag</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/window_geometry_store.rs</code>: records for two labels saved
+        into a temp config dir, read back and placed against a monitor set — each label's rect returns as saved; the
+        same file corrupted reads as no records. <code>xtask</code>'s command-registry test stays green (no command
+        added)</td></tr>
+      <tr><td>e2e</td><td>waived: the relaunch journey through the real window is W6's <code>layout.spec.ts</code>
+        (epic E2E plan, "Survives a relaunch"); off-monitor restore stays unit-level, a second monitor not being
+        hermetic</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
