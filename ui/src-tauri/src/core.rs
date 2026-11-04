@@ -27,6 +27,21 @@ pub fn mode(attach: Option<&str>) -> Mode {
     }
 }
 
+pub fn launch_ports(ephemeral: bool) -> (u16, u16) {
+    if ephemeral {
+        return (0, 0);
+    }
+    let defaults = trawler::Config::default();
+    (defaults.proxy_addr.port(), defaults.api_addr.port())
+}
+
+/// The single-instance socket is one fixed path per machine, so only the app
+/// whose core holds the fixed ports may claim it; an e2e app on ephemeral ports
+/// handing over to the developer's own Trawler would test that one instead.
+pub fn hands_over(mode: &Mode, (proxy_port, api_port): (u16, u16)) -> bool {
+    *mode == Mode::Own && proxy_port != 0 && api_port != 0
+}
+
 pub enum Core {
     Owned(Arc<Supervisor>),
     Attached(String),
@@ -144,13 +159,13 @@ fn own<R: Runtime>(app: &AppHandle<R>) -> Result<Supervisor, StartError> {
             report(&format!("adopting ./ca into {} failed: {err}", ca_dir.display()));
         }
     }
-    let defaults = trawler::Config::default();
+    let (proxy_port, api_port) = launch_ports(crate::EPHEMERAL_PORTS);
     let launch = Launch {
         program,
         leading_args: vec![crate::CORE_FLAG.into()],
         ca_dir,
-        proxy_port: defaults.proxy_addr.port(),
-        api_port: defaults.api_addr.port(),
+        proxy_port,
+        api_port,
         ready_timeout: READY_TIMEOUT,
         grace: STOP_GRACE,
     };
@@ -224,6 +239,23 @@ mod tests {
     fn an_absent_or_blank_variable_owns_a_core() {
         assert_eq!(mode(None), Mode::Own);
         assert_eq!(mode(Some("  ")), Mode::Own);
+    }
+
+    #[test]
+    fn a_production_core_takes_the_fixed_ports() {
+        assert_eq!(launch_ports(false), (7420, 7421));
+    }
+
+    #[test]
+    fn an_ephemeral_core_lets_the_os_choose() {
+        assert_eq!(launch_ports(true), (0, 0));
+    }
+
+    #[test]
+    fn only_an_owned_core_on_fixed_ports_hands_a_second_launch_over() {
+        assert!(hands_over(&Mode::Own, (7420, 7421)));
+        assert!(!hands_over(&Mode::Own, (0, 0)));
+        assert!(!hands_over(&Mode::Attach("http://127.0.0.1:9000".into()), (7420, 7421)));
     }
 
     #[test]

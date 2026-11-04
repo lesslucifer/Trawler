@@ -22,6 +22,7 @@ pub mod window_geometry;
 mod scenario;
 
 pub const CORE_FLAG: &str = "--core";
+pub const EPHEMERAL_PORTS: bool = cfg!(feature = "e2e");
 
 /// The app binary is also its own core: launched with `--core` first, the rest
 /// of its arguments go to the same entry as `cargo run -p trawler`.
@@ -39,10 +40,7 @@ use tauri::Manager;
 pub fn run() {
     let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
     let builder = tauri::Builder::default();
-    // Only an owned core holds the fixed ports, so only then does a second
-    // launch hand over to the first; an attached app (the e2e) never yields to
-    // a Trawler already running on this machine.
-    let builder = if mode == core::Mode::Own {
+    let builder = if core::hands_over(&mode, core::launch_ports(EPHEMERAL_PORTS)) {
         builder.plugin(tauri_plugin_single_instance::init(|app, _, _| core::focus_main(app)))
     } else {
         builder
