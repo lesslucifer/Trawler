@@ -62,6 +62,17 @@ test("from the keyboard, the warning takes focus, Esc cancels it, and focus retu
   expect(restarts(stub)).toBe(0);
 });
 
+test("the warning closes once the core is no longer running", async () => {
+  const stub = await shown(RUNNING);
+  fireEvent.click(await screen.findByRole("button", { name: "restart" }));
+  act(() => stub.emitState({ state: "exited", code: 101, signal: null }));
+  expect(screen.queryByText("Restarting clears the captured list")).toBeNull();
+  act(() => stub.emitState({ state: "starting" }));
+  act(() => stub.emitState({ ...RUNNING, pid: 2 }));
+  expect(screen.queryByText("Restarting clears the captured list")).toBeNull();
+  expect(screen.getByRole("button", { name: "restart" })).toBeEnabled();
+});
+
 test("a confirmed restart is sent once, held while it runs", async () => {
   let finish: () => void = () => {};
   const stub = coreStub({

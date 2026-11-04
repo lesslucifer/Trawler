@@ -83,6 +83,7 @@ export function CaptureService({ bridge = tauriBridge }: { bridge?: CoreBridge }
   const restartHolder = useRef<HTMLDivElement>(null);
   const warning = useRef<HTMLDivElement>(null);
   if (state?.state === "running") lastRunning.current = state;
+  if (asking && state?.state !== "running") setAsking(false);
 
   useEffect(() => {
     if (asking) warning.current?.querySelector("button")?.focus();
