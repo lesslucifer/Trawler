@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONEAPP
+wu: E-ONEAPP.W5
+branch: HEAD
+tests:
+  unit: { count: 42, covers: "the e2e build's core takes OS-chosen ports and production takes 7420/7421; only an owned core on fixed ports hands a second launch over; xtask judges each suite's tally by name, is green only when both suites are, and each suite's npm script and config write its tally" }
+  integration: { waived: "the WU's contract is the e2e; the shell seams it changes (port choice, single-instance hand-over) are pure functions covered by unit tests, and W2's supervisor integration tests already run the core on ephemeral ports" }
+  e2e: { count: 7, covers: "J1-J3 over the app binary alone: its own core captures a proxied request into the list and GET /flows; the Capture service page shows pid, ports and log, reads a SIGKILL as killed with the window alive, and restart returns on the same addresses; quitting leaves no app or core process and frees both ports. J4: the attached service page reads attached with no log and no restart" }
