@@ -73,6 +73,20 @@ const SPECIMENS: Record<string, ReactElement> = {
   ),
   SourceSurface: <collection.SourceSurface text='{"a":1}' language={json()} testId="surface" />,
   Spinner: <collection.Spinner />,
+  Splitter: (
+    <collection.Splitter
+      axis="x"
+      value={520}
+      min={384}
+      max={960}
+      dir={-1}
+      onChange={() => {}}
+      onCommit={() => {}}
+      onReset={() => {}}
+      label="detail pane width"
+      valueText="520 px"
+    />
+  ),
   StatusDot: <collection.StatusDot status="connected" opens="setup" onClick={() => {}} />,
   StatusLine: (
     <collection.StatusLine

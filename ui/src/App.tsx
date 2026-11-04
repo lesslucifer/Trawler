@@ -49,6 +49,7 @@ import { useDraft } from "./useDraft";
 import { bounded, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
+import { useLayout } from "./useLayout";
 import { NotAnswering } from "./NotAnswering";
 import { quitStopsCore } from "./coreService";
 import { CoreServiceContext, tauriBridge, useCoreService, type CoreBridge } from "./useCoreService";
@@ -210,6 +211,7 @@ function Shell({
   // it caused.
   const [clearedEmpty, setClearedEmpty] = useState(false);
   const [pane, setPane] = useState<Pane>(null);
+  const split = useLayout();
   const inspected = pane?.kind === "inspector" ? pane.id : null;
   const [retryNonce, setRetryNonce] = useState(0);
   const { flow: detail, failed: detailFailed } = useFlowDetail(
@@ -1090,6 +1092,7 @@ function Shell({
   return (
     <Layout
       mainRef={mainRef}
+      split={split}
       band={
         // The statement sits immediately above what it is about. With rows, that
         // is the rows; with a refusal standing in their place, it is the refusal
@@ -1183,12 +1186,14 @@ function Shell({
             failed={detailFailed}
             onClose={() => setPane(null)}
             onReplay={detail ? () => compose(detail) : undefined}
+            split={split}
           />
         ) : undefined
       }
     >
       {closeDialog}
       <FlowList
+        split={split}
         flows={flows}
         selectedId={inspected ?? (pane?.kind === "composer" ? seedId : null)}
         onSelect={inspect}

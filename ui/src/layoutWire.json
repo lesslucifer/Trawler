@@ -1,0 +1,11 @@
+{
+  "pane": 600,
+  "headersShare": 0.42,
+  "columns": {
+    "time": 160,
+    "method": 70,
+    "host": 240,
+    "status": 70,
+    "duration": 90
+  }
+}

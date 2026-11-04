@@ -542,6 +542,8 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             crate::setup::dismiss_notice,
             crate::setup::notes_shown,
             crate::setup::show_notes,
+            crate::layout::layout_read,
+            crate::layout::layout_write,
             confirm_reach,
             confirm_replace_proxy,
             crate::core::core_status,

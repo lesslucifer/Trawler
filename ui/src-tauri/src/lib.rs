@@ -6,6 +6,7 @@
 mod bundle;
 pub mod core;
 mod core_address;
+pub mod layout;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -15,6 +16,7 @@ pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
+pub mod window_geometry;
 
 #[cfg(feature = "scenario")]
 mod scenario;
@@ -48,6 +50,7 @@ pub fn run() {
     let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .on_window_event(window_geometry::track)
         .menu(menu::build)
         .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()))
         .on_window_event(|window, event| {
@@ -57,7 +60,11 @@ pub fn run() {
                 window.app_handle().exit(0);
             }
         })
-        .setup(move |app| core::setup(app, mode));
+        .setup(move |app| {
+            core::setup(app, mode)?;
+            window_geometry::install(app.handle());
+            Ok(())
+        });
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         setup::ca_trusted,
@@ -78,6 +85,8 @@ pub fn run() {
         setup::dismiss_notice,
         setup::notes_shown,
         setup::show_notes,
+        layout::layout_read,
+        layout::layout_write,
         route::open_route,
         reach::confirm_reach,
         reach::confirm_replace_proxy,
@@ -92,10 +101,14 @@ pub fn run() {
     let builder =
         builder.plugin(tauri_plugin_wdio::init()).plugin(tauri_plugin_wdio_webdriver::init());
 
-    builder
-        .build(tauri::generate_context!())
-        .expect("error while running trawler-ui")
-        .run(|app, event| on_run_event(app, &event));
+    builder.build(tauri::generate_context!()).expect("error while running trawler-ui").run(
+        |app, event| {
+            if let tauri::RunEvent::Exit = event {
+                window_geometry::save(app);
+            }
+            on_run_event(app, &event);
+        },
+    );
 }
 
 pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {

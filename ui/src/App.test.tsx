@@ -2165,7 +2165,7 @@ test("narrowing after a clear reads as the filter's absence, not as the clear's"
 });
 
 test("a dismissed clear ask sends the live filter and refills from the bus without a dialog", async () => {
-  vi.mocked(invoke).mockImplementation(async (command) => command === "notice_dismissed");
+  vi.mocked(invoke).mockImplementation(async (command) => (command === "notice_dismissed" ? true : undefined));
   let rows = [flow({ id: "f1", uri: "http://example.com/" }), flow({ id: "f2", uri: "http://other.test/" })];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} initialState={PROVEN} />);

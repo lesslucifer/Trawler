@@ -12,9 +12,12 @@ import {
   Notice,
   Section,
   SegmentedControl,
+  Splitter,
   StatusPill,
 } from "./components/index";
 import { BodyViewer } from "./BodyViewer";
+import { HEADERS_SHARE, clamp } from "./layoutBounds";
+import type { LayoutControls } from "./useLayout";
 
 const LEGS = [
   { value: "request", label: "request" },
@@ -41,6 +44,21 @@ function LegHeaders({ headers }: { headers: HeaderView[] }) {
   );
 }
 
+function useHeight(): [(el: HTMLElement | null) => void, number] {
+  const [height, setHeight] = useState(0);
+  const observer = useRef<ResizeObserver | null>(null);
+  const measure = useCallback((el: HTMLElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el) return;
+    setHeight(el.getBoundingClientRect().height);
+    if (typeof ResizeObserver === "undefined") return;
+    observer.current = new ResizeObserver(([entry]) => setHeight(entry.contentRect.height));
+    observer.current.observe(el);
+  }, []);
+  return [measure, height];
+}
+
 function versionsLine(flow: FlowView): string {
   return flow.response_http_version
     ? `${flow.request_http_version} → ${flow.response_http_version}`
@@ -53,14 +71,18 @@ export function FlowDetail({
   failed = false,
   onClose,
   onReplay,
+  split,
 }: {
   api: TrawlerApi;
   flow: FlowView | null;
   failed?: boolean;
   onClose: () => void;
   onReplay?: () => void;
+  split: LayoutControls;
 }) {
   const [leg, setLeg] = useState<Leg>("request");
+  const [measure, height] = useHeight();
+  const [measureHeaders, headersHeight] = useHeight();
 
   // The list keeps focus when Enter opens the panel, so the origin is read once
   // at mount — before anything inside the panel can take focus — and Esc is
@@ -103,9 +125,11 @@ export function FlowDetail({
   }
 
   const headers = leg === "request" ? flow.request_headers : flow.response_headers;
+  const ceiling = split.layout.headersShare;
+  const headersAt = height > 0 ? Math.min(ceiling, headersHeight / height) : ceiling;
 
   return (
-    <div data-testid="detail" className="flex h-full flex-col font-ui text-ink">
+    <div ref={measure} data-testid="detail" className="flex h-full flex-col font-ui text-ink">
       <header className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-2">
         <MethodLabel method={flow.method} />
         <StatusPill status={flow.status} />
@@ -136,14 +160,40 @@ export function FlowDetail({
       </div>
 
       {/* The body is the zone a reader came for, so it takes whatever height the
-          headers leave: the headers zone is capped at a share of the panel and
-          scrolls inside itself, the body fills the rest and scrolls inside
-          itself, and the panel as a whole never scrolls. */}
-      <Section title={`Headers · ${headers.length}`} className="flex min-h-0 max-h-zone-cap flex-col">
-        <div data-testid="headers-scroll" className="relative min-h-0 overflow-auto">
-          <LegHeaders headers={headers} />
-        </div>
-      </Section>
+          headers leave: the headers zone is capped at the user's share of the
+          panel and scrolls inside itself, the body fills the rest and scrolls
+          inside itself, and the panel as a whole never scrolls. The share is a
+          ceiling, so a short leg keeps its own height and the splitter sits
+          under its last row — which is where a drag or a step starts from, even
+          below zone-min; the share saved is where the line is dropped, never
+          below zone-min. */}
+      <div
+        ref={measureHeaders}
+        data-testid="headers-zone"
+        className="flex min-h-0 flex-col"
+        style={{ maxHeight: `${ceiling * 100}%` }}
+      >
+        <Section title={`Headers · ${headers.length}`} className="flex min-h-0 flex-col">
+          <div data-testid="headers-scroll" className="relative min-h-0 overflow-auto">
+            <LegHeaders headers={headers} />
+          </div>
+        </Section>
+      </div>
+      <div className="-mt-px">
+        <Splitter
+          axis="y"
+          dir={1}
+          perPx={1 / Math.max(height, 1)}
+          value={headersAt}
+          min={Math.min(HEADERS_SHARE.min, headersAt)}
+          max={HEADERS_SHARE.max}
+          onChange={(share) => split.setHeadersShare(clamp(share, HEADERS_SHARE))}
+          onCommit={split.commit}
+          onReset={split.resetHeadersShare}
+          label="headers height"
+          valueText={`${Math.round(headersAt * 100)} % of the pane`}
+        />
+      </div>
 
       <Section title="Body" className="flex min-h-0 flex-1 flex-col">
         <BodyViewer api={api} flow={flow} leg={leg} />

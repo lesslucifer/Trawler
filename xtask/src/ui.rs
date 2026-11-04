@@ -457,15 +457,22 @@ mod tests {
     }
 
     #[test]
-    fn the_e2e_workspace_keeps_the_native_utils_pin() {
+    fn the_e2e_workspace_pins_the_tauri_service_exactly() {
         let repo = crate::repo_root().expect("repo root");
+        let manifest =
+            std::fs::read_to_string(repo.join("ui/e2e/package.json")).expect("ui/e2e/package.json");
+        let parsed: serde_yaml::Value = serde_yaml::from_str(&manifest).expect("valid json");
+        let pinned = parsed["devDependencies"]["@wdio/tauri-service"].as_str().unwrap_or("");
+        assert!(
+            pinned.split('.').count() == 3 && pinned.chars().all(|c| c.is_ascii_digit() || c == '.'),
+            "ui/e2e keeps no lockfile, so a range lets the service float onto native-utils it was not built against: {pinned:?}"
+        );
         let workspace = std::fs::read_to_string(repo.join("ui/e2e/pnpm-workspace.yaml"))
             .expect("ui/e2e/pnpm-workspace.yaml");
-        let parsed: serde_yaml::Value = serde_yaml::from_str(&workspace).expect("valid yaml");
-        assert_eq!(
-            parsed["overrides"]["@wdio/native-utils"].as_str(),
-            Some("2.5.0"),
-            "@wdio/tauri-service fails to initialise below @wdio/native-utils 2.5.0"
+        let workspace: serde_yaml::Value = serde_yaml::from_str(&workspace).expect("valid yaml");
+        assert!(
+            workspace["overrides"]["@wdio/native-utils"].is_null(),
+            "the service pins its own native-utils; an override pairs it with one it was not built against"
         );
     }
 

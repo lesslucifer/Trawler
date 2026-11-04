@@ -1772,7 +1772,7 @@ fn mark_notice_dismissed(config_dir: &Path, key: NoticeKey) -> std::io::Result<(
     std::fs::write(notice_dismissed_path(config_dir, key), [])
 }
 
-fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+pub(crate) fn config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     tauri::Manager::path(app).app_config_dir().map_err(|e| e.to_string())
 }
 
