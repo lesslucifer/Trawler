@@ -136,7 +136,7 @@ flowchart TD
         <tr><td><code>proptest</code> · <code>insta</code></td><td>Property tests · snapshot tests.</td><td>unit · integration</td></tr>
         <tr><td><code>cargo-nextest</code> · <code>cargo-llvm-cov</code> · <code>cargo-mutants</code> <span class="badge">CI</span></td><td>Runner · coverage gate · mutation gate.</td><td>all</td></tr>
         <tr><td><code>Vitest</code> + <code>Testing Library</code> + <code>jsdom</code></td><td>Front-end (<code>ui/</code>) unit + integration: pure functions, the typed API client, and components/layout against a mock API.</td><td>unit · integration</td></tr>
-        <tr><td><code>@wdio/tauri-service</code> (embedded WebDriver)</td><td>Drives the real Tauri window against an ephemeral <code>run(Config)</code> core (<code>cargo xtask ui e2e</code>). macOS-primary, since raw <code>tauri-driver</code> is Linux/Windows-only.</td><td>e2e</td></tr>
+        <tr><td><code>@wdio/tauri-service</code> (embedded WebDriver)</td><td>Drives the real Tauri window in two suites (<code>cargo xtask ui e2e</code>): attached to a harness <code>run(Config)</code> core on ephemeral ports, and owning its own core, which the e2e build puts on ephemeral ports. macOS-primary, since raw <code>tauri-driver</code> is Linux/Windows-only.</td><td>e2e</td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="frontend-test-stack">

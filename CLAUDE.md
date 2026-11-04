@@ -4,21 +4,23 @@ Trawler — native MITM HTTP(S) debugging proxy, API-first core.
 
 **Stack**: Rust 2021 · tokio · hudsucker 0.24 (MITM proxy, `:7420`) · axum 0.8
 (control API: REST + SSE + `/ca.crt`, `:7421`) · rcgen 0.14 (CA). Native UI:
-Tauri 2 + Vite + TypeScript + React + Tailwind in `ui/` (out-of-process API
-client; mirrors Strata). Lints: clippy pedantic, `unsafe_code` forbidden
-(see `Cargo.toml`).
+Tauri 2 + Vite + TypeScript + React + Tailwind in `ui/` (an API client that
+spawns and supervises its core as a child process, DEC-69; mirrors Strata).
+Lints: clippy pedantic, `unsafe_code` forbidden (see `Cargo.toml`).
 
 **Layout**: lib crate `src/lib.rs` (`run(Config)` composition root) + thin bin
 `src/main.rs`. Modules: `config` · `flow` (domain model) · `event` · `capture`
 · `store` (ring + bus) · `recorder` (proxy handler) · `ca` · `api/` (routes,
 views, decode). Integration/e2e tests in `tests/` (`test-utils` feature =
-shared test support). Native app in `ui/` (`ui/src-tauri` a standalone crate
-outside the core workspace — headless `cargo build`/`test` stays GUI-free).
-Generated CA in `ca/`, git-ignored.
+shared test support). Native app in `ui/` (`ui/src-tauri` a workspace member
+and default-run; the root build/test compile it, the `trawler` lib stays GUI-free).
+Generated CA in `ca/` (headless, git-ignored) or the app's data dir (app).
 
-**Commands**: `cargo run` (`RUST_LOG=trawler=debug` for logs) · `cargo test` ·
-`cargo clippy` · `cargo xtask ui build|dev|e2e` (front-end bundle · Tauri
-window · WebDriver e2e). Quick check: `curl -x http://127.0.0.1:7420 http://example.com/`
+**Commands**: `cargo run` (the app, owning its core) · `cargo run -p trawler`
+(headless core; `RUST_LOG=trawler=debug` for logs) · `cargo test` (needs
+Node + pnpm; `-p trawler` = core only) · `cargo clippy` ·
+`cargo xtask ui build|dev|e2e` (front-end bundle · HMR window · WebDriver e2e).
+Quick check (either run): `curl -x http://127.0.0.1:7420 http://example.com/`
 → `curl http://127.0.0.1:7421/flows`.
 
 Architecture & invariants: `docs/architecture.html` · rationale:
