@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU query-bar-build -> epic/query-bar"
+epic: E-QUERY
+wu: E-QUERY.W3
+branch: wu/query-bar/query-bar-build
+base: 96e3e31300fa36033a77a86f50b1b46b1c7fd22f
+head: 4128871ab4f1d0baa6db1dda3a258cd78baed377
+diff_sha256: c051270c61a1bebc6342c230b410cb91df965b80a962e7115791e337dec0bacb
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 4
+  stage_seconds:
+    gate0: 0
+    total: 124
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "api.ts imports Chip and chipParams from query.ts, so the chip-to-wire mapping lives beside the grammar rather than in the transport module"
+    waived: "query.ts owns the chip, and the chip's parameter is part of it (DEC-71: the grammar is the app's); api.ts sends what it is handed"
+  - finding: "clearFlows and exportHar throw a plain Error on a 400, so only a listing refusal marks its chip"
+    waived: "the capture menu shows an export or clear refusal beside the control pressed, as before this WU; the listing already marks the chip for the same chips, which every export and clear share"
+  - finding: "judge() leaves a keyed value untrimmed, so a pasted 'host: x' makes a host chip with a leading space"
+    waived: "the chip draws the value as typed and the core substring-matches it as sent; Space ends a chip, so a typed draft cannot reach it, only a paste"
+  - finding: "a two-letter word before a colon within two edits of a key (id:5, ip:1.2.3.4) is a near-miss fault, not text"
+    waived: "the design's C3 ruling and DEC-71's forks: a near miss of a key is a fault; quotes take it as text"
+verdict: PASS
+date: 2026-11-04
