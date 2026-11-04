@@ -2,7 +2,7 @@ schema: design/v1
 epic: E-INSPWIN
 wu: E-INSPWIN.W2
 base: 8bbb941854e7e42f95415a859d433b812679d6c0
-design_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+design_sha256: 018eb9b9838a2c7e2496b760576a017cd4f4e6921ea31bec10d98d648ebf4884
 verdict: PASS
 artifacts: [docs/work/2026-11-03-data-window-design-run.html, docs/work/components/edit-surface.html, docs/work/components/form-table.html, docs/work/components/hex-view.html, docs/work/components/menu.html]
 date: 2026-11-04
