@@ -1,0 +1,36 @@
+schema: doc/v1
+epic: E-PANELS
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "The close's two residue rows: inspector windows call the shell's window-geometry restore once built (E-INSPWIN, the plan's Q1), and the e2e workspace's missing typecheck (W6)."
+  - path: "docs/decisions/dec-36-the-pane-and-the-window.html"
+    tier: T2
+    action: updated
+    distills: "W1: its header and the rejected draggable-split row name DEC-67 as superseding that rejection; 520/1440 stay as defaults and the identity generalises to path = window - pane - sum(tracks)."
+  - path: "docs/decisions/dec-67-the-user-sizes-the-layout.html"
+    tier: T2
+    action: added
+    distills: "W1, v2 at W6: the user sizes the layout within designed bounds, restored at launch; shell-owned layout.json for splits and columns once per app, windows.json for geometry per window label, each read whole or not at all, no version field, shape checked by the store and bounds by the app, staged writes; the rejected alternatives (localStorage, the window-state plugin)."
+  - path: "docs/decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html"
+    tier: T2
+    action: added
+    distills: "W3, the Splitter design's forks retired here (DEC-16): a line with a transparent grip-reach band, reset by double-click and no key, the caller's unit with perPx; what follows for keys, saving, a short leg and a lowered bound."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-67 and DEC-68 routed; DEC-36's row and status name the supersession."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "W6: the keyboard conventions gain resize a split - arrows 8 px, Shift 48, Home/End to the bounds, no reset key (DEC-68)."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "W6: UC-4 and UC-5 rows state the user-sized layout and its fallback."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "W6: UC-4 gains the user-sized surfaces (splits, five columns, each window), their bounds, keys, resets, persistence, the bad-save fallback and e2e provenance; UC-5's headers share and pane width become user-sized defaults."
