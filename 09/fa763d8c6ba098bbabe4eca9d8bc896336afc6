@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 09fa763d8c6ba098bbabe4eca9d8bc896336afc6
+base: aa8584f11b1f903472e73bbabd3d720d7b7b30ec
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-query-bar-w2-design-result.html
+report_sha256: 171ae0085c177ad476aedfa2d262bdc6fbe47f3396650abce26db57f60e2cbeb
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDtKIwtpr833u7IQhFK2k8FLGyo2lGE0UrJ+j5NBpkyGrD06Ostsjj4RE
+  roYA0SojHDq1FHtazLrgdhn5I7tnoJ
+  -----END SSH SIGNATURE-----
