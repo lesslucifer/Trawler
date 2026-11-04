@@ -24,8 +24,18 @@ fn layout_path(config_dir: &Path) -> PathBuf {
     config_dir.join("layout.json")
 }
 
-fn staged_path(config_dir: &Path) -> PathBuf {
-    config_dir.join("layout.json.staged")
+fn staged_path(path: &Path) -> PathBuf {
+    let mut staged = path.as_os_str().to_owned();
+    staged.push(".staged");
+    PathBuf::from(staged)
+}
+
+pub(crate) fn replace_whole(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    std::fs::write(staged_path(path), bytes)?;
+    std::fs::rename(staged_path(path), path)
 }
 
 pub fn read_layout(config_dir: &Path) -> Option<Layout> {
@@ -34,9 +44,7 @@ pub fn read_layout(config_dir: &Path) -> Option<Layout> {
 }
 
 pub fn write_layout(config_dir: &Path, layout: &Layout) -> std::io::Result<()> {
-    std::fs::create_dir_all(config_dir)?;
-    std::fs::write(staged_path(config_dir), serde_json::to_vec(layout)?)?;
-    std::fs::rename(staged_path(config_dir), layout_path(config_dir))
+    replace_whole(&layout_path(config_dir), &serde_json::to_vec(layout)?)
 }
 
 #[tauri::command]
@@ -155,7 +163,7 @@ mod tests {
         write_layout(&dir.0, &sized()).unwrap();
         write_layout(&dir.0, &wider).unwrap();
         assert_eq!(read_layout(&dir.0), Some(wider));
-        assert!(!staged_path(&dir.0).exists());
+        assert!(!staged_path(&layout_path(&dir.0)).exists());
 
         let fresh = TempDir::new("fresh");
         write_layout(&fresh.0.join("nested"), &sized()).unwrap();

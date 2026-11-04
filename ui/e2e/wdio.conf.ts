@@ -27,17 +27,19 @@ const RUN_TALLY = resolve(here, ".run-tally.json");
 // scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
 const CORE_ADDRESS_VAR = "TRAWLER_E2E_API";
 
-// The app writes its dismissed-notice markers into the real user config dir, so
-// they outlive a run. A marker left by an earlier one would silence the clear ask
-// the capture spec exists to assert, and the spec's own last case leaves one
-// behind — so the run starts and ends without them.
-const NOTICE_MARKERS = [
+// The app writes its dismissed-notice markers and its saved window geometry into
+// the real user config dir, so they outlive a run. A marker left by an earlier one
+// would silence the clear ask the capture spec exists to assert, and the spec's own
+// last case leaves one behind; a window the user moved would open the run at their
+// size — so the run starts and ends without them.
+const SAVED_STATE = [
   "clear-ask-dismissed",
   "remote-notice-dismissed",
+  "windows.json",
 ].map((name) => resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name));
 
-function clearNoticeMarkers() {
-  for (const marker of NOTICE_MARKERS) rmSync(marker, { force: true });
+function clearSavedState() {
+  for (const file of SAVED_STATE) rmSync(file, { force: true });
 }
 
 // The shell reads the Android emulator through the first SDK that holds adb,
@@ -144,7 +146,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 60_000 },
 
   onPrepare: async () => {
-    clearNoticeMarkers();
+    clearSavedState();
     useFakeSdk();
     await startCore();
     await seedSentFlow();
@@ -168,6 +170,6 @@ export const config: WebdriverIO.Config = {
     harness?.kill();
     rmSync(PORTS_FILE, { force: true });
     if (fakeSdk) rmSync(fakeSdk, { recursive: true, force: true });
-    clearNoticeMarkers();
+    clearSavedState();
   },
 };
