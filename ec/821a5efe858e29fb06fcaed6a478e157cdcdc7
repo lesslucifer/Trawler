@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-ONEAPP
+wu: E-ONEAPP.W4
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"
+    tier: T2
+    action: updated
+    distills: "rule 6 amended: quitting stops the capture service the app owns, an attached one outlives the quit (Q15)"
+  - path: "docs/decisions/dec-68-the-app-supervises-its-core.html"
+    tier: T2
+    action: updated
+    distills: "meta records that DEC-68 amends DEC-64 rule 6 (E-ONEAPP.W4)"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-64's row: a quit stops the capture service the app owns (rule 6, amended)"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's quit row and rebuild note: an owned core's quit says it stops the capture service; attached keeps 'once it stops'"
+  - path: "docs/work/2026-11-03-one-app-plan.html"
+    tier: T3
+    action: updated
+    distills: "Q15 ruling (attach mode keeps today's copy) and the W4 summary's link to its plan"
+  - path: "docs/work/2026-11-04-one-app-w4-quit-truth-plan.html"
+    tier: T3
+    action: added
+    distills: "W4's requirement, copy table, seams, expected result and test plan"
+  - path: "docs/work/2026-11-04-one-app-w4-quit-truth-result.html"
+    tier: T3
+    action: added
+    distills: "W4's outcome, deviation, evidence, distillation and follow-ups"
