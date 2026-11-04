@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "WU data-window-build -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W3
+branch: wu/inspect-window/data-window-build
+base: 6cc1fcb5edf95925b3970a1eb6e0ae549a920094
+head: e682465fb29a8d81ad61fe5f3ed02db76a9b3da7
+diff_sha256: 44992f010863bdbb27588121647e7d9c037e238d1cb13d8e859575213e199527
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 2
+    nit: 5
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 4, verified: 1 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 8, verified: 2, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-04
