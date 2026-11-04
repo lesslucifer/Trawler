@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeabe9f9f34851f0dfae41a" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W2 result: the data window's design run</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W2 — result</h1>
+      <p>The data window's design run is closed after two owner rounds. The window keeps only find on screen; every other
+        act is in a ⋯ menu or a right-click, and decode is an inline peek. Four component designs are confirmed for W3–W6.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W2</span> · branch
+        <code>wu/inspect-window/data-window-design</code> · <a href="2026-11-03-inspect-window-w2-data-window-design-plan.html">WU
+        plan</a> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a> ·
+        <a href="2026-11-03-data-window-design-run.html">the run</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th></th></tr>
+      <tr><td>1 · the run is a design run, archived, with a minted id and the bootstrap</td><td><code>data-status="archived"</code> after review · green · archived</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>2 · the mockup mounts the collection and toggles every state</td><td>18 state toggles: five kinds, ⋯ open, right-click, modified, find, broken JSON, a JWT decoded, a binary decode, undecodable, 0 B, no payload, 600 px, the opener</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>3 · every Given answered</td><td>18 rows; the filtered view is <em>deliberately unused</em>, deferred by the owner</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>4 · a key path for each pointer act</td><td>26 rows; new keys proposed as rulebook vocabulary</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>5 · a component design per registry proposal</td><td><a href="components/menu.html">Menu</a> · <a href="components/edit-surface.html">EditSurface</a> · <a href="components/form-table.html">FormTable</a> · <a href="components/hex-view.html">HexView</a>, confirmed; CutMarker's delta in the run</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>6 · the review records the owner's rounds</td><td>start · round 1 · round 2</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>7 · <code>design/v1</code> names the run and every design</td><td>on this WU's tip, empty built set</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>Q4: JSONPath and a text filter, as a view</td><td>deferred to a later epic; the epic plan's model, toolsets, rows 4, 6, 9, W3–W6 and J2, J3 amended</td><td>the owner's round 1</td></tr>
+      <tr><td>a toolbar per kind, a view band, a 400 px decoder panel, a copy/save target switch</td><td>a find bar, a ⋯ menu and a right-click menu, a status bar, an inline decode peek; copy and save deliver what is on screen</td><td>the owner's round 1: "the UI/UX of the menu is terrible, make it simpler"</td></tr>
+      <tr><td>three component designs</td><td>four: <code>Menu</code> added</td><td>nothing in the collection runs acts from a list</td></tr>
+      <tr><td>a <code>CutMarker</code> design file</td><td>a delta table in the run</td><td>a shipped component cannot carry a design file (components·unretired); its contract is its TSDoc</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>51906fcf</code> plan · <code>6d08c768</code> round-1 draft · <code>2bea562b</code> round-2 rebuild · <code>6742d364</code> close</td></tr>
+      <tr><td>checks</td><td><code>cargo xtask verify-doc</code> green on the run, the four designs, both plans and this result · <code>scripts/check-render.mjs</code> clean on the run (9 mounts, 28 toggles) and the four designs</td></tr>
+      <tr><td>tests</td><td>every layer waived: the WU adds no executable code (WU plan's test plan)</td></tr>
+      <tr><td>review</td><td>no code review: the diff changes no code path (DEC-46). The design step writes <code>design/v1</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">No T2 change here. A design reaches UC-9 / UC-5 and the rulebook once
+      it is built, so W7 distils the run's vocabulary and lexicon, as the epic's distillation plan says. DEC-68 still
+      names views and a copy/save target; W7 amends it to the deferred filter.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W3</td><td>build Menu, the ⋯ and right-click menus, the status bar, and the CutMarker delta; IconButton glyphs more, window, add</td></tr>
+      <tr><td>W6</td><td>DecodePeek and the EditSurface / FormTable inset: offer only the decoders that read the value; glyph replace ⇄</td></tr>
+      <tr><td>W7</td><td>DEC-68's views and copy/save lines to the deferred filter; the rulebook vocabulary and lexicon from the run's proposals</td></tr>
+      <tr><td>a later epic</td><td>the JSONPath / text filter (Q4)</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
