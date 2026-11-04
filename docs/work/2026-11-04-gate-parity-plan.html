@@ -116,14 +116,14 @@ flowchart LR
       </div>
       <div data-wu="E-GATEPAR.W5">
         <h3 id="w5">W5 · launch-guard — a slow-launch machine is named, not endured</h3>
-        <p data-item="wu-summary"><code>cargo xtask hooks install</code> (W1) and the suite-running gates probe the machine once: link a fresh tiny binary and time its first launch. Above a threshold → refuse with the Developer Tools fix line (Q6). The verdict is cached per machine. <code>cargo-nextest</code> becomes a checked prerequisite and the serial <code>cargo test</code> fallback goes (Q7). Fixes C6 (machine side), C7.</p>
+        <p data-item="wu-summary"><code>cargo xtask hooks install</code> (W1) and the suite-running gates probe the machine once: link a fresh tiny binary and time its first launch. Above a threshold → refuse with the Developer Tools fix line, overridable by <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code>. The verdict is cached per machine. <code>cargo-nextest</code> becomes a checked prerequisite and the serial <code>cargo test</code> fallback goes. Fixes C6 (machine side), C7.</p>
         <p data-item="wu-maps-to">E-GATEPAR · C6, C7 · push timing report F1, F3, F5.</p>
         <p data-item="wu-expected">On a machine with the Gatekeeper wait, the gate names the cause in seconds instead of a 15-minute run or a false red; without nextest, it refuses with the install line.</p>
         <p data-item="wu-deps">E-GATEPAR.W1 (the install entrypoint).</p>
       </div>
       <div data-wu="E-GATEPAR.W6">
         <h3 id="w6">W6 · suite-cost — the suite costs its tests, not its structure</h3>
-        <p data-item="wu-summary">Cut what the suite pays around its tests. (1) <code>doctest = false</code> for each crate with zero doc-tests, plus a unit test per crate that fails when a doc comment gains a runnable example, so a doc-test is never silently dropped. (2) Integration tests consolidated to one binary per crate (<code>tests/it/main.rs</code> + modules, Q5); the feature-gated hook tests keep their own targets. (3) Re-measure with the report's run-5 script. Fixes C8.</p>
+        <p data-item="wu-summary">Cut what the suite pays around its tests. (1) <code>doctest = false</code> for each crate with zero doc-tests, plus a unit test per crate that fails when a doc comment gains a runnable example, so a doc-test is never silently dropped. (2) Integration tests consolidated to one binary per crate (<code>tests/it/main.rs</code> + modules); the feature-gated hook tests keep their own targets. (3) Re-measure with the report's run-5 script. Fixes C8.</p>
         <p data-item="wu-maps-to">E-GATEPAR · C8 · push timing report F6, F7.</p>
         <p data-item="wu-expected">On this machine, <code>cargo test --all</code> after a change drops from 67 s toward its 13–14 s of tests; fewer binaries to link also trims the 56 s compile; no test is lost (passed count unchanged: compare the before/after totals).</p>
         <p data-item="wu-deps">none: independent of the gate WUs; lands before W7 so the measurement includes it.</p>
@@ -170,9 +170,9 @@ flowchart LR
           <tr><td><code>core.hooksPath</code> vs reinstall-on-drift?</td><td><strong><code>core.hooksPath</code></strong> → tracked dir; repo-wide config, so every worktree follows at once</td></tr>
           <tr><td>Shared <code>target/</code> also serialises builds via cargo's lock across worktrees. Split it?</td><td><strong>no</strong>. Out of scope; W5 measures lock wait</td></tr>
           <tr><td>pre-push for a non-checked-out ref: build it in a temp worktree, or refuse?</td><td><strong>as proposed</strong>: run on HEAD only if HEAD's tree = pushed tree; else a temp worktree on the shared target</td></tr>
-          <tr><td><strong>Q5 · open (W6)</strong>: consolidate integration tests to one binary per crate (31 binaries → about 5)?</td><td>proposed: <strong>yes</strong>. Fewer links and first launches on every change. Costs a move of <code>tests/*.rs</code> into <code>tests/it/</code> modules; the feature-gated hook tests stay separate</td></tr>
-          <tr><td><strong>Q6 · open (W5)</strong>: launch probe refuses, or only warns?</td><td>proposed: <strong>refuse</strong> on gates that run the suite (merge to main, push), with the fix line, overridable by <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> for a machine where the exemption is impossible</td></tr>
-          <tr><td><strong>Q7 · open (W5)</strong>: make <code>cargo-nextest</code> required?</td><td>proposed: <strong>yes</strong>. It overlaps launch waits and reports every red binary instead of stopping at the first</td></tr>
+          <tr><td>Q5 (W6): consolidate integration tests to one binary per crate (31 binaries → about 5)?</td><td><strong>yes</strong>. Fewer links and first launches on every change. Costs a move of <code>tests/*.rs</code> into <code>tests/it/</code> modules; the feature-gated hook tests stay separate</td></tr>
+          <tr><td>Q6 (W5): launch probe refuses, or only warns?</td><td><strong>refuse</strong> on gates that run the suite (merge to main, push), with the fix line, overridable by <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> for a machine where the exemption is impossible</td></tr>
+          <tr><td>Q7 (W5): make <code>cargo-nextest</code> required?</td><td><strong>yes</strong>. It overlaps launch waits and reports every red binary instead of stopping at the first</td></tr>
         </tbody>
       </table>
     </div>
