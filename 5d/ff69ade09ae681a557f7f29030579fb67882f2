@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W3
+branch: HEAD
+tests:
+  unit: { count: 206, covers: "every data label maps to the one shared geometry record; kind from hint, sniff and override; the working copy's history (steps, input groups amended, undo/redo, restore yields the exact original bytes); form pairs decoded, only the edited part re-encoded, the untouched part kept as sent, repeats and bad escapes; the history bounded past the original; the original decoded with its BOM, and lossily only when it says so; the pane's payload and the caption's file name; the claim shared across a double mount; each new component's contract (Menu keys, dismissal and placement; EditSurface steps, marks, inset and foldTo; FormTable edit, add, remove, marks and inset; HexView rows, marks across rows and range copy); CutMarker with and without an opener; the pane's ⧉, ⌘⇧O and cut-marker way in" }
+  integration: { count: 30, covers: "on the mock runtime any number of data windows write one geometry record and the last move wins; the screen fed 2 MB JSON, 300 KiB form and 1 MiB binary payloads renders them whole, edits, undoes and restores them, and every copy and save target delivers its bytes, bytes that are not UTF-8 stay read-only and a BOM and CRLF line breaks survive an edit, mixed breaks stay read-only, with no request made" }
+  e2e: { waived: "W7's spec drives the real windows once W4–W6 land, per the epic plan; the screen is reachable only through a native window the wdio capability does not yet name" }
