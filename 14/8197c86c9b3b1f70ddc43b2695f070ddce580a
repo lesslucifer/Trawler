@@ -1,0 +1,44 @@
+schema: doc/v1
+epic: E-ONEAPP
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "W5: one workspace with the app as the core's supervisor; the UI-out-of-process row becomes the app supervises its core; the Run rows give cargo run to the app and cargo run -p trawler to the headless core."
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "The close's three residue rows: capture with no window open (Q7), packaging the whole app (Q3), and the e2e bundle a later cargo run embeds (W1)."
+  - path: "docs/decisions/dec-12-native-ui-stack.html"
+    tier: T2
+    action: updated
+    distills: "W1: marked superseded by DEC-69 in its out-of-process topology and GUI-free root build clauses only; the API-first clause stands."
+  - path: "docs/decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"
+    tier: T2
+    action: updated
+    distills: "W4: rule 6 amended - quitting stops the capture service the app owns, an attached one outlives the quit and keeps today's copy (Q15)."
+  - path: "docs/decisions/dec-69-the-app-supervises-its-core.html"
+    tier: T2
+    action: added
+    distills: "W1-W4: the app supervises its core - a self-spawned --core child, the stdin lifeline, the ready line, the injected API address, attach mode via TRAWLER_API, one workspace; rules 9-12 (spawn in setup, conflict by probe, single-instance only when owned, one stop path, the CA's home and adoption), 13-14 (numbered log entries and start marks, Settings a second window, main ends the app); records the DEC-64 amendment."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-69 routed; DEC-12 and DEC-64 rows name the supersession and the amendment."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "W3: the Capture service run's proposals - restart and attached in the lexicon, the page's exception to capture service, the keys for Cmd-comma, Cmd-W and a scrolling region."
+  - path: "docs/testing-strategy.html"
+    tier: T1
+    action: updated
+    distills: "W5: the WebDriver row names both e2e suites, attached through TRAWLER_API and owned by the app binary alone."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "W2-W4: UC-4's one launch, the new UC-SVC, UC-ONBOARD's quit row."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "W2: UC-4 - the app starts and stops its own capture service, the conflict, single-instance and attach contract; W3: UC-SVC new and UC-4's not-answering restart; W4: UC-ONBOARD's quit row."
