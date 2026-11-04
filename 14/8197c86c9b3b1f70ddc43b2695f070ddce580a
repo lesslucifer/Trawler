@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-ONEAPP
+base: a09fd714cee840b18a90402cc5f985ba1cc00440
+tip: 148197c86c9b3b1f70ddc43b2695f070ddce580a
+diff_sha256: 16b0886f2a41e5ce8746ad3b50b4155e4000dd631a8548944b88cbd1ab913e60
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-11-04
