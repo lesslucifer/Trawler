@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-ONEAPP
+wu: E-ONEAPP.W5
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "one workspace; the app supervises its core as a self-spawned child (DEC-69); cargo run opens the app, cargo run -p trawler is the headless core; the e2e runs attached and owned suites"
+  - path: "docs/testing-strategy.html"
+    tier: T1
+    action: updated
+    distills: "the WebDriver e2e runs two suites: attached to a harness core, and owning its core on ephemeral ports"
+  - path: "docs/work/2026-11-04-one-app-w5-e2e-plan.html"
+    tier: T3
+    action: added
+    distills: "the W5 plan: two suites, the owned spec's journeys, the e2e build's ports and single-instance seams"
+  - path: "docs/work/2026-11-04-one-app-w5-e2e-result.html"
+    tier: T3
+    action: added
+    distills: "the W5 result: both suites green, the J4 restart-assertion deviation, the T1/T0 distillation"
+t2_waived: "W5 adds no behavior beyond the epic's T2 records already landed by W1-W4 (DEC-69, DEC-12, DEC-64, UC-4, UC-SVC, UC-ONBOARD); its change is e2e coverage plus an e2e-build-only port and single-instance choice"
