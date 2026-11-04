@@ -1,0 +1,53 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-69-the-data-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 10: every data window shares one geometry record in windows.json, the last moved or resized writing it (Q11 re-ruled)"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-69's row names the shared geometry record"
+  - path: "docs/work/2026-11-03-data-window-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the run's links to the four retired component designs point at the built components"
+  - path: "docs/work/2026-11-03-inspect-window-plan.html"
+    tier: T3
+    action: updated
+    distills: "Q11 re-ruled to one shared record; W3's block builds the four components whole and the geometry; W4 no longer retires designs"
+  - path: "docs/work/2026-11-03-inspect-window-w2-data-window-design-result.html"
+    tier: T3
+    action: updated
+    distills: "links to the four retired component designs point at the built components"
+  - path: "docs/work/2026-11-04-inspect-window-w3-data-window-build-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's requirement, pieces, split against W4–W6, expected result and test plan"
+  - path: "docs/work/2026-11-04-inspect-window-w3-data-window-build-result.html"
+    tier: T3
+    action: added
+    distills: "W3's outcome, deviations (incl. the UI feedback round: ↗, the header in parts, Select opening upward), evidence, distillation and follow-ups"
+  - path: "docs/work/components/edit-surface.html"
+    tier: T3
+    action: deleted
+    distills: "EditSurface's component design, retired into the component's TSDoc in ui/src/components/EditSurface.tsx"
+    distilled_to: "none: every fork is carried by the TSDoc tags @avoid (SourceSurface reuse, its own history, the inset overlay, a cap) and @tier (the virtualised viewport over paging) in ui/src/components/EditSurface.tsx"
+  - path: "docs/work/components/form-table.html"
+    tier: T3
+    action: deleted
+    distills: "FormTable's component design, retired into the component's TSDoc in ui/src/components/FormTable.tsx"
+    distilled_to: "none: every fork is carried by the TSDoc tags @avoid (measured rows over DEC-34's escape, a Field in every cell, KeyValueRow's rows) and @states (editing one cell) in ui/src/components/FormTable.tsx"
+  - path: "docs/work/components/hex-view.html"
+    tier: T3
+    action: deleted
+    distills: "HexView's component design, retired into the component's TSDoc in ui/src/components/HexView.tsx"
+    distilled_to: "none: every fork is carried by the TSDoc tag @avoid (HexRenderer's cap by contract, one text block for the dump) in ui/src/components/HexView.tsx"
+  - path: "docs/work/components/menu.html"
+    tier: T3
+    action: deleted
+    distills: "Menu's component design, retired into the component's TSDoc in ui/src/components/Menu.tsx"
+    distilled_to: "none: every fork is carried by the TSDoc tag @avoid (submenus, Select's value-holding, section titles) in ui/src/components/Menu.tsx"
