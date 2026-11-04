@@ -1,0 +1,26 @@
+schema: cr/v5
+scope: "WU wu/panels/window-geometry -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W5
+branch: wu/panels/window-geometry
+base: 8196a69961997be81270ed0f3d1d4c0da0492ce3
+head: c4edfb85ba7e9d8e673a3c44d7dfb48e2593c0b6
+diff_sha256: 5162cdb35ab43b032b3323f4af81681cb16882e9fc06e39686b5c3cc6b75aa77
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-04
