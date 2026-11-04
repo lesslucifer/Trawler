@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PANELS
+wu: E-PANELS.W4
+branch: HEAD
+tests:
+  unit: { count: 75, covers: "Each fixed column's default and bounds read from its tokens; the path track as minmax(path-min, 1fr); a restored column clamped to its own bounds; listMin and splitter A's max lowered by a wide column; useLayout's setColumn in whole pixels, resetColumn of one track, and the columns back on the reset event; FlowList's five separators with their bounds and value text, the left-edge handles stepping with dir -1, a clamped drag committing once, a double-click resetting one column, handles before the rows in tab order and drawn on an empty list, none without a layout, the label row and rows sharing one template inside one horizontal scroller at listMin; a layout.json still carrying columns.size reading as no saved layout." }
+  integration: { count: 5, covers: "Layout and FlowList under one useLayout through a stubbed Tauri bridge serving layoutWire.json: labels and rows open at the saved widths; a key step and a whole drag on a handle each end in one layout_write of the whole layout; widening host to its max lowers splitter A's live maximum to 384 and shows the pane there without a write of the pane; a double-click restores one column and Reset Layout restores every column." }
+  e2e: { waived: "The real-window journeys (column drag and bounds, label/cell x-offsets, relaunch) are W6's layout.spec.ts; jsdom has no layout to measure offsets with." }
