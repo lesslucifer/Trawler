@@ -41,7 +41,7 @@ export function copiedRange(bytes: Uint8Array, selection: Selection): string {
  * HexView — the whole hex dump of a payload in the data window, virtualised and read-only, with byte-range find marks and a copyable selection.
  * @tier T2 — owns the dump layout (offset · 16 bytes · ASCII) and the range selection; the bytes and the match ranges are the caller's
  * @anatomy offset ink-mute · 16 bytes ink-body, wider gap after the 8th · ASCII, non-printable as ink-mute "." · matched bytes wash-select + ink in both columns, current wash-active · selection wash-select in both columns
- * @use the data window's hex surface (DEC-70): a binary payload, or any payload the user views as hex
+ * @use the data window's hex surface (DEC-71): a binary payload, or any payload the user views as hex
  * @avoid the body pane (HexRenderer, capped at HEX_MAX by contract) · editing bytes · a cut marker or any cap · one text block for the whole dump: a row per element with bytes as spans is what lets a mark sit on a byte and the list window
  * @states rest · with find marks (the current one's row scrolled to only when the caller bumps reveal) · with a selected range. No editable, empty or loading state
  * @madeof @tanstack/react-virtual (T0)

@@ -185,7 +185,7 @@ describe("the body pane's size report", () => {
     const api = {
       getBody: async (): Promise<BodyFetch> => ({ bytes, contentType }),
     } as unknown as TrawlerApi;
-    return render(<BodyViewer api={api} flow={view} leg="request" />);
+    return render(<BodyViewer api={api} flow={view} leg="request" pretty onPretty={() => {}} />);
   };
 
   it("BodyViewer supplies the size the fetch already counted", async () => {

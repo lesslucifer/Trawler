@@ -161,24 +161,29 @@ impl Tracker {
     }
 }
 
+pub fn install(app: &AppHandle) {
+    let records = crate::setup::config_dir(app).map(|dir| read_records(&dir)).unwrap_or_default();
+    track_from(app, records);
+}
+
+pub fn track_from<R: Runtime>(app: &AppHandle<R>, records: Records) {
+    manage(app, records);
+    for window in app.webview_windows().values() {
+        let window = window.as_ref().window();
+        restore(&window, min_size_of(&window));
+    }
+}
+
 pub fn manage<R: Runtime>(app: &AppHandle<R>, records: Records) {
     app.manage(Tracker(Mutex::new(records)));
 }
 
-pub fn records<R: Runtime>(app: &AppHandle<R>) -> Records {
+pub fn tracked_records<R: Runtime>(app: &AppHandle<R>) -> Records {
     app.try_state::<Tracker>().map(|tracker| tracker.records().clone()).unwrap_or_default()
 }
 
-pub fn install(app: &AppHandle) {
-    let records = crate::setup::config_dir(app).map(|dir| read_records(&dir)).unwrap_or_default();
-    manage(app, records);
-    for window in app.webview_windows().values() {
-        restore(&window.as_ref().window());
-    }
-}
-
-pub fn restore(window: &Window) {
-    place(window, saved(window.app_handle(), window.label()), min_size_of(window));
+pub fn restore<R: Runtime>(window: &Window<R>, min: MinSize) {
+    place(window, saved(window.app_handle(), window.label()), min);
 }
 
 pub fn saved<R: Runtime>(app: &AppHandle<R>, label: &str) -> Option<Geometry> {
@@ -285,7 +290,7 @@ fn work_areas<R: Runtime>(window: &Window<R>) -> Vec<WorkArea> {
         .collect()
 }
 
-fn min_size_of(window: &Window) -> MinSize {
+fn min_size_of<R: Runtime>(window: &Window<R>) -> MinSize {
     window
         .app_handle()
         .config()

@@ -27,7 +27,9 @@
             "settings"
           ],
           "permissions": [
-            "wdio:default"
+            "wdio:default",
+            "core:window:allow-set-size",
+            "core:window:allow-set-position"
           ]
         }
       ]

@@ -257,7 +257,8 @@
             (a body run cannot fix a panel-level contradiction). Forces the leg switch OUT of W7's subjects
             and narrows W8's <code>ModeButton</code> swap to the decode pair; the leg pair is deleted, not
             swapped. Default leg is <strong>request</strong>, always — the shipped per-flow rule moved the
-            screen under the user between flows</td>
+            screen under the user between flows. Amended by DEC-70: the leg and the body view are the user's, held by Shell and passed down as props; the leg
+            carries between flows, request only until the user chooses</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -746,7 +747,8 @@
             since it has no time. The dot stays connected once capture was proven. "Set up another device" opens on the
             last device chosen unless that was This machine, else on the question unanswered. The dot opens on the last
             choice. Rejected: attributing requests to a device, clearing the list's filter, keeping the tally,
-            preselecting a guess, restarting the session on a platform change. Rule 5 superseded by DEC-61</td>
+            preselecting a guess, restarting the session on a platform change. Rule 5 superseded by DEC-61; rule 6's last
+            device outlives the app session (DEC-70)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -866,8 +868,23 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-70-the-data-window.html"><code>dec-70-the-data-window.html</code></a></td>
+          <td><a href="dec-70-a-choice-belongs-to-the-user-not-the-flow.html"><code>dec-70-a-choice-belongs-to-the-user-not-the-flow.html</code></a></td>
           <td><span class="badge id">DEC-70</span></td>
+          <td><strong>A choice belongs to the user, not the flow.</strong> The detail's leg, the body mode (one for both
+            legs) and setup's <code>lastPlatform</code> are one record held by Shell, the one writer, read once at launch
+            and written whole on each choice to <code>view-prefs.json</code> (<code>view_prefs_read</code> /
+            <code>view_prefs_write</code>). Each field reads alone, a bad one as its default; unknown fields are kept
+            on write; an early choice beats the launch read. <code>lastPlatform</code> seeds only setup the user opens:
+            the launch check and <code>chosen</code> start on This machine, so no adb runs before the user opens setup.
+            The Settings window reopens where it was left. Separate from <code>layout.json</code>, untouched by Reset
+            Layout. Amends DEC-31 and DEC-60 rule 6. Rejected: a body mode per leg, fields in
+            <code>layout.json</code>, restoring <code>chosen</code>, restoring the selection or draft, a debounced
+            write, localStorage</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-71-the-data-window.html"><code>dec-71-the-data-window.html</code></a></td>
+          <td><span class="badge id">DEC-71</span></td>
           <td><strong>The data window.</strong> Any component holding data opens a window with
             <code>{key, title, bytes, typeHint?}</code>, by value; the shell creates or focuses
             <code>data-&lt;hex(key)&gt;</code> and the window claims the payload once, as raw IPC bytes. It keeps the

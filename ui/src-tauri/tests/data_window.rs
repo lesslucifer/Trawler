@@ -172,7 +172,7 @@ fn any_number_of_data_windows_write_one_shared_record() {
 
     assert_eq!(data_labels(&app).len(), 5);
     assert_eq!(
-        window_geometry::records(app.handle()).into_keys().collect::<Vec<_>>(),
+        window_geometry::tracked_records(app.handle()).into_keys().collect::<Vec<_>>(),
         [DATA_WINDOWS_RECORD]
     );
 }
@@ -186,11 +186,11 @@ fn the_data_window_moved_last_writes_the_shared_record() {
     moved(&app, "a", 40, 60);
     moved(&app, "b", 300, 200);
 
-    let shared = window_geometry::records(app.handle())[DATA_WINDOWS_RECORD];
+    let shared = window_geometry::tracked_records(app.handle())[DATA_WINDOWS_RECORD];
     assert_eq!((shared.x, shared.y), (300, 200));
 
     moved(&app, "a", 7, 9);
 
-    let shared = window_geometry::records(app.handle())[DATA_WINDOWS_RECORD];
+    let shared = window_geometry::tracked_records(app.handle())[DATA_WINDOWS_RECORD];
     assert_eq!((shared.x, shared.y), (7, 9));
 }

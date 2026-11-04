@@ -1,7 +1,7 @@
 import { invoke, type InvokeArgs } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-// The data window's whole input (DEC-70): what the opener holds, by value. The
+// The data window's whole input (DEC-71): what the opener holds, by value. The
 // window learns nothing else about where the data came from.
 export interface DataPayload {
   key: string;
@@ -100,7 +100,7 @@ export function isDataWindow(self: Window = window): boolean {
 type Take = () => Promise<DataPayload | null>;
 const claims = new WeakMap<Take, Promise<DataPayload | null>>();
 
-// The payload is claimed exactly once (DEC-70 rule 2), and a second claim answers
+// The payload is claimed exactly once (DEC-71 rule 2), and a second claim answers
 // null — so a screen that mounts twice must share the first claim's answer.
 export function claimOnce(take: Take = takeDataPayload): Promise<DataPayload | null> {
   let claim = claims.get(take);

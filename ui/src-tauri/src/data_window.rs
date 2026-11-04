@@ -1,4 +1,4 @@
-// The data window (DEC-70). The shell only creates or focuses the window and
+// The data window (DEC-71). The shell only creates or focuses the window and
 // relays the opener's payload to it by value; it reads nothing inside the bytes.
 
 use std::collections::HashMap;
