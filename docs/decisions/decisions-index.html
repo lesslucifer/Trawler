@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v22 · 2026-09-17 · Trawler</div>
+      <div class="meta">v23 · 2026-11-03 · Trawler</div>
     </div>
   </header>
   <main>
@@ -47,8 +47,8 @@
         <tr>
           <td><a href="dec-12-native-ui-stack.html"><code>dec-12-native-ui-stack.html</code></a></td>
           <td><span class="badge id">DEC-12</span></td>
-          <td>Primary UI is a native desktop app (Tauri+Vite+TS+React+Tailwind, mirror Strata), an out-of-process client of the control API; Warp design system with functional status color; open CORS grant on the loopback API; configurable API base URL; web shell kept — reverses the web-primary framing</td>
-          <td><span class="badge auto">active</span></td>
+          <td>Primary UI is a native desktop app (Tauri+Vite+TS+React+Tailwind, mirror Strata), an out-of-process client of the control API; Warp design system with functional status color; open CORS grant on the loopback API; configurable API base URL; web shell kept — reverses the web-primary framing. Its topology and GUI-free-root-build clauses are superseded by DEC-69</td>
+          <td><span class="badge auto">active · partly superseded</span></td>
         </tr>
         <tr>
           <td><a href="dec-13-onboarding-capabilities.html"><code>dec-13-onboarding-capabilities.html</code></a></td>
@@ -799,7 +799,8 @@
             asks as ✕ does; the Dock's Quit and a logout cannot be held. It asks while this machine routes through
             Trawler (its address, localhost or its own address on Trawler's port), while its proxy could not be read,
             or while reach is armed or the chosen emulator routes here. A proxy that is not Trawler's asks nothing.
-            The stake is the capture service; the act is <em>stop routing through Trawler</em>, with the platform's own
+            The stake is the capture service, which a quit stops when the app owns it (rule 6, amended by
+            E-ONEAPP.W4); the act is <em>stop routing through Trawler</em>, with the platform's own
             steps. Rejected: a revert on terminate, ⌘Q unasked, a foreign proxy asked about, the remote notice on every
             quit, the dialog's own client targets</td>
           <td><span class="badge auto">active</span></td>
@@ -848,6 +849,20 @@
             drag. Double-click resets one boundary; no key does (owner, C5); View ▸ Reset Layout resets all. The value is
             the caller's unit, <code>perPx</code> converting. A drag saves once on release; a lowered bound clamps what is
             shown, never what is saved; on a short leg a drag starts where the line sits. Rejected: a grip gutter, Enter to reset or collapse, always-pixels</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-69-the-app-supervises-its-core.html"><code>dec-69-the-app-supervises-its-core.html</code></a></td>
+          <td><span class="badge id">DEC-69</span></td>
+          <td><strong>The app supervises its core.</strong> The app spawns its own binary as <code>--core</code>, one
+            core entry (<code>trawler::cli::main</code>) shared with the headless <code>trawler</code>; the core prints
+            one JSON ready line with its bound addresses, logs on stderr, and with <code>--lifeline</code> exits on stdin
+            EOF. One workspace: a bare <code>cargo run</code> is the app, <code>cargo run -p trawler</code> the headless
+            core, which stays GUI-free by test. The app embeds <code>ui/dist</code> and its build script rebuilds a stale
+            bundle. The window opens only after the core's ready line, its address injected into every webview; a
+            taken port is a native dialog and no window; every stop closes stdin, waits, then kills; the CA lives in the
+            app data dir, adopting <code>./ca</code>. Supersedes DEC-12's topology and GUI-free-root-build clauses. Rejected: the core in-process, a
+            separate sidecar binary, a launcher binary, stdin EOF always fatal, the address in a log line</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

@@ -13,6 +13,7 @@ export const CAPTURE_COPY = {
   importName: "import a curl command or a har file",
   newRequestAct: "new request",
   setUpDeviceAct: "set up another device",
+  settingsAct: "settings…",
   clearAct: "clear",
   clearPreference: "don't show this again",
   exporting: "exporting…",
@@ -50,6 +51,7 @@ export function CaptureControls({
   onCleared,
   onNewRequest,
   onSetUpDevice,
+  onOpenSettings,
 }: {
   api: TrawlerApi;
   filter: Filter;
@@ -57,6 +59,7 @@ export function CaptureControls({
   onCleared: () => void;
   onNewRequest?: () => void;
   onSetUpDevice?: () => void;
+  onOpenSettings?: () => void;
 }) {
   // Two flags rather than one slot naming the running transfer: export and
   // import start and finish independently, so a single slot lets whichever
@@ -137,6 +140,7 @@ export function CaptureControls({
     ...(onSetUpDevice
       ? [{ id: "set-up-device", label: CAPTURE_COPY.setUpDeviceAct, run: onSetUpDevice }]
       : []),
+    ...(onOpenSettings ? [{ id: "settings", label: CAPTURE_COPY.settingsAct, run: onOpenSettings }] : []),
   ];
 
   return (

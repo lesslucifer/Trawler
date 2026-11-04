@@ -191,6 +191,7 @@ pub fn track(window: &Window, event: &WindowEvent) {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn save(app: &AppHandle) {
     let Some(tracker) = app.try_state::<Tracker>() else { return };
     let records = tracker.records().clone();
@@ -201,6 +202,7 @@ pub fn save(app: &AppHandle) {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn apply(window: &Window, geometry: Geometry) {
     let applied = window
         .set_size(PhysicalSize::new(geometry.width, geometry.height))

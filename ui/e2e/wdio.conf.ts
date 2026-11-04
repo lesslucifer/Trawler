@@ -10,7 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 // The macOS-primary target has no WKWebView WebDriver for raw tauri-driver, so
 // the e2e drives the real window through @wdio/tauri-service's embedded provider.
 // The app is built with the `e2e` cargo feature so the wdio plugins are present.
-const APP_BINARY = resolve(here, "../src-tauri/target/release/trawler-ui");
+export const APP_BINARY = resolve(here, "../../target/release/trawler-ui");
 
 // The launcher (this config) and the test worker are separate processes, so the
 // core's ports cross to the spec via this file — never a shared variable.
@@ -20,12 +20,12 @@ export const PORTS_FILE = resolve(here, ".core-ports.json");
 // file passed: a service that fails before any spec starts leaves wdio green.
 const RUN_TALLY = resolve(here, ".run-tally.json");
 
-// The app reads its core's address from this variable at window creation, before
-// its first script runs (`e2e_core_address` in the shell). The launcher spawns
+// This variable attaches the app to the run's core (attach mode): it spawns none and
+// injects the address before the first script runs (`core_address`). The launcher spawns
 // the app, so exporting it here is what puts it in the app's environment — and it
 // is why no spec ever navigates the window: a reload mid-run stops the WKWebView
 // scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
-const CORE_ADDRESS_VAR = "TRAWLER_E2E_API";
+const CORE_ADDRESS_VAR = "TRAWLER_API";
 
 // The app writes its dismissed-notice markers, its saved layout and its saved
 // window geometry into the real user config dir, so they outlive a run. A marker
@@ -88,6 +88,7 @@ const SPECS = [
   "./specs/onboarding.spec.ts",
   "./specs/capture.spec.ts",
   "./specs/replay.spec.ts",
+  "./specs/service-attached.spec.ts",
   "./specs/layout.spec.ts",
   "./specs/layout-relaunched.spec.ts",
   "./specs/layout-broken.spec.ts",

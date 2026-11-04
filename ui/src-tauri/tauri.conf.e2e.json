@@ -8,6 +8,7 @@
     "windows": [
       {
         "title": "Trawler",
+        "create": false,
         "width": 1440,
         "height": 800,
         "minWidth": 850,
@@ -21,7 +22,8 @@
         {
           "identifier": "wdio",
           "windows": [
-            "main"
+            "main",
+            "settings"
           ],
           "permissions": [
             "wdio:default"

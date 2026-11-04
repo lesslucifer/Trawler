@@ -6,6 +6,8 @@ import { ApiError, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 import { CAPTURE_COPY } from "./CaptureControls";
+import { CLOSE_COPY } from "./ProxyCloseDialog";
+import { coreStub, RUNNING } from "./coreStub";
 import * as files from "./body";
 import { QUIET_AFTER_MS, type OnbState } from "./onboardingMachine";
 import { CA_FILES } from "./setup";
@@ -3470,4 +3472,52 @@ describe("quitting", () => {
     await requestClose();
     expect(dialog()).toHaveTextContent("Trawler's capture service isn't answering, so this Mac has no internet");
   });
+
+  test.each([
+    ["an owned, running core", RUNNING, CLOSE_COPY.quitStops.ours("this Mac")],
+    ["an attached core", { state: "attached", api: "http://127.0.0.1:7421" } as const, CLOSE_COPY.stake.ours("this Mac")],
+    ["a core whose state was never read", null, CLOSE_COPY.stake.ours("this Mac")],
+  ])("over %s, the stake says what the quit itself does", async (_, state, stake) => {
+    onMacHost();
+    proxyReads("ours");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    const shell = coreStub({ state });
+    render(<App api={api} initialState={PROVEN} core={shell.bridge} />);
+    await waitFor(() => expect(shell.call).toHaveBeenCalledWith("core_status"));
+
+    await requestClose();
+    await waitFor(() => expect(dialog()).toHaveTextContent(stake));
+  });
+
+  // Review round 1: an owned core that already exited is not stopped by the quit.
+  test("over an owned core that exited, an unread proxy keeps the sentence that stays true", async () => {
+    onMacHost();
+    proxyReads("unknown");
+    const { api } = mockApi(() => []);
+    api.reach = vi.fn(async () => UNARMED);
+    const shell = coreStub({ state: { state: "exited", code: null, signal: 9 } });
+    render(<App api={api} initialState={PROVEN} core={shell.bridge} />);
+    await waitFor(() => expect(shell.call).toHaveBeenCalledWith("core_status"));
+
+    await requestClose();
+    await waitFor(() => expect(dialog()).toHaveTextContent(CLOSE_COPY.stake.unread("this Mac")));
+    expect(dialog()).not.toHaveTextContent(/Quitting stops/);
+  });
+});
+
+test("the capture menu opens Settings inside the app, and offers none in the web shell", async () => {
+  const { api } = replayWorld();
+  const shell = coreStub({ state: RUNNING });
+  const { unmount } = render(<App api={api} initialState={PROVEN} core={shell.bridge} />);
+  await rowOf(0);
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.trigger }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: CAPTURE_COPY.settingsAct }));
+  expect(shell.call).toHaveBeenCalledWith("open_settings");
+  unmount();
+
+  render(<App api={api} initialState={PROVEN} core={coreStub({ state: null }).bridge} />);
+  await rowOf(0);
+  fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.trigger }));
+  expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.settingsAct })).toBeNull();
 });

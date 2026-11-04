@@ -13,7 +13,8 @@
         dialog says what it read, and stops routing only through Trawler.</p>
       <div class="meta">v1 · 2026-10-26 · Trawler · T2 decision · minted by <strong>E-ONBRVP.W11</strong> from the
         owner's rulings Q1–Q5 · relates to <a href="dec-55-reach-is-an-authorization-decision.html">DEC-55</a> ·
-        UC-ONBOARD · <strong>active</strong></div>
+        UC-ONBOARD · <strong>active</strong> · rule 6 amended by <strong>E-ONEAPP.W4</strong> (2026-11-04,
+        <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a>): quitting stops the capture service the app owns</div>
     </div>
   </header>
   <main>
@@ -63,9 +64,12 @@
         run together, then this machine's proxy (read off the shell's main thread) and the opt-out. A read that
         does not answer in time claims nothing: an unanswered proxy reads as unread</td><td>a close held by a read
         that never settles is a window that cannot be quit (E-ONBRVP.W11's review, rounds 1 and 2)</td></tr>
-      <tr><td>6</td><td>The stake is the capture service, not the window: the routed machine has no internet once
-        it stops, or now while it does not answer</td><td>the core is its own process, and quitting the window does
-        not stop it</td></tr>
+      <tr><td>6</td><td>The stake is the capture service, not the window. Quitting stops the service the app owns,
+        so the dialog says <em>quitting stops</em> it; an attached service outlives the quit, so there it says the
+        machine has no internet <em>once</em> it stops. While it does not answer, the machine has no internet
+        now</td><td>the app supervises its core and stops it on every exit
+        (<a href="dec-69-the-app-supervises-its-core.html">DEC-69</a>); attached, the core is its own process
+        (E-ONEAPP's Q15)</td></tr>
       <tr><td>7</td><td>The act is <em>stop routing through Trawler</em>, offered only where the shell can perform
         it (macOS, Windows). Its steps are the platform's own <em>to turn it off later</em></td><td>one act, one
         name, one copy of each reversal</td></tr>

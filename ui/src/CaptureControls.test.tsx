@@ -758,3 +758,32 @@ test("without a way into setup, the menu offers none", () => {
 
   expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.setUpDeviceAct })).toBeNull();
 });
+
+test("settings… closes the menu last and opens Settings", () => {
+  const onOpenSettings = vi.fn();
+  render(
+    <CaptureControls
+      api={apiStub()}
+      filter={{}}
+      count={6}
+      onCleared={() => {}}
+      onSetUpDevice={() => {}}
+      onOpenSettings={onOpenSettings}
+    />,
+  );
+  fireEvent.click(trigger());
+
+  const items = screen.getAllByRole("menuitem");
+  const last = items[items.length - 1];
+  expect(last).toHaveAttribute("aria-label", CAPTURE_COPY.settingsAct);
+  fireEvent.click(last);
+  expect(onOpenSettings).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("menu")).toBeNull();
+});
+
+test("without an app around it, the menu offers no settings", () => {
+  render(<CaptureControls api={apiStub()} filter={{}} count={6} onCleared={() => {}} />);
+  fireEvent.click(trigger());
+
+  expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.settingsAct })).toBeNull();
+});
