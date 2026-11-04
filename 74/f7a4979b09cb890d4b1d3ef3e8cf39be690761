@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-STICKY
+wu: E-STICKY.W2
+base: 7ccec09fb14f0b67987e4818f90732f151d4eb8c
+tip: 74f7a4979b09cb890d4b1d3ef3e8cf39be690761
+diff_sha256: b3401f797e671faa31b06316aaed839141c32e597a241f6bab3745573c53cb95
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-04
