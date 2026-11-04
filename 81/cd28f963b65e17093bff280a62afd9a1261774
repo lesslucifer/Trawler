@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-ONEAPP
+wu: E-ONEAPP.W4
+branch: HEAD
+tests:
+  unit: { count: 212, covers: "with quitStops the ours, unread, devices and emulator stakes say quitting stops Trawler's capture service and never 'once ... stops'; without it each keeps today's sentence; the not-answering sentence is the same either way; in App, a close over an owned running core shows the owned stake, and over an attached core, a never-read state, or an owned core that exited (unread proxy) shows today's; quitStopsCore is true only for starting and running" }
+  integration: { count: 2, covers: "on_run_event(RunEvent::Exit) on Tauri's mock runtime over a supervised trawler-ui --core on ephemeral ports leaves no core process and both ports bindable; over an attached core the same event leaves that core running and accepting connections" }
+  e2e: { waived: "J3 (quit releases the ports against an owned core) is W5's one-app.spec.ts, which needs the owned-core e2e build W5 introduces. Today's e2e suite runs attached, where the quit copy is unchanged, and no spec drives the quit dialog" }
