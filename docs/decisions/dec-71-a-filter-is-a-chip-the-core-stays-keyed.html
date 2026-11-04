@@ -11,7 +11,7 @@
       <h1>DEC-71 — a filter is a chip, the core stays keyed</h1>
       <p>The app's four filter controls become one typed query bar. Each accepted filter is a chip, the app parses
         the grammar, and the core keeps keyed query parameters, now with lists, negation and <code>is</code>.</p>
-      <div class="meta">v1 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-QUERY</strong> before W1 and W2,
+      <div class="meta">v2 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-QUERY</strong> before W1 and W2,
         from the owner's rulings on Q1–Q10 (2026-11-04) · reverses UC-4's “an exactly-matched filter is chosen rather
         than typed” · UC-3 · UC-4 · UC-6 · UC-7 · <strong>active</strong></div>
     </div>
@@ -78,6 +78,27 @@
         inside a value unambiguous</td></tr>
       <tr><td>Commands in the bar (<code>&gt;export</code>)</td><td>Q6, Q8: the bar only filters and searches</td></tr>
       <tr><td>Keep the dropdowns beside the bar</td><td>two ways to set one filter, and they would disagree</td></tr>
+    </table>
+
+    <h2 id="bar-forks">The bar's forks</h2>
+    <table data-c="bar-forks">
+      <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
+      <tr><td>where the grammar lives</td><td>inside <code>QueryBar</code> (T2), through <code>query.ts</code></td><td>a
+        T1 bar handed <code>parse</code> and <code>suggest</code>: the grammar has one tenant, and two copies would
+        drift on the rule that must not (rule 8)</td></tr>
+      <tr><td>what Enter does</td><td>Enter and Tab take the highlighted suggestion, as in <code>Select</code>. Space
+        takes the draft as typed, and so does ↑ to its row then Enter (owner, round 1)</td><td>Enter takes the draft as
+        typed: Enter would mean here what it means nowhere else in the app</td></tr>
+      <tr><td>when a fault is said</td><td>on an attempt (Enter, Tab, Space), in the suggestions' place, until the
+        next keystroke</td><td>live as you type: <code>status:4</code> is a fault on its way to
+        <code>status:404</code></td></tr>
+      <tr><td>an unknown key</td><td>a fault only within two edits of a real key (<code>stauts:</code>); any other
+        <code>word:rest</code> is text</td><td>every unknown key a fault: <code>localhost:8080</code> and
+        <code>https://api</code> would need quotes</td></tr>
+      <tr><td>a chip's box</td><td>a wash pill, no border at rest; a refused chip gains a warn border and ⚠</td><td>the
+        small-control box per chip: boxes inside a box, and a chip would read as a button</td></tr>
+      <tr><td>changing a chip</td><td>remove it and type it again</td><td>editing in place: a second way to make a chip,
+        with its own faults</td></tr>
     </table>
 
   </main>

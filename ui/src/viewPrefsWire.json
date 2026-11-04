@@ -1,5 +1,10 @@
 {
   "leg": "response",
   "bodyMode": "raw",
-  "lastPlatform": "android"
+  "lastPlatform": "android",
+  "chips": [
+    { "key": "status", "value": "4xx", "negated": false },
+    { "key": "method", "value": "OPTIONS", "negated": true },
+    { "key": "q", "value": "login token", "negated": false }
+  ]
 }

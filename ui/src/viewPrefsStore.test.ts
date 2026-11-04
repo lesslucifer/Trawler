@@ -38,7 +38,27 @@ describe("viewPrefsStore", () => {
     expect(calls).toEqual([["view_prefs_write", { prefs: wire }]]);
   });
 
-  it("defaults to the request leg, pretty, and no remembered platform", () => {
-    expect(DEFAULT_VIEW_PREFS).toEqual({ leg: "request", bodyMode: "pretty", lastPlatform: null });
+  it("defaults to the request leg, pretty, no remembered platform and no chips", () => {
+    expect(DEFAULT_VIEW_PREFS).toEqual({ leg: "request", bodyMode: "pretty", lastPlatform: null, chips: [] });
+  });
+
+  it("reads the saved chips back, dropping each one that no longer parses as itself", async () => {
+    const kept = { key: "host", value: "localhost:8080", negated: false };
+    const saved = [
+      kept,
+      { key: "status", value: "6xx", negated: false },
+      { key: "colour", value: "red", negated: false },
+      { key: "method", value: "get", negated: false },
+      { key: "q", value: "x" },
+      "status:4xx",
+      null,
+    ];
+    const { call } = bridge(() => Promise.resolve({ chips: saved }));
+    await expect(readViewPrefs(call)).resolves.toEqual({ chips: [kept] });
+  });
+
+  it("reads chips that are not a list as no saved chips at all", async () => {
+    const { call } = bridge(() => Promise.resolve({ chips: "status:4xx" }));
+    await expect(readViewPrefs(call)).resolves.toEqual({});
   });
 });

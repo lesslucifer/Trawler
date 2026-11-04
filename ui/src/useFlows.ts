@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, filterParams, type Filter, type FlowSummary, type FlowView, type TrawlerApi } from "./api";
+import { ApiError, type Filter, type FlowSummary, type FlowView, type TrawlerApi } from "./api";
+import { chipParams, refusedParam } from "./query";
 import { hostOf, lastCaptureAt as newestCapture } from "./flow";
 
 const DEBOUNCE_MS = 150;
@@ -9,11 +10,22 @@ const DEBOUNCE_MS = 150;
 // refusal it already gave does not stop being true when the stream blips. Held
 // together they need a precedence rule inside the state; held apart, precedence
 // belongs where it is a design decision — in what each zone renders.
-//
-// `status` is the only /flows parameter with a grammar to violate, so a 400 is
-// always about the value in that box, which is why a refusal can name it.
 function refusalOf(error: unknown): boolean {
   return error instanceof ApiError && error.status === 400;
+}
+
+// What the core refused: the parameter it named, its sentence, and that
+// parameter's values when asked. The core judges a parameter by its values
+// alone, so the refusal holds exactly as long as they are still being sent.
+export interface Refusal {
+  param: string;
+  reason: string;
+  values: readonly string[];
+}
+
+function stillSent(refusal: Refusal, asked: URLSearchParams): boolean {
+  const sent = asked.getAll(refusal.param);
+  return sent.length === refusal.values.length && sent.every((value, i) => value === refusal.values[i]);
 }
 
 // The list reads what its filter asks for. The setup screen reads every row,
@@ -23,8 +35,7 @@ export type FlowsScope = "list" | "setup";
 // Live flow feed, ported from the web shell: server-side filtering (the API owns
 // the semantics) + a debounced refetch on filter change and on any SSE lifecycle
 // event. The list is whatever GET /flows returns for the current filter.
-export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
-  const [filter, setFilter] = useState<Filter>({});
+export function useFlows(api: TrawlerApi, scope: FlowsScope = "list", filter: Filter = NO_FILTER) {
   const [flows, setFlows] = useState<FlowSummary[]>([]);
   // Each scope keeps its own answer, so coming back from setup never shows the
   // list rows its filter excludes. A listing with no filter answers both.
@@ -34,9 +45,8 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
   // screen survive it: they were true when they arrived, and discarding evidence
   // on a transient failure is the worse error.
   const [silent, setSilent] = useState(false);
-  // The status value the core refused, or null. Distinct from silence: the core
-  // answered, and what it said was no.
-  const [refused, setRefused] = useState<string | null>(null);
+  // Distinct from silence: the core answered, and what it said was no.
+  const [refused, setRefused] = useState<Refusal | null>(null);
   const [retrying, setRetrying] = useState(false);
   // How many listings the core has answered with rows. An empty list is also
   // what the hook starts with, so this is what tells "the core said nothing is
@@ -79,12 +89,10 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
   // never read as a failed fetch.
   const refresh = useCallback(() => {
     const mine = ++latest.current;
-    const unfiltered = filterParams(filterRef.current).toString() === "";
+    const unfiltered = filterRef.current.length === 0;
     const forList = scopeRef.current === "list";
-    const query = forList ? filterRef.current : {};
-    // What was asked, captured with the request: by the time a refusal comes
-    // back the box may hold something the core has never judged.
-    const asked = query.status ?? "";
+    const query = forList ? filterRef.current : NO_FILTER;
+    const asked = chipParams(query);
     api.latestCapture().then(
       (row) => raiseCapture(row && newestCapture([row])),
       () => {},
@@ -107,18 +115,20 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
           // answer to show, so the rows go with it and the count reads what is
           // on screen.
           setFlows([]);
-          setRefused(asked);
+          const reason = error instanceof Error ? error.message : "";
+          const param = refusedParam(reason);
+          setRefused({ param, reason, values: asked.getAll(param) });
           setSilent(false);
           return;
         }
         // No answer, or one the core should not have given. Either way the rows
         // are unverified rather than absent, so they stay.
         setSilent(true);
-        // A refusal is about the value it was asked with. Silence on a
-        // different value teaches nothing about it, but leaves it describing
-        // something the box no longer holds — so it goes. Silence on the
-        // refused value itself leaves it standing.
-        setRefused((refusal) => (refusal === asked ? refusal : null));
+        // A refusal is about the values it was asked with. Silence on
+        // different values teaches nothing about them, but leaves it describing
+        // chips the bar no longer holds — so it goes. Silence while the refused
+        // values are still sent leaves it standing.
+        setRefused((refusal) => (refusal !== null && stillSent(refusal, asked) ? refusal : null));
       },
     );
   }, [api, raiseCapture]);
@@ -163,13 +173,7 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
     return close;
   }, [api, debouncedRefresh]);
 
-  const update = useCallback(
-    (key: keyof Filter, value: string) => setFilter((f) => ({ ...f, [key]: value })),
-    [],
-  );
-
   return {
-    filter,
     flows,
     everything,
     hosts,
@@ -181,9 +185,10 @@ export function useFlows(api: TrawlerApi, scope: FlowsScope = "list") {
     refused,
     retrying,
     retry,
-    update,
   };
 }
+
+const NO_FILTER: Filter = [];
 
 // A remembered tunnel is only ever asked about seconds after it opened, so a
 // reset loses nothing a caller is waiting on.

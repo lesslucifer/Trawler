@@ -28,7 +28,7 @@ describe("useViewPrefs", () => {
     const { result } = renderHook(() => useViewPrefs(store));
     expect(result.current.prefs).toEqual(DEFAULT_VIEW_PREFS);
     await act(async () => answer({ leg: "response", lastPlatform: "android" }));
-    expect(result.current.prefs).toEqual({ leg: "response", bodyMode: "pretty", lastPlatform: "android" });
+    expect(result.current.prefs).toEqual({ leg: "response", bodyMode: "pretty", lastPlatform: "android", chips: [] });
     expect(store.read).toHaveBeenCalledTimes(1);
   });
 
@@ -42,7 +42,7 @@ describe("useViewPrefs", () => {
     const { result } = renderHook(() => useViewPrefs(store));
     act(() => result.current.set("leg", "response"));
     await act(async () => answer({ leg: "request", bodyMode: "raw" }));
-    expect(result.current.prefs).toEqual({ leg: "response", bodyMode: "raw", lastPlatform: null });
+    expect(result.current.prefs).toEqual({ leg: "response", bodyMode: "raw", lastPlatform: null, chips: [] });
   });
 
   // A quit (Cmd-Q, the Dock, the last window closing) ends the process without
@@ -51,9 +51,9 @@ describe("useViewPrefs", () => {
     const store = stubStore(async () => ({ lastPlatform: "ios" }));
     const { result } = await mount(store);
     act(() => result.current.set("leg", "response"));
-    expect(store.write).toHaveBeenLastCalledWith({ leg: "response", bodyMode: "pretty", lastPlatform: "ios" });
+    expect(store.write).toHaveBeenLastCalledWith({ leg: "response", bodyMode: "pretty", lastPlatform: "ios", chips: [] });
     act(() => result.current.set("bodyMode", "raw"));
-    expect(store.write).toHaveBeenLastCalledWith({ leg: "response", bodyMode: "raw", lastPlatform: "ios" });
+    expect(store.write).toHaveBeenLastCalledWith({ leg: "response", bodyMode: "raw", lastPlatform: "ios", chips: [] });
     expect(store.write).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -73,6 +73,6 @@ describe("useViewPrefs", () => {
     expect(store.write).not.toHaveBeenCalled();
     await act(async () => answer({ bodyMode: "raw", lastPlatform: "android" }));
     expect(store.write).toHaveBeenCalledTimes(1);
-    expect(store.write).toHaveBeenCalledWith({ leg: "response", bodyMode: "raw", lastPlatform: "ios" });
+    expect(store.write).toHaveBeenCalledWith({ leg: "response", bodyMode: "raw", lastPlatform: "ios", chips: [] });
   });
 });

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Leg } from "./api";
+import { readChip, type Chip } from "./query";
 import { PLATFORM_IDS, type PlatformId } from "./setup";
 
 export type BodyMode = "pretty" | "raw";
@@ -8,9 +9,10 @@ export type ViewPrefs = {
   leg: Leg;
   bodyMode: BodyMode;
   lastPlatform: PlatformId | null;
+  chips: readonly Chip[];
 };
 
-export const DEFAULT_VIEW_PREFS: ViewPrefs = { leg: "request", bodyMode: "pretty", lastPlatform: null };
+export const DEFAULT_VIEW_PREFS: ViewPrefs = { leg: "request", bodyMode: "pretty", lastPlatform: null, chips: [] };
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 
@@ -19,6 +21,11 @@ const BODY_MODES: readonly BodyMode[] = ["pretty", "raw"];
 
 const oneOf = <T>(known: readonly T[], value: unknown): T | undefined =>
   known.includes(value as T) ? (value as T) : undefined;
+
+function chipsOf(saved: unknown): Chip[] | undefined {
+  if (!Array.isArray(saved)) return undefined;
+  return saved.map(readChip).filter((chip): chip is Chip => chip !== null);
+}
 
 export async function readViewPrefs(call: Invoke = invoke): Promise<Partial<ViewPrefs>> {
   let saved: Record<string, unknown> | null;
@@ -31,6 +38,7 @@ export async function readViewPrefs(call: Invoke = invoke): Promise<Partial<View
     leg: oneOf(LEGS, saved?.leg),
     bodyMode: oneOf(BODY_MODES, saved?.bodyMode),
     lastPlatform: oneOf(PLATFORM_IDS, saved?.lastPlatform),
+    chips: chipsOf(saved?.chips),
   };
   return Object.fromEntries(Object.entries(read).filter(([, value]) => value !== undefined));
 }

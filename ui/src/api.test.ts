@@ -1,5 +1,8 @@
 import { afterEach, vi } from "vitest";
-import { ApiError, apiAddr, attachmentName, createApi, defaultProxyAddr, filterParams } from "./api";
+import { ApiError, apiAddr, attachmentName, createApi, defaultProxyAddr } from "./api";
+import type { Chip, ChipKey } from "./query";
+
+const chip = (key: ChipKey, value: string, negated = false): Chip => ({ key, value, negated });
 import type { FlowSummary } from "./api";
 
 afterEach(() => {
@@ -18,13 +21,6 @@ test("defaultProxyAddr resolves global, then session, then the default", () => {
   expect(defaultProxyAddr()).toBe("192.168.1.9:7000");
 });
 
-test("filterParams sets only non-empty, trimmed keys", () => {
-  const p = filterParams({ q: " get ", host: "", method: "POST", status: "  " });
-  expect(p.get("q")).toBe("get");
-  expect(p.get("method")).toBe("POST");
-  expect(p.has("host")).toBe(false);
-  expect(p.has("status")).toBe(false);
-});
 
 test("listFlows fetches /flows with the filter and parses typed rows", async () => {
   const rows: FlowSummary[] = [
@@ -45,7 +41,7 @@ test("listFlows fetches /flows with the filter and parses typed rows", async () 
   vi.stubGlobal("fetch", fetchMock);
 
   const api = createApi("http://127.0.0.1:9999/");
-  const result = await api.listFlows({ host: "x" });
+  const result = await api.listFlows([chip("host", "x")]);
 
   expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/flows?host=x");
   expect(result[0].method).toBe("GET");
@@ -98,7 +94,7 @@ test("latestCapture throws ApiError on a non-ok response", async () => {
 
 test("listFlows throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-  await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);
+  await expect(createApi("http://x").listFlows([])).rejects.toThrow(/500/);
 });
 
 // A bare CONNECT tunnel never becomes a flow, so a `connection` event must bump
@@ -185,8 +181,8 @@ test("exportHar carries the live filter and takes the filename the server stampe
   });
   vi.stubGlobal("fetch", fetchMock);
 
-  const out = await createApi("http://x").exportHar({ host: "api.example.com", q: "" });
-  expect(fetchMock).toHaveBeenCalledWith("http://x/flows/export?host=api.example.com");
+  const out = await createApi("http://x").exportHar([chip("host", "api.example.com"), chip("method", "OPTIONS", true)]);
+  expect(fetchMock).toHaveBeenCalledWith("http://x/flows/export?host=api.example.com&not_method=OPTIONS");
   expect(out.filename).toBe("trawler-20260908-101500.har");
   expect([...out.bytes]).toEqual([...bytes]);
 });
@@ -205,12 +201,12 @@ test("a refused export throws the server's sentence too — all three doors repo
     "fetch",
     vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => "status must be a number" }),
   );
-  await expect(createApi("http://x").exportHar({ status: "x" })).rejects.toThrow(
+  await expect(createApi("http://x").exportHar([chip("status", "4xx")])).rejects.toThrow(
     /^status must be a number$/,
   );
 
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => "" }));
-  await expect(createApi("http://x").exportHar({})).rejects.toThrow(/500 and gave no reason/);
+  await expect(createApi("http://x").exportHar([])).rejects.toThrow(/500 and gave no reason/);
 });
 
 test("importHar posts the bytes to the HAR door and answers the count", async () => {
@@ -262,28 +258,32 @@ test("clearFlows DELETEs the listing under the live filter and answers what left
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ removed: 214 }) });
   vi.stubGlobal("fetch", fetchMock);
 
-  expect(await createApi("http://x").clearFlows({ method: "GET" })).toBe(214);
-  expect(fetchMock).toHaveBeenCalledWith("http://x/flows?method=GET", { method: "DELETE" });
+  expect(await createApi("http://x").clearFlows([chip("q", "login"), chip("q", "token")])).toBe(214);
+  expect(fetchMock).toHaveBeenCalledWith("http://x/flows?q=login&q=token", { method: "DELETE" });
 });
 
 test("a refused clear throws the server's sentence too", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => "status must be a number" }));
-  await expect(createApi("http://x").clearFlows({ status: "x" })).rejects.toThrow(/status must be a number/);
+  await expect(createApi("http://x").clearFlows([chip("status", "4xx")])).rejects.toThrow(/status must be a number/);
 });
 
 // The whole basis of the shell's two connection sentences: a core that refused
 // and a core that said nothing must not arrive at the caller as the same throw.
-test("a refused listing throws ApiError with the status; a dead socket throws no ApiError", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+test("a refused listing throws ApiError with the core's sentence; a dead socket throws no ApiError", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => "not_status must be a code\n" }),
+  );
   const refused = await createApi("http://x")
-    .listFlows({ status: "4xz" })
+    .listFlows([chip("status", "4xx", true)])
     .catch((e: unknown) => e);
   expect(refused).toBeInstanceOf(ApiError);
   expect((refused as ApiError).status).toBe(400);
+  expect((refused as ApiError).message).toBe("not_status must be a code");
 
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
   const silent = await createApi("http://x")
-    .listFlows({})
+    .listFlows([])
     .catch((e: unknown) => e);
   expect(silent).not.toBeInstanceOf(ApiError);
 });
@@ -351,7 +351,7 @@ test("listFlows parses the provenance mark off a summary", async () => {
     },
   ];
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => rows }));
-  expect((await createApi("http://x").listFlows({}))[0].source).toBe("imported");
+  expect((await createApi("http://x").listFlows([]))[0].source).toBe("imported");
 });
 
 const UNREACHABLE = { armed: false, proxy: null, api: null, ca_urls: null, wifi_page: null, interfaces: [] };
