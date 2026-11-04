@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 304968340a9237c85b739ee24a90d88e00b4afbd
+base: 8bbb941854e7e42f95415a859d433b812679d6c0
+tier: key
+signer: vuluu
+report: docs/work/2026-11-03-inspect-window-w2-data-window-design-result.html
+report_sha256: d7f3e38f2de794734bceb8ed9aacda7f5699e2e78a8438505d8f78b112d22b24
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBZ+fClUEsZXKr3ZYI10hvIII/Tk0mLqyvSHhfR6ghNj34BuyQk5Edjt0
+  JuYTsad/UMu2B9GLs00UAzjFYyVf8A
+  -----END SSH SIGNATURE-----
