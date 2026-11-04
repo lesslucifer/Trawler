@@ -5,6 +5,7 @@ use tauri::{App, Manager, WebviewWindow, WebviewWindowBuilder};
 use trawler_ui_lib::data_window::{
     self, frame, label_for, unframe, Caption, Payload, LABEL_PREFIX, MAIN_WINDOW,
 };
+use trawler_ui_lib::window_geometry::{self, Change, Records, DATA_WINDOWS_RECORD};
 
 fn app() -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let app = data_window::install(mock_builder())
@@ -148,4 +149,47 @@ fn a_data_window_destroyed_takes_only_its_unclaimed_payload() {
 
     assert!(claim(&window(&app, "a")).is_empty());
     assert_eq!(unframe(&claim(&window(&app, "b"))).expect("b's payload").bytes, b"2");
+}
+
+fn tracked_app() -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
+    let (app, main) = app();
+    window_geometry::manage(app.handle(), Records::new());
+    (app, main)
+}
+
+fn moved(app: &App<MockRuntime>, key: &str, x: i32, y: i32) {
+    window_geometry::record_change(&window(app, key).as_ref().window(), Change::Moved { x, y });
+}
+
+#[test]
+fn any_number_of_data_windows_write_one_shared_record() {
+    let (app, main) = tracked_app();
+
+    for key in ["flow-1:request", "flow-1:response", "flow-2:response", "a", "b"] {
+        open(&main, &payload(key, key, b"x".to_vec()));
+    }
+
+    assert_eq!(data_labels(&app).len(), 5);
+    assert_eq!(
+        window_geometry::records(app.handle()).into_keys().collect::<Vec<_>>(),
+        [DATA_WINDOWS_RECORD]
+    );
+}
+
+#[test]
+fn the_data_window_moved_last_writes_the_shared_record() {
+    let (app, main) = tracked_app();
+    open(&main, &payload("a", "a", b"1".to_vec()));
+    open(&main, &payload("b", "b", b"2".to_vec()));
+
+    moved(&app, "a", 40, 60);
+    moved(&app, "b", 300, 200);
+
+    let shared = window_geometry::records(app.handle())[DATA_WINDOWS_RECORD];
+    assert_eq!((shared.x, shared.y), (300, 200));
+
+    moved(&app, "a", 7, 9);
+
+    let shared = window_geometry::records(app.handle())[DATA_WINDOWS_RECORD];
+    assert_eq!((shared.x, shared.y), (7, 9));
 }

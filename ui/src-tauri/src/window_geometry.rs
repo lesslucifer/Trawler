@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Window, WindowEvent};
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, Window, WindowEvent};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -48,6 +48,16 @@ pub enum Change {
 pub struct Shown {
     pub maximized: bool,
     pub minimized: bool,
+}
+
+pub const DATA_WINDOWS_RECORD: &str = "data-*";
+
+pub fn record_key(label: &str) -> &str {
+    if crate::data_window::is_data_window(label) {
+        DATA_WINDOWS_RECORD
+    } else {
+        label
+    }
 }
 
 fn records_path(config_dir: &Path) -> PathBuf {
@@ -151,42 +161,63 @@ impl Tracker {
     }
 }
 
+pub fn manage<R: Runtime>(app: &AppHandle<R>, records: Records) {
+    app.manage(Tracker(Mutex::new(records)));
+}
+
+pub fn records<R: Runtime>(app: &AppHandle<R>) -> Records {
+    app.try_state::<Tracker>().map(|tracker| tracker.records().clone()).unwrap_or_default()
+}
+
 pub fn install(app: &AppHandle) {
     let records = crate::setup::config_dir(app).map(|dir| read_records(&dir)).unwrap_or_default();
-    app.manage(Tracker(Mutex::new(records)));
+    manage(app, records);
     for window in app.webview_windows().values() {
         restore(&window.as_ref().window());
     }
 }
 
 pub fn restore(window: &Window) {
+    place(window, saved(window.app_handle(), window.label()), min_size_of(window));
+}
+
+pub fn saved<R: Runtime>(app: &AppHandle<R>, label: &str) -> Option<Geometry> {
+    app.try_state::<Tracker>()?.records().get(record_key(label)).copied()
+}
+
+pub fn place<R: Runtime>(window: &Window<R>, saved: Option<Geometry>, min: MinSize) {
     let Some(tracker) = window.try_state::<Tracker>() else { return };
-    let saved = tracker.records().get(window.label()).copied();
-    let applied = saved.and_then(|record| {
-        placed(record, frame_of(window), &work_areas(window), min_size_of(window))
-    });
+    let applied =
+        saved.and_then(|record| placed(record, frame_of(window), &work_areas(window), min));
     if let Some(geometry) = applied {
         apply(window, geometry);
     }
     if let Some(record) = applied.or_else(|| current(window)) {
-        tracker.records().insert(window.label().to_owned(), record);
+        tracker.records().insert(record_key(window.label()).to_owned(), record);
     }
 }
 
 pub fn track(window: &Window, event: &WindowEvent) {
-    let change = match event {
-        WindowEvent::Moved(position) => Change::Moved { x: position.x, y: position.y },
-        WindowEvent::Resized(size) => Change::Resized { width: size.width, height: size.height },
-        WindowEvent::Destroyed => return save(window.app_handle()),
-        _ => return,
-    };
+    match event {
+        WindowEvent::Moved(position) => {
+            record_change(window, Change::Moved { x: position.x, y: position.y });
+        }
+        WindowEvent::Resized(size) => {
+            record_change(window, Change::Resized { width: size.width, height: size.height });
+        }
+        WindowEvent::Destroyed => save(window.app_handle()),
+        _ => {}
+    }
+}
+
+pub fn record_change<R: Runtime>(window: &Window<R>, change: Change) {
     let Some(tracker) = window.try_state::<Tracker>() else { return };
     let shown = Shown {
         maximized: window.is_maximized().unwrap_or(false),
         minimized: window.is_minimized().unwrap_or(false),
     };
     let mut records = tracker.records();
-    if let Some(record) = records.get_mut(window.label()) {
+    if let Some(record) = records.get_mut(record_key(window.label())) {
         *record = tracked(*record, change, shown);
     }
 }
@@ -201,7 +232,7 @@ pub fn save(app: &AppHandle) {
     }
 }
 
-fn apply(window: &Window, geometry: Geometry) {
+fn apply<R: Runtime>(window: &Window<R>, geometry: Geometry) {
     let applied = window
         .set_size(PhysicalSize::new(geometry.width, geometry.height))
         .and_then(|()| window.set_position(PhysicalPosition::new(geometry.x, geometry.y)))
@@ -211,7 +242,7 @@ fn apply(window: &Window, geometry: Geometry) {
     }
 }
 
-fn current(window: &Window) -> Option<Geometry> {
+fn current<R: Runtime>(window: &Window<R>) -> Option<Geometry> {
     let position = window.outer_position().ok()?;
     let size = window.inner_size().ok()?;
     Some(Geometry {
@@ -223,7 +254,7 @@ fn current(window: &Window) -> Option<Geometry> {
     })
 }
 
-fn frame_of(window: &Window) -> Frame {
+fn frame_of<R: Runtime>(window: &Window<R>) -> Frame {
     match (window.outer_size(), window.inner_size()) {
         (Ok(outer), Ok(inner)) => Frame {
             width: outer.width.saturating_sub(inner.width),
@@ -233,7 +264,7 @@ fn frame_of(window: &Window) -> Frame {
     }
 }
 
-fn work_areas(window: &Window) -> Vec<WorkArea> {
+fn work_areas<R: Runtime>(window: &Window<R>) -> Vec<WorkArea> {
     let primary = window.primary_monitor().ok().flatten().map(|monitor| *monitor.position());
     let mut monitors = window.available_monitors().unwrap_or_default();
     monitors.sort_by_key(|monitor| Some(*monitor.position()) != primary);
@@ -404,6 +435,18 @@ mod tests {
             ),
             record
         );
+    }
+
+    #[test]
+    fn every_data_window_shares_one_record_and_every_other_window_keeps_its_own() {
+        assert_eq!(record_key("data-6b"), DATA_WINDOWS_RECORD);
+        assert_eq!(record_key("data-"), DATA_WINDOWS_RECORD);
+        assert_eq!(
+            record_key(&crate::data_window::label_for("flow-7:response")),
+            DATA_WINDOWS_RECORD
+        );
+        assert_eq!(record_key("main"), "main");
+        assert_eq!(record_key("inspector-1"), "inspector-1");
     }
 
     fn two_labels() -> Records {
