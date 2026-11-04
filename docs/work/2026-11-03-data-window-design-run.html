@@ -30,7 +30,7 @@
         <a href="2026-11-03-inspect-window-w2-data-window-design-plan.html">WU plan</a> · components:
         <a href="../../ui/src/components/Menu.tsx">Menu</a> · <a href="../../ui/src/components/EditSurface.tsx">EditSurface</a> ·
         <a href="../../ui/src/components/FormTable.tsx">FormTable</a> · <a href="../../ui/src/components/HexView.tsx">HexView</a> ·
-        CutMarker amended in <a href="#cut-marker">its delta</a> · within DEC-69</div>
+        CutMarker amended in <a href="#cut-marker">its delta</a> · within DEC-70</div>
     </div>
   </header>
   <main data-artifact="design-run" data-status="archived">
@@ -57,7 +57,7 @@
       </div>
       <p>overflow: window header, find bar and status bar pinned, each one row that wraps as the window narrows and
         never scrolls sideways. surface: the one zone that scrolls, both ways, inside itself, and it is uncapped: it holds
-        the whole payload, which the core caps at 10 MiB (DEC-69 rule 7), virtualised by EditSurface, FormTable and
+        the whole payload, which the core caps at 10 MiB (DEC-70 rule 7), virtualised by EditSurface, FormTable and
         HexView. The decode peek opens inside the surface under the line it decodes, scrolls inside itself past 256 px
         (<code>body-max</code>) and pushes the lines below it down. Form pairs are in wire order until <em>sort by
         key</em>, a declared working-copy step that reorders the pairs themselves. menus: the ⋯ menu and the right-click
@@ -1006,19 +1006,19 @@
       <tr><td><code>payload.title</code></td><td>used</td><td>the native window title and the header line, as the opener wrote it</td></tr>
       <tr><td><code>payload.bytes</code></td><td>used</td><td>the original, never changed. The working copy starts as a copy of it. A 0 B payload is the <em>none</em> state</td></tr>
       <tr><td><code>payload.typeHint</code></td><td>used</td><td>kind detection reads it first and the status bar names it: <em>detected from application/json</em></td></tr>
-      <tr><td><code>payload.key</code></td><td>deliberately unused</td><td>opaque, and only the shell reads it, to focus an open window (DEC-69 rule 3). The screen never shows it</td></tr>
+      <tr><td><code>payload.key</code></td><td>deliberately unused</td><td>opaque, and only the shell reads it, to focus an open window (DEC-70 rule 3). The screen never shows it</td></tr>
       <tr><td>the six kinds: json · form · xml · text · hex · image</td><td>used</td><td>one surface each and the ⋯ items that fit it; see the payload toggles</td></tr>
       <tr><td>the kind override</td><td>used</td><td>the kind Select in the status bar. The note beside it reads <em>your choice · detected …</em></td></tr>
       <tr><td>original / working copy</td><td>used</td><td>the surface is the working copy and is always editable. <em>modified · N edits</em> in the status bar. Undo, redo, restore original, copy original and save original in ⋯. Copy and save deliver what is on screen</td></tr>
       <tr><td>the filtered view: JSONPath and text filter (Q4)</td><td>deliberately unused</td><td>deferred by the owner on 2026-11-04 to a later epic: this window ships find only. Nothing on screen leaves a place for it</td></tr>
       <tr><td>decoders: base64 (standard, URL-safe, padding optional) · URL-encoding · JWT</td><td>used</td><td>the decode peek, from a right-click or ⌘⇧D. It offers only the decoders that read the value; a switch appears only when more than one does. When none does, it gives the reason in words</td></tr>
       <tr><td><code>openDataWindow(payload)</code> (W1)</td><td>used</td><td>the peek's ⧉ and its binary result, the pane's ⧉ and the cut marker's button</td></tr>
-      <tr><td>the save dialog and file write (DEC-69 rule 9)</td><td>used</td><td>save and save original in ⋯, and ⌘S</td></tr>
+      <tr><td>the save dialog and file write (DEC-70 rule 9)</td><td>used</td><td>save and save original in ⋯, and ⌘S</td></tr>
       <tr><td>the clipboard</td><td>used</td><td>copy (CopyButton) · copy original · copy as JSON · the right-click copy · native ⌘C</td></tr>
       <tr><td>BodyViewer's loaded bytes, content type and mode (the opener)</td><td>used</td><td>the entry point hands what the pane holds in the mode it shows: pretty hands the decoded bytes, raw the raw ones</td></tr>
       <tr><td>the window size, 1200 × 800, minimum 600 × 400 (W1)</td><td>used</td><td>the frame and the narrow state. Nothing stacks or hides at the minimum: every zone is one wrapping row or the surface</td></tr>
       <tr><td>remembering size and position (Q11)</td><td>blocked</td><td>waits on E-PANELS' mechanism; see blocked-on</td></tr>
-      <tr><td>the core, the control API, any flow or leg</td><td>deliberately unused</td><td>DEC-69: the window knows only its payload and makes no request</td></tr>
+      <tr><td>the core, the control API, any flow or leg</td><td>deliberately unused</td><td>DEC-70: the window knows only its payload and makes no request</td></tr>
       <tr><td><code>prefers-reduced-motion</code></td><td>deliberately unused</td><td>nothing animates. A copy confirm is CopyButton's label swap; menus and the peek appear without a transition</td></tr>
     </table>
     <p class="kd">Not given (may not be assumed to exist): a way to write back to the opener, the capture or the core ·
@@ -1083,7 +1083,7 @@
     <table data-item="review" data-c="review-table">
       <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
       <tbody>
-        <tr><td>Start: the epic plan's W2 block, its toolset table and rulings Q1, Q4, Q7, Q9 and Q12</td><td>capabilities · mockup · keyboard · proposals: six kinds on one frame, the working copy's history in the header, the view band, the decoder panel, the entry point on the pane</td><td><code>DEC-69</code></td></tr>
+        <tr><td>Start: the epic plan's W2 block, its toolset table and rulings Q1, Q4, Q7, Q9 and Q12</td><td>capabilities · mockup · keyboard · proposals: six kinds on one frame, the working copy's history in the header, the view band, the decoder panel, the entry point on the pane</td><td><code>DEC-70</code></td></tr>
         <tr><td>Round 1, the owner (2026-11-04): "the functionality is good, but the UI/UX of the menu is terrible; make it simpler". Then, question by question:
           <ul>
             <li>a bar with a ⋯ menu, styled like the VS Code editor</li>
@@ -1105,7 +1105,7 @@
             <li><strong>round-1 calls:</strong> C1, C2, C5 and C10 replaced as above. C9 is gone with the filter. C3 (<em>re-indent</em>), C4 (edit in place), C6 (1200 × 800), C7 (restore asks nothing) and C8 (entry point) stand</li>
             <li><strong>proposals:</strong> <code>Menu</code> added, with its design. EditSurface and FormTable gain an inset, and FormTable hover acts. <code>DecoderPanel</code> → <code>DecodePeek</code>. <code>StatusBar</code> added. The <code>decoder</code> 400 px token and the 900 px stacking rule dropped. Glyphs: undo / redo out, more / add in. ⌘L dropped</li>
             <li><strong>capabilities:</strong> the view is deliberately unused, deferred</li>
-          </ul></td><td>Q4 (re-ruled: deferred) · <code>DEC-69</code> · the epic plan's W4, W5, W7 and J2, J3, amended the same day</td></tr>
+          </ul></td><td>Q4 (re-ruled: deferred) · <code>DEC-70</code> · the epic plan's W4, W5, W7 and J2, J3, amended the same day</td></tr>
         <tr><td>Round 2, the owner (2026-11-04), three comments on the peek, "the rest looks fine":
           <ul>
             <li>"decode as should show parsable type only"</li>

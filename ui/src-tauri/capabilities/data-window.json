@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "data-window",
-  "description": "A data window works on the payload it was handed and can save what it names, nothing more (DEC-69)",
+  "description": "A data window works on the payload it was handed and can save what it names, nothing more (DEC-70)",
   "windows": ["data-*"],
   "permissions": [
     "core:default",
