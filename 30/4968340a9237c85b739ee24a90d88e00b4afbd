@@ -1,0 +1,38 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-03-data-window-design-run.html"
+    tier: T3
+    action: added
+    distills: "The data window's closed design run: a live mockup (find bar, ⋯ and right-click menus, status bar, inline decode peek, six kinds, 18 states), Given, keyboard, proposals, blocked-on (Q11) and the owner's rounds 1 and 2."
+  - path: "docs/work/2026-11-03-inspect-window-plan.html"
+    tier: T3
+    action: updated
+    distills: "Q4 re-ruled: the JSONPath/text filter is deferred; the model, toolsets, expected rows 4, 6, 9, W2–W6 summaries and J2, J3 follow the run's simpler window."
+  - path: "docs/work/2026-11-03-inspect-window-w2-data-window-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement, mapping, the ten decisions the run makes, expected result and waived test plan."
+  - path: "docs/work/2026-11-03-inspect-window-w2-data-window-design-result.html"
+    tier: T3
+    action: added
+    distills: "W2's outcome, deviations (filter deferred, the UI rebuilt simpler, Menu added, CutMarker as a delta), evidence and follow-ups for W3, W6, W7."
+  - path: "docs/work/components/edit-surface.html"
+    tier: T3
+    action: added
+    distills: "EditSurface: the editable, uncapped JSON/XML/text surface with one caller-owned history and an inset slot for the decode peek; confirmed."
+  - path: "docs/work/components/form-table.html"
+    tier: T3
+    action: added
+    distills: "FormTable: every form pair whole and editable, hover/focus + and ×, a new-pair row, an inset under a row; confirmed."
+  - path: "docs/work/components/hex-view.html"
+    tier: T3
+    action: added
+    distills: "HexView: the whole virtualised dump with byte-range find marks and a copyable selection; confirmed."
+  - path: "docs/work/components/menu.html"
+    tier: T3
+    action: added
+    distills: "Menu: a popover of acts from a trigger or a point, sections, keys, check and choice rows, disabled-with-reason, full keyboard; confirmed."
+t2_waived: "A design reaches UC-9 / UC-5 and the rulebook once it is built; W7 distils the run, and amends DEC-68 to the deferred filter."
