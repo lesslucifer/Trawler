@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU decoders -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W6
+branch: wu/inspect-window/decoders
+base: 8dcf2c1a6783133b7e589f579349af47c2c282f1
+head: 7e0a470f908f58f83007edd9d0eeadcc8d0a158c
+diff_sha256: 57bfff81dcf2cd9e97e67b4e8119ad41b9435859b143007c89c643f06e1ee54a
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 1
+  stage_seconds:
+    total: 173
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 2 }
+findings: { found: 4, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "a JSON selection replaced with its decoded form is spliced as escaped string content even when the selection is a bare non-string token"
+    waived: "unreachable but for a hand-picked bare number whose base64 digits happen to spell UTF-8 text; a selection with its quotes or any escape is refused before replace, and the JSON notice names a broken document on the next render"
+verified:
+  - severity: important
+    finding: "decoders.ts redeclares the PNG, JPEG and GIF signatures and the prefix check that dataKind.ts owns, so a corrected signature must change in two places"
+  - severity: important
+    finding: "readBytes re-implements rawKind's text-versus-binary rule with a different control class (DEL in, VT and FF out), so a decoded a%7Fb reads binary in the peek and text in the window it opens"
+verdict: FAIL
+date: 2026-11-04
