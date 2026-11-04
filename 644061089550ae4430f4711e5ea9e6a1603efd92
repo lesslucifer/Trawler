@@ -1,0 +1,18 @@
+schema: design/v1
+epic: E-PANELS
+base: a74695b49ed63ebf8f9b2fde11298b68f29ea6ee
+design_sha256: eeaa532eadb22ea2f4c4983125ccf0840b0bced8b315b1878e048e7adde7182f
+verdict: PASS
+artifacts: [docs/work/components/splitter.html]
+implements:
+  - path: docs/work/components/splitter.html
+    blob: d9534ad9c181f306a727ec3cf863036ba97833ec
+    built: [ui/src/components/Splitter.tsx]
+  - path: docs/work/2026-11-03-panels-splitters-design-run.html
+    blob: 1477d3b80cc45ad171be4581f01ba91f1aab3b80
+    built: [ui/src/Layout.tsx, ui/src/FlowDetail.tsx, ui/src/App.tsx, ui/src/FlowList.tsx]
+undesigned:
+  - path: ui/src/BodyViewer.tsx
+    why: "wrapped in memo so a splitter drag does not re-decode the body; nothing it renders changes"
+accounting: "THE EPIC'S HAND-OFF, END TO END. The splitters' run was authored and closed at W2 and cited by blob 1477d3b8 at W3 (Layout, FlowDetail, App) and W4 (FlowList, App); that blob is the one the file holds at the close commit's parent, so the pin names one state, and the close retires it from the tree. The Splitter component design, confirmed at W2, was cited at d9534ad9 by W3 and retired there into Splitter's TSDoc (DEC-16, forks to DEC-68) - its last state, read via cf09e4be26 (DEC-29). The one added surface, Splitter.tsx, is cited, never declared. BodyViewer's edit is a memo with no rendered change. W1, W5 and W6 touched no rendered file. No component design is left unbuilt."
+date: 2026-11-04
