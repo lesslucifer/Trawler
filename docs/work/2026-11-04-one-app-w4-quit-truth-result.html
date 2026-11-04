@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeab7f19f34851f0dfae32e" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP.W4 result: a quit says what it now does</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP.W4 result — a quit says what it now does</h1>
+      <p>Delivered as planned. Over an owned core, the quit dialog says that quitting stops Trawler's capture service.
+        Over an attached core it keeps today's sentences. An integration test drives the shell's exit event over both.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-ONEAPP.W4</span> · branch
+        <code>wu/one-app/quit-truth</code> · <a href="2026-11-04-one-app-w4-quit-truth-plan.html">WU plan</a> ·
+        <a href="2026-11-03-one-app-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th>How it was seen</th></tr>
+      <tr><td>owned core, ⌘Q while routed here: "Quitting stops Trawler's capture service, …"</td><td>delivered</td>
+        <td>the dialog's <code>quitStops</code> picks <code>CLOSE_COPY.quitStops</code> for ours, unread, devices and
+        emulator (<code>ProxyCloseDialog.test.tsx</code>). <code>App.test.tsx</code> renders the app over an owned,
+        running core and reads the owned sentence at the close. Not driven live: that would mean routing this Mac
+        through Trawler</td></tr>
+      <tr><td>attached, or state never read: today's "once … stops"</td><td>delivered</td><td><code>App.test.tsx</code>
+        over an attached core and over a <code>null</code> state, and the dialog tests without
+        <code>quitStops</code>. The stale sentence is the same either way</td></tr>
+      <tr><td>every exit stops an owned core and frees its ports; an attached core outlives it</td><td>delivered</td>
+        <td><code>quit_stops_core.rs</code> calls <code>on_run_event(Exit)</code> on Tauri's mock runtime over a
+        supervised <code>--core</code> on ephemeral ports. No process remains and both ports bind. Over an attached
+        core the process still runs and accepts connections. The Dock quit and a logout reach the same
+        <code>RunEvent::Exit</code>, so they are covered by this path rather than driven natively</td></tr>
+      <tr><td>lint and suite green</td><td>delivered</td><td><code>cargo xtask gate0</code> (fmt, clippy
+        <code>-D warnings</code>, the whole Rust suite) · Vitest 71 files / 60 812 tests · <code>tsc</code> · ESLint on the touched files</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>From the plan or design</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>DEC-64 and UC-ONBOARD</td><td>DEC-68's meta also records that it amends DEC-64 rule 6, and the decision
+        index's DEC-64 row says so</td><td>one fact per tier: each record points at the other instead of
+        restating it</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>2c59b223</code> plan · <code>48cfcc08</code> the copy and the exit path ·
+        <code>c7299f87</code> T2 distilled · this report</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/quit_stops_core.rs</code> (2): the exit event stops an owned
+        core and frees its ports · it leaves an attached core running</td></tr>
+      <tr><td>unit</td><td>Vitest: <code>ProxyCloseDialog.test.tsx</code> (+9: four cases owned, four kept, the stale
+        sentence) · <code>App.test.tsx</code> (+3: owned, attached, never read)</td></tr>
+      <tr><td>e2e</td><td>waived for the WU: J3 (quit releases) belongs to W5's owned-core e2e build. Today's attached
+        suite sees unchanged copy</td></tr>
+      <tr><td>docs</td><td><a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>
+        rule 6 amended · <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a> meta ·
+        <a href="../decisions/decisions-index.html">decision index</a> · UC-ONBOARD's quit row and the rebuild note in
+        <a href="../use-cases/web-ui.html#uc-onboard">web-ui.html</a> · Q15 in the epic plan</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2: DEC-64 rule 6 now says that quitting stops the service the app
+      owns, and that an attached one outlives the quit (Q15). DEC-68 records the amendment. UC-ONBOARD's quit row says
+      the same. No design rule changes: the dialog's frame, title, buttons and steps are untouched. T1 and T0 are W5's
+      (Q10).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Where</th></tr>
+      <tr><td>J3, quit releases the ports end to end against an owned core</td><td>W5</td></tr>
+      <tr><td>the <code>web-ui.html</code> snapshot was refused (HTTP 413, the doc is too large), so this edit to it has
+        no diff baseline</td><td>htmldoc server limit</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
