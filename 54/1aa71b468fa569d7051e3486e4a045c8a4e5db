@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-QUERY
+wu: E-QUERY.W3
+branch: wu/query-bar/query-bar-build
+tests:
+  unit: { count: 224, covers: "every grammar form and fault, chip labels that read back, the suggestion table, one W1 parameter per chip, a refused parameter to its chips, saved chips re-parsed; QueryBar's behavior table key by key (Enter/Tab take the highlight, Space as typed, arrows without wrap, Esc, Backspace, x, duplicates, faults until the next keystroke, refused marking, the focus handle); useFlows handed chips, a refusal named by its parameter and held while its values are sent; the reworded notices; export and clear carry the chips; the view prefs record with chips; QueryBar in the collection" }
+  integration: { count: 182, covers: "the header holds one query bar and no other filter control; typing never lists and a chip lists once with its parameters; a typo stays a draft that says why and the list does not move; Cmd-F focuses the bar; saved chips come back and the listing carries them; a chip is saved when made; a core refusal marks its chip and the row region names it; the wire record with chips round-trips through the shell's store" }
+  e2e: { waived: "W4 owns the WebDriver spec over the chip flows against a real core, per the epic's E2E plan" }
