@@ -22,7 +22,9 @@
     <table data-item="outcome" data-c="outcome">
       <tr><th>Expected</th><th>Shipped</th><th></th></tr>
       <tr><td>a JWT selected in JSON decodes from the right-click under the selection's last line</td><td><em>decode</em>
-        ⌘⇧D first in the selection's right-click, waiting with <em>select a value</em>; the peek is a block under the
+        ⌘⇧D first in the right-click; the value is found around the selection or the pointer (quotes, a key and
+        punctuation dropped, a value cut short grown to its edges, the longest value in a chunk) and selected, waiting
+        with <em>no value here</em> where there is none; the peek is a block under the
         line holding the selection's trimmed end, pushing lines down, scrolling past <code>body-max</code>; <em>decoded as
         JWT</em>, header and payload at 2 spaces on read-only EditSurfaces, <em>signature · not verified</em> as
         written</td><td><span class="badge auto">delivered</span></td></tr>
@@ -62,6 +64,13 @@
         try-out: worktrees share one target dir, so <code>cargo run</code> reused a build script compiled in another
         worktree, checked that worktree's <code>ui/</code>, and embedded this one's stale <code>ui/dist</code> — the
         decode row was missing from the app</td></tr>
+      <tr><td>the selection is the value; base64 means something as binary only with a known signature</td><td>a
+        rough selection or the pointer finds its value (<code>decodeAround</code>): kept as selected when it reads well,
+        else grown to the value's edges, else the longest value in the chunk; valid base64 always reads, as binary with
+        <em>no known signature</em> where none matches</td><td>the owner's try-out: selecting a value exactly is work the
+        tool can do, and a protobuf payload in base64 was refused as <em>nothing readable</em>. A value that reads as
+        text, JSON, a JWT or a known format still wins over unknown binary, so a selection cut short does not read as
+        junk</td></tr>
     </table>
 
     <h2 id="evidence">Evidence</h2>
@@ -69,23 +78,27 @@
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>d5e59a93</code> plan · <code>986f67bc</code> decoders, the peek, the right-click rows
         and ⌘⇧D, EditSurface <code>selection()</code>, IconButton <code>replace</code> · <code>65a6cc58</code> review round 1's fix
-        · <code>d13aa5ca</code> the bundle check per worktree</td></tr>
+        · <code>d13aa5ca</code> the bundle check per worktree · the value found around a rough selection, and base64
+        binary read without a signature</td></tr>
       <tr><td>unit</td><td><code>decoders</code> (18: base64 standard, URL-safe, padded, padding-less and with
         whitespace; 4n + 1, a foreign character, mid-string padding, nothing; JSON at 2 spaces with a number past
         2<sup>53</sup> kept; binary with and without a signature, a control character, tab and CRLF as text; URL with
         <code>+</code>, a bad escape, non-UTF-8 escapes as binary; JWT valid, empty signature, 2 and 4 parts, a header not
-        base64url, a payload not JSON; the guess, one reading only, URL only over an escape, base64-to-binary only with a
-        signature, the reason; replacement, what each opens as, the content key; DEL read as text and a vertical tab or form
+        base64url, a payload not JSON; the guess, one reading only, URL only over an escape, valid base64 read as binary
+        with or without a signature, the reason; the value around a selection (quotes dropped, a cursor or a cut-short
+        selection grown, a well-reading selection kept, the value picked from a chunk with its key, the reason, nothing
+        where no value is); replacement, what each opens as, the content key; DEL read as text and a vertical tab or form
         feed as binary, by <code>rawKind</code>) · <code>bundle</code> (the build script reads the crate dir per
         run, failing before the fix) · <code>dataKind</code> (one table naming PNG, JPEG, GIF, gzip and PDF,
-        the first three sniffed as image) · EditSurface <code>selection()</code> ·
+        the first three sniffed as image) · EditSurface <code>selection()</code> and <code>select()</code> ·
         IconButton <code>replace</code> ⇄</td></tr>
-      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (9 new: a JWT from the right-click
-        under its line with nothing modified; ⇄ as JSON string content and ⌘Z; one occurrence replaced in a CRLF text and
+      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (12 new: a JWT from the right-click
+        under its line with nothing modified, no value under the pointer disabled; a value right-clicked with nothing
+        selected; a rough selection with its key and quotes decoded and replaced; protobuf base64 read as binary; ⇄ as JSON string content and ⌘Z; one occurrence replaced in a CRLF text and
         copied with CRLF; a malformed token's reason with no acts; binary ↗ handing the decoded bytes, title and a key of
         their own; a JWT opening its payload as JSON; a form row from the right-click and ⌘⇧D, ⇄ and undo; an empty value
         disabled; Esc, an edit and a kind change closing the peek)</td></tr>
-      <tr><td>suites</td><td>vitest 61 252 in 92 files green; eslint and <code>tsc</code> clean; the pre-commit fmt and clippy green</td></tr>
+      <tr><td>suites</td><td>vitest 61 265 in 92 files green (two clock-bound CaptureService cases red after midnight until the running-core fixture started today); eslint and <code>tsc</code> clean; the pre-commit fmt and clippy green</td></tr>
       <tr><td>review</td><td>A first round was voided before any verdict: Gate 0 ran beside the finders and a
         supervised-core test timed out waiting for the core under that load (it passes alone in 2.6 s and in a quiet
         Gate 0). Round 1 FAIL on <code>7e0a470f</code>: two verified importants — the decoders redeclared the image
@@ -94,7 +107,8 @@
         <code>dataKind</code>'s one table names each signature and says which are images, and a decoded result is text
         exactly when <code>rawKind</code> says so. One nit waived on the record (a bare JSON token replaced as string
         content). Refuted: the read-only menu and ⌘⇧D disagreeing (the menu never opens there). Round 2 PASS on
-        <code>8d210cf2</code> with five nits waived on the record. The bundle fix moved the code, so round 3 runs on the
+        <code>8d210cf2</code> with five nits waived on the record. Round 3 PASS on <code>a476880c</code> (the bundle fix sits
+        outside the review's code paths; two nits waived). The try-out changes moved the code, so round 4 runs on the
         tip that carries this report</td></tr>
     </table>
 
