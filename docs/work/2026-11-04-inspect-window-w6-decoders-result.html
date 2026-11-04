@@ -57,20 +57,27 @@
         would have been replaced instead</td></tr>
       <tr><td>—</td><td>decode is offered on the editable text kinds and the form table only</td><td>read-only text keeps
         W3's native right-click and has nothing to replace; hex and image have no text to select</td></tr>
+      <tr><td>—</td><td>the app's build script checks the bundle of the worktree it runs for: it reads
+        <code>CARGO_MANIFEST_DIR</code> per run instead of baking it in at compile time</td><td>found in the owner's
+        try-out: worktrees share one target dir, so <code>cargo run</code> reused a build script compiled in another
+        worktree, checked that worktree's <code>ui/</code>, and embedded this one's stale <code>ui/dist</code> — the
+        decode row was missing from the app</td></tr>
     </table>
 
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>d5e59a93</code> plan · <code>986f67bc</code> decoders, the peek, the right-click rows
-        and ⌘⇧D, EditSurface <code>selection()</code>, IconButton <code>replace</code> · <code>65a6cc58</code> review round 1's fix</td></tr>
+        and ⌘⇧D, EditSurface <code>selection()</code>, IconButton <code>replace</code> · <code>65a6cc58</code> review round 1's fix
+        · <code>d13aa5ca</code> the bundle check per worktree</td></tr>
       <tr><td>unit</td><td><code>decoders</code> (18: base64 standard, URL-safe, padded, padding-less and with
         whitespace; 4n + 1, a foreign character, mid-string padding, nothing; JSON at 2 spaces with a number past
         2<sup>53</sup> kept; binary with and without a signature, a control character, tab and CRLF as text; URL with
         <code>+</code>, a bad escape, non-UTF-8 escapes as binary; JWT valid, empty signature, 2 and 4 parts, a header not
         base64url, a payload not JSON; the guess, one reading only, URL only over an escape, base64-to-binary only with a
         signature, the reason; replacement, what each opens as, the content key; DEL read as text and a vertical tab or form
-        feed as binary, by <code>rawKind</code>) · <code>dataKind</code> (one table naming PNG, JPEG, GIF, gzip and PDF,
+        feed as binary, by <code>rawKind</code>) · <code>bundle</code> (the build script reads the crate dir per
+        run, failing before the fix) · <code>dataKind</code> (one table naming PNG, JPEG, GIF, gzip and PDF,
         the first three sniffed as image) · EditSurface <code>selection()</code> ·
         IconButton <code>replace</code> ⇄</td></tr>
       <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (9 new: a JWT from the right-click
@@ -86,8 +93,9 @@
         binary in the peek and text in the window it opened. Fixed with regression tests first in <code>65a6cc58</code>:
         <code>dataKind</code>'s one table names each signature and says which are images, and a decoded result is text
         exactly when <code>rawKind</code> says so. One nit waived on the record (a bare JSON token replaced as string
-        content). Refuted: the read-only menu and ⌘⇧D disagreeing (the menu never opens there). Round 2 on the tip that
-        carries this report</td></tr>
+        content). Refuted: the read-only menu and ⌘⇧D disagreeing (the menu never opens there). Round 2 PASS on
+        <code>8d210cf2</code> with five nits waived on the record. The bundle fix moved the code, so round 3 runs on the
+        tip that carries this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
