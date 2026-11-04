@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPairAfter, editPair, encodePair, parsePairs, removePair, repeats } from "./formPairs";
+import { addPairAfter, editPair, parsePairs, removePair, repeats } from "./formPairs";
 
 const FORM = "grant_type=urn%3Aietf&scope=accounts&scope=sessions%20devices&state=&note=50%ZZ+off&flag";
 
@@ -49,8 +49,12 @@ describe("an edit re-encodes only its own pair", () => {
     expect(editPair("a=1&b=2", 0, "key", "z z")).toBe("z%20z=1&b=2");
   });
 
-  it("a kept-as-sent pair, once edited, is encoded whole", () => {
-    expect(editPair("note=50%ZZ", 0, "value", "50%")).toBe(encodePair("note", "50%"));
+  it("the edited part is encoded; the part nobody edited keeps its sent bytes", () => {
+    expect(editPair("note=50%ZZ", 0, "value", "50%")).toBe("note=50%25");
+    expect(editPair("%ZZ=ok", 0, "value", "new")).toBe("%ZZ=new");
+    expect(editPair("a+b=1%7e", 0, "key", "c d")).toBe("c%20d=1%7e");
+    expect(editPair("flag", 0, "value", "on")).toBe("flag=on");
+    expect(parsePairs(editPair("%ZZ=ok", 0, "value", "new"))[0].kept).toBe(true);
   });
 });
 

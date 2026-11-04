@@ -222,6 +222,7 @@ export function EditSurface({
   const callbacks = useRef({ onChange, onSelect });
   callbacks.current = { onChange, onSelect };
   const group = useRef<{ step: string; at: number } | null>(null);
+  const shown = useRef(text);
   const compartments = useRef({ language: new Compartment(), readOnly: new Compartment(), wrap: new Compartment() });
   const [insetHost] = useState(() => document.createElement("div"));
 
@@ -245,7 +246,8 @@ export function EditSurface({
         const now = Date.now();
         const extend = group.current !== null && group.current.step === step && now - group.current.at < GROUP_MS;
         group.current = { step, at: now };
-        callbacks.current.onChange?.(update.state.doc.toString(), step, extend);
+        shown.current = update.state.doc.toString();
+        callbacks.current.onChange?.(shown.current, step, extend);
       }
       if (update.selectionSet) {
         const selection = update.state.selection;
@@ -286,7 +288,8 @@ export function EditSurface({
 
   useEffect(() => {
     const editor = view.current;
-    if (!editor || editor.state.doc.toString() === text) return;
+    if (!editor || text === shown.current) return;
+    shown.current = text;
     group.current = null;
     editor.dispatch({
       changes: { from: 0, to: editor.state.doc.length, insert: text },

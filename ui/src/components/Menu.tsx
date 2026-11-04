@@ -119,6 +119,7 @@ export function Menu({
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (live.length === 0 && event.key !== "Escape" && event.key !== "Tab") return;
     const move = (to: number) => {
       event.preventDefault();
       setActive(to);

@@ -88,6 +88,20 @@ describe("keyboard", () => {
     key("Enter");
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("with every row disabled the keys move nothing, and Esc still closes", () => {
+    const onClose = vi.fn();
+    render(
+      <Menu label="selection" sections={[[{ label: "copy", disabled: true, why: "select some text", run: () => {} }]]} at={{ x: 0, y: 0 }} onClose={onClose} />,
+    );
+    key("ArrowDown");
+    key("End");
+    key("c");
+    key("Enter");
+    expect(document.querySelector(".bg-wash-tint")).toBeNull();
+    key("Escape");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
 });
 
 describe("pointer", () => {

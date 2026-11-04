@@ -20,23 +20,25 @@ const raws = (text: string) => (text === "" ? [] : text.split("&"));
 
 export function parsePairs(text: string): FormPair[] {
   return raws(text).map((raw, index) => {
-    const eq = raw.indexOf("=");
-    const key = decodePart(eq < 0 ? raw : raw.slice(0, eq));
-    const value = decodePart(eq < 0 ? "" : raw.slice(eq + 1));
+    const [rawKey, rawValue] = splitRaw(raw);
+    const key = decodePart(rawKey);
+    const value = decodePart(rawValue);
     return { index, raw, key: key.text, value: value.text, kept: key.kept || value.kept };
   });
 }
 
-export const encodePair = (key: string, value: string) =>
-  `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+function splitRaw(raw: string): [key: string, value: string] {
+  const eq = raw.indexOf("=");
+  return eq < 0 ? [raw, ""] : [raw.slice(0, eq), raw.slice(eq + 1)];
+}
 
 export function editPair(text: string, index: number, part: PairPart, edited: string): string {
-  return parsePairs(text)
-    .map((pair) =>
-      pair.index === index
-        ? encodePair(part === "key" ? edited : pair.key, part === "value" ? edited : pair.value)
-        : pair.raw,
-    )
+  return raws(text)
+    .map((raw, i) => {
+      if (i !== index) return raw;
+      const [key, value] = splitRaw(raw);
+      return part === "key" ? `${encodeURIComponent(edited)}=${value}` : `${key}=${encodeURIComponent(edited)}`;
+    })
     .join("&");
 }
 

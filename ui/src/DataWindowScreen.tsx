@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { captionFilename, decodeBody, hexDump, humanBytes, saveBody } from "./body";
+import { captionFilename, hexDump, humanBytes, saveBody } from "./body";
 import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { addPairAfter, editPair, parsePairs, removePair, type PairPart } from "./formPairs";
@@ -8,6 +8,7 @@ import {
   canRedo,
   canUndo,
   commit,
+  decodeOriginal,
   editCount,
   isModified,
   redo,
@@ -39,13 +40,20 @@ const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+function lineCount(text: string): number {
+  let lines = 1;
+  for (let at = text.indexOf("\n"); at >= 0; at = text.indexOf("\n", at + 1)) lines += 1;
+  return lines;
+}
+
 function copy(text: string) {
   void navigator.clipboard?.writeText(text);
 }
 
 function Workbench({ payload }: { payload: DataPayload }) {
   const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
-  const original = useMemo(() => decodeBody(payload.bytes).text, [payload]);
+  const decoded = useMemo(() => decodeOriginal(payload.bytes), [payload]);
+  const original = decoded.text;
   const [history, setHistory] = useState<History>(() => startHistory(original));
   const [override, setOverride] = useState<DataKind | null>(null);
   const [menu, setMenu] = useState<OpenMenu | null>(null);
@@ -55,11 +63,12 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const more = useRef<HTMLButtonElement>(null);
 
   const kind = override ?? detected.kind;
-  const readOnly = READ_ONLY_KINDS.has(kind);
+  const lossy = !decoded.whole && !READ_ONLY_KINDS.has(kind);
+  const readOnly = READ_ONLY_KINDS.has(kind) || lossy;
   const text = workingText(history);
   const bytes = useMemo(() => workingBytes(history, payload.bytes), [history, payload.bytes]);
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
-  const lines = useMemo(() => text.split("\n").length, [text]);
+  const lines = useMemo(() => lineCount(text), [text]);
   const empty = payload.bytes.length === 0;
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));
@@ -91,14 +100,17 @@ function Workbench({ payload }: { payload: DataPayload }) {
       } else if (key === "z" && !typing && !readOnly) {
         event.preventDefault();
         setHistory((h) => (event.shiftKey ? redo(h) : undo(h)));
-      } else if (event.key === "Backspace" && !typing && kind === "form" && row !== null) {
+      } else if (event.key === "Backspace" && !typing && !readOnly && kind === "form" && row !== null) {
         event.preventDefault();
         removeRow(row);
+      } else if (key === "c" && !typing && kind === "form" && row !== null && pairs[row] && !window.getSelection()?.toString()) {
+        event.preventDefault();
+        copy(pairs[row].value);
       }
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [empty, kind, readOnly, removeRow, row, save]);
+  }, [empty, kind, pairs, readOnly, removeRow, row, save]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -179,7 +191,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
       );
     }
     if (kind === "hex") return <HexView bytes={bytes} testId="data-surface" />;
-    if (kind === "form") {
+    if (kind === "form" && !lossy) {
       const edit = (index: number, part: PairPart, value: string) =>
         step(editPair(text, index, part, value), `edited the ${part} of pair ${index + 1}`);
       return (
@@ -197,9 +209,17 @@ function Workbench({ payload }: { payload: DataPayload }) {
     }
     return (
       <div className="flex min-h-0 flex-1 flex-col" onContextMenu={onContext}>
+        {lossy && (
+          <div className="border-b border-hairline px-4 py-chrome-y">
+            <Notice tone="warn" detail="an edit would rewrite those bytes too, so it stays read-only; hex shows every byte">
+              not valid UTF-8: shown with � where bytes did not decode
+            </Notice>
+          </div>
+        )}
         <EditSurface
           text={text}
-          language={SURFACE_LANGUAGE[kind]}
+          language={kind === "form" ? "plain" : SURFACE_LANGUAGE[kind]}
+          readOnly={lossy}
           onChange={(next, name, extend) => setHistory((h) => (extend ? amend(h, next, name) : commit(h, next, name)))}
           onSelect={(selected) => setSelection(selected)}
           testId="data-surface"
@@ -207,8 +227,6 @@ function Workbench({ payload }: { payload: DataPayload }) {
       </div>
     );
   };
-
-  const shownSize = readOnly || !isModified(history) ? bytes.length : new TextEncoder().encode(text).length;
 
   return (
     <div className="flex h-full flex-col bg-canvas text-ink">
@@ -243,7 +261,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
         <span data-testid="detected">
           {override ? `your choice · detected ${kindLabel(detected.kind)} from ${detected.from}` : `detected from ${detected.from}`}
         </span>
-        <span>{humanBytes(empty ? 0 : shownSize)}</span>
+        <span>{humanBytes(bytes.length)}</span>
         {!readOnly && !empty && <span>{kind === "form" ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
         <span className="ml-auto flex items-center gap-x-3">
           {selection && kind !== "form" && !readOnly && <span>selection {plural(selection.length, "character")}</span>}

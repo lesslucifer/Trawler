@@ -121,8 +121,8 @@ describe("the working copy", () => {
     expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
   });
 
-  it("restore original returns the exact handed-in bytes, even ones that were not UTF-8", async () => {
-    const bytes = new Uint8Array([0x7b, 0x22, 0x61, 0x22, 0x3a, 0xff, 0x7d]);
+  it("restore original returns the exact handed-in bytes", async () => {
+    const bytes = encode("café");
     await open(payload({ bytes, typeHint: "text/plain", text: undefined }));
     typeInto(0, "edited ");
     fireEvent.click(moreItem(/^restore original/));
@@ -138,6 +138,28 @@ describe("the working copy", () => {
     expect(moreItem(/^undo/)).toHaveTextContent("nothing to undo");
     expect(screen.getByRole("menuitem", { name: /^redo/ })).toHaveTextContent("nothing to redo");
     expect(screen.getByRole("menuitem", { name: /^restore original/ })).toHaveTextContent("unmodified");
+  });
+});
+
+describe("bytes the text cannot hold", () => {
+  it("data that is not valid UTF-8 stays read-only and says why, so no edit can rewrite the bytes around it", async () => {
+    const bytes = new Uint8Array([0x61, 0xe9, 0x62]);
+    await open(payload({ bytes, typeHint: "text/plain", text: undefined }));
+    expect(screen.getByText(/not valid UTF-8/)).toBeInTheDocument();
+    expect(view().state.readOnly).toBe(true);
+    expect(footer()).toHaveTextContent("read-only");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["save⌘S"]);
+    fireEvent.click(screen.getByRole("menuitem"));
+    expect(saved.mock.lastCall![0]).toBe(bytes);
+  });
+
+  it("a byte-order mark survives an edit", async () => {
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...encode("abc")]);
+    await open(payload({ bytes, typeHint: "text/plain", text: undefined }));
+    typeInto(view().state.doc.length, "d");
+    key("s");
+    expect(Array.from(saved.mock.lastCall![0])).toEqual([0xef, 0xbb, 0xbf, ...encode("abcd")]);
   });
 });
 
@@ -199,6 +221,13 @@ describe("a 300 KiB form payload", () => {
     fireEvent.contextMenu(screen.getAllByTestId("form-pair")[1], { clientX: 5, clientY: 5 });
     fireEvent.click(screen.getByRole("menuitem", { name: /^copy the value/ }));
     expect(writeText).toHaveBeenLastCalledWith("two words");
+  });
+
+  it("⌘C copies the selected row's value when no text is selected", async () => {
+    await open(payload({ text: "a=1&b=two", typeHint: "application/x-www-form-urlencoded" }));
+    fireEvent.click(screen.getAllByTestId("form-pair")[1]);
+    key("c");
+    expect(writeText).toHaveBeenLastCalledWith("two");
   });
 
   it("⌘⌫ removes the selected row's pair", async () => {

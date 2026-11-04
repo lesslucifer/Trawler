@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   amend,
+  decodeOriginal,
   canRedo,
   canUndo,
   commit,
@@ -101,5 +102,36 @@ describe("restore original", () => {
     const original = new TextEncoder().encode("a");
     expect(workingBytes(startHistory("a"), original)).toBe(original);
     expect(workingBytes(commit(startHistory("a"), "é", "typed"), original)).toEqual(new TextEncoder().encode("é"));
+  });
+});
+
+describe("the history is bounded", () => {
+  it("past its budget the oldest edits go, the original never does, and the count still says how many", () => {
+    const budget = 10;
+    let history = startHistory("orig");
+    for (const text of ["aaaa", "bbbb", "cccc", "dddd"]) history = commit(history, text, `set ${text}`, budget);
+    expect(steps(history)).toEqual(["original", "set cccc", "set dddd"]);
+    expect(editCount(history)).toBe(4);
+    expect(workingText(history)).toBe("dddd");
+    expect(workingText(restoreOriginal(history, budget))).toBe("orig");
+    expect(workingText(undo(undo(history)))).toBe("orig");
+  });
+
+  it("the step being made is kept even when it alone is past the budget", () => {
+    const history = commit(startHistory("a"), "x".repeat(50), "pasted", 10);
+    expect(workingText(history)).toBe("x".repeat(50));
+  });
+});
+
+describe("the original as text", () => {
+  it("valid UTF-8 decodes whole, a byte-order mark kept so it re-encodes", () => {
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf, 0x61]);
+    const decoded = decodeOriginal(bom);
+    expect(decoded.whole).toBe(true);
+    expect(Array.from(new TextEncoder().encode(decoded.text))).toEqual(Array.from(bom));
+  });
+
+  it("bytes that are not UTF-8 decode lossily and say so", () => {
+    expect(decodeOriginal(new Uint8Array([0x61, 0xff]))).toEqual({ text: "a\ufffd", whole: false });
   });
 });

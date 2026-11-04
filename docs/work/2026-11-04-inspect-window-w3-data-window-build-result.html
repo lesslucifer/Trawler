@@ -72,10 +72,16 @@
         <code>formPairs</code> · <code>body</code> · <code>dataWindow</code> · Menu · EditSurface · FormTable · HexView ·
         CutMarker · IconButton · BodyViewer · the collection roster</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/data_window.rs</code> (9, mock runtime: any number of keys
-        write one record, the last move wins) · <code>ui/src/DataWindowScreen.test.tsx</code> (16: 2 MB JSON, 300 KiB form,
-        1 MiB binary, every copy and save target, no request)</td></tr>
+        write one record, the last move wins) · <code>ui/src/DataWindowScreen.test.tsx</code> (19: 2 MB JSON, 300 KiB form,
+        1 MiB binary, every copy and save target, bytes that are not UTF-8, a kept BOM, no request)</td></tr>
       <tr><td>suites</td><td>shell <code>cargo test</code> 183 + 9 green; clippy <code>-D warnings</code> green in the real
-        and scenario builds; vitest 60,977 in 81 files green; eslint, <code>tsc -b</code> and <code>vite build</code> clean</td></tr>
+        and scenario builds; vitest 60,985 in 81 files green; eslint, <code>tsc -b</code> and <code>vite build</code> clean</td></tr>
+      <tr><td>review</td><td>round 1 FAIL on <code>29d37a2f</code>: one verified blocker (a payload that is not
+        UTF-8, or opens with a BOM, decoded lossily and re-encoded whole by the first edit) and four importants (a form edit
+        re-encoding the pair's untouched part; an unbounded history; the document flattened twice and encoded twice per
+        keystroke), fixed with regression tests in the commit after it. Such a payload now opens read-only with a warn
+        Notice; the BOM is kept; the untouched part keeps its sent bytes; the history holds at most 32 Mi characters after
+        the original, counting what it drops</td></tr>
       <tr><td>docs</td><td><a href="../decisions/dec-69-the-data-window.html">DEC-69</a> rule 10 ·
         <a href="../decisions/decisions-index.html">decisions index</a> · the four design files retired</td></tr>
     </table>
