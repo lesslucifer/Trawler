@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aea88f99f34851f0dfae2a9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP.W3 result: the Capture service page</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP.W3 result — the Capture service page</h1>
+      <p>Delivered as designed. ⌘, opens a Settings window that follows the capture service live, shows its log with a
+        mark where each core began, and restarts it. A core that exited is offered the same restart from the main
+        window.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-ONEAPP.W3</span> · branch
+        <code>wu/one-app/service-page</code> · <a href="2026-11-04-one-app-w3-service-page-plan.html">WU plan</a> ·
+        design run <em>the Capture service page</em> (archived run, at
+        <code>docs/work/2026-11-04-one-app-service-page-design-run.html</code>) ·
+        <a href="2026-11-03-one-app-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th>How it was seen</th></tr>
+      <tr><td>the design run, closed before code</td><td>delivered</td><td>round 1 on 2026-11-04: the owner's LGTM
+        kept D1–D5 as drawn. The run was archived in its own commit, before any code commit</td></tr>
+      <tr><td>⌘, opens Settings on Capture service, running, with pid, start time, ports and log</td><td>delivered</td>
+        <td>the menu's <em>Settings…</em> (⌘,) builds the <code>settings</code> window, or focuses it if it is already
+        open (<code>settings_opens_once_and_is_focused_after</code>). The page renders the running facts and the log
+        (<code>CaptureService.test.tsx</code>). Live, attached to a headless core on <code>:7421</code> (an owned run
+        was not possible: that core held both fixed ports), clicking <em>Settings…</em> opened a "Settings" window
+        showing <em>attached — started outside this app</em>, <code>http://127.0.0.1:7421</code> and the not-managed
+        sentence. A second click kept one window. A synthetic ⌘, sent through System Events did not reach the app,
+        because focus was elsewhere, so the accelerator itself was not driven</td></tr>
+      <tr><td>a killed core reads "stopped" live, and the main window offers restart</td><td>delivered</td>
+        <td><code>core://state</code> drives the page with no reload. <code>NotAnswering</code> swaps <em>try
+        again</em> for <em>restart</em> on an owned, exited core and names the exit</td></tr>
+      <tr><td>restart warns, holds, returns running on the same ports, and marks the new core</td><td>delivered</td>
+        <td>the real <code>restart_core</code> over Tauri's mock runtime answers running with a new pid on the same
+        ports and emits exited → starting → running. The ring holds one start mark per spawned pid</td></tr>
+      <tr><td>attached: address, "not managed", no restart</td><td>delivered</td><td>Vitest (attached), and the live
+        window above. The command refuses an attached core and spawns nothing</td></tr>
+      <tr><td>closing Settings never quits, and the main window ends the app</td><td>delivered</td><td>live: Quit with
+        Settings open ended the app within ~2 s, and the attached core kept listening</td></tr>
+      <tr><td>lint and suite green</td><td>delivered</td><td><code>cargo clippy --workspace --all-targets --all-features -D warnings</code> · <code>cargo test -p trawler-ui</code>
+        (lib 181, <code>restart_command</code> 3, <code>supervisor</code> 3) · <code>cargo test -p xtask</code> · Vitest
+        70 files / 60 787 tests · <code>tsc</code> · ESLint (design vocabulary included)</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>From the plan or design</th><th>What happened</th><th>Why</th></tr>
+      <tr><td><code>core_log</code> / <code>core://log</code> carried plain strings</td><td>they now carry
+        <code>{seq, kind: "start"|"line", …}</code>, and each spawn pushes a start mark (DEC-68 rule 13)</td><td>a start
+        mark is data, not text the page parses. The page subscribes and then reads, so a line can arrive by both
+        routes, and the sequence number merges them exactly</td></tr>
+      <tr><td>the window opens at <code>#settings</code></td><td>the window gets a per-window init script
+        (<code>window.__TRAWLER_PAGE__</code>) and loads <code>index.html</code></td><td><code>WebviewUrl::App</code>
+        is a path, and a <code>#</code> in it would be percent-encoded</td></tr>
+      <tr><td>closing Settings never quits</td><td>also: destroying the main window now exits the app (DEC-68 rule 14)</td>
+        <td>with a second window, "the last window closed" no longer follows from the main window closing. Q7 needs the
+        app to end with its main window</td></tr>
+      <tr><td>facts while starting or exited</td><td>show the addresses of the last running core, when there was one</td>
+        <td><code>CoreState.starting</code> and <code>.exited</code> carry no ports. The run drew them from the ports
+        a restart reuses</td></tr>
+      <tr><td>a failed restart's detail is the launch refusal</td><td>a separate <code>restart_refusal</code>: "Another
+        program is using port 7420. Quit it, then try again."</td><td>the launch sentence says "open Trawler again",
+        which is wrong advice inside a running app. This is the sentence the run drew</td></tr>
+      <tr><td>Settings in the macOS app menu</td><td>also prepended to the first menu on Windows and Linux</td><td>without
+        that, the page would be unreachable off macOS</td></tr>
+      <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
+        <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
+        service from context, so a provider is the whole fixture</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · this report</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (3): restart round-trips through the
+        supervisor · attached refuses · settings opens once. <code>tests/supervisor.rs</code> gains one start mark per
+        core</td></tr>
+      <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization) · core.rs (two restart
+        sentences) · menu.rs (Settings action) · settings.rs (only main ends the app) · Vitest:
+        <code>CaptureService.test.tsx</code> (10) · <code>useCoreService.test.ts</code> (8) ·
+        <code>NotAnswering.test.tsx</code> (4) · <code>coreService.test.ts</code> (4, updated)</td></tr>
+      <tr><td>e2e</td><td>waived for the WU: J2 belongs to W5's owned-core e2e build</td></tr>
+      <tr><td>docs</td><td>UC-SVC + UC-4 in <a href="../use-cases/web-ui.html#uc-svc">web-ui.html</a> and the
+        <a href="../use-cases/use-cases-index.html">use-case index</a> ·
+        <a href="../decisions/dec-68-the-app-supervises-its-core.html">DEC-68</a> v3 (rules 13–14) ·
+        <a href="../design-rules/design-rules-index.html">the rulebook</a> (restart, attached, the capture-service
+        exception, three key conventions)</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2: UC-SVC is new and UC-4 gains the not-answering restart. DEC-68 gains
+      rule 13 (numbered log entries and start marks) and rule 14 (Settings is a second window, and the main window ends
+      the app). The rulebook takes the run's proposals: <em>restart</em> and <em>attached</em>, the Capture service
+      page's exception to <em>capture service</em>, and ⌘, · ⌘W · a scrolling region's keys. <code>LogTail</code> stays
+      build-local, as the run's proposals row said. T1 and T0 are W5's (Q10).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Where</th></tr>
+      <tr><td>J2, the service page end to end against an owned core</td><td>W5</td></tr>
+      <tr><td>the warning could name how many flows a restart clears (the run's blocked-on row)</td><td>none planned:
+        the owner may ask for it</td></tr>
+      <tr><td>the <code>web-ui.html</code> snapshot was refused (HTTP 413, the doc is too large), so this round's
+        edit to it has no diff baseline</td><td>htmldoc server limit</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

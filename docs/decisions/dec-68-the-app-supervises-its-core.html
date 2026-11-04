@@ -12,7 +12,7 @@
       <p>Trawler is one program to its user: the app starts the capture core as a child process of its own binary,
         and the repo is one Cargo workspace whose bare <code>cargo run</code> opens that app. The API boundary does not
         move.</p>
-      <div class="meta">v2 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-ONEAPP.W1</strong>, rules 9–12 by <strong>E-ONEAPP.W2</strong>, from the owner's
+      <div class="meta">v3 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-ONEAPP.W1</strong>, rules 9–12 by <strong>E-ONEAPP.W2</strong>, rules 13–14 by <strong>E-ONEAPP.W3</strong>, from the owner's
         rulings on Q1–Q14 (2026-11-03) · supersedes <a href="dec-12-native-ui-stack.html">DEC-12</a>'s topology and
         GUI-free-root-build clauses only · UC-4 · <strong>active</strong></div>
     </div>
@@ -79,6 +79,15 @@
       <tr><td>12</td><td>An owned core's CA lives in <code>&lt;app data&gt;/ca</code>. The first launch copies a whole
         <code>./ca</code> (pem + key) there, never over an existing CA. The headless core keeps <code>./ca</code></td>
         <td>Q6: a launch from Finder has no meaningful cwd. Devices already trust the old CA</td></tr>
+      <tr><td>13</td><td>The log ring holds numbered entries: a start mark (pid, time) at every spawn, then that core's
+        stderr lines. <code>core_log</code> and <code>core://log</code> carry the same numbers, and a reader merges the
+        two by them. The ring spans restarts</td>
+        <td>a page that subscribes, then reads, would otherwise show a line heard on both twice. A crash's last
+        lines stay readable after the restart that follows it</td></tr>
+      <tr><td>14</td><td>Settings is a second window (<code>settings</code>), opened or focused by ⌘,. The main window
+        is the app: once it is destroyed the app exits, whatever else is open</td>
+        <td>Q7: closing the last window quits. A Settings window left open must not keep the core alive with no
+        main window</td></tr>
     </table>
 
     <h2 id="kept">What DEC-12 keeps</h2>
