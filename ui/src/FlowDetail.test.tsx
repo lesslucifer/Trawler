@@ -14,6 +14,8 @@ const still: LayoutControls = {
   setHeadersShare: () => {},
   resetPane: () => {},
   resetHeadersShare: () => {},
+  setColumn: () => {},
+  resetColumn: () => {},
   commit: () => {},
 };
 

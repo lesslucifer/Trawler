@@ -3,25 +3,62 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FlowSource, FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { NotAnswering } from "./NotAnswering";
-import { Button, DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
-import { DEFAULT_COLUMNS, columnTemplate } from "./layoutBounds";
-import type { ColumnWidths } from "./layoutStore";
+import { Button, DurationText, MethodLabel, Notice, Splitter, StatusPill, TimestampText } from "./components/index";
+import { COLUMN_BOUNDS, DEFAULT_COLUMNS, columnTemplate, listMin, type Track } from "./layoutBounds";
+import type { LayoutControls } from "./useLayout";
 
 const ROW_HEIGHT = 30;
 
-function HeaderRow({ template }: { template: string }) {
+type ColumnLabel = { track: Track; label: string; align?: string };
+
+const BEFORE_PATH: readonly ColumnLabel[] = [
+  { track: "time", label: "Time" },
+  { track: "method", label: "Method" },
+  { track: "host", label: "Host" },
+];
+const AFTER_PATH: readonly ColumnLabel[] = [
+  { track: "status", label: "Status", align: "text-center" },
+  { track: "duration", label: "Duration", align: "text-right" },
+];
+
+function ColumnHandle({ column, edge, split }: { column: ColumnLabel; edge: "left" | "right"; split: LayoutControls }) {
+  const width = split.layout.columns[column.track];
+  const { min, max } = COLUMN_BOUNDS[column.track];
+  return (
+    <div className={`absolute inset-y-0 flex w-3 justify-center ${edge === "right" ? "-right-3" : "-left-3"}`}>
+      <Splitter
+        axis="x"
+        dir={edge === "right" ? 1 : -1}
+        value={width}
+        min={min}
+        max={max}
+        onChange={(next) => split.setColumn(column.track, next)}
+        onCommit={split.commit}
+        onReset={() => split.resetColumn(column.track)}
+        label={`${column.label.toLowerCase()} column width`}
+        valueText={`${width} px`}
+      />
+    </div>
+  );
+}
+
+function HeaderRow({ template, split }: { template: string; split?: LayoutControls }) {
+  const label = (column: ColumnLabel, edge: "left" | "right") => (
+    <span key={column.track} className={`relative ${column.align ?? ""}`}>
+      {column.label}
+      {split && <ColumnHandle column={column} edge={edge} split={split} />}
+    </span>
+  );
   return (
     <div
       data-wire="none"
+      data-testid="column-labels"
       className="grid gap-3 border-b border-hairline px-4 py-chrome-y text-body uppercase tracking-label text-ink-mute"
       style={{ gridTemplateColumns: template }}
     >
-      <span>Time</span>
-      <span>Method</span>
-      <span>Host</span>
+      {BEFORE_PATH.map((column) => label(column, "right"))}
       <span>Path</span>
-      <span className="text-center">Status</span>
-      <span className="text-right">Duration</span>
+      {AFTER_PATH.map((column) => label(column, "left"))}
     </div>
   );
 }
@@ -128,9 +165,9 @@ export function FlowList({
   retrying = false,
   onRetry = () => {},
   onSetUp,
-  columns = DEFAULT_COLUMNS,
+  split,
 }: {
-  columns?: ColumnWidths;
+  split?: LayoutControls;
   flows: FlowSummary[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
@@ -142,6 +179,7 @@ export function FlowList({
   onRetry?: () => void;
   onSetUp?: () => void;
 }) {
+  const columns = split?.layout.columns ?? DEFAULT_COLUMNS;
   const template = columnTemplate(columns);
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -189,7 +227,7 @@ export function FlowList({
   if (flows.length === 0) {
     return (
       <div className="flex h-full flex-col">
-        <HeaderRow template={template} />
+        <HeaderRow template={template} split={split} />
         <Absence
           filtered={filtered}
           cleared={cleared}
@@ -204,65 +242,67 @@ export function FlowList({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <HeaderRow template={template} />
-      <div
-        ref={parentRef}
-        data-testid="flow-scroll"
-        role="listbox"
-        aria-label="flows"
-        data-wire="collection"
-        data-order="wire"
-        aria-activedescendant={selectedIndex < 0 ? undefined : `flow-row-${selectedId}`}
-        tabIndex={0}
-        onKeyDown={onKeyDown}
-        className="min-h-0 flex-1 overflow-auto"
-      >
-        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-          {virtualizer.getVirtualItems().map((item) => {
-            const flow = flows[item.index];
-            const row = toRow(flow);
-            const selected = flow.id === selectedId;
-            return (
-              <div
-                key={flow.id}
-                id={`flow-row-${flow.id}`}
-                data-testid="flow-row"
-                role="option"
-                aria-selected={selected}
-                onClick={() => onSelect?.(flow.id)}
-                title={row.path}
-                className={`absolute left-0 top-0 grid w-full cursor-pointer items-center gap-3 border-b border-hairline px-4 font-mono text-ink-body hover:bg-canvas-soft ${
-                  selected ? "bg-canvas-soft" : ""
-                }`}
-                style={{
-                  gridTemplateColumns: template,
-                  height: ROW_HEIGHT,
-                  transform: `translateY(${item.start}px)`,
-                }}
-              >
-                <span data-wire="started_at">
-                  <SourceMark source={flow.source} />
-                  <TimestampText timestamp={flow.started_at} />
-                </span>
-                <span data-wire="method">
-                  <MethodLabel method={flow.method} />
-                </span>
-                <span data-wire="host" className="truncate">
-                  {row.host}
-                </span>
-                <span data-wire="path" className="truncate">
-                  {row.path}
-                </span>
-                <span data-wire="status" className="text-center">
-                  <StatusPill status={flow.status} />
-                </span>
-                <span data-wire="duration_ms">
-                  <DurationText value={flow.duration_ms} />
-                </span>
-              </div>
-            );
-          })}
+    <div data-testid="flow-columns" className="h-full overflow-x-auto overflow-y-hidden">
+      <div className="flex h-full flex-col" style={{ minWidth: listMin(columns) }}>
+        <HeaderRow template={template} split={split} />
+        <div
+          ref={parentRef}
+          data-testid="flow-scroll"
+          role="listbox"
+          aria-label="flows"
+          data-wire="collection"
+          data-order="wire"
+          aria-activedescendant={selectedIndex < 0 ? undefined : `flow-row-${selectedId}`}
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        >
+          <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+            {virtualizer.getVirtualItems().map((item) => {
+              const flow = flows[item.index];
+              const row = toRow(flow);
+              const selected = flow.id === selectedId;
+              return (
+                <div
+                  key={flow.id}
+                  id={`flow-row-${flow.id}`}
+                  data-testid="flow-row"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => onSelect?.(flow.id)}
+                  title={row.path}
+                  className={`absolute left-0 top-0 grid w-full cursor-pointer items-center gap-3 border-b border-hairline px-4 font-mono text-ink-body hover:bg-canvas-soft ${
+                    selected ? "bg-canvas-soft" : ""
+                  }`}
+                  style={{
+                    gridTemplateColumns: template,
+                    height: ROW_HEIGHT,
+                    transform: `translateY(${item.start}px)`,
+                  }}
+                >
+                  <span data-wire="started_at">
+                    <SourceMark source={flow.source} />
+                    <TimestampText timestamp={flow.started_at} />
+                  </span>
+                  <span data-wire="method">
+                    <MethodLabel method={flow.method} />
+                  </span>
+                  <span data-wire="host" className="truncate">
+                    {row.host}
+                  </span>
+                  <span data-wire="path" className="truncate">
+                    {row.path}
+                  </span>
+                  <span data-wire="status" className="text-center">
+                    <StatusPill status={flow.status} />
+                  </span>
+                  <span data-wire="duration_ms">
+                    <DurationText value={flow.duration_ms} />
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

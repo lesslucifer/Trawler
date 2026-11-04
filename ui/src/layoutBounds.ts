@@ -26,9 +26,27 @@ const CELL_GAP = px(tokenOf(ROW_CHROME.gap));
 const PATH_MIN = px("path-min");
 const SPLIT_LINE = 1;
 
-// The time column holds the cross-day timestamp an import produces (115.2px)
-// plus the source mark's reserved 16px box; the mark never enters the arithmetic.
-export const DEFAULT_COLUMNS: ColumnWidths = { time: 160, method: 70, host: 180, status: 70, size: 90 };
+export type Track = keyof ColumnWidths;
+type Sized = Bounds & { initial: number };
+
+export const TRACKS: readonly Track[] = ["time", "method", "host", "status", "duration"];
+
+const trackBounds = (track: Track): Sized => ({
+  initial: px(`col-${track}`),
+  min: px(`col-${track}-min`),
+  max: px(`col-${track}-max`),
+});
+
+const perTrack = <T>(of: (track: Track) => T) =>
+  Object.fromEntries(TRACKS.map((track) => [track, of(track)])) as Record<Track, T>;
+
+export const COLUMN_BOUNDS = perTrack(trackBounds);
+
+export const DEFAULT_COLUMNS: ColumnWidths = perTrack((track) => COLUMN_BOUNDS[track].initial);
+
+export function restorableColumns(saved: ColumnWidths): ColumnWidths {
+  return perTrack((track) => clamp(saved[track], COLUMN_BOUNDS[track]));
+}
 
 export const DEFAULT_LAYOUT: SavedLayout = {
   pane: PANE.initial,
@@ -36,8 +54,8 @@ export const DEFAULT_LAYOUT: SavedLayout = {
   columns: DEFAULT_COLUMNS,
 };
 
-export function columnTemplate({ time, method, host, status, size }: ColumnWidths): string {
-  return `${time}px ${method}px ${host}px 1fr ${status}px ${size}px`;
+export function columnTemplate({ time, method, host, status, duration }: ColumnWidths): string {
+  return `${time}px ${method}px ${host}px minmax(${PATH_MIN}px, 1fr) ${status}px ${duration}px`;
 }
 
 export function clamp(value: number, { min, max }: Bounds): number {

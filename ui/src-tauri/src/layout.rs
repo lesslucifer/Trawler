@@ -17,7 +17,7 @@ pub struct ColumnWidths {
     pub method: u32,
     pub host: u32,
     pub status: u32,
-    pub size: u32,
+    pub duration: u32,
 }
 
 fn layout_path(config_dir: &Path) -> PathBuf {
@@ -75,7 +75,7 @@ mod tests {
         Layout {
             pane: 600,
             headers_share: 0.42,
-            columns: ColumnWidths { time: 160, method: 70, host: 240, status: 70, size: 90 },
+            columns: ColumnWidths { time: 160, method: 70, host: 240, status: 70, duration: 90 },
         }
     }
 
@@ -84,7 +84,7 @@ mod tests {
         std::fs::write(layout_path(dir), text).unwrap();
     }
 
-    const WHOLE: &str = r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"size":90}}"#;
+    const WHOLE: &str = r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"duration":90}}"#;
 
     #[test]
     fn a_written_layout_reads_back_unchanged() {
@@ -121,19 +121,29 @@ mod tests {
     fn any_other_shape_reads_as_no_saved_layout() {
         let dir = TempDir::new("shape");
         for shape in [
-            r#"{"pane":600,"columns":{"time":160,"method":70,"host":240,"status":70,"size":90}}"#,
+            r#"{"pane":600,"columns":{"time":160,"method":70,"host":240,"status":70,"duration":90}}"#,
             r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70}}"#,
-            r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"size":90},"version":2}"#,
-            r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"path":300,"status":70,"size":90}}"#,
-            r#"{"pane":"600","headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"size":90}}"#,
-            r#"{"pane":-1,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"size":90}}"#,
-            r#"{"pane":600,"headersShare":"wide","columns":{"time":160,"method":70,"host":240,"status":70,"size":90}}"#,
+            r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"duration":90},"version":2}"#,
+            r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"path":300,"status":70,"duration":90}}"#,
+            r#"{"pane":"600","headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"duration":90}}"#,
+            r#"{"pane":-1,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"duration":90}}"#,
+            r#"{"pane":600,"headersShare":"wide","columns":{"time":160,"method":70,"host":240,"status":70,"duration":90}}"#,
             "[]",
             "null",
         ] {
             saved(&dir.0, shape);
             assert_eq!(read_layout(&dir.0), None, "{shape}");
         }
+    }
+
+    #[test]
+    fn a_layout_saved_before_duration_was_named_reads_as_no_saved_layout() {
+        let dir = TempDir::new("size-key");
+        saved(
+            &dir.0,
+            r#"{"pane":600,"headersShare":0.42,"columns":{"time":160,"method":70,"host":240,"status":70,"size":90}}"#,
+        );
+        assert_eq!(read_layout(&dir.0), None);
     }
 
     #[test]

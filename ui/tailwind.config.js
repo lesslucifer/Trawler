@@ -91,6 +91,24 @@ export default {
       // The narrowest a flow row's path cell may get: about sixteen mono
       // characters, enough to recognise an endpoint.
       "path-min": "128px",
+      // The flow row's fixed tracks: each default, and the floor its content
+      // needs uncut (host alone is cut, with an ellipsis) to the ceiling past
+      // which the track only takes the path's room.
+      "col-time": "160px",
+      "col-time-min": "136px",
+      "col-time-max": "240px",
+      "col-method": "70px",
+      "col-method-min": "56px",
+      "col-method-max": "112px",
+      "col-host": "180px",
+      "col-host-min": "96px",
+      "col-host-max": "480px",
+      "col-status": "70px",
+      "col-status-min": "48px",
+      "col-status-max": "112px",
+      "col-duration": "90px",
+      "col-duration-min": "64px",
+      "col-duration-max": "160px",
       // How far a splitter's hit band reaches past its 1px line on each side.
       "grip-reach": "4px",
       "listing-max": "184px",

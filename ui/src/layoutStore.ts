@@ -6,7 +6,7 @@ export type ColumnWidths = {
   method: number;
   host: number;
   status: number;
-  size: number;
+  duration: number;
 };
 
 export type SavedLayout = {

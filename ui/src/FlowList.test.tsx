@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowList } from "./FlowList";
-import { ROW_CHROME } from "./layoutBounds";
+import { DEFAULT_COLUMNS, DEFAULT_LAYOUT, ROW_CHROME, columnTemplate, listMin } from "./layoutBounds";
+import type { LayoutControls } from "./useLayout";
 import type { FlowSummary } from "./api";
 
 function flow(over: Partial<FlowSummary> = {}): FlowSummary {
@@ -432,15 +433,112 @@ test("each provenance wears its own face, and a captured row wears none", () => 
   expect(faces).toEqual(["", "↑", "↗"]);
 });
 
+function controls(columns = DEFAULT_COLUMNS): LayoutControls {
+  return {
+    layout: { ...DEFAULT_LAYOUT, columns },
+    setPane: vi.fn(),
+    setHeadersShare: vi.fn(),
+    resetPane: vi.fn(),
+    resetHeadersShare: vi.fn(),
+    setColumn: vi.fn(),
+    resetColumn: vi.fn(),
+    commit: vi.fn(),
+  };
+}
+
+const handle = (name: string) => screen.getByRole("separator", { name: `${name} column width` });
+
 test("the label row and every row lay out the saved column widths, with the chrome the pane's bound counts", () => {
   const { container } = render(
-    <FlowList flows={[flow()]} columns={{ time: 200, method: 70, host: 300, status: 70, size: 90 }} />,
+    <FlowList flows={[flow()]} split={controls({ time: 200, method: 70, host: 300, status: 70, duration: 90 })} />,
   );
   const row = container.querySelector('[data-testid="flow-row"]') as HTMLElement;
-  const label = screen.getByText("Time").parentElement as HTMLElement;
+  const label = screen.getByTestId("column-labels");
   for (const grid of [row, label]) {
-    expect(grid.style.gridTemplateColumns).toBe("200px 70px 300px 1fr 70px 90px");
+    expect(grid.style.gridTemplateColumns).toBe("200px 70px 300px minmax(128px, 1fr) 70px 90px");
     expect(grid.classList).toContain(ROW_CHROME.inset);
     expect(grid.classList).toContain(ROW_CHROME.gap);
   }
+});
+
+test("the label row scrolls sideways with the rows, at least as wide as the row's minimum", () => {
+  const columns = { ...DEFAULT_COLUMNS, host: 480 };
+  render(<FlowList flows={[flow()]} split={controls(columns)} />);
+  const scroller = screen.getByTestId("flow-columns");
+  expect(scroller.className).toMatch(/overflow-x-auto/);
+  expect(scroller).toContainElement(screen.getByTestId("column-labels"));
+  expect(scroller).toContainElement(listbox());
+  expect(screen.getByTestId("column-labels").parentElement).toHaveStyle({ minWidth: `${listMin(columns)}px` });
+  expect(listbox().className).toMatch(/overflow-y-auto/);
+});
+
+test("each fixed column carries a handle bounded by its own tokens; path carries none", () => {
+  render(<FlowList flows={[flow()]} split={controls()} />);
+  const bounds = [
+    ["time", 160, 136, 240],
+    ["method", 70, 56, 112],
+    ["host", 180, 96, 480],
+    ["status", 70, 48, 112],
+    ["duration", 90, 64, 160],
+  ] as const;
+  expect(screen.getAllByRole("separator")).toHaveLength(bounds.length);
+  for (const [name, now, min, max] of bounds) {
+    expect(handle(name)).toHaveAttribute("aria-valuenow", String(now));
+    expect(handle(name)).toHaveAttribute("aria-valuemin", String(min));
+    expect(handle(name)).toHaveAttribute("aria-valuemax", String(max));
+    expect(handle(name)).toHaveAttribute("aria-valuetext", `${now} px`);
+  }
+});
+
+test("a handle before the path widens its column rightwards, one after it leftwards", () => {
+  const split = controls();
+  render(<FlowList flows={[flow()]} split={split} />);
+  fireEvent.keyDown(handle("host"), { key: "ArrowRight" });
+  fireEvent.keyDown(handle("status"), { key: "ArrowLeft" });
+  fireEvent.keyDown(handle("duration"), { key: "ArrowLeft", shiftKey: true });
+  expect(split.setColumn).toHaveBeenNthCalledWith(1, "host", 188);
+  expect(split.setColumn).toHaveBeenNthCalledWith(2, "status", 78);
+  expect(split.setColumn).toHaveBeenNthCalledWith(3, "duration", 138);
+  expect(split.commit).toHaveBeenCalledTimes(3);
+});
+
+test("a column drag reports the width clamped to the track's bounds and commits once on release", () => {
+  const split = controls();
+  render(<FlowList flows={[flow()]} split={split} />);
+  const host = handle("host");
+  fireEvent.pointerDown(host, { button: 0, clientX: 400, pointerId: 1 });
+  fireEvent.pointerMove(host, { clientX: 1000, pointerId: 1 });
+  fireEvent.pointerMove(host, { clientX: 0, pointerId: 1 });
+  fireEvent.pointerUp(host, { pointerId: 1 });
+  expect(vi.mocked(split.setColumn).mock.calls).toEqual([
+    ["host", 480],
+    ["host", 96],
+  ]);
+  expect(split.commit).toHaveBeenCalledTimes(1);
+});
+
+test("a double-click resets that one column", () => {
+  const split = controls({ ...DEFAULT_COLUMNS, method: 100 });
+  render(<FlowList flows={[flow()]} split={split} />);
+  fireEvent.doubleClick(handle("method"));
+  expect(split.resetColumn).toHaveBeenCalledWith("method");
+  expect(split.commit).toHaveBeenCalledTimes(1);
+});
+
+test("the column handles come before the rows in tab order", () => {
+  render(<FlowList flows={three} split={controls()} />);
+  const focusable = Array.from(document.querySelectorAll<HTMLElement>('[tabindex="0"]'));
+  expect(focusable.map((el) => el.getAttribute("role"))).toEqual([...Array(5).fill("separator"), "listbox"]);
+});
+
+test("the handles are drawn on an empty list too, so columns size before traffic", () => {
+  render(<FlowList flows={[]} split={controls()} />);
+  expect(screen.getAllByRole("separator")).toHaveLength(5);
+});
+
+test("a list with no layout to size draws the default columns and no handles", () => {
+  const { container } = render(<FlowList flows={[flow()]} />);
+  const row = container.querySelector('[data-testid="flow-row"]') as HTMLElement;
+  expect(row.style.gridTemplateColumns).toBe(columnTemplate(DEFAULT_COLUMNS));
+  expect(screen.queryByRole("separator")).toBeNull();
 });
