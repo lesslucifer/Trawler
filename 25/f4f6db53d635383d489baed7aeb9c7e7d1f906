@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-QUERY
+wu: E-QUERY.W1
+branch: HEAD
+tests:
+  unit: { count: 92, covers: "each predicate alone and negated; repeated key any of; repeated q all of; different keys all of; a negated status keeps a pending flow; is pending and https; host with and without a port, empty host matching hostless flows; host_with_port and is_https derivation; query pairs to filter with unknown keys ignored; every refusal leads with the parameter as sent" }
+  integration: { count: 49, covers: "for nine list, negation and is queries the listing, the HAR export and a clear on a fresh store select the same flows and the clear leaves the rest; every single-parameter query selects what it did before; an unreadable value is refused 400 by all three doors naming the parameter as sent, and a refused clear removes nothing" }
+  e2e: { waived: "W1 adds no flow a user walks; the epic's W4 WebDriver spec drives these parameters through the app" }
