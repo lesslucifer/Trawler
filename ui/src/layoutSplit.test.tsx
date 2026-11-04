@@ -47,7 +47,16 @@ function Shell() {
     <Layout
       header={null}
       split={split}
-      detail={<FlowDetail split={split} api={apiStub()} flow={flow} onClose={() => {}} />}
+      detail={<FlowDetail
+          split={split}
+          api={apiStub()}
+          flow={flow}
+          onClose={() => {}}
+          leg="request"
+          onLeg={() => {}}
+          pretty
+          onPretty={() => {}}
+        />}
     >
       rows
     </Layout>

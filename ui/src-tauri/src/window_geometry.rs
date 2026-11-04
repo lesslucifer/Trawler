@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Window, WindowEvent};
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, Window, WindowEvent};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -153,18 +153,26 @@ impl Tracker {
 
 pub fn install(app: &AppHandle) {
     let records = crate::setup::config_dir(app).map(|dir| read_records(&dir)).unwrap_or_default();
+    track_from(app, records);
+}
+
+pub fn track_from<R: Runtime>(app: &AppHandle<R>, records: Records) {
     app.manage(Tracker(Mutex::new(records)));
     for window in app.webview_windows().values() {
-        restore(&window.as_ref().window());
+        let window = window.as_ref().window();
+        restore(&window, min_size_of(&window));
     }
 }
 
-pub fn restore(window: &Window) {
+pub fn tracked_records<R: Runtime>(app: &AppHandle<R>) -> Records {
+    app.try_state::<Tracker>().map(|tracker| tracker.records().clone()).unwrap_or_default()
+}
+
+pub fn restore<R: Runtime>(window: &Window<R>, min: MinSize) {
     let Some(tracker) = window.try_state::<Tracker>() else { return };
     let saved = tracker.records().get(window.label()).copied();
-    let applied = saved.and_then(|record| {
-        placed(record, frame_of(window), &work_areas(window), min_size_of(window))
-    });
+    let applied =
+        saved.and_then(|record| placed(record, frame_of(window), &work_areas(window), min));
     if let Some(geometry) = applied {
         apply(window, geometry);
     }
@@ -203,7 +211,7 @@ pub fn save(app: &AppHandle) {
 }
 
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
-fn apply(window: &Window, geometry: Geometry) {
+fn apply<R: Runtime>(window: &Window<R>, geometry: Geometry) {
     let applied = window
         .set_size(PhysicalSize::new(geometry.width, geometry.height))
         .and_then(|()| window.set_position(PhysicalPosition::new(geometry.x, geometry.y)))
@@ -213,7 +221,7 @@ fn apply(window: &Window, geometry: Geometry) {
     }
 }
 
-fn current(window: &Window) -> Option<Geometry> {
+fn current<R: Runtime>(window: &Window<R>) -> Option<Geometry> {
     let position = window.outer_position().ok()?;
     let size = window.inner_size().ok()?;
     Some(Geometry {
@@ -225,7 +233,7 @@ fn current(window: &Window) -> Option<Geometry> {
     })
 }
 
-fn frame_of(window: &Window) -> Frame {
+fn frame_of<R: Runtime>(window: &Window<R>) -> Frame {
     match (window.outer_size(), window.inner_size()) {
         (Ok(outer), Ok(inner)) => Frame {
             width: outer.width.saturating_sub(inner.width),
@@ -235,7 +243,7 @@ fn frame_of(window: &Window) -> Frame {
     }
 }
 
-fn work_areas(window: &Window) -> Vec<WorkArea> {
+fn work_areas<R: Runtime>(window: &Window<R>) -> Vec<WorkArea> {
     let primary = window.primary_monitor().ok().flatten().map(|monitor| *monitor.position());
     let mut monitors = window.available_monitors().unwrap_or_default();
     monitors.sort_by_key(|monitor| Some(*monitor.position()) != primary);
@@ -254,7 +262,7 @@ fn work_areas(window: &Window) -> Vec<WorkArea> {
         .collect()
 }
 
-fn min_size_of(window: &Window) -> MinSize {
+fn min_size_of<R: Runtime>(window: &Window<R>) -> MinSize {
     window
         .app_handle()
         .config()

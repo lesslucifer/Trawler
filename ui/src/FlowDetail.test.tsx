@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState, type ComponentProps } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import { FlowDetail } from "./FlowDetail";
 import { toCurl } from "./flow";
 import { CONFIRM_MS } from "./components/index";
-import type { FlowView, TrawlerApi } from "./api";
+import type { FlowView, Leg, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 import { DEFAULT_LAYOUT } from "./layoutBounds";
 import type { LayoutControls } from "./useLayout";
@@ -18,6 +19,15 @@ const still: LayoutControls = {
   resetColumn: () => {},
   commit: () => {},
 };
+
+type Chosen = "leg" | "onLeg" | "pretty" | "onPretty";
+
+function Detail(props: Omit<ComponentProps<typeof FlowDetail>, Chosen> & { initialLeg?: Leg }) {
+  const { initialLeg = "request", ...rest } = props;
+  const [leg, setLeg] = useState<Leg>(initialLeg);
+  const [pretty, setPretty] = useState(true);
+  return <FlowDetail {...rest} leg={leg} onLeg={setLeg} pretty={pretty} onPretty={setPretty} />;
+}
 
 const stubApi = (): TrawlerApi =>
   apiStub({
@@ -82,7 +92,7 @@ function withOverflowingValueCells(run: () => void) {
 }
 
 test("while the flow is still loading, one sentence stands in for the whole panel", () => {
-  render(<FlowDetail split={still} api={stubApi()} flow={null} onClose={() => {}} />);
+  render(<Detail split={still} api={stubApi()} flow={null} onClose={() => {}} />);
   const pending = screen.getByTestId("detail-loading");
   expect(pending).toHaveTextContent("loading this flow…");
   expect(pending.querySelector("[data-tone]")).toHaveAttribute("data-tone", "mute");
@@ -91,7 +101,7 @@ test("while the flow is still loading, one sentence stands in for the whole pane
 });
 
 test("the identity row: verb, status with its reason phrase, duration, and the leg selector on request", () => {
-  render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
+  render(<Detail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
   const detail = screen.getByTestId("detail");
   expect(within(detail.querySelector("header")!).getByText("GET").className).toMatch(/text-ok/);
   expect(screen.getByLabelText("200 OK")).toBeInTheDocument();
@@ -104,13 +114,13 @@ test("the identity row: verb, status with its reason phrase, duration, and the l
 });
 
 test("a duration over a second is scaled by the component, not by the screen", () => {
-  render(<FlowDetail split={still} api={stubApi()} flow={view({ duration_ms: 1400 })} onClose={() => {}} />);
+  render(<Detail split={still} api={stubApi()} flow={view({ duration_ms: 1400 })} onClose={() => {}} />);
   expect(screen.getByText("1.4 s")).toBeInTheDocument();
 });
 
 test("the flow line: the URI is a copy target and the versions line carries both protocols", async () => {
   const writeText = stubClipboard();
-  render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
+  render(<Detail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
   const uri = screen.getByRole("button", { name: "copy uri" });
   expect(uri).toHaveTextContent("http://example.com/a?x=1");
   expect(screen.getByTestId("flow-line")).toHaveTextContent("HTTP/1.1 → HTTP/2.0");
@@ -122,7 +132,7 @@ test("the flow line: the URI is a copy target and the versions line carries both
 
 test("an in-flight flow has no response version and the line carries no arrow", () => {
   render(
-    <FlowDetail split={still}
+    <Detail split={still}
       api={stubApi()}
       flow={view({ response_http_version: null, status: null, duration_ms: null, response_body: null })}
       onClose={() => {}}
@@ -136,7 +146,7 @@ test("an in-flight flow has no response version and the line carries no arrow", 
 test("headers render in wire order, duplicate names survive, and a value copies on click", async () => {
   const writeText = stubClipboard();
   render(
-    <FlowDetail split={still}
+    <Detail split={still}
       api={stubApi()}
       flow={view({
         request_headers: [
@@ -163,7 +173,7 @@ test("headers render in wire order, duplicate names survive, and a value copies 
 });
 
 test("a leg that sent no headers says so, keeps its zone, and stays selectable", () => {
-  render(<FlowDetail split={still} api={stubApi()} flow={view({ response_headers: [] })} onClose={() => {}} />);
+  render(<Detail split={still} api={stubApi()} flow={view({ response_headers: [] })} onClose={() => {}} />);
   fireEvent.click(legRadio("response"));
   const notice = screen.getByText("none — this leg sent no headers");
   expect(notice.closest("[data-tone]")).toHaveAttribute("data-tone", "mute");
@@ -177,7 +187,7 @@ test("copy as curl writes the command, confirms, reverts — and the command is 
   try {
     const writeText = stubClipboard();
     const flow = view();
-    render(<FlowDetail split={still} api={stubApi()} flow={flow} onClose={() => {}} />);
+    render(<Detail split={still} api={stubApi()} flow={flow} onClose={() => {}} />);
     expect(screen.getByTestId("detail").textContent).not.toContain("curl '");
 
     fireEvent.click(screen.getByRole("button", { name: "copy as curl" }));
@@ -199,14 +209,14 @@ test("copy as curl writes the command, confirms, reverts — and the command is 
 
 test("✕ closes the panel", () => {
   const onClose = vi.fn();
-  render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={onClose} />);
+  render(<Detail split={still} api={stubApi()} flow={view()} onClose={onClose} />);
   fireEvent.click(screen.getByRole("button", { name: "close" }));
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 test("Esc closes the panel from anywhere, unless another surface already claimed it", () => {
   const onClose = vi.fn();
-  render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={onClose} />);
+  render(<Detail split={still} api={stubApi()} flow={view()} onClose={onClose} />);
 
   fireEvent.keyDown(document.body, { key: "Escape" });
   expect(onClose).toHaveBeenCalledTimes(1);
@@ -219,7 +229,7 @@ test("Esc closes the panel from anywhere, unless another surface already claimed
 
 test("Esc still dismisses a panel that is only loading", () => {
   const onClose = vi.fn();
-  render(<FlowDetail split={still} api={stubApi()} flow={null} onClose={onClose} />);
+  render(<Detail split={still} api={stubApi()} flow={null} onClose={onClose} />);
   fireEvent.keyDown(document.body, { key: "Escape" });
   expect(onClose).toHaveBeenCalledTimes(1);
 });
@@ -229,7 +239,7 @@ test("closing returns focus to whatever had it when the panel opened", () => {
   document.body.appendChild(origin);
   origin.focus();
   try {
-    render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
+    render(<Detail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
     const close = screen.getByRole("button", { name: "close" });
     close.focus();
     expect(document.activeElement).toBe(close);
@@ -247,7 +257,7 @@ test("closing returns focus to whatever had it when the panel opened", () => {
 test("one selector governs both leg-scoped zones; the flow line follows neither", async () => {
   const api = stubApi();
   render(
-    <FlowDetail split={still}
+    <Detail split={still}
       api={api}
       flow={view({
         request_headers: [{ name: "accept", value: "*/*" }],
@@ -282,7 +292,7 @@ test("one selector governs both leg-scoped zones; the flow line follows neither"
 // body is the zone a reader came for, so it takes the height the headers leave.
 test("the panel never scrolls as a whole: headers are capped and scroll inside, the body fills the rest", async () => {
   render(
-    <FlowDetail split={still}
+    <Detail split={still}
       api={stubApi()}
       flow={view({ request_body: { state: "captured", size: 5, data_base64: "" } })}
       onClose={() => {}}
@@ -310,7 +320,7 @@ test("a header value taller than three lines is clamped, and one act under its n
   const cookie = "session=" + "x".repeat(900);
   withOverflowingValueCells(() => {
     render(
-      <FlowDetail split={still}
+      <Detail split={still}
         api={stubApi()}
         flow={view({ request_headers: [{ name: "set-cookie", value: cookie }] })}
         onClose={() => {}}
@@ -328,7 +338,7 @@ test("a header value taller than three lines is clamped, and one act under its n
 
 test("replay stands in the flow line beside copy as curl, and opens a draft of this flow", () => {
   const onReplay = vi.fn();
-  render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={() => {}} onReplay={onReplay} />);
+  render(<Detail split={still} api={stubApi()} flow={view()} onClose={() => {}} onReplay={onReplay} />);
   const line = screen.getByTestId("flow-line");
 
   const buttons = within(line).getAllByRole("button");
@@ -339,7 +349,7 @@ test("replay stands in the flow line beside copy as curl, and opens a draft of t
 });
 
 test("with nothing to replay into, the inspector offers no replay", () => {
-  render(<FlowDetail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
+  render(<Detail split={still} api={stubApi()} flow={view()} onClose={() => {}} />);
   expect(screen.queryByRole("button", { name: "replay" })).toBeNull();
 });
 
@@ -348,7 +358,7 @@ test("the headers ceiling is the user's share, sized by a splitter under the hea
   const commit = vi.fn();
   const resetHeadersShare = vi.fn();
   render(
-    <FlowDetail
+    <Detail
       split={{ ...still, layout: { ...DEFAULT_LAYOUT, headersShare: 0.5 }, setHeadersShare, commit, resetHeadersShare }}
       api={stubApi()}
       flow={view()}
@@ -374,7 +384,7 @@ test("the pane's height turns a dragged pixel into a share", () => {
   const setHeadersShare = vi.fn();
   const tall = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ height: 400 } as DOMRect);
   try {
-    render(<FlowDetail split={{ ...still, setHeadersShare }} api={stubApi()} flow={view()} onClose={() => {}} />);
+    render(<Detail split={{ ...still, setHeadersShare }} api={stubApi()} flow={view()} onClose={() => {}} />);
     const splitter = screen.getByRole("separator", { name: "headers height" });
     fireEvent.pointerDown(splitter, { button: 0, clientY: 300, pointerId: 1 });
     fireEvent.pointerMove(splitter, { clientY: 340, pointerId: 1 });
@@ -393,7 +403,7 @@ test("splitter B starts from where a short leg puts it, not from the ceiling abo
     });
   try {
     render(
-      <FlowDetail
+      <Detail
         split={{ ...still, layout: { ...DEFAULT_LAYOUT, headersShare: 0.5 }, setHeadersShare }}
         api={stubApi()}
         flow={view()}
@@ -419,7 +429,7 @@ test("a leg shorter than zone-min keeps its line where it sits, and the share sa
       return { height: this.dataset.testid === "headers-zone" ? 32 : 400 } as DOMRect;
     });
   try {
-    render(<FlowDetail split={{ ...still, setHeadersShare }} api={stubApi()} flow={view()} onClose={() => {}} />);
+    render(<Detail split={{ ...still, setHeadersShare }} api={stubApi()} flow={view()} onClose={() => {}} />);
     const splitter = screen.getByRole("separator", { name: "headers height" });
     expect(splitter).toHaveAttribute("aria-valuenow", "0.08");
     expect(splitter).toHaveAttribute("aria-valuemin", "0.08");
@@ -438,13 +448,13 @@ test("resizing the headers does not decode the body again", async () => {
     getBody: vi.fn(async () => ({ bytes: new TextEncoder().encode('{"a":1}'), contentType: "application/json" })),
   });
   const flow = view({ request_body: { state: "captured", size: 7, data_base64: "" } });
-  const { rerender } = render(<FlowDetail split={still} api={api} flow={flow} onClose={() => {}} />);
+  const { rerender } = render(<Detail split={still} api={api} flow={flow} onClose={() => {}} />);
   await screen.findByTestId("body-pane");
   const decode = vi.spyOn(TextDecoder.prototype, "decode");
   try {
     for (const headersShare of [0.4, 0.45, 0.5]) {
       rerender(
-        <FlowDetail
+        <Detail
           split={{ ...still, layout: { ...DEFAULT_LAYOUT, headersShare } }}
           api={api}
           flow={flow}
@@ -456,4 +466,42 @@ test("resizing the headers does not decode the body again", async () => {
   } finally {
     decode.mockRestore();
   }
+});
+
+// E-STICKY: the leg is the user's, held above the pane, so the pane opens on it
+// and hands a pick back instead of keeping one of its own.
+test("the pane opens on the leg it is handed and hands a pick back without taking it", () => {
+  const onLeg = vi.fn();
+  render(
+    <FlowDetail
+      split={still}
+      api={stubApi()}
+      flow={view()}
+      onClose={() => {}}
+      leg="response"
+      onLeg={onLeg}
+      pretty={false}
+      onPretty={() => {}}
+    />,
+  );
+  expect(legRadio("response")).toBeChecked();
+  expect(screen.getByRole("radiogroup", { name: "response body mode" })).toBeInTheDocument();
+  fireEvent.click(legRadio("request"));
+  expect(onLeg).toHaveBeenCalledWith("request");
+  expect(legRadio("response")).toBeChecked();
+});
+
+test("a flow with no response yet still opens on the response leg the user chose", () => {
+  render(
+    <Detail
+      split={still}
+      api={stubApi()}
+      flow={view({ status: null, response_http_version: null, response_body: null, response_headers: [] })}
+      onClose={() => {}}
+      initialLeg="response"
+    />,
+  );
+  expect(legRadio("response")).toBeChecked();
+  expect(screen.getByTestId("body-viewer")).toHaveAttribute("data-leg", "response");
+  expect(screen.getByText("no response yet")).toBeInTheDocument();
 });
