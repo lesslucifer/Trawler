@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb3ce49f34851f0dfae607" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W6 result: decoders</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W6 — result</h1>
+      <p>A selection or a form value now decodes in a peek under it — base64, URL-encoding or a JWT, or the reason none
+        reads it — and is replaced as one step or opened as data of its own.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W6</span> · branch
+        <code>wu/inspect-window/decoders</code> · <a href="2026-11-04-inspect-window-w6-decoders-plan.html">WU
+        plan</a> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th></th></tr>
+      <tr><td>a JWT selected in JSON decodes from the right-click under the selection's last line</td><td><em>decode</em>
+        ⌘⇧D first in the selection's right-click, waiting with <em>select a value</em>; the peek is a block under the
+        line holding the selection's trimmed end, pushing lines down, scrolling past <code>body-max</code>; <em>decoded as
+        JWT</em>, header and payload at 2 spaces on read-only EditSurfaces, <em>signature · not verified</em> as
+        written</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>⇄ replaces as one undoable step</td><td><em>replaced the selection with its decoded form</em>: only the
+        selected range, spaces around it kept, JSON-escaped as string content in JSON, joined with the text's own line
+        breaks; a JWT gives its payload as written</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a form row decodes and ⇄ re-encodes into the value</td><td><em>decode the value</em> ⌘⇧D on the row's
+        right-click (disabled on an empty value) and on the selected row; the peek under the row; <em>replaced the value of
+        “assertion” with its decoded form</em></td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>binary offers ↗ only and opens as hex</td><td><em>10 B of binary · looks like gzip</em> (PNG, JPEG, GIF,
+        gzip, PDF named); ↗ opens <em>&lt;title&gt; · decoded base64</em> with the decoded bytes and no type hint, so the
+        window sniffs hex or image; JSON and a JWT payload open as <code>application/json</code>, text as
+        <code>text/plain</code>; the key is the bytes' SHA-256, so the same result focuses its window</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a malformed input says why and changes nothing</td><td><em>not base64, URL-encoded or a JWT: …</em> with
+        the guessed decoder's reason (4n + 1 length, a foreign character, padding mid-string, a bad escape, 2 or 4 parts,
+        a segment not base64url or not JSON) and <em>the selection is left as it was</em>; no ⇄ or ↗</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>Esc, ×, an edit, undo or another kind close the peek</td><td>as listed; Esc leaves an open menu and a
+        focused field to their own Esc</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a switch when more than one decoder reads the value</td><td>not built: see deviations</td><td><span class="badge approval">dropped</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan or run said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>a SegmentedControl switch among the decoders that read the value, a lone one a label (the run's DecodePeek,
+        the plan's requirement)</td><td>the decoder that reads it is always a label; <code>decode</code> returns one
+        reading or the reason</td><td>under the owner's round-2 rule (offer only the decoders that read it) no value reads
+        two ways: base64 and a JWT refuse <code>%</code>, a JWT's dots refuse base64, and URL counts only over an escape —
+        so the switch could never show. It returns with a decoder that overlaps one of these</td></tr>
+      <tr><td>the run's peek replaced the first occurrence of the decoded text</td><td>the selection's own range is
+        spliced; EditSurface's handle gains <code>selection()</code></td><td>a value repeated earlier in the document
+        would have been replaced instead</td></tr>
+      <tr><td>—</td><td>decode is offered on the editable text kinds and the form table only</td><td>read-only text keeps
+        W3's native right-click and has nothing to replace; hex and image have no text to select</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>d5e59a93</code> plan · <code>986f67bc</code> decoders, the peek, the right-click rows
+        and ⌘⇧D, EditSurface <code>selection()</code>, IconButton <code>replace</code></td></tr>
+      <tr><td>unit</td><td><code>decoders</code> (18: base64 standard, URL-safe, padded, padding-less and with
+        whitespace; 4n + 1, a foreign character, mid-string padding, nothing; JSON at 2 spaces with a number past
+        2<sup>53</sup> kept; binary with and without a signature, a control character, tab and CRLF as text; URL with
+        <code>+</code>, a bad escape, non-UTF-8 escapes as binary; JWT valid, empty signature, 2 and 4 parts, a header not
+        base64url, a payload not JSON; the guess, one reading only, URL only over an escape, base64-to-binary only with a
+        signature, the reason; replacement, what each opens as, the content key) · EditSurface <code>selection()</code> ·
+        IconButton <code>replace</code> ⇄</td></tr>
+      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (9 new: a JWT from the right-click
+        under its line with nothing modified; ⇄ as JSON string content and ⌘Z; one occurrence replaced in a CRLF text and
+        copied with CRLF; a malformed token's reason with no acts; binary ↗ handing the decoded bytes, title and a key of
+        their own; a JWT opening its payload as JSON; a form row from the right-click and ⌘⇧D, ⇄ and undo; an empty value
+        disabled; Esc, an edit and a kind change closing the peek)</td></tr>
+      <tr><td>suites</td><td>vitest 61 252 in 92 files green; eslint and <code>tsc</code> clean; the pre-commit fmt and clippy green</td></tr>
+      <tr><td>review</td><td>Round 1 on the tip that carries this report</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2 waived: no decision, use case or rule changed. EditSurface's
+      <code>selection()</code> and IconButton's ⇄ live in their code and TSDoc (T4). UC-9's decoder rows and ⌘⇧D land in
+      the use case and the rulebook with W7, as the epic's distillation plan says.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W7</td><td>J3 decodes a JWT form value and opens the payload in a real second window; ⌘⇧D, <em>decoded
+        as</em> and the step names <em>replaced … with its decoded form</em> into the rulebook; DEC-71's record of the
+        peek's single reading in place of the switch</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
