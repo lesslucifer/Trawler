@@ -30,8 +30,7 @@ import {
   Menu,
   Notice,
   Select,
-  useConfirm,
-  writeClipboard,
+  useCopy,
   type MenuItem,
   type MenuPoint,
 } from "./components/index";
@@ -44,6 +43,17 @@ const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 
+const SETTLE_MS = 250;
+
+function useSettled<T>(value: T): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [value]);
+  return settled;
+}
+
 function Workbench({ payload }: { payload: DataPayload }) {
   const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
   const decoded = useMemo(() => decodeBody(payload.bytes, { keepBom: true }), [payload]);
@@ -55,16 +65,8 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const [row, setRow] = useState<number | null>(null);
   const [size, setSize] = useState<ImageSize>("fit");
   const more = useRef<HTMLButtonElement>(null);
-  const { state: copied, flash } = useConfirm(payload);
-  const copy = useCallback(
-    (text: string) => {
-      writeClipboard(text).then(
-        () => flash("confirming"),
-        () => flash("error"),
-      );
-    },
-    [flash],
-  );
+  const { state: copied, copy } = useCopy(payload);
+  const settled = useSettled(history);
 
   const kind = override ?? detected.kind;
   const lineBreak = useMemo(() => lineBreakOf(original), [original]);
@@ -77,11 +79,11 @@ function Workbench({ payload }: { payload: DataPayload }) {
     [kind, history, payload.bytes],
   );
   const shownSize = useMemo(
-    () => (isModified(history) ? byteLength(workingText(history)) : payload.bytes.length),
-    [history, payload.bytes],
+    () => (isModified(settled) ? byteLength(workingText(settled)) : payload.bytes.length),
+    [settled, payload.bytes],
   );
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
-  const lines = useMemo(() => lineCountOf(text), [text]);
+  const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));

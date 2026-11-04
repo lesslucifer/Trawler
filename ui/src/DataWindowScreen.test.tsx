@@ -114,6 +114,14 @@ describe("the working copy", () => {
     expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
   });
 
+  it("the line count and size catch up once typing pauses", async () => {
+    await open(payload());
+    expect(footer()).toHaveTextContent("3 lines");
+    typeInto(1, "\n\n");
+    await waitFor(() => expect(footer()).toHaveTextContent("5 lines"));
+    expect(footer()).toHaveTextContent(files.humanBytes(encode('{\n\n\n  "plan": "team"\n}').length));
+  });
+
   it("keystrokes in one input group are one step", async () => {
     await open(payload());
     typeInto(12, "x");

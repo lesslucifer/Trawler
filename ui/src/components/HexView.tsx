@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { writeClipboard } from "./CopyButton";
+import { writeClipboard } from "./useConfirm";
 import type { TextRange } from "./EditSurface";
 
 const WIDTH = 16;

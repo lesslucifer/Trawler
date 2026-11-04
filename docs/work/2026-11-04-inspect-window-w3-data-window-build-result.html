@@ -75,7 +75,7 @@
         write one record, the last move wins) · <code>ui/src/DataWindowScreen.test.tsx</code> (23: 2 MB JSON, 300 KiB form,
         1 MiB binary, every copy and save target, bytes that are not UTF-8, a kept BOM, kept and mixed line breaks, CR-only lines, a copy's outcome, no request)</td></tr>
       <tr><td>suites</td><td>shell <code>cargo test</code> 183 + 9 green; clippy <code>-D warnings</code> green in the real
-        and scenario builds; vitest 61,014 in 81 files green; eslint, <code>tsc -b</code> and <code>vite build</code> clean</td></tr>
+        and scenario builds; vitest 61,016 in 81 files green; eslint, <code>tsc -b</code> and <code>vite build</code> clean</td></tr>
       <tr><td>review</td><td>round 1 FAIL on <code>29d37a2f</code>: one verified blocker (a payload that is not
         UTF-8, or opens with a BOM, decoded lossily and re-encoded whole by the first edit) and four importants (a form edit
         re-encoding the pair's untouched part; an unbounded history; the document flattened twice and encoded twice per
@@ -94,7 +94,12 @@
         as one sweep over the ranges in line order. Round 5 FAIL on <code>a867e32f</code>: one verified blocker (a lone
         surrogate pasted into a form cell threw on commit and lost the draft) and one important (a second strict-then-lossy
         decode beside <code>decodeBody</code>), fixed: an edited part writes a lone surrogate as U+FFFD, as TextEncoder
-        does, and <code>decodeBody</code> takes <code>keepBom</code> and is the one decode</td></tr>
+        does, and <code>decodeBody</code> takes <code>keepBom</code> and is the one decode. Round 6 FAIL on
+        <code>1f3f04e5</code>: one verified blocker (text pasted with other breaks into a CRLF or CR document stayed mixed
+        inside a line) and two importants (the copy outcome written by hand a third time; the footer scanning the whole
+        text on every keystroke), fixed: EditSurface lets CodeMirror split on every break and reports the text joined with
+        the original's; <code>useCopy</code> is the one copy contract, used by CopyButton, CopyText and the window; the
+        footer counts lines and size once typing pauses</td></tr>
       <tr><td>docs</td><td><a href="../decisions/dec-69-the-data-window.html">DEC-69</a> rule 10 ·
         <a href="../decisions/decisions-index.html">decisions index</a> · the four design files retired</td></tr>
     </table>

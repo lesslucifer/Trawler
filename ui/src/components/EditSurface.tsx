@@ -21,7 +21,6 @@ import {
   EditorState,
   StateEffect,
   StateField,
-  type EditorSelection,
   type Extension,
   type Range,
   type Transaction,
@@ -197,9 +196,6 @@ function revealAndScroll(view: EditorView, range: TextRange) {
   });
 }
 
-const selectedText = (state: EditorState, selection: EditorSelection) =>
-  state.sliceDoc(selection.main.from, selection.main.to);
-
 /**
  * EditSurface — the data window's whole-data surface: every byte of a JSON, XML or text document, editable, foldable and searchable, uncapped.
  * @tier T2 — owns the editor configuration (editable document, virtualised viewport, fold gutter, three-token highlight, find marks); the text, the one history and what a change means are the caller's
@@ -229,12 +225,9 @@ export function EditSurface({
   callbacks.current = { onChange, onSelect };
   const group = useRef<{ step: string; at: number } | null>(null);
   const shown = useRef(text);
-  const compartments = useRef({
-    language: new Compartment(),
-    readOnly: new Compartment(),
-    wrap: new Compartment(),
-    lineBreak: new Compartment(),
-  });
+  const compartments = useRef({ language: new Compartment(), readOnly: new Compartment(), wrap: new Compartment() });
+  const joinWith = useRef(lineBreak);
+  joinWith.current = lineBreak;
   const [insetHost] = useState(() => document.createElement("div"));
 
   useImperativeHandle(handle, () => ({
@@ -249,7 +242,7 @@ export function EditSurface({
 
   useEffect(() => {
     if (!host.current) return;
-    const { language: lang, readOnly: locked, wrap: wrapped, lineBreak: separator } = compartments.current;
+    const { language: lang, readOnly: locked, wrap: wrapped } = compartments.current;
     const listener = EditorView.updateListener.of((update) => {
       const user = update.transactions.filter((tr) => tr.docChanged && !tr.annotation(external));
       if (user.length) {
@@ -257,13 +250,13 @@ export function EditSurface({
         const now = Date.now();
         const extend = group.current !== null && group.current.step === step && now - group.current.at < GROUP_MS;
         group.current = { step, at: now };
-        shown.current = update.state.sliceDoc();
+        shown.current = update.state.doc.sliceString(0, update.state.doc.length, joinWith.current);
         callbacks.current.onChange?.(shown.current, step, extend);
       }
       if (update.selectionSet) {
         const selection = update.state.selection;
         callbacks.current.onSelect?.(
-          selectedText(update.state, selection),
+          update.state.doc.sliceString(selection.main.from, selection.main.to, joinWith.current),
           update.state.doc.lineAt(selection.main.to).number,
         );
       }
@@ -279,7 +272,6 @@ export function EditSurface({
           keymap.of([...foldKeymap, ...standardKeymap]),
           warpTheme,
           surfaceTheme,
-          separator.of(EditorState.lineSeparator.of(lineBreak)),
           lang.of(language(choice)),
           locked.of(EditorState.readOnly.of(readOnly)),
           wrapped.of(wrap ? EditorView.lineWrapping : []),
@@ -316,12 +308,6 @@ export function EditSurface({
   useEffect(() => {
     view.current?.dispatch({ effects: compartments.current.readOnly.reconfigure(EditorState.readOnly.of(readOnly)) });
   }, [readOnly]);
-
-  useEffect(() => {
-    view.current?.dispatch({
-      effects: compartments.current.lineBreak.reconfigure(EditorState.lineSeparator.of(lineBreak)),
-    });
-  }, [lineBreak]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: compartments.current.wrap.reconfigure(wrap ? EditorView.lineWrapping : []) });

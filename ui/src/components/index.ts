@@ -3,7 +3,7 @@ export type { ButtonFrame, ButtonProps, ButtonShape, ButtonTone } from "./Button
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { CommandBlock } from "./CommandBlock";
-export { CopyButton, writeClipboard } from "./CopyButton";
+export { CopyButton } from "./CopyButton";
 export { CopyText } from "./CopyText";
 export { CutMarker, OpenWhole } from "./CutMarker";
 export type { OpenWholeAct } from "./CutMarker";
@@ -51,4 +51,4 @@ export { TextRenderer } from "./TextRenderer";
 export { TimestampText } from "./TimestampText";
 export { TonedText } from "./TonedText";
 export { XmlRenderer } from "./XmlRenderer";
-export { CONFIRM_MS, useConfirm } from "./useConfirm";
+export { CONFIRM_MS, useConfirm, useCopy, writeClipboard } from "./useConfirm";
