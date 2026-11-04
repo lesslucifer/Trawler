@@ -10,6 +10,7 @@ use tauri::{App, Listener, Manager, WebviewWindow, WebviewWindowBuilder};
 use trawler_ui_lib::core::{self, Core, STATE_EVENT};
 use trawler_ui_lib::settings::{self, SETTINGS_WINDOW};
 use trawler_ui_lib::supervisor::Supervisor;
+use trawler_ui_lib::window_geometry::{tracked_records, Records};
 
 mod common;
 use common::{launch, PATIENCE};
@@ -113,4 +114,13 @@ fn settings_from_the_page_opens_through_its_command() {
     let open: Vec<String> =
         app.webview_windows().into_keys().filter(|label| label == SETTINGS_WINDOW).collect();
     assert_eq!(open, [SETTINGS_WINDOW]);
+}
+
+#[test]
+fn settings_joins_the_window_records_the_shell_saves() {
+    let app = app();
+    trawler_ui_lib::window_geometry::track_from(app.handle(), Records::new());
+    assert!(!tracked_records(app.handle()).contains_key(SETTINGS_WINDOW));
+    settings::open(app.handle()).expect("settings opens");
+    assert!(tracked_records(app.handle()).contains_key(SETTINGS_WINDOW));
 }

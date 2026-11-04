@@ -21,7 +21,7 @@
          flow, and those belonging to one of its two legs. Mixing the scopes is what produced two
          competing leg switches on one screen.</p>
       <div class="meta">DEC-31 · 2026-09-05 · Trawler · E-REDESIGN.W5 · distilled from the flow-detail
-        design run (Tune 8, Tune 9) · status: active</div>
+        design run (Tune 8, Tune 9) · status: active · amended by <a href="dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a> (the leg and the body view are the user&rsquo;s, held by Shell)</div>
     </div>
   </header>
   <main>
@@ -53,9 +53,10 @@
             <td>The <strong>panel</strong>. One selector, in the pinned identity row, governing every
                 leg-scoped zone at once.</td></tr>
         <tr><td><strong>What does the body pane own?</strong></td>
-            <td>Its own concerns only — the body view (raw&nbsp;|&nbsp;pretty), the renderer dispatch, copy
-                and save, its absences and its cut marker. It <strong>receives</strong> the leg as a
-                prop and selects nothing.</td></tr>
+            <td>Its own concerns only — the renderer dispatch, copy and save, its absences and its cut
+                marker. It <strong>receives</strong> the leg and, since
+                <a href="dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>, the body view
+                (raw&nbsp;|&nbsp;pretty) as props; both are the user's, held by Shell, and outlive the flow.</td></tr>
         <tr><td><strong>What must every zone declare?</strong></td>
             <td>Its <strong>scope</strong>: <span class="scope-flow">flow-scoped</span> (identical on
                 both legs) or <span class="scope-leg">leg-scoped</span> (follows the selector). This is
@@ -121,7 +122,10 @@
             <td>The panel holds the leg state and passes it down. The default is
                 <strong>request</strong>, always — the shipped per-flow rule
                 (<code>flow.response_body ? "response" : "request"</code>) would move the screen under
-                the user between flows. <em>Done: W6 built it — one <code>SegmentedControl</code> in the
+                the user between flows. <em>Amended by
+                <a href="dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>: Shell holds the leg and
+                the panel receives it, so it carries to the next flow and across a relaunch — request only until the
+                user chooses, which keeps this row's reason.</em> <em>Done: W6 built it — one <code>SegmentedControl</code> in the
                 identity row, one <em>Headers</em> and one <em>Body</em> zone following it.</em></td></tr>
         <tr><td><strong>W7</strong><br><span class="meta">design the body viewer</span></td>
             <td>The leg switch is <strong>not this run's subject</strong>. Its epic-plan row is struck

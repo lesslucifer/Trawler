@@ -27,17 +27,19 @@ const RUN_TALLY = resolve(here, ".run-tally.json");
 // scheme tasks the Tauri IPC rides on, and answering a stopped one aborts the app.
 const CORE_ADDRESS_VAR = "TRAWLER_API";
 
-// The app writes its dismissed-notice markers, its saved layout and its saved
-// window geometry into the real user config dir, so they outlive a run. A marker
+// The app writes its dismissed-notice markers, its saved layout, its saved window
+// geometry and its view choices into the real user config dir, so they outlive a run. A marker
 // left by an earlier one would silence the clear ask the capture spec exists to
 // assert, and the spec's own last case leaves one behind; a layout or a window the
-// user sized would open the run at their sizes, and the layout specs leave both
+// user sized would open the run at their sizes, and a leg or body mode chosen
+// would open every flow on it; the layout and sticky specs leave all of these
 // behind — so the run starts and ends without them.
 const SAVED_STATE = [
   "clear-ask-dismissed",
   "remote-notice-dismissed",
   "layout.json",
   "windows.json",
+  "view-prefs.json",
 ].map((name) => resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name));
 
 function clearSavedState() {
@@ -83,12 +85,16 @@ function useFakeSdk() {
 // the flows spec refills from its own hits. Order is explicit, not
 // alphabetical-by-accident. The three layout specs run in this order because each
 // of the first two ends by quitting the app, and the launcher launches it again
-// for the next file: that relaunch is what the second and third assert.
+// for the next file: that relaunch is what the second and third assert. The three
+// sticky specs are the same shape for the user's view choices.
 const SPECS = [
   "./specs/onboarding.spec.ts",
   "./specs/capture.spec.ts",
   "./specs/replay.spec.ts",
   "./specs/service-attached.spec.ts",
+  "./specs/sticky.spec.ts",
+  "./specs/sticky-relaunched.spec.ts",
+  "./specs/sticky-broken.spec.ts",
   "./specs/layout.spec.ts",
   "./specs/layout-relaunched.spec.ts",
   "./specs/layout-broken.spec.ts",

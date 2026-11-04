@@ -136,6 +136,21 @@ test("opensOn leaves the question open only for another device over this machine
   expect(opensOn(reduce(choseIos, { t: "re-invoke", at: 2_000 }))).toBe("ios");
 });
 
+// E-STICKY · Q3: setup the user opens lands on the platform last named; the
+// launch check's own opening stays on this machine.
+test("a re-invoke carrying the remembered platform opens setup on it", () => {
+  const proven = reduce(onboarding, { t: "captured" });
+  expect(reduce(proven, { t: "re-invoke", at: 2_000, platform: "android" }).chosen).toBe("android");
+  expect(opensOn(reduce(proven, { t: "re-invoke", at: 2_000, another: true, platform: "android" }))).toBe("android");
+  expect(opensOn(reduce(proven, { t: "re-invoke", at: 2_000, another: true, platform: "this" }))).toBeNull();
+  const choseIos = reduce(proven, { t: "choose", platform: "ios" });
+  expect(reduce(choseIos, { t: "re-invoke", at: 3_000 }).chosen).toBe("ios");
+});
+
+test("the launch check opens setup on this machine whatever was remembered", () => {
+  expect(reduce(initial(), { t: "not-detected", at: 1_000 }).chosen).toBe("this");
+});
+
 test("stepStatus derives done/active/pending from step order", () => {
   const s: OnbState = { ...onboarding, step: "set-proxy" };
   expect(stepStatus(s, "trust-ca")).toBe("done");

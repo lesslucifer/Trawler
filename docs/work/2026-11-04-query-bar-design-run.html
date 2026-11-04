@@ -28,7 +28,7 @@
         <strong>E-QUERY.W2</strong> · branch <code>wu/query-bar/query-bar-design</code> · epic
         <a href="2026-11-04-query-bar-plan.html">E-QUERY</a> · <a href="2026-11-04-query-bar-w2-design-plan.html">WU plan</a> ·
         component: <a href="components/query-bar.html">QueryBar</a> · within
-        <a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a></div>
+        <a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a></div>
     </div>
   </header>
   <main data-artifact="design-run" data-status="archived">
@@ -494,7 +494,7 @@
       <tr><td><code>login</code> · <code>"two words"</code></td><td>text</td><td><code>q=</code></td><td>URIs containing it; several text chips must all match (Q10)</td></tr>
       <tr><td><code>host:</code> <code>method:</code> <code>status:</code> <code>type:</code> <code>source:</code> <code>is:</code></td><td>keyed</td><td><code>host=</code> <code>method=</code> <code>status=</code> <code>content_type=</code> <code>source=</code> <code>is=</code></td><td>one key repeated matches any of its chips (Q2); different keys must all match</td></tr>
       <tr><td><code>-</code> before either</td><td>negated</td><td><code>not_&lt;key&gt;=</code> · <code>not_q=</code></td><td>none of them</td></tr>
-      <tr><td>a near miss of a key (<code>stauts:</code>), an empty value, an unclosed quote, a status that is not a code or class, a <code>source:</code> or <code>is:</code> outside its set</td><td>none: a fault</td><td>nothing</td><td>the draft stays and says why (DEC-70 rule 8)</td></tr>
+      <tr><td>a near miss of a key (<code>stauts:</code>), an empty value, an unclosed quote, a status that is not a code or class, a <code>source:</code> or <code>is:</code> outside its set</td><td>none: a fault</td><td>nothing</td><td>the draft stays and says why (DEC-71 rule 8)</td></tr>
       <tr><td>any other <code>word:rest</code> (<code>localhost:8080</code>, <code>https://api</code>)</td><td>text</td><td><code>q=</code></td><td>URIs containing it (C3)</td></tr>
     </table>
 
@@ -535,7 +535,7 @@
     <table data-item="capabilities" data-c="given-table">
       <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
       <tr><td>the listing, export and clear taking W1's parameters (<code>q</code> all of, other keys any of, <code>not_&lt;key&gt;</code>, <code>is</code>)</td><td>used</td><td>the chips are sent as those parameters, and the capture menu's export and clear take the same set</td></tr>
-      <tr><td>the core's <code>400</code> naming the parameter as sent (W1, DEC-70 rule 6)</td><td>used</td><td>the chip that produced it is marked; the row region says why (C10)</td></tr>
+      <tr><td>the core's <code>400</code> naming the parameter as sent (W1, DEC-71 rule 6)</td><td>used</td><td>the chip that produced it is marked; the row region says why (C10)</td></tr>
       <tr><td>the hosts seen (<code>useFlows</code>'s <code>hosts</code>, accumulated, port kept)</td><td>used</td><td><code>host:</code> suggestions</td></tr>
       <tr><td><code>HTTP_METHODS</code></td><td>used</td><td><code>method:</code> suggestions, each drawn by MethodLabel</td></tr>
       <tr><td>the flow count</td><td>used</td><td>the capture slot, unchanged</td></tr>
@@ -592,9 +592,9 @@
     <table data-item="review" data-c="review-table">
       <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
       <tbody>
-        <tr><td>Start: the epic plan's W2 block and rulings Q3 (⌘F), Q4 (chips survive a relaunch), Q5 (only a chip refetches), Q7 (a chip, text included), Q8 (no actions in the bar), Q10 (text chips all of)</td><td>capabilities · mockup · keyboard · proposals: one bar of chips in the four controls' place, suggestions computed in the client, the list moving only on a chip</td><td><code>DEC-70</code></td></tr>
+        <tr><td>Start: the epic plan's W2 block and rulings Q3 (⌘F), Q4 (chips survive a relaunch), Q5 (only a chip refetches), Q7 (a chip, text included), Q8 (no actions in the bar), Q10 (text chips all of)</td><td>capabilities · mockup · keyboard · proposals: one bar of chips in the four controls' place, suggestions computed in the client, the list moving only on a chip</td><td><code>DEC-71</code></td></tr>
         <tr><td>Owner, round 1: C1 changed, "use the alternative": Enter takes the highlight, as in Select</td><td>mockup: Enter and Tab both take the highlighted row, the badge is <em>↵ enter</em> on the highlight only · the suggestions table · keyboard: three suggestion rows · proposals: <em>complete with Tab</em> becomes <em>Tab takes a suggestion</em> · the component design: behavior, forks, specimen</td><td><code>keyboard-parity</code> · Select's <em>take the moved-to item</em> · <code>QueryBar</code> API</td></tr>
-        <tr><td>Owner, round 1: C2, on the alternative, "but how do we type it?"</td><td>the C2 row and the mockup's note say it: a phrase with a space is typed in quotes, <code>"login token"</code> is one text chip. C2 held as drawn</td><td><code>DEC-70</code> rule 8: a typed form the draft can always reach</td></tr>
+        <tr><td>Owner, round 1: C2, on the alternative, "but how do we type it?"</td><td>the C2 row and the mockup's note say it: a phrase with a space is typed in quotes, <code>"login token"</code> is one text chip. C2 held as drawn</td><td><code>DEC-71</code> rule 8: a typed form the draft can always reach</td></tr>
         <tr><td>Owner, round 1: C3–C11 held</td><td>nothing: drawn as held</td><td><code>taste</code> · C8: <code>DEC-21</code>, no prop without a truthful source</td></tr>
       </tbody>
     </table>

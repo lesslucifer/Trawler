@@ -292,7 +292,7 @@
             <td><code>?host=a&amp;host=b</code> · <code>?q=login&amp;q=token</code> (<span class="badge id">E-QUERY.W1</span>)</td>
             <td>a repeated <code>q</code> matches <strong>all of</strong> its values; any other repeated key matches
             <strong>any of</strong> them; different keys combine as all of. A single parameter selects what it did before
-            (<a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a>)</td>
+            (<a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>)</td>
           </tr>
           <tr>
             <td><code>?not_method=OPTIONS</code> · <code>not_&lt;key&gt;</code> for every key, repeatable</td>
@@ -349,8 +349,9 @@
         <li><strong>One leg at a time, under one selector</strong>
         (<a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a>): the identity row's
         <em>request | response</em> switch governs both the header table and the body pane together; the
-        URI, versions and curl are the flow's and never move. The panel always opens on
-        <em>request</em>. A leg that sent no headers says <em>none — this leg sent no headers</em> and stays
+        URI, versions and curl are the flow's and never move. The leg is the user's, not the flow's
+        (<a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>): every flow opens on the leg last chosen — <em>request</em> until one is — and a relaunch keeps
+        it. A flow with no response yet, opened on <em>response</em>, says so there. A leg that sent no headers says <em>none — this leg sent no headers</em> and stays
         selectable; a flow still being fetched shows <em>loading this flow…</em> and nothing else.</li>
         <li><strong>Every wire value is a copy target</strong>: headers render in wire order with duplicate
         names preserved, and clicking a header value — or the URI — copies exactly that value, confirming
@@ -381,7 +382,8 @@
         <strong>raw / pretty</strong> toggle switches between the bytes the server sent
         (<code>?decode=source</code> — transport encoding reversed, nothing re-indented or
         transcoded) and the fully rendered view (<code>?decode=1</code> — decompressed,
-        charset-normalised, JSON/XML pretty-printed). A gzipped JSON body therefore reads as its minified
+        charset-normalised, JSON/XML pretty-printed). The choice is one setting for both legs, kept
+        across flows and relaunches like the leg (<a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>). A gzipped JSON body therefore reads as its minified
         source in raw rather than as a hex dump of gzip frames, and hex is reserved for payloads that
         genuinely have no text form. The stored bytes stay reachable at <code>?decode=0</code>.</li>
         <li><strong>A truncated body says so</strong>: renderings are capped (128 KiB of
@@ -420,7 +422,10 @@
       <em>brotli-compressed</em> JSON body still renders decoded — the decode chain proven
       through the UI; a proxied PNG renders as an image; an <em>XML</em> body renders as XML rather
       than falling through to text; a brotli body in <em>raw</em> shows its minified source rather than a
-      hex dump of its frames; and a body past the render cap states its truncation. The decode chain itself is pinned at the
+      hex dump of its frames; and a body past the render cap states its truncation. The sticky trio
+      (<code>sticky.spec.ts</code>, <code>-relaunched</code>, <code>-broken</code>) proves the leg and body mode carry to
+      the next flow and through a real quit and relaunch, and that a corrupt <code>view-prefs.json</code> opens on
+      request and pretty with nothing said. The decode chain itself is pinned at the
       API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
       viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
       <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
@@ -429,7 +434,10 @@
     <h2 id="uc-svc">UC-SVC — See and restart the capture service</h2>
     <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens a Settings window on the Capture service page
       (<span class="badge id">E-ONEAPP.W3</span>, <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>
-      rules 13–14). It follows the service live and closes without quitting the app. The web shell has no Settings, so its capture menu offers none.</p>
+      rules 13–14). It follows the service live and closes without quitting the app, and reopens where it was left — across a relaunch,
+      placed before it shows so it never jumps, on a monitor that still exists
+      (<a href="../decisions/dec-67-the-user-sizes-the-layout.html">DEC-67</a>, <a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>; proven by
+      <code>sticky-relaunched.spec.ts</code>). The web shell has no Settings, so its capture menu offers none.</p>
     <table data-c="uc-svc-states">
       <tr><th>The service is</th><th>The page shows</th><th>It offers</th></tr>
       <tr><td>starting</td><td>⟳ starting</td><td>restart, held beside "waiting for the capture service to start…"</td></tr>
@@ -482,6 +490,9 @@
         <tr><td>"set up another device"</td><td>a new session, opened on the last platform chosen if it was not
           this machine. Otherwise the question is unanswered and no task shows until one is chosen</td></tr>
       </table>
+      <p>The last platform chosen outlives a relaunch, but only setup the user opens lands on it: the launch
+      check's own setup, and the device the quit dialog reads, start on this machine every launch, so nothing reads an
+      emulator before the user opens setup (<a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>).</p>
       <p>A session reads only captured rows and tunnels that started after it opened, unfiltered by whatever
       the list is filtered to. So the first device's success is never the second device's, and the list's
       view is never the screen's evidence.</p>

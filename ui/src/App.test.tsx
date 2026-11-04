@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import App, { CA_READ_PATIENCE_MS, LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
@@ -3520,4 +3520,77 @@ test("the capture menu opens Settings inside the app, and offers none in the web
   await rowOf(0);
   fireEvent.click(screen.getByRole("button", { name: CAPTURE_COPY.trigger }));
   expect(screen.queryByRole("menuitem", { name: CAPTURE_COPY.settingsAct })).toBeNull();
+});
+
+// E-STICKY: a view choice belongs to the user, not to the flow it was made on.
+describe("what the user chose stays chosen", () => {
+  const radio = (group: string, name: string) =>
+    within(screen.getByRole("radiogroup", { name: group })).getByRole("radio", { name });
+  const twoFlows = () =>
+    mockApi(() => [
+      flow({ id: "f1", uri: "http://example.com/a" }),
+      flow({ id: "f2", uri: "http://example.com/b" }),
+    ]);
+  const open = async (index: number) => {
+    fireEvent.click((await screen.findAllByTestId("flow-row"))[index]);
+    await screen.findByTestId("detail");
+  };
+  const saved = (prefs: Record<string, unknown>) =>
+    vi.mocked(invoke).mockImplementation(async (name: string) => (name === "view_prefs_read" ? prefs : undefined));
+
+  test("the next flow opens on the leg and body mode picked on the last one, and the pick is saved", async () => {
+    const { api } = twoFlows();
+    render(<App api={api} initialState={PROVEN} />);
+    await open(0);
+    fireEvent.click(radio("leg", "response"));
+    fireEvent.click(radio("response body mode", "raw"));
+
+    await open(1);
+    await waitFor(() => expect(api.getFlow).toHaveBeenCalledWith("f2"));
+    expect(radio("leg", "response")).toBeChecked();
+    expect(radio("response body mode", "raw")).toBeChecked();
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("view_prefs_write", {
+        prefs: { leg: "response", bodyMode: "raw", lastPlatform: null },
+      }),
+    );
+  });
+
+  test("a launch opens flows on the leg and body mode saved last time", async () => {
+    saved({ leg: "response", bodyMode: "raw" });
+    const { api } = twoFlows();
+    render(<App api={api} initialState={PROVEN} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("view_prefs_read"));
+    await open(0);
+    expect(radio("leg", "response")).toBeChecked();
+    expect(radio("response body mode", "raw")).toBeChecked();
+  });
+
+  test("setup the user opens lands on the remembered platform; the launch check's stays on this machine", async () => {
+    const { api } = mockApi(() => []);
+    render(<App api={api} />);
+    const question = await screen.findByRole("button", { name: QUESTION });
+    const unremembered = question.textContent;
+    cleanup();
+
+    saved({ lastPlatform: "android-sim" });
+    render(<App api={api} />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("view_prefs_read"));
+    expect(await screen.findByRole("button", { name: QUESTION })).toHaveTextContent(unremembered!);
+    fireEvent.click(screen.getByRole("button", { name: "show traffic" }));
+    fireEvent.click(await screen.findByTestId("status-dot"));
+    expect(await screen.findByRole("button", { name: QUESTION })).toHaveTextContent("Android emulator");
+  });
+
+  test("a platform picked in setup is the one saved", async () => {
+    const { api } = mockApi(() => []);
+    render(<App api={api} />);
+    await screen.findByText(QUESTION);
+    pickPlatform("Android emulator");
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("view_prefs_write", {
+        prefs: { leg: "request", bodyMode: "pretty", lastPlatform: "android-sim" },
+      }),
+    );
+  });
 });

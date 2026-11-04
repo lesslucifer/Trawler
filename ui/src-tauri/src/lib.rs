@@ -16,6 +16,7 @@ pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
+pub mod view_prefs;
 pub mod window_geometry;
 
 #[cfg(feature = "scenario")]
@@ -85,6 +86,8 @@ pub fn run() {
         setup::show_notes,
         layout::layout_read,
         layout::layout_write,
+        view_prefs::view_prefs_read,
+        view_prefs::view_prefs_write,
         route::open_route,
         reach::confirm_reach,
         reach::confirm_replace_proxy,

@@ -16,7 +16,7 @@ export const PORTS_FILE = resolve(here, ".walkthrough-ports.json");
 // The app saves its layout and its window geometry into the real user config dir;
 // a layout or a window the user sized would film the reels at their sizes instead
 // of the configured ones.
-const SAVED_SIZES = ["layout.json", "windows.json"].map((name) =>
+const SAVED_SIZES = ["layout.json", "windows.json", "view-prefs.json"].map((name) =>
   resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name),
 );
 

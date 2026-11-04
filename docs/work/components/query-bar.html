@@ -42,10 +42,10 @@
     </table>
     <table data-c="drivers">
       <tr><th>Driver</th><th>Design consequence</th></tr>
-      <tr><td>DEC-70 rule 8: a draft that does not parse never reaches the core</td><td><code>onChange(chips)</code> fires only when a
+      <tr><td>DEC-71 rule 8: a draft that does not parse never reaches the core</td><td><code>onChange(chips)</code> fires only when a
         chip is added or removed; a fault is the component's own state, never the caller's</td></tr>
       <tr><td>Q5: only a chip refetches</td><td>typing never calls out; suggestions are computed in the component</td></tr>
-      <tr><td>DEC-70 rule 6: a refusal names its parameter</td><td>the caller passes which chips were refused; the component marks them</td></tr>
+      <tr><td>DEC-71 rule 6: a refusal names its parameter</td><td>the caller passes which chips were refused; the component marks them</td></tr>
       <tr><td>DEC-18: one small-control box</td><td>the bar is Field's box; a chip draws no second box (a wash, no border at rest)</td></tr>
       <tr><td>keyboard-parity</td><td>every pointer act has a key: Tab, Enter, Space, ↑/↓, Esc, Backspace, and the chips' × in tab order</td></tr>
       <tr><td>colour-plus-text</td><td>a refused chip carries ⚠ beside the warn border; a negated chip carries its <code>-</code></td></tr>
@@ -85,7 +85,7 @@
       <tr><td>Esc</td><td>closes the suggestions</td><td>the draft and the chips stay</td><td>dismiss the surface — unchanged</td></tr>
       <tr><td>Backspace</td><td>empty draft → the last chip goes</td><td>calls <code>onChange</code> without it</td><td>the typed-token idiom</td></tr>
       <tr><td>×</td><td>removes that chip</td><td>calls <code>onChange</code> without it; focus returns to the draft</td><td>the pointer path to any chip</td></tr>
-      <tr><td>fault</td><td><code>stauts:4xx</code> + Enter</td><td>no chip; the fault replaces the suggestions until the next keystroke</td><td>C4, DEC-70 rule 8</td></tr>
+      <tr><td>fault</td><td><code>stauts:4xx</code> + Enter</td><td>no chip; the fault replaces the suggestions until the next keystroke</td><td>C4, DEC-71 rule 8</td></tr>
       <tr><td>duplicate</td><td><code>host:api</code> twice</td><td>the draft clears, no chip is added, <code>onChange</code> is not called</td><td>a second identical chip changes nothing</td></tr>
       <tr><td>unknown key</td><td><code>localhost:8080</code></td><td>text, unless the key is within two edits of a real one</td><td>C3</td></tr>
       <tr><td>focus</td><td>⌘F</td><td>the caller binds ⌘F and calls the bar's <code>focus()</code> (a ref)</td><td>Q3; the window's keys are the screen's, not the component's</td></tr>
@@ -128,7 +128,7 @@
  * @tier T2 — owns the grammar (draft → chip or fault, draft → suggestions) through query.ts; chips, hosts seen and the refusal are the caller's
  * @anatomy Field's box, flex-wrap, chrome-tight padding · chips: wash-tint pill, mono, key and "-" ink-mute, value ink (MethodLabel for a method), IconButton × size 24 · refused: warn border + ⚠ · draft: borderless mono input, min-w-field-sm · suggestions: Select's popup surface under the draft, completion mono + hint ui + the key that takes it · fault: an inline warn Notice in the suggestions' place
  * @use the one filter of a list the user narrows by typed keys and text: the flow list's header
- * @avoid one free-text value (Field) · one choice among options (Select) · actions or commands in the bar (DEC-70 rule 9) · calling the caller on a keystroke: onChange is for chips only · editing a chip in place
+ * @avoid one free-text value (Field) · one choice among options (Select) · actions or commands in the bar (DEC-71 rule 9) · calling the caller on a keystroke: onChange is for chips only · editing a chip in place
  * @states rest · focused (suggestions, Enter or Tab takes the highlight, Space the draft as typed) · moved (↑/↓ highlight) · faulted (warn Notice until the next keystroke) · chips · a refused chip. No disabled, loading or restored state
  * @madeof IconButton · MethodLabel · Notice
  */</code></pre>

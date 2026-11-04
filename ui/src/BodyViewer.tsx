@@ -59,12 +59,15 @@ export const BodyViewer = memo(function BodyViewer({
   api,
   flow,
   leg,
+  pretty,
+  onPretty,
 }: {
   api: TrawlerApi;
   flow: FlowView;
   leg: Leg;
+  pretty: boolean;
+  onPretty: (pretty: boolean) => void;
 }) {
-  const [pretty, setPretty] = useState(true);
   const [fetched, setFetched] = useState<BodyFetch | "error" | null>(null);
 
   const body: BodyView | null = leg === "request" ? flow.request_body : flow.response_body;
@@ -107,7 +110,7 @@ export const BodyViewer = memo(function BodyViewer({
         <SegmentedControl
           options={MODES}
           value={pretty ? "pretty" : "raw"}
-          onChange={(value) => setPretty(value === "pretty")}
+          onChange={(value) => onPretty(value === "pretty")}
           ariaLabel={`${leg} body mode`}
         />
         {loaded && (
