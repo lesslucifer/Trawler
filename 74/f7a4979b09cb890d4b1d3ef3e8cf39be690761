@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-STICKY
+wu: E-STICKY.W2
+branch: HEAD
+tests:
+  unit: { waived: "the diff changes no product code: e2e specs, the e2e launchers and overlay, and docs" }
+  integration: { waived: "no contract added; W1's view_prefs_store.rs and restart_command.rs hold the store and the Settings record" }
+  e2e: { count: 9, covers: "flow B opens on the Response and raw picked on flow A; after a real quit and relaunch the app opens on the list, a flow opens on Response and raw, setup from the menu lands on the Android emulator and the Settings window reopens at the rect it was left at; a corrupt view-prefs.json opens on Request and pretty with no band or warning" }
