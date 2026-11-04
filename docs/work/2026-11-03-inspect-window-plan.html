@@ -11,7 +11,7 @@
       <h1>E-INSPWIN — epic plan</h1>
       <p>A data window: hand it a piece of data and it gives the user room and tools to read, find in,
         reformat, decode and freely edit a working copy — the original always one click away.</p>
-      <div class="meta">v4, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
+      <div class="meta">v5, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred); Q11 re-ruled 2026-11-04 (one shared record) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
         · WU branches <code>wu/inspect-window/&lt;slug&gt;</code></div>
     </div>
   </header>
@@ -133,7 +133,7 @@ flowchart LR
         <tr><td>Writing edits back (to the capture, the pane, or the composer)</td><td>Edits are scratch in the working copy; the original is always restorable. Sending a modified request stays the composer's (UC-8).</td></tr>
         <tr><td>Openers other than <code>BodyViewer</code> / <code>CutMarker</code></td><td>The payload contract makes them a one-call addition; follow-ups (Q5).</td></tr>
         <tr><td>Any core change or new endpoint</td><td>Pure front end + shell window plumbing.</td></tr>
-        <tr><td>Remembering window size and position</td><td>Wanted, deferred until E-PANELS lands its persistence mechanism; that epic (or whichever merges second) wires <code>data-*</code> windows in.</td></tr>
+        <tr><td>Remembering each data window's size and position on its own</td><td>Every data window shares one geometry record (Q11); a record per key would grow <code>windows.json</code> by one entry per payload ever opened.</td></tr>
         <tr><td>Diff (original vs working copy, two payloads); jq; schema-bound decoders (protobuf, msgpack, gRPC)</td><td>Follow-ups.</td></tr>
         <tr><td>The web shell (UC-3)</td><td>Retired at native parity per DEC-12.</td></tr>
         <tr><td>Changing the pane's caps</td><td>The pane stays the glance; the window is the way past them.</td></tr>
@@ -228,8 +228,10 @@ flowchart LR
             surfaces (hex/image read-only). The working-copy model: original kept, edits with undo/redo,
             <em>modified</em> marker, <em>restore original</em>; the ⋯ and right-click menus (Menu); copy/save of what is on
             screen, and of the <em>original</em>. The entry point on <code>BodyViewer</code> and
-            <code>CutMarker</code>. Cites W2's run blob.</td></tr>
-          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 open, whole data, working copy; UC-5 entry point</td></tr>
+            <code>CutMarker</code>. Menu, EditSurface, FormTable and HexView built to their whole contracts and their
+            design files retired (DEC-16). Every <code>data-*</code> window shares one geometry record in
+            <code>windows.json</code> (Q11). Cites W2's run blob.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 open, whole data, working copy; UC-5 entry point; Q11</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Rows 1, 3 (render + fold), 5 (free edit, undo, restore), 7
             (render), 9 hold. Unit: kind detection over hint/sniff/override, restore yields the original bytes after any
             edit sequence, each copy target. Integration: the screen fed 2&nbsp;MB JSON, 300&nbsp;KiB form, 1&nbsp;MiB
@@ -243,7 +245,7 @@ flowchart LR
         <table>
           <tr><th>What it builds</th><td data-item="wu-summary">Find (count, next/prev, keyboard); fold to
             depth&nbsp;N; reformat (indent 2/4/tab, minified, sorted keys) as
-            undoable working-copy steps; copy node path / value. Component designs retire into TSDoc (DEC-16). Cites W2's
+            undoable working-copy steps; copy node path / value — on the surfaces W3 built whole. Cites W2's
             run blob.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 JSON rows</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">Rows 4, 5 (reformat) hold. Unit: reformat edge inputs
@@ -339,7 +341,7 @@ flowchart LR
         <tr><td>Q8</td><td>Lifecycle vs the main window and DEC-64?</td><td>decided</td><td>Data windows close with the main window; closing one asks nothing.</td></tr>
         <tr><td>Q9</td><td>Entry points?</td><td>decided</td><td><code>BodyViewer</code>'s toolbar, the <code>CutMarker</code>, and a keyboard shortcut while the body has focus; keys set in the design run.</td></tr>
         <tr><td>Q10</td><td>E-ONEAPP and the core address?</td><td>decided</td><td>Moot: pure front end, the window never talks to the core.</td></tr>
-        <tr><td>Q11</td><td>Remember window size and position?</td><td>decided</td><td>Yes, but deferred until E-PANELS lands its mechanism.</td></tr>
+        <tr><td>Q11</td><td>Remember window size and position?</td><td>decided</td><td>Re-ruled by the owner on 2026-11-04 (W3): yes, through E-PANELS' <code>windows.json</code>, as one record shared by every data window — whichever data window moved or resized last writes it, and a new data window opens there. It was a record per window, deferred until E-PANELS landed.</td></tr>
         <tr><td>Q12</td><td>Do edits survive closing the window?</td><td>decided</td><td>No — the working copy lives as long as its window; closing a modified window asks nothing (scratch by definition).</td></tr>
       </table>
     </div>
