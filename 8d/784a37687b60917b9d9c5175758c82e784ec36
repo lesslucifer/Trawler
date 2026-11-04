@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app (round 6)"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: 8d784a37687b60917b9d9c5175758c82e784ec36
+diff_sha256: 1569246576c9d8a8148e610cb38e2241e86f895a47f116b7a1a9145b8d0c9d57
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 165
+    finders: 57
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 3, verified: 1, waived: 0 }
+blocking:
+  - "blocker (raised important): settings::open runs WebviewWindowBuilder::build inside the on_menu_event handler on the event-loop thread, which Tauri 2.11.5 documents (webview_window.rs:58/115) as deadlocking on Windows, where the Settings item is also offered"
+verdict: FAIL
+date: 2026-11-04
