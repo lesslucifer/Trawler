@@ -45,7 +45,7 @@
       <tr><td>closing Settings never quits, and the main window ends the app</td><td>delivered</td><td>live: Quit with
         Settings open ended the app within ~2 s, and the attached core kept listening</td></tr>
       <tr><td>lint and suite green</td><td>delivered</td><td><code>cargo clippy --workspace --all-targets --all-features -D warnings</code> · <code>cargo test -p trawler-ui</code>
-        (lib 183, <code>restart_command</code> 3, <code>supervisor</code> 4) · <code>cargo test -p xtask</code> · Vitest
+        (lib 184, <code>restart_command</code> 3, <code>supervisor</code> 4) · <code>cargo test -p xtask</code> · Vitest
         70 files / 60 787 tests · <code>tsc</code> · ESLint (design vocabulary included)</td></tr>
     </table>
 
@@ -81,6 +81,13 @@
         <code>core_status</code> inline, so each hook now reads its snapshot only once its listener is registered. A
         restart's applied result also counts as newer than that read</td><td>the altitude finder, verified from the
         Tauri 2.11.5 source. Round 1's verifier had refuted the same race from memory</td></tr>
+      <tr><td>review round 3 (FAIL)</td><td>two verified blockers were fixed behind regression tests that failed
+        first. The restart warning now takes focus when it opens, so Esc cancels it and focus returns to
+        <em>restart</em>, as the run's keyboard row promised. A spawn also waits, at most the stop grace, for the
+        previous core's log reader to finish, so that core's late lines stay above the next start mark (DEC-68
+        rule 13)</td><td>the correctness finder. Round 3 refuted four other importants: both log-render costs (the
+        core logs only a few lines per start), the capability split (same bundle, same origin), and an orphan on quit
+        during a restart (the stdin lifeline ends it)</td></tr>
       <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
         <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
         service from context, so a provider is the whole fixture</td></tr>
@@ -89,13 +96,13 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · round 2's fix · this report</td></tr>
+      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · round 3's fixes · this report</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (3): restart round-trips through the
         supervisor · attached refuses · settings opens once. <code>tests/supervisor.rs</code> gains one start mark per
         core, and <code>restarts_asked_for_at_once_run_one_after_the_other</code></td></tr>
-      <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization, a failed spawn published as exited, the page's cap pinned to the ring's) · core.rs (two restart
+      <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization, a failed spawn published as exited, a core's late lines kept above the next start mark, the page's cap pinned to the ring's) · core.rs (two restart
         sentences) · menu.rs (Settings action) · settings.rs (only main ends the app) · Vitest:
-        <code>CaptureService.test.tsx</code> (10) · <code>useCoreService.test.ts</code> (12) ·
+        <code>CaptureService.test.tsx</code> (11) · <code>useCoreService.test.ts</code> (12) ·
         <code>NotAnswering.test.tsx</code> (4) · <code>coreService.test.ts</code> (4, updated)</td></tr>
       <tr><td>e2e</td><td>waived for the WU: J2 belongs to W5's owned-core e2e build</td></tr>
       <tr><td>docs</td><td>UC-SVC + UC-4 in <a href="../use-cases/web-ui.html#uc-svc">web-ui.html</a> and the

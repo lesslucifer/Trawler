@@ -52,6 +52,16 @@ test("restart asks first while a core runs, and a cancel sends nothing", async (
   expect(restarts(stub)).toBe(0);
 });
 
+test("from the keyboard, the warning takes focus, Esc cancels it, and focus returns to restart", async () => {
+  const stub = await shown(RUNNING);
+  fireEvent.click(await screen.findByRole("button", { name: "restart" }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "restart" })));
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(screen.queryByText("Restarting clears the captured list")).toBeNull();
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "restart" })));
+  expect(restarts(stub)).toBe(0);
+});
+
 test("a confirmed restart is sent once, held while it runs", async () => {
   let finish: () => void = () => {};
   const stub = coreStub({

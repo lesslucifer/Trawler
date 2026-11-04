@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button, CopyText, Notice, StatusLine, TimestampText } from "./components/index";
 import { stoppedWords, type CoreState } from "./coreService";
 import { LogTail } from "./LogTail";
@@ -81,7 +81,12 @@ export function CaptureService({ bridge = tauriBridge }: { bridge?: CoreBridge }
   const [asking, setAsking] = useState(false);
   const lastRunning = useRef<Running | null>(null);
   const restartHolder = useRef<HTMLDivElement>(null);
+  const warning = useRef<HTMLDivElement>(null);
   if (state?.state === "running") lastRunning.current = state;
+
+  useEffect(() => {
+    if (asking) warning.current?.querySelector("button")?.focus();
+  }, [asking]);
 
   const confirm = () => {
     setAsking(false);
@@ -119,6 +124,7 @@ export function CaptureService({ bridge = tauriBridge }: { bridge?: CoreBridge }
   } else if (asking) {
     actions = (
       <div
+        ref={warning}
         onKeyDown={(event) => {
           if (event.key === "Escape") cancel();
         }}

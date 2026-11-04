@@ -156,6 +156,7 @@ struct Shared {
     owned: Option<Owned>,
     ports: (u16, u16),
     log: LogRing,
+    draining: Option<mpsc::Receiver<()>>,
 }
 
 struct Inner {
@@ -208,6 +209,7 @@ impl Supervisor {
                     owned: None,
                     ports,
                     log: LogRing::new(LOG_LINES),
+                    draining: None,
                 }),
                 observer,
             }),
@@ -268,10 +270,14 @@ impl Supervisor {
                 StartError::Spawn(err.to_string())
             })?;
         let stdin = child.stdin.take();
+        self.drain_previous_log();
         self.inner.record(LogEntry::Start { pid: child.id(), at_ms: now_ms() });
         if let Some(stderr) = child.stderr.take() {
             let inner = Arc::clone(&self.inner);
+            let (drained, draining) = mpsc::channel::<()>();
+            inner.lock().draining = Some(draining);
             std::thread::spawn(move || {
+                let _drained = drained;
                 for text in BufReader::new(stderr).lines().map_while(Result::ok) {
                     inner.record(LogEntry::Line { text });
                 }
@@ -314,6 +320,16 @@ impl Supervisor {
                     |port| StartError::Conflict { port },
                 ))
             }
+        }
+    }
+
+    // The previous core's reader can still hold lines it read before that core
+    // exited; they belong above the next start mark (DEC-68 rule 13). Bounded by
+    // the stop grace, in case something else keeps the old pipe open.
+    fn drain_previous_log(&self) {
+        let draining = self.inner.lock().draining.take();
+        if let Some(draining) = draining {
+            let _ = draining.recv_timeout(self.launch.grace);
         }
     }
 
@@ -506,6 +522,7 @@ mod tests {
                 owned: None,
                 ports: (0, 0),
                 log: LogRing::new(1),
+                draining: None,
             }),
             observer: Arc::new(move |event| sink.lock().unwrap().push(event)),
         };
@@ -541,6 +558,7 @@ mod tests {
                     owned: None,
                     ports: (0, 0),
                     log: LogRing::new(1),
+                    draining: None,
                 }),
                 observer: Arc::new(move |event| sink.lock().unwrap().push(event)),
             }),
@@ -550,6 +568,42 @@ mod tests {
         let exited = CoreState::Exited { code: None, signal: None };
         assert_eq!(supervisor.snapshot(), exited);
         assert_eq!(seen.lock().unwrap().last(), Some(&CoreEvent::State(exited)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_cores_late_lines_stay_above_the_next_cores_start_mark() {
+        let lingering = "(sleep 0.3; echo late >&2) >/dev/null & exit 0";
+        let supervisor = Supervisor {
+            launch: Launch {
+                program: PathBuf::from("/bin/sh"),
+                leading_args: vec!["-c".into(), lingering.into()],
+                ..launch()
+            },
+            inner: Arc::new(Inner {
+                shared: Mutex::new(Shared {
+                    state: CoreState::Starting,
+                    generation: 0,
+                    owned: None,
+                    ports: (0, 0),
+                    log: LogRing::new(LOG_LINES),
+                    draining: None,
+                }),
+                observer: Arc::new(|_| {}),
+            }),
+            restarting: Mutex::new(()),
+        };
+        assert!(supervisor.spawn((0, 0)).is_err());
+        assert!(supervisor.spawn((0, 0)).is_err());
+        let kinds: Vec<&str> = supervisor
+            .log()
+            .iter()
+            .map(|logged| match &logged.entry {
+                LogEntry::Start { .. } => "start",
+                LogEntry::Line { .. } => "line",
+            })
+            .collect();
+        assert_eq!(kinds[..3], ["start", "line", "start"]);
     }
 
     #[test]
