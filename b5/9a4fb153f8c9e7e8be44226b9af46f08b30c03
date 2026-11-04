@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: b59a4fb153f8c9e7e8be44226b9af46f08b30c03
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-one-app-w3-service-page-result.html
+report_sha256: df44fc2e267b8f9c845b72953626fb456c6849a880ee12d550bb3465a1d62e35
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAQ1qphEwj+o/drsqS9SH1MpdfdgZklGimtKne2S+c/Mufz55Vje+/WRE
+  +qwkX5l2CX6UV4PEbW3+jCr2WMgk4I
+  -----END SSH SIGNATURE-----
