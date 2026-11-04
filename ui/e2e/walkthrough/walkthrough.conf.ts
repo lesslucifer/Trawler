@@ -13,9 +13,12 @@ const APP_BINARY = resolve(here, "../../src-tauri/target/scenario/release/trawle
 
 export const PORTS_FILE = resolve(here, ".walkthrough-ports.json");
 
-// The app saves its window geometry into the real user config dir; a window the
-// user moved would film the reels at their size instead of the configured one.
-const SAVED_WINDOWS = resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app/windows.json");
+// The app saves its layout and its window geometry into the real user config dir;
+// a layout or a window the user sized would film the reels at their sizes instead
+// of the configured ones.
+const SAVED_SIZES = ["layout.json", "windows.json"].map((name) =>
+  resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app", name),
+);
 
 export const RUN_VAR = "TRAWLER_WALKTHROUGH_RUN";
 export const OUT_VAR = "TRAWLER_WALKTHROUGH_OUT";
@@ -132,7 +135,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 90_000, bail: true },
 
   onPrepare: async () => {
-    rmSync(SAVED_WINDOWS, { force: true });
+    for (const file of SAVED_SIZES) rmSync(file, { force: true });
     const ports = await startCore();
     await prepare(ports, run.launch.prelaunch);
     process.env.TRAWLER_E2E_API = ports.front;
@@ -148,6 +151,6 @@ export const config: WebdriverIO.Config = {
     }
     harness?.kill();
     rmSync(PORTS_FILE, { force: true });
-    rmSync(SAVED_WINDOWS, { force: true });
+    for (const file of SAVED_SIZES) rmSync(file, { force: true });
   },
 };

@@ -12,7 +12,7 @@
       <p>The list/pane split, the headers/body split, the flow list's fixed columns and every window are sized by the
         user within designed bounds, and come back the way they were left. The designed values become the defaults a
         reset returns to.</p>
-      <div class="meta">v1 · 2026-11-03 · Trawler · T2 decision · minted by <strong>E-PANELS.W1</strong> from the epic
+      <div class="meta">v2 · 2026-11-04 (window geometry in its own file, W5) · Trawler · T2 decision · minted by <strong>E-PANELS.W1</strong> from the epic
         plan's rulings Q1–Q9 · supersedes in part <a href="dec-36-the-pane-and-the-window.html">DEC-36</a> (its rejection
         of a draggable split) · UC-4 · UC-5 · <strong>active</strong></div>
     </div>
@@ -31,9 +31,9 @@
 
     <div class="callout" data-c="decision">
       <p><strong>Decision.</strong> Each split and each fixed flow-list column is draggable and keyboard-resizable between
-        a minimum and a maximum; nothing collapses to zero. Sizes persist in the shell, in <code>layout.json</code> in the
-        app config directory: pane width, headers share and the column widths once for the whole app, window geometry
-        once per window label. A saved layout is restored whole or not at all.</p>
+        a minimum and a maximum; nothing collapses to zero. Sizes persist in the shell, in its config directory: pane width,
+        headers share and the column widths once for the whole app, in <code>layout.json</code>; window geometry once
+        per window label, in <code>windows.json</code> (E-PANELS.W5). Each file is restored whole or not at all.</p>
     </div>
 
     <h2 id="dec-36">What happens to DEC-36</h2>
@@ -51,14 +51,15 @@
     <h2 id="rules">The persistence contract</h2>
     <table data-c="rules">
       <tr><th>#</th><th>Rule</th><th>Why</th></tr>
-      <tr><td>1</td><td>The shell owns the file, beside the dismissed-notice markers; the app reaches it through
-        <code>layout_read</code> / <code>layout_write</code>. No layout state passes through the core or the control
+      <tr><td>1</td><td>The shell owns both files, beside the dismissed-notice markers; the app reaches
+        <code>layout.json</code> through <code>layout_read</code> / <code>layout_write</code>, and the shell alone
+        writes <code>windows.json</code> as its windows move, close and the app exits. No layout state passes through the core or the control
         API</td><td>one home for the app's remembered choices (as DEC-66); <code>curl</code> keeps seeing everything the
         app does (DEC-12)</td></tr>
       <tr><td>2</td><td>Pane width, headers share and each column width are one value for the whole app; window size,
         position and maximized state are one record per window label</td><td>every flow opens at the same pane, an
         inspector window reads the same headers share as the main one, and each window reopens where it was</td></tr>
-      <tr><td>3</td><td>No version field. A file that does not parse into exactly the current shape (missing, extra or
+      <tr><td>3</td><td>No version field. Either file that does not parse into exactly the current shape (missing, extra or
         mistyped field, not JSON) reads as no saved layout: the whole default, never a partial restore</td><td>a part of
         a layout restored beside defaults is a layout nobody chose</td></tr>
       <tr><td>4</td><td>The store checks shape, never bounds; the app clamps a restored value to the live bounds</td><td>the
