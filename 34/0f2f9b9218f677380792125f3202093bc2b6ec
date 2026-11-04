@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-PANELS
+wu: E-PANELS.W6
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-67-the-user-sizes-the-layout.html"
+    tier: T2
+    action: updated
+    distills: "v2: window geometry lives in windows.json, written by the shell alone; layout.json holds splits and columns; each read whole or not at all"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-67's row names the two files"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "keyboard conventions gain resize a split: arrows 8 px, Shift 48, Home/End to the bounds, no reset key (DEC-68)"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-4 and UC-5 rows state the user-sized layout and its fallback"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-4 gains the user-sized surfaces, their bounds, keys, resets, persistence and e2e provenance; UC-5's headers share and pane width become user-sized defaults"
+  - path: "docs/work/2026-11-03-panels-plan.html"
+    tier: T3
+    action: updated
+    distills: "W6's block and the E2E plan record the relaunch as a real quit, Reset Layout via its event, one corrupt save through the window, and link the W6 plan"
+  - path: "docs/work/2026-11-04-panels-w6-e2e-plan.html"
+    tier: T3
+    action: added
+    distills: "W6's requirement, forks (real quit over reloadSession, Reset Layout event, one broken save), expected results, test plan and distillation"
+  - path: "docs/work/2026-11-04-panels-w6-e2e-result.html"
+    tier: T3
+    action: added
+    distills: "what W6 shipped, its three deviations forced by the embedded WebDriver, evidence and follow-ups"
