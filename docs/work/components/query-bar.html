@@ -18,7 +18,7 @@
       <h1>QueryBar <span class="badge id">T2</span></h1>
       <p>One box of filter chips and a draft. Typing writes the draft, suggestions follow it, and a chip is made only
         when the draft parses.</p>
-      <div class="meta">Component design · 2026-11-04 · Trawler · status: draft, awaiting confirmation · proposed by the
+      <div class="meta">Component design · 2026-11-04 · Trawler · status: <strong>confirmed</strong> 2026-11-04 (round 1; C1 took the alternative: Enter takes the highlight) · proposed by the
         <a href="../2026-11-04-query-bar-design-run.html">query bar's design run</a> (E-QUERY.W2) · built by
         E-QUERY.W3 · retires into the TSDoc on build (DEC-16)</div>
     </div>
@@ -68,7 +68,7 @@
         <code>role="combobox"</code>. Placeholder in ui: <em>filter — status:4xx, host:api, or any text</em>, then <em>add a filter</em> once a chip exists</td><td>the draft wraps to a new line rather than shrinking below a word</td></tr>
       <tr><td>6</td><td>suggestions</td><td>Select's popup surface (<code>bg-canvas</code>, hairline, <code>rounded-card</code>, <code>shadow-pop</code>,
         <code>z-popup</code>) under the draft, <code>min-w-picker</code>, scrolling past <code>listing-max</code>. A row: the completion in mono,
-        its hint in ui <code>ink-mute</code>, and at the right edge the key that takes it (<em>⇥ tab</em>, <em>↵ enter</em>). The
+        its hint in ui <code>ink-mute</code>, and <em>↵ enter</em> at the right edge of the highlighted row. The
         highlight is Select's <code>bg-wash-tint</code></td><td>one floating surface in the collection, not two</td></tr>
       <tr><td>7</td><td>fault</td><td>a warn Notice, inline, in the suggestions' place: <em>unknown key “stauts” — did you mean status?</em></td><td>Notice owns a sentence at a tone with its glyph</td></tr>
     </table>
@@ -78,10 +78,10 @@
     <table data-c="behavior">
       <tr><th>Rule</th><th>Example</th><th>Spec</th><th>Why</th></tr>
       <tr><td>typing</td><td><code>sta</code></td><td>updates the draft and its suggestions, clears a fault, and never calls <code>onChange</code></td><td>Q5</td></tr>
-      <tr><td>Tab</td><td><code>st</code> → <code>status:</code> · <code>status:4</code> → chip <code>status:4xx</code></td><td>takes the highlighted row: a key goes into the draft, a value becomes a chip. With no rows, it tries the draft as typed. With an empty draft and no rows, focus moves on</td><td>C1: completion is the bar's main act</td></tr>
-      <tr><td>Enter</td><td><code>st</code> → text chip <code>st</code></td><td>takes the draft as typed, or the moved-to row after ↑/↓</td><td>C1: what you typed is what you meant</td></tr>
-      <tr><td>Space</td><td><code>login token</code> → two chips</td><td>outside quotes, ends the chip as Enter does</td><td>C2</td></tr>
-      <tr><td>↑ / ↓</td><td>moves the highlight</td><td>no wrap; the right-edge badge follows to <em>↵ enter</em></td><td>Select's convention</td></tr>
+      <tr><td>Enter</td><td><code>st</code> → <code>status:</code> · <code>status:4</code> → chip <code>status:4xx</code></td><td>takes the highlighted row: a key goes into the draft, a value becomes a chip. With no rows, it tries the draft as typed</td><td>C1 (owner): Select's <em>take the moved-to item</em></td></tr>
+      <tr><td>Tab</td><td>as Enter</td><td>takes the highlighted row. With an empty draft and no rows, focus moves on</td><td>completion is the bar's main act</td></tr>
+      <tr><td>Space</td><td><code>login token</code> → two chips · <code>"login token"</code> → one</td><td>outside quotes, takes the draft as typed, whatever is highlighted</td><td>C2: the as-typed path with one key</td></tr>
+      <tr><td>↑ / ↓</td><td>moves the highlight</td><td>no wrap; the <em>↵ enter</em> badge follows it. ↑ reaches the as-typed row</td><td>Select's convention</td></tr>
       <tr><td>Esc</td><td>closes the suggestions</td><td>the draft and the chips stay</td><td>dismiss the surface — unchanged</td></tr>
       <tr><td>Backspace</td><td>empty draft → the last chip goes</td><td>calls <code>onChange</code> without it</td><td>the typed-token idiom</td></tr>
       <tr><td>×</td><td>removes that chip</td><td>calls <code>onChange</code> without it; focus returns to the draft</td><td>the pointer path to any chip</td></tr>
@@ -108,7 +108,7 @@
     <table data-c="forks">
       <tr><th>Fork</th><th>Settled</th><th>Rejected, and why</th></tr>
       <tr><td>tier</td><td><span class="badge auto">settled</span> T2, grammar inside</td><td><span class="badge approval">rejected</span> T1 with <code>parse</code> and <code>suggest</code> props: the grammar has one tenant, and two copies of it would drift on the rule that must not (DEC-20)</td></tr>
-      <tr><td>Tab or Enter</td><td><span class="badge auto">settled</span> Tab takes the suggestion, Enter takes the typed text (C1)</td><td><span class="badge approval">rejected</span> Enter takes the highlight: a text chip then needs the arrows</td></tr>
+      <tr><td>Tab or Enter</td><td><span class="badge auto">settled</span> Enter and Tab both take the highlight, as in Select; Space takes what is typed (owner, C1)</td><td><span class="badge approval">rejected</span> Tab takes the suggestion and Enter the typed text: Enter would mean something here it means nowhere else in the app</td></tr>
       <tr><td>where a fault is said</td><td><span class="badge auto">settled</span> in the suggestions' place, on an attempt (C4)</td><td><span class="badge approval">rejected</span> live as you type: <code>status:4</code> is a fault on its way to <code>status:404</code></td></tr>
       <tr><td>chip box</td><td><span class="badge auto">settled</span> a wash, no border at rest (C6)</td><td><span class="badge approval">rejected</span> the small-control box per chip: boxes inside a box, and a chip would read as a button</td></tr>
     </table>
@@ -129,7 +129,7 @@
  * @anatomy Field's box, flex-wrap, chrome-tight padding · chips: wash-tint pill, mono, key and "-" ink-mute, value ink (MethodLabel for a method), IconButton × size 24 · refused: warn border + ⚠ · draft: borderless mono input, min-w-field-sm · suggestions: Select's popup surface under the draft, completion mono + hint ui + the key that takes it · fault: an inline warn Notice in the suggestions' place
  * @use the one filter of a list the user narrows by typed keys and text: the flow list's header
  * @avoid one free-text value (Field) · one choice among options (Select) · actions or commands in the bar (DEC-70 rule 9) · calling the caller on a keystroke: onChange is for chips only · editing a chip in place
- * @states rest · focused (suggestions) · moved (↑/↓ highlight, Enter takes it) · faulted (warn Notice until the next keystroke) · chips · a refused chip. No disabled, loading or restored state
+ * @states rest · focused (suggestions, Enter or Tab takes the highlight, Space the draft as typed) · moved (↑/↓ highlight) · faulted (warn Notice until the next keystroke) · chips · a refused chip. No disabled, loading or restored state
  * @madeof IconButton · MethodLabel · Notice
  */</code></pre>
 
@@ -271,7 +271,7 @@
         else if (p.fault) { setFault(p.fault); setOpen(true); }
       };
       const take = (row) => (row.kind === "key" ? (setDraft(row.text), setMoved(false), setAt(0)) : accept(row.text));
-      const badge = (row, i) => (moved ? (i === active ? "↵ enter" : null) : row.kind === "typed" ? "↵ enter" : i === active ? "⇥ tab" : null);
+      const badge = (row, i) => (i === active ? "↵ enter" : null);
       const onKey = (e) => {
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           if (!rows.length) return;
@@ -282,7 +282,7 @@
           if (rows.length) { e.preventDefault(); take(rows[active]); } else if (draft.trim()) { e.preventDefault(); accept(draft); }
         } else if (e.key === "Enter") {
           e.preventDefault();
-          if (moved && rows[active]) take(rows[active]); else if (draft.trim()) accept(draft);
+          if (rows[active]) take(rows[active]); else if (draft.trim()) accept(draft);
         } else if (e.key === " " && draft.trim() && !openQuote(draft)) {
           e.preventDefault();
           accept(draft);

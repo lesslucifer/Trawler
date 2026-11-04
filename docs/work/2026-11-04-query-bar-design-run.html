@@ -24,20 +24,21 @@
       <p>The header with one query bar where the free-text field, the host and method dropdowns and the status field
         were. Every filter is a chip. Typing writes a draft and suggestions follow it. The list follows the chips,
         never a keystroke.</p>
-      <div class="meta">Design run · round 1 on 2026-11-04, open for the owner · Trawler · T3 (docs/work/) ·
+      <div class="meta">Design run · round 1 on 2026-11-04, closed (archived) · Trawler · T3 (docs/work/) ·
         <strong>E-QUERY.W2</strong> · branch <code>wu/query-bar/query-bar-design</code> · epic
         <a href="2026-11-04-query-bar-plan.html">E-QUERY</a> · <a href="2026-11-04-query-bar-w2-design-plan.html">WU plan</a> ·
         component: <a href="components/query-bar.html">QueryBar</a> · within
         <a href="../decisions/dec-70-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-70</a></div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="ready">
+  <main data-artifact="design-run" data-status="archived">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Live. Click the bar (or hover the frame and press ⌘F) and type. <code>st</code> then Tab completes
-      <code>status:</code>; <code>4</code> then Tab makes a <code>status:4xx</code> chip, and only then do the rows move.
-      Enter takes what you typed, Space ends a chip, ↑/↓ move through the suggestions, Backspace in an empty draft removes
-      the last chip, and each chip's × removes that one. Try <code>-method:OPTIONS</code>, <code>host:localhost:8080</code>,
+      <code>status:</code>; <code>4</code> then Enter makes a <code>status:4xx</code> chip, and only then do the rows move.
+      Enter or Tab takes the highlighted suggestion, ↑/↓ move the highlight, Space ends a chip as typed (quotes keep a
+      space: <code>"login token"</code>), Backspace in an empty draft removes the last chip, and each chip's × removes
+      that one. Try <code>-method:OPTIONS</code>, <code>host:localhost:8080</code>,
       <code>login token</code>, <code>stauts:4xx</code>. The buttons under the frame force one state at a time.</p>
     <div data-item="mockup">
       <div class="app">
@@ -295,7 +296,7 @@
             else if (p.fault) store.set({ fault: p.fault, open: true });
           };
           const take = (row) => (row.kind === "key" ? store.set({ draft: row.text, moved: false, active: 0, fault: null }) : accept(row.text));
-          const badge = (row, i) => (s.moved ? (i === active ? "↵ enter" : null) : row.kind === "typed" ? "↵ enter" : i === active ? "⇥ tab" : null);
+          const badge = (row, i) => (i === active ? "↵ enter" : null);
           const onKey = (e) => {
             if (e.key === "ArrowDown" || e.key === "ArrowUp") {
               if (!rows.length) return;
@@ -307,7 +308,7 @@
               else if (s.draft.trim()) { e.preventDefault(); accept(s.draft); }
             } else if (e.key === "Enter") {
               e.preventDefault();
-              if (s.moved && rows[active]) take(rows[active]);
+              if (rows[active]) take(rows[active]);
               else if (s.draft.trim()) accept(s.draft);
             } else if (e.key === " " && s.draft.trim() && !openQuote(s.draft)) {
               e.preventDefault();
@@ -499,23 +500,26 @@
 
     <h3 id="suggestions">What the suggestions offer</h3>
     <table data-c="suggestions-table">
-      <tr><th>Draft</th><th>Rows, in order</th><th>Highlighted</th><th>Tab takes · Enter takes</th></tr>
+      <tr><th>Draft</th><th>Rows, in order</th><th>Highlighted</th><th>Enter or Tab takes · Space takes</th></tr>
       <tr><td>empty, focused</td><td>the six keys, each with its hint</td><td><code>host:</code></td><td><code>host:</code> into the draft · nothing</td></tr>
       <tr><td><code>st</code></td><td>the draft as a text chip (<em>search the URI for it</em>), then <code>status:</code></td><td><code>status:</code></td><td><code>status:</code> into the draft · a text chip <code>st</code></td></tr>
       <tr><td><code>status:4</code></td><td><code>status:4xx</code> (not parseable as typed, so no as-typed row)</td><td><code>status:4xx</code></td><td>the chip · a fault: <em>“4” isn't a status</em></td></tr>
       <tr><td><code>host:api</code></td><td><code>host:api</code> as typed, then every host seen containing <em>api</em></td><td>the first host seen</td><td>that host's chip · <code>host:api</code></td></tr>
-      <tr><td>after ↑/↓</td><td>unchanged</td><td>the moved-to row</td><td>the moved-to row · the moved-to row (C1)</td></tr>
+      <tr><td><code>login</code></td><td>the draft as a text chip only</td><td><code>login</code></td><td>the chip · the chip</td></tr>
+      <tr><td>after ↑/↓</td><td>unchanged</td><td>the moved-to row</td><td>the moved-to row · the draft as typed</td></tr>
+      <tr><td>no rows (<code>stauts:4xx</code>)</td><td>none</td><td>—</td><td>the draft as typed, or its fault</td></tr>
       <tr><td><code>-</code> + any of the above</td><td>the same rows with <code>-</code>, hints read <em>leave out by …</em></td><td>as above</td><td>as above</td></tr>
     </table>
     <p class="kd">Values per key: hosts seen (accumulated, port kept) · <code>HTTP_METHODS</code> · 2xx 3xx 4xx 5xx ·
-      a fixed type list (C8) · captured imported sent · pending https. Each right edge names the key that takes the
-      row: <em>⇥ tab</em> on the highlight, <em>↵ enter</em> on the as-typed row.</p>
+      a fixed type list (C8) · captured imported sent · pending https. The highlighted row carries <em>↵ enter</em> at
+      its right edge. To take the draft exactly as typed when a suggestion is highlighted, press ↑ to the as-typed row,
+      or Space.</p>
 
     <h3 id="calls">Calls for the owner's round</h3>
     <table data-c="calls">
       <tr><th>#</th><th>The run drew</th><th>The alternative</th></tr>
-      <tr><td>C1</td><td><strong>Tab takes the highlighted suggestion; Enter takes what is typed.</strong> After ↑/↓, both take the moved-to row. Each row says which key takes it</td><td>Enter always takes the highlight, as in Select. Then <code>st</code> + Enter completes <code>status:</code>, and a text chip needs the arrows to reach its row</td></tr>
-      <tr><td>C2</td><td><strong>Space ends a chip</strong> outside quotes, so typing <code>login token</code> straight through makes two text chips</td><td>space is literal, and only Enter, Tab or a click ends a chip. <code>login token</code> becomes one text chip</td></tr>
+      <tr><td>C1</td><td><strong>Enter takes the highlighted suggestion</strong>, as in Select, and so does Tab. <code>st</code> + Enter completes <code>status:</code>; the as-typed row is reached with ↑, or taken with Space. <strong>Owner: the alternative</strong></td><td>was drawn: Tab takes the highlight, Enter takes what is typed</td></tr>
+      <tr><td>C2</td><td><strong>Space ends a chip</strong> outside quotes, so typing <code>login token</code> straight through makes two text chips. A phrase with a space is typed in quotes: <code>"login token"</code> is one text chip, matching URIs that contain the phrase</td><td>space is literal, and only Enter, Tab or a click ends a chip. <code>login token</code> becomes one text chip</td></tr>
       <tr><td>C3</td><td>an unknown key is a fault <strong>only as a near miss</strong> of a real key (two edits or fewer: <code>stauts</code>, <code>mehtod</code>). Any other <code>word:rest</code> is text, so <code>localhost:8080</code> and <code>https://api</code> search the URI</td><td>every unknown key is a fault, and a colon inside text needs quotes</td></tr>
       <tr><td>C4</td><td>a fault shows <strong>when a chip is attempted</strong> (Enter, Tab, Space), as a warn Notice in the suggestions' place, and goes with the next keystroke</td><td>live as you type · or under the bar, in the header, which then grows a line</td></tr>
       <tr><td>C5</td><td>the bar is <strong>mono</strong>: draft, chips and suggestions are typed grammar, read as typed (Field's <code>verbatim</code>). Hints and the placeholder are ui</td><td>ui for keys and mono for values only</td></tr>
@@ -552,9 +556,9 @@
       <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
       <tr><td>click into the bar</td><td>app header, query bar</td><td>⌘F from anywhere in the main window, or Tab to the draft. proposed: focus the query bar</td></tr>
       <tr><td>hover a suggestion</td><td>suggestions</td><td>↑ / ↓ move the highlight, no wrap (move within a list without selecting)</td></tr>
-      <tr><td>click a key suggestion</td><td>suggestions</td><td>Tab takes the highlighted row, and the key goes into the draft. After ↑ / ↓, Enter also takes it (take the moved-to item). proposed: complete with Tab</td></tr>
-      <tr><td>click a value suggestion</td><td>suggestions</td><td>Tab, or Enter after ↑ / ↓: the chip is made. proposed: complete with Tab</td></tr>
-      <tr><td>click the as-typed suggestion</td><td>suggestions</td><td>Enter, or Space outside quotes (C2). proposed: end a chip</td></tr>
+      <tr><td>click a key suggestion</td><td>suggestions</td><td>Enter takes the highlighted row (take the moved-to item), and the key goes into the draft. Tab does the same. proposed: Tab takes a suggestion</td></tr>
+      <tr><td>click a value suggestion</td><td>suggestions</td><td>Enter, or Tab, on the highlighted row: the chip is made (take the moved-to item)</td></tr>
+      <tr><td>click the as-typed suggestion</td><td>suggestions</td><td>↑ to it, then Enter (take the moved-to item), or Space outside quotes (C2). proposed: end a chip</td></tr>
       <tr><td>click outside to close the suggestions</td><td>suggestions</td><td>Esc: the suggestions close and the draft is unchanged (dismiss the surface — unchanged)</td></tr>
       <tr><td>click a chip's ×</td><td>query bar, a chip</td><td>Shift+Tab to that ×, Enter or Space (activate the focused element). The last chip also goes with Backspace in an empty draft. proposed: remove the last chip</td></tr>
       <tr><td>scroll the suggestions</td><td>suggestions</td><td>↑ / ↓ keep the highlighted row in view</td></tr>
@@ -570,8 +574,8 @@
         renders a removable token</td><td>W3</td></tr>
       <tr><td>TSDoc</td><td>Field's <code>@use</code> and <code>@avoid</code> drop <em>the filter bar's free-text box and its status box</em> and
         <em>the filter bar's four controls</em>; Select's tenants drop the host and method filters</td><td>those tenants go</td><td>W3</td></tr>
-      <tr><td>keyboard vocabulary</td><td><em>focus the query bar</em> ⌘F · <em>complete with Tab</em>: Tab takes the highlighted suggestion,
-        Enter takes what is typed · <em>end a chip</em>: Enter, or Space outside quotes · <em>remove the last chip</em>:
+      <tr><td>keyboard vocabulary</td><td><em>focus the query bar</em> ⌘F · <em>Tab takes a suggestion</em>: Tab, like Enter, takes the
+        highlighted suggestion · <em>end a chip</em>: Space outside quotes takes the draft as typed · <em>remove the last chip</em>:
         Backspace in an empty draft</td><td>the conventions have no typed-token pattern</td><td>W4 distills it into the rulebook</td></tr>
       <tr><td>lexicon</td><td><em>filter</em>: one chip in the query bar. Never <em>tag</em>, <em>token</em> or <em>pill</em> on screen. The
         screen never says <em>draft</em> for the bar's typed text: that word is the composer's</td><td>new terms</td><td>W4</td></tr>
@@ -589,6 +593,9 @@
       <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
       <tbody>
         <tr><td>Start: the epic plan's W2 block and rulings Q3 (⌘F), Q4 (chips survive a relaunch), Q5 (only a chip refetches), Q7 (a chip, text included), Q8 (no actions in the bar), Q10 (text chips all of)</td><td>capabilities · mockup · keyboard · proposals: one bar of chips in the four controls' place, suggestions computed in the client, the list moving only on a chip</td><td><code>DEC-70</code></td></tr>
+        <tr><td>Owner, round 1: C1 changed, "use the alternative": Enter takes the highlight, as in Select</td><td>mockup: Enter and Tab both take the highlighted row, the badge is <em>↵ enter</em> on the highlight only · the suggestions table · keyboard: three suggestion rows · proposals: <em>complete with Tab</em> becomes <em>Tab takes a suggestion</em> · the component design: behavior, forks, specimen</td><td><code>keyboard-parity</code> · Select's <em>take the moved-to item</em> · <code>QueryBar</code> API</td></tr>
+        <tr><td>Owner, round 1: C2, on the alternative, "but how do we type it?"</td><td>the C2 row and the mockup's note say it: a phrase with a space is typed in quotes, <code>"login token"</code> is one text chip. C2 held as drawn</td><td><code>DEC-70</code> rule 8: a typed form the draft can always reach</td></tr>
+        <tr><td>Owner, round 1: C3–C11 held</td><td>nothing: drawn as held</td><td><code>taste</code> · C8: <code>DEC-21</code>, no prop without a truthful source</td></tr>
       </tbody>
     </table>
 
