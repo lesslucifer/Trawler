@@ -45,7 +45,7 @@
       <tr><td>closing Settings never quits, and the main window ends the app</td><td>delivered</td><td>live: Quit with
         Settings open ended the app within ~2 s, and the attached core kept listening</td></tr>
       <tr><td>lint and suite green</td><td>delivered</td><td><code>cargo clippy --workspace --all-targets --all-features -D warnings</code> · <code>cargo test -p trawler-ui</code>
-        (lib 181, <code>restart_command</code> 3, <code>supervisor</code> 3) · <code>cargo test -p xtask</code> · Vitest
+        (lib 183, <code>restart_command</code> 3, <code>supervisor</code> 4) · <code>cargo test -p xtask</code> · Vitest
         70 files / 60 787 tests · <code>tsc</code> · ESLint (design vocabulary included)</td></tr>
     </table>
 
@@ -70,6 +70,12 @@
         which is wrong advice inside a running app. This is the sentence the run drew</td></tr>
       <tr><td>Settings in the macOS app menu</td><td>also prepended to the first menu on Windows and Linux</td><td>without
         that, the page would be unreachable off macOS</td></tr>
+      <tr><td>review round 1 (FAIL)</td><td>three verified importants were fixed, each behind a regression test
+        that failed first. A core that cannot spawn is now published as exited, not left starting. Restarts run one at
+        a time behind a lock. The page's 2000-line cap is pinned to the ring's by a Rust test that reads
+        <code>coreService.ts</code>. One verified nit was fixed too: a refusal clears once the core runs again, and a
+        restart's reply never overwrites a newer state event</td><td>the code review's correctness and altitude
+        finders. Without the lock, the concurrency test failed 3 of 3 on a spurious port conflict</td></tr>
       <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
         <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
         service from context, so a provider is the whole fixture</td></tr>
@@ -81,10 +87,10 @@
       <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · this report</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (3): restart round-trips through the
         supervisor · attached refuses · settings opens once. <code>tests/supervisor.rs</code> gains one start mark per
-        core</td></tr>
-      <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization) · core.rs (two restart
+        core, and <code>restarts_asked_for_at_once_run_one_after_the_other</code></td></tr>
+      <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization, a failed spawn published as exited, the page's cap pinned to the ring's) · core.rs (two restart
         sentences) · menu.rs (Settings action) · settings.rs (only main ends the app) · Vitest:
-        <code>CaptureService.test.tsx</code> (10) · <code>useCoreService.test.ts</code> (8) ·
+        <code>CaptureService.test.tsx</code> (10) · <code>useCoreService.test.ts</code> (10) ·
         <code>NotAnswering.test.tsx</code> (4) · <code>coreService.test.ts</code> (4, updated)</td></tr>
       <tr><td>e2e</td><td>waived for the WU: J2 belongs to W5's owned-core e2e build</td></tr>
       <tr><td>docs</td><td>UC-SVC + UC-4 in <a href="../use-cases/web-ui.html#uc-svc">web-ui.html</a> and the

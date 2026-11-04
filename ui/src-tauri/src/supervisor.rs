@@ -193,6 +193,7 @@ impl Inner {
 pub struct Supervisor {
     launch: Launch,
     inner: Arc<Inner>,
+    restarting: Mutex<()>,
 }
 
 impl Supervisor {
@@ -210,6 +211,7 @@ impl Supervisor {
                 }),
                 observer,
             }),
+            restarting: Mutex::new(()),
         };
         supervisor.spawn(ports)?;
         Ok(supervisor)
@@ -223,7 +225,10 @@ impl Supervisor {
         self.inner.lock().log.entries()
     }
 
+    // Each window can ask; without the lock a second restart would find no child
+    // to stop and spawn onto ports the first is still releasing.
     pub fn restart(&self) -> Result<CoreState, StartError> {
+        let _one_at_a_time = self.restarting.lock().unwrap_or_else(PoisonError::into_inner);
         self.stop();
         let ports = self.inner.lock().ports;
         self.spawn(ports)
@@ -258,7 +263,10 @@ impl Supervisor {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|err| StartError::Spawn(err.to_string()))?;
+            .map_err(|err| {
+                self.inner.publish(generation, CoreState::exited(None));
+                StartError::Spawn(err.to_string())
+            })?;
         let stdin = child.stdin.take();
         self.inner.record(LogEntry::Start { pid: child.id(), at_ms: now_ms() });
         if let Some(stderr) = child.stderr.take() {
@@ -518,6 +526,39 @@ mod tests {
         assert_eq!(taken_port([0, port]), Some(port));
         drop(held);
         assert_eq!(taken_port([0, port]), None);
+    }
+
+    #[test]
+    fn a_core_that_cannot_spawn_is_published_as_exited() {
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&seen);
+        let supervisor = Supervisor {
+            launch: Launch { program: PathBuf::from("/nonexistent/trawler-ui"), ..launch() },
+            inner: Arc::new(Inner {
+                shared: Mutex::new(Shared {
+                    state: CoreState::Starting,
+                    generation: 0,
+                    owned: None,
+                    ports: (0, 0),
+                    log: LogRing::new(1),
+                }),
+                observer: Arc::new(move |event| sink.lock().unwrap().push(event)),
+            }),
+            restarting: Mutex::new(()),
+        };
+        assert!(matches!(supervisor.spawn((0, 0)), Err(StartError::Spawn(_))));
+        let exited = CoreState::Exited { code: None, signal: None };
+        assert_eq!(supervisor.snapshot(), exited);
+        assert_eq!(seen.lock().unwrap().last(), Some(&CoreEvent::State(exited)));
+    }
+
+    #[test]
+    fn the_page_caps_its_log_at_the_rings_size() {
+        let page = include_str!("../../src/coreService.ts");
+        assert!(
+            page.contains(&format!("export const LOG_LINES = {LOG_LINES};")),
+            "ui/src/coreService.ts must declare the ring's LOG_LINES ({LOG_LINES})"
+        );
     }
 
     #[test]

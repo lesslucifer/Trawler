@@ -84,3 +84,26 @@ test("the log joins its snapshot and live lines, and lets go on unmount", async 
   unmount();
   await waitFor(() => expect(stub.unlisten).toHaveBeenCalled());
 });
+
+test("a refusal gives way once the core is running again", async () => {
+  const stub = coreStub({ state: RUNNING, restart: () => Promise.reject("refused") });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await act(() => result.current.restart());
+  expect(result.current.refusal).toBe("refused");
+  act(() => stub.emitState({ ...RUNNING, pid: 2 }));
+  expect(result.current.refusal).toBeNull();
+});
+
+test("a restart's reply never overwrites a newer state event", async () => {
+  let finish: () => void = () => {};
+  const stub = coreStub({
+    state: RUNNING,
+    restart: () => new Promise((resolve) => (finish = () => resolve({ ...RUNNING, pid: 1 }))),
+  });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(result.current.state).toEqual(RUNNING));
+  act(() => void result.current.restart());
+  act(() => stub.emitState({ state: "exited", code: null, signal: 9 }));
+  await act(async () => finish());
+  expect(result.current.state).toEqual({ state: "exited", code: null, signal: 9 });
+});

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
@@ -38,16 +38,18 @@ export function useCoreService(bridge: CoreBridge = tauriBridge): CoreService {
   const [state, setState] = useState<CoreState | null>(null);
   const [restarting, setRestarting] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const eventsHeard = useRef(0);
 
   useEffect(() => {
     let live = true;
-    let heard = false;
     const subscription = onCoreState((next) => {
-      heard = true;
-      if (live) setState(next);
+      eventsHeard.current += 1;
+      if (!live) return;
+      setState(next);
+      if (next.state === "running") setRefusal(null);
     }, bridge.on).catch(() => undefined);
     void readCoreStatus(bridge.call).then((read) => {
-      if (live && !heard) setState(read);
+      if (live && eventsHeard.current === 0) setState(read);
     });
     return () => {
       live = false;
@@ -58,8 +60,10 @@ export function useCoreService(bridge: CoreBridge = tauriBridge): CoreService {
   const restart = useCallback(async () => {
     setRestarting(true);
     setRefusal(null);
+    const heardBefore = eventsHeard.current;
     try {
-      setState(await restartCore(bridge.call));
+      const restarted = await restartCore(bridge.call);
+      if (eventsHeard.current === heardBefore) setState(restarted);
     } catch (err) {
       setRefusal(err instanceof Error ? err.message : String(err));
     } finally {

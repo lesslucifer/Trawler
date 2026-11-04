@@ -113,6 +113,36 @@ fn a_supervised_core_survives_a_kill_restarts_on_its_ports_and_leaves_on_stop() 
 }
 
 #[test]
+fn restarts_asked_for_at_once_run_one_after_the_other() {
+    let ca = tempfile::tempdir().unwrap();
+    let (observer, _events) = watched();
+    let supervisor = Arc::new(Supervisor::start(launch(ca.path(), 0, 0), observer).unwrap());
+    let (_, proxy, api) = running(&supervisor.snapshot());
+
+    let restarts: Vec<_> = (0..2)
+        .map(|_| {
+            let supervisor = Arc::clone(&supervisor);
+            std::thread::spawn(move || supervisor.restart())
+        })
+        .collect();
+    let pids: Vec<u32> = restarts
+        .into_iter()
+        .map(|restart| {
+            let state = restart.join().unwrap().expect("each restart succeeds");
+            let (pid, restarted_proxy, restarted_api) = running(&state);
+            assert_eq!((restarted_proxy, restarted_api), (proxy, api));
+            pid
+        })
+        .collect();
+
+    let (current, _, _) = running(&supervisor.snapshot());
+    assert!(pids.contains(&current));
+    let replaced = pids.into_iter().find(|&pid| pid != current).expect("two cores were started");
+    eventually("the replaced core is gone", || !alive(replaced));
+    supervisor.stop();
+}
+
+#[test]
 fn a_taken_port_is_named_before_any_window() {
     let ca = tempfile::tempdir().unwrap();
     let held = TcpListener::bind("127.0.0.1:0").unwrap();
