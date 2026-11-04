@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-QUERY
+wu: E-QUERY.W2
+base: aa8584f11b1f903472e73bbabd3d720d7b7b30ec
+design_sha256: 19637509d6e48541a48b5eb0a7fb9a3fc85b88f60a75be699dc21f24d4159c8d
+verdict: PASS
+artifacts: [docs/work/2026-11-04-query-bar-design-run.html, docs/work/components/query-bar.html]
+date: 2026-11-04
