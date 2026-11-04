@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-PANELS
+wu: E-PANELS.W4
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-04-panels-w4-columns-plan.html"
+    tier: T3
+    action: added
+    distills: "W4's requirement, the Q8 fork taken (an outer horizontal scroller), expected results and test plan"
+  - path: "docs/work/2026-11-04-panels-w4-columns-result.html"
+    tier: T3
+    action: added
+    distills: "what W4 shipped, its deviations and evidence"
+t2_waived: "UC-4's column row and the resize-a-split vocabulary are distilled by W6, per the epic's distillation plan; W4 adds no decision beyond DEC-67/DEC-68."
