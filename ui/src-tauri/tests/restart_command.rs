@@ -94,3 +94,12 @@ fn settings_opens_once_and_is_focused_after() {
         app.webview_windows().into_keys().filter(|label| label == SETTINGS_WINDOW).collect();
     assert_eq!(open, [SETTINGS_WINDOW]);
 }
+
+#[test]
+fn settings_from_the_menu_is_built_off_the_calling_thread() {
+    let app = app();
+    let opening = settings::open_in_background(app.handle());
+    assert_ne!(opening.thread().id(), std::thread::current().id());
+    opening.join().expect("the opening thread").expect("settings opens");
+    assert!(app.get_webview_window(SETTINGS_WINDOW).is_some());
+}

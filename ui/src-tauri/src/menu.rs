@@ -40,11 +40,7 @@ pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
             }
             None => app.exit(0),
         },
-        MenuAction::OpenSettings => {
-            if let Err(err) = settings::open(app) {
-                eprintln!("opening Settings failed: {err}");
-            }
-        }
+        MenuAction::OpenSettings => drop(settings::open_in_background(app)),
         MenuAction::Ignore => {}
     }
 }

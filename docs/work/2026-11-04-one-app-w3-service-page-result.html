@@ -45,7 +45,7 @@
       <tr><td>closing Settings never quits, and the main window ends the app</td><td>delivered</td><td>live: Quit with
         Settings open ended the app within ~2 s, and the attached core kept listening</td></tr>
       <tr><td>lint and suite green</td><td>delivered</td><td><code>cargo clippy --workspace --all-targets --all-features -D warnings</code> · <code>cargo test -p trawler-ui</code>
-        (lib 185, <code>restart_command</code> 3, <code>supervisor</code> 4) · <code>cargo test -p xtask</code> · Vitest
+        (lib 185, <code>restart_command</code> 4, <code>supervisor</code> 4) · <code>cargo test -p xtask</code> · Vitest
         70 files / 60 787 tests · <code>tsc</code> · ESLint (design vocabulary included)</td></tr>
     </table>
 
@@ -98,6 +98,12 @@
         <code>ui/src/page.ts</code>, and a Rust test pins the shell's script to it, so a rename on either side fails a
         test instead of rendering the whole app in the Settings window</td><td>the altitude finder. Round 5 refuted the
         restart refusal's Rust wording, which follows W2's <code>refusal()</code> in the same file</td></tr>
+      <tr><td>review round 6 (FAIL)</td><td>one verified blocker was fixed behind a test that failed first. The menu
+        now builds the Settings window off the event-loop thread (<code>settings::open_in_background</code>), because
+        Tauri documents that <code>WebviewWindowBuilder::build</code> deadlocks on Windows inside an event handler. The
+        Windows hang itself cannot reproduce on macOS, so the test pins the offload. Live on macOS after the fix,
+        <em>Settings…</em> opened the window and Quit still ended the app</td><td>the correctness finder, verified from
+        Tauri 2.11.5's <code>webview_window.rs</code> and <code>app.rs</code></td></tr>
       <tr><td><code>NotAnswering</code> tested in <code>App.test.tsx</code></td><td>tested in its own
         <code>NotAnswering.test.tsx</code> through the context App provides</td><td>the restart branch reads the core
         service from context, so a provider is the whole fixture</td></tr>
@@ -106,9 +112,9 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · <code>eb0e2365</code> round 3's fixes · <code>7ab41704</code> round 4's fix · round 5's fix · this report</td></tr>
-      <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (3): restart round-trips through the
-        supervisor · attached refuses · settings opens once. <code>tests/supervisor.rs</code> gains one start mark per
+      <tr><td>commits</td><td><code>1243a982</code> plan + run · <code>8547ced2</code> the run's close · <code>8b3fd337</code> the build · <code>3614c3c3</code> round 1's fixes · <code>32ce9ce7</code> round 2's fix · <code>eb0e2365</code> round 3's fixes · <code>7ab41704</code> round 4's fix · <code>8d784a37</code> round 5's fix · round 6's fix · this report</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/restart_command.rs</code> (4): restart round-trips through the
+        supervisor · attached refuses · settings opens once · the menu builds it off the calling thread. <code>tests/supervisor.rs</code> gains one start mark per
         core, and <code>restarts_asked_for_at_once_run_one_after_the_other</code></td></tr>
       <tr><td>unit</td><td>supervisor.rs (ring order, sequence, entry serialization, a failed spawn published as exited, a core's late lines kept above the next start mark, the page's cap pinned to the ring's) · core.rs (two restart
         sentences) · menu.rs (Settings action) · settings.rs (only main ends the app, the page mark pinned to <code>page.ts</code>) · <code>page.test.ts</code> (2) · Vitest:

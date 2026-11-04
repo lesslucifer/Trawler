@@ -1,3 +1,5 @@
+use std::thread::JoinHandle;
+
 use tauri::{AppHandle, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 pub const SETTINGS_WINDOW: &str = "settings";
@@ -13,6 +15,20 @@ fn page_script() -> String {
 /// secondary window is still open (Q7 — closing the last window quits).
 pub fn ends_the_app(label: &str) -> bool {
     label == MAIN_WINDOW
+}
+
+// WebviewWindowBuilder::build deadlocks on Windows when called from an event
+// handler (Tauri's own warning, wry#583), and a menu item's handler is one.
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
+pub fn open_in_background<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<tauri::Result<()>> {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let opened = open(&app);
+        if let Err(err) = &opened {
+            eprintln!("opening Settings failed: {err}");
+        }
+        opened
+    })
 }
 
 pub fn open<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
