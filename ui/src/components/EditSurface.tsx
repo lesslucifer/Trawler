@@ -45,6 +45,7 @@ export interface EditSurfaceHandle {
   focus: () => void;
   positionAt: (point: { x: number; y: number }) => number | null;
   cursor: () => number;
+  selection: () => TextRange;
 }
 
 export interface EditSurfaceProps {
@@ -250,6 +251,10 @@ export function EditSurface({
     },
     cursor() {
       return view.current?.state.selection.main.head ?? 0;
+    },
+    selection() {
+      const main = view.current?.state.selection.main;
+      return { from: main?.from ?? 0, to: main?.to ?? 0 };
     },
   }));
 

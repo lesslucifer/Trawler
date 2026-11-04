@@ -6,10 +6,12 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
+  type ReactNode,
   type RefObject,
 } from "react";
 import { byteLength, captionFilename, captionParts, decodeBody, hexDump, humanBytes, queryCount, saveBody } from "./body";
-import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
+import { claimOnce, openDataWindow, takeDataPayload, type DataPayload } from "./dataWindow";
+import { contentKey, decode, DECODER_LABEL, opensAs, replacement, type DecoderId, type Decoded, type Peeked } from "./decoders";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { findBytes, findMatches, readHexQuery, type HexQueryMode } from "./find";
 import {
@@ -78,6 +80,13 @@ import {
 } from "./components/index";
 
 type OpenMenu = { type: "more" } | { type: "context"; at: MenuPoint; row: number | null; offset?: number };
+type PeekOrigin = { type: "selection"; range: TextRange; line: number } | { type: "row"; index: number; key: string };
+type Open = (payload: DataPayload) => Promise<void>;
+
+interface Peek {
+  origin: PeekOrigin;
+  peeked: Peeked;
+}
 type NodePart = "path" | "value";
 type ImageSize = "fit" | "actual";
 
@@ -94,6 +103,7 @@ const FOLD_CHOICES = [
   { id: "none", label: "none" },
 ];
 const NEEDS_JSON = "needs valid JSON";
+const REPLACED_SELECTION = "replaced the selection with its decoded form";
 const SHOWN_ENCODED = "shown encoded";
 
 interface Search {
@@ -150,6 +160,83 @@ function FindBar({
   );
 }
 
+function DecodePeek({
+  peeked,
+  from,
+  onReplace,
+  onOpen,
+  onClose,
+}: {
+  peeked: Peeked;
+  from: "selection" | "value";
+  onReplace: (() => void) | null;
+  onOpen: (decoder: DecoderId, reading: Decoded) => void;
+  onClose: () => void;
+}) {
+  const block = (label: string, child: ReactNode) => (
+    <div className="flex flex-col gap-chrome-tight">
+      <span className="font-ui text-label uppercase tracking-label text-ink-mute">{label}</span>
+      {child}
+    </div>
+  );
+  const shown = (text: string, language: "json" | "plain") => (
+    <EditSurface text={text} language={language} readOnly testId="decoded" />
+  );
+  const body = () => {
+    if (peeked.decoder === null) {
+      return (
+        <Notice tone="warn" detail={`the ${from} is left as it was`}>
+          {`not base64, URL-encoded or a JWT: ${peeked.reason}`}
+        </Notice>
+      );
+    }
+    const { reading } = peeked;
+    if (reading.kind === "jwt") {
+      return (
+        <div className="flex flex-col gap-2">
+          {block("header", shown(reading.header, "json"))}
+          {block("payload", shown(reading.payload, "json"))}
+          {block(
+            "signature · not verified",
+            <span data-testid="signature" className="break-all font-mono text-body text-ink-body">
+              {reading.signature || "none"}
+            </span>,
+          )}
+        </div>
+      );
+    }
+    if (reading.kind === "binary") {
+      return (
+        <Notice detail="binary cannot replace text in place; ↗ opens it as data of its own">
+          {`${humanBytes(reading.bytes.length)} of binary · ${reading.looks ? `looks like ${reading.looks}` : "no known signature"}`}
+        </Notice>
+      );
+    }
+    return reading.kind === "json" ? shown(reading.shown, "json") : shown(reading.text, "plain");
+  };
+  return (
+    <div data-testid="decode-peek" className="rounded-card border border-hairline bg-canvas-soft font-ui">
+      <div className="flex flex-wrap items-center gap-chrome-gap border-b border-hairline px-3 py-chrome-y">
+        <span className="text-label uppercase tracking-label text-ink-mute">{peeked.decoder ? "decoded as" : "decode"}</span>
+        {peeked.decoder && <span className="text-control text-ink">{DECODER_LABEL[peeked.decoder]}</span>}
+        <span className="ml-auto flex items-center gap-chrome-gap">
+          {onReplace && (
+            <IconButton
+              glyph="replace"
+              label={peeked.decoder === "jwt" ? "replace with the payload" : "replace with decoded"}
+              onClick={onReplace}
+            />
+          )}
+          {peeked.decoder && (
+            <IconButton glyph="window" label="open in data window" onClick={() => onOpen(peeked.decoder, peeked.reading)} />
+          )}
+          <IconButton glyph="close" label="close the peek" onClick={onClose} />
+        </span>
+      </div>
+      <div className="max-h-body-max overflow-auto px-3 py-2">{body()}</div>
+    </div>
+  );
+}
 
 function Caption({ title }: { title: string }) {
   const { what, target } = captionParts(title);
@@ -188,7 +275,7 @@ function useSettled<T>(value: T): T {
   return settled;
 }
 
-function Workbench({ payload }: { payload: DataPayload }) {
+function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
   const decoded = useMemo(() => decodeBody(payload.bytes, { keepBom: true }), [payload]);
   const original = decoded.text;
@@ -204,6 +291,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const [fold, setFold] = useState<{ id: string; text: string } | null>(null);
   const [wrap, setWrap] = useState(true);
   const [encoded, setEncoded] = useState(false);
+  const [peek, setPeek] = useState<Peek | null>(null);
   const more = useRef<HTMLButtonElement>(null);
   const surfaceHandle = useRef<EditSurfaceHandle>(null);
   const findBox = useRef<HTMLDivElement>(null);
@@ -261,6 +349,8 @@ function Workbench({ payload }: { payload: DataPayload }) {
     () => (kind === "xml" && !readOnly && menu ? reindentXml(text, breakWith) : null),
     [kind, readOnly, menu, text, breakWith],
   );
+
+  useEffect(() => setPeek(null), [text, kind, encoded]);
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));
   const stepFind = useCallback(
@@ -330,6 +420,59 @@ function Workbench({ payload }: { payload: DataPayload }) {
     void saveBody(payload.bytes, captionFilename(payload.title, payload.typeHint, "-original"));
   };
 
+  const decodeSelection = useCallback(() => {
+    const handle = surfaceHandle.current;
+    if (!handle) return;
+    const surface = surfaceText(text);
+    const { from, to } = handle.selection();
+    const chosen = surface.slice(from, to);
+    const input = chosen.trim();
+    if (!input) return;
+    const start = from + chosen.length - chosen.trimStart().length;
+    const range = { from: start, to: start + input.length };
+    const line = (surface.slice(0, range.to).match(/\n/g)?.length ?? 0) + 1;
+    setPeek({ origin: { type: "selection", range, line }, peeked: decode(input) });
+  }, [text]);
+  const decodeRow = useCallback(
+    (index: number) => {
+      const pair = pairs[index];
+      if (pair?.value) setPeek({ origin: { type: "row", index, key: pair.key }, peeked: decode(pair.value) });
+    },
+    [pairs],
+  );
+  const decodeNow = useCallback(() => {
+    if (asTable && row !== null) decodeRow(row);
+    else if (onText && !readOnly) decodeSelection();
+  }, [asTable, decodeRow, decodeSelection, onText, readOnly, row]);
+  const replaceDecoded = (origin: PeekOrigin, value: string) => {
+    if (origin.type === "row") {
+      step(editPair(text, origin.index, "value", value), `replaced the value of “${origin.key}” with its decoded form`);
+      return;
+    }
+    const surface = surfaceText(text);
+    const insert = kind === "json" ? JSON.stringify(value).slice(1, -1) : surfaceText(value);
+    const spliced = surface.slice(0, origin.range.from) + insert + surface.slice(origin.range.to);
+    step(spliced.replace(/\n/g, breakWith), REPLACED_SELECTION);
+  };
+  const openDecoded = (decoder: DecoderId, reading: Decoded) => {
+    const { bytes, typeHint } = opensAs(reading);
+    const title = `${payload.title} · decoded ${DECODER_LABEL[decoder]}`;
+    void contentKey(bytes).then((key) => open(typeHint ? { key, title, bytes, typeHint } : { key, title, bytes }));
+  };
+  const peekNode = () => {
+    if (!peek) return null;
+    const value = peek.peeked.decoder ? replacement(peek.peeked.reading) : null;
+    return (
+      <DecodePeek
+        peeked={peek.peeked}
+        from={peek.origin.type === "row" ? "value" : "selection"}
+        onReplace={value === null || readOnly ? null : () => replaceDecoded(peek.origin, value)}
+        onOpen={openDecoded}
+        onClose={() => setPeek(null)}
+      />
+    );
+  };
+
   const removeRow = useCallback(
     (index: number) => {
       setHistory((h) => commit(h, removePair(workingText(h), index), `removed pair ${index + 1}`));
@@ -343,6 +486,11 @@ function Workbench({ payload }: { payload: DataPayload }) {
       const command = event.metaKey || event.ctrlKey;
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
       if (empty) return;
+      if (event.key === "Escape" && peek && !menu && !typing) {
+        event.preventDefault();
+        setPeek(null);
+        return;
+      }
       if (!command && event.altKey && !typing) {
         if (event.code === "KeyZ" && !event.shiftKey && onText) {
           event.preventDefault();
@@ -355,7 +503,10 @@ function Workbench({ payload }: { payload: DataPayload }) {
       }
       if (!command) return;
       const key = event.key.toLowerCase();
-      if (key === "f" && searchable) {
+      if (key === "d" && event.shiftKey && !typing) {
+        event.preventDefault();
+        decodeNow();
+      } else if (key === "f" && searchable) {
         event.preventDefault();
         const input = findBox.current?.querySelector("input");
         input?.focus();
@@ -382,7 +533,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [asTable, copy, copyNode, empty, kind, onText, pairs, readOnly, reindent, removeRow, row, save, searchable, stepFind]);
+  }, [asTable, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, readOnly, reindent, removeRow, row, save, searchable, stepFind]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -478,7 +629,10 @@ function Workbench({ payload }: { payload: DataPayload }) {
     const pair = target === null ? undefined : pairs[target];
     if (asTable && pair) {
       return [
-        [{ label: "copy the value", keys: "⌘C", run: () => copy(pair.value) }],
+        [
+          { label: "decode the value", keys: "⌘⇧D", disabled: !pair.value, why: "empty value", run: () => decodeRow(pair.index) },
+          { label: "copy the value", keys: "⌘C", run: () => copy(pair.value) },
+        ],
         [
           { label: "add a pair below", run: () => step(addPairAfter(text, pair.index), `added a pair after pair ${pair.index + 1}`) },
           { label: "remove the pair", keys: "⌘⌫", run: () => removeRow(pair.index) },
@@ -486,7 +640,10 @@ function Workbench({ payload }: { payload: DataPayload }) {
       ];
     }
     const sections: MenuItem[][] = [
-      [{ label: "copy", keys: "⌘C", disabled: !selection, why: "select some text", run: () => copy(selection) }],
+      [
+        { label: "decode", keys: "⌘⇧D", disabled: !selection.trim(), why: "select a value", run: decodeSelection },
+        { label: "copy", keys: "⌘C", disabled: !selection, why: "select some text", run: () => copy(selection) },
+      ],
     ];
     if (kind === "json" && offset !== undefined) {
       sections.push([
@@ -543,6 +700,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
           matches={found.byPair}
           current={current}
           reveal={reveal}
+          inset={peek?.origin.type === "row" ? { afterIndex: peek.origin.index, node: peekNode() } : null}
           testId="data-surface"
         />
       );
@@ -581,6 +739,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
           matches={found.ranges}
           current={current}
           reveal={reveal}
+          inset={peek?.origin.type === "selection" ? { afterLine: peek.origin.line, node: peekNode() } : null}
           handle={surfaceHandle}
           testId="data-surface"
         />
@@ -662,7 +821,13 @@ function Workbench({ payload }: { payload: DataPayload }) {
   );
 }
 
-export function DataWindowScreen({ take = takeDataPayload }: { take?: () => Promise<DataPayload | null> }) {
+export function DataWindowScreen({
+  take = takeDataPayload,
+  open = openDataWindow,
+}: {
+  take?: () => Promise<DataPayload | null>;
+  open?: Open;
+}) {
   const [payload, setPayload] = useState<DataPayload | null | undefined>(undefined);
 
   useEffect(() => {
@@ -708,5 +873,5 @@ export function DataWindowScreen({ take = takeDataPayload }: { take?: () => Prom
       </div>
     );
   }
-  return <Workbench payload={payload} />;
+  return <Workbench payload={payload} open={open} />;
 }
