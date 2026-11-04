@@ -1,0 +1,50 @@
+schema: cr/v5
+scope: "WU inspect-window/decoders -> epic/inspect-window (round 4)"
+epic: E-INSPWIN
+wu: E-INSPWIN.W6
+branch: wu/inspect-window/decoders
+base: 8dcf2c1a6783133b7e589f579349af47c2c282f1
+head: 1873de5aa2e8c34ef1f95a470b6e804cfab9c135
+diff_sha256: d5172735197bc8b3b40f90281e4ddb45073cf563e1834015e47e927bbaa19f88
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 5
+  stage_seconds:
+    gate0: 310
+    finders: 60
+    verifiers: 0
+    total: 389
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "contentKey, the decoded window's key scheme, sits in decoders.ts rather than beside the window contract in dataWindow.ts"
+    waived: "dataWindow.ts imposes no key scheme (the key is opaque, chosen by the opener) and the screen, the opener here, is its one caller; nothing can drift"
+  - finding: "decode spreads the selection into a character array and runs up to three decoders synchronously with no size cap"
+    waived: "measured 267 ms on a 10 MiB base64 string and 64 ms otherwise, once per explicit decode; ruling Q7 leaves the window uncapped"
+  - finding: "a JSON selection outside a string literal is replaced as escaped string content, leaving invalid JSON"
+    waived: "reachable only by deciding to decode a bare integer whose base64 digits spell UTF-8 text and replacing it with that garbage; the step is undoable and the screen names the broken JSON"
+  - finding: "openDecoded's promise has no catch, so a failed open is unhandled and silent"
+    waived: "the same void openDataWindow pattern as BodyViewer's shipped opener; the shell owns window failures"
+  - finding: "the selection splice and JSON escaping live in the screen rather than in a pure text helper"
+    waived: "a few lines bound to the screen's surface text and history, reached by the integration tests"
+  - finding: "decoded bytes that open with %PDF- and are valid UTF-8 read as text, never named as a PDF"
+    waived: "deliberate since round 1's fix: a decoded result is text exactly when rawKind says so, matching the window it opens in; a real PDF carries binary bytes past its header and reads as binary"
+  - finding: "the context menu builds a copy of the surface text and checks for a value around the pointer on every render while it is open"
+    waived: "the check walks only the selection and the token at its edges; the copy is one per render of an open menu, which re-renders on a handful of state changes; menuJson's memo exists because it parses the document"
+  - finding: "decodeAround may decode up to ten candidate spans of a large selection on one gesture"
+    waived: "bounded at the exact span, its grown span and the eight longest values, each linear and once per explicit decode; the round-2 measurement (267 ms at 10 MiB per decode) stands for the common one-candidate case"
+  - finding: "the shared RUNNING stub's start time now follows the wall-clock date"
+    waived: "coreStub is imported by tests only; starting it today is the fix that keeps the same-day clock assertions true on any date"
+verdict: PASS
+date: 2026-11-05
