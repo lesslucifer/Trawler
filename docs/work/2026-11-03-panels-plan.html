@@ -178,7 +178,7 @@ flowchart LR
       <div data-wu="E-PANELS.W6">
         <h3 id="w6">E-PANELS.W6 — e2e and distillation</h3>
         <table>
-          <tr><th>What it builds</th><td data-item="wu-summary"><code>ui/e2e/specs/layout.spec.ts</code> through the real window (below), the e2e launcher's marker wipe extended to <code>layout.json</code>, and the distillation into T2.</td></tr>
+          <tr><th>What it builds</th><td data-item="wu-summary">Three layout spec files through the real window (below) — the relaunch a real quit, since <code>reloadSession()</code> keeps the app process under the embedded provider; both launchers' saved-state wipe extended to <code>layout.json</code>; the e2e dependency pin that stopped the suite before W6; and the distillation into T2. Plan: <a href="2026-11-04-panels-w6-e2e-plan.html">W6 plan</a>.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E; every expected-result row.</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">e2e green; UC-4/UC-5 rows, the DEC and the design-rules vocabulary current; plan and reports archived.</td></tr>
           <tr><th>Dependencies</th><td data-item="wu-deps">W3, W4 and W5.</td></tr>
@@ -193,9 +193,9 @@ flowchart LR
         <tr><td>Drag and bound</td><td>select a flow → drag splitter A past both ends → pane width equals <code>pane-min</code> / <code>pane-max</code>; drag splitter B → headers share within bounds.</td></tr>
         <tr><td>Columns</td><td>drag the host handle past both ends → host track equals its min / max, path never below <code>path-min</code>; each label's left edge equals its cells' left edge; double-click the handle → 180.</td></tr>
         <tr><td>Keyboard</td><td>focus splitter A → arrows move it by the designed step; End reaches max; reset gesture returns 520.</td></tr>
-        <tr><td>Survives a relaunch</td><td>set pane, headers share, a column width, window size → end the session and relaunch the app (<code>browser.reloadSession()</code>) → all four restored.</td></tr>
-        <tr><td>Broken save</td><td>write a corrupt / wrong-shape <code>layout.json</code> before launch → defaults, no error notice.</td></tr>
-        <tr><td>Reset layout</td><td>after changes, the reset act → every default back, file rewritten.</td></tr>
+        <tr><td>Survives a relaunch</td><td>set pane, headers share, a column width, window size → quit the app by destroying its window; the launcher launches it again for the next spec file → all four restored.</td></tr>
+        <tr><td>Broken save</td><td>write a corrupt <code>layout.json</code> before launch (every other shape: <code>layout.rs</code> unit tests) → defaults, no error notice.</td></tr>
+        <tr><td>Reset layout</td><td>after changes, the reset act (its <code>layout-reset</code> event, emitted from the webview — WebDriver does not reach the native menu) → every default back, file rewritten.</td></tr>
       </table>
       <p>The launcher removes <code>layout.json</code> before and after the run, like the notice markers, so no run inherits another's layout. Off-monitor restore is unit-level only (W5) — a real second monitor is not hermetic; that is the stated waiver for that row.</p>
     </div>

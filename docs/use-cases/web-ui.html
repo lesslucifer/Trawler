@@ -139,6 +139,34 @@
         the same move. The width and the window are one decision: a wider pane alone makes the screen worse
         at the size the app opens at.</td></tr>
       </table>
+      <p>The layout became the user's in <span class="badge id">E-PANELS</span>
+      (<a href="../decisions/dec-67-the-user-sizes-the-layout.html">DEC-67</a>,
+      <a href="../decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html">DEC-68</a>); the fixed sizes
+      above are now its defaults.</p>
+      <table data-c="uc-4-gains-panels">
+        <tr><th>Surface</th><th>User-sized within</th><th>Comes back</th></tr>
+        <tr><td>list ↔ detail pane (the composer too, UC-8)</td><td>384&nbsp;px to 960&nbsp;px, and never so wide
+          the list loses its columns' room</td><td>once for the app</td></tr>
+        <tr><td>each fixed flow-list column — time, method, host, status, duration</td><td>its own floor and
+          ceiling; path keeps the remainder, at least 128&nbsp;px, and the labels scroll sideways with the
+          rows</td><td>once for the app</td></tr>
+        <tr><td>each window</td><td>the OS's own gestures, never below 850 × 600</td><td>per window, moved onto
+          a monitor that still exists</td></tr>
+      </table>
+      <ul>
+        <li>Each line is a 1&nbsp;px split with a grip band past each side: a drag, ←/→ (↑/↓ for a horizontal
+        split) by 8&nbsp;px, Shift by 48, Home / End to its bounds; a double-click returns that one default and
+        View ▸ Reset Layout returns them all. Nothing collapses to zero; columns are resized, never reordered or
+        hidden.</li>
+        <li>A narrower window clamps what is shown, never what is saved: widened again, the pane returns to the
+        user's width.</li>
+        <li>Sizes live in the shell — <code>layout.json</code> and <code>windows.json</code> in its config dir
+        — never in the core or the API (DEC-12). A file the app cannot read whole is the whole default, with no
+        notice.</li>
+        <li>Pinned end to end by <code>ui/e2e/specs/layout.spec.ts</code>, <code>layout-relaunched.spec.ts</code>
+        and <code>layout-broken.spec.ts</code>: every bound by drag and key, the resets, the labels over their
+        cells, all four sizes across a real quit and launch, and a corrupt save opening the defaults.</li>
+      </ul>
       <p><strong>One rule is knowingly unmet, and now bounded.</strong> The host and path cells truncate
       rather than wrap, because a virtualized fixed-height row cannot both wrap and stay one line. The full
       value stays reachable — the path on the row's title, both in the detail pane's URI — and the cut is
@@ -303,12 +331,14 @@
         at the value for ~2 s; drag-selecting still selects.</li>
         <li><strong>The body is the main zone and the panel never scrolls as a whole</strong>
         (<a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a>): the headers take their natural
-        height up to about a third of the panel and scroll inside it, the heading naming how many there are;
+        height up to a share of the panel — a third by default, user-sized between 15&nbsp;% and 60&nbsp;% on the
+        split under them (<a href="#uc-4">UC-4</a>) — and scroll inside it, the heading naming how many there are;
         the body takes the rest and scrolls inside itself. A header value taller than three lines — a
         cookie, a token, a policy — is clamped with <em>more</em> / <em>less</em> under its name: lines are
         hidden, never characters, the value still copies whole, and one act shows all of it. How much a
         clamped value shows before that act is the panel's width, and the width is a chosen number:
-        520&nbsp;px, with the app's default window at 1440 to pay for it
+        520&nbsp;px by default, with the app's default window at 1440 to pay for it, and every flow opens at the
+        width the user last set (<a href="#uc-4">UC-4</a>)
         (<a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a>, <span class="badge id">E-RFINISH</span>) —
         about 168 characters of a 900-character cookie instead of about 108.</li>
         <li><strong>Esc dismisses the panel</strong>, as does ✕, and focus returns to the list that opened
