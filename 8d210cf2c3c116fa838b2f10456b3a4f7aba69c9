@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W6
+base: 8dcf2c1a6783133b7e589f579349af47c2c282f1
+design_sha256: 5bffce2bbf63c8abd7105376fc6f1093930fc6414c1c44eea35bb428da57444d
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-03-data-window-design-run.html
+    blob: e5f9c5c5f16f6a67d7e6eb156d9989dd69c1e99f
+    built: [ui/src/DataWindowScreen.tsx, ui/src/components/IconButton.tsx]
+undesigned:
+  - path: ui/src/components/EditSurface.tsx
+    why: "adds selection() to the handle, reading the main selection's range for the screen; it renders nothing new and the inset the peek mounts in was built in W3 from the same run"
+date: 2026-11-04
