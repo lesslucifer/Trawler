@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU form-text-hex-tools -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W5
+branch: wu/inspect-window/form-text-hex-tools
+base: 768fb8905fc14c7b3e813483126e5c82da89be35
+head: b7b352eb97591299cd36443992fb97a5e4e870db
+diff_sha256: 7a341655b9c90ebfb5d61c61d71aad51b7125d96790b1eb82b9ab5e3df63dde3
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 447
+    total: 465
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 4, verified: 0, waived: 0 }
+nits:
+  - finding: "findInPairs compiles the query's RegExp once per key and value rather than once per search"
+    waived: "round 1's verifier measured it: about 1 ms over 5 000 pairs, 35-50 ms over 200 000, linear either way; no visible stall at the window's sizes"
+  - finding: "find.ts and formPairs.ts import the TextRange type from the components barrel, a type-only cycle with FormTable"
+    waived: "type-only and erased at build; jsonTools already imports it that way; moving EditSurface's exported type is outside this WU"
+  - finding: "xmlTools matches tag names case-insensitively, so XML like <A></a> is re-indented rather than reported"
+    waived: "deliberate: the kind is XML / HTML and HTML names are case-insensitive; re-indent lays a text out, it does not validate XML"
+  - finding: "the XML indent unit is read from the first indented tag line, which may sit deeper than depth 1"
+    waived: "the same heuristic as JSON's indent reader; a wrong unit is one undoable step and a re-indent from a minified copy uses 2 spaces"
+verdict: PASS
+date: 2026-11-04
