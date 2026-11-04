@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeafe3f9f34851f0dfae507">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-70: a filter is a chip, the core stays keyed</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-70 — a filter is a chip, the core stays keyed</h1>
+      <p>The app's four filter controls become one typed query bar. Each accepted filter is a chip, the app parses
+        the grammar, and the core keeps keyed query parameters, now with lists, negation and <code>is</code>.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-QUERY</strong> before W1 and W2,
+        from the owner's rulings on Q1–Q10 (2026-11-04) · reverses UC-4's “an exactly-matched filter is chosen rather
+        than typed” · UC-3 · UC-4 · UC-6 · UC-7 · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before (UC-4, E-RFINISH)</th><th>What went wrong</th><th>Ruling</th></tr>
+      <tr><td>four controls: free text (URI only), a host dropdown, a method dropdown, a status field</td>
+        <td>four rules to learn. <code>content_type</code> and <code>source</code> existed in the core with no control
+          in the app</td><td>one typed bar, every filter a chip</td></tr>
+      <tr><td>method and host <em>chosen, not typed</em>, so a partial verb like <code>GE</code> could not be
+        written</td><td>the dropdowns fixed one failure (a query that cannot be satisfied) by removing typing
+          altogether</td><td>typing returns. An unparseable draft stays a draft and says why, so that failure stays
+          fixed</td></tr>
+      <tr><td>the host dropdown offered <code>new URL().host</code> (port kept); the core matched
+        <code>Uri::host()</code> (port dropped)</td><td>picking <code>localhost:8080</code> listed nothing</td>
+        <td>the host filter matches host or host:port</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> A filter is a chip, and only a chip filters. The app parses a typed draft into a
+        chip and refetches only when a chip is added or removed. The grammar belongs to the app. The core parses no
+        query string and keeps keyed parameters, which an API client writes directly.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The core takes <code>host</code> <code>method</code> <code>status</code>
+        <code>content_type</code> <code>source</code> <code>q</code> <code>is</code>, each repeatable, and a
+        <code>not_&lt;key&gt;</code> form of each</td><td>Q1, Q9: no <code>?query=</code> grammar in the core. Negation
+          and lists are the two things the chips need that keyed parameters lacked</td></tr>
+      <tr><td>2</td><td>A repeated <code>q</code> matches <em>all of</em> its values. Any other repeated key matches
+        <em>any of</em> its values. Different keys combine as <em>all of</em></td><td>Q10: each text chip narrows.
+          Q2: <code>host:a host:b</code> means either host, so there is no OR syntax</td></tr>
+      <tr><td>3</td><td><code>not_&lt;key&gt;=v</code> excludes every flow that <code>&lt;key&gt;=v</code> would
+        select. Repeated, it excludes flows matching any of the values</td><td>“matches none of them”, whatever the key</td></tr>
+      <tr><td>4</td><td><code>is=pending</code> means no response yet. <code>is=https</code> means the request scheme is
+        https</td><td>Q2: the two states the bar offers that no key covered</td></tr>
+      <tr><td>5</td><td>A single parameter behaves exactly as it did before this record</td><td>no existing client
+        (the web shell, scripts, the app before W3) breaks</td></tr>
+      <tr><td>6</td><td>A value the core cannot read is refused <code>400</code> with a reason naming the parameter as
+        sent (<code>not_status</code>, not <code>status</code>). The listing, export and clear share that one
+        refusal</td><td>the app marks the chip that produced the refusal. A silently empty list reads like “nothing
+          matched”</td></tr>
+      <tr><td>7</td><td>The host filter is a substring of host or host:port</td><td>the app's host values carry the
+        port</td></tr>
+      <tr><td>8</td><td>A draft that does not parse never reaches the core. It stays in the bar and names its fault</td>
+        <td>this keeps the protection the dropdowns gave, without the dropdowns</td></tr>
+      <tr><td>9</td><td>Actions (export, clear, settings) stay out of the bar. ⌘F focuses it. The chips survive a
+        relaunch through E-STICKY's store</td><td>Q3, Q4, Q8</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Parse the grammar in the core (<code>?query=</code>)</td><td>Q1: two grammars for one capability. API
+        clients already write keyed parameters</td></tr>
+      <tr><td>OR syntax within a key (<code>method:GET,POST</code>)</td><td>Q2: repeating the key says the same</td></tr>
+      <tr><td>Apply on each keystroke, debounced</td><td>Q5: a half-typed draft would filter the list</td></tr>
+      <tr><td>Accepted filters stay highlighted text, not chips</td><td>Q7: one draft parsed at a time keeps a colon
+        inside a value unambiguous</td></tr>
+      <tr><td>Commands in the bar (<code>&gt;export</code>)</td><td>Q6, Q8: the bar only filters and searches</td></tr>
+      <tr><td>Keep the dropdowns beside the bar</td><td>two ways to set one filter, and they would disagree</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
