@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: cdb2f66a5410f257b25d5d88a402d1e71772904c
+diff_sha256: 4ebf603069d7dac3b896623ef9d05f7e4b0d6963967083dd3131a25e7fbd8f4b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 5
+  stage_seconds:
+    gate0: 1
+    finders: 42
+  by_finder:
+    correctness: { found: 4, verified: 2 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 1 }
+findings: { found: 9, verified: 3, waived: 0 }
+blocking:
+  - "important: Supervisor::spawn returns StartError::Spawn after publishing Starting and never publishes Exited, so a failed spawn leaves the page on a disabled 'waiting' row forever"
+  - "important: restart_core is not serialized; two windows restarting at once can spawn a second core onto ports the first is still releasing"
+  - "important: LOG_LINES = 2000 is declared in coreService.ts and supervisor.rs with nothing tying them, so the UI tail and the ring can drift"
+verdict: FAIL
+date: 2026-11-04
