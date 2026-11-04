@@ -92,15 +92,18 @@ pub fn run() {
     let builder =
         builder.plugin(tauri_plugin_wdio::init()).plugin(tauri_plugin_wdio_webdriver::init());
 
-    builder.build(tauri::generate_context!()).expect("error while running trawler-ui").run(
-        |app, event| {
-            if let tauri::RunEvent::Exit = event {
-                if let Some(core) = app.try_state::<core::Core>() {
-                    core.stop();
-                }
-            }
-        },
-    );
+    builder
+        .build(tauri::generate_context!())
+        .expect("error while running trawler-ui")
+        .run(|app, event| on_run_event(app, &event));
+}
+
+pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
+    if let tauri::RunEvent::Exit = event {
+        if let Some(core) = app.try_state::<core::Core>() {
+            core.stop();
+        }
+    }
 }
 
 #[cfg(test)]

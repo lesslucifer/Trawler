@@ -50,6 +50,7 @@ import { bounded, useProxyCloseConfirm, type QuitFacts } from "./closeConfirm";
 import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { NotAnswering } from "./NotAnswering";
+import { quitStopsCore } from "./coreService";
 import { CoreServiceContext, tauriBridge, useCoreService, type CoreBridge } from "./useCoreService";
 import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
@@ -843,6 +844,7 @@ function Shell({
       onQuit={close.quit}
       onCancel={close.cancel}
       notesShown={notesShown}
+      quitStops={quitStopsCore(service?.state ?? null)}
     />
   );
 

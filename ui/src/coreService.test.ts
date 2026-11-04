@@ -4,6 +4,7 @@ import {
   CORE_STATE_EVENT,
   onCoreLog,
   onCoreState,
+  quitStopsCore,
   readCoreLog,
   readCoreStatus,
   restartCore,
@@ -67,4 +68,12 @@ test("state and log events hand over their payloads", async () => {
   expect(states).toEqual([{ state: "exited", code: null, signal: 9 }]);
   expect(lines).toEqual([line]);
   expect([CORE_STATE_EVENT, CORE_LOG_EVENT]).toEqual(["core://state", "core://log"]);
+});
+
+test("a quit stops the core only while the app runs one of its own", () => {
+  expect(quitStopsCore({ state: "starting" })).toBe(true);
+  expect(quitStopsCore(running)).toBe(true);
+  expect(quitStopsCore({ state: "exited", code: 1, signal: null })).toBe(false);
+  expect(quitStopsCore({ state: "attached", api: "http://127.0.0.1:7421" })).toBe(false);
+  expect(quitStopsCore(null)).toBe(false);
 });
