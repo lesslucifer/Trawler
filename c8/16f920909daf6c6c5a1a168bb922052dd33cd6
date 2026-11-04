@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-STICKY
+branch: HEAD
+tests:
+  unit: { count: 256, covers: "Every rule at the level where it lives (W1). THE STORE: view-prefs.json round-trips, reads each wrong field as its default alone and keeps other versions' fields (view_prefs.rs); the app store validates per field (viewPrefsStore.test.ts). THE ONE WRITER: useViewPrefs reads once, lets an early choice win per field, sends the whole record the moment a choice is made, held only until the read settles. THE SURFACES: the pane and body viewer render and hand back the leg and mode they are given; in App the next flow opens on the last leg and mode, a saved record restores, a setup pick is saved. SETUP: a user re-invoke opens setup on the remembered platform while the launch check stays on This machine." }
+  integration: { count: 7, covers: "W1's bounded contracts. view_prefs_store.rs: the wire record the app sends writes and reads back beside a foreign field, and a broken file reads as defaults. restart_command.rs: Settings opened on a tracked app joins the window records the shell saves." }
+  e2e: { count: 9, covers: "THE EPIC'S FULL FLOW through the real Tauri window (W2): cargo xtask ui e2e green, attached suite 11 of 11 spec files and owned 1 of 1. sticky.spec.ts: flow B opens on the Response and raw picked on flow A. sticky-relaunched.spec.ts, after a real quit and relaunch: the app opens on the list, a flow opens on Response and raw, setup from the menu lands on the Android emulator, and the Settings window reopens at the rect it was left at. sticky-broken.spec.ts: a corrupt view-prefs.json opens on Request and pretty with no band or warning. flows.spec.ts selects the leg and mode it asserts, so no spec leans on a default." }
