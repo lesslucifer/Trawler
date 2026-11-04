@@ -56,8 +56,13 @@
         box's value. Adding another chip beside a refused one therefore keeps the refusal standing, as before</td></tr>
       <tr><td>the forks went into DEC-71 now, not at W4</td><td>DEC-16 lets a design file go only after its forks are
         distilled, and the design retires in the WU that builds it</td></tr>
-      <tr><td>the archived design run still links to the retired design file</td><td>its bytes are the signed-off run;
-        it leaves the tree at the epic's close</td></tr>
+      <tr><td>the archived design run's two links to the retired design file are now plain citations</td><td>verify-doc
+        refuses a link to a file the tree no longer holds</td></tr>
+      <tr><td>added: the supervisor tests pay macOS's first-exec scan before their readiness clock
+        (<code>ui/src-tauri/tests/common/mod.rs</code>)</td><td>Gate 0 was red on <code>quit_stops_core</code>: a freshly
+        linked app binary took 16–22 s to start its first exec, and the tests give the core 20 s to be ready.
+        <code>cargo test</code> relinks before each run, so the test always paid the scan. The app is unaffected: it
+        runs its core from its own, already-scanned binary</td></tr>
     </table>
 
     <h2 id="evidence">Evidence</h2>
@@ -73,6 +78,9 @@
         saved when made; a refusal marks its chip; export and clear carry the chips.
         <code>ui/src-tauri/tests/view_prefs_store.rs</code>: the wire record, now with chips, round-trips</td></tr>
       <tr><td>e2e</td><td>waived: W4's WebDriver spec walks the chip flows against a real core</td></tr>
+      <tr><td>fix</td><td>after a forced relink, <code>quit_stops_core</code> (2), <code>supervisor</code> (4) and
+        <code>restart_command</code> (6) pass; before the fix both <code>quit_stops_core</code> tests failed with
+        <code>NoReady { waited: 20s }</code></td></tr>
       <tr><td>suite</td><td>all 81 front-end test files green, eslint and <code>tsc -b</code> clean, the bundle builds,
         clippy and fmt green at commit</td></tr>
     </table>
