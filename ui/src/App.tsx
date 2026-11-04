@@ -843,6 +843,7 @@ function Shell({
       onQuit={close.quit}
       onCancel={close.cancel}
       notesShown={notesShown}
+      quitStops={service?.state != null && service.state.state !== "attached"}
     />
   );
 

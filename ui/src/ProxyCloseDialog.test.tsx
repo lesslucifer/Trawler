@@ -229,6 +229,34 @@ describe("nothing here routes through Trawler, but a device could (D4)", () => {
   });
 });
 
+describe("an owned core, which the quit itself stops (DEC-64 rule 6)", () => {
+  const panel = () => screen.getByTestId("proxy-close-panel");
+  const CASES: [string, QuitPrompt, string, string][] = [
+    ["ours", OURS, CLOSE_COPY.quitStops.ours("this Mac"), CLOSE_COPY.stake.ours("this Mac")],
+    ["unread", UNREAD, CLOSE_COPY.quitStops.unread("this Mac"), CLOSE_COPY.stake.unread("this Mac")],
+    ["devices", DEVICES, CLOSE_COPY.quitStops.devices, CLOSE_COPY.stake.devices],
+    ["emulator", EMULATOR, CLOSE_COPY.quitStops.emulator("Pixel_7_API_35"), CLOSE_COPY.stake.emulator("Pixel_7_API_35")],
+  ];
+
+  it.each(CASES)("%s: says quitting stops the capture service", (_, prompt, owned) => {
+    mount(prompt, { quitStops: true });
+    expect(panel()).toHaveTextContent(owned);
+    expect(panel()).toHaveTextContent(/Quitting stops Trawler's capture service/);
+    expect(panel()).not.toHaveTextContent(/once Trawler's capture service stops/);
+  });
+
+  it.each(CASES)("%s: without an owned core, keeps the sentence that stays true", (_, prompt, __, kept) => {
+    mount(prompt);
+    expect(panel()).toHaveTextContent(kept);
+    expect(panel()).not.toHaveTextContent(/Quitting stops/);
+  });
+
+  it("the not-answering sentence is the same either way", () => {
+    mount(STALE, { quitStops: true });
+    expect(panel()).toHaveTextContent(CLOSE_COPY.stake.stale("this Mac"));
+  });
+});
+
 describe("which device's steps open first", () => {
   it("the emulator found, else the device last set up, else an iPhone", () => {
     expect(deviceShown(EMULATOR, "ios")).toBe("android-sim");
