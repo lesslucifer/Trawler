@@ -39,6 +39,10 @@ export function restartCore(call: Invoke = invoke): Promise<CoreState> {
   return call<CoreState>("restart_core");
 }
 
+export function openSettings(call: Invoke = invoke): Promise<void> {
+  return call<void>("open_settings");
+}
+
 export function onCoreState(handler: (state: CoreState) => void, on: Listen = listen): Promise<UnlistenFn> {
   return on<CoreState>(CORE_STATE_EVENT, (event) => handler(event.payload));
 }

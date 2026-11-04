@@ -5,6 +5,7 @@ import {
   LOG_LINES,
   onCoreLog,
   onCoreState,
+  openSettings,
   readCoreLog,
   readCoreStatus,
   restartCore,
@@ -26,6 +27,7 @@ export interface CoreService {
   restarting: boolean;
   refusal: string | null;
   restart: () => Promise<void>;
+  openSettings: (() => void) | null;
 }
 
 export const CoreServiceContext = createContext<CoreService | null>(null);
@@ -79,7 +81,9 @@ export function useCoreService(bridge: CoreBridge = tauriBridge): CoreService {
     }
   }, [bridge]);
 
-  return { state, restarting, refusal, restart };
+  const openSettingsWindow = useCallback(() => void openSettings(bridge.call).catch(() => {}), [bridge]);
+
+  return { state, restarting, refusal, restart, openSettings: state ? openSettingsWindow : null };
 }
 
 export function mergeLog(kept: LogEntry[], incoming: LogEntry[], cap: number = LOG_LINES): LogEntry[] {

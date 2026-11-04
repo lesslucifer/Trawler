@@ -16,7 +16,7 @@ use common::{launch, PATIENCE};
 
 fn app() -> App<MockRuntime> {
     mock_builder()
-        .invoke_handler(tauri::generate_handler![core::restart_core])
+        .invoke_handler(tauri::generate_handler![core::restart_core, settings::open_settings])
         .build(mock_context(noop_assets()))
         .expect("a mock app")
 }
@@ -102,4 +102,15 @@ fn settings_from_the_menu_is_built_off_the_calling_thread() {
     assert_ne!(opening.thread().id(), std::thread::current().id());
     opening.join().expect("the opening thread").expect("settings opens");
     assert!(app.get_webview_window(SETTINGS_WINDOW).is_some());
+}
+
+#[test]
+fn settings_from_the_page_opens_through_its_command() {
+    let app = app();
+    let main = window(&app);
+    invoke(&main, "open_settings").expect("open_settings answers");
+    invoke(&main, "open_settings").expect("a second ask focuses it");
+    let open: Vec<String> =
+        app.webview_windows().into_keys().filter(|label| label == SETTINGS_WINDOW).collect();
+    assert_eq!(open, [SETTINGS_WINDOW]);
 }

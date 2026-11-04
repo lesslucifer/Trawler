@@ -31,6 +31,14 @@ pub fn open_in_background<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<tauri::R
     })
 }
 
+// Async so it runs off the main thread: a sync command runs on it, where
+// building a window deadlocks on Windows (the same Tauri warning as above).
+#[tauri::command]
+#[allow(clippy::unused_async)]
+pub async fn open_settings<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    open(&app).map_err(|err| err.to_string())
+}
+
 pub fn open<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
         window.unminimize()?;

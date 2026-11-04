@@ -83,7 +83,8 @@ pub fn run() {
         reach::confirm_replace_proxy,
         core::core_status,
         core::core_log,
-        core::restart_core
+        core::restart_core,
+        settings::open_settings
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);

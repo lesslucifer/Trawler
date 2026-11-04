@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useReducer,
@@ -181,6 +182,7 @@ function Shell({
   initialState?: OnbState;
 }) {
   const client = useMemo(() => api ?? createApi(), [api]);
+  const service = useContext(CoreServiceContext);
   const [state, dispatch] = useReducer(
     reduce,
     initialState,
@@ -1156,6 +1158,7 @@ function Shell({
             onCleared={() => setClearedEmpty(true)}
             onNewRequest={() => compose(null)}
             onSetUpDevice={setUpAnother}
+            onOpenSettings={service?.openSettings ?? undefined}
           />
         </>
       }

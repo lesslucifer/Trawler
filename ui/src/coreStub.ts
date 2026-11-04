@@ -19,6 +19,7 @@ export function coreStub({
     if (command === "core_status") return state;
     if (command === "core_log") return log;
     if (command === "restart_core") return restart();
+    if (command === "open_settings") return undefined;
     throw new Error(`${command} is not stubbed`);
   });
   const on = vi.fn(async (event: string, handler: (event: { payload: unknown }) => void) => {

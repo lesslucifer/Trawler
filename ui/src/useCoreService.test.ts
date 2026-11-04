@@ -138,3 +138,18 @@ test("the log is read only once its listener is registered", async () => {
   await register();
   await waitFor(() => expect(result.current).toEqual([line(0, "snapshot")]));
 });
+
+test("inside the app, settings opens through the shell", async () => {
+  const stub = coreStub({ state: RUNNING });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(result.current.openSettings).not.toBeNull());
+  act(() => result.current.openSettings?.());
+  expect(stub.call).toHaveBeenCalledWith("open_settings");
+});
+
+test("with no app around it, there is no settings to open", async () => {
+  const stub = coreStub({ state: null });
+  const { result } = renderHook(() => useCoreService(stub.bridge));
+  await waitFor(() => expect(stub.call).toHaveBeenCalledWith("core_status"));
+  expect(result.current.openSettings).toBeNull();
+});

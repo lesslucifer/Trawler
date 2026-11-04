@@ -8,7 +8,7 @@ function withService(service: Partial<CoreService>) {
   const restart = vi.fn(async () => {});
   const onRetry = vi.fn();
   render(
-    <CoreServiceContext.Provider value={{ state: null, restarting: false, refusal: null, restart, ...service }}>
+    <CoreServiceContext.Provider value={{ state: null, restarting: false, refusal: null, restart, openSettings: null, ...service }}>
       <NotAnswering retrying={false} onRetry={onRetry} />
     </CoreServiceContext.Provider>,
   );
