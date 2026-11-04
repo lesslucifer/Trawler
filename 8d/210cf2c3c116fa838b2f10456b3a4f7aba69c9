@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8d210cf2c3c116fa838b2f10456b3a4f7aba69c9
+base: 8dcf2c1a6783133b7e589f579349af47c2c282f1
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-inspect-window-w6-decoders-result.html
+report_sha256: d1caae3ab53833075ffd3d543d6c9fb0f443ddad0efab0f2c3ceaa909f37ceb8
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDHcQgRuuybqrCafqkyqGdC8ZeJnzGxjaNCnt7b1JdQK8s0I02xjvQ2Qz
+  2vLbIjy2xO/c9HwZql4FSAB8Ei0qoI
+  -----END SSH SIGNATURE-----
