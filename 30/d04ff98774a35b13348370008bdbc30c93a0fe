@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W4
+branch: HEAD
+tests:
+  unit: { count: 73, covers: "JSON parsed without recursion keeping each literal's source text, repeated keys, escapes and a BOM; every layout (2, 4, tab, minified) matches JSON.stringify and writes the text's own line break and closing break; sort keys deep, stable, by decoded key; each malformed input names its line, column and reason; the node at an offset as a path and a value (string decoded, container verbatim with the document's break); literal case-insensitive find capped and mapped to the surface's positions; EditSurface reveals the current match only on the caller's reveal, never on an edit that moves the matches, folds every nested range on fold to all, and its handle focuses, reads the cursor and maps a point; IconButton's previous and next glyphs; the working copy names its current step" }
+  integration: { count: 46, covers: "the screen fed a 2 MB JSON payload finds by cmd-F, Enter, shift-Enter, cmd-G, shift-cmd-G and the arrows, wrapping, Esc clears and returns to the surface, no match disables the arrows, an edit is counted at once, CRLF documents mark at the surface's positions, and a form table offers no find; indent, minify and sort keys are named steps undone one at a time, keep a number past 2^53 and repeated keys, and lay out CRLF; a copy that does not parse shows where with indent and sort keys disabled, also once typing pauses after a breaking edit; read-only JSON offers no reformat; fold to works from the menu on JSON and XML; the JSON right-click and option-cmd-C keys copy a node's path and value, keep CRLF, wait for a parse and are absent on text; no request made" }
+  e2e: { waived: "W7's spec drives the real windows once W4-W6 land, per the epic plan (J2 works a JSON document); the screen is reachable only through a native window the wdio capability does not yet name" }
