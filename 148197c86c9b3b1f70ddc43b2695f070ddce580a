@@ -1,0 +1,21 @@
+schema: design/v1
+epic: E-ONEAPP
+base: a09fd714cee840b18a90402cc5f985ba1cc00440
+design_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-04-one-app-service-page-design-run.html
+    blob: 222695cdc2bba9078ceb9042cedae577eb305c76
+    built: [ui/src/CaptureService.tsx, ui/src/LogTail.tsx, ui/src/NotAnswering.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wraps the existing shell in the core-service provider, hands the capture menu its settings handler, and passes one boolean (quitStopsCore) to the existing quit dialog; every screen it draws is unchanged"
+  - path: ui/src/CaptureControls.tsx
+    why: "one more act in the existing capture menu, a text row built from the same CaptureAct shape; the menu's layout, glyph column and order rules are unchanged"
+  - path: ui/src/ProxyCloseDialog.tsx
+    why: "a copy edit inside the existing dialog: four stake sentences gain an owned-core wording picked by a boolean prop; frame, title, buttons, steps and layout untouched, so the E-ONBRVP.W11 design still describes it"
+  - path: ui/src/main.tsx
+    why: "chooses which root a window mounts, the existing app or the designed Capture service page, from the shell's page mark; it draws no element of its own"
+accounting: "THE EPIC'S HAND-OFF, END TO END. The Capture service run was authored at 1243a982 and closed on the owner's LGTM at 8547ced2 before any W3 code, then cited by blob 222695cd at W3 for both added surfaces (CaptureService, LogTail) and NotAnswering's restart; that blob is the one the file holds at the close commit's parent, so the pin names one state, and the close retires it from the tree. App, CaptureControls and main were declared at W3, ProxyCloseDialog and App's quit prop at W4, each a wiring or copy edit inside an existing surface. W1, W2 and W5 touched no rendered file. The epic added no component design file, so none is left unbuilt."
+date: 2026-11-04
