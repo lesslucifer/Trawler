@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU form-text-hex-tools -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W5
+branch: wu/inspect-window/form-text-hex-tools
+base: 768fb8905fc14c7b3e813483126e5c82da89be35
+head: 5a3f307be8358deddca9355df0f439229c01d6d7
+diff_sha256: 1be84ea860845da8668f52b6fa47ce8366725c07478a0436cd1b8657faa83cab
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 1
+  stage_seconds:
+    gate0: 482
+    total: 704
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency: { found: 2, verified: 1 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 6, verified: 3, waived: 0 }
+blockers:
+  - "xmlTools rawTextEnd indexes text.toLowerCase() into the original text: a character whose lowercase changes length (U+0130) before </script> shifts the raw-text end, so <a><script>İİİİ x</script><c/></a> is refused as '</a> closes <script>'"
+  - "HTML void names apply to every document: RSS <channel><link>http://x</link><title>t</title></channel> reads <link> as empty, its text as the channel's, and re-indent silently leaves the document as written"
+importants:
+  - "rawTextEnd lowercases the whole document once per <script>/<style> open tag: O(k*n), re-run on each text change while the menu is open"
+nits:
+  - finding: "DataWindowScreen's local interface Found shares its name with find.ts's exported Found, of another shape"
+    waived: "recorded unverified as a nit; renamed in the round-1 fix commit, outside this note's range"
+verdict: FAIL
+date: 2026-11-04
