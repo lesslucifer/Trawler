@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-QUERY
+wu: E-QUERY.W3
+base: 96e3e31300fa36033a77a86f50b1b46b1c7fd22f
+design_sha256: fd7cb95ae6a9da9cdf652c2088b79e4acf2bc06c30277c128348651380bc4026
+verdict: PASS
+artifacts: [docs/work/2026-11-04-query-bar-design-run.html]
+implements:
+  - path: docs/work/components/query-bar.html
+    blob: 107c31548e47fd560e83d39cb32940a5e952d18c
+    built: [ui/src/components/QueryBar.tsx]
+  - path: docs/work/2026-11-04-query-bar-design-run.html
+    blob: fce494fa5b14784d63daa781b9c2b479db3fa6d3
+    built: [ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/components/Field.tsx, ui/src/components/Select.tsx]
+date: 2026-11-04
