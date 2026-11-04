@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU decoders -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W6
+branch: wu/inspect-window/decoders
+base: 8dcf2c1a6783133b7e589f579349af47c2c282f1
+head: 8d210cf2c3c116fa838b2f10456b3a4f7aba69c9
+diff_sha256: 97102a1b77d6ddb5a4e2f919c4ece0a64c13c04bc76cb68aa97fe62ed27ceee9
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 4
+  stage_seconds:
+    total: 1200
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 2, verified: 2 }
+    altitude: { found: 2, verified: 2 }
+findings: { found: 5, verified: 5, waived: 0 }
+waivers: []
+nits:
+  - finding: "contentKey, the decoded window's key scheme, sits in decoders.ts rather than beside the window contract in dataWindow.ts"
+    waived: "dataWindow.ts imposes no key scheme (the key is opaque, chosen by the opener) and the screen, the opener here, is its one caller; nothing can drift"
+  - finding: "decode spreads the selection into a character array and runs up to three decoders synchronously with no size cap"
+    waived: "measured 267 ms on a 10 MiB base64 string and 64 ms otherwise, once per explicit decode; ruling Q7 leaves the window uncapped"
+  - finding: "a JSON selection outside a string literal is replaced as escaped string content, leaving invalid JSON"
+    waived: "reachable only by deciding to decode a bare integer whose base64 digits spell UTF-8 text and replacing it with that garbage; the step is undoable and the screen names the broken JSON"
+  - finding: "openDecoded's promise has no catch, so a failed open is unhandled and silent"
+    waived: "the same void openDataWindow pattern as BodyViewer's shipped opener; the shell owns window failures"
+  - finding: "the selection splice and JSON escaping live in the screen rather than in a pure text helper"
+    waived: "a few lines bound to the screen's surface text and history, reached by the integration tests"
+verdict: PASS
+date: 2026-11-04
