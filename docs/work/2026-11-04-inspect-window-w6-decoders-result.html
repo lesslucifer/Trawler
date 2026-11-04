@@ -63,13 +63,15 @@
     <table data-item="evidence" data-c="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>d5e59a93</code> plan · <code>986f67bc</code> decoders, the peek, the right-click rows
-        and ⌘⇧D, EditSurface <code>selection()</code>, IconButton <code>replace</code></td></tr>
+        and ⌘⇧D, EditSurface <code>selection()</code>, IconButton <code>replace</code> · <code>65a6cc58</code> review round 1's fix</td></tr>
       <tr><td>unit</td><td><code>decoders</code> (18: base64 standard, URL-safe, padded, padding-less and with
         whitespace; 4n + 1, a foreign character, mid-string padding, nothing; JSON at 2 spaces with a number past
         2<sup>53</sup> kept; binary with and without a signature, a control character, tab and CRLF as text; URL with
         <code>+</code>, a bad escape, non-UTF-8 escapes as binary; JWT valid, empty signature, 2 and 4 parts, a header not
         base64url, a payload not JSON; the guess, one reading only, URL only over an escape, base64-to-binary only with a
-        signature, the reason; replacement, what each opens as, the content key) · EditSurface <code>selection()</code> ·
+        signature, the reason; replacement, what each opens as, the content key; DEL read as text and a vertical tab or form
+        feed as binary, by <code>rawKind</code>) · <code>dataKind</code> (one table naming PNG, JPEG, GIF, gzip and PDF,
+        the first three sniffed as image) · EditSurface <code>selection()</code> ·
         IconButton <code>replace</code> ⇄</td></tr>
       <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (9 new: a JWT from the right-click
         under its line with nothing modified; ⇄ as JSON string content and ⌘Z; one occurrence replaced in a CRLF text and
@@ -77,7 +79,15 @@
         their own; a JWT opening its payload as JSON; a form row from the right-click and ⌘⇧D, ⇄ and undo; an empty value
         disabled; Esc, an edit and a kind change closing the peek)</td></tr>
       <tr><td>suites</td><td>vitest 61 252 in 92 files green; eslint and <code>tsc</code> clean; the pre-commit fmt and clippy green</td></tr>
-      <tr><td>review</td><td>Round 1 on the tip that carries this report</td></tr>
+      <tr><td>review</td><td>A first round was voided before any verdict: Gate 0 ran beside the finders and a
+        supervised-core test timed out waiting for the core under that load (it passes alone in 2.6 s and in a quiet
+        Gate 0). Round 1 FAIL on <code>7e0a470f</code>: two verified importants — the decoders redeclared the image
+        signatures <code>dataKind</code> owns, and read text with a control class of their own, so a decoded DEL read
+        binary in the peek and text in the window it opened. Fixed with regression tests first in <code>65a6cc58</code>:
+        <code>dataKind</code>'s one table names each signature and says which are images, and a decoded result is text
+        exactly when <code>rawKind</code> says so. One nit waived on the record (a bare JSON token replaced as string
+        content). Refuted: the read-only menu and ⌘⇧D disagreeing (the menu never opens there). Round 2 on the tip that
+        carries this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
