@@ -1,0 +1,33 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W3
+base: 6cc1fcb5edf95925b3970a1eb6e0ae549a920094
+design_sha256: a869b0a84b2988c4ea55e7a749a3425c1432605d263569b45b17283e923cfe7d
+verdict: PASS
+artifacts: [docs/work/2026-11-03-data-window-design-run.html]
+implements:
+  - path: docs/work/2026-11-03-data-window-design-run.html
+    blob: e2713946bdf2e98080173d283dcb4868d5e84501
+    built: [ui/src/DataWindowScreen.tsx, ui/src/BodyViewer.tsx, ui/src/components/CutMarker.tsx, ui/src/components/IconButton.tsx]
+  - path: docs/work/components/menu.html
+    blob: 356990cc9c62b84c5c4485eb4da5897df6dfa878
+    built: [ui/src/components/Menu.tsx]
+  - path: docs/work/components/edit-surface.html
+    blob: 48a2b04a40fef563e5f44a1778029118d63f5d39
+    built: [ui/src/components/EditSurface.tsx]
+  - path: docs/work/components/form-table.html
+    blob: efae89feca354bec6052a88f2334450b9a3d0e05
+    built: [ui/src/components/FormTable.tsx]
+  - path: docs/work/components/hex-view.html
+    blob: 344f7deef36688a9696e2128fc590271c066f325
+    built: [ui/src/components/HexView.tsx]
+undesigned:
+  - path: ui/src/components/CopyButton.tsx
+    why: "its clipboard write and confirm moved into the shared useCopy hook; the button's markup, states and labels are unchanged"
+  - path: ui/src/components/CopyText.tsx
+    why: "its clipboard write and confirm moved into the shared useCopy hook; the text's markup, states and labels are unchanged"
+  - path: ui/src/components/SourceSurface.tsx
+    why: "its CodeMirror theme and highlight moved verbatim to warpTheme.ts so EditSurface shares them; the pane renders exactly as before"
+  - path: ui/src/main.tsx
+    why: "the root picks DataWindowScreen for a data-* window and App otherwise; a mount switch with no layout of its own"
+date: 2026-11-04
