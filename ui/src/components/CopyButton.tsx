@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "./Button";
-import { useConfirm } from "./useConfirm";
+import { useCopy } from "./useConfirm";
 
 export interface CopyButtonProps {
   label: string;
@@ -13,6 +13,7 @@ export interface CopyButtonProps {
 }
 
 const COPY_GLYPH = "⧉";
+
 
 /**
  * CopyButton — labeled button that copies a derived payload and confirms inline; payload is not displayed.
@@ -32,15 +33,9 @@ export function CopyButton({
   disabled = false,
   className = "",
 }: CopyButtonProps) {
-  const { state, flash } = useConfirm(value);
+  const { state, copy: write } = useCopy(value);
 
-  const copy = () => {
-    const payload = getPayload ? getPayload() : (value ?? "");
-    Promise.resolve(navigator.clipboard?.writeText(payload)).then(
-      () => flash("confirming"),
-      () => flash("error"),
-    );
-  };
+  const copy = () => write(getPayload ? getPayload() : (value ?? ""));
 
   const outcomeClass =
     state === "confirming"

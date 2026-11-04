@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export const CONFIRM_MS = 2000;
 
+export function writeClipboard(text: string): Promise<void> {
+  return Promise.resolve(navigator.clipboard?.writeText(text));
+}
+
 export type ConfirmState = "idle" | "confirming" | "error";
 
 /**
@@ -35,4 +39,18 @@ export function useConfirm(resetKey: unknown): {
   );
 
   return { state, flash };
+}
+
+export function useCopy(resetKey: unknown): { state: ConfirmState; copy: (text: string) => void } {
+  const { state, flash } = useConfirm(resetKey);
+  const copy = useCallback(
+    (text: string) => {
+      writeClipboard(text).then(
+        () => flash("confirming"),
+        () => flash("error"),
+      );
+    },
+    [flash],
+  );
+  return { state, copy };
 }

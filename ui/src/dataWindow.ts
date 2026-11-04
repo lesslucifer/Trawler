@@ -1,4 +1,5 @@
 import { invoke, type InvokeArgs } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 // The data window's whole input (DEC-69): what the opener holds, by value. The
 // window learns nothing else about where the data came from.
@@ -89,4 +90,23 @@ export async function takeDataPayload(call: Invoke = invoke): Promise<DataPayloa
   if (!inShell()) return takeInBrowser();
   const framed = await call<ArrayBuffer>("take_data_payload");
   return framed.byteLength === 0 ? null : unframePayload(new Uint8Array(framed));
+}
+
+export function isDataWindow(self: Window = window): boolean {
+  const label = "__TAURI_INTERNALS__" in self ? getCurrentWindow().label : self.name;
+  return label.startsWith(DATA_WINDOW_PREFIX);
+}
+
+type Take = () => Promise<DataPayload | null>;
+const claims = new WeakMap<Take, Promise<DataPayload | null>>();
+
+// The payload is claimed exactly once (DEC-69 rule 2), and a second claim answers
+// null — so a screen that mounts twice must share the first claim's answer.
+export function claimOnce(take: Take = takeDataPayload): Promise<DataPayload | null> {
+  let claim = claims.get(take);
+  if (!claim) {
+    claim = take();
+    claims.set(take, claim);
+  }
+  return claim;
 }

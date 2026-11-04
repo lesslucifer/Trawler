@@ -12,6 +12,8 @@ use tauri::{
     WindowEvent,
 };
 
+use crate::window_geometry::{self, MinSize};
+
 pub const LABEL_PREFIX: &str = "data-";
 pub const MAIN_WINDOW: &str = "main";
 const WIDTH: f64 = 1200.0;
@@ -115,16 +117,25 @@ pub async fn open_data_window<R: Runtime>(
         focus(&app, &label);
         return Ok(());
     }
-    WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
+    // Read before the build: every data window shares one record, and the new
+    // window's own first Moved/Resized would otherwise overwrite it first.
+    let saved = window_geometry::saved(&app, &label);
+    let window = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
         .title(title)
         .inner_size(WIDTH, HEIGHT)
         .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
+        .visible(false)
         .build()
-        .map(|_| ())
         .map_err(|err| {
             parked.take(&label);
             err.to_string()
-        })
+        })?;
+    window_geometry::place(
+        &window.as_ref().window(),
+        saved,
+        MinSize { width: MIN_WIDTH, height: MIN_HEIGHT },
+    );
+    window.show().map_err(|err| err.to_string())
 }
 
 #[tauri::command]

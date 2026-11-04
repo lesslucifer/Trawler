@@ -858,7 +858,8 @@
             <code>data-&lt;hex(key)&gt;</code> and the window claims the payload once, as raw IPC bytes. It keeps the
             original, edits a scratch working copy, shows views, and knows nothing of flows or the core. UC-5's evidence
             rule binds the pane, not the window. No write-back, no caps, no close ask; data windows close with the main
-            window and hold only core default, save and file write. Rejected: a flow id fetched by the window, one reused
+            window and hold only core default, save and file write; they share one geometry record, the last moved one
+            writing it. Rejected: a flow id fetched by the window, one reused
             window, live data, lifted pane caps, write-back, a close ask, the payload in a URL or as JSON</td>
           <td><span class="badge auto">active</span></td>
         </tr>

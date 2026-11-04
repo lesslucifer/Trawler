@@ -1,4 +1,5 @@
-import type { BodyView, Leg } from "./api";
+import type { BodyFetch, BodyView, FlowView, Leg } from "./api";
+import type { DataPayload } from "./dataWindow";
 
 // Content-type → renderer dispatch, the core UC-5 contract. Decoded bodies
 // dispatch on the served content type; raw bodies sniff bytes (rawKind),
@@ -53,11 +54,11 @@ export interface DecodedBody {
 // downstream cannot tell a replacement character from one the body carried on
 // purpose. The strict pass is the same single decode the lenient one was; only
 // a body that fails it is decoded twice.
-export function decodeBody(bytes: Uint8Array): DecodedBody {
+export function decodeBody(bytes: Uint8Array, { keepBom = false } = {}): DecodedBody {
   try {
-    return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), whole: true };
+    return { text: new TextDecoder("utf-8", { fatal: true, ignoreBOM: keepBom }).decode(bytes), whole: true };
   } catch {
-    return { text: bodyText(bytes), whole: false };
+    return { text: new TextDecoder("utf-8", { ignoreBOM: keepBom }).decode(bytes), whole: false };
   }
 }
 
@@ -105,7 +106,18 @@ export function humanBytePair(shown: number, total: number): [string, string] {
 // Caps count characters (a rendered line is characters), but a cut marker states
 // bytes — the size the user would save. For non-ASCII the two differ.
 export function byteLength(text: string): number {
-  return new TextEncoder().encode(text).length;
+  let length = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    const next = text.charCodeAt(i + 1);
+    if (code < 0x80) length += 1;
+    else if (code < 0x800) length += 2;
+    else if (code >= 0xd800 && code < 0xdc00 && next >= 0xdc00 && next < 0xe000) {
+      length += 4;
+      i += 1;
+    } else length += 3;
+  }
+  return length;
 }
 
 // One dump, two consumers: HexRenderer tones the three parts separately, while
@@ -236,6 +248,13 @@ function clean(part: string): string {
   return part.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-._]+|[-._]+$/g, "");
 }
 
+// A data window knows only its opener's caption, so that caption is the name a
+// saved file is found again by; the hint, when there is one, picks the extension.
+export function captionFilename(caption: string, typeHint: string | undefined, suffix = ""): string {
+  const name = clean(caption).slice(0, 80).replace(/[-._]+$/, "") || "data";
+  return `${name}${suffix}${bodyExtension(typeHint ?? null)}`;
+}
+
 export function saveFilename(uri: string, leg: Leg, contentType: string | null): string {
   return `${endpointSlug(uri)}-${leg}${bodyExtension(contentType)}`;
 }
@@ -324,4 +343,39 @@ function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
     });
     input.click();
   });
+}
+
+// What the pane hands a data window: the bytes it holds, in the mode it shows.
+// Raw bytes go without a hint, because a served type says nothing about stored
+// bytes that may still be compressed; the window sniffs them, as rawKind does.
+export function bodyPayload(flow: FlowView, leg: Leg, fetched: BodyFetch, pretty: boolean): DataPayload {
+  const mode = pretty ? "pretty" : "raw";
+  const where = flow.uri.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+  const payload: DataPayload = {
+    key: `${flow.id}:${leg}:${mode}`,
+    title: `${leg} body${pretty ? "" : " · raw"} · ${flow.method} ${where}`,
+    bytes: fetched.bytes,
+  };
+  if (pretty && fetched.contentType) payload.typeHint = fetched.contentType;
+  return payload;
+}
+
+export interface CaptionParts {
+  what: string;
+  target?: { method: string; host: string; path: string; query: string };
+}
+
+const CAPTION_SEPARATOR = " · ";
+const CAPTION_TARGET = /^([A-Z]+) ([^/?#\s]+)([^?#\s]*)(\S*)$/;
+
+export function captionParts(caption: string): CaptionParts {
+  const at = caption.lastIndexOf(CAPTION_SEPARATOR);
+  const target = at < 0 ? null : CAPTION_TARGET.exec(caption.slice(at + CAPTION_SEPARATOR.length));
+  if (!target) return { what: caption };
+  const [, method, host, path, query] = target;
+  return { what: caption.slice(0, at), target: { method, host, path, query } };
+}
+
+export function queryCount(query: string): number {
+  return query.replace(/^\?/, "").split("&").filter(Boolean).length;
 }

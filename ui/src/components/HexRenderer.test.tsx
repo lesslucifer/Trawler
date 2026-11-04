@@ -47,7 +47,7 @@ describe("HexRenderer", () => {
     render(<HexRenderer bytes={new Uint8Array(HEX_MAX + 100).fill(0x41)} />);
 
     expect(screen.queryByText(/more bytes/)).not.toBeInTheDocument();
-    expect(screen.getByText(/showing/).className).toContain("text-warn");
+    expect(screen.getByText(/showing/).parentElement!.className).toContain("text-warn");
   });
 
   it("shows no marker for a body inside the cap", () => {
