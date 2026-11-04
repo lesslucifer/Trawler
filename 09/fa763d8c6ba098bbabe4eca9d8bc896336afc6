@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-QUERY
+wu: E-QUERY.W2
+branch: HEAD
+tests:
+  unit: { waived: "The WU adds no executable code; its artifacts are a design run and a component design, and every predicate over them is a verify-doc rule with its own tests in xtask." }
+  integration: { waived: "The contract is a green, closed, citable run: verify-doc asserts green, 6·run-closed asserts it archived at this merge, design-scope and 9·design assert W3 can cite it." }
+  e2e: { waived: "A design doc renders no surface a driver can touch; W4's WebDriver spec drives the built query bar." }
