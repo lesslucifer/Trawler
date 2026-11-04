@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "Epic E-PANELS -> main. The whole epic's code as one range: the layout bridge and bounds (ui/src/layoutStore.ts, layoutBounds.ts, layoutWire.json, useLayout.ts), the Splitter component, its use in Layout.tsx, FlowDetail.tsx and FlowList.tsx's column template and handles, App.tsx's one hook, BodyViewer's memo, the e2e layout specs and launchers (ui/e2e/), and the e2e pin guard (xtask/src/ui.rs). ONE ROUND. Each code-bearing WU was reviewed on its own diff as it landed (W1, W3, W4, W5, W6 PASS); this round judges the epic as a single range against main, the scope no WU review had: the seams between them. The close commit at the tip changes no code path."
+epic: E-PANELS
+branch: epic/panels
+base: a74695b49ed63ebf8f9b2fde11298b68f29ea6ee
+head: 644061089550ae4430f4711e5ea9e6a1603efd92
+diff_sha256: fcc62d1b74d77a2d148f7434d03d99807dcde5c20d03b5ba906859a8bac6a9ff
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 4
+  stage_seconds:
+    gate0: 149
+    total: 230
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 3, verified: 1 }
+findings: { found: 7, verified: 1, waived: 0 }
+nits:
+  - finding: "The config dir path and the layout.json / windows.json names are spelled out in wdio.conf.ts, walkthrough.conf.ts and specs/layout.ts (proposed important, verified nit)."
+    waived: "A drift fails loudly, not silently: a renamed file makes the specs' savedLayout() read null and time out, and a stale cleanup list fails layout.spec.ts's default-size assertions on the next run. Consolidating into a shared ui/e2e constants module is a tidy-up, not a defect."
+  - finding: "A layout change released less than LAYOUT_WRITE_MS (250 ms) before the window is destroyed is not written, since the pending write flushes only on React unmount."
+    waived: "The loss window is the 250 ms after a release; the debounced write is DEC-67's staged-write rule, and a quit inside that window costing the last drag is accepted."
+  - finding: "Splitter.move marks moved on any pointermove, so a press with a zero-delta jitter commits one layout_write of an unchanged layout."
+    waived: "One idempotent write of the same layout, at most once per press; nothing is lost or wrong."
+  - finding: "A column drag re-lays-out every visible virtual row per pointermove with no rAF coalescing."
+    waived: "Bounded by the virtual window (overscan 12), the per-move cost W3 and W4 already accepted; perf.test.tsx stays green."
+  - finding: "FlowList's label row and rows spell gap-3 / px-4 as literal classes while ROW_CHROME feeds listMin's arithmetic."
+    waived: "Tailwind's JIT needs literal class names in the source; FlowList.test.tsx pins the rendered classes to ROW_CHROME, so the two cannot diverge unseen."
+refuted: "TWO CANDIDATES REFUTED. Efficiency (important): every splitter move re-renders App and the unmemoized FlowList; the verifier found it bounded by the virtualizer's visible window, waived with that reason at W3 and W4, the data-growing body decode already fixed by BodyViewer's memo, and DEC-68 writing only on release. Altitude (important): the e2e DEFAULTS re-declare the Tailwind tokens; ui/e2e is its own package outside ui/src's compile scope, and an e2e stating expected values independently of the code is the pin, so importing DEFAULT_LAYOUT would make the assertion circular."
+verdict: PASS
+date: 2026-11-04
