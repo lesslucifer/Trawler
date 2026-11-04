@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app (round 5)"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: 7ab417046426d2e9ecf930d26c1c0f43ae408859
+diff_sha256: 1e8225d93722d763d0f9c34246191324838d61d65eaaacd12826056de6ac0b4e
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 2
+  stage_seconds:
+    gate0: 97
+    finders: 54
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 4, verified: 1 }
+findings: { found: 4, verified: 1, waived: 0 }
+blocking:
+  - "important: the window-to-page contract is a bare string on each side (settings.rs PAGE_SCRIPT, main.tsx's literal) with nothing pinning them, so a rename silently renders the whole app in the Settings window"
+verdict: FAIL
+date: 2026-11-04
