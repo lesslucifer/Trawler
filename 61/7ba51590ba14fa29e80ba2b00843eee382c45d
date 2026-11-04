@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "WU sticky-choices -> epic/sticky-ui"
+epic: E-STICKY
+wu: E-STICKY.W1
+branch: wu/sticky-ui/sticky-choices
+base: ea973847c1482d15ec0bdfbcb876b9950dc94fe6
+head: 617ba51590ba14fa29e80ba2b00843eee382c45d
+diff_sha256: 88dc6c43fcb36cff932d475ad407bb0336929b8818e137c893eb6bd63473c32c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 5
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-04
