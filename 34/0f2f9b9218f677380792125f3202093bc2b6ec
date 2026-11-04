@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU wu/panels/e2e -> epic/panels"
+epic: E-PANELS
+wu: E-PANELS.W6
+branch: wu/panels/e2e
+base: 999ca87c2ba49535f23954ddcdda849676094cff
+head: 340f2f9b9218f677380792125f3202093bc2b6ec
+diff_sha256: ef91b36a067ba9e47be4a1b22b3f25eef76c3f225d4076e44b2c8b0cf0e67856
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 197
+    finders: 60
+  by_finder:
+    correctness: { found: 4, verified: 4 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 4, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "xtask/src/ui.rs: the exact-pin predicate also accepts malformed strings such as '1.5.' or '..'"
+    waived: "the guard's job is refusing a range operator, which every such string still lacks; pnpm itself rejects a malformed version at install, so the e2e run fails loudly before any spec"
+  - finding: "layout-broken.spec.ts: 'says nothing' asserts only the band and warn-tone notices, the two surfaces a failure would use"
+    waived: "layout_read carries no error channel by contract (DEC-67 rule 3), so those are the only surfaces through which a notice could appear; the spec's load-bearing proof is the defaults"
+  - finding: "layout-relaunched.spec.ts: the corrupt-file setup is a separate case coupled to the next file by SPECS order"
+    waived: "the order is declared and explained in wdio.conf.ts; bail is 0 so a failed first case does not skip the setup, and a broken chain fails the next file visibly rather than passing it"
+  - finding: "layout.ts: the config dir is the macOS path"
+    waived: "the e2e is macOS-primary by design (wdio.conf.ts and the existing SAVED_STATE use the same path); another host does not run this suite"
+verdict: PASS
+date: 2026-11-04
