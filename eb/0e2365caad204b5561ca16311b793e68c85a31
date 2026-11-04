@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU one-app/service-page -> epic/one-app (round 4)"
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+branch: wu/one-app/service-page
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+head: eb0e2365caad204b5561ca16311b793e68c85a31
+diff_sha256: 0272e7532112c3d402fa36fcc74c750bbaf888722e4fb214424f431c789d8c09
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 5
+  stage_seconds:
+    gate0: 172
+    finders: 74
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 8, verified: 1, waived: 0 }
+blocking:
+  - "blocker (raised important): the restart warning's asking flag survives the core leaving running, so it shows over an exited core (breaking D4: an exited core restarts at once) and reappears after another window's restart"
+verdict: FAIL
+date: 2026-11-04
