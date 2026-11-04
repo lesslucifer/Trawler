@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU E-STICKY.W2 wu/sticky-ui/e2e-distill -> epic/sticky-ui"
+epic: E-STICKY
+wu: E-STICKY.W2
+branch: wu/sticky-ui/e2e-distill
+base: 7ccec09fb14f0b67987e4818f90732f151d4eb8c
+head: 74f7a4979b09cb890d4b1d3ef3e8cf39be690761
+diff_sha256: f7cc7379879244259cdd746e534a49a262c95cbff2cec839739c2ce59403bb76
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    gate0: 317
+    finders: 53
+    total: 454
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 3, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "sticky.spec's wait for windows.json to hold a settings record can pass at once, since service-attached.spec already wrote one"
+    waived: "a sequencing guard only; the restored rect is proven by sticky-relaunched.spec after the quit's save"
+  - finding: "picking Response and raw in sticky.spec can be a no-op when replay.spec already left both chosen"
+    waived: "flow B still opens on the last choice, which is the claim; the relaunch and the corrupt-file run prove the state changes"
+verdict: PASS
+date: 2026-11-04
