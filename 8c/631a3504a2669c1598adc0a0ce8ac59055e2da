@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8c631a3504a2669c1598adc0a0ce8ac59055e2da
+base: ea973847c1482d15ec0bdfbcb876b9950dc94fe6
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-sticky-ui-w1-sticky-choices-result.html
+report_sha256: 7a58e15a7038d45a9fb0eff4d9bc30cd54b31b633a951649219fbb83a303e367
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDF4KxCfZRr0hOwAnKPhxpH7ygRMKZtcm2Hzm/TzcOirXBSS8Mrrdmvb5
+  +WLdzDr33jdnALBkzJLJuBs7fkz2AJ
+  -----END SSH SIGNATURE-----
