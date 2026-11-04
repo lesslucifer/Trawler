@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PANELS
+wu: E-PANELS.W6
+branch: HEAD
+tests:
+  unit: { count: 23, covers: "The e2e workspace pins @wdio/tauri-service to an exact version and carries no @wdio/native-utils override, so the ignored lockfile cannot let the service float onto a native-utils it was not built against." }
+  integration: { waived: "W6 adds no contract of its own: it adds e2e specs, launcher config and docs; the existing xtask run-tally judge is what counts the three new spec files." }
+  e2e: { count: 9, covers: "Through the real window: the list/pane split dragged past each end stops at 384 and the live maximum; the headers/body split saves 15 % and 60 %; the host column stops at 96 and 480 with path at least 128 and every label over its cells, a double-click returning 180; the pane steps 8 px by arrow, End/Home reach its bounds, a double-click returns 520; Reset Layout's event returns and saves every default. Pane, headers share, a column and the window size survive a real quit and launch; a corrupt layout.json launches the defaults with no band and no warn notice. Whole suite 7 of 7 spec files." }
