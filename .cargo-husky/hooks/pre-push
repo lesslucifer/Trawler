@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fast local mirror of the CI test gate + DoD evidence sync. Installed by cargo-husky.
+# Fast local mirror of the CI test gate + DoD evidence sync.
 set -e
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 

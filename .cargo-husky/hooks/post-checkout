@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installed to .git/hooks by cargo-husky (user-hooks feature).
+# Runs from the checkout via core.hooksPath (cargo xtask hooks install).
 # Copies files matching patterns in .gitworktreecopy from the source worktree
 # (the one `git worktree add` was invoked from) to the new worktree.
 # Falls back to the main worktree if the source cannot be detected.
