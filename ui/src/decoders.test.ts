@@ -3,6 +3,7 @@ import {
   base64,
   contentKey,
   decode,
+  decodeAround,
   guessDecoder,
   jwt,
   opensAs,
@@ -17,6 +18,7 @@ const b64 = (bytes: Uint8Array | string) =>
 const b64url = (text: string) => b64(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const token = (header: string, payload: string, signature = "c2ln") => `${b64url(header)}.${b64url(payload)}.${signature}`;
 const GZIP = Uint8Array.of(0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03);
+const PROTOBUF = Uint8Array.of(0x08, 0x96, 0x01, 0x12, 0x0b, 0x73, 0x75, 0x67, 0x67, 0x65, 0x73, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0xfe, 0x03);
 
 const listed = (bytes: Uint8Array | string | null) =>
   bytes === null ? null : Array.from(typeof bytes === "string" ? new TextEncoder().encode(bytes) : bytes);
@@ -131,9 +133,13 @@ describe("decode", () => {
     expect(base64(token("{}", "{}")).kind).toBe("unreadable");
   });
 
-  it("takes URL only over a real escape and base64-to-binary only with a known signature", () => {
+  it("takes URL only over a real escape", () => {
     expect(url("abcd")).toMatchObject({ kind: "text", text: "abcd" });
-    expect(decode("abcd")).toEqual({ decoder: null, reason: "it decodes to nothing readable" });
+    expect(decode("abcd")).not.toMatchObject({ decoder: "url" });
+  });
+
+  it("reads valid base64 as binary when no format is known, as when one is", () => {
+    expect(decode(b64(PROTOBUF))).toMatchObject({ decoder: "base64", reading: { kind: "binary", looks: null } });
     expect(decode(b64(GZIP))).toMatchObject({ decoder: "base64", reading: { kind: "binary", looks: "gzip" } });
   });
 
@@ -143,6 +149,51 @@ describe("decode", () => {
       reason: "2 parts separated by dots. A JWT has 3: header, payload, signature",
     });
     expect(decode("50%ZZ")).toMatchObject({ reason: "“%ZZ” at character 3 is not a percent-escape: % takes two hex digits" });
+  });
+});
+
+describe("decodeAround finds the value in a rough selection or at the cursor", () => {
+  const HELLO = b64("hello world");
+  const spanOf = (text: string, part: string) => ({ from: text.indexOf(part), to: text.indexOf(part) + part.length });
+
+  it("drops the quotes and punctuation around a selected value", () => {
+    const text = `{"t":"${HELLO}","u":1}`;
+    const found = decodeAround(text, spanOf(text, `"${HELLO}",`));
+    expect(found).toMatchObject({ range: spanOf(text, HELLO), peeked: { decoder: "base64", reading: { text: "hello world" } } });
+  });
+
+  it("grows a cursor or a selection cut short to the whole value", () => {
+    const text = `{"t": "${HELLO}"}`;
+    const middle = text.indexOf(HELLO) + 5;
+    expect(decodeAround(text, { from: middle, to: middle })).toMatchObject({ range: spanOf(text, HELLO) });
+    const cut = spanOf(text, HELLO.slice(1, -1));
+    expect(decodeAround(text, cut)).toMatchObject({ range: spanOf(text, HELLO), peeked: { reading: { text: "hello world" } } });
+  });
+
+  it("keeps a selection that reads well as it is, inside a longer run", () => {
+    const text = `token=${b64("hi")}&x=1`;
+    expect(decodeAround(text, spanOf(text, b64("hi")))).toMatchObject({ range: spanOf(text, b64("hi")), peeked: { reading: { text: "hi" } } });
+  });
+
+  it("picks the value out of a chunk that also holds its key", () => {
+    const proto = b64(PROTOBUF);
+    const text = `[{"google:suggesttemplate":"${proto}"},{}]`;
+    const found = decodeAround(text, spanOf(text, `{"google:suggesttemplate":"${proto}"}`));
+    expect(found).toMatchObject({ range: spanOf(text, proto), peeked: { decoder: "base64", reading: { kind: "binary" } } });
+  });
+
+  it("gives the reason for the value it found when nothing reads it", () => {
+    const bad = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODEyIn0";
+    const text = `{"t": "${bad}"}`;
+    expect(decodeAround(text, spanOf(text, bad))).toMatchObject({
+      range: spanOf(text, bad),
+      peeked: { decoder: null, reason: "2 parts separated by dots. A JWT has 3: header, payload, signature" },
+    });
+  });
+
+  it("finds nothing where no value is", () => {
+    expect(decodeAround(`{ "a": [] }`, { from: 1, to: 1 })).toBeNull();
+    expect(decodeAround(`{ "a": [] }`, { from: 6, to: 9 })).toBeNull();
   });
 });
 

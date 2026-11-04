@@ -212,6 +212,14 @@ describe("the handle", () => {
     });
     expect(ref.current!.selection()).toEqual({ from: 9, to: 9 });
   });
+
+  it("selects a range it is handed", () => {
+    const ref = createRef<EditSurfaceHandle>();
+    const { container } = render(<EditSurface handle={ref} text={DOC} language="json" />);
+    const view = viewIn(container);
+    act(() => ref.current!.select({ from: 5, to: 14 }));
+    expect(view.state.selection.main).toMatchObject({ from: 5, to: 14 });
+  });
 });
 
 describe("folding", () => {

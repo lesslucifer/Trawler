@@ -845,10 +845,20 @@ describe("decode", () => {
     return opened;
   }
 
-  it("waits for a selection, then reads a JWT under its line, leaving the working copy as it was", async () => {
-    await open(payload({ text: JSON_DOC }));
+  function rightClickAt(offset: number) {
+    vi.spyOn(view(), "posAtCoords").mockReturnValue(offset);
     fireEvent.contextMenu(screen.getByTestId("data-surface"), { clientX: 10, clientY: 10 });
-    expect(screen.getByRole("menuitem", { name: /^decode/ })).toHaveTextContent("select a value");
+  }
+
+  const selected = () => {
+    const { from, to } = view().state.selection.main;
+    return doc().slice(from, to);
+  };
+
+  it("waits for a value under the pointer or a selection, then reads a JWT under its line, leaving the working copy as it was", async () => {
+    await open(payload({ text: JSON_DOC }));
+    rightClickAt(0);
+    expect(screen.getByRole("menuitem", { name: /^decode/ })).toHaveTextContent("no value here: right-click on one or select it");
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
     select(TOKEN);
@@ -866,6 +876,33 @@ describe("decode", () => {
     expect(above).toHaveClass("cm-line");
     expect(above).toHaveTextContent('"session_token"');
     expect(screen.queryByTestId("modified")).toBeNull();
+  });
+
+  it("right-clicking a value with nothing selected decodes that value and selects it", async () => {
+    await open(payload({ text: JSON_DOC }));
+    rightClickAt(doc().indexOf(TOKEN) + 12);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(selected()).toBe(TOKEN);
+  });
+
+  it("⌘⇧D takes the value out of a rough selection, its key and quotes dropped", async () => {
+    await open(payload({ text: JSON_DOC }));
+    select(`"session_token": "${TOKEN}",`);
+    key("D", { shiftKey: true });
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(selected()).toBe(TOKEN);
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with the payload" }));
+    expect(doc()).toBe(`{\n  "session_token": "{\\"sub\\":\\"8812\\"}",\n  "plan": "team"\n}`);
+  });
+
+  it("valid base64 with no known format reads as binary to open, not as unreadable", async () => {
+    const proto = btoa(String.fromCharCode(0x08, 0x96, 0x01, 0x12, 0x0b, ...new TextEncoder().encode("suggestions"), 0x18, 0xfe, 0x03));
+    await open(payload({ text: `{"t": "${proto}"}` }));
+    select(proto);
+    key("D", { shiftKey: true });
+    expect(peek()).toHaveTextContent("19 B of binary · no known signature");
+    expect(within(peek()).getByRole("button", { name: "open in data window" })).toBeInTheDocument();
   });
 
   it("⇄ replaces the token with its payload as JSON string content, one step undone by ⌘Z", async () => {

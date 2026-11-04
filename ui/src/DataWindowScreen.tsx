@@ -11,7 +11,19 @@ import {
 } from "react";
 import { byteLength, captionFilename, captionParts, decodeBody, hexDump, humanBytes, queryCount, saveBody } from "./body";
 import { claimOnce, openDataWindow, takeDataPayload, type DataPayload } from "./dataWindow";
-import { contentKey, decode, DECODER_LABEL, opensAs, replacement, type DecoderId, type Decoded, type Peeked } from "./decoders";
+import {
+  contentKey,
+  decode,
+  decodeAround,
+  DECODER_LABEL,
+  hasValueAround,
+  opensAs,
+  replacement,
+  type DecoderId,
+  type Decoded,
+  type Peeked,
+  type Span,
+} from "./decoders";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { findBytes, findMatches, readHexQuery, type HexQueryMode } from "./find";
 import {
@@ -420,19 +432,17 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     void saveBody(payload.bytes, captionFilename(payload.title, payload.typeHint, "-original"));
   };
 
-  const decodeSelection = useCallback(() => {
-    const handle = surfaceHandle.current;
-    if (!handle) return;
-    const surface = surfaceText(text);
-    const { from, to } = handle.selection();
-    const chosen = surface.slice(from, to);
-    const input = chosen.trim();
-    if (!input) return;
-    const start = from + chosen.length - chosen.trimStart().length;
-    const range = { from: start, to: start + input.length };
-    const line = (surface.slice(0, range.to).match(/\n/g)?.length ?? 0) + 1;
-    setPeek({ origin: { type: "selection", range, line }, peeked: decode(input) });
-  }, [text]);
+  const decodeAt = useCallback(
+    (around: Span) => {
+      const surface = surfaceText(text);
+      const found = decodeAround(surface, around);
+      if (!found) return;
+      surfaceHandle.current?.select(found.range);
+      const line = (surface.slice(0, found.range.to).match(/\n/g)?.length ?? 0) + 1;
+      setPeek({ origin: { type: "selection", range: found.range, line }, peeked: found.peeked });
+    },
+    [text],
+  );
   const decodeRow = useCallback(
     (index: number) => {
       const pair = pairs[index];
@@ -442,8 +452,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   );
   const decodeNow = useCallback(() => {
     if (asTable && row !== null) decodeRow(row);
-    else if (onText && !readOnly) decodeSelection();
-  }, [asTable, decodeRow, decodeSelection, onText, readOnly, row]);
+    else if (onText && !readOnly && surfaceHandle.current) decodeAt(surfaceHandle.current.selection());
+  }, [asTable, decodeAt, decodeRow, onText, readOnly, row]);
   const replaceDecoded = (origin: PeekOrigin, value: string) => {
     if (origin.type === "row") {
       step(editPair(text, origin.index, "value", value), `replaced the value of “${origin.key}” with its decoded form`);
@@ -639,9 +649,17 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         ],
       ];
     }
+    const selected = surfaceHandle.current?.selection();
+    const around = selection && selected ? selected : { from: offset ?? 0, to: offset ?? 0 };
     const sections: MenuItem[][] = [
       [
-        { label: "decode", keys: "⌘⇧D", disabled: !selection.trim(), why: "select a value", run: decodeSelection },
+        {
+          label: "decode",
+          keys: "⌘⇧D",
+          disabled: !hasValueAround(surfaceText(text), around),
+          why: "no value here: right-click on one or select it",
+          run: () => decodeAt(around),
+        },
         { label: "copy", keys: "⌘C", disabled: !selection, why: "select some text", run: () => copy(selection) },
       ],
     ];

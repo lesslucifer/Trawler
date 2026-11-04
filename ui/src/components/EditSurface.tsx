@@ -46,6 +46,7 @@ export interface EditSurfaceHandle {
   positionAt: (point: { x: number; y: number }) => number | null;
   cursor: () => number;
   selection: () => TextRange;
+  select: (range: TextRange) => void;
 }
 
 export interface EditSurfaceProps {
@@ -255,6 +256,9 @@ export function EditSurface({
     selection() {
       const main = view.current?.state.selection.main;
       return { from: main?.from ?? 0, to: main?.to ?? 0 };
+    },
+    select({ from, to }) {
+      view.current?.dispatch({ selection: { anchor: from, head: to }, scrollIntoView: true });
     },
   }));
 

@@ -119,9 +119,7 @@ export function guessDecoder(input: string): DecoderId {
 
 function means(id: DecoderId, reading: Reading, input: string): reading is Decoded {
   if (reading.kind === "unreadable") return false;
-  if (id === "url") return ESCAPE.test(input);
-  if (id === "base64" && reading.kind === "binary") return reading.looks !== null;
-  return true;
+  return id !== "url" || ESCAPE.test(input);
 }
 
 // No value reads two ways under these three: base64 and a JWT refuse "%", a
@@ -134,6 +132,70 @@ export function decode(input: string): Peeked {
     if (means(id, reading, input)) return { decoder: id, reading };
   }
   return { decoder: null, reason: guessed.kind === "unreadable" ? guessed.reason : "it decodes to nothing readable" };
+}
+
+export interface Span {
+  from: number;
+  to: number;
+}
+
+export interface Found {
+  range: Span;
+  peeked: Peeked;
+}
+
+const VALUE_CHAR = /[A-Za-z0-9+/=_\-.%]/;
+const VALUE_RUN = /[A-Za-z0-9+/=_\-.%]+/g;
+const MOST_RUNS_TRIED = 8;
+
+const inValue = (text: string, at: number) => at >= 0 && at < text.length && VALUE_CHAR.test(text[at]);
+const width = (span: Span) => span.to - span.from;
+
+function trimmed(text: string, { from, to }: Span): Span {
+  while (from < to && !inValue(text, from)) from++;
+  while (to > from && !inValue(text, to - 1)) to--;
+  return { from, to };
+}
+
+function grown(text: string, { from, to }: Span): Span {
+  while (inValue(text, from - 1)) from--;
+  while (inValue(text, to)) to++;
+  return { from, to };
+}
+
+function candidates(text: string, range: Span): Span[] {
+  const exact = trimmed(text, range);
+  const whole = grown(text, exact);
+  const runs = Array.from(text.slice(whole.from, whole.to).matchAll(VALUE_RUN), (match) => ({
+    from: whole.from + match.index,
+    to: whole.from + match.index + match[0].length,
+  }))
+    .sort((a, b) => width(b) - width(a))
+    .slice(0, MOST_RUNS_TRIED);
+  const seen = new Set<string>();
+  return [exact, whole, ...runs].filter((span) => {
+    const id = `${span.from}:${span.to}`;
+    if (width(span) === 0 || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+export const hasValueAround = (text: string, range: Span) => width(grown(text, trimmed(text, range))) > 0;
+
+const readsWell = (peeked: Peeked) =>
+  peeked.decoder !== null && !(peeked.reading.kind === "binary" && peeked.reading.looks === null);
+
+export function decodeAround(text: string, range: Span): Found | null {
+  let first: Found | null = null;
+  let decodes: Found | null = null;
+  for (const span of candidates(text, range)) {
+    const found = { range: span, peeked: decode(text.slice(span.from, span.to)) };
+    if (readsWell(found.peeked)) return found;
+    first ??= found;
+    if (found.peeked.decoder !== null) decodes ??= found;
+  }
+  return decodes ?? first;
 }
 
 export function replacement(reading: Decoded): string | null {
