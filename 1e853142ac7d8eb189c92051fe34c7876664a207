@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-PANELS
+wu: E-PANELS.W4
+base: 9cc6ac01fd6d515cf9cca428ea6f86b4ae5ef7b2
+design_sha256: 6736ba605af037bda3e31d8b934bbc7452ec437fe190f286a8555f11febb8f1b
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-03-panels-splitters-design-run.html
+    blob: 1477d3b80cc45ad171be4581f01ba91f1aab3b80
+    built: [ui/src/FlowList.tsx, ui/src/App.tsx]
+date: 2026-11-04
