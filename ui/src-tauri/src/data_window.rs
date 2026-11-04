@@ -1,4 +1,4 @@
-// The data window (DEC-68). The shell only creates or focuses the window and
+// The data window (DEC-69). The shell only creates or focuses the window and
 // relays the opener's payload to it by value; it reads nothing inside the bytes.
 
 use std::collections::HashMap;
@@ -148,14 +148,14 @@ pub fn on_destroyed<R: Runtime>(app: &AppHandle<R>, destroyed: &str) -> Vec<Stri
     closed
 }
 
-fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
+pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     if matches!(event, WindowEvent::Destroyed) {
         on_destroyed(window.app_handle(), window.label());
     }
 }
 
 pub fn install<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
-    builder.manage(Parked::default()).on_window_event(on_window_event)
+    builder.manage(Parked::default())
 }
 
 #[cfg(test)]

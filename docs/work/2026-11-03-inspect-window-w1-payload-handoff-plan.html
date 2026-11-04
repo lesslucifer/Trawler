@@ -28,7 +28,7 @@
     <h2 id="mapping">Mapping</h2>
     <p data-item="maps-to" data-c="mapping">
       E-INSPWIN · UC-9 window lifecycle · epic expected rows 2 (same key focuses, another key opens a second window, data
-      windows close with the main one) and 10 (the shell relays, the core is never called) · mints DEC-68 (the data window;
+      windows close with the main one) and 10 (the shell relays, the core is never called) · mints DEC-69 (the data window;
       DEC-67 is held by <code>epic/panels</code>).
     </p>
 
@@ -56,7 +56,7 @@ sequenceDiagram
 
     <table data-c="pieces">
       <tr><th>Piece</th><th>Where</th><th>Contract</th></tr>
-      <tr><td>DEC-68</td><td><code>docs/decisions/</code> + index</td><td>generic data tool fed by value; original / working
+      <tr><td>DEC-69</td><td><code>docs/decisions/</code> + index</td><td>generic data tool fed by value; original / working
         copy / view; no write-back; no core; the pane's evidence rule stops at the handed-over original</td></tr>
       <tr><td>commands</td><td><code>ui/src-tauri/src/data_window.rs</code></td><td><code>open_data_window</code> (async,
         raw body) · <code>take_data_payload</code> (raw response, empty when nothing is parked for the caller's label);

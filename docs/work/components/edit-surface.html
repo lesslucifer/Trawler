@@ -42,10 +42,10 @@
     </table>
     <table data-c="drivers">
       <tr><th>Driver</th><th>Design consequence</th></tr>
-      <tr><td>DEC-68 rule 7: no render caps</td><td>no <code>TEXT_MAX</code>; CodeMirror's viewport renders only the visible lines, so 10 MiB stays scrollable</td></tr>
-      <tr><td>DEC-68 rule 4: the original never changes</td><td>the surface never holds the original. It is handed the working copy's text and reports each change; the caller keeps both</td></tr>
+      <tr><td>DEC-69 rule 7: no render caps</td><td>no <code>TEXT_MAX</code>; CodeMirror's viewport renders only the visible lines, so 10 MiB stays scrollable</td></tr>
+      <tr><td>DEC-69 rule 4: the original never changes</td><td>the surface never holds the original. It is handed the working copy's text and reports each change; the caller keeps both</td></tr>
       <tr><td>one history (restore original and indent are steps)</td><td>CodeMirror's own history is off. Each committed change goes to <code>onChange</code>, so reformat, sort, replace and a typed edit undo in one sequence</td></tr>
-      <tr><td>DEC-68 rule 5: everything but the original is scratch</td><td>the line UC-5 draws sits between this and SourceSurface. The TSDoc cites DEC-68 so the next reader does not "fix" the edit back out</td></tr>
+      <tr><td>DEC-69 rule 5: everything but the original is scratch</td><td>the line UC-5 draws sits between this and SourceSurface. The TSDoc cites DEC-69 so the next reader does not "fix" the edit back out</td></tr>
       <tr><td>mono-for-wire-data, the syntax roles</td><td>the document is mono; keys, strings and numbers take <code>syn-key</code> / <code>syn-str</code> / <code>syn-num</code>, punctuation <code>ink-mute</code>, as in SourceSurface</td></tr>
       <tr><td>keyboard-parity</td><td>the surface is one tab stop; inside it the cursor, selection and fold keys are CodeMirror's</td></tr>
     </table>
@@ -108,8 +108,8 @@
  * EditSurface — the data window's whole-data surface: every byte of a JSON, XML or text document, editable, foldable and searchable, uncapped.
  * @tier T2 — owns the editor configuration (editable document, virtualised viewport, fold gutter, three-token highlight, find marks); the text, the one history and what a change means are the caller's
  * @anatomy line numbers (ink-mute) · fold gutter ▾/▸ with a "… N lines" wash-tint chip on a folded line · mono text-body document, syn-key/syn-str/syn-num, punctuation ink-mute, wrap on by default · find marks wash-select, current wash-active + 1px ink-mute outline · CodeMirror cursor and selection · an inset block under one line (the caller's node)
- * @use the data window only (DEC-68): its json / xml / text surface and a form shown encoded; read-only for a decoded result
- * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-68 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-68 rule 7) · marking the document edited (DEC-59: the screen says so in words) · overlaying the inset on the lines below it: it is a block in the document
+ * @use the data window only (DEC-69): its json / xml / text surface and a form shown encoded; read-only for a decoded result
+ * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-69 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-69 rule 7) · marking the document edited (DEC-59: the screen says so in words) · overlaying the inset on the lines below it: it is a block in the document
  * @states editable · read-only (selection, find and fold still work) · folded (view state) · with find marks · with an inset under one line. No empty, error or loading state
  * @madeof CodeMirror 6 (T0) — view, state, language, lang-json, lang-xml, search decorations
  */</code></pre>

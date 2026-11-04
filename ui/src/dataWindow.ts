@@ -1,6 +1,6 @@
 import { invoke, type InvokeArgs } from "@tauri-apps/api/core";
 
-// The data window's whole input (DEC-68): what the opener holds, by value. The
+// The data window's whole input (DEC-69): what the opener holds, by value. The
 // window learns nothing else about where the data came from.
 export interface DataPayload {
   key: string;

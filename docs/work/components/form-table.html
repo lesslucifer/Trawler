@@ -37,7 +37,7 @@
     </table>
     <table data-c="drivers">
       <tr><th>Driver</th><th>Design consequence</th></tr>
-      <tr><td>DEC-68 rule 7: no caps</td><td>rows are virtualised; the pair count has no ceiling</td></tr>
+      <tr><td>DEC-69 rule 7: no caps</td><td>rows are virtualised; the pair count has no ceiling</td></tr>
       <tr><td>DEC-34: fixed-height rows may truncate</td><td>the escape is not taken. Rows are variable-height and measured, so a 3 KiB value wraps whole</td></tr>
       <tr><td>wrap-not-truncate</td><td>keys and values wrap anywhere (<code>break-all</code>): a token has no spaces to wrap at</td></tr>
       <tr><td>DEC-59: Field for value editing</td><td>the cell being edited is a multi-line, verbatim Field; nothing else here takes typing</td></tr>
@@ -100,7 +100,7 @@
  * FormTable — every pair of a URL-encoded form, uncapped, each key and value whole and wrapped, edited in place.
  * @tier T2 — owns display decoding, the duplicate-key count and the never-cut rule; the pairs, their order and what an edit means are the caller's
  * @anatomy sticky uppercase-mute label row (# · key · value) · number ink-mute · key mono syn-key, "N of M “key”" under a repeat · value mono ink, wrapped whole, "none" when empty, "kept as sent" under a bad escape · IconButton add + and close × per row, invisible until hover, focus or selection · selected row canvas-soft · the edited cell a multiline verbatim Field · a new-pair row (new key · new value, ink-mute) after the last · an inset block under one row
- * @use the data window's form surface, decoded (DEC-68)
+ * @use the data window's form surface, decoded (DEC-69)
  * @avoid the body pane (FormRenderer, capped and read-only) · truncating, clamping or fixing a row's height (DEC-34's escape is not taken here) · re-encoding pairs nobody edited · sorting inside it: the caller hands the order · hiding a row's acts from the keyboard: focus shows them as hover does
  * @states rest · row hovered or focused (acts shown) · selected row · editing one cell · with find marks · with an inset under one row. No empty, collapsed or loading state
  * @madeof Field (T1) — the edited cell · IconButton (T1) — add and remove · @tanstack/react-virtual (T0)
