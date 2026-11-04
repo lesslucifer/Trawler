@@ -27,7 +27,7 @@
       <div class="meta">Design run · round 1 on 2026-11-04, closed (archived) · Trawler · T3 (docs/work/) ·
         <strong>E-QUERY.W2</strong> · branch <code>wu/query-bar/query-bar-design</code> · epic
         <a href="2026-11-04-query-bar-plan.html">E-QUERY</a> · <a href="2026-11-04-query-bar-w2-design-plan.html">WU plan</a> ·
-        component: <a href="components/query-bar.html">QueryBar</a> · within
+        component: QueryBar (<code>components/query-bar.html</code>, retired into QueryBar's TSDoc at W3) · within
         <a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a></div>
     </div>
   </header>
@@ -569,7 +569,7 @@
       <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
       <tr><td>component (T2)</td><td><code>QueryBar</code>: chips, a draft, suggestions. It owns the grammar (draft → chip or fault,
         draft → suggestions) through a pure <code>query.ts</code>; chips, hosts seen and the refusal come from the caller.
-        Design: <a href="components/query-bar.html">components/query-bar.html</a></td><td>Field's <code>@avoid</code>: it judges
+        Design: <code>components/query-bar.html</code> (retired into QueryBar's TSDoc at W3)</td><td>Field's <code>@avoid</code>: it judges
         nothing typed. Select's <code>@avoid</code>: free-text entry and more than one value. Nothing in the collection
         renders a removable token</td><td>W3</td></tr>
       <tr><td>TSDoc</td><td>Field's <code>@use</code> and <code>@avoid</code> drop <em>the filter bar's free-text box and its status box</em> and
