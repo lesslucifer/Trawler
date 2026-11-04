@@ -86,6 +86,42 @@ describe("what the window was handed", () => {
   });
 });
 
+describe("the header reads the caption in parts", () => {
+  it("what above; the method, host, path and query on one line, the whole caption on hover", async () => {
+    const title = "request body · raw · POST www.example.com/ajax/bnzai?__a=1&__req=7n&lsd=x";
+    await open(payload({ title }));
+    const heading = screen.getByRole("heading", { name: title });
+    expect(heading).toHaveAttribute("title", title);
+    expect(screen.getByText("request body · raw").tagName).toBe("P");
+    expect(within(heading).getByText("POST")).toBeInTheDocument();
+    expect(within(heading).getByText("www.example.com")).toHaveClass("text-ink");
+    expect(within(heading).getByText("/ajax/bnzai")).toHaveClass("text-ink-body");
+    expect(within(heading).getByText("?__a=1&__req=7n&lsd=x")).toHaveClass("text-ink-mute");
+    expect(within(heading).getByText("3 params")).toBeInTheDocument();
+    expect(within(heading).getByText("?__a=1&__req=7n&lsd=x").parentElement).toHaveClass("truncate");
+  });
+
+  it("a target with no query names no params", async () => {
+    await open(payload());
+    expect(within(screen.getByRole("heading")).queryByText(/param/)).toBeNull();
+  });
+
+  it("a caption of another shape is shown whole on one line", async () => {
+    await open(payload({ title: "a pasted note" }));
+    expect(screen.getByRole("heading", { name: "a pasted note" })).toHaveClass("truncate");
+  });
+});
+
+describe("the footer's kind picker", () => {
+  it("opens upward, inside a window that never scrolls as a whole", async () => {
+    await open(payload());
+    fireEvent.click(within(footer()).getByRole("button", { name: "treat the data as" }));
+    const list = within(footer()).getByRole("listbox").parentElement!;
+    expect(list).toHaveAttribute("data-opens", "above");
+    expect(footer().parentElement).toHaveClass("overflow-hidden");
+  });
+});
+
 describe("a 2 MB JSON payload", () => {
   const big = JSON.stringify({ items: Array.from({ length: 22_000 }, (_, i) => ({ id: i, name: `item ${i}`, tag: "abcdefghij".repeat(6) })) }, null, 2);
 

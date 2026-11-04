@@ -359,3 +359,23 @@ export function bodyPayload(flow: FlowView, leg: Leg, fetched: BodyFetch, pretty
   if (pretty && fetched.contentType) payload.typeHint = fetched.contentType;
   return payload;
 }
+
+export interface CaptionParts {
+  what: string;
+  target?: { method: string; host: string; path: string; query: string };
+}
+
+const CAPTION_SEPARATOR = " · ";
+const CAPTION_TARGET = /^([A-Z]+) ([^/?#\s]+)([^?#\s]*)(\S*)$/;
+
+export function captionParts(caption: string): CaptionParts {
+  const at = caption.lastIndexOf(CAPTION_SEPARATOR);
+  const target = at < 0 ? null : CAPTION_TARGET.exec(caption.slice(at + CAPTION_SEPARATOR.length));
+  if (!target) return { what: caption };
+  const [, method, host, path, query] = target;
+  return { what: caption.slice(0, at), target: { method, host, path, query } };
+}
+
+export function queryCount(query: string): number {
+  return query.replace(/^\?/, "").split("&").filter(Boolean).length;
+}

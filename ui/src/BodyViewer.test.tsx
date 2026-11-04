@@ -371,7 +371,7 @@ test("the fetch failure is the only absence in warn tone — it is the only faul
   expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
 });
 
-test("⧉ hands the data window what the pane holds, in the mode it shows", async () => {
+test("↗ hands the data window what the pane holds, in the mode it shows", async () => {
   const bytes = text('{"a":1}');
   const api = apiWith({ bytes, contentType: "application/json" });
   render(<BodyViewer api={api} flow={flow({ uri: "https://api.example.com/v2/x?y=1" })} leg="response" />);

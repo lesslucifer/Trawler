@@ -22,7 +22,7 @@ describe("IconButton", () => {
 
   it.each([
     ["more", "⋯"],
-    ["window", "⧉"],
+    ["window", "↗"],
     ["add", "+"],
   ] as const)("%s draws %s and is named after it unless labelled", (glyph, face) => {
     render(<IconButton glyph={glyph} onClick={() => {}} />);

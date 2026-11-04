@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { byteLength, captionFilename, decodeBody, hexDump, humanBytes, saveBody } from "./body";
+import { byteLength, captionFilename, captionParts, decodeBody, hexDump, humanBytes, queryCount, saveBody } from "./body";
 import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { addPairAfter, editPair, parsePairs, removePair, type PairPart } from "./formPairs";
@@ -28,6 +28,7 @@ import {
   IconButton,
   ImageRenderer,
   Menu,
+  MethodLabel,
   Notice,
   Select,
   useCopy,
@@ -42,6 +43,32 @@ const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+
+function Caption({ title }: { title: string }) {
+  const { what, target } = captionParts(title);
+  if (!target) {
+    return (
+      <h1 title={title} className="min-w-0 flex-1 truncate font-ui text-note text-ink">
+        {title}
+      </h1>
+    );
+  }
+  const params = queryCount(target.query);
+  return (
+    <div className="min-w-0 flex-1">
+      <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">{what}</p>
+      <h1 aria-label={title} title={title} className="flex min-w-0 items-baseline gap-2">
+        <MethodLabel method={target.method} className="shrink-0" />
+        <span className="min-w-0 truncate font-mono text-body">
+          <span className="text-ink">{target.host}</span>
+          <span className="text-ink-body">{target.path}</span>
+          <span className="text-ink-mute">{target.query}</span>
+        </span>
+        {params > 0 && <span className="shrink-0 font-ui text-chrome text-ink-mute">{plural(params, "param")}</span>}
+      </h1>
+    </div>
+  );
+}
 
 const SETTLE_MS = 250;
 
@@ -253,9 +280,9 @@ function Workbench({ payload }: { payload: DataPayload }) {
   };
 
   return (
-    <div className="flex h-full flex-col bg-canvas text-ink">
+    <div className="flex h-full flex-col overflow-hidden bg-canvas text-ink">
       <header className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-2">
-        <h1 className="min-w-0 flex-1 break-words font-ui text-note text-ink">{payload.title}</h1>
+        <Caption title={payload.title} />
         {!empty && kind !== "image" && <CopyButton label="copy" getPayload={onScreen} />}
         {!empty && (
           <span ref={more}>
@@ -281,6 +308,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
           }}
           label="treat the data as"
           searchable={false}
+          opens="above"
         />
         <span data-testid="detected">
           {override ? `your choice · detected ${kindLabel(detected.kind)} from ${detected.from}` : `detected from ${detected.from}`}

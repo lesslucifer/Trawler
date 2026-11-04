@@ -9,10 +9,10 @@ export interface SelectOption {
 /**
  * Select — the app's one dropdown: a compact trigger, a popup list, and type-to-filter.
  * @tier T1 — presentation and keyboard behaviour only; options, the selected value, the loading flag and the handler all come from the caller. It never fetches, sorts, resolves or defaults anything
- * @anatomy trigger = CopyButton's box (1px line border, radius 3, padding 3/9, min-height 24, Inter 11.5px ink-body) plus a muted ▾ caret; it fills the component's own box and carries a 132 minimum, so it never resizes with the selection and a host that needs a wider one sizes the box through className; shows the selected label, or the placeholder in ink-mute when value is undefined · popup overlays below (canvas, hairline border, radius 4, shadow), never pushes content · search row when searchable (default true) or as soon as the user types: borderless input, case-insensitive substring on label, matched run underlined · option rows with a reserved 9px tick column, min-height 24, one line: the option's element if given, else its label; selected = ✓ in ink, keyboard-active = soft wash — two channels, not one · one muted-italic line replaces the list for the three non-list outcomes, in precedence order: "loading…" with a spinner (isLoading) · "nothing to choose from" (no options) · "no match" (filter) · list scrolls past ~7 rows
+ * @anatomy trigger = CopyButton's box (1px line border, radius 3, padding 3/9, min-height 24, Inter 11.5px ink-body) plus a muted ▾ caret; it fills the component's own box and carries a 132 minimum, so it never resizes with the selection and a host that needs a wider one sizes the box through className; shows the selected label, or the placeholder in ink-mute when value is undefined · popup overlays below, or above with opens="above" for a trigger on a window's bottom edge (canvas, hairline border, radius 4, shadow), never pushes content · search row when searchable (default true) or as soon as the user types: borderless input, case-insensitive substring on label, matched run underlined · option rows with a reserved 9px tick column, min-height 24, one line: the option's element if given, else its label; selected = ✓ in ink, keyboard-active = soft wash — two channels, not one · one muted-italic line replaces the list for the three non-list outcomes, in precedence order: "loading…" with a spinner (isLoading) · "nothing to choose from" (no options) · "no match" (filter) · list scrolls past ~7 rows
  * @use any single choice from five or more options, whether they are known at build time or fetched: a target picker, a filter, a saved view, an export format. Pass {id,label,element?}[] plus the value and a handler; value may be undefined for nothing-selected, and isLoading covers options still on their way
  * @avoid two to four options (use SegmentedControl — all choices visible reads as a switch; this is a miss by cardinality, not kind) · multi-select or a clear affordance — at most one option is selected, and nothing returns to unselected once chosen, so a filter that must clear offers an "any" option of its own rather than asking for a clear button · free-text entry (that is a combobox, not this) · option groups or disabled entries · an option element that needs two lines or its own hit target: the row is one line at a 24px floor whatever the element draws · an element without a label — the trigger and the filter both need text · fetching, sorting or defaulting options inside the component · explaining a failed fetch here: stop passing isLoading and render your own Notice, a 184px popup cannot carry an error and a retry · committing on arrow-key movement: only Enter or a click selects
- * @states rest · hover · focus (1px mute outline) · open · filtering · no-match · loading (spinner, outranks empty) · empty (loaded, no options) · nothing-selected (value undefined → muted placeholder, no tick) · disabled (38%, out of tab order). Keyboard: ↑↓ move without selecting (no wrap), Enter selects (a no-op while loading, empty or filtered to nothing), Esc closes unchanged, Tab closes and moves on, typing filters even when searchable is false; closing always returns focus to the trigger. No invalid, partial-selection or open-upward state
+ * @states rest · hover · focus (1px mute outline) · open · filtering · no-match · loading (spinner, outranks empty) · empty (loaded, no options) · nothing-selected (value undefined → muted placeholder, no tick) · disabled (38%, out of tab order). Keyboard: ↑↓ move without selecting (no wrap), Enter selects (a no-op while loading, empty or filtered to nothing), Esc closes unchanged, Tab closes and moves on, typing filters even when searchable is false; closing always returns focus to the trigger. No invalid or partial-selection state
  * @madeof —
  */
 export function Select({
@@ -24,6 +24,7 @@ export function Select({
   searchable = true,
   label,
   disabled = false,
+  opens = "below",
   className = "",
 }: {
   options: SelectOption[];
@@ -34,6 +35,7 @@ export function Select({
   searchable?: boolean;
   label?: string;
   disabled?: boolean;
+  opens?: "below" | "above";
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -163,10 +165,14 @@ export function Select({
 
       {open && (
         <div
-          className={
-            // design-allow: top-[calc(100%+theme(spacing.chrome-y))] — an offset-from-the-trigger shape; the gap itself is a token
-            "absolute left-0 top-[calc(100%+theme(spacing.chrome-y))] z-popup min-w-full overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop"
-          }
+          data-opens={opens}
+          className={`absolute left-0 ${
+            opens === "above"
+              ? // design-allow: bottom-[calc(100%+theme(spacing.chrome-y))] — an offset-from-the-trigger shape; the gap itself is a token
+                "bottom-[calc(100%+theme(spacing.chrome-y))]"
+              : // design-allow: top-[calc(100%+theme(spacing.chrome-y))] — an offset-from-the-trigger shape; the gap itself is a token
+                "top-[calc(100%+theme(spacing.chrome-y))]"
+          } z-popup min-w-full overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop`}
         >
           {(searchable || typed) && (
             <div className="flex items-center gap-chrome-gap border-b border-hairline px-2 py-chrome-y">

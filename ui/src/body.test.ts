@@ -2,6 +2,8 @@ import {
   bodyKind,
   bodyPayload,
   captionFilename,
+  captionParts,
+  queryCount,
   bodyNotice,
   bodyText,
   byteLength,
@@ -437,6 +439,39 @@ describe("bodyPayload — what the pane hands a data window", () => {
 
   it("no served type, no hint", () => {
     expect("typeHint" in bodyPayload(view, "response", { ...fetched, contentType: null }, true)).toBe(false);
+  });
+});
+
+describe("captionParts — the caption read back for the window's header", () => {
+  const view = { id: "f1", method: "POST", uri: "https://www.example.com/ajax/x?a=1&b=%3A&c" } as FlowView;
+  const fetched = { bytes: new Uint8Array(), contentType: null };
+
+  it("reads back what bodyPayload wrote: what, then the method, host, path and query", () => {
+    expect(captionParts(bodyPayload(view, "request", fetched, true).title)).toEqual({
+      what: "request body",
+      target: { method: "POST", host: "www.example.com", path: "/ajax/x", query: "?a=1&b=%3A&c" },
+    });
+    expect(captionParts(bodyPayload(view, "response", fetched, false).title).what).toBe("response body · raw");
+  });
+
+  it("a target with no path or query keeps those empty", () => {
+    expect(captionParts("request body · CONNECT example.com:443").target).toEqual({
+      method: "CONNECT",
+      host: "example.com:443",
+      path: "",
+      query: "",
+    });
+  });
+
+  it("a caption of any other shape is all what, with no target", () => {
+    expect(captionParts("a pasted note")).toEqual({ what: "a pasted note" });
+    expect(captionParts("x · not a request")).toEqual({ what: "x · not a request" });
+  });
+
+  it("counts the query's parameters, empty ones not", () => {
+    expect(queryCount("?a=1&b=%3A&c")).toBe(3);
+    expect(queryCount("?a=1&&")).toBe(1);
+    expect(queryCount("")).toBe(0);
   });
 });
 
