@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W5
+base: 768fb8905fc14c7b3e813483126e5c82da89be35
+design_sha256: 2c2c914941b67793432829522319c3365100382b0a6fe450e2d8d7771b3868f0
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-03-data-window-design-run.html
+    blob: e293ca845f6e10337b77bb7f5625c23c955a364a
+    built: [ui/src/DataWindowScreen.tsx, ui/src/components/FormTable.tsx, ui/src/components/HexView.tsx]
+date: 2026-11-04
