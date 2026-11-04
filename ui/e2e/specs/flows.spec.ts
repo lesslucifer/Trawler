@@ -1,6 +1,7 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 import { readFileSync } from "node:fs";
 import { PORTS_FILE } from "../wdio.conf.ts";
+import { addChips, chips, emptyTheDraft, focusDraft, press, removeEveryChip, suggestionTexts, type } from "./query.ts";
 
 const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as {
   api: string;
@@ -96,28 +97,30 @@ describe("UC-4 — watch live traffic in the native app", () => {
     expect(await pill.getText()).toContain("200");
   });
 
-  it("the method filter offers the verbs rather than taking free text", async () => {
-    await $('button[aria-label="method"]').click();
-    await $('[role="option"]').waitForExist({ timeout: 15_000 });
-    const labels: string[] = [];
-    for (const option of await $$('[role="option"]')) {
-      labels.push(await option.getAttribute("aria-label"));
+  it("the header holds one query bar where four filter controls were", async () => {
+    expect(await $$('header [role="combobox"][aria-label="filter"]').length).toBe(1);
+    for (const retired of ['button[aria-label="host"]', 'button[aria-label="method"]', 'input[aria-label="status"]']) {
+      expect(await $(retired).isExisting()).toBe(false);
     }
-    expect(labels).toContain("GET");
-    expect(labels).toContain("any method");
-    // The exactness the design flagged: the verb is matched whole server-side,
-    // so a partial verb was never a legal query and is no longer typeable.
-    expect(labels).not.toContain("GE");
-    await browser.keys("Escape");
   });
 
-  it("a filter narrows the list", async () => {
-    // The free-text field is the one key that stays free text: the server
-    // substring-matches it, so an arbitrary value is a legal query.
-    await $('[aria-label="filter"]').setValue("no-such-path.invalid");
+  it("the method key offers the verbs, and a value that is not a verb stays a draft", async () => {
+    await focusDraft();
+    await type("method:");
+    expect(await suggestionTexts()).toContain("method:GET");
+    await type("G3");
+    await press("Enter");
+    await $('[aria-label="filter"][aria-invalid="true"]').waitForExist({ timeout: 5_000 });
+    expect(await $("body").getText()).toContain("a method is letters only, like GET");
+    expect(await chips()).toEqual([]);
+    await emptyTheDraft();
+  });
+
+  it("a text chip narrows the list", async () => {
+    await addChips("no-such-path.invalid");
     await browser.waitUntil(async () => (await rowCount()) === 0, {
       timeout: 15_000,
-      timeoutMsg: "the filter never narrowed the list",
+      timeoutMsg: "the text chip never narrowed the list",
     });
   });
 
@@ -129,38 +132,32 @@ describe("UC-4 — watch live traffic in the native app", () => {
     expect(text).not.toContain("Nothing captured yet");
   });
 
-  it("clearing the filter brings the rows back", async () => {
-    await $('[aria-label="filter"]').clearValue();
+  it("removing the chip brings the rows back", async () => {
+    await removeEveryChip();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
-      timeoutMsg: "the list never came back after clearing the filter",
+      timeoutMsg: "the list never came back after removing the chip",
     });
   });
 
-  it("the host filter offers the hosts capture has seen, and choosing one narrows to it", async () => {
-    await $('button[aria-label="host"]').click();
-    await $('[role="option"]').waitForExist({ timeout: 15_000 });
-    // The harness origin is localhost on an ephemeral port, so the option is
+  it("the host key offers the hosts capture has seen, and its chip narrows to it", async () => {
+    await focusDraft();
+    await type("host:");
+    // The harness origin is localhost on an ephemeral port, so the host is
     // matched by prefix rather than by a port this spec cannot know.
-    let captured: WebdriverIO.Element | undefined;
-    for (const option of await $$('[role="option"]')) {
-      const label = await option.getAttribute("aria-label");
-      if (label?.startsWith("localhost:")) captured = option;
-    }
-    expect(captured).toBeDefined();
+    expect((await suggestionTexts()).some((text) => text.startsWith("host:localhost:"))).toBe(true);
 
-    await captured!.click();
+    await type("localhost");
+    await press("Tab");
+    await browser.waitUntil(async () => (await chips()).some((chip) => chip.startsWith("host:localhost:")), {
+      timeout: 15_000,
+      timeoutMsg: "Tab never made the host chip",
+    });
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
-      timeoutMsg: "choosing the captured host emptied the list",
+      timeoutMsg: "the captured host's chip emptied the list",
     });
-
-    await $('button[aria-label="host"]').click();
-    await $('[role="option"][aria-label="any host"]').click();
-    await browser.waitUntil(async () => (await rowCount()) >= 1, {
-      timeout: 15_000,
-      timeoutMsg: "the list never came back after choosing any host",
-    });
+    await removeEveryChip();
   });
 
   // UC-4's second W6 contract: the useful debugging query is a class, and it is
@@ -181,63 +178,41 @@ describe("UC-4 — watch live traffic in the native app", () => {
       return seen;
     };
 
-    await $('[aria-label="status"]').setValue("4xx");
+    await addChips("status:4xx");
     await browser.waitUntil(
       async () => {
         const seen = await statuses();
         return seen.length > 0 && seen.every((s) => s.startsWith("4"));
       },
-      { timeout: 15_000, timeoutMsg: "the class filter never narrowed the list to 4xx" },
+      { timeout: 15_000, timeoutMsg: "the class chip never narrowed the list to 4xx" },
     );
     expect((await statuses()).some((s) => s.startsWith("5"))).toBe(false);
 
-    await $('[aria-label="status"]').setValue("404");
+    await removeEveryChip();
+    await addChips("status:404");
     await browser.waitUntil(
       async () => {
         const seen = await statuses();
         return seen.length > 0 && seen.every((s) => s.startsWith("404"));
       },
-      { timeout: 15_000, timeoutMsg: "the exact code never narrowed the list to 404" },
+      { timeout: 15_000, timeoutMsg: "the exact code chip never narrowed the list to 404" },
     );
 
-    // A value that names neither is a stated rejection, not a silent empty list.
-    await $('[aria-label="status"]').setValue("4xz");
-    const empty = await $('[data-testid="empty"]');
-    await empty.waitForExist({ timeout: 15_000 });
-    const stated = await empty.getText();
-    expect(stated).toContain("“4xz” isn't a status code");
-    expect(stated).not.toContain("Nothing matches your filter");
-    expect(stated).not.toContain("Trawler's capture service isn't answering");
+    // A value that names neither never reaches the core: the draft says why and
+    // the list keeps the chip it had.
+    await focusDraft();
+    await type("status:4xz");
+    await press("Enter");
+    await $('[aria-label="filter"][aria-invalid="true"]').waitForExist({ timeout: 5_000 });
+    expect(await $("body").getText()).toContain("“4xz” isn't a status — try a code like 404 or a class like 4xx");
+    expect(await chips()).toEqual(["status:404"]);
+    expect(await $('[data-testid="empty"]').isExisting()).toBe(false);
 
-    await $('[aria-label="status"]').clearValue();
+    await removeEveryChip();
     await browser.waitUntil(async () => (await rowCount()) >= 3, {
       timeout: 15_000,
-      timeoutMsg: "clearing the status never brought the rows back",
+      timeoutMsg: "removing the status chip never brought the rows back",
     });
-  });
-
-  it("the two dropdowns and the status field share the header row without wrapping", async () => {
-    const box = async (sel: string) =>
-      browser.execute((s: string) => {
-        const r = document.querySelector(s)!.getBoundingClientRect();
-        return { top: r.top, w: Math.round(r.width) };
-      }, sel);
-
-    const host = await box('button[aria-label="host"]');
-    const method = await box('button[aria-label="method"]');
-    const status = await box('input[aria-label="status"]');
-
-    // One row: the controls share a top edge, so the header did not wrap. Within
-    // a pixel, not to the pixel — the row centres on its tallest child (the
-    // capture controls, 28px) and the status input is a quarter-pixel taller than
-    // the two dropdowns, so their centred tops differ by an eighth of a pixel. A
-    // wrap moves a control by a whole row; this tolerance cannot hide one.
-    const sameRow = (a: number, b: number) => expect(Math.abs(a - b)).toBeLessThan(1);
-    sameRow(host.top, method.top);
-    sameRow(method.top, status.top);
-    // Select's own 132px floor is respected rather than crushed by the caller's width.
-    expect(host.w).toBeGreaterThanOrEqual(132);
-    expect(method.w).toBeGreaterThanOrEqual(132);
   });
 
   it("the keyboard selects a row and opens its detail — no pointer at all", async () => {
@@ -493,17 +468,17 @@ describe("UC-4 — the list says when it cannot reach the API", () => {
   // The control, taken while the core is alive and answering: an absence, in the
   // words of an absence, with no claim about the connection.
   it("a reachable core with nothing to show states the absence, not a failure", async () => {
-    await $('[aria-label="filter"]').setValue("no-such-path.invalid");
+    await addChips("no-such-path.invalid");
     const empty = await $('[data-testid="empty"]');
     await empty.waitForExist({ timeout: 15_000 });
     const text = await empty.getText();
     expect(text).toContain("Nothing matches your filter");
     expect(text).not.toContain("Trawler's capture service isn't answering");
 
-    await $('[aria-label="filter"]').clearValue();
+    await removeEveryChip();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
-      timeoutMsg: "the list never came back after clearing the filter",
+      timeoutMsg: "the list never came back after removing the chip",
     });
   });
 
