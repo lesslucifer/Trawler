@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 148197c86c9b3b1f70ddc43b2695f070ddce580a
+base: a09fd714cee840b18a90402cc5f985ba1cc00440
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-04-one-app-epic-result.html
+report_sha256: fcea57fe7b00f8b1c9435b1d251d07c61229bd9d5f12d7915f1ca3d679ef7e6a
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAUodrmPjpFTGnf40PtG8O4xwF7sE46IP7hSXTOsjGGGXr+Dd9wdYhEem
+  s/eNHS9hn/gigNF38YldiblDSoLM0J
+  -----END SSH SIGNATURE-----
