@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 1e853142ac7d8eb189c92051fe34c7876664a207
+base: 9cc6ac01fd6d515cf9cca428ea6f86b4ae5ef7b2
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-panels-w4-columns-result.html
+report_sha256: 804e3db2e6ccebc98d8e6762bb84954161e101754718f9ddc1bac1b4d26b5872
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECB1jkupgYd2nkZ/k5GAf5rmaSvY2gdqLS84gVp1DQY0oydUHRIlsqD51
+  X7WpwDgn06ooW3BcG3w2qQ0yl8NnID
+  -----END SSH SIGNATURE-----
